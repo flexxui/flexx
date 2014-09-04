@@ -1,0 +1,21 @@
+language: python
+
+virtualenv:
+    system_site_packages: true
+
+python:
+    - "2.6"
+    - "2.7"
+    - "3.3"
+    - "3.4"
+
+
+# Install dependencies
+install:
+    # pyqt4 for some cases
+    #- pip install 
+
+# Run the tests
+script: 
+    - python -c "import sys; print(sys.version)"
+    # - python make test X
