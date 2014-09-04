@@ -1,18 +1,20 @@
 language: python
 
-#virtualenv:
-#    system_site_packages: true
+virtualenv:
+    system_site_packages: true
 
 python:
+    # all versions except pypy and pypy3 have numpy as well.
+    # -> TRAVIS_PYTHON_VERSION
     - "2.6"
     - "2.7"
+    - "pypy3"
     - "3.3"
     - "3.4"
-    # -> TRAVIS_PYTHON_VERSION
-
 
 # Install dependencies
 install:
+    echo no dependencies except Qt/PySide
     # pyqt4 for some cases
     #- pip install 
 
