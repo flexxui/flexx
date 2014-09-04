@@ -9,7 +9,6 @@ python:
     # all versions except pypy and pypy3 have numpy as well.
     # -> TRAVIS_PYTHON_VERSION
     # Versions we want some lib code to work on
-    - "pypy"
     - "pypy3"
     - "2.6"
     - "2.7"
