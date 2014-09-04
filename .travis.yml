@@ -1,16 +1,24 @@
+# Travis CI configuration file for Zoof
+# Validate this at http://lint.travis-ci.org/
+
 language: python
 
-virtualenv:
-    system_site_packages: true
 
 python:
     # all versions except pypy and pypy3 have numpy as well.
     # -> TRAVIS_PYTHON_VERSION
+    # Versions we want some lib code to work on
+    - "pypy"
+    - "pypy3"
     - "2.6"
     - "2.7"
-    - "pypy3"
-    - "3.3"
     - "3.4"
+    # For GUI stuff
+    - "3.2_with_system_site_packages"
+
+env:
+    - FOO=3.3
+    - FOO=3.4
 
 # Install dependencies
 install:
@@ -20,5 +28,6 @@ install:
 
 # Run the tests
 script: 
+    - echo $FOO
     - python -c "import sys; print(sys.version)"
     # - python make test X
