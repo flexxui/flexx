@@ -5,6 +5,8 @@ Zoof, coding to the people!
 Zoof, coding for everyone.
 
 """
+
+import os
 import time
 from collections import OrderedDict
 
@@ -17,7 +19,7 @@ Qt = QtCore.Qt
 PARAMS = Dict()
 PARAMS.size = 32
 PARAMS.gap = 0.05
-PARAMS.inset= 0.25
+PARAMS.inset= 0.20
 PARAMS.height = 0.4
 PARAMS.width = 0.6
 #
@@ -26,7 +28,7 @@ PARAMS.bgcolor2 = '#dc322f'
 PARAMS.bgcolor3 = '#859900'
 PARAMS.edgecolor = '#073642'
 PARAMS.mono = False
-PARAMS.fullheight = 1.0
+PARAMS.fullheight = 0.8
 
     
 def create_logo(**kwargs):
@@ -70,18 +72,22 @@ def create_logo(**kwargs):
     painter.setRenderHints(1|2|4|8)
     
     # Paint outlines
-    pen = QtGui.QPen(QtGui.QColor(params.edgecolor))
+    clr = QtGui.QColor(params.edgecolor)
+    #clr.setAlpha(50)
+    pen = QtGui.QPen(clr)
     pen.setWidthF(edgewidth*size)
     painter.setPen(pen)
     painter.setBrush(Qt.NoBrush)
     for verts in (verts1, verts2, verts3, verts4):
         lines = [QtCore.QPointF(p[0]*size, p[1]*size) for p in verts]
         painter.drawPolygon(lines)
-    
+
     # Paint shape
+    colors = (params.bgcolor, params.bgcolor2, params.bgcolor3, 
+              params.bgcolor3, params.edgecolor, '#000')
+    clr = colors[max(0, params.mono-1)]
     painter.setPen(Qt.NoPen)
-    painter.setBrush(QtGui.QBrush(QtGui.QColor(params.bgcolor)))
-    colors = params.bgcolor, params.bgcolor2, params.bgcolor3, params.bgcolor3
+    painter.setBrush(QtGui.QBrush(QtGui.QColor(clr)))
     for verts, clr in zip((verts1, verts2, verts3, verts4), colors):
         if not params.mono:
             painter.setBrush(QtGui.QBrush(QtGui.QColor(clr)))
@@ -137,7 +143,7 @@ class Win(QtGui.QWidget):
                                 ('height', 0.0, 0.5),
                                 ('width', 0.1, 0.8),
                                 ('fullheight', 0.5, 1.0),
-                                ('mono', 0, 1), ]:
+                                ('mono', 0, 6), ]:
             val = PARAMS[name]
             if not isinstance(val, (float, int)):
                 continue
@@ -160,10 +166,15 @@ class Win(QtGui.QWidget):
             hbox.addWidget(slider, 4)
             controlLayout.addLayout(hbox, 1)
         
+        # Save button
+        self._savebut = QtGui.QPushButton('Save', self)
+        self._savebut.clicked.connect(self.on_save)
+        controlLayout.addWidget(self._savebut)
+        
         # Start
         self.updateLogo()
     
-    def updateLogo(self, bla=None):
+    def _get_params(self):
         # Obtain values from sliders and update slider labels
         names = [slider._name for slider in self._sliders]
         values = [(slider.value()/1000. if slider._isfloat else slider.value())
@@ -171,15 +182,25 @@ class Win(QtGui.QWidget):
         for name, val, label in zip(names, values, self._sliderLabels):
             fmt = '%s: %0.2f' if isinstance(val, float) else '%s: %i'
             label.setText(fmt % (name, val))
+        return dict(zip(names, values))
+    
+    def updateLogo(self, bla=None):
+        params = self._get_params()
         # Generate pixmap
         t0 = time.time()
-        pixmap = create_logo(**dict(zip(names, values)))
+        pixmap = create_logo(**params)
         #print('Logo took %0.0f ms to generate' % ((time.time() - t0)*1000))
         # Apply it to all display labels
         pixmapL = pixmap.scaled(200, 200, transformMode=Qt.FastTransformation)
         self._labels[0].setPixmap(pixmapL)
         for label in self._labels[1:]:
             label.setPixmap(pixmap)
+    
+    def on_save(self):
+        params = self._get_params()
+        pixmap = create_logo(**params)
+        filename = os.path.expanduser('~/zooflogo%i.png' % params['size'])
+        pixmap.save(filename, None, 0)
 
 
 if __name__ == '__main__':
