@@ -38,8 +38,8 @@ class Dict(_dict):
     class (such as 'items' and 'copy') cannot be get/set as attributes.
     """
     
-    __reserved_names__ = _dict().__dir__()  # Also from OrderedDict
-    __pure_names__ = dict().__dir__()
+    __reserved_names__ = dir(_dict())  # Also from OrderedDict
+    __pure_names__ = dir(dict())
     
     def __getattribute__(self, key):
         try:

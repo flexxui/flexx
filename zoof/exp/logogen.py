@@ -10,7 +10,7 @@ import os
 import time
 from collections import OrderedDict
 
-from PySide import QtCore, QtGui
+from PyQt4 import QtCore, QtGui
 from zoof.lib.zson import Dict
 
 Qt = QtCore.Qt
@@ -69,7 +69,9 @@ def create_logo(**kwargs):
     pixmap.fill(QtGui.QColor(0, 0, 0, 0))
     painter = QtGui.QPainter()
     painter.begin(pixmap)
-    painter.setRenderHints(1|2|4|8)
+    hint = (painter.Antialiasing | painter.TextAntialiasing | 
+            painter.SmoothPixmapTransform | painter.HighQualityAntialiasing)
+    painter.setRenderHints(hint)
     
     # Paint outlines
     clr = QtGui.QColor(params.edgecolor)
@@ -80,7 +82,7 @@ def create_logo(**kwargs):
     painter.setBrush(Qt.NoBrush)
     for verts in (verts1, verts2, verts3, verts4):
         lines = [QtCore.QPointF(p[0]*size, p[1]*size) for p in verts]
-        painter.drawPolygon(lines)
+        painter.drawPolygon(QtGui.QPolygonF(lines))
 
     # Paint shape
     colors = (params.bgcolor, params.bgcolor2, params.bgcolor3, 
@@ -92,7 +94,7 @@ def create_logo(**kwargs):
         if not params.mono:
             painter.setBrush(QtGui.QBrush(QtGui.QColor(clr)))
         lines = [QtCore.QPointF(p[0]*size, p[1]*size) for p in verts]
-        painter.drawPolygon(lines)
+        painter.drawPolygon(QtGui.QPolygonF(lines))
     
     painter.end()
     return pixmap
