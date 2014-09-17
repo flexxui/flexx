@@ -47,6 +47,9 @@ coverage.xml
 *.log
 *.pot
 
-# Sphinx documentation
+# Sphinx documentation and website
 docs/_build/
+_website/
+_gh-pages/
+
 
