@@ -52,6 +52,7 @@ class WebSiteTester(QtGui.QWidget):
     def _reload1(self, clean=False):
         self._but1.setEnabled(False)
         self._but2.setEnabled(False)
+        app = QtGui.qApp
         app.flush(); app.processEvents(); app.processEvents()
         if clean and os.path.isdir(OUTDIR):
             shutil.rmtree(OUTDIR)
