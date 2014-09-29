@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+# Copyright (c) 2014, Zoof Development Team.
+# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2014, Zoof Development Team.
+# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+
 import sys
 import os
 import shutil
