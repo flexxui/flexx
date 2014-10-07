@@ -1,9 +1,12 @@
-""" 
-Experiments with the purpose for creating a GUI toolkit based
-on web technologies like HTML/CSS/JS.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2014, Almar Klein
 
-Applications build with such a GUI can be easily deployed on all platforms
-and also run in a web browser...
+""" 
+Little experiment for the purpose for creating a GUI toolkit based on
+web technologies like HTML/CSS/JS.
+
+Applications build with such a GUI can be easily deployed on all
+platforms and also run in a web browser...
 
 Usefull links:
 * http://www.aclevername.com/articles/python-webgui/
@@ -12,7 +15,8 @@ Usefull links:
 
 import time
 
-from zoof.qt import QtCore, QtWebKit
+#from zoof.qt import QtCore, QtGui, QtWebKit
+from PyQt4 import QtCore, QtGui, QtWebKit
 
 
 HTML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -35,10 +39,10 @@ HTML = """<?xml version="1.0" encoding="UTF-8"?>
 // <![CDATA[
 
 function send(msg) {
+    // we communicate to Python by modifying the title
     document.title = "null";
     document.title = msg;
 }
-// NOTE: jQuery would make this all much cleaner!  You need it!
 
 
 function got_a_click(e) {
@@ -52,12 +56,6 @@ function got_a_move(e) {
     }
 }
 
-/*
-function document_ready() {
-    send('"document-ready"');
-    document.getElementById('messages').addEventListener('click', got_a_click, false);
-}
-*/
 
 $(document).ready(function() {
      $('#messages').click(got_a_click);
@@ -65,9 +63,6 @@ $(document).ready(function() {
      send('document.ready');
 })
 
-
-
-//document.addEventListener('DOMContentLoaded', document_ready, false);
 
 // ]]>
 </script>
@@ -99,6 +94,8 @@ $(document).ready(function() {
 
 
 class Page(QtWebKit.QWebPage):
+    """ Subclass Pagse to catch JS errors and prompts.
+    """
     def javaScriptConsoleMessage(self, msg, linenr, sourceID):
         print('ERROR: on line %i in %r: %s' % (linenr, sourceID, msg))
     
@@ -113,10 +110,14 @@ class Page(QtWebKit.QWebPage):
             elif a.lower() == 'n':
                 return False
 
-    # def javaScriptPrompt
+    def javaScriptPrompt(self, frame, *args):
+        pass  # todo
 
 
 class Main(QtWebKit.QWebView):
+    """ Our main application window.
+    """
+    
     def __init__(self):
         super().__init__(None)
         
@@ -149,7 +150,7 @@ class Main(QtWebKit.QWebView):
         print('MSG:', title)
         if title.startswith("got-a-move:test-widget"):
             xy = title.split('-')[-1]
-            x, y = [int(i) for i in xy.split(',')]
+            x, y = [int(i)-20 for i in xy.split(',')]
             msg =  'document.getElementById("test-widget").style.left = "%ipx";' % x
             msg += 'document.getElementById("test-widget").style.top = "%ipx";' % y
             self.web_send(msg)
@@ -164,7 +165,6 @@ class Main(QtWebKit.QWebView):
                         $("#test-widget").css({   "width": "100px", 
                                                     "height": "35px",
                                                     "position":"absolute",
-                                                    //"display": "none",
                                                     "top":"100px",
                                                     "left":"100px",
                                                     "background": "red",
@@ -173,49 +173,20 @@ class Main(QtWebKit.QWebView):
                                                     "handle": "",
                                                     "cursor": "move",
                                                 });
+                        // Implement some dragging (sort of)
                         $("#test-widget")._down = false;
                         $("#test-widget").mousedown(function(e){this._down=true});
                         $("#test-widget").mouseup(function(e){this._down=false});
+                        $("#test-widget").mouseleave(function(e){this._down=false});
                         $("#test-widget").mousemove(function(e){if (this._down) {got_a_move(e);}});
                         
-                        /*
-                        $("#test-widget").bind('drag', got_a_move);
-                        $("#test-widget").bind('dragstart', function(e){
-                            e.preventDefault();
-                        });
-                        $("#test-widget").bind('dragstart', function(e){
-                            e.dataTransfer.setData('text/plain', 'This text may be dragged')
-                        });
-                        $("#test-widget").bind('drag', function(){
-                            alert('moveing');
-                        });
-                        //$("#test-widget").mousemove(got_a_move);
-                        */
-                        /*
-                        var x = document.createElement("DIV");
-                        var t = document.createTextNode("This is a paragraph.");
-                        x.appendChild(t);
-                        document.body.appendChild(x);
-                        x.style.width = '100px';
-                        x.style.height = '35px';
-                        x.style.position = 'fixed';
-                        x.style.top = '100px';
-                        x.style.left = '100px';
-                        x.style['background'] = 'red';
-                        x.style.overflow = 'hidden';
-                        x.id = 'test-widget';
-                        //x.draggable = true;
-                        $.toJSON('asd');
-                        $('#test-widget').draggable();
-                        //document.getElementById('test-widget').addEventListener('click', got_a_click, false);
-                        //x.addEventListener('click', function(){got_a_click(x)}, false);
-                        x.addEventListener('click', got_a_click, false);
-                        //x.addEventListener('drag', got_a_move, false); // drag mousemove
-                        */
                         """)
         
     
 
 if __name__ == '__main__':
+    app = QtGui.QApplication([])
     m = Main()
     m.show()
+    app.exec_()
+
