@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# Copyright (c) 2013, imageio contributers
+# imageio is distributed under the terms of the (new) BSD License.
+
+""" 
+Utils for testing
+"""
+
 import sys
 import inspect
 
