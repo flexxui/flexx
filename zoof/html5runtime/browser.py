@@ -39,6 +39,21 @@ class BrowserRuntime(HTML5Runtime):
                 b.open(url)
                 return
         
+        # If that did not work, maybe we should try harder
+        # In particular on Windows, the exes may simply not be on the path
+        if type == 'chrome':
+            from .chromeapp import get_chrome_exe
+            exe = get_chrome_exe() or 'google-chrome'
+            self._start_subprocess([exe, url])
+            self._proc = None  # Prevent closing
+            return
+        elif type == 'chromium':
+            from .chromeapp import get_chromium_exe
+            exe = get_chromium_exe() or 'chromium-browser'
+            self._start_subprocess([exe, url])
+            self._proc = None  # Prevent closing
+            return
+        
         if errors:
             logging.warn('Given browser %r not valid/available;\n'
                          'Falling back to the default browser.' % type)
