@@ -76,6 +76,10 @@ def launch(url, runtime=None,
     runtime = runtime or 'xul'
     runtime = runtime.lower()
     
+    # Aliases
+    aliases= {'firefox': 'browser-firefox', 'chrome': 'browser-chrome'}
+    runtime = aliases.get(runtime, runtime)
+    
     browsertype = None
     
     if runtime == 'xul':

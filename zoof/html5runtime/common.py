@@ -5,6 +5,7 @@ Common code for all runtimes.
 import os
 import sys
 import time
+import atexit
 import threading
 import subprocess
 import tempfile
@@ -17,12 +18,26 @@ class HTML5Runtime(object):
         self._proc = None
         self._streamreader = None
         self._launch()
+        atexit.register(self.close)
     
     def close(self):
         """ Close the runtime
         
         If it won't close in a nice way, it is killed.
         """
+        if self._proc is None:
+            return
+        # Terminate, wait for a bot, kill
+        self._proc.terminate()
+        timeout = time.time() + 0.25
+        while time.time() > timeout:
+            time.sleep(0.02)
+            if self._proc.poll() is not None:
+                break
+        else:
+            self._proc.kill()
+        # Discart process
+        self._proc = None
     
     def _start_subprocess(self, command, **env):
         environ = os.environ.copy()
@@ -52,7 +67,7 @@ class StreamReader(threading.Thread):
         threading.Thread.__init__(self)
         
         self._process = process
-        self.deamon = True
+        self.setDaemon(True)
         self._exit = False
     
     def stop(self, timeout=1.0):
@@ -73,7 +88,7 @@ class StreamReader(threading.Thread):
         # clean the process up
         while self._process.poll() is None:
             time.sleep(0.05)
-        print('process stopped (%i)' % self._process.poll())
+        print('runtime process stopped (%i)' % self._process.poll())
 
 
 def create_temp_app_dir(prefix, suffix='', cleanup=60):
