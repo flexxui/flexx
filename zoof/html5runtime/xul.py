@@ -187,7 +187,10 @@ class XulRuntime(HTML5Runtime):
         if ff_exe:
             exename, ext = os.path.splitext(os.path.basename(sys.executable))
             exe = os.path.join(app_path, exename + '-ui' + ext)
-            os.symlink(ff_exe, exe)
+            try:
+                os.symlink(ff_exe, exe)
+            except Exception:  # e.g. WinXP
+                exe = ff_exe
         else:
             exe = 'firefox'
         
