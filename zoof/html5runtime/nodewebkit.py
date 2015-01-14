@@ -1,13 +1,57 @@
-""" zoof.gui client based on node-webkit.
+""" HTML5 runtime based on node-webkit
+
+https://github.com/rogerwang/node-webkit
+
 """
 
+# todo: needs more work to discover the nw executable.
+
 import os
-import time
-import subprocess
-import threading
+import sys
+import json
+import shutil
+
+from .common import HTML5Runtime, create_temp_app_dir
 
 
-def fix_libudef():
+def get_template():
+    return {"name": "zoof_ui_app",
+            "main": "",
+            "nodejs": False,
+            "single-instance": False,
+            "description": "an app made with Zoof ui",
+            "version": "1.0",
+            "keywords": [],
+            
+            "window": {
+                "title": "",
+                "icon": "",
+                "toolbar": False,
+                "frame": True,
+                "width": 640,
+                "height": 480,
+                "position": "center",
+                "resizable": True,
+                "min_width": 10,
+                "min_height": 10,
+                #"max_width": 800,
+                #"max_height": 600,
+                "always-on-top": False,
+                "fullscreen": False,
+                "kiosk": False,
+                "transparent": False,
+                "show_in_taskbar": True,
+                "show": True
+                },
+            
+            "webkit": {
+                "plugin": True,
+                "java": False
+                }
+            }
+
+
+def fix_libudef(dest):
     """ Fix the dependency for libudef by making a link to libudef.so.1.
     
     github.com/rogerwang/node-webkit/wiki/The-solution-of-lacking-libudev.so.0 
@@ -20,59 +64,71 @@ def fix_libudef():
         "/lib/i386-linux-gnu/libudev.so.1",  # Ubuntu 32bit
         ]
     
-    target = '/home/almar/projects/pylib/zoof/zoof/exp/libudev.so.0'
+    target = os.path.join(dest, 'libudev.so.0')
     for path in paths:
         if os.path.isfile(path) and not os.path.isfile(target):
             os.symlink(path, target)
             print('linked to', path)
 
 
-def launch():
+def get_nodewebkit_exe():
+    """ Try to find the executable for node-webkit
     
-    exe = '/home/almar/projects/node-webkit-v0.11.5-linux-x64/nw'
-    target = '/home/almar/projects/pylib/zoof/zoof/exp'
-    cmd = [exe, target] 
-    
-    env = os.environ.copy()
-    if sys.platform.startswith('linux'):
-        llp = env.get('LD_LIBRARY_PATH', '')
-        env['LD_LIBRARY_PATH'] = target + os.pathsep + llp
-    
-    p = subprocess.Popen(cmd, env=env,
-                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    p.reader = StreamReader(p)
-    p.reader.start()
-    return p
-
-
-class StreamReader(threading.Thread):
-    """ Reads stdout of process and print
-    
-    This needs to be done in a separate thread because reading from a
-    PYPE blocks.
+    Return None if it could not be found.
     """
-    def __init__(self, process):
-        threading.Thread.__init__(self)
+    
+    # Get possible locations of nw exe
+    paths = []
+    paths.append('/home/almar/projects/node-webkit-v0.11.5-linux-x64/nw')
+    
+    # Test each location
+    for path in paths:
+        if os.path.isfile(path):
+            return path
+    else:
+        return None
+
+
+class NodeWebkitRuntime(HTML5Runtime):
+    """ HTML5 runtime based on node-webkit.
+    """
+    
+    _app_count = 0
+    
+    def _launch(self):
+        NodeWebkitRuntime._app_count += 1
         
-        self._process = process
-        self.deamon = True
-        self._exit = False
-    
-    def stop(self, timeout=1.0):
-        self._exit = True
-        self.join(timeout)
-    
-    def run(self):
-        while not self._exit:
-            time.sleep(0.001)
-            msg = self._process.stdout.readline()  # <-- Blocks here
-            if not msg:
-                break  # Process dead  
-            if not isinstance(msg, str):
-                msg = msg.decode('utf-8', 'ignore')
-            print('UI: ' + msg)
-
-
-if __name__ == '__main__':
-    fix_libudef()
-    p = launch()
+        # Get dir to store app definition
+        app_path = create_temp_app_dir('nw', str(NodeWebkitRuntime._app_count))
+        id = os.path.basename(app_path).split('_', 1)[1]
+        
+        # Populate app definition
+        D = get_template()
+        D['name'] = 'app' + id
+        D['main'] = self._kwargs['url']
+        D['window']['title'] = self._kwargs['title'] or 'node-webkit runtime'
+        
+        # Set size (position can be null, center, mouse)
+        size = self._kwargs.get('size', (640, 480))
+        D['window']['width'], D['window']['height'] = size[0], size[1]
+        
+        # Icon?
+        if self._kwargs.get('icon'):
+            icon_path1 = self._kwargs['icon']
+            icon_path2 = os.path.join(app_path, os.path.basename(icon_path1))
+            shutil.copy(icon_path1, icon_path2)
+            D['window']['icon'] = icon_path2
+        
+        # Write
+        with open(os.path.join(app_path, 'package.json'), 'wb') as f:
+            f.write(json.dumps(D, indent=4).encode('utf-8'))
+        
+        # Fix libudef bug
+        fix_libudef(app_path)
+        if sys.platform.startswith('linux'):
+            llp = app_path + os.pathsep + os.getenv('LD_LIBRARY_PATH', '')
+        
+        # Launch
+        exe = get_nodewebkit_exe() or 'nw'
+        cmd = [exe, app_path] 
+        self._start_subprocess(cmd, LD_LIBRARY_PATH=llp)
