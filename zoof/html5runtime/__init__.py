@@ -17,9 +17,9 @@ Browsers
 --------
 
 * browser - launch the default browser
-* browser-ff - launch firefox browser
+* browser-firefox - launch firefox browser
 * browser-chrome - launch chrome/chromium browser
-* browser-ie - launch Internet Explorer
+* browser-x = launch browser x (if supported by webbrowser module)
 
 
 Other runtimes currently not supported
@@ -42,6 +42,10 @@ Memory considerations
 from .common import HTML5Runtime
 from .xul import XulRuntime
 from .nodewebkit import NodeWebkitRuntime
+from .browser import BrowserRuntime
+
+
+# todo: select a runtime that is available
 
 
 def launch(url, runtime=None, 
@@ -49,6 +53,43 @@ def launch(url, runtime=None,
     """ Launch an html5 runtime in a new process
     
     Returns an object that can be used to influence the runtime.
+    
+    Parameters
+    ----------
+    url : str
+        The url to open. Can be a local file (prefix with file://).
+    runtime : str
+        The runtime to use. Can be 'xul', 'nodewebkit', 'browser', 
+        'browser-firefox', 'browser-chrome', and more.
+    title : str
+        Window title. Some runtimes may override this with the title
+        in the HTML head section.
+    size: tuple of ints
+        The size in pixels of the window. Some runtimes may ignore this.
+    pos : tuple of ints
+        The position of the window. Some runtimes may ignore this.
+    icon : str
+        Path to an icon file (png recommended). Some runtimes may ignore this.
+    
     """
     
-    return XulRuntime(url=url, title=title, size=size, pos=pos, icon=icon)
+    runtime = runtime or 'xul'
+    runtime = runtime.lower()
+    
+    browsertype = None
+    
+    if runtime == 'xul':
+        Runtime = XulRuntime
+    elif runtime == 'nodewebkit':
+        Runtime = NodeWebkitRuntime
+    elif runtime == 'browser':
+        Runtime = BrowserRuntime
+    elif runtime.startswith('browser-'):
+        Runtime = BrowserRuntime
+        browsertype = runtime.split('-', 1)[1]
+    else:
+        raise ValueError('Unknown html5 runtime %r.' % runtime)
+    
+    
+    return Runtime(url=url, title=title, size=size, pos=pos, icon=icon, 
+                   browsertype=browsertype)
