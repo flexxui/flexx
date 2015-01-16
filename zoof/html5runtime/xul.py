@@ -189,7 +189,8 @@ class XulRuntime(HTML5Runtime):
             exe = os.path.join(app_path, exename + '-ui' + ext)
             try:
                 os.symlink(ff_exe, exe)
-            except Exception:  # e.g. WinXP
+            except Exception:
+                # Windows has symlink in Python 3.2+, Windows Vista+
                 exe = ff_exe
         else:
             exe = 'firefox'
