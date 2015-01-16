@@ -39,6 +39,8 @@ Memory considerations
 
 """
 
+import os
+
 from .common import HTML5Runtime
 from .xul import XulRuntime
 from .nodewebkit import NodeWebkitRuntime
@@ -79,6 +81,14 @@ def launch(url, runtime=None,
     # Aliases
     aliases= {'firefox': 'browser-firefox', 'chrome': 'browser-chrome'}
     runtime = aliases.get(runtime, runtime)
+    
+    # Check icon
+    if icon is not None:
+        if not os.path.isfile(icon):
+            raise ValueError('Given icon is not a valid filename: %r' % icon)
+        ext = os.path.splitext(icon)[1]
+        if ext not in ('.ico', '.png'):
+            raise ValueError('Icon must be a .ico or .png, not %r' % ext)
     
     browsertype = None
     

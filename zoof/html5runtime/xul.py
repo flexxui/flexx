@@ -7,7 +7,7 @@ import time
 import shutil
 
 from .common import HTML5Runtime, create_temp_app_dir
-
+from .icon import Icon
 
 # todo: title should change with title of web page?
 # todo: enable setting position/size at runtime?
@@ -118,12 +118,12 @@ def create_xul_app(path, id, **kwargs):
                         ]:
         open(os.path.join(path, fname), 'wb').write(text.encode('utf-8'))
     
-    # Icon
+    # Icon - use Icon class to write a png (for Unix) and an ico (for Windows)
     if kwargs.get('icon'):
-        icon = kwargs['icon']
-        ext = os.path.splitext(icon)[1]
-        icon_name = 'chrome/icons/default/%s%s' % (D['windowid'], ext)
-        shutil.copy(icon, os.path.join(path, icon_name))
+        icon = Icon(kwargs['icon'])  # accepts ico/png/bmp
+        icon_name = os.path.join(path, 'chrome/icons/default/' + D['windowid'])
+        icon.write(icon_name + '.ico')
+        icon.write(icon_name + '.png')
 
 
 def get_firefox_exe():

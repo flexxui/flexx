@@ -5,6 +5,7 @@ Common code for all runtimes.
 import os
 import sys
 import time
+import shutil
 import atexit
 import threading
 import subprocess
@@ -116,10 +117,11 @@ def create_temp_app_dir(prefix, suffix='', cleanup=60):
                     dirtime = int(dname.split('_')[1])
                 except Exception:
                     pass
+                print(dirname, dirtime, time.time() - dirtime)
                 if (time.time() - dirtime) > cleanup:
                     try:
                         shutil.rmtree(dirname)
-                    except Exception:
+                    except (OSError, IOError):
                         pass
     
     # Return new dir
