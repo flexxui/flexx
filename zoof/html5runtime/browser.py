@@ -43,7 +43,7 @@ class BrowserRuntime(HTML5Runtime):
         # In particular on Windows, the exes may simply not be on the path
         if type == 'firefox':
             from .xul import get_firefox_exe
-            exe = get_firefox_exe() or 'google-chrome'
+            exe = get_firefox_exe() or 'firefox'
             self._start_subprocess([exe, url])
             self._proc = None  # Prevent closing
             return

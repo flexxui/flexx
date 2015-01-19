@@ -5,8 +5,9 @@ import os
 import sys
 import time
 import shutil
+import subprocess
 
-from .common import HTML5Runtime, create_temp_app_dir
+from .common import HTML5Runtime, create_temp_app_dir, appdata_dir
 from .icon import Icon
 
 # todo: title should change with title of web page?
@@ -136,9 +137,10 @@ def get_firefox_exe():
     
     # Collect possible locations
     if sys.platform.startswith('win'):
-        paths.append('C:\\Program Files\\Mozilla Firefox\\firefox.exe')
-        paths.append('C:\\Program Files\\Firefox\\firefox.exe')
-        paths.append('C:\\Program Files (x86)\\Firefox\\firefox.exe')
+        for basepath in ('C:\\Program Files\\', 'C:\\Program Files (x86)\\'):
+            paths.append(basepath + 'Mozilla Firefox\\firefox.exe')
+            paths.append(basepath + 'Mozilla\\Firefox\\firefox.exe')
+            paths.append(basepath + 'Firefox\\firefox.exe')
     elif sys.platform.startswith('linux'):
         paths.append('/usr/lib/firefox/firefox')
         paths.append('/usr/lib64/firefox/firefox')
@@ -153,6 +155,79 @@ def get_firefox_exe():
         return None
 
 
+def get_xul_runtime():
+    """ Get path to executable for the xul runtime. The given path is
+    in a writable directory; we copy the firefox runtime if necessary.
+    Returns None if no XUL runtime could be found.
+    """
+    # Get location of firefox
+    ff_exe = get_firefox_exe()
+    ff_version = ''
+    if ff_exe:
+        # Get version
+        inifile = os.path.join(os.path.dirname(ff_exe), 'application.ini')
+        for line in open(inifile, 'rb').read().decode('utf-8').splitlines():
+            if line.lower().startswith('version'):
+                ff_version = 'xul_' + line.split('=')[1].strip()
+                break
+    
+    # Get dir with runtimes and list of subdirs (that represent versions)
+    xuldir = os.path.join(appdata_dir('zoof'), 'html5runtimes')
+    if not os.path.isdir(xuldir):
+        os.mkdir(xuldir)
+    dnames = [d for d in sorted(os.listdir(xuldir)) if d.startswith('xul_')]
+    
+    # Must we install ff?
+    if ff_version:
+        if (not dnames) or (dnames[-1] < ff_version):
+            copy_firefox_runtime(os.path.dirname(ff_exe),
+                                 os.path.join(xuldir, ff_version))
+            dnames.append(ff_version)
+    
+    # Clean up old runtimes
+    for dname in dnames[:-1]:
+        print('clearing', dname)
+        try:
+            shutil.rmtree(os.path.join(xuldir, dname))
+        except (OSError, IOError):
+            pass
+    
+    # Get highest version
+    if dnames:
+        the_exe = os.path.join(xuldir, dnames[-1], 'xulrunner-stub')
+        the_exe += '.exe' if sys.platform.startswith('win') else ''
+        return the_exe
+    else:
+        return None
+
+
+def copy_firefox_runtime(dir1, dir2):
+    """ Copy the firefox runtime to a new folder, in which we rename
+    the firefox exe to xulrunner-stub. This thus creates a xul runtime
+    in a location where we have write access, so that we can duplicate
+    the exe with a name of our chosing, or create a symlink to it.
+    """
+    t0 = time.time()
+    # Clear
+    if os.path.isdir(dir2):
+        shutil.rmtree(dir2)
+    os.mkdir(dir2)
+    # Get extension
+    ext = '.exe' if sys.platform.startswith('win') else ''
+    # Copy all files except dirs and exes
+    for fname in os.listdir(dir1):
+        if os.path.splitext(fname)[1].lower() in ('.exe', ''):
+            continue
+        filename1 = os.path.join(dir1, fname)
+        filename2 = os.path.join(dir2, fname)
+        if os.path.isfile(filename1):
+            shutil.copy2(filename1, filename2)
+    # Copy firefox exe -> xulrunner-stub
+    shutil.copy2(os.path.join(dir1, 'firefox' + ext),
+                    os.path.join(dir2, 'xulrunner-stub' + ext))
+    print('Copied firefox (in %1.2f s)' % (time.time()-t0))
+
+
 class XulRuntime(HTML5Runtime):
     """ HTML5 runtime based on Mozilla's XUL framework.
     """
@@ -161,6 +236,9 @@ class XulRuntime(HTML5Runtime):
     
     def _launch(self):
         XulRuntime._app_count += 1
+        
+        # Get executable for xul runtime (may be None)
+        xul_exe = get_xul_runtime()
         
         # Temp folder to store app files
         app_path = create_temp_app_dir('xul', str(XulRuntime._app_count))
@@ -180,20 +258,35 @@ class XulRuntime(HTML5Runtime):
         create_xul_app(app_path, id, windowfeatures=windowfeatures, 
                        **self._kwargs)
         
-        # Get executable, create link if we can, so that our window is
-        # not grouped with ff, and has a more meaningful process name.
-        # Using sys.executable also works well when frozen.
-        ff_exe = get_firefox_exe()
-        if ff_exe:
+        # Get the command to execute
+        exe = None
+        if xul_exe:
+            # Create link if we can, so that our window is not grouped with
+            # ff, and has a more meaningful process name. Using
+            # sys.executable also works well when frozen.
             exename, ext = os.path.splitext(os.path.basename(sys.executable))
-            exe = os.path.join(app_path, exename + '-ui' + ext)
-            try:
-                os.symlink(ff_exe, exe)
-            except Exception:
-                # Windows has symlink in Python 3.2+, Windows Vista+
-                exe = ff_exe
+            newexename = exename + '-ui' + ext
+            exe = os.path.join(os.path.dirname(xul_exe), newexename)
+            if not os.path.isfile(exe):
+                try:
+                    os.symlink(xul_exe, exe)
+                except Exception:
+                    # Windows has symlink in Python 3.2+, Windows Vista+
+                    # But often the user has no privilege to symlink
+                    shutil.copy2(xul_exe, exe)
         else:
-            exe = 'firefox'
+            # See if we can use firefox command, Firefox may be
+            # available even though we failed to find it.
+            try:
+                version = subprocess.check_output(['firefox', '--version'])
+                exe = 'firefox'
+            except Exception:
+                pass
+        
+        # Final check
+        if exe is None:
+            raise RuntimeError('Could not find XUL runtime. '
+                               'Please install firefox.')
         
         # Launch
         print('launching XUL app')
