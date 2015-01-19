@@ -1,6 +1,6 @@
-""" HTML5 runtime based on node-webkit
+""" Web runtime based on node-webkit
 
-https://github.com/rogerwang/node-webkit
+https://github.com/nwjs/nw.js
 
 """
 
@@ -11,7 +11,7 @@ import sys
 import json
 import shutil
 
-from .common import HTML5Runtime, create_temp_app_dir
+from .common import WebRuntime, create_temp_app_dir
 
 
 def get_template():
@@ -89,8 +89,8 @@ def get_nodewebkit_exe():
         return None
 
 
-class NodeWebkitRuntime(HTML5Runtime):
-    """ HTML5 runtime based on node-webkit.
+class NodeWebkitRuntime(WebRuntime):
+    """ Web runtime based on node-webkit.
     """
     
     _app_count = 0

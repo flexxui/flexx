@@ -41,7 +41,7 @@ Memory considerations
 
 import os
 
-from .common import HTML5Runtime
+from .common import WebRuntime
 from .xul import XulRuntime
 from .nodewebkit import NodeWebkitRuntime
 from .browser import BrowserRuntime
@@ -53,7 +53,7 @@ from .browser import BrowserRuntime
 
 def launch(url, runtime=None, 
            title='', size=(640, 480), pos=None, icon=None):
-    """ Launch an html5 runtime in a new process
+    """ Launch a web runtime in a new process
     
     Returns an object that can be used to influence the runtime.
     
@@ -62,7 +62,7 @@ def launch(url, runtime=None,
     url : str
         The url to open. Can be a local file (prefix with file://).
     runtime : str
-        The runtime to use. Can be 'xul', 'nodewebkit', 'browser', 
+        The runtime to use. Can be 'xul', 'nwjs', 'browser', 
         'browser-firefox', 'browser-chrome', and more.
     title : str
         Window title. Some runtimes may override this with the title
@@ -95,7 +95,7 @@ def launch(url, runtime=None,
     
     if runtime == 'xul':
         Runtime = XulRuntime
-    elif runtime == 'nodewebkit':
+    elif runtime in ('nwjs', 'nodewebkit'):
         Runtime = NodeWebkitRuntime
     elif runtime == 'browser':
         Runtime = BrowserRuntime
@@ -103,7 +103,7 @@ def launch(url, runtime=None,
         Runtime = BrowserRuntime
         browsertype = runtime.split('-', 1)[1]
     else:
-        raise ValueError('Unknown html5 runtime %r.' % runtime)
+        raise ValueError('Unknown web runtime %r.' % runtime)
     
     
     return Runtime(url=url, title=title, size=size, pos=pos, icon=icon, 

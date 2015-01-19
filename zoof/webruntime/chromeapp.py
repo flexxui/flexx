@@ -1,4 +1,4 @@
-""" HTML5 runtime based on a chrome app
+""" Web runtime based on a chrome app
 
 """
 

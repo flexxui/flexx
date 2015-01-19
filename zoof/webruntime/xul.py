@@ -1,4 +1,4 @@
-""" HTML5 runtime based on XUL (i.e. Firefox browser engine)
+""" Web runtime based on XUL (i.e. Firefox browser engine)
 """
 
 import os
@@ -7,7 +7,7 @@ import time
 import shutil
 import subprocess
 
-from .common import HTML5Runtime, create_temp_app_dir, appdata_dir, default_icon
+from .common import WebRuntime, create_temp_app_dir, appdata_dir, default_icon
 from .icon import Icon
 
 # todo: title should change with title of web page?
@@ -175,7 +175,7 @@ def get_xul_runtime():
                 break
     
     # Get dir with runtimes and list of subdirs (that represent versions)
-    xuldir = os.path.join(appdata_dir('zoof'), 'html5runtimes')
+    xuldir = os.path.join(appdata_dir('zoof'), 'webruntimes')
     if not os.path.isdir(xuldir):
         os.mkdir(xuldir)
     dnames = [d for d in sorted(os.listdir(xuldir)) if d.startswith('xul_')]
@@ -231,8 +231,8 @@ def copy_firefox_runtime(dir1, dir2):
     print('Copied firefox (in %1.2f s)' % (time.time()-t0))
 
 
-class XulRuntime(HTML5Runtime):
-    """ HTML5 runtime based on Mozilla's XUL framework.
+class XulRuntime(WebRuntime):
+    """ Web runtime based on Mozilla's XUL framework.
     """
     
     _app_count = 0

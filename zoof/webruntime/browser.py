@@ -1,4 +1,4 @@
-""" HTML5 runtime based on a common browser
+""" Web runtime based on a common browser
 
 Opens browser via webbrowser module.
 """
@@ -6,7 +6,7 @@ Opens browser via webbrowser module.
 import webbrowser
 import logging
 
-from .common import HTML5Runtime
+from .common import WebRuntime
 
 
 BROWSER_MAP = {'chrome': ['google-chrome', 'chrome', 
@@ -16,7 +16,7 @@ BROWSER_MAP = {'chrome': ['google-chrome', 'chrome',
                }
 
 
-class BrowserRuntime(HTML5Runtime):
+class BrowserRuntime(WebRuntime):
     
     def _launch(self):
         

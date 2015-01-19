@@ -10,10 +10,10 @@ import atexit
 import threading
 import subprocess
 
-from zoof.html5runtime.icon import Icon
+from zoof.webruntime.icon import Icon
 
 
-class HTML5Runtime(object):
+class WebRuntime(object):
     def __init__(self, **kwargs):
         assert 'url' in kwargs
         self._kwargs = kwargs
