@@ -147,6 +147,8 @@ def get_firefox_exe():
     elif sys.platform.startswith('linux'):
         paths.append('/usr/lib/firefox/firefox')
         paths.append('/usr/lib64/firefox/firefox')
+        paths.append('/usr/lib/iceweasel/iceweasel')
+        paths.append('/usr/lib64/iceweasel/iceweasel')
     elif sys.platform.startswith('darwin'):
         paths.append('/Applications/Firefox.app')
     
@@ -181,6 +183,10 @@ def get_xul_runtime():
     dnames = [d for d in sorted(os.listdir(xuldir)) if d.startswith('xul_')]
     
     # Must we install ff?
+    # On Windows we must copy if we want to change the process name and
+    # avoid taskbar grouping with firefox. We do it everwhere for
+    # consistency since its only needed once and it is fast. On rasp-pi
+    # it takes 8 s though.
     if ff_version:
         if (not dnames) or (dnames[-1] < ff_version):
             copy_firefox_runtime(os.path.dirname(ff_exe),
@@ -211,24 +217,35 @@ def copy_firefox_runtime(dir1, dir2):
     the exe with a name of our chosing, or create a symlink to it.
     """
     t0 = time.time()
+    # Get extension
+    ext = '.exe' if sys.platform.startswith('win') else ''
+    # On Rasberry Pi, the xul runtime is in a (linked) subdir 
+    if os.path.isdir(os.path.join(dir1, 'xulrunner')):
+        dir1 = os.path.join(dir1, 'xulrunner')
     # Clear
     if os.path.isdir(dir2):
         shutil.rmtree(dir2)
     os.mkdir(dir2)
-    # Get extension
-    ext = '.exe' if sys.platform.startswith('win') else ''
-    # Copy all files except dirs and exes
-    for fname in os.listdir(dir1):
-        if os.path.splitext(fname)[1].lower() in ('.exe', ''):
-            continue
-        filename1 = os.path.join(dir1, fname)
-        filename2 = os.path.join(dir2, fname)
-        if os.path.isfile(filename1):
-            shutil.copy2(filename1, filename2)
-    # Copy firefox exe -> xulrunner-stub
-    shutil.copy2(os.path.join(dir1, 'firefox' + ext),
-                    os.path.join(dir2, 'xulrunner-stub' + ext))
-    print('Copied firefox (in %1.2f s)' % (time.time()-t0))
+    try:
+        # Copy all files except dirs and exes
+        for fname in os.listdir(dir1):
+            if os.path.splitext(fname)[1].lower() in ('.exe', ''):
+                continue
+            filename1 = os.path.join(dir1, fname)
+            filename2 = os.path.join(dir2, fname)
+            if os.path.isfile(filename1):
+                shutil.copy2(filename1, filename2)
+        # Copy firefox exe -> xulrunner-stub
+        for exe_name in ('firefox', 'iceweasel', 'xulrunner-stub', 'firefox'):
+            exe = os.path.join(dir1, exe_name + ext)
+            if os.path.isfile(exe):
+                break
+        shutil.copy2(exe, os.path.join(dir2, 'xulrunner-stub' + ext))
+        print('Copied firefox (in %1.2f s)' % (time.time()-t0))
+    except Exception:
+        # Clean up
+        shutil.rmtree(dir2)
+        raise
 
 
 class XulRuntime(WebRuntime):
