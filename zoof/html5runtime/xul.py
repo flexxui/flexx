@@ -7,7 +7,7 @@ import time
 import shutil
 import subprocess
 
-from .common import HTML5Runtime, create_temp_app_dir, appdata_dir
+from .common import HTML5Runtime, create_temp_app_dir, appdata_dir, default_icon
 from .icon import Icon
 
 # todo: title should change with title of web page?
@@ -122,9 +122,12 @@ def create_xul_app(path, id, **kwargs):
     # Icon - use Icon class to write a png (for Unix) and an ico (for Windows)
     if kwargs.get('icon'):
         icon = Icon(kwargs['icon'])  # accepts ico/png/bmp
-        icon_name = os.path.join(path, 'chrome/icons/default/' + D['windowid'])
-        icon.write(icon_name + '.ico')
-        icon.write(icon_name + '.png')
+    else:
+        icon = default_icon()
+    icon_name = os.path.join(path, 'chrome/icons/default/' + D['windowid'])
+    icon.write(icon_name + '.ico')
+    icon.write(icon_name + '.png')
+
 
 
 def get_firefox_exe():

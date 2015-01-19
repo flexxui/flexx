@@ -265,6 +265,12 @@ class Icon(object):
         """
         return tuple(sorted(self._ims.keys()))
     
+    def add(self, data):
+        """ Add an image represented as bytes or bytearray.
+        """
+        assert isinstance(data, (bytes, bytearray))
+        self._store_image(data)
+    
     def read(self, filename):
         """ Read an image from the given filename and add to collection
         
@@ -312,10 +318,12 @@ class Icon(object):
             raise ValueError('Can only export to png, bmp, or ico')
     
     def _image_size(self, im):
-        npixel = len(im) // 4
-        width = height = int(npixel ** 0.5)
+        npixels = len(im) // 4
+        width = height = int(npixels ** 0.5)
+        if width * height * 4 != len(im):
+            raise ValueError('Icon must be NxMx4 pixels')
         if width not in VALID_SIZES:
-            raise ValueError('Not a proper icon')
+            raise ValueError('Icon must have size in %s' % str(VALID_SIZES))
         return width
     
     def _store_image(self, im):

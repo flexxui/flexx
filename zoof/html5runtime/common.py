@@ -10,6 +10,8 @@ import atexit
 import threading
 import subprocess
 
+from zoof.html5runtime.icon import Icon
+
 
 class HTML5Runtime(object):
     def __init__(self, **kwargs):
@@ -184,3 +186,33 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
     
     # Done
     return path
+
+
+_icon_template = """
+xxxx  x   x  xxx
+  x  x x x x x
+ x   x x x x xxx
+xxxx  x   x  x
+
+ xx   xxx   xxx
+x  x  x  x  x  x
+xxxx  xxx   xxx 
+x  x  x     x
+"""
+
+
+def default_icon():
+    """ Generate a default icon object.
+    """
+    im = bytearray(4*16*16)
+    for y, line in enumerate(_icon_template.splitlines()):
+        y += 5
+        if y < 16:
+            for x, c in enumerate(line):
+                if c == 'x':
+                    i = (y * 16 + x) * 4
+                    im[i:i+4] = [0, 0, 150, 255]
+        
+    icon = Icon()
+    icon.add(im)
+    return icon
