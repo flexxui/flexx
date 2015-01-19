@@ -47,6 +47,7 @@ from .nodewebkit import NodeWebkitRuntime
 from .browser import BrowserRuntime
 
 
+# todo: rename to htmlruntime or webruntime. html6 will be there someday
 # todo: select a runtime that is available
 
 
