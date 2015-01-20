@@ -29,15 +29,16 @@ class WebRuntime(object):
         """
         if self._proc is None:
             return
-        # Terminate, wait for a bot, kill
-        self._proc.terminate()
-        timeout = time.time() + 0.25
-        while time.time() > timeout:
-            time.sleep(0.02)
-            if self._proc.poll() is not None:
-                break
-        else:
-            self._proc.kill()
+        # Terminate, wait for a bit, kill
+        if self._proc.poll() is None:
+            self._proc.terminate()
+            timeout = time.time() + 0.25
+            while time.time() > timeout:
+                time.sleep(0.02)
+                if self._proc.poll() is not None:
+                    break
+            else:
+                self._proc.kill()
         # Discart process
         self._proc = None
     

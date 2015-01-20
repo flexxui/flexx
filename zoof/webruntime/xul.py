@@ -150,7 +150,7 @@ def get_firefox_exe():
         paths.append('/usr/lib/iceweasel/iceweasel')
         paths.append('/usr/lib64/iceweasel/iceweasel')
     elif sys.platform.startswith('darwin'):
-        paths.append('/Applications/Firefox.app')
+        paths.append('/Applications/Firefox.app/Contents/MacOS/firefox')
     
     # Try location until we find one that exists
     for path in paths:
@@ -170,7 +170,10 @@ def get_xul_runtime():
     ff_version = ''
     if ff_exe:
         # Get version
-        inifile = os.path.join(os.path.dirname(ff_exe), 'application.ini')
+        if 'Contents/MacOS/' in ff_exe:
+            inifile = os.path.join(os.path.dirname(ff_exe), '../Resources/application.ini')
+        else:
+            inifile = os.path.join(os.path.dirname(ff_exe), 'application.ini')
         for line in open(inifile, 'rb').read().decode('utf-8').splitlines():
             if line.lower().startswith('version'):
                 ff_version = 'xul_' + line.split('=')[1].strip()
@@ -189,6 +192,11 @@ def get_xul_runtime():
     # it takes 8 s though.
     if ff_version:
         if (not dnames) or (dnames[-1] < ff_version):
+            if sys.platform.startswith('darwin'):
+                os.mkdir(os.path.join(xuldir, ff_version))
+                stub_exe = os.path.join(xuldir, ff_version, 'xulrunner')
+                os.symlink(ff_exe, stub_exe)
+                return stub_exe
             copy_firefox_runtime(os.path.dirname(ff_exe),
                                  os.path.join(xuldir, ff_version))
             dnames.append(ff_version)
@@ -203,7 +211,7 @@ def get_xul_runtime():
     
     # Get highest version
     if dnames:
-        the_exe = os.path.join(xuldir, dnames[-1], 'xulrunner-stub')
+        the_exe = os.path.join(xuldir, dnames[-1], 'xulrunner')
         the_exe += '.exe' if sys.platform.startswith('win') else ''
         return the_exe
     else:
@@ -212,7 +220,7 @@ def get_xul_runtime():
 
 def copy_firefox_runtime(dir1, dir2):
     """ Copy the firefox runtime to a new folder, in which we rename
-    the firefox exe to xulrunner-stub. This thus creates a xul runtime
+    the firefox exe to xulrunner. This thus creates a xul runtime
     in a location where we have write access, so that we can duplicate
     the exe with a name of our chosing, or create a symlink to it.
     """
@@ -227,27 +235,86 @@ def copy_firefox_runtime(dir1, dir2):
         shutil.rmtree(dir2)
     os.mkdir(dir2)
     try:
-        # Copy all files except dirs and exes
+        # Copy all files except dirs 
         for fname in os.listdir(dir1):
-            if os.path.splitext(fname)[1].lower() in ('.exe', ''):
-                continue
             filename1 = os.path.join(dir1, fname)
             filename2 = os.path.join(dir2, fname)
             if os.path.isfile(filename1):
                 shutil.copy2(filename1, filename2)
-        # Copy firefox exe -> xulrunner-stub
-        for exe_name in ('firefox', 'iceweasel', 'xulrunner-stub', 'firefox'):
+        # Copy firefox exe -> xulrunner
+        for exe_name in ('firefox', 'iceweasel', 'xulrunner', 'firefox'):
             exe = os.path.join(dir1, exe_name + ext)
             if os.path.isfile(exe):
                 break
-        shutil.copy2(exe, os.path.join(dir2, 'xulrunner-stub' + ext))
+        shutil.copy2(exe, os.path.join(dir2, 'xulrunner' + ext))
         print('Copied firefox (in %1.2f s)' % (time.time()-t0))
     except Exception:
         # Clean up
         shutil.rmtree(dir2)
         raise
 
+##
 
+INFO_PLIST = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIconFile</key>
+    <string>app.icns</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>English</string>
+    <key>CFBundleExecutable</key>
+    <string>xulrunner</string>
+    <key>CFBundleName</key>
+    <string>{name}</string>
+</dict>
+</plist>
+""".replace('    ', '\t')
+
+def osx_create_app(xul_path, path):
+    """ xul_path is the executable for xulrunner
+    path is the .app to write
+    """
+    # Get app of firefox
+    if not 'Contents/MacOS' in os.path.realpath(xul_path):
+        raise NotImplementedError('Cannot deal with real xulrunner yet')
+    xul_app = os.path.dirname(os.path.dirname(os.path.dirname(xul_path)))
+    assert xul_app.endswith('.app')
+    
+    # Clear destination
+    if os.path.isdir(path):
+        shutil.rmtree(path)
+    os.mkdir(path)
+    
+    # Make dir structure
+    os.mkdir(os.path.join(path, 'Contents'))
+    os.mkdir(os.path.join(path, 'Contents', 'MacOS'))
+    os.mkdir(os.path.join(path, 'Contents', 'Resources'))
+    
+    # Make a link for all the files
+    for dirpath, dirnames, filenames in os.walk(xul_app):
+        relpath = os.path.relpath(dirpath, xul_app)
+        if '.app' in relpath:
+            continue
+        if relpath.endswith('MacOS') or relpath.endswith('Resources'):
+            for fname in filenames:
+                filename1 = os.path.join(xul_app, relpath, fname)
+                filename2 = os.path.join(path, relpath, fname)
+                os.symlink(filename1, filename2)
+    # Make xulrunner exe
+    os.symlink(os.path.join(xul_app, 'Contents', 'MacOS', 'firefox'),
+               os.path.join(path, 'Contents', 'MacOS', 'xulrunner'))
+    # Make info.plist
+    info = INFO_PLIST.format(name=os.path.basename(path)[:-4])  # todo: or title?
+    with open(os.path.join(path, 'Contents', 'info.plist'), 'wb') as f:
+        f.write(info.encode('utf-8'))
+    # Make icon
+    icon = default_icon()  # todo: use given icon
+    icon.write(os.path.join(path, 'Contents', 'Resources', 'app.icns'))
+    
+    
+#print(osx_create_app(get_firefox_exe()))
+##
 class XulRuntime(WebRuntime):
     """ Web runtime based on Mozilla's XUL framework.
     """
@@ -280,20 +347,24 @@ class XulRuntime(WebRuntime):
         
         # Get the command to execute
         exe = None
-        if xul_exe:
+        if xul_exe:  # todo: and realpath is a file
             # Create link if we can, so that our window is not grouped with
             # ff, and has a more meaningful process name. Using
             # sys.executable also works well when frozen.
             exename, ext = os.path.splitext(os.path.basename(sys.executable))
             newexename = exename + '-ui' + ext
             exe = os.path.join(os.path.dirname(xul_exe), newexename)
-            if not os.path.isfile(exe):
-                try:
-                    os.symlink(xul_exe, exe)
-                except Exception:
-                    # Windows has symlink in Python 3.2+, Windows Vista+
-                    # But often the user has no privilege to symlink
-                    shutil.copy2(xul_exe, exe)
+            if sys.platform.startswith('darwin'):
+                osx_create_app(os.path.realpath(xul_exe), exe + '.app')
+                exe += '.app/Contents/MacOS/xulrunner'
+            else:
+                if not os.path.isfile(exe):
+                    try:
+                        os.symlink(xul_exe, exe)
+                    except Exception:
+                        # Windows has symlink in Python 3.2+, Windows Vista+
+                        # But often the user has no privilege to symlink
+                        shutil.copy2(xul_exe, exe)
         else:
             # See if we can use firefox command, Firefox may be
             # available even though we failed to find it.
