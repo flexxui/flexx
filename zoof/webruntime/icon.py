@@ -294,15 +294,18 @@ class Icon(object):
     def write(self, filename):
         """ Write the icon collection to an image with the given filename
         
-        Can be an ICO, PNG, or BMP file. In case of PNG/BMP, multiple
-        images may be generated, the image size is appended to the file
-        name.
+        Can be an ICO, ICNS, PNG, or BMP file. In case of PNG/BMP,
+        multiple images may be generated, the image size is appended
+        to the file name.
         """
         if not isinstance(filename, str):
             raise ValueError('Icon.write() needs a file name')
         
         if filename.lower().endswith('.ico'):
             data = self._to_ico()
+            open(filename, 'wb').write(data)
+        elif filename.lower().endswith('.icns'):
+            data = self._to_icns()
             open(filename, 'wb').write(data)    
         elif filename.lower().endswith('.png'):
             for size in sorted(self._ims):
@@ -386,6 +389,53 @@ class Icon(object):
             # Set offset pointer
             offset += len(imdata)
         
+        return b''.join([bb] + imdatas)
+    
+    def _to_icns(self):
+        # OSX icon format
+        # todo: include text/refrs from wiki and the two refs on wiki
+        
+        imdatas = []
+        raw_types = {16: (b'is32', b's8mk'),
+                     32: (b'il32', b'l8mk'),
+                     48: (b'ih32', b'h8mk'),
+                     128: (b'it32', b't8mk'), }
+        png_types = {16: b'icp4', 32: b'icp5', 64: b'icp6', 128: b'ic07',
+                     256: b'ic08', 512: b'ic09', 1024: b'ic10'}
+        
+        for size in sorted(self._ims):
+            im = self._ims[size]
+            if size in raw_types:
+                # Raw format - can be compressed with packbits
+                type, apha_type = raw_types[size]
+                # RGBA to XRGB
+                data = bytearray(len(im))
+                data[1::4] = im[0::4]
+                data[2::4] = im[1::4]
+                data[3::4] = im[2::4]
+                # Store RGBA
+                imdatas.append(type)
+                imdatas.append(struct.pack('>I', len(data) + 8))
+                imdatas.append(data)
+                # RGBA to A
+                data = bytearray(len(im)//4)
+                data[:] = im[3::4]
+                # Store alpha
+                imdatas.append(apha_type)
+                imdatas.append(struct.pack('>I', len(data) + 8))
+                imdatas.append(data)
+            elif False:  # size in png_types:
+                # Store as png, does not seem to work
+                data = self._to_png(im)
+                imdatas.append(png_types[size])
+                imdatas.append(struct.pack('>I', len(data) + 8))
+                imdatas.append(data)
+            else:
+                print('Skipping export size %i to .icns' % size)
+                continue
+        
+        total_icon_size = sum([len(i) for i in imdatas]) + 8
+        bb = b'icns' + struct.pack('>I', total_icon_size)
         return b''.join([bb] + imdatas)
     
     def _from_bmp(self, bb):
@@ -520,7 +570,7 @@ class Icon(object):
 
 if __name__ == '__main__':
     icondir = '/home/almar/projects/pyapps/iep/default/iep/resources/appicons/'
-    
+    icondir = '/Users/almar/py/iep/iep/resources/appicons/'
     #print(get_png_info(icondir+'ieplogo32.png'))
     
     
@@ -533,4 +583,5 @@ if __name__ == '__main__':
 #                 icondir+'test128.bmp', icondir+'test256.bmp')
     icon = Icon(icondir + 'ieplogo.ico')
     icon.write(icondir+'test.ico')
+    icon.write(icondir+'test.icns')
     icon.write(icondir+'test.png')
