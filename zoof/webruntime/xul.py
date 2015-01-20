@@ -463,7 +463,7 @@ class XulRuntime(WebRuntime):
         open(op.join(path, 'Contents', 'info.plist'), 'wt').write(info)
         # Make icon
         if self._kwargs.get('icon', None):
-            icon = Icon(kwargs['icon'])  # accepts ico/png/bmp
+            icon = Icon(self._kwargs['icon'])  # accepts ico/png/bmp
         else:
             icon = default_icon()
         icon.write(op.join(path, 'Contents', 'Resources', 'app.icns'))

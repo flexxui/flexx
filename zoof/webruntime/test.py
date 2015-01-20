@@ -4,7 +4,8 @@ from zoof.webruntime import launch
 icon = None
 #icondir = r'C:\almar\iep\iep\resources\appicons/'
 #icondir = '/home/almar/projects/pyapps/iep/default/iep/resources/appicons/'
-#icon = icondir + 'ieplogo32.png'
+#icondir = '/Users/almar/py/iep/iep/resources/appicons/'
+#icon = icondir + 'ieplogo.ico'
 
 
 #target = 'file:///home/almar/projects/pylib/zoof/zoof/exp/learn_html5.html'
