@@ -4,7 +4,7 @@
 
 """
 Pure python module to handle the .ico format. Also support for simple
-PNG files. Writter for Python 2.7 and Python 3.2+
+PNG files. Written for Python 2.7 and Python 3.2+.
 
 * Icon - class to populate an icon stack and export it to ICO or PNG
 * read_png() and write_png() - functions to deal with simple PNG files.
@@ -45,10 +45,17 @@ def write_png(im, shape):
     """
     # This function is written to be standalone
     
-    assert isinstance(im, bytes)
+    # Check types
+    assert isinstance(im, (bytes, bytearray))
     assert isinstance(shape, tuple)
+    
+    # Check shape
+    if len(shape) != 3:
+        raise ValueError('shape must be 3 elements)')
     if shape[2] not in (3, 4):
-        raise TypeError('shape[2] must be in (3, 4)')
+        raise ValueError('shape[2] must be in (3, 4)')
+    if (shape[0] * shape[1] * shape[2]) != len(im):
+        raise ValueError('Shape does not match number of elements in image')
     
     def add_chunk(data, name):
         name = name.encode('ASCII')
@@ -68,7 +75,7 @@ def write_png(im, shape):
     ihdr = struct.pack('>IIBBBBB', w, h, depth, ctyp, 0, 0, 0)
     add_chunk(ihdr, 'IHDR')
     
-    # Chunk with pixels
+    # Chunk with pixels. Just one chunk, no fancy filters.
     line_len = w * shape[2]
     lines = [im[i*line_len:(i+1)*line_len] for i in range(h)]
     lines = [b'\x00' + line for line in lines]  # prepend filter byte
@@ -89,8 +96,8 @@ def read_png(f):
     Returns (pixel_array, (NxMxC)), with C 3 or 4, depending or whether
     the image is RGB or RGBA. The pixel_array is a bytearray object.
     
-    Simple implementation. Can only PNG's that are not interlaced, have
-    a bit depth of 8, and are either RGB or RGBA.
+    Simple implementation. Can only read PNG's that are not interlaced,
+    have a bit depth of 8, and are either RGB or RGBA.
     """
     # This function is written to be standalone, but needs _png_scanline()
     
@@ -333,6 +340,8 @@ class Icon(object):
         self._ims[self._image_size(im)] = im
     
     def _from_ico(self, bb):
+        # Windows icon format.
+        # http://en.wikipedia.org/wiki/ICO_%28file_format%29
         
         assert intl(bb[0:2]) == 0
         assert intl(bb[2:4]) == 1  # must be ICO (not CUR)
@@ -392,8 +401,12 @@ class Icon(object):
         return b''.join([bb] + imdatas)
     
     def _to_icns(self):
-        # OSX icon format
-        # todo: include text/refrs from wiki and the two refs on wiki
+        # OSX icon format. 
+        # No formal spec. Any docs is reverse engineered by someone.
+        # Which is one reason for not having a from_icns().
+        # http://en.wikipedia.org/wiki/Apple_Icon_Image_format
+        # http://www.macdisk.com/maciconen.php
+        # http://www.ezix.org/project/wiki/MacOSXIcons
         
         imdatas = []
         raw_types = {16: (b'is32', b's8mk'),
@@ -439,6 +452,8 @@ class Icon(object):
         return b''.join([bb] + imdatas)
     
     def _from_bmp(self, bb):
+        # Bitmap image file format
+        # http://en.wikipedia.org/wiki/BMP_file_format
         
         # Skip header it is there
         file_header = False

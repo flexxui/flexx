@@ -5,6 +5,7 @@ https://github.com/nwjs/nw.js
 """
 
 # todo: needs more work to discover the nw executable.
+# todo: icon
 
 import os
 import sys
@@ -68,7 +69,6 @@ def fix_libudef(dest):
     for path in paths:
         if os.path.isfile(path) and not os.path.isfile(target):
             os.symlink(path, target)
-            print('linked to', path)
 
 
 def get_nodewebkit_exe():

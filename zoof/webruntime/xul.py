@@ -1,4 +1,7 @@
-""" Web runtime based on XUL (i.e. Firefox browser engine)
+""" Web runtime based on XUL (i.e. Mozilla's Firefox browser engine)
+
+This is the best developed runtime, with tested good behavior on
+Windows, OSX, Linux and Raspberry Pi.
 
 Developer notes
 ---------------
@@ -37,8 +40,6 @@ from .icon import Icon
 # todo: title should change with title of web page?
 # todo: enable setting position/size at runtime?
 # todo: enable fullscreen - does not seem to work on XUL
-# todo: test/fix on Windows, OSX, raspberry
-
 
 
 ## File templates

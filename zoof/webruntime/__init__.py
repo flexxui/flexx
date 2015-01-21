@@ -8,7 +8,8 @@ App runtimes
 
 * xul - Mozilla's app framework. Make use of the same engine as Firefox.
   Available where Firefox is installed.
-* nodewebkit - Node webkit is an app runtime based on Chromium and node.js.
+* nw.js (previously node-webkit) - An app runtime based on Chromium and
+  node.js.
 * pyqt - Use QWebkit as a runtime. No WebGL here though.
 * chrome-app
 
@@ -45,41 +46,43 @@ from .common import WebRuntime
 from .xul import XulRuntime
 from .nodewebkit import NodeWebkitRuntime
 from .browser import BrowserRuntime
+from .qtwebkit import PyQtRuntime
+from .chromeapp import ChromeAppRuntime
 
-
-# todo: rename to htmlruntime or webruntime. html6 will be there someday
-# todo: select a runtime that is available
+# todo: auto-select a runtime that is available
 
 
 def launch(url, runtime=None, 
            title='', size=(640, 480), pos=None, icon=None):
     """ Launch a web runtime in a new process
     
-    Returns an object that can be used to influence the runtime.
+    Returns an object that can be used to control (to some extent) the
+    runtime.
     
     Parameters
     ----------
     url : str
-        The url to open. Can be a local file (prefix with file://).
+        The url to open. Can be a local file (prefix with "file://").
     runtime : str
-        The runtime to use. Can be 'xul', 'nwjs', 'browser', 
-        'browser-firefox', 'browser-chrome', and more.
+        The runtime to use. Can be 'xul', 'pyqt', 'nwjs', 'chromeapp',
+        'browser', 'browser-firefox', 'browser-chrome', and more.
     title : str
-        Window title. Some runtimes may override this with the title
-        in the HTML head section.
+        Window title. Some runtimes may override the window title with
+        the value specified in the HTML head section.
     size: tuple of ints
         The size in pixels of the window. Some runtimes may ignore this.
     pos : tuple of ints
         The position of the window. Some runtimes may ignore this.
     icon : str
-        Path to an icon file (png recommended). Some runtimes may ignore this.
-    
+        Path to an icon file (png or ico). Some runtimes may ignore
+        this. The icon will be automatically converted to png/ico/icns,
+        depending on what's needed by the platform.
     """
     
     runtime = runtime or 'xul'
     runtime = runtime.lower()
     
-    # Aliases
+    # Aliases / shorthands
     aliases= {'firefox': 'browser-firefox', 'chrome': 'browser-chrome'}
     runtime = aliases.get(runtime, runtime)
     
@@ -91,12 +94,16 @@ def launch(url, runtime=None,
         if ext not in ('.ico', '.png'):
             raise ValueError('Icon must be a .ico or .png, not %r' % ext)
     
+    # Select Runtime class
     browsertype = None
-    
     if runtime == 'xul':
         Runtime = XulRuntime
-    elif runtime in ('nwjs', 'nodewebkit'):
+    elif runtime == 'pyqt':
+        Runtime = PyQtRuntime
+    elif runtime == 'nwjs':
         Runtime = NodeWebkitRuntime
+    elif runtime == 'chromeapp':
+        Runtime = ChromeAppRuntime
     elif runtime == 'browser':
         Runtime = BrowserRuntime
     elif runtime.startswith('browser-'):
@@ -105,7 +112,7 @@ def launch(url, runtime=None,
     else:
         raise ValueError('Unknown web runtime %r.' % runtime)
     
-    
+    # Create runtime, launch, and return 
     rt = Runtime(url=url, title=title, size=size, pos=pos, icon=icon, 
                  browsertype=browsertype)
     rt.launch()
