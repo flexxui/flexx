@@ -147,7 +147,7 @@ def get_firefox_exe():
         return None
 
 
-def copy_xul_runtime(self, dir1, dir2):
+def copy_xul_runtime(dir1, dir2):
     """ Copy the firefox/xulrunner runtime to a new folder, in which
     we rename the firefox exe to xulrunner. This thus creates a xul
     runtime in a location where we have write access. Used to be able
@@ -373,7 +373,7 @@ class XulRuntime(WebRuntime):
         
         if sys.platform.startswith('win'):
             # Windows: copy the whole tuntime
-            copy_firefox_runtime(op.dirname(ff_exe), path)
+            copy_xul_runtime(op.dirname(ff_exe), path)
         else:
             # OSX / Linux: create a symlink to xul runtime exe
             os.mkdir(path)
