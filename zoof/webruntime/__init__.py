@@ -106,5 +106,7 @@ def launch(url, runtime=None,
         raise ValueError('Unknown web runtime %r.' % runtime)
     
     
-    return Runtime(url=url, title=title, size=size, pos=pos, icon=icon, 
-                   browsertype=browsertype)
+    rt = Runtime(url=url, title=title, size=size, pos=pos, icon=icon, 
+                 browsertype=browsertype)
+    rt.launch()
+    return rt

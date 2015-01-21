@@ -19,7 +19,6 @@ class WebRuntime(object):
         self._kwargs = kwargs
         self._proc = None
         self._streamreader = None
-        self._launch()
         atexit.register(self.close)
     
     def close(self):
@@ -53,6 +52,14 @@ class WebRuntime(object):
             raise RuntimeError('Invalid command to start runtime: %r' % cmd[0])
         self._streamreader = StreamReader(self._proc)
         self._streamreader.start()
+    
+    def launch(self):
+        """ Launch the runtime.
+        """
+        if self._proc is None: 
+            self._launch()
+        else:
+            raise RuntimeError('WebRuntime already running')
     
     def _launch(self):
         raise NotImplementedError()
