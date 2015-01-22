@@ -1,3 +1,6 @@
+zoof.webruntime
+---------------
+
 The purpose of the webruntime subpackage is to provide a means to launch
 a web runtime that looks and feels as a desktop application. There is
 support for multiple web runtimes, such as xul, nw.js, pyqt-webkit, and

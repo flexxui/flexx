@@ -1,4 +1,4 @@
-""" Web runtime based on qt-webkit.
+""" Web runtime based on qt-webkit. Requires PyQt4 or PySide.
 """
 
 import sys
