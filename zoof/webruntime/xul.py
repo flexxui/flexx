@@ -70,25 +70,55 @@ MAIN_XUL = """
     height="480"
     sizemode="normal"
     >
-  <browser type="content" src="{url}" flex="1" disablehistory="true" />
-    <keyset>
-        <key id="key_fullScreen" keycode="VK_F11" command="View:FullScreen"/>
-    </keyset>
+    <script type="application/javascript"
+            src="chrome://{name}/content/main.js" />
+    <browser src="{url}"
+             id="content"
+             type="content-primary"
+             flex="1"
+             disablehistory="true" />
 </window>
 """.lstrip()
 
-
 MAIN_JS = """
+window.addEventListener("load", startup, false);
+window.addEventListener("resize", resizefunc, false);
+
+var thebrowser;
+
+function startup() {
+    //thebrowser = document.createElement("browser");
+    //window.document.body.appendChild(thebrowser);
+    
+    document.getElementById("content").open = function() {
+    window.alert('haha open ' + arguments[0]);
+        //window.open(arguments[0], arguments[1], "chrome," + arguments[2]);
+    };
+    //document.getElementById("thebrowser").open = window.open;
+    //window.open("http://zoof.io", "hello", "chrome,width=400,height=300");
+}
+
+var resizefunc = function(ev) {
+    window.resizeTo(100, 100);
+    window.alert("resize");
+};
+
+
 """
 # persist="screenX screenY width height sizemode"
 
 
 PREFS_JS = """
+// This tells xulrunner what xul file to use
 pref("toolkit.defaultChromeURI", "chrome://{name}/content/main.xul");
 
+// This line is needed to let window.open work
+pref("browser.chromeURL", "chrome://{name}/content/main.xul");
+
+// Set features - setting width, height, maximized, etc. here
 pref("toolkit.defaultChromeFeatures", "{windowfeatures}");
- 
-/* debugging prefs, disable these before you deploy your application! */
+
+// debugging prefs, disable these before you deploy your application!
 pref("browser.dom.window.dump.enabled", false);
 pref("javascript.options.showInConsole", false);
 pref("javascript.options.strict", false);
@@ -99,7 +129,8 @@ pref("nglayout.debug.disable_xul_fastload", false);
 
 INFO_PLIST = """
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" NONL
+"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>CFBundleIconFile</key>
@@ -112,7 +143,7 @@ INFO_PLIST = """
     <string>{name}</string>
 </dict>
 </plist>
-""".lstrip().replace('    ', '\t')
+""".lstrip().replace('    ', '\t').replace('NONL\n', '')
 
 
 ## Functions
@@ -201,7 +232,8 @@ class XulRuntime(WebRuntime):
         # Set size and position
         size = self._kwargs.get('size', (640, 480))
         pos = self._kwargs.get('pos', None)
-        windowfeatures = 'width=%i, height=%i' % (size[0], size[1])
+        windowfeatures = 'resizable,'
+        windowfeatures += 'width=%i, height=%i' % (size[0], size[1])
         if pos:
             windowfeatures += ', top=%i, left=%i' % (pos[0], pos[1])
         
@@ -236,6 +268,7 @@ class XulRuntime(WebRuntime):
         # Launch
         print('launching XUL app')
         cmd = [exe, '-app', op.join(app_path, 'application.ini')]
+        #cmd.append('-jsconsole')  # for debugging
         self._start_subprocess(cmd)
     
     
@@ -262,10 +295,11 @@ class XulRuntime(WebRuntime):
         D['id'] = 'app_' + id + '@zoof.io'
         
         # Fill in arguments in file contents
+        manifest_link = 'manifest chrome/chrome.manifest'
         manifest = 'content {name} content/'.format(**D)
         application_ini = APPLICATION_INI.format(**D)
         main_xul = MAIN_XUL.format(**D)
-        main_js = MAIN_JS.format(**D)
+        main_js = MAIN_JS  # No format (also problematic due to braces)
         prefs_js = PREFS_JS.format(**D)
         
         # Clear
@@ -281,7 +315,7 @@ class XulRuntime(WebRuntime):
             os.mkdir(op.join(path, subdir))
         
         # Create files
-        for fname, text in [('chrome.manifest', 'manifest chrome/chrome.manifest'),
+        for fname, text in [('chrome.manifest', manifest_link),
                             ('chrome/chrome.manifest', manifest),
                             ('application.ini', application_ini),
                             ('defaults/preferences/prefs.js', prefs_js),
@@ -290,7 +324,7 @@ class XulRuntime(WebRuntime):
                             ]:
             open(op.join(path, fname), 'wb').write(text.encode('utf-8'))
         
-        # Icon - use Icon class to write a png (for Unix) and an ico (for Windows)
+        # Icon - use Icon class to write a png (Unix) and an ico (Windows)
         if kwargs.get('icon'):
             icon = Icon(kwargs['icon'])  # accepts ico/png/bmp
         else:
@@ -332,8 +366,8 @@ class XulRuntime(WebRuntime):
         dnames = [d for d in sorted(os.listdir(xuldir)) if d.startswith('xul')]
         
         # Get obsolete versions, and remove them
-        obsolete = [d for d in dnames 
-                    if not op.isfile(op.realpath(op.join(xuldir, d, exe_name)))]
+        obsolete = [d for d in dnames if not 
+                    op.isfile(op.realpath(op.join(xuldir, d, exe_name)))]
         dnames = [d for d in dnames if d not in obsolete]
         
         # Clean up old runtimes (do before installing new ff, because

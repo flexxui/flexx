@@ -5,62 +5,7 @@ import tornado.httpserver
 import tornado.websocket
 import tornado.web
 
-HTML = """
-<!doctype html>
-<html>
-  <head>
-    <title>WebSockets Hello World</title>
-    <meta charset="utf-8" />
-    <style type="text/css">
-      body {
-        text-align: center;
-        min-width: 500px;
-      }
-    </style>
-    <script src="http://code.jquery.com/jquery.min.js"></script>
-    <script>
-      $(document).ready(function () {
-        
-        var ws;
-        
-        ws = new WebSocket("ws://localhost:PORT/ws");
-
-        //s.onmessage = function(evt) {alert("message received: " + evt.data)};
-        ws.onmessage = function(evt) {
-            var cur = $("#log").html();
-            $("#log").html(cur + evt.data + "<br />");
-        };
-        
-        ws.onclose = function(evt) {
-            var cur = $("#log").html();
-            $("#log").html(cur + 'Socket closed' + "<br />");
-        };
-        
-        ws.onopen =  function(evt) {
-            var cur = $("#log").html();
-            $("#log").html(cur + 'Socket connected' + "<br />");
-        };
-        
-        $("#send").click(function(evt) {
-          var msg = $("#msg").val();
-          ws.send(msg)
-        });       
- 
-      });
-    </script>
-  </head>
- 
-  <body>
-    <h1>WebSockets Hello World</h1>
-    <div>
-      <input type="text" id="msg" value="message">
-      <input type="submit" id="send" value="send" /><br />
-     <div id="log"> LOG:<br><br></div>
-    </div>
-  </body>
-</html>
-""".lstrip()
-
+import logging
 
 HTML = """
 <!doctype html>
@@ -80,12 +25,38 @@ HTML = """
     
 <script>
 var lastmsg;
+var ws;
 
 document.body.onload = function () {
-    var ws;
+    
+    // Send log messages to the server
+    console._log = console.log;
+    console._info = console.info || console.log;
+    console._warn = console.warn || console.log;
+    
+    console.log = function (msg) {
+        console._log(msg);
+        ws.send("INFO " + msg);
+    };
+    console.info = function (msg) {
+        console._info(msg);
+        ws.send("INFO " + msg);
+    };
+    console.warn = function (msg) {
+        console._warn(msg);
+        ws.send("WARN " + msg);
+    };
+    window.addEventListener('error', errorHandler, false);
+    
+    function errorHandler (ev){
+        // ev: message, url, linenumber
+        var intro = "On line " + ev.lineno + " in " + ev.filename + ":";
+        ws.send("ERROR " + intro + '\\n    ' + ev.message);
+    }
     
     // Open web socket in binary mode
-    ws = new WebSocket("ws://localhost:PORT/ws");
+    var loc = location;
+    ws = new WebSocket("ws://" + loc.hostname + ':' + loc.port + "/ws");
     ws.binaryType = "arraybuffer";
     
     ws.onmessage = function(evt) {
@@ -93,7 +64,10 @@ document.body.onload = function () {
         lastmsg = evt.data;
         var msg = decodeUtf8(evt.data);
         if (msg.search('EVAL ') === 0) {
-            eval(msg.slice(5));
+            window._ = eval(msg.slice(5));  // eval
+            ws.send('RET ' + window._);  // send back result
+        } else if (msg.search('OPEN ') === 0) {
+            window.win1 = window.open(msg.slice(5), 'new', 'chrome');
         } else {
             log.innerHTML += msg + "<br />";
         }
@@ -212,7 +186,7 @@ class MainHandler(tornado.web.RequestHandler):
         if self.application._sockets:
             self.write('Connection already claimed')
         else:
-            self.write(HTML.replace('PORT', str(self.application.zoof_port)))
+            self.write(HTML)
     
     def write_error(self, status_code, **kwargs):
         # does not work?
@@ -250,11 +224,21 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     
     def on_message(self, message):
         """ Called when a new message is received from JS.
+        
+        We now have a very basic protocol for receiving messages,
+        we should at some point define a real formalized protocol.
         """
-        print('message received %s' % message)
-        if message.startswith('EVAL'):
-            self.write_message(message, binary=True)
+        
+        if message.startswith('RET '):
+            print(message[4:])  # Return value
+        elif message.startswith('ERROR '):
+            logging.error('JS - ' + message[6:].strip())
+        elif message.startswith('WARN '):
+            logging.warn('JS - ' + message[5:].strip())
+        elif message.startswith('INFO '):
+            logging.info('JS - ' + message[5:].strip())
         else:
+            print('message received %s' % message)
             self.write_message('echo ' + message, binary=True)
  
     def on_close(self):
@@ -279,11 +263,6 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     #    return True
 
 
-# application = tornado.web.Application([
-#     (r'/ws', WSHandler),
-#     (r"/(.*)", MainHandler),
-# ])
- 
  
 if __name__ == "__main__":
     #http_server = tornado.httpserver.HTTPServer(application)
