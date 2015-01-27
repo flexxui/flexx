@@ -184,7 +184,7 @@ class MainHandler(tornado.web.RequestHandler):
         print('init request')
     
     def get(self, path=None):
-        from .application import manager
+        from .app import manager
         print('get', path)
         if not path:
             self.write('Root selected, apps available: %r' % 
@@ -228,7 +228,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         # Don't collect messages to send them more efficiently, just send asap
         self.set_nodelay(True)
         
-        from .application import manager
+        from .app import manager
         print('new ws connection', path)
         app_name = path.strip('/')
         if manager.has_app(app_name):
