@@ -3,5 +3,5 @@
 GUI toolkit based on web technology with a Pythonic API.
 """
 
-from .app import start, stop, process_events, call_later
-from .app import App, Widget, Label, Button
+from .app import run, stop, App, process_events, call_later
+from .widget import Widget, Label, Button

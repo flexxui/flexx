@@ -17,4 +17,4 @@ class MyApp(ui.App):
 
 app = MyApp()
 keep_alive()
-ui.start(runtime='xul')
+ui.run(runtime='xul')

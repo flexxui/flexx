@@ -1,11 +1,13 @@
 """ zoof.gui client based serving a web page using tornado.
 """
 
-import tornado.httpserver
-import tornado.websocket
-import tornado.web
-
 import logging
+
+import tornado.web
+import tornado.websocket
+
+from .app import manager
+
 
 HTML = """
 <!doctype html>
@@ -149,42 +151,15 @@ function decodeUtf8(arrayBuffer) {
 """.lstrip()
 
 
-class TornadoApplication(tornado.web.Application):
-    """ We have one tornado application per Zoof application. I think.
-    We'll have to see how we'll deal with multiple windows later.
-    
-    Each application can have multiple sockets. I think. Maybe we should
-    limit it to exactly one. In any case, we must ensure a consistent
-    state between server and client.
-    
-    The purpose of this subclass is to provide a central part where we
-    keep track of the web socket objects. So that these, and the main handler
-    can act accordingly.
-    """
-    
-    def __init__(self):
-        tornado.web.Application.__init__(self,
-            [(r"/(.*)/ws", WSHandler), (r"/(.*)", MainHandler), ])
-        
-        self._sockets = []
-    
-    def register_socket(self, s):
-        self._sockets.append(s)
-    
-#     def write_message(self, msg):
-#         for s in self._sockets:
-#             s.write_message(msg, binary=True)
-
-
 class MainHandler(tornado.web.RequestHandler):
-    """ Handler for http requests: server pages
+    """ Handler for http requests: serve pages
     """
     def initialize(self, **kwargs):
         # kwargs == dict set as third arg in url spec
-        print('init request')
+        # print('init request')
+        pass
     
     def get(self, path=None):
-        from .app import manager
         print('get', path)
         if not path:
             self.write('Root selected, apps available: %r' % 
@@ -228,7 +203,6 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         # Don't collect messages to send them more efficiently, just send asap
         self.set_nodelay(True)
         
-        from .app import manager
         print('new ws connection', path)
         app_name = path.strip('/')
         if manager.has_app(app_name):
@@ -264,7 +238,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         print('detected close: %s (%i)' % (reason, code))
     
     def close_this(self):
-        """ We can call this to close the websocket
+        """ Call this to close the websocket
         """
         self.close(1000, 'closed by server')
     
@@ -276,21 +250,3 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     # Uncomment this to allow cross-domain access
     #def check_origin(self, origin):
     #    return True
-
-
- 
-if __name__ == "__main__":
-    #http_server = tornado.httpserver.HTTPServer(application)
-    #http_server.listen(8888)
-    
-    application.listen(8888)
-    
-    webbrowser.open('http://localhost:8888')
-    
-    # Start the main loop (http://www.tornadoweb.org/en/stable/ioloop.html)
-    ioloop = tornado.ioloop.IOLoop.instance()
-    ioloop.instance().start()
-    ioloop.run_sync(lambda x=None: None)  # == process_events
-    
-    # Also see ioloop.call_later() and ioloop.add_callback()
-    

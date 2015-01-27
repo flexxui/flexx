@@ -1,36 +1,57 @@
-""" Definition of application class
+""" Definition of App class and the app manager.
+
+In zoof.ui, an application is defined by an App class. One instance of
+this class is instantiated per connection. Further, multiple apps can
+be hosted from the same process simply be specifying more App classes.
+
+For simplicity, developers can instantiate the class in their main
+script, and this instance will be used for the first connection that
+is made.
+
+Further, we may allow not specifying an App class at all, in which case
+a default App is used (not yet implemented).
+
 """
 
 import inspect
-#from collections import OrderedDict
 
 import tornado.ioloop
 import tornado.web
 
-from .serve import TornadoApplication
 from zoof.webruntime import launch
 
-# todo: rename this module to app.py
-
+# Create/get the tornado event loop
 _tornado_loop = tornado.ioloop.IOLoop.instance()
-_tornado_app = None
 
-_app_classes = {}  # name -> class
+# The tornado server, started on start()
+_tornado_app = None
 
 
 class AppManager(object):
+    """ There is one AppManager class (in zoof.ui.app.manager). It's
+    purpose is to manage the application classes and instances. It is
+    mostly used internally, but advanced users may use it too.
+    """
     
     def __init__(self):
         self._apps = {}  # name -> (AppClass, pending, connected)
     
     def register_app_class(self, app_class):
+        """ Register an application by its class
+        
+        Applications are identified by the ``__name__`` attribute of
+        the class. The given class must inherit from ``App``.
+        """
         assert isinstance(app_class, type) and issubclass(app_class, App)
         name = app_class.__name__
         if name in self._apps:
             raise ValueError('App with name %r already registered' % name)
         self._apps[name] = app_class, [], []
     
-    def add_app_instance(self, app):
+    def _add_app_instance(self, app):
+        """ Add an app instance as a pending app. User internally.
+        Friend method of the App class.
+        """
         assert isinstance(app, App)
         name = app.__class__.__name__
         if name not in self._apps:
@@ -40,12 +61,19 @@ class AppManager(object):
             raise RuntimeError('Given app is not an instance of corresponding '
                                'registerered class.')
         if app.status == 0:
+            assert app not in pending
             pending.append(app)
         else:
             raise RuntimeError('Cannot add app instances that are/were '
                                'already connected')
     
     def get_pendig_app(self, name):
+        """ Get an app instance for the given app name
+        
+        The returned app is a "pending" app, which implies that it is
+        not yet connected. It may already exist before this function
+        is called. Used in start() to associate a runtime object.
+        """
         # todo: remove app instance when disconnected
         cls, pending, connected = self._apps[name]
         if pending:
@@ -55,6 +83,11 @@ class AppManager(object):
             return app
     
     def connect_an_app(self, name, ws):
+        """ Connect a pending app instance
+        
+        Called by the websocket object upon connecting, thus initiating
+        the application.
+        """
         cls, pending, connected = self._apps[name]
         # Get app (from pending if possible)
         if pending:
@@ -69,15 +102,20 @@ class AppManager(object):
         for key in dir(app):
             if not key.startswith('__'):
                 ob = getattr(app, key)
-                if isinstance(ob, Widget):
+                if ob.__class__.__name__ == 'Button':
+                #if isinstance(ob, Widget):
                     ob._create()
     
     def has_app(self, name):
+        """ Returns True of name is a registered applciation name
+        """
         return name in self._apps.keys()
     
     def get_app_names(self):
+        """ Get a list of registered application names
+        """
         return list(self._apps.keys())
-    
+
 # Create app manager object
 manager = AppManager()
 
@@ -102,9 +140,31 @@ def port_hash(name):
     return 49152 + (val % 2**14)
 
 
-def start(runtime=None):
-    # todo: prevent already running
+def run(runtime='xul', host='localhost', port=None):
+    """ Start the user interface
+    
+    This will do a couple of things:
+    
+    * All subclasses of App in the caller namespace are registered as apps.
+    * The server is started for UI runtimes to connect to.
+    * If specified, a runtime is launched for each application class.
+    * The even-loop is started.
+    
+    This function generally does not return until the application is
+    stopped, although it will try to behave nicely in interactive
+    environments (e.g. IEP, Spyder, IPython notebook), so the caller
+    should take into account that the function may return emmidiately.
+    
+    """
+    # todo: make it work in IPython (should be easy since its tornnado too
+    
+    # todo: allow ioloop already running (e.g. integration with ipython)
+    
     global _tornado_app 
+    
+    # Check that its not already running
+    if _tornado_app is not None:
+        raise RuntimeError('zoof.ui eventloop already running')
     
     # Detect App classes in caller namespace
     app_names = manager.get_app_names()
@@ -116,13 +176,15 @@ def start(runtime=None):
                 manager.register_app_class(ob)
                 print('found', ob.__name__)
     
-    # Set host. localhost is safer
-    host = 'localhost'  # or other host name or known ip address.
+    # Create server
+    from .serve import WSHandler, MainHandler
+    _tornado_app = tornado.web.Application([(r"/(.*)/ws", WSHandler), 
+                                            (r"/(.*)", MainHandler), ])
     
-    # Start server
-    if _tornado_app is None:
-        _tornado_app = TornadoApplication()
-        # Find free port number
+    # Start server (find free port number if port not given)
+    if port is not None:
+        _tornado_app.listen(port, host)
+    else:
         for i in range(100):
             port = port_hash('zoof+%i' % i)
             try:
@@ -132,27 +194,35 @@ def start(runtime=None):
                 pass  # address already in use
         else:
             raise RuntimeError('Could not bind to free address')    
-        
-        print('Serving apps at http://%s:%i/' % (host, port))
+    
+    # Notify address, so its easy to e.g. copy and paste in the browser
+    print('Serving apps at http://%s:%i/' % (host, port))
     
     # Launch runtime for each app
-    for name in manager.get_app_names():
-        # We get an app instance and associate the runtime with it. 
-        # We assume that the runtime will be the first to connect, and thus
-        # pick up this app instance. But this is in no way guaranteed.
-        # todo: guarante that runtime connects to exactlty this app
-        app = manager.get_pendig_app(name)
-        app._runtime = launch('http://localhost:%i/%s' % (port, name), runtime)
+    if runtime:
+        for name in manager.get_app_names():
+            # We get an app instance and associate the runtime with it. 
+            # We assume that the runtime will be the first to connect, and thus
+            # pick up this app instance. But this is in no way guaranteed.
+            # todo: guarante that runtime connects to exactlty this app
+            app = manager.get_pendig_app(name)
+            app._runtime = launch('http://localhost:%i/%s' % (port, name), runtime)
     
     # Start event loop
     _tornado_loop.start()
 
 
 def stop():
+    """ Stop the event loop
+    """
     _tornado_loop.stop()
 
 
 def process_events():
+    """ Process events
+    
+    Call this to keep the application working while running in a loop.
+    """
     _tornado_loop.run_sync(lambda x=None: None)
 
 
@@ -168,11 +238,11 @@ def call_later(delay, callback, *args, **kwargs):
 
 
 class App(object):
+    """ Base application object
     
-    # todo: where to store this dict?
-    # todo: must these be weakrefs?
-    # todo: do we need an app manager?
-    _instances = {}  # class -> list of instances
+    Subclass this class to create a defintion for a new application.
+    An instance of this class will be created for each connection.
+    """
     
     def __init__(self):
         #instance_list = App._instances.setdefault(self._full_app_name(), [])
@@ -184,14 +254,19 @@ class App(object):
         # Init runtime that is connected with this app instance
         self._runtime = None
         
-        manager.add_app_instance(self)
+        manager._add_app_instance(self)
         self.init()
     
     def init(self):
+        """ Override this method to initialize the application, e.g. 
+        create widgets.
+        """
         pass
     
     @property
     def status(self):
+        """ The statuse of this application.
+        """
         if self._ws is None:
             return 0  # not connected yet
         elif self._ws.close_code is None:
@@ -221,117 +296,3 @@ class App(object):
 class DefaultApp(App):
     pass
 
-
-# Register default class
-_app_classes['default'] = DefaultApp
-
-
-# class App(object):
-#     """ zoof.ui app. There is only one instance.
-#     """
-#     
-#     def __init__(self, runtime='xul'):
-#         # todo: singleton?
-#         self._ioloop = tornado.ioloop.IOLoop.instance()
-#         
-#         self._tornado_app = TornadoApplication()
-#         
-#         # Set host. localhost is safer
-#         host = 'localhost'  # or other host name or known ip address.
-#         
-#         # Find free port number
-#         for i in range(100):
-#             port = port_hash('zoof+%i' % i)
-#             try:
-#                 self._tornado_app.listen(port, host)
-#                 break
-#             except OSError:
-#                 pass  # address already in use
-#         else:
-#             raise RuntimeError('Could not bind to free address')    
-#         
-#         self._tornado_app.zoof_port = port
-#         self._runtime = launch('http://localhost:%i' % port, runtime)
-#     
-#     def eval(self, code):
-#         self._tornado_app.write_message('EVAL ' + code)
-#     
-#     def start(self):  # todo: or run()?
-#         self._ioloop.start()
-#     
-#     def stop(self):
-#         self._ioloop.stop()
-#     
-#     def process_events(self):
-#         self._ioloop.run_sync(lambda x=None: None)
-#     
-#     def call_later(self, delay, callback, *args, **kwargs):
-#         """ Call the given callback after delay seconds. If delay is zero, 
-#         call in the next event loop iteration.
-#         """
-#         if delay <= 0:
-#             self._ioloop.add_callback(callback, *args, **kwargs)
-#         else:
-#             self._ioloop.call_later(delay, callback, *args, **kwargs)
-
-
-
-class NativeElement(object):
-    
-    def __init__(self, id):
-        t = 'document.getElementById("{id}").innerHTML = "{text}"'
-        # ... get __dir__ from JS and allow live inspection of DOM elements
-        # That would be great for debugging ...
-
-
-class Widget(object):
-    _counter = 0
-    def __init__(self, parent):
-        self._parent = parent
-        
-        #
-    
-    def _create(self, app):
-        
-        if self._parent is None:
-            win = self._app._new_window()
-
-
-class Label(Widget):
-    pass
-
-class Button(Widget):
-    _TEMPLATE = """
-        var e = document.createElement("button");
-        e.id = '{id}';
-        e.innerHTML = '{text}'
-        document.body.appendChild(e);
-        """
-    
-    def __init__(self, parent, text='Click me'):
-        Widget._counter += 1
-        self._parent = parent
-        self._id = 'but%i' % Widget._counter
-        self._text = text
-        if parent._ws:
-            self._create()
-    
-    def set_text(self, text):
-        self._text = text
-        if self._parent._ws:
-            t = 'document.getElementById("{id}").innerHTML = "{text}"'
-            self._parent.eval(t.format(id=self._id, text=text))
-    
-    def _create(self):
-        self._parent.eval(self._TEMPLATE.format(id=self._id, text=self._text))
-        
-        
-
-
-class Window(object):
-    
-    __slots__ = ['_title']
-    
-    def set_title(self, title):
-        pass
-        # todo: properties or functions?
