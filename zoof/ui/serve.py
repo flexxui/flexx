@@ -56,7 +56,7 @@ document.body.onload = function () {
     
     // Open web socket in binary mode
     var loc = location;
-    ws = new WebSocket("ws://" + loc.hostname + ':' + loc.port + "/ws");
+    ws = new WebSocket("ws://" + loc.hostname + ':' + loc.port + "/" + loc.pathname + "/ws");
     ws.binaryType = "arraybuffer";
     
     ws.onmessage = function(evt) {
@@ -73,21 +73,22 @@ document.body.onload = function () {
         }
     };
     
-    ws.onclose = function(evt) {
-        document.body.innerHTML = 'Lost connection with GUI server'
+    ws.onclose = function(ev) {
+        document.body.innerHTML = 'Lost connection with GUI server:<br >';
+        document.body.innerHTML += ev.reason + " (" + ev.code + ")";
     };
     
-    ws.onopen = function(evt) {
+    ws.onopen = function(ev) {
         var log = document.getElementById('log');
         log.innerHTML += 'Socket connected' + "<br />";
     };
     
-    ws.onerror = function(evt) {
+    ws.onerror = function(ev) {
         var log = document.getElementById('log');
-        log.innerHTML += 'Socket error' + evt.error + "<br />";
+        log.innerHTML += 'Socket error' + ev.error + "<br />";
     };
     
-    document.getElementById('send').onclick = function(evt) {
+    document.getElementById('send').onclick = function(ev) {
         var msg = document.getElementById('msg').value;
         ws.send(msg)
     };       
@@ -163,41 +164,50 @@ class TornadoApplication(tornado.web.Application):
     
     def __init__(self):
         tornado.web.Application.__init__(self,
-            [(r'/ws', WSHandler), (r"/(.*)", MainHandler), ])
+            [(r"/(.*)/ws", WSHandler), (r"/(.*)", MainHandler), ])
         
         self._sockets = []
     
     def register_socket(self, s):
         self._sockets.append(s)
     
-    def write_message(self, msg):
-        for s in self._sockets:
-            s.write_message(msg, binary=True)
+#     def write_message(self, msg):
+#         for s in self._sockets:
+#             s.write_message(msg, binary=True)
 
 
 class MainHandler(tornado.web.RequestHandler):
     """ Handler for http requests: server pages
     """
     def initialize(self, **kwargs):
+        # kwargs == dict set as third arg in url spec
         print('init request')
     
     def get(self, path=None):
+        from .application import manager
         print('get', path)
-        if self.application._sockets:
-            self.write('Connection already claimed')
+        if not path:
+            self.write('Root selected, apps available: %r' % 
+                       manager.get_app_names())
         else:
-            self.write(HTML)
+            app_name = path.split('/')[0]
+            if manager.has_app(app_name) and not '/' in path:
+                self.write(HTML)
+            else:
+                #self.write('invalid resource')
+                super().write_error(404)
     
     def write_error(self, status_code, **kwargs):
         # does not work?
-        print(repr(status_code))
+        print('in write_error', repr(status_code))
         if status_code == 404:
             self.write('zoof.gui wants you to connect to root (404)')
         else:
+            self.write('Zoof ui encountered an error: <br /><br />')
             super().write_error(status_code, **kwargs)
     
     def on_finish(self):
-        print('finish request')
+        pass  # print('finish request')
 
 
 class WSHandler(tornado.websocket.WebSocketHandler):
@@ -212,15 +222,20 @@ class WSHandler(tornado.websocket.WebSocketHandler):
                      }
     
     # todo: use ping() and close()
-    def open(self):
+    def open(self, path=None):
         """ Called when a new connection is made.
         """
-        print('new ws connection')
-        self.write_message("Hello World", binary=True)
-        
-        self.application.register_socket(self)
         # Don't collect messages to send them more efficiently, just send asap
         self.set_nodelay(True)
+        
+        from .application import manager
+        print('new ws connection', path)
+        app_name = path.strip('/')
+        if manager.has_app(app_name):
+            app = manager.connect_an_app(app_name, self)
+            self.write_message("Hello World", binary=True)
+        else:
+            self.close(1003, "Could not associate socket with an app.")
     
     def on_message(self, message):
         """ Called when a new message is received from JS.

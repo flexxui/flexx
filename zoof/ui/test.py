@@ -3,13 +3,18 @@ from zoof import ui
 
 def keep_alive():
     __iep__.process_commands()
-    app.call_later(0.1, keep_alive)
-
-app = ui.App(runtime='xul')
-
-b = ui.Button(app, 'Foo')
+    ui.call_later(0.1, keep_alive)
 
 
-# Run
+class MyApp(ui.App):
+    def init(self):
+        self.b = ui.Button(self, 'Hello world')
+
+
+# class MyApp2(ui.App):
+#     def init(self):
+#         self.b = ui.Button(self, 'Hello world')
+
+app = MyApp()
 keep_alive()
-app.start()
+ui.start(runtime='xul')
