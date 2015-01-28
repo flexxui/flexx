@@ -1,15 +1,39 @@
 """ Definition of App class and the app manager.
 
-In zoof.ui, an application is defined by an App class. One instance of
-this class is instantiated per connection. Further, multiple apps can
-be hosted from the same process simply be specifying more App classes.
+What one process does
+---------------------
 
-For simplicity, developers can instantiate the class in their main
-script, and this instance will be used for the first connection that
-is made.
+In zoof.io, each server process hosts on a single URL (domain+port).
+But can serve multiple applications via different paths.
 
-Further, we may allow not specifying an App class at all, in which case
-a default App is used (not yet implemented).
+Each process uses one tornado IOLoop (the default one), and exactly one
+Tornado Application object.
+
+Applications
+------------
+
+Developers create application by implementing an App class. One instance
+of this class is instantiated per connection. Multiple apps can be
+hosted from the same process simply be specifying more App classes.
+To connect to the application `MyApp`, you should connect to 
+"http://domain:port/MyApp".
+
+Each connection features a bidirectional websocket through which most
+of the comminication will go. There is thus one websocket per
+application instance. Per application instance, multiple windows
+can be opened (via JS ``window.open()``). These windows shall be
+controlled via the websocket of the main window.
+
+Making things simple
+--------------------
+
+To allow easy access to an app instance during an interactive session,
+developers can instantiate a class in their main script. This instance
+will be used by the first connection that is made. If two instances
+are created, these would be used by the first two connections.
+
+We may allow not specifying an App class at all, in which case a default
+App is used (not yet implemented/decided).
 
 """
 
@@ -41,6 +65,9 @@ class AppManager(object):
         
         Applications are identified by the ``__name__`` attribute of
         the class. The given class must inherit from ``App``.
+        
+        After registering a class, it becomes possible to connect to 
+        "http://address:port/ClassName". 
         """
         assert isinstance(app_class, type) and issubclass(app_class, App)
         name = app_class.__name__
@@ -60,7 +87,7 @@ class AppManager(object):
         if not isinstance(app, cls):
             raise RuntimeError('Given app is not an instance of corresponding '
                                'registerered class.')
-        if app.status == 0:
+        if app.status == App.STATUS.PENDING:
             assert app not in pending
             pending.append(app)
         else:
@@ -102,7 +129,7 @@ class AppManager(object):
         for key in dir(app):
             if not key.startswith('__'):
                 ob = getattr(app, key)
-                if ob.__class__.__name__ == 'Button':
+                if ob.__class__.__name__ in ('Button', 'Window'):
                 #if isinstance(ob, Widget):
                     ob._create()
     
@@ -157,7 +184,6 @@ def run(runtime='xul', host='localhost', port=None):
     
     """
     # todo: make it work in IPython (should be easy since its tornnado too
-    
     # todo: allow ioloop already running (e.g. integration with ipython)
     
     global _tornado_app 
@@ -235,27 +261,48 @@ def call_later(delay, callback, *args, **kwargs):
     else:
         _tornado_loop.call_later(delay, callback, *args, **kwargs)
 
+# todo: move to ..util
+def create_enum(*members):
+    """ Create an enum type from given string arguments.
+    """
+    assert all([isinstance(m, str) for m in members])
+    enums = dict([(s, s) for s in members])
+    return type('Enum', (), enums)
 
+
+
+# In tk, tk.Tk() creates the main window, further windows should be
+# created with tk.TopLevel()
+# In wx, a Frame is the toplevel window
+# In Fltk a Frame can be toplevel or not
 
 class App(object):
     """ Base application object
     
-    Subclass this class to create a defintion for a new application.
-    An instance of this class will be created for each connection.
+    A subclass of the App class represents an application, and also its
+    main window.
+    
+    Subclass this class to implement for a new application. One instance
+    of this class will be created for each connection. Therefore, any
+    data should be stored on the application object; avoid global data.
     """
     
+    STATUS = create_enum('PENDING', 'CONNECTED', 'CLOSED')
+    
     def __init__(self):
-        #instance_list = App._instances.setdefault(self._full_app_name(), [])
-        #instance_list.append(self)
-        print('Instantiate app %s' % self.__class__.__name__)
         # Init websocket, will be set when a connection is made
         self._ws = None
-        
         # Init runtime that is connected with this app instance
         self._runtime = None
-        
+        # Register this app instance
         manager._add_app_instance(self)
+        print('Instantiate app %s' % self.__class__.__name__)
+        # Start!
         self.init()
+    
+    def __repr__(self):
+        s = self.status.lower()
+        return '<App %r (%s) at 0x%x>' % (self.__class__.__name__, s, id(self))
     
     def init(self):
         """ Override this method to initialize the application, e.g. 
@@ -263,34 +310,42 @@ class App(object):
         """
         pass
     
+    def close(self):
+        """ Close the runtime, if possible
+        """
+        # todo: close via JS
+        if self._runtime:
+            self._runtime.close()
+    
     @property
     def status(self):
-        """ The statuse of this application.
+        """ The status of this application. Can be PENDING, CONNECTED or
+        CLOSED. See App.STATUS enum.
         """
+        # todo: is this how we want to do enums throughout?
         if self._ws is None:
-            return 0  # not connected yet
+            return self.STATUS.PENDING  # not connected yet
         elif self._ws.close_code is None:
-            return 1  # alive and kicking
+            return self.STATUS.CONNECTED  # alive and kicking
         else:
-            return 2  # connection closed
+            return self.STATUS.CLOSED  # connection closed
     
     @property
     def parent(self):
-        # Make sure this can never be not None
+        """ For compatibility with widgets. The parent of an App is
+        always None.
+        """
         return None
     
-#     @classmethod
-#     def _full_app_name(cls):
-#         return cls.__module__ + '.' + cls.__name__
-#     
-#     @classmethod
-#     def instances(cls):
-#         return App._instances[cls._full_app_name()]
-    
     def eval(self, code):
+        """ Evaluate the given JavaScript code in the client
+        
+        Intended for use during development and debugging. Deployable
+        code should avoid making use of this function.
+        """
         if self._ws is None:
             raise RuntimeError('App not connected')
-        self._ws.write_message('EVAL ' + code, binary=True)
+        self._ws.command('EVAL ' + code)
 
 
 class DefaultApp(App):

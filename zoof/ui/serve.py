@@ -196,6 +196,8 @@ class WSHandler(tornado.websocket.WebSocketHandler):
                      1003: 'could not accept data',
                      }
     
+    # --- callbacks
+    
     # todo: use ping() and close()
     def open(self, path=None):
         """ Called when a new connection is made.
@@ -237,15 +239,20 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         reason = self.close_reason or self.known_reasons.get(code, '')
         print('detected close: %s (%i)' % (reason, code))
     
-    def close_this(self):
-        """ Call this to close the websocket
-        """
-        self.close(1000, 'closed by server')
-    
     def on_pong(self, data):
         """ Called when our ping is returned.
         """
         print('PONG', data)
+    
+    # --- methdos
+    
+    def command(self, cmd):
+        self.write_message(cmd, binary=True)
+    
+    def close_this(self):
+        """ Call this to close the websocket
+        """
+        self.close(1000, 'closed by server')
     
     # Uncomment this to allow cross-domain access
     #def check_origin(self, origin):

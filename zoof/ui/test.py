@@ -9,7 +9,7 @@ def keep_alive():
 class MyApp(ui.App):
     def init(self):
         self.b = ui.Button(self, 'Hello world')
-
+        self.win = ui.Window(self, 'A new window!')
 
 # class MyApp2(ui.App):
 #     def init(self):
