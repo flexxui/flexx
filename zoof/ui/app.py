@@ -42,6 +42,7 @@ import inspect
 import tornado.ioloop
 import tornado.web
 
+from ..webruntime.icon import Icon  # todo: move to util
 from zoof.webruntime import launch
 
 # Create/get the tornado event loop
@@ -117,24 +118,20 @@ class AppManager(object):
         """
         cls, pending, connected = self._apps[name]
         # Get app (from pending if possible)
-        if pending:
-            app = pending.pop(0)
-        else:
-            app = cls()
+        if not pending:
+            cls()  # create class, instance ends up in pending
+        app = pending.pop(0)
         # Add app to connected, set ws
+        assert app.status == app.STATUS.PENDING
         connected.append(app)
         app._ws = ws
-        # Create all widgets associates with app
-        # todo: use children
-        for key in dir(app):
-            if not key.startswith('__'):
-                ob = getattr(app, key)
-                if ob.__class__.__name__ in ('Button', 'Window'):
-                #if isinstance(ob, Widget):
-                    ob._create()
+        # Create all widgets associated with app
+        for child in app.children:
+            child._create()
+        return app
     
-    def has_app(self, name):
-        """ Returns True of name is a registered applciation name
+    def has_app_name(self, name):
+        """ Returns True if name is a registered appliciation name
         """
         return name in self._apps.keys()
     
@@ -142,6 +139,17 @@ class AppManager(object):
         """ Get a list of registered application names
         """
         return list(self._apps.keys())
+    
+    def get_app_by_id(self, name, id):
+        """ Get app by name and id
+        """
+        cls, pending, connected = self._apps[name]
+        for app in pending:
+            if app.id == id:
+                return app
+        for app in connected:
+            if app.id == id:
+                return app
 
 # Create app manager object
 manager = AppManager()
@@ -203,9 +211,8 @@ def run(runtime='xul', host='localhost', port=None):
                 print('found', ob.__name__)
     
     # Create server
-    from .serve import WSHandler, MainHandler
-    _tornado_app = tornado.web.Application([(r"/(.*)/ws", WSHandler), 
-                                            (r"/(.*)", MainHandler), ])
+    from .serve import ZoofTornadoApplication
+    _tornado_app = ZoofTornadoApplication()
     
     # Start server (find free port number if port not given)
     if port is not None:
@@ -232,7 +239,11 @@ def run(runtime='xul', host='localhost', port=None):
             # pick up this app instance. But this is in no way guaranteed.
             # todo: guarante that runtime connects to exactlty this app
             app = manager.get_pendig_app(name)
-            app._runtime = launch('http://localhost:%i/%s' % (port, name), runtime)
+            icon = app._icon
+            icon = icon if icon.image_sizes() else None
+            app._runtime = launch('http://localhost:%i/%s/' % (port, name), 
+                                  runtime=runtime, 
+                                  icon=icon, title=app.title)
     
     # Start event loop
     _tornado_loop.start()
@@ -270,13 +281,36 @@ def create_enum(*members):
     return type('Enum', (), enums)
 
 
+class BaseWidget(object):
+    
+    def __init__(self, parent):
+        self._parent = None
+        self._children = []
+        self._set_parent(parent)
+    
+    @property
+    def parent(self):
+        return self._parent
+    
+    def _set_parent(self, new_parent):
+        old_parent = self._parent
+        if old_parent is not None:
+            while self in old_parent._children:
+                old_parent._children.remove(self)
+        if new_parent is not None:
+            new_parent._children.append(self)
+        self._parent = new_parent
+    
+    @property
+    def children(self):
+        return list(self._children)
 
 # In tk, tk.Tk() creates the main window, further windows should be
 # created with tk.TopLevel()
 # In wx, a Frame is the toplevel window
 # In Fltk a Frame can be toplevel or not
 
-class App(object):
+class App(BaseWidget):
     """ Base application object
     
     A subclass of the App class represents an application, and also its
@@ -287,13 +321,23 @@ class App(object):
     data should be stored on the application object; avoid global data.
     """
     
+    icon = None  # todo: how to distinguish this class attr from an instance attr?
+    # Maybe we need an AppClass class? for stuff that;s equal for each app instance?
+    
     STATUS = create_enum('PENDING', 'CONNECTED', 'CLOSED')
     
     def __init__(self):
+        BaseWidget.__init__(self, None)
         # Init websocket, will be set when a connection is made
         self._ws = None
         # Init runtime that is connected with this app instance
         self._runtime = None
+        
+        # Init
+        self._icon = Icon()
+        self._title = 'Zoof UI app'
+        self._widget_counter = 0
+        
         # Register this app instance
         manager._add_app_instance(self)
         print('Instantiate app %s' % self.__class__.__name__)
@@ -303,6 +347,18 @@ class App(object):
     def __repr__(self):
         s = self.status.lower()
         return '<App %r (%s) at 0x%x>' % (self.__class__.__name__, s, id(self))
+    
+    @property
+    def name(self):
+        """ The name of the app.
+        """
+        return self.__class__.__name__
+    
+    @property
+    def id(self):
+        """ The id of this app as a string
+        """
+        return '%x' % id(self)
     
     def init(self):
         """ Override this method to initialize the application, e.g. 
@@ -346,6 +402,19 @@ class App(object):
         if self._ws is None:
             raise RuntimeError('App not connected')
         self._ws.command('EVAL ' + code)
+    
+    def add_icon(self, filename):
+        self._icon.read(filename)
+    
+    # todo: traitlets?
+    @property
+    def title(self):
+        return self._title
+    
+    @title.setter
+    def title(self, value):
+        assert isinstance(value, str)
+        self._title = value
 
 
 class DefaultApp(App):

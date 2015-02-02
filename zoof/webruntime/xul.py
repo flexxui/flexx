@@ -325,14 +325,12 @@ class XulRuntime(WebRuntime):
             open(op.join(path, fname), 'wb').write(text.encode('utf-8'))
         
         # Icon - use Icon class to write a png (Unix) and an ico (Windows)
+        # The launch function ensures that there always is an icon
         if kwargs.get('icon'):
-            icon = Icon(kwargs['icon'])  # accepts ico/png/bmp
-        else:
-            icon = default_icon()
-        icon_name = op.join(path, 'chrome/icons/default/' + D['windowid'])
-        icon.write(icon_name + '.ico')
-        icon.write(icon_name + '.png')
-    
+            icon = kwargs.get('icon')
+            icon_name = op.join(path, 'chrome/icons/default/' + D['windowid'])
+            icon.write(icon_name + '.ico')
+            icon.write(icon_name + '.png')
     
     def _get_xul_runtime(self):
         """ Get path to executable of a xul runtime. The returned path

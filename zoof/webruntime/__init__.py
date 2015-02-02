@@ -42,7 +42,8 @@ Memory considerations
 
 import os
 
-from .common import WebRuntime
+from .icon import Icon
+from .common import WebRuntime, default_icon
 from .xul import XulRuntime
 from .nodewebkit import NodeWebkitRuntime
 from .browser import BrowserRuntime
@@ -73,10 +74,11 @@ def launch(url, runtime=None,
         The size in pixels of the window. Some runtimes may ignore this.
     pos : tuple of ints
         The position of the window. Some runtimes may ignore this.
-    icon : str
-        Path to an icon file (png or ico). Some runtimes may ignore
-        this. The icon will be automatically converted to png/ico/icns,
-        depending on what's needed by the platform.
+    icon : str | Icon
+        Icon instance or path to an icon file (png or ico). Some
+        runtimes may ignore this. The icon will be automatically
+        converted to png/ico/icns, depending on what's needed by the
+        platform.
     """
     
     runtime = runtime or 'xul'
@@ -86,13 +88,16 @@ def launch(url, runtime=None,
     aliases= {'firefox': 'browser-firefox', 'chrome': 'browser-chrome'}
     runtime = aliases.get(runtime, runtime)
     
-    # Check icon
-    if icon is not None:
-        if not os.path.isfile(icon):
-            raise ValueError('Given icon is not a valid filename: %r' % icon)
-        ext = os.path.splitext(icon)[1]
-        if ext not in ('.ico', '.png'):
-            raise ValueError('Icon must be a .ico or .png, not %r' % ext)
+    # Check/create icon
+    if icon is None:
+        icon = default_icon()
+    elif isinstance(icon, Icon):
+        pass
+    elif isinstance(icon, str):
+        icon = Icon(icon)
+    else:
+        raise ValueError('Icon must be an Icon, a filename or None, not %r' % 
+                         type(icon))
     
     # Select Runtime class
     browsertype = None

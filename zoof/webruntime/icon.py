@@ -327,6 +327,14 @@ class Icon(object):
         else:
             raise ValueError('Can only export to png, bmp, or ico')
     
+    def to_bytes(self):
+        """ Return the bytes that represent the .ico image
+        
+        This function can be used by webservers to serve the ico image
+        without needing a physical representation on disk.
+        """
+        return self._to_ico()
+    
     def _image_size(self, im):
         npixels = len(im) // 4
         width = height = int(npixels ** 0.5)

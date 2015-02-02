@@ -5,7 +5,6 @@ https://github.com/nwjs/nw.js
 """
 
 # todo: needs more work to discover the nw executable.
-# todo: icon
 
 import os
 import sys
@@ -114,10 +113,12 @@ class NodeWebkitRuntime(WebRuntime):
         
         # Icon?
         if self._kwargs.get('icon'):
-            icon_path1 = self._kwargs['icon']
-            icon_path2 = os.path.join(app_path, os.path.basename(icon_path1))
-            shutil.copy(icon_path1, icon_path2)
-            D['window']['icon'] = icon_path2
+            print(self._kwargs.get('icon'))
+            icon = self._kwargs.get('icon')
+            icon_path = os.path.join(app_path, 'app.png')  # nw can handle ico
+            icon.write(icon_path)
+            smallest = '%i.png' % icon.image_sizes()[0]
+            D['window']['icon'] = icon_path.rsplit('.', 1)[0] + smallest
         
         # Write
         with open(os.path.join(app_path, 'package.json'), 'wb') as f:

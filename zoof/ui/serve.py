@@ -1,154 +1,68 @@
 """ zoof.gui client based serving a web page using tornado.
 """
 
+import sys
+import os
 import logging
 
 import tornado.web
 import tornado.websocket
 
-from .app import manager
+from ..webruntime.common import default_icon
+from .app import manager, call_later
+
+THIS_DIR = os.path.abspath(os.path.dirname(__file__))
+
+HTML_DIR = os.path.join(os.path.dirname(THIS_DIR), 'html')
 
 
-HTML = """
-<!doctype html>
-<html>
-<head>
-    <title>WebSockets Hello World</title>
-</head>
+def _zoof_run_callback(self, callback, *args, **kwargs):
+    """ Patched version of Tornado's _run_callback that sets traceback
+    info when an exception occurs, so that we can do PM debugging.
+    """
+    def _callback(*args, **kwargs):
+        try:
+            callback(*args, **kwargs)
+        except Exception:
+            type, value, tb = sys.exc_info()
+            tb = tb.tb_next  # Skip *this* frame
+            sys.last_type = type
+            sys.last_value = value
+            sys.last_traceback = tb
+            del tb  # Get rid of it in this namespace
+            raise
+    return self._orig_run_callback(_callback, *args, **kwargs)
 
-<body>
 
-<style type="text/css">
-    body {
-    text-align: center;
-    min-width: 500px;
-    }
-</style>
+def _patch_tornado():
+    WebSocketProtocol = tornado.websocket.WebSocketProtocol
+    if not hasattr(WebSocketProtocol, '_orig_run_callback'):
+        WebSocketProtocol._orig_run_callback = WebSocketProtocol._run_callback
+        WebSocketProtocol._run_callback = _zoof_run_callback
+
+
+_patch_tornado()
+
+
+class ZoofTornadoApplication(tornado.web.Application):
+    """ Simple subclass of tornado Application.
     
-<script>
-var lastmsg;
-var ws;
-
-document.body.onload = function () {
+    Has functionality for serving our html/css/js files, and caching them.
+    """
+    def __init__(self):
+        tornado.web.Application.__init__(self, 
+            [(r"/(.*)/ws", WSHandler), (r"/(.*)", MainHandler), ])
+        self._cache = {}
     
-    // Send log messages to the server
-    console._log = console.log;
-    console._info = console.info || console.log;
-    console._warn = console.warn || console.log;
-    
-    console.log = function (msg) {
-        console._log(msg);
-        ws.send("INFO " + msg);
-    };
-    console.info = function (msg) {
-        console._info(msg);
-        ws.send("INFO " + msg);
-    };
-    console.warn = function (msg) {
-        console._warn(msg);
-        ws.send("WARN " + msg);
-    };
-    window.addEventListener('error', errorHandler, false);
-    
-    function errorHandler (ev){
-        // ev: message, url, linenumber
-        var intro = "On line " + ev.lineno + " in " + ev.filename + ":";
-        ws.send("ERROR " + intro + '\\n    ' + ev.message);
-    }
-    
-    // Open web socket in binary mode
-    var loc = location;
-    ws = new WebSocket("ws://" + loc.hostname + ':' + loc.port + "/" + loc.pathname + "/ws");
-    ws.binaryType = "arraybuffer";
-    
-    ws.onmessage = function(evt) {
-        var log = document.getElementById('log');
-        lastmsg = evt.data;
-        var msg = decodeUtf8(evt.data);
-        if (msg.search('EVAL ') === 0) {
-            window._ = eval(msg.slice(5));  // eval
-            ws.send('RET ' + window._);  // send back result
-        } else if (msg.search('OPEN ') === 0) {
-            window.win1 = window.open(msg.slice(5), 'new', 'chrome');
-        } else {
-            log.innerHTML += msg + "<br />";
-        }
-    };
-    
-    ws.onclose = function(ev) {
-        document.body.innerHTML = 'Lost connection with GUI server:<br >';
-        document.body.innerHTML += ev.reason + " (" + ev.code + ")";
-    };
-    
-    ws.onopen = function(ev) {
-        var log = document.getElementById('log');
-        log.innerHTML += 'Socket connected' + "<br />";
-    };
-    
-    ws.onerror = function(ev) {
-        var log = document.getElementById('log');
-        log.innerHTML += 'Socket error' + ev.error + "<br />";
-    };
-    
-    document.getElementById('send').onclick = function(ev) {
-        var msg = document.getElementById('msg').value;
-        ws.send(msg)
-    };       
-
-};
-
-function decodeUtf8(arrayBuffer) {
-  var result = "";
-  var i = 0;
-  var c = 0;
-  var c1 = 0;
-  var c2 = 0;
-
-  var data = new Uint8Array(arrayBuffer);
-
-  // If we have a BOM skip it
-  if (data.length >= 3 && data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) {
-    i = 3;
-  }
-
-  while (i < data.length) {
-    c = data[i];
-
-    if (c < 128) {
-      result += String.fromCharCode(c);
-      i++;
-    } else if (c > 191 && c < 224) {
-      if( i+1 >= data.length ) {
-        throw "UTF-8 Decode failed. Two byte character was truncated.";
-      }
-      c2 = data[i+1];
-      result += String.fromCharCode( ((c&31)<<6) | (c2&63) );
-      i += 2;
-    } else {
-      if (i+2 >= data.length) {
-        throw "UTF-8 Decode failed. Multi byte character was truncated.";
-      }
-      c2 = data[i+1];
-      c3 = data[i+2];
-      result += String.fromCharCode( ((c&15)<<12) | ((c2&63)<<6) | (c3&63) );
-      i += 3;
-    }
-  }
-  return result;
-};
-
-
-</script>
-
-<h1>WebSockets Hello World</h1>
-<div>
-    <input type="text" id="msg" value="message">
-    <input type="submit" id="send" value="send" /><br />
-    <div id="log"> LOG:<br><br></div>
-</div>
-</body>
-</html>
-""".lstrip()
+    def load(self, fname):
+        """ Load a file with the given name. Returns bytes.
+        """
+        if fname not in self._cache:
+            filename = os.path.join(HTML_DIR, fname)
+            blob = open(filename, 'rb').read()
+            return blob  # todo: bypasse cache
+            self._cache[fname] = blob
+        return self._cache[fname]
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -161,16 +75,41 @@ class MainHandler(tornado.web.RequestHandler):
     
     def get(self, path=None):
         print('get', path)
+        app_name = path.rstrip('/')
+        app_name = app_name if app_name.isidentifier() else None
+        
         if not path:
+            # Not a path, index / home page
             self.write('Root selected, apps available: %r' % 
                        manager.get_app_names())
-        else:
-            app_name = path.split('/')[0]
-            if manager.has_app(app_name) and not '/' in path:
-                self.write(HTML)
+        elif app_name:
+            # This looks like an app, redirect, serve app, or error
+            if not '/' in path:
+                self.redirect('/%s/' % app_name)
+            elif manager.has_app_name(app_name):
+                self.write(self.application.load('index.html'))
             else:
+                self.write('No app %r is being hosted right now' % app_name)
+        elif path.endswith('.ico'):
+            # Icon, look it up from the app instance
+            app_name, filename = path.split('/', 1)
+            id = filename.split('.')[0]
+            if manager.has_app_name(app_name):
+                app = manager.get_app_by_id(app_name, id)
+                if app:
+                    self.write(app._icon.to_bytes())
+        else:
+            # Another resource, e.g. js/css/icon
+            app_name, filename = path.split('/', 1)
+            if path.endswith('.css'):
+                self.set_header("Content-Type", 'text/css')
+            try:
+                res = self.application.load(filename)
+            except IOError:
                 #self.write('invalid resource')
                 super().write_error(404)
+            else:
+                self.write(res)
     
     def write_error(self, status_code, **kwargs):
         # does not work?
@@ -207,8 +146,10 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         
         print('new ws connection', path)
         app_name = path.strip('/')
-        if manager.has_app(app_name):
+        if manager.has_app_name(app_name):
             app = manager.connect_an_app(app_name, self)
+            self.command('ICON %s.ico' % app.id)
+            self.command('TITLE %s' % app.title)
             self.write_message("Hello World", binary=True)
         else:
             self.close(1003, "Could not associate socket with an app.")

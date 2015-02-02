@@ -11,5 +11,5 @@ icon = None
 #target = 'file:///home/almar/projects/pylib/zoof/zoof/exp/learn_html5.html'
 target = 'http://zoof.io'
 
-rt1 = launch(target, 'chromeapp', title='my xul app', icon=icon)
+rt1 = launch(target, 'xul', title='my xul app', icon=icon)
 #rt2 = launch('http://zoof.io')

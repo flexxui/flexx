@@ -2,26 +2,28 @@
     Main script for zoof.js
 */
 
-var lastmsg;
-var ws;
+var zoof = {};
 
-window.addEventListener('load', initZoof, false);
+zoof.lastmsg = null;
+zoof.ws = null;
 
-function initZoof() {
-    initSocket();
-    initLogging();
-}
+zoof.init = function () {
+    zoof.initSocket();
+    zoof.initLogging();
+};
 
+window.addEventListener('load', zoof.init, false);
 
-function initSocket() {
+zoof.initSocket = function () {
     // Open web socket in binary mode
     var loc = location;
-    ws = new WebSocket("ws://" + loc.hostname + ':' + loc.port + "/" + loc.pathname + "/ws");
+    var ws = new WebSocket("ws://" + loc.hostname + ':' + loc.port + "/" + loc.pathname + "/ws");
+    zoof.ws = ws;
     ws.binaryType = "arraybuffer";
     
     ws.onmessage = function(evt) {
         var log = document.getElementById('log');
-        lastmsg = evt.data;
+        zoof.lastmsg = evt.data;
         var msg = decodeUtf8(evt.data);
         if (msg.search('EVAL ') === 0) {
             window._ = eval(msg.slice(5));  // eval
@@ -59,10 +61,10 @@ function initSocket() {
         var msg = document.getElementById('msg').value;
         ws.send(msg)
     };
-}
+};
 
 
-function initLogging() {
+zoof.initLogging = function () {
     // Keep originals
     console._log = console.log;
     console._info = console.info || console.log;
@@ -71,15 +73,15 @@ function initLogging() {
     // Set new functions
     console.log = function (msg) {
         console._log(msg);
-        ws.send("INFO " + msg);
+        zoof.ws.send("INFO " + msg);
     };
     console.info = function (msg) {
         console._info(msg);
-        ws.send("INFO " + msg);
+        zoof.ws.send("INFO " + msg);
     };
     console.warn = function (msg) {
         console._warn(msg);
-        ws.send("WARN " + msg);
+        zoof.ws.send("WARN " + msg);
     };
     
     // Create error handlers, so that JS errors get into Python
@@ -88,6 +90,6 @@ function initLogging() {
     function errorHandler (ev){
         // ev: message, url, linenumber
         var intro = "On line " + ev.lineno + " in " + ev.filename + ":";
-        ws.send("ERROR " + intro + '\\n    ' + ev.message);
+        zoof.ws.send("ERROR " + intro + '\n    ' + ev.message);
     }
-}
+};
