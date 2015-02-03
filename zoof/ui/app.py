@@ -125,9 +125,10 @@ class AppManager(object):
         assert app.status == app.STATUS.PENDING
         connected.append(app)
         app._ws = ws
-        # Create all widgets associated with app
-        for child in app.children:
-            child._create()
+        # The app can now be used
+        ws.command('ICON %s.ico' % app.id)
+        ws.command('TITLE %s' % app._config.title)
+        app.init()
         return app
     
     def has_app_name(self, name):
@@ -239,11 +240,12 @@ def run(runtime='xul', host='localhost', port=None):
             # pick up this app instance. But this is in no way guaranteed.
             # todo: guarante that runtime connects to exactlty this app
             app = manager.get_pendig_app(name)
-            icon = app._icon
+            icon = app._config.icon
             icon = icon if icon.image_sizes() else None
             app._runtime = launch('http://localhost:%i/%s/' % (port, name), 
                                   runtime=runtime, 
-                                  icon=icon, title=app.title)
+                                  size=app.config.size,
+                                  icon=icon, title=app.config.title)
     
     # Start event loop
     _tornado_loop.start()
@@ -310,6 +312,7 @@ class BaseWidget(object):
 # In wx, a Frame is the toplevel window
 # In Fltk a Frame can be toplevel or not
 
+
 class App(BaseWidget):
     """ Base application object
     
@@ -326,6 +329,29 @@ class App(BaseWidget):
     
     STATUS = create_enum('PENDING', 'CONNECTED', 'CLOSED')
     
+    class Config(object):
+        """ Config(title='Zoof app', icon=None, size=(640, 480))
+        
+        args:
+            title (str): the window title
+            icon (str, Icon): the window icon
+            size (tuple): the wise (width, height) of the window. Cannot
+                be applied in browser windows.
+        """
+        
+        def __init__(self, title='Zoof app', icon=None, size=(640, 480)):
+            self.title = title
+            self.icon = Icon()
+            if icon:
+                self.icon.read(icon)
+            self.size = size
+        
+        def __call__(self, app):
+            app._config = self
+            return app
+    
+    _config = Config()  # Set default config
+    
     def __init__(self):
         BaseWidget.__init__(self, None)
         # Init websocket, will be set when a connection is made
@@ -334,19 +360,23 @@ class App(BaseWidget):
         self._runtime = None
         
         # Init
-        self._icon = Icon()
-        self._title = 'Zoof UI app'
         self._widget_counter = 0
         
         # Register this app instance
         manager._add_app_instance(self)
         print('Instantiate app %s' % self.__class__.__name__)
-        # Start!
-        self.init()
     
     def __repr__(self):
         s = self.status.lower()
         return '<App %r (%s) at 0x%x>' % (self.__class__.__name__, s, id(self))
+    
+    @property
+    def config(self):
+        """ The app configuration. Setting the configuration after
+        app instantiation has no effect; this represents the config with 
+        which the app was created.
+        """
+        return self._config
     
     @property
     def name(self):
@@ -361,8 +391,10 @@ class App(BaseWidget):
         return '%x' % id(self)
     
     def init(self):
-        """ Override this method to initialize the application, e.g. 
-        create widgets.
+        """ Override this method to initialize the application
+        
+        It gets called right after the connection with the client has
+        been made. This is where you want to create your widgets.
         """
         pass
     
@@ -403,19 +435,6 @@ class App(BaseWidget):
             raise RuntimeError('App not connected')
         self._ws.command('EVAL ' + code)
     
-    def add_icon(self, filename):
-        self._icon.read(filename)
-    
-    # todo: traitlets?
-    @property
-    def title(self):
-        return self._title
-    
-    @title.setter
-    def title(self, value):
-        assert isinstance(value, str)
-        self._title = value
-
 
 class DefaultApp(App):
     pass

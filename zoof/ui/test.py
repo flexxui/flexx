@@ -6,19 +6,20 @@ def keep_alive():
     ui.call_later(0.1, keep_alive)
 
 
+
 class MyApp(ui.App):
+    
+    _config = ui.App.Config(title='Zoof test app', size=(400, 300),
+                            icon='https://assets-cdn.github.com/favicon.ico')
+               
     def init(self):
-        self.title = 'Zoof test app'
-        self.add_icon('/home/almar/projects/pyapps/iep/default/iep/resources/appicons/ieplogo.ico')
         
         self.b0 = ui.Button(self, 'Hello world foo bar')
         
-        self.layout = ui.HBoxLayout(self)
-        self.b1 = ui.Button(self.layout, 'Hola', flex=1)
-        self.b2 = ui.Button(self.layout, 'Hello world', flex=0)
-        self.b3 = ui.Button(self.layout, 'Foo bar', flex=3)
-        self.layout.update()  # would be auto-called when used in context
-        
+        with ui.HBoxLayout(self) as self.layout:
+            self.b1 = ui.Button(text='Hola', flex=1)
+            self.b2 = ui.Button(text='Hello world', flex=0)
+            self.b3 = ui.Button(text='Foo bar', flex=3)
         #self.win = ui.Window(self, 'A new window!')
 
 # class MyApp2(ui.App):

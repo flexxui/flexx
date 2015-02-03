@@ -97,7 +97,7 @@ class MainHandler(tornado.web.RequestHandler):
             if manager.has_app_name(app_name):
                 app = manager.get_app_by_id(app_name, id)
                 if app:
-                    self.write(app._icon.to_bytes())
+                    self.write(app._config.icon.to_bytes())
         else:
             # Another resource, e.g. js/css/icon
             app_name, filename = path.split('/', 1)
@@ -148,8 +148,6 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         app_name = path.strip('/')
         if manager.has_app_name(app_name):
             app = manager.connect_an_app(app_name, self)
-            self.command('ICON %s.ico' % app.id)
-            self.command('TITLE %s' % app.title)
             self.write_message("Hello World", binary=True)
         else:
             self.close(1003, "Could not associate socket with an app.")

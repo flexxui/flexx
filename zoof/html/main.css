@@ -1,0 +1,32 @@
+body {
+    background-color: #bbf;
+}
+
+.zHBoxLayout {
+    width: 100%;
+    border-spacing: 5px;
+    margin: -6px;
+}
+
+.zHBoxLayout td {
+   //border: 1px solid black; 
+}
+
+.zButton {
+    box-sizing: border-box;
+    white-space: nowrap;
+    /*
+    background: #eee;
+    color: #333;
+    border-radius: 3px;
+    border: 1px solid #888;
+    padding: 3px 6px 3px 6px;
+    font-family: sans;
+    font-size: smaller;
+    text-align: center;
+    /**/
+}
+
+td.flex > .zButton {
+    width: 100%;
+}

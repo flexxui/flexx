@@ -288,7 +288,15 @@ class Icon(object):
         if not isinstance(filename, str):
             raise ValueError('Icon.read() needs a file name')
         
-        data = open(filename, 'rb').read()
+        if filename.startswith('http'):
+            try:
+                from urllib.request import urlopen  # Python 3.x
+            except ImportError:
+                from urllib2 import urlopen  # Python 2.x
+            data = urlopen(filename, timeout=2.0).read()
+        else:
+            data = open(filename, 'rb').read()
+        
         if filename.lower().endswith('.ico'):
             self._from_ico(data)
         elif filename.lower().endswith('.png'):

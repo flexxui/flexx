@@ -13,7 +13,12 @@ class NativeElement(object):
 class Widget(BaseWidget):
     _counter = 0
     def __init__(self, parent, flex=0):
-        assert parent is not None
+        if parent is None:
+            if _default_parent:
+                parent = _default_parent[-1]
+            else:
+                raise ValueError('Parent must be given unless it is '
+                                 'instantiated a widget context.')
         BaseWidget.__init__(self, parent)
         self._flex = flex
         app = self.get_app()
@@ -77,52 +82,45 @@ class Button(Widget):
         document.body.appendChild(e);
         """
     
-    def __init__(self, parent, text='Click me', **kwargs):
+    def __init__(self, parent=None, text='Click me', **kwargs):
         super().__init__(parent, **kwargs)
         Widget._counter += 1
         self._text = text
-        if self.get_app()._ws:
-            self._create()
-    
-    def set_text(self, text):
-        self._text = text
-        if self._parent._ws:
-            t = 'document.getElementById("{id}").innerHTML = "{text}"'
-            self._parent.eval(t.format(id=self._id, text=text))
-    
-    def _create(self):
+        
         eval = self.get_app().eval
         #self._parent.eval(self._TEMPLATE.format(id=self._id, text=self._text))
         parent = 'body' if isinstance(self.parent, App) else self.parent.id
         T = 'zoof.createButton("{parent}", "{id}", "{text}");'
         eval(T.format(parent=parent, id=self._id, text=self._text))
         eval('zoof.setProps("{id}", "flex", {flex});'.format(id=self.id, flex=self._flex))
-        for child in self.children:
-            child._create()
-        
+    
+    def set_text(self, text):
+        self._text = text
+        t = 'document.getElementById("{id}").innerHTML = "{text}"'
+        self._parent.eval(t.format(id=self._id, text=text))
+
+
+_default_parent = []
 
 class HBoxLayout(Widget):
     
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self._need_update = False
-        if parent._ws:
-            self._create()
-    
-    def _create(self):
+        
         eval = self.get_app().eval
         #self._parent.eval(self._TEMPLATE.format(id=self._id, text=self._text))
         T = 'zoof.createHBoxLayout("body", "{id}");'
         eval(T.format(id=self._id))
-        for child in self.children:
-            child._create()
-        if self._need_update:
-            self._need_update = False
-            self.update()
     
     def update(self):
         eval = self.get_app().eval
-        if self.get_app()._ws:
-            eval('zoof.HBoxLayout_layout("{id}");'.format(id=self._id))
-        else:
-            self._need_update = True
+        eval('zoof.HBoxLayout_layout("{id}");'.format(id=self._id))
+    
+    def __enter__(self):
+        _default_parent.append(self)
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        assert self is _default_parent.pop(-1)
+        if value is None:
+            self.update()
