@@ -2,19 +2,24 @@ body {
     background-color: #bbf;
 }
 
-.zHBoxLayout {
+.zf-widget {
+    box-sizing: border-box;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.zf-hbox {
     width: 100%;
     border-spacing: 5px;
     margin: -6px;
 }
 
-.zHBoxLayout td {
+.zf-hbox td {
    //border: 1px solid black; 
 }
 
-.zButton {
-    box-sizing: border-box;
-    white-space: nowrap;
+.zf-button {
+    
     /*
     background: #eee;
     color: #333;
@@ -27,6 +32,6 @@ body {
     /**/
 }
 
-td.flex > .zButton {
+td.flex > .zf-button {
     width: 100%;
 }

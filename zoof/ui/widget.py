@@ -102,19 +102,19 @@ class Button(Widget):
 
 _default_parent = []
 
-class HBoxLayout(Widget):
+class HBox(Widget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
         
         eval = self.get_app().eval
         #self._parent.eval(self._TEMPLATE.format(id=self._id, text=self._text))
-        T = 'zoof.createHBoxLayout("body", "{id}");'
+        T = 'zoof.createHBox("body", "{id}");'
         eval(T.format(id=self._id))
     
     def update(self):
         eval = self.get_app().eval
-        eval('zoof.HBoxLayout_layout("{id}");'.format(id=self._id))
+        eval('zoof.HBox_layout("{id}");'.format(id=self._id))
     
     def __enter__(self):
         _default_parent.append(self)

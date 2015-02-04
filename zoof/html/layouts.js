@@ -4,12 +4,12 @@ zoof.createWidget = function (parent, id, type, className) {
     var par;  // semantic parent
     
     e.id = id;
-    e.className = className;
+    e.className = className + ' zf-widget';
     
     par = document.getElementById(parent);
-    if (par.className === 'zHBoxLayout') {
+    if (par.className.search('zf-hbox') > -1) {
         // todo: generalize this triage with some sort of table?
-        zoof.addToHBoxLayout(par, e);
+        zoof.addToHBox(par, e);
     } else {
         par.appendChild(e);
     }
@@ -26,27 +26,27 @@ zoof.setProps = function (id) {
 
 zoof.createButton = function (parent, id, text) {
     //console.warn('creating button');
-    var e = zoof.createWidget(parent, id, 'button', 'zButton');
+    var e = zoof.createWidget(parent, id, 'button', 'zf-button');
     e.innerHTML = text;
 };
 
 
-zoof.createHBoxLayout = function (parent, id) {
+zoof.createHBox = function (parent, id) {
     //console.warn('creating hbox');
-    var e = zoof.createWidget(parent, id, 'table', 'zHBoxLayout');
+    var e = zoof.createWidget(parent, id, 'table', 'zf-hbox');
     var row = document.createElement("tr");
     e.appendChild(row);
 };
 
 
-zoof.addToHBoxLayout = function (layout, child) {
+zoof.addToHBox = function (layout, child) {
     var td = document.createElement("td");
     layout.children[0].appendChild(td);
     td.appendChild(child);
 };
 
 
-zoof.HBoxLayout_layout = function (id) {
+zoof.HBox_layout = function (id) {
 
     var T = document.getElementById(id);
     var ncols;
