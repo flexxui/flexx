@@ -72,9 +72,10 @@ MAIN_XUL = """
     >
     <script type="application/javascript"
             src="chrome://{name}/content/main.js" />
+    <!-- content or content-primary ? -->
     <browser src="{url}"
              id="content"
-             type="content-primary"
+             type="content"
              flex="1"
              disablehistory="true" />
 </window>
