@@ -158,7 +158,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         We now have a very basic protocol for receiving messages,
         we should at some point define a real formalized protocol.
         """
-        
+        print(message)
         if message.startswith('RET '):
             print(message[4:])  # Return value
         elif message.startswith('ERROR '):

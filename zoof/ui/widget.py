@@ -124,3 +124,26 @@ class HBox(Widget):
         assert self is _default_parent.pop(-1)
         if value is None:
             self.update()
+
+class VBox(Widget):
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        eval = self.get_app().eval
+        #self._parent.eval(self._TEMPLATE.format(id=self._id, text=self._text))
+        T = 'zoof.createVBox("body", "{id}");'
+        eval(T.format(id=self._id))
+    
+    def update(self):
+        eval = self.get_app().eval
+        eval('zoof.VBox_layout("{id}");'.format(id=self._id))
+    
+    def __enter__(self):
+        _default_parent.append(self)
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        assert self is _default_parent.pop(-1)
+        if value is None:
+            self.update()

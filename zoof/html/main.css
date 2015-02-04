@@ -1,5 +1,10 @@
+html {
+    height: 100%;
+}
+
 body {
     background-color: #bbf;
+    height: 100%;
 }
 
 .zf-widget {
@@ -14,8 +19,14 @@ body {
     margin: -6px;
 }
 
-.zf-hbox td {
-   //border: 1px solid black; 
+.zf-vbox {
+    height: 100%;
+    border-spacing: 5px;
+    margin: -6px;
+}
+
+.zf-hbox td, .zf-vbox td {
+   //border: 1px solid black;
 }
 
 .zf-button {
@@ -32,6 +43,10 @@ body {
     /**/
 }
 
-td.flex > .zf-button {
+td.hflex > .zf-button {
     width: 100%;
+}
+
+td.vflex > .zf-button {
+    height: 100%;
 }

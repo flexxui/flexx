@@ -16,7 +16,7 @@ class MyApp(ui.App):
         
         self.b0 = ui.Button(self, 'Hello world foo bar')
         
-        with ui.HBox(self) as self.layout:
+        with ui.VBox(self) as self.layout:
             self.b1 = ui.Button(text='Hola', flex=1)
             self.b2 = ui.Button(text='Hello world', flex=0)
             self.b3 = ui.Button(text='Foo bar', flex=3)

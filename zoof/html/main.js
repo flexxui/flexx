@@ -49,17 +49,12 @@ zoof.initSocket = function () {
     
     ws.onopen = function(ev) {
         var log = document.getElementById('log');
-        log.innerHTML += 'Socket connected' + "<br />";
+        log += 'Socket connected' + "<br />";
     };
     
     ws.onerror = function(ev) {
         var log = document.getElementById('log');
         log.innerHTML += 'Socket error' + ev.error + "<br />";
-    };
-    
-    document.getElementById('send').onclick = function(ev) {
-        var msg = document.getElementById('msg').value;
-        ws.send(msg)
     };
 };
 
@@ -72,16 +67,16 @@ zoof.initLogging = function () {
     
     // Set new functions
     console.log = function (msg) {
-        console._log(msg);
         zoof.ws.send("INFO " + msg);
+        console._log(msg);
     };
     console.info = function (msg) {
-        console._info(msg);
         zoof.ws.send("INFO " + msg);
+        console._info(msg);
     };
     console.warn = function (msg) {
-        console._warn(msg);
         zoof.ws.send("WARN " + msg);
+        console._warn(msg);
     };
     
     // Create error handlers, so that JS errors get into Python
