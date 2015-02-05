@@ -16,7 +16,7 @@ class MyApp(ui.App):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 2
+        TEST = 3
         
         if TEST == 1:
             with ui.HBox(self, flex=1) as self.hbox1:
@@ -53,6 +53,16 @@ class MyApp(ui.App):
                 
                 ui.Widget(flex=1)
                 ui.Label(text='Note the spacer Widget above', flex=0)
+        
+        if TEST == 3:
+            with ui.Form(self) as self.form:
+                ui.Label(text='Name:')
+                self.b1 = ui.Button(text='Hola')
+                ui.Label(text='Age:')
+                self.b2 = ui.Button(text='Hello world')
+                ui.Label(text='Favorite color:')
+                self.b3 = ui.Button(text='Foo bar')
+            
         #self.win = ui.Window(self, 'A new window!')
         
 # class MyApp2(ui.App):

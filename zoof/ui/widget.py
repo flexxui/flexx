@@ -194,3 +194,29 @@ class VBox(Layout):
         assert self is _default_parent.pop(-1)
         if value is None:
             self.update()
+
+
+class Form(Layout):
+    """ A Form layout vertically stacks pairs of widgets
+    
+    Usually, these will be pairs of labels vs input widgets. The labels
+    are on the left with flex 0, and the widgets on the right have flex
+    1. The same can be achieved with a Grid, but a Form provides a more
+    convienent API for this use-case.
+    """
+    
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+    
+    def update(self):
+        eval = self.get_app()._exec
+        eval('zoof.Form_layout("{id}");'.format(id=self._id))
+    
+    def __enter__(self):
+        _default_parent.append(self)
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        assert self is _default_parent.pop(-1)
+        if value is None:
+            self.update()
