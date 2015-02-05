@@ -19,9 +19,13 @@ zoof.createWidgetElement = function (type, D) {
     
     e.id = D.id;
     zoof.widgets[D.id] = e;
-
+    
     e.className = D.className;
     e.zfInfo = D;  // store info used to create the widget
+    
+    // Set position. Ignored unless position is absolute or relative
+    e.style.left = (D.pos[0] > 1 ? D.pos[0] + "px" : D.pos[0] * 100 + "%");
+    e.style.top = (D.pos[1] > 1 ? D.pos[1] + "px" : D.pos[1] * 100 + "%");
     
     par = zoof.get(D.parent);
     if (typeof par.appendWidget == 'function') {
@@ -135,6 +139,11 @@ zoof.createGrid = function (D) {
         // Append
         cell.appendChild(child);
     };
+};
+
+
+zoof.createPinBoard = function (D) {
+    var e = zoof.createWidgetElement('div', D);
 };
 
 
@@ -303,4 +312,8 @@ zoof.Grid_layout = function (id) {
             cell.style.width = xflexes[i] * 100/xnflex + '%';
         }
     }
+};
+
+
+zoof.PinBoard_layout = function (id) {
 };

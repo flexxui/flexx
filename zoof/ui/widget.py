@@ -172,21 +172,17 @@ class Layout(Widget):
         if value is None:
             self.update()
 
+# todo: spacing and margin for all layouts
+# todo: combine JS code for layouts?
 
 class HBox(Layout):
     """ An HBox is a layout widget used to align widgets horizontally
     """
-    
-    def __init__(self, parent=None, **kwargs):
-        super().__init__(parent, **kwargs)
-    
+
 
 class VBox(Layout):
     """ An VBox is a layout widget used to align widgets vertically
     """
-    
-    def __init__(self, parent=None, **kwargs):
-        super().__init__(parent, **kwargs)
 
 
 class Form(Layout):
@@ -197,9 +193,6 @@ class Form(Layout):
     1. The same can be achieved with a Grid, but a Form provides a more
     convienent API for this use-case.
     """
-    
-    def __init__(self, parent=None, **kwargs):
-        super().__init__(parent, **kwargs)
 
 
 class Grid(Layout):
@@ -209,9 +202,15 @@ class Grid(Layout):
     complex to use.
     """
     
-    def __init__(self, parent=None, **kwargs):
-        super().__init__(parent, **kwargs)
-    
     # todo: allow different flexes per row/col
     # e.g. set_col_flex(i, flex), set_row_flex(i, flex)
     # todo: allow colspan and rowspan
+
+
+class PinBoard(Layout):
+    """ A PinBoard layout allows absolute positioning of its contained widgets
+    
+    The ``pos`` property of child widgets should be set. When larger
+    than 1, the value is interpreted as pixels. If smaller than 1, it
+    is interpreted as a percentage of the layout's size.
+    """

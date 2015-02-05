@@ -30,6 +30,10 @@ body {
 }
 
 
+.zf-pinboard {
+    position: relative;
+}
+
 
 /* ========== Widgets in a layout ========== */
 
@@ -48,8 +52,12 @@ td.hcell-flex > .zf-widget {
     width: 100%;
 }
 
-hcell > .zf-widget {
+.hcell > .zf-widget {
     /*height: 100%;*/
+}
+
+.zf-pinboard > .zf-widget {
+    position: absolute;
 }
 
 
