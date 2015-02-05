@@ -20,24 +20,13 @@ body {
     margin: 0px;
     padding: 0px;
     border-spacing: 0px;
+    border: 0px;
 }
 
-.hcell {
-    padding: 0px 5px;  /* inter-widget spacing */
-}
-
-.vcell {
-    padding: 5px 0px;  /* inter-widget spacing */
-}
-
-/* We only want space *between* the widgets */
-.hcell:first-child, .vcell:first-child {
-    padding-left: 0px;
-    padding-top: 0px;
-}
-.hcell:last-child, .vcell:last-child {
-    padding-right: 0px;
-    padding-bottom: 0px;
+.hcell .vcell {
+    /* inter-widget spacing. padding-left/top is set to "spacing"
+       on each non-first row/column in the layout. */
+    padding: 0px;  
 }
 
 

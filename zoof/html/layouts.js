@@ -23,6 +23,13 @@ zoof.setProps = function (id) {
     }
 };
 
+zoof.setStyle = function (id) {
+    e = document.getElementById(id);
+    for (var i=1; i<arguments.length; i+=2) {
+        e.style[arguments[i]] = arguments[i+1];
+    }
+};
+
 zoof.createButton = function (parent, id, text) {
     //console.warn('creating button');
     var e = zoof.createWidget(parent, id, 'button', 'zf-button');
@@ -30,15 +37,19 @@ zoof.createButton = function (parent, id, text) {
 };
 
 
-zoof.createHBox = function (parent, id) {
+zoof.createHBox = function (parent, id, spacing) {
     //console.warn('creating hbox');
     var e = zoof.createWidget(parent, id, 'table', 'zf-hbox');
-    e.appendChild(document.createElement("tr"));
+    var row = document.createElement("tr")
+    e.appendChild(row);
     
     e.appendWidget = function (child) {
         var td = document.createElement("td");
-        this.children[0].appendChild(td);
+        row.appendChild(td);
         td.appendChild(child);
+        if (row.children.length > 1) {
+            td.style['padding-left'] = spacing;
+        }
     };
 };
 

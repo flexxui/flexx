@@ -27,14 +27,26 @@ class MyApp(ui.App):
         if TEST == 2:
             with ui.VBox(self) as self.vbox:
                 
+                ui.Button(text='Flex 0 0 0', flex=0)
+                with ui.HBox(flex=0) as self.hbox2:
+                    self.b1 = ui.Button(text='Hola', flex=0)
+                    self.b2 = ui.Button(text='Hello world', flex=0)
+                    self.b3 = ui.Button(text='Foo bar', flex=0)
+                
                 ui.Button(text='Flex 1 0 3', flex=0)
                 with ui.HBox(flex=0) as self.hbox1:
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=3)
                 
-                ui.Button(text='Flex 0 0 0', flex=0)
-                with ui.HBox(flex=0) as self.hbox2:
+                ui.Button(text='margin 10 (around layout)', flex=0)
+                with ui.HBox(flex=0, margin=10) as self.hbox2:
+                    self.b1 = ui.Button(text='Hola', flex=0)
+                    self.b2 = ui.Button(text='Hello world', flex=0)
+                    self.b3 = ui.Button(text='Foo bar', flex=0)
+                
+                ui.Button(text='spacing 10 (inter-widget)', flex=0)
+                with ui.HBox(flex=0, spacing=10) as self.hbox2:
                     self.b1 = ui.Button(text='Hola', flex=0)
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=0)

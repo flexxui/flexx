@@ -104,15 +104,18 @@ _default_parent = []
 
 class HBox(Widget):
     
-    def __init__(self, parent=None, **kwargs):
+    def __init__(self, parent=None, spacing=None, margin=None, **kwargs):
         super().__init__(parent, **kwargs)
         
         eval = self.get_app()._exec
         #self._parent.eval(self._TEMPLATE.format(id=self._id, text=self._text))
         parent = 'body' if isinstance(self.parent, App) else self.parent.id
-        T = 'zoof.createHBox("{parent}", "{id}");'
-        eval(T.format(parent=parent, id=self._id))
+        T = 'zoof.createHBox("{parent}", "{id}", "{spacing}");'
+        spacing = str(spacing or 0) + 'px'
+        eval(T.format(parent=parent, id=self._id, spacing=spacing))
         eval('zoof.setProps("{id}", "flex", {flex});'.format(id=self.id, flex=self._flex))
+        if margin is not None:
+            eval('zoof.setStyle("{id}", "padding", "{margin}px");'.format(id=self.id, margin=margin))
     
     def update(self):
         eval = self.get_app()._exec
