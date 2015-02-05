@@ -425,6 +425,13 @@ class App(BaseWidget):
         """
         return None
     
+    def _exec(self, code):
+        """ Like eval, but without returning the result value.
+        """
+        if self._ws is None:
+            raise RuntimeError('App not connected')
+        self._ws.command('EXEC ' + code)
+    
     def eval(self, code):
         """ Evaluate the given JavaScript code in the client
         

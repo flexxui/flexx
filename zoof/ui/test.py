@@ -14,14 +14,34 @@ class MyApp(ui.App):
                
     def init(self):
         
-        self.b0 = ui.Button(self, 'Hello world foo bar')
+        #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        with ui.VBox(self) as self.layout:
-            self.b1 = ui.Button(text='Hola', flex=1)
-            self.b2 = ui.Button(text='Hello world', flex=0)
-            self.b3 = ui.Button(text='Foo bar', flex=3)
+        TEST = 2
+        
+        if TEST == 1:
+            with ui.HBox(self, flex=1) as self.hbox1:
+                self.b1 = ui.Button(text='Hola', flex=1)
+                self.b2 = ui.Button(text='Hello world', flex=0)
+                self.b3 = ui.Button(text='Foo bar', flex=3)
+        
+        if TEST == 2:
+            with ui.VBox(self) as self.vbox:
+                
+                ui.Button(text='Flex 1 0 3', flex=0)
+                with ui.HBox(flex=0) as self.hbox1:
+                    self.b1 = ui.Button(text='Hola', flex=1)
+                    self.b2 = ui.Button(text='Hello world', flex=0)
+                    self.b3 = ui.Button(text='Foo bar', flex=3)
+                
+                ui.Button(text='Flex 0 0 0', flex=0)
+                with ui.HBox(flex=0) as self.hbox2:
+                    self.b1 = ui.Button(text='Hola', flex=0)
+                    self.b2 = ui.Button(text='Hello world', flex=0)
+                    self.b3 = ui.Button(text='Foo bar', flex=0)
+                
+                ui.Button(text='-- stretch --', flex=1)
         #self.win = ui.Window(self, 'A new window!')
-
+        
 # class MyApp2(ui.App):
 #     def init(self):
 #         self.b = ui.Button(self, 'Hello world')

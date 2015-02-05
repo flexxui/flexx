@@ -28,6 +28,8 @@ zoof.initSocket = function () {
         if (msg.search('EVAL ') === 0) {
             window._ = eval(msg.slice(5));  // eval
             ws.send('RET ' + window._);  // send back result
+        } else if (msg.search('EXEC ') === 0) {
+            eval(msg.slice(5));  // like eval, but do not return result
         } else if (msg.search('TITLE ') === 0) {
             document.title = msg.slice(6);
         } else if (msg.search('ICON ') === 0) {

@@ -90,7 +90,7 @@ class MainHandler(tornado.web.RequestHandler):
                 self.write(self.application.load('index.html'))
             else:
                 self.write('No app %r is being hosted right now' % app_name)
-        elif path.endswith('.ico'):
+        elif path.endswith('.ico') and '/' in path:
             # Icon, look it up from the app instance
             app_name, filename = path.split('/', 1)
             id = filename.split('.')[0]
@@ -158,7 +158,6 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         We now have a very basic protocol for receiving messages,
         we should at some point define a real formalized protocol.
         """
-        print(message)
         if message.startswith('RET '):
             print(message[4:])  # Return value
         elif message.startswith('ERROR '):

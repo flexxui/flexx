@@ -1,11 +1,71 @@
+/* ========== Preparations ========== */
+
 html {
-    height: 100%;
+    /* set height, so body can have height, and the first layout too */
+    height: 100%;  
 }
 
 body {
-    background-color: #bbf;
+    /* Set height so the first layout can fill whole window */
+    height: 100%;
+    margin: 0px;
+}
+
+
+/* ========== Layout ========== */
+
+.zf-hbox, .zf-vbox {
+    width: 100%;
+    height: 100%;
+    margin: 0px;
+    padding: 0px;
+    border-spacing: 0px;
+}
+
+.hcell {
+    padding: 0px 5px;  /* inter-widget spacing */
+}
+
+.vcell {
+    padding: 5px 0px;  /* inter-widget spacing */
+}
+
+/* We only want space *between* the widgets */
+.hcell:first-child, .vcell:first-child {
+    padding-left: 0px;
+    padding-top: 0px;
+}
+.hcell:last-child, .vcell:last-child {
+    padding-right: 0px;
+    padding-bottom: 0px;
+}
+
+
+
+/* ========== Widgets in a layout ========== */
+
+/* In flexed cells, occupy the full space */
+.vcell-flex > .zf-widget {
     height: 100%;
 }
+td.hcell-flex > .zf-widget {
+    width: 100%;
+}
+
+/* In non-flexed cells, occupy the cross-axis cell.
+   Alwayas for width. For height it depends on the widget.
+*/
+.vcell > .zf-widget {
+    width: 100%;
+}
+
+hcell > .zf-widget {
+    /*height: 100%;*/
+}
+
+
+
+/* ========== Widgets ========== */
 
 .zf-widget {
     box-sizing: border-box;
@@ -13,40 +73,18 @@ body {
     overflow: hidden;
 }
 
-.zf-hbox {
-    width: 100%;
-    border-spacing: 5px;
-    margin: -6px;
+
+/* ========== Appearance ========== */
+
+body {
+    background-color: #eee;
 }
 
-.zf-vbox {
-    height: 100%;
-    border-spacing: 5px;
-    margin: -6px;
+/*
+.zf-hbox > tr > td {
+   border: 1px solid red;
 }
-
-.zf-hbox td, .zf-vbox td {
-   //border: 1px solid black;
+.zf-vbox > tr > td { 
+    border: 1px solid blue;
 }
-
-.zf-button {
-    
-    /*
-    background: #eee;
-    color: #333;
-    border-radius: 3px;
-    border: 1px solid #888;
-    padding: 3px 6px 3px 6px;
-    font-family: sans;
-    font-size: smaller;
-    text-align: center;
-    /**/
-}
-
-td.hflex > .zf-button {
-    width: 100%;
-}
-
-td.vflex > .zf-button {
-    height: 100%;
-}
+/**/

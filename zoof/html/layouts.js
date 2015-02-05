@@ -43,13 +43,6 @@ zoof.createHBox = function (parent, id) {
 };
 
 
-zoof.addToHBox = function (layout, child) {
-    var td = document.createElement("td");
-    layout.children[0].appendChild(td);
-    td.appendChild(child);
-};
-
-
 
 zoof.createVBox = function (parent, id) {
     var e = zoof.createWidget(parent, id, 'table', 'zf-vbox');
@@ -81,17 +74,24 @@ zoof.HBox_layout = function (id) {
     }
     
     nflex = flexes.reduce(function(pv, cv) { return pv + cv; }, 0);
-    console.warn(flexes);
-    if (nflex > 0) {
-        for (j=0; j<ncols; j++) {
-            cell = row.children[j];
-            if (flexes[j] === 0) {
-                cell.className = '';
-                cell.style.width = 'auto';
-            } else {
-                cell.className = 'hflex';  // via css we set button width to 100%
-                cell.style.width = flexes[j] * 100/nflex + '%';
-            }
+    
+    // If no flexes are given; assign each an equal flex
+    if (nflex === 0) {
+        flexes.fill(1);
+        nflex = flexes.length;
+    }
+    
+    // Assign width and classnames to cells, so that together with the
+    // css, the table layout engine will behave as we want.
+    for (j=0; j<ncols; j++) {
+        cell = row.children[j];
+        cell.style.height = '100%';
+        if (flexes[j] === 0) {
+            cell.className = 'hcell';
+            cell.style.width = 'auto';
+        } else {
+            cell.className = 'hcell hcell-flex';  // via css we set button width to 100%
+            cell.style.width = flexes[j] * 100/nflex + '%';
         }
     }
 };
@@ -119,16 +119,24 @@ zoof.VBox_layout = function (id) {
     }
     
     nflex = flexes.reduce(function(pv, cv) { return pv + cv; }, 0);
-    console.warn(flexes);
+    
+    // If no flexes are given; assign each an equal flex
+    if (nflex === 0) {
+        flexes.fill(1);
+        nflex = flexes.length;
+    }
+    
+    // Assign width and classnames to cells, so that together with the
+    // css, the table layout engine will behave as we want.
     if (nflex > 0) {
         for (i=0; i<nrows; i++) {
             row = T.children[i]
             cell = row.children[0];
             if (flexes[i] === 0) {
-                cell.className = '';
+                cell.className = 'vcell';
                 row.style.height = 'auto';
             } else {
-                cell.className = 'vflex';  // via css we set button width to 100%
+                cell.className = 'vcell vcell-flex';  // via css we set button width to 100%
                 row.style.height = flexes[i] * 100/nflex + '%';
             }
         }
