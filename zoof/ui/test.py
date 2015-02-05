@@ -16,7 +16,7 @@ class MyApp(ui.App):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 3
+        TEST = 4
         
         if TEST == 1:
             with ui.HBox(self, flex=1) as self.hbox1:
@@ -55,13 +55,30 @@ class MyApp(ui.App):
                 ui.Label(text='Note the spacer Widget above', flex=0)
         
         if TEST == 3:
-            with ui.Form(self) as self.form:
-                ui.Label(text='Name:')
-                self.b1 = ui.Button(text='Hola')
-                ui.Label(text='Age:')
-                self.b2 = ui.Button(text='Hello world')
-                ui.Label(text='Favorite color:')
-                self.b3 = ui.Button(text='Foo bar')
+            with ui.HBox(self, spacing=20):
+                with ui.Form() as self.form:
+                    # todo: can this be written with one line per row?
+                    # e.g. self.b1 = ui.Button(label='Name', text='Hola')
+                    ui.Label(text='Name:')
+                    self.b1 = ui.Button(text='Hola')
+                    ui.Label(text='Age:')
+                    self.b2 = ui.Button(text='Hello world')
+                    ui.Label(text='Favorite color:')
+                    self.b3 = ui.Button(text='Foo bar')
+                with ui.Form() as self.form:
+                    # e.g. self.b1 = ui.Button(label='Name', text='Hola')
+                    ui.Label(text='Pet name:')
+                    self.b1 = ui.Button(text='Hola')
+                    ui.Label(text='Pet Age:')
+                    self.b2 = ui.Button(text='Hello world')
+                    ui.Label(text='Pet\'s Favorite color:')
+                    self.b3 = ui.Button(text='Foo bar')
+        
+        if TEST == 4:
+            with ui.Grid(self) as self.grid:
+                self.b1 = ui.Button(text='Hola', pos=(2, 3))
+                self.b2 = ui.Button(text='Hello world', pos=(0, 0))
+                self.b3 = ui.Button(text='Foo bar', pos=(0, 1))
             
         #self.win = ui.Window(self, 'A new window!')
         

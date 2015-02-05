@@ -21,7 +21,7 @@ class Widget(BaseWidget):
     
     _counter = 0  # to produce unique id's
     
-    def __init__(self, parent=None, flex=0):
+    def __init__(self, parent=None, flex=0, pos=(0, 0)):
         if parent is None:
             if _default_parent:
                 parent = _default_parent[-1]
@@ -30,6 +30,7 @@ class Widget(BaseWidget):
                                  'instantiated a widget context.')
         BaseWidget.__init__(self, parent)
         self._flex = flex
+        self._pos = pos
         app = self.get_app()
         app._widget_counter += 1
         self._id = self.__class__.__name__ + str(app._widget_counter)
@@ -52,7 +53,9 @@ class Widget(BaseWidget):
         
         self._create_js_object_real(id=self.id, 
                                     className=classes, 
-                                    parent=parent, 
+                                    parent=parent,
+                                    pos=self._pos,
+                                    flex=self._flex,
                                     **kwargs)
         
     def _create_js_object_real(self, **kwargs):
@@ -61,6 +64,7 @@ class Widget(BaseWidget):
         funcname = 'create' + self.__class__.__name__
         eval('zoof.%s(%s);' % (funcname, json.dumps(kwargs)))
         eval('zoof.setProps("%s", "flex", %s);' % (self.id, self._flex))
+        # todo: remove setProps, apply via the dict
     
     def get_app(self):
         node = self.parent
@@ -144,26 +148,20 @@ _default_parent = []
 class Layout(Widget):
     """ Base class for all layouts
     """
-
-
-class HBox(Layout):
-    """ An HBox is a layout widget used to align widgets horizontally
-    """
     
     def __init__(self, parent=None, spacing=None, margin=None, **kwargs):
         self._spacing = spacing
         self._margin = margin
-        
         super().__init__(parent, **kwargs)
     
     def _create_js_object_real(self, **kwargs):
         spacing = str(self._spacing or 0) + 'px'
         margin = str(self._margin or 0) + 'px'
         super()._create_js_object_real(spacing=spacing, margin=margin, **kwargs)
-    
+
     def update(self):
         eval = self.get_app()._exec
-        eval('zoof.HBox_layout("{id}");'.format(id=self._id))
+        eval('zoof.%s_layout(%r);' % (self.__class__.__name__, self.id))
     
     def __enter__(self):
         _default_parent.append(self)
@@ -174,6 +172,14 @@ class HBox(Layout):
         if value is None:
             self.update()
 
+
+class HBox(Layout):
+    """ An HBox is a layout widget used to align widgets horizontally
+    """
+    
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+    
 
 class VBox(Layout):
     """ An VBox is a layout widget used to align widgets vertically
@@ -181,19 +187,6 @@ class VBox(Layout):
     
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
-    
-    def update(self):
-        eval = self.get_app()._exec
-        eval('zoof.VBox_layout("{id}");'.format(id=self._id))
-    
-    def __enter__(self):
-        _default_parent.append(self)
-        return self
-    
-    def __exit__(self, type, value, traceback):
-        assert self is _default_parent.pop(-1)
-        if value is None:
-            self.update()
 
 
 class Form(Layout):
@@ -207,16 +200,18 @@ class Form(Layout):
     
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
+
+
+class Grid(Layout):
+    """ A Grid layout aligns widgets in a grid
     
-    def update(self):
-        eval = self.get_app()._exec
-        eval('zoof.Form_layout("{id}");'.format(id=self._id))
+    It is more flexible than hbox and vbox, but is also slighly more
+    complex to use.
+    """
     
-    def __enter__(self):
-        _default_parent.append(self)
-        return self
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
     
-    def __exit__(self, type, value, traceback):
-        assert self is _default_parent.pop(-1)
-        if value is None:
-            self.update()
+    # todo: allow different flexes per row/col
+    # e.g. set_col_flex(i, flex), set_row_flex(i, flex)
+    # todo: allow colspan and rowspan

@@ -115,6 +115,29 @@ zoof.createForm = function (D) {
 };
 
 
+zoof.createGrid = function (D) {
+    var e = zoof.createWidgetElement('table', D);
+    e.appendChild(document.createElement("tr"));
+    
+    e.appendWidget = function (child) {
+        var i = child.zfInfo.pos[0];
+        var j = child.zfInfo.pos[1];
+        // Ensure enough rows
+        while (i >= e.children.length) {
+            e.appendChild(document.createElement("tr"));
+        }
+        var row = e.children[i];
+        // Ensure enough coloums
+        while (j >= row.children.length) {
+            row.appendChild(document.createElement("td"));
+        }
+        var cell = row.children[j];
+        // Append
+        cell.appendChild(child);
+    };
+};
+
+
 zoof.HBox_layout = function (id) {
 
     var T = zoof.get(id);
@@ -236,5 +259,48 @@ zoof.Form_layout = function (id) {
         cell1.style.width = 'auto';
         cell2.style.width = '100%';
         
+    }
+};
+
+
+zoof.Grid_layout = function (id) {
+    var i, j;
+    
+    // Get table
+    var T = zoof.get(id);
+    var nrows = T.children.length;
+    var ncols = 0;
+    for (i=0; i<nrows; i++) {
+        ncols = Math.max(ncols, T.children[i].children.length);
+    }
+    if (nrows === 0 || ncols ===0) {
+        return
+    }
+    
+    var xflexes = new Array(ncols);
+    var yflexes = new Array(nrows);
+    var xnflex, ynflex;
+    var cell;
+    var row;
+    
+    xflexes.fill(1);
+    yflexes.fill(1);
+    xnflex = xflexes.length;
+    ynflex = yflexes.length;
+    
+    // Assign width and classnames to cells, so that together with the
+    // css, the table layout engine will behave as we want.
+    for (i=0; i<nrows; i++) {
+        row = T.children[i]
+        for (j=0; j<ncols; j++) {
+            cell = row.children[j];
+            if (cell === undefined) {
+                continue;
+            }
+            cell.className = 'vcell vcell-flex hcell hcell-flex';
+            row.style.height = yflexes[i] * 100/ynflex + '%';
+            //row.style.height = 'auto';
+            cell.style.width = xflexes[i] * 100/xnflex + '%';
+        }
     }
 };
