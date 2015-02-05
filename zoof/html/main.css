@@ -62,6 +62,9 @@ hcell > .zf-widget {
     overflow: hidden;
 }
 
+.zf-label {
+    background: #aaa;
+}
 
 /* ========== Appearance ========== */
 

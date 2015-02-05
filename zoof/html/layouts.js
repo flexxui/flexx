@@ -1,12 +1,29 @@
 
-zoof.createWidget = function (parent, id, type, className) {
+zoof.widgets = {};
+
+zoof.get = function (id) {
+    if (id === 'body') {
+        return document.body;
+    } else {
+        return zoof.widgets[id]
+    }
+};
+
+
+zoof.createWidgetElement = function (type, D) {
+    /* Used by all createX functions to create the HTML element, assign
+       id and class name, and insert the element in the DOM.
+    */
     var e = document.createElement(type);
     var par;  // semantic parent
     
-    e.id = id;
-    e.className = className + ' zf-widget';
+    e.id = D.id;
+    zoof.widgets[D.id] = e;
+
+    e.className = D.className;
+    e.zfInfo = D;  // store info used to create the widget
     
-    par = document.getElementById(parent);
+    par = zoof.get(D.parent);
     if (typeof par.appendWidget == 'function') {
         par.appendWidget(e);
     } else {
@@ -17,46 +34,59 @@ zoof.createWidget = function (parent, id, type, className) {
 
 
 zoof.setProps = function (id) {
-    e = document.getElementById(id);
+    e = zoof.get(id);
     for (var i=1; i<arguments.length; i+=2) {
         e[arguments[i]] = arguments[i+1];
     }
 };
 
 zoof.setStyle = function (id) {
-    e = document.getElementById(id);
+    e = zoof.get(id);
     for (var i=1; i<arguments.length; i+=2) {
         e.style[arguments[i]] = arguments[i+1];
     }
 };
 
-zoof.createButton = function (parent, id, text) {
-    //console.warn('creating button');
-    var e = zoof.createWidget(parent, id, 'button', 'zf-button');
-    e.innerHTML = text;
+
+zoof.createWidget = function (D) {
+    var e = zoof.createWidgetElement('div', D);
 };
 
 
-zoof.createHBox = function (parent, id, spacing) {
-    //console.warn('creating hbox');
-    var e = zoof.createWidget(parent, id, 'table', 'zf-hbox');
+zoof.createLabel = function (D) {
+    var e = zoof.createWidgetElement('div', D);
+    e.innerHTML = D.text;
+};
+
+
+zoof.createButton = function (D) {
+    var e = zoof.createWidgetElement('button', D);
+    e.innerHTML = D.text;
+};
+
+
+zoof.createHBox = function (D) {
+    var e = zoof.createWidgetElement('table', D);
     var row = document.createElement("tr")
     e.appendChild(row);
+    
+    // layout margin is implemented by table padding
+    e.style.padding = D.margin;  
     
     e.appendWidget = function (child) {
         var td = document.createElement("td");
         row.appendChild(td);
         td.appendChild(child);
         if (row.children.length > 1) {
-            td.style['padding-left'] = spacing;
+            td.style['padding-left'] = D.spacing;
         }
     };
 };
 
 
 
-zoof.createVBox = function (parent, id) {
-    var e = zoof.createWidget(parent, id, 'table', 'zf-vbox');
+zoof.createVBox = function (D) {
+    var e = zoof.createWidgetElement('table', D);
     
     e.appendWidget = function (child) {
         var tr = document.createElement("tr");
@@ -70,7 +100,7 @@ zoof.createVBox = function (parent, id) {
 
 zoof.HBox_layout = function (id) {
 
-    var T = document.getElementById(id);
+    var T = zoof.get(id);
     var ncols;
     var j;
     var flexes = [];
@@ -110,7 +140,7 @@ zoof.HBox_layout = function (id) {
 
 zoof.VBox_layout = function (id) {
     // Get table
-    var T = document.getElementById(id);
+    var T = zoof.get(id);
     var nrows = T.children.length;
     if (nrows === 0) {
         return

@@ -1,4 +1,6 @@
 
+import json
+
 from .app import App, BaseWidget
 
 
@@ -11,8 +13,15 @@ class NativeElement(object):
 
 
 class Widget(BaseWidget):
-    _counter = 0
-    def __init__(self, parent, flex=0):
+    """ Base widget class
+    
+    All widgets derive from this class. On itself, this type of widget
+    represents an empty space, and can be useful as a filler.
+    """
+    
+    _counter = 0  # to produce unique id's
+    
+    def __init__(self, parent=None, flex=0):
         if parent is None:
             if _default_parent:
                 parent = _default_parent[-1]
@@ -24,15 +33,40 @@ class Widget(BaseWidget):
         app = self.get_app()
         app._widget_counter += 1
         self._id = self.__class__.__name__ + str(app._widget_counter)
+        
+        # Call function to create js_object
+        self._create_js_object()
+    
+    def _create_js_object(self, **kwargs):
+        """ This method can be overloaded to populate the dict used
+        by JS to create the widget. Overloaded versions should simpy
+        call the super-method with additional kwargs.
+        """
+        
+        # Get css classes
+        classes = ['zf-' + c.__name__.lower() for c in self.__class__.mro()]
+        classes = ' '.join(classes[:1-len(Widget.mro())])
+        
+        # Get parent
+        parent = 'body' if isinstance(self.parent, App) else self.parent.id
+        
+        self._create_js_object_real(id=self.id, 
+                                    className=classes, 
+                                    parent=parent, 
+                                    **kwargs)
+        
+    def _create_js_object_real(self, **kwargs):
+        
+        eval = self.get_app()._exec
+        funcname = 'create' + self.__class__.__name__
+        eval('zoof.%s(%s);' % (funcname, json.dumps(kwargs)))
+        eval('zoof.setProps("%s", "flex", %s);' % (self.id, self._flex))
     
     def get_app(self):
         node = self.parent
         while not isinstance(node, App):
             node = node.parent
         return node
-    
-    def _create(self, app):
-        pass
     
     @property
     def id(self):
@@ -71,51 +105,61 @@ class Window(object):
 
 
 class Label(Widget):
-    pass
+    """ A Label represents a piece of text.
+    """
+    
+    def __init__(self, parent=None, text='', **kwargs):
+        self._text = text
+        super().__init__(parent, **kwargs)
+    
+    def _create_js_object_real(self, **kwargs):
+        super()._create_js_object_real(text=self._text, **kwargs)
+        
+    def set_text(self, text):
+        self._text = text
+        t = 'document.getElementById("{id}").innerHTML = "{text}"'
+        self.get_app()._exec(t.format(id=self._id, text=text))
 
 
 class Button(Widget):
-    _TEMPLATE = """
-        var e = document.createElement("button");
-        e.id = '{id}';
-        e.innerHTML = '{text}'
-        document.body.appendChild(e);
-        """
+    """ A Button is a widget than can be clicked on to invoke an action
+    """
     
     def __init__(self, parent=None, text='Click me', **kwargs):
-        super().__init__(parent, **kwargs)
-        Widget._counter += 1
         self._text = text
-        
-        eval = self.get_app()._exec
-        #self._parent.eval(self._TEMPLATE.format(id=self._id, text=self._text))
-        parent = 'body' if isinstance(self.parent, App) else self.parent.id
-        T = 'zoof.createButton("{parent}", "{id}", "{text}");'
-        eval(T.format(parent=parent, id=self._id, text=self._text))
-        eval('zoof.setProps("{id}", "flex", {flex});'.format(id=self.id, flex=self._flex))
+        super().__init__(parent, **kwargs)
+    
+    def _create_js_object_real(self, **kwargs):
+        super()._create_js_object_real(text=self._text, **kwargs)
     
     def set_text(self, text):
         self._text = text
         t = 'document.getElementById("{id}").innerHTML = "{text}"'
-        self._parent._exec(t.format(id=self._id, text=text))
+        self.get_app()._exec(t.format(id=self._id, text=text))
 
 
 _default_parent = []
 
-class HBox(Widget):
+
+class Layout(Widget):
+    """ Base class for all layouts
+    """
+
+
+class HBox(Layout):
+    """ An HBox is a layout widget used to align widgets horizontally
+    """
     
     def __init__(self, parent=None, spacing=None, margin=None, **kwargs):
-        super().__init__(parent, **kwargs)
+        self._spacing = spacing
+        self._margin = margin
         
-        eval = self.get_app()._exec
-        #self._parent.eval(self._TEMPLATE.format(id=self._id, text=self._text))
-        parent = 'body' if isinstance(self.parent, App) else self.parent.id
-        T = 'zoof.createHBox("{parent}", "{id}", "{spacing}");'
-        spacing = str(spacing or 0) + 'px'
-        eval(T.format(parent=parent, id=self._id, spacing=spacing))
-        eval('zoof.setProps("{id}", "flex", {flex});'.format(id=self.id, flex=self._flex))
-        if margin is not None:
-            eval('zoof.setStyle("{id}", "padding", "{margin}px");'.format(id=self.id, margin=margin))
+        super().__init__(parent, **kwargs)
+    
+    def _create_js_object_real(self, **kwargs):
+        spacing = str(self._spacing or 0) + 'px'
+        margin = str(self._margin or 0) + 'px'
+        super()._create_js_object_real(spacing=spacing, margin=margin, **kwargs)
     
     def update(self):
         eval = self.get_app()._exec
@@ -130,17 +174,13 @@ class HBox(Widget):
         if value is None:
             self.update()
 
-class VBox(Widget):
+
+class VBox(Layout):
+    """ An VBox is a layout widget used to align widgets vertically
+    """
     
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
-        
-        eval = self.get_app()._exec
-        #self._parent.eval(self._TEMPLATE.format(id=self._id, text=self._text))
-        parent = 'body' if isinstance(self.parent, App) else self.parent.id
-        T = 'zoof.createVBox("{parent}", "{id}");'
-        eval(T.format(parent=parent, id=self._id))
-        eval('zoof.setProps("{id}", "flex", {flex});'.format(id=self.id, flex=self._flex))
     
     def update(self):
         eval = self.get_app()._exec
