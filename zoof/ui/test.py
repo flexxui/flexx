@@ -16,7 +16,7 @@ class MyApp(ui.App):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 5
+        TEST = 2
         
         if TEST == 1:
             with ui.HBox(self, flex=1) as self.hbox1:
@@ -67,18 +67,21 @@ class MyApp(ui.App):
                     self.b3 = ui.Button(text='Foo bar')
                 with ui.Form() as self.form:
                     # e.g. self.b1 = ui.Button(label='Name', text='Hola')
+                    ui.Widget(flex=1)  # Add a flexer
+                    ui.Widget()
                     ui.Label(text='Pet name:')
                     self.b1 = ui.Button(text='Hola')
                     ui.Label(text='Pet Age:')
                     self.b2 = ui.Button(text='Hello world')
                     ui.Label(text='Pet\'s Favorite color:')
                     self.b3 = ui.Button(text='Foo bar')
-        
+                    ui.Widget(flex=1)
         if TEST == 4:
             with ui.Grid(self) as self.grid:
-                self.b1 = ui.Button(text='Hola', pos=(2, 3))
-                self.b2 = ui.Button(text='Hello world', pos=(0, 0))
-                self.b3 = ui.Button(text='Foo bar', pos=(0, 1))
+                self.b1 = ui.Button(text='Nostretch', pos=(0, 0))
+                self.b2 = ui.Button(text='Hola', pos=(1, 1), flex=(1,1))
+                self.b3 = ui.Button(text='Hello world', pos=(2, 2), flex=(2, 1))
+                self.b4 = ui.Button(text='Foo bar', pos=(4, 4), flex=(1, 2))
         
         if TEST == 5:
             with ui.PinBoard(self) as self.grid:

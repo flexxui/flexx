@@ -1,11 +1,21 @@
+/*  Script for handling widgets and layout.
+
+*/
+
+/* JSLint config */
+/*global zoof */
+/*jslint node: true, continue:true */
+"use strict";
 
 zoof.widgets = {};
+zoof.AUTOFLEX = 729;  // magic number unlikely to occut in practice
+
 
 zoof.get = function (id) {
     if (id === 'body') {
         return document.body;
     } else {
-        return zoof.widgets[id]
+        return zoof.widgets[id];
     }
 };
 
@@ -14,13 +24,15 @@ zoof.createWidgetElement = function (type, D) {
     /* Used by all createX functions to create the HTML element, assign
        id and class name, and insert the element in the DOM.
     */
-    var e = document.createElement(type);
-    var par;  // semantic parent
+    var e = document.createElement(type),
+        par;  // semantic parent
     
     e.id = D.id;
     zoof.widgets[D.id] = e;
     
     e.className = D.className;
+    e.hflex = D.hflex;
+    e.vflex = D.vflex;
     e.zfInfo = D;  // store info used to create the widget
     
     // Set position. Ignored unless position is absolute or relative
@@ -28,7 +40,7 @@ zoof.createWidgetElement = function (type, D) {
     e.style.top = (D.pos[1] > 1 ? D.pos[1] + "px" : D.pos[1] * 100 + "%");
     
     par = zoof.get(D.parent);
-    if (typeof par.appendWidget == 'function') {
+    if (typeof par.appendWidget === 'function') {
         par.appendWidget(e);
     } else {
         par.appendChild(e);
@@ -38,16 +50,18 @@ zoof.createWidgetElement = function (type, D) {
 
 
 zoof.setProps = function (id) {
-    e = zoof.get(id);
-    for (var i=1; i<arguments.length; i+=2) {
-        e[arguments[i]] = arguments[i+1];
+    var i,
+        e = zoof.get(id);
+    for (i = 0; i < arguments.length; i += 2) {
+        e[arguments[i]] = arguments[i + 1];
     }
 };
 
 zoof.setStyle = function (id) {
-    e = zoof.get(id);
-    for (var i=1; i<arguments.length; i+=2) {
-        e.style[arguments[i]] = arguments[i+1];
+    var i,
+        e = zoof.get(id);
+    for (i = 1; i < arguments.length; i += 2) {
+        e.style[arguments[i]] = arguments[i + 1];
     }
 };
 
@@ -70,12 +84,14 @@ zoof.createButton = function (D) {
 
 
 zoof.createHBox = function (D) {
-    var e = zoof.createWidgetElement('table', D);
-    var row = document.createElement("tr")
-    e.appendChild(row);
+    var e, row;
     
+    e = zoof.createWidgetElement('table', D);
+    row = document.createElement("tr");
+    e.appendChild(row);
+        
     // layout margin is implemented by table padding
-    e.style.padding = D.margin;  
+    e.style.padding = D.margin;
     
     e.appendWidget = function (child) {
         var td = document.createElement("td");
@@ -85,6 +101,19 @@ zoof.createHBox = function (D) {
             td.style['padding-left'] = D.spacing;
         }
     };
+    
+    e.applyLayout = function () {zoof.applyTableLayout(this); };
+    
+    e.applyCellLayout = function (row, col, vflex, hflex, cum_vflex, cum_hflex) {
+        col.style.height = '100%';
+        if (hflex === 0) {
+            col.className = '';
+            col.style.width = 'auto';
+        } else {
+            col.className = 'hflex';
+            col.style.width = hflex * 100 / cum_hflex + '%';
+        }
+    };
 };
 
 
@@ -92,12 +121,25 @@ zoof.createVBox = function (D) {
     var e = zoof.createWidgetElement('table', D);
     
     e.appendWidget = function (child) {
-        var tr = document.createElement("tr");
-        var td = document.createElement("td");
+        var tr = document.createElement("tr"),
+            td = document.createElement("td");
         this.appendChild(tr);
         tr.appendChild(td);
         td.appendChild(child);
     };
+    
+    e.applyLayout = function () {zoof.applyTableLayout(this); };
+    
+    e.applyCellLayout = function (row, col, vflex, hflex, cum_vflex, cum_hflex) {
+        if (vflex === 0) {
+            col.className = 'hflex';
+            row.style.height = 'auto';
+        } else {
+            col.className = 'vflex hflex';
+            row.style.height = vflex * 100 / cum_vflex + '%';
+        }
+    };
+
 };
 
 
@@ -106,16 +148,42 @@ zoof.createForm = function (D) {
     e.appendChild(document.createElement("tr"));
     
     e.appendWidget = function (child) {
-        var row = e.children[e.children.length-1];
-        var itemsinrow = row.children.length;
+        var row, td, itemsinrow;
+        row = e.children[e.children.length - 1];
+        itemsinrow = row.children.length;
         if (itemsinrow >= 2) {
             row = document.createElement("tr");
             e.appendChild(row);
         }
-        var td = document.createElement("td");
+        td = document.createElement("td");
         row.appendChild(td);
         td.appendChild(child);
+        // Do some auto-flexing
+        child.hflex = (row.children.length === 1 ? 0 : 1);
     };
+    
+    e.applyLayout = function () {zoof.applyTableLayout(this); };
+    
+    e.applyCellLayout = function (row, col, vflex, hflex, cum_vflex, cum_hflex) {
+        var className = '';
+        if ((vflex === zoof.AUTOFLEX) || (vflex === 0)) {
+            row.style.height = 'auto';
+            className += '';
+        } else {
+            row.style.height = vflex * 100 / cum_vflex + '%';
+            className += 'vflex';
+        }
+        className += ' ';
+        if (hflex === 0) {
+            col.style.width = 'auto';
+            className += '';
+        } else {
+            col.style.width = '100%';
+            className += 'hflex';
+        }
+        col.className = className;
+    };
+    
 };
 
 
@@ -124,196 +192,112 @@ zoof.createGrid = function (D) {
     e.appendChild(document.createElement("tr"));
     
     e.appendWidget = function (child) {
-        var i = child.zfInfo.pos[0];
-        var j = child.zfInfo.pos[1];
+        var i, j, row, cell;
+        i = child.zfInfo.pos[1];
+        j = child.zfInfo.pos[0];
         // Ensure enough rows
         while (i >= e.children.length) {
             e.appendChild(document.createElement("tr"));
         }
-        var row = e.children[i];
+        row = e.children[i];
         // Ensure enough coloums
         while (j >= row.children.length) {
             row.appendChild(document.createElement("td"));
         }
-        var cell = row.children[j];
+        cell = row.children[j];
         // Append
         cell.appendChild(child);
     };
+    
+    e.applyLayout = function () {zoof.applyTableLayout(this); };
+    
+    e.applyCellLayout = function (row, col, vflex, hflex, cum_vflex, cum_hflex) {
+        var className = '';
+        if (vflex === 0) {
+            row.style.height = 'auto';
+            className += '';
+        } else {
+            row.style.height = vflex * 100 / cum_vflex + '%';
+            className += 'vflex';
+        }
+        className += ' ';
+        if (hflex === 0) {
+            col.style.width = 'auto';
+            className += '';
+        } else {
+            col.style.width = hflex * 100 / cum_hflex + '%';
+            className += ' hflex';
+        }
+        col.className = className;
+    };
+
 };
 
 
 zoof.createPinBoard = function (D) {
     var e = zoof.createWidgetElement('div', D);
+    e.applyLayout = function () {}; // dummy    
 };
 
 
-zoof.HBox_layout = function (id) {
-
-    var T = zoof.get(id);
-    var ncols;
-    var j;
-    var flexes = [];
-    var nflex;
-    var cell;
-    var row = T.children[0];
-    
-    var ncols = row.children.length;
-    for (j=0; j<ncols; j++) {
-        cell = row.children[j];
-        flexes[j] = cell.children[0].flex || 0;
-    }
-    
-    nflex = flexes.reduce(function(pv, cv) { return pv + cv; }, 0);
-    
-    // If no flexes are given; assign each an equal flex
-    if (nflex === 0) {
-        flexes.fill(1);
-        nflex = flexes.length;
-    }
-    
-    // Assign width and classnames to cells, so that together with the
-    // css, the table layout engine will behave as we want.
-    for (j=0; j<ncols; j++) {
-        cell = row.children[j];
-        cell.style.height = '100%';
-        if (flexes[j] === 0) {
-            cell.className = 'hcell';
-            cell.style.width = 'auto';
-        } else {
-            cell.className = 'hcell hcell-flex';  // via css we set button width to 100%
-            cell.style.width = flexes[j] * 100/nflex + '%';
-        }
-    }
-};
-
-
-zoof.VBox_layout = function (id) {
-    // Get table
-    var T = zoof.get(id);
-    var nrows = T.children.length;
-    if (nrows === 0) {
-        return
-    }
-    var ncols = T.children[0].children.length
-    
-    var i, j;
-    var flexes = [];
-    var nflex;
-    var cell;
-    var row;
-    
-    for (i=0; i<nrows; i++) {
-        row = T.children[i];
-        cell = row.children[0];
-        flexes[i] = cell.children[0].flex || 0;
-    }
-    
-    nflex = flexes.reduce(function(pv, cv) { return pv + cv; }, 0);
-    
-    // If no flexes are given; assign each an equal flex
-    if (nflex === 0) {
-        flexes.fill(1);
-        nflex = flexes.length;
-    }
-    
-    // Assign width and classnames to cells, so that together with the
-    // css, the table layout engine will behave as we want.
-    for (i=0; i<nrows; i++) {
-        row = T.children[i]
-        cell = row.children[0];
-        if (flexes[i] === 0) {
-            cell.className = 'vcell';
-            row.style.height = 'auto';
-        } else {
-            cell.className = 'vcell vcell-flex';  // via css we set button width to 100%
-            row.style.height = flexes[i] * 100/nflex + '%';
-        }
-    }
-};
-
-
-zoof.Form_layout = function (id) {
-    // Get table
-    var T = zoof.get(id);
-    var nrows = T.children.length;
-    if (nrows === 0) {
-        return
-    }
-    var ncols = T.children[0].children.length
-    
-    var i, j;
-    var flexes = [];
-    var nflex;
-    var cell;
-    var row;
-    
-    flexes.fill(1);
-    nflex = flexes.length;
-    
-    // Assign width and classnames to cells, so that together with the
-    // css, the table layout engine will behave as we want.
-    for (i=0; i<nrows; i++) {
-        row = T.children[i]
-        cell1 = row.children[0];
-        cell2 = row.children[1];
+zoof.applyTableLayout = function (table) {
+    /* To be called with a layout id when a child is added or stretch factor
+       changes.
+    */
+    var row, col,
+        i, j, nrows, ncols,
+        vflexes, hflexes, cum_vflex, cum_hflex;
         
-        cell1.className = 'vcell vcell-flex hcell';
-        cell2.className = 'vcell vcell-flex hcell hcell-flex';
-        
-        // Vertical
-        row.style.height = flexes[i] * 100/nflex + '%';
-        //row.style.height = 'auto';
-        
-        // Horizontal
-        cell1.style.width = 'auto';
-        cell2.style.width = '100%';
-        
+    // Get table dimensions    
+    nrows = table.children.length;
+    ncols = 0;
+    for (i = 0; i < nrows; i += 1) {
+        row = table.children[i];
+        ncols = Math.max(ncols, row.children.length);
     }
-};
-
-
-zoof.Grid_layout = function (id) {
-    var i, j;
-    
-    // Get table
-    var T = zoof.get(id);
-    var nrows = T.children.length;
-    var ncols = 0;
-    for (i=0; i<nrows; i++) {
-        ncols = Math.max(ncols, T.children[i].children.length);
-    }
-    if (nrows === 0 || ncols ===0) {
-        return
+    if (nrows === 0 || ncols === 0) {
+        return;
     }
     
-    var xflexes = new Array(ncols);
-    var yflexes = new Array(nrows);
-    var xnflex, ynflex;
-    var cell;
-    var row;
-    
-    xflexes.fill(1);
-    yflexes.fill(1);
-    xnflex = xflexes.length;
-    ynflex = yflexes.length;
-    
-    // Assign width and classnames to cells, so that together with the
-    // css, the table layout engine will behave as we want.
-    for (i=0; i<nrows; i++) {
-        row = T.children[i]
-        for (j=0; j<ncols; j++) {
-            cell = row.children[j];
-            if (cell === undefined) {
+    // Collect flexes
+    vflexes = [];
+    hflexes = [];
+    for (i = 0; i < nrows; i += 1) {
+        row = table.children[i];
+        for (j = 0; j < ncols; j += 1) {
+            col = row.children[j];
+            if ((col === undefined) || (col.children.length === 0)) {
                 continue;
             }
-            cell.className = 'vcell vcell-flex hcell hcell-flex';
-            row.style.height = yflexes[i] * 100/ynflex + '%';
-            //row.style.height = 'auto';
-            cell.style.width = xflexes[i] * 100/xnflex + '%';
+            vflexes[i] = Math.max(vflexes[i] || 0, col.children[0].vflex || 0);
+            hflexes[j] = Math.max(hflexes[j] || 0, col.children[0].hflex || 0);
         }
     }
-};
-
-
-zoof.PinBoard_layout = function (id) {
+    
+    // What is the cumulative "flex-value"?
+    cum_vflex = vflexes.reduce(function (pv, cv) { return pv + cv; }, 0);
+    cum_hflex = hflexes.reduce(function (pv, cv) { return pv + cv; }, 0);
+    
+    // If no flexes are given; assign each equal
+    if (cum_vflex === 0) {
+        vflexes.fill(zoof.AUTOFLEX);
+        cum_vflex = vflexes.length * zoof.AUTOFLEX;
+    }
+    if (cum_hflex === 0) {
+        hflexes.fill(zoof.AUTOFLEX);
+        cum_hflex = hflexes.length * zoof.AUTOFLEX;
+    }
+    //console.log(vflexes);
+    
+    // Assign css class and height/weight to cells
+    for (i = 0; i < nrows; i += 1) {
+        row = table.children[i];
+        for (j = 0; j < ncols; j += 1) {
+            col = row.children[j];
+            if ((col === undefined) || (col.children.length === 0)) {
+                continue;
+            }
+            table.applyCellLayout(row, col, vflexes[i], hflexes[j], cum_vflex, cum_hflex);
+        }
+    }
 };

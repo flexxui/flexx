@@ -29,7 +29,7 @@ class Widget(BaseWidget):
                 raise ValueError('Parent must be given unless it is '
                                  'instantiated a widget context.')
         BaseWidget.__init__(self, parent)
-        self._flex = flex
+        self._flex = flex if isinstance(flex, tuple) else (flex, flex)
         self._pos = pos
         app = self.get_app()
         app._widget_counter += 1
@@ -55,7 +55,8 @@ class Widget(BaseWidget):
                                     className=classes, 
                                     parent=parent,
                                     pos=self._pos,
-                                    flex=self._flex,
+                                    hflex=self._flex[0],
+                                    vflex=self._flex[1],
                                     **kwargs)
         
     def _create_js_object_real(self, **kwargs):
@@ -161,7 +162,7 @@ class Layout(Widget):
 
     def update(self):
         eval = self.get_app()._exec
-        eval('zoof.%s_layout(%r);' % (self.__class__.__name__, self.id))
+        eval('zoof.get(%r).applyLayout();' % self.id)
     
     def __enter__(self):
         _default_parent.append(self)

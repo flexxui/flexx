@@ -38,10 +38,10 @@ body {
 /* ========== Widgets in a layout ========== */
 
 /* In flexed cells, occupy the full space */
-.vcell-flex > .zf-widget {
+td.vflex > .zf-widget {
     height: 100%;
 }
-td.hcell-flex > .zf-widget {
+td.hflex > .zf-widget {
     width: 100%;
 }
 
