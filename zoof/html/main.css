@@ -45,22 +45,15 @@ td.hflex > .zf-widget {
     width: 100%;
 }
 
-/* In non-flexed cells, occupy the cross-axis cell.
-   Alwayas for width. For height it depends on the widget.
-*/
-.vcell > .zf-widget {
-    width: 100%;
-}
-
-.hcell > .zf-widget {
-    /*height: 100%;*/
-}
 
 .zf-pinboard > .zf-widget {
     position: absolute;
 }
 
 
+.zf-form > tr > td > .zf-label {
+    text-align: right;
+}
 
 /* ========== Widgets ========== */
 
@@ -71,7 +64,7 @@ td.hflex > .zf-widget {
 }
 
 .zf-label {
-    background: #aaa;
+    /*background: #aaa;*/
 }
 
 /* ========== Appearance ========== */

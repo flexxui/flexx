@@ -39,12 +39,43 @@ zoof.createWidgetElement = function (type, D) {
     e.style.left = (D.pos[0] > 1 ? D.pos[0] + "px" : D.pos[0] * 100 + "%");
     e.style.top = (D.pos[1] > 1 ? D.pos[1] + "px" : D.pos[1] * 100 + "%");
     
+    // Add to parent
     par = zoof.get(D.parent);
     if (typeof par.appendWidget === 'function') {
         par.appendWidget(e);
     } else {
         par.appendChild(e);
     }
+    
+    // Add callback for resizing    
+    e.checkResize = function () {
+        /* This needs to be called if there is a chance that the widget has
+           changed size. If will check the real size the next tick and emit
+           a resize event if necessary.
+        */
+        setTimeout(e.checkResizeNow, 0);
+    };
+    e.storedSize = [0, 0];
+    e.checkResizeNow = function () {
+        var i, func, event;
+        event = new window.CustomEvent("resize");
+        event.widthChanged = (e.storedSize[0] !== e.clientWidth);
+        event.heightChanged = (e.storedSize[1] !== e.clientHeight);
+        if (event.widthChanged || event.heightChanged) {
+            e.storedSize = [e.clientWidth, e.clientHeight];
+            e.dispatchEvent(event);
+        }
+    };
+        
+    // Always invoke a resize after all initialization is done
+    e.checkResize();
+    // Keep up to date from parent size changes    
+    if (par === document.body) {
+        window.addEventListener('resize', e.checkResize, false);
+    } else {
+        par.addEventListener('resize', e.checkResize, false);
+    }
+            
     return e;
 };
 
@@ -114,6 +145,8 @@ zoof.createHBox = function (D) {
             col.style.width = hflex * 100 / cum_hflex + '%';
         }
     };
+    
+    // no need to adjust the row-height when resizing
 };
 
 
@@ -131,6 +164,8 @@ zoof.createVBox = function (D) {
     e.applyLayout = function () {zoof.applyTableLayout(this); };
     
     e.applyCellLayout = function (row, col, vflex, hflex, cum_vflex, cum_hflex) {
+        
+        row.vflex = vflex;
         if (vflex === 0) {
             col.className = 'hflex';
             row.style.height = 'auto';
@@ -139,7 +174,9 @@ zoof.createVBox = function (D) {
             row.style.height = vflex * 100 / cum_vflex + '%';
         }
     };
-
+    
+    // We need to adjust height-percent when there is a vertical resize
+    e.addEventListener('resize', zoof.adaptLayoutToSizeChange, false);
 };
 
 
@@ -184,6 +221,8 @@ zoof.createForm = function (D) {
         col.className = className;
     };
     
+    // We need to adjust height-percent when there is a vertical resize
+    e.addEventListener('resize', zoof.adaptLayoutToSizeChange, false);
 };
 
 
@@ -230,6 +269,9 @@ zoof.createGrid = function (D) {
         }
         col.className = className;
     };
+    
+    // We need to adjust height-percent when there is a vertical resize
+    e.addEventListener('resize', zoof.adaptLayoutToSizeChange, false);
 
 };
 
@@ -242,7 +284,10 @@ zoof.createPinBoard = function (D) {
 
 zoof.applyTableLayout = function (table) {
     /* To be called with a layout id when a child is added or stretch factor
-       changes.
+       changes. Calculates the flexes and (via a layout-dependent function)
+       sets the class of the td element and the width of the td element.
+       The heights of tr elements is set on resize, since it behaves slightly 
+       different.
     */
     var row, col,
         i, j, nrows, ncols,
@@ -287,17 +332,67 @@ zoof.applyTableLayout = function (table) {
         hflexes.fill(zoof.AUTOFLEX);
         cum_hflex = hflexes.length * zoof.AUTOFLEX;
     }
-    //console.log(vflexes);
     
     // Assign css class and height/weight to cells
     for (i = 0; i < nrows; i += 1) {
         row = table.children[i];
+        row.vflex = vflexes[i] || 0;  // Store for use during resizing
         for (j = 0; j < ncols; j += 1) {
             col = row.children[j];
             if ((col === undefined) || (col.children.length === 0)) {
                 continue;
             }
             table.applyCellLayout(row, col, vflexes[i], hflexes[j], cum_vflex, cum_hflex);
+        }
+    }
+};
+
+
+zoof.adaptLayoutToSizeChange = function (event) {
+    /* This function adapts the height (in percent) of the flexible rows
+    of a layout. This is needed because the percent-height applies to the
+    total height of the table. This function is called whenever the
+    table resizes, and adjusts the percent-height, taking the available 
+    remaining table height into account. This is not necesary for the
+    width, since percent-width in colums *does* apply to available width.
+    */
+    
+    var table, row, col, i, j,
+        cum_vflex, remainingHeight, remainingPercentage, maxHeight;
+    
+    table = event.target;
+    
+    if (event.heightChanged) {
+        
+        // Set one flex row to max, so that non-flex rows have their minimum size
+        // The table can already have been stretched a bit, causing the total row-height
+        // in % to not be sufficient from keeping the non-flex rows from growing.
+        for (i = 0; i < table.children.length; i += 1) {
+            row = table.children[i];
+            if (row.vflex > 0) {
+                row.style.height = '100%';
+                break;
+            }
+        }
+        
+        // Get remaining height: subtract height of each non-flex row
+        remainingHeight = table.clientHeight;
+        cum_vflex = 0;
+        for (i = 0; i < table.children.length; i += 1) {
+            row = table.children[i];
+            cum_vflex += row.vflex;
+            if ((row.vflex === 0) && (row.children.length > 0)) {
+                remainingHeight -= row.children[0].clientHeight;
+            }
+        }
+        
+        // Apply height % for each flex row
+        remainingPercentage = 100 * remainingHeight / table.clientHeight;
+        for (i = 0; i < table.children.length; i += 1) {
+            row = table.children[i];
+            if (row.vflex > 0) {
+                row.style.height = Math.round(row.vflex / cum_vflex * remainingPercentage) + 1 + '%';
+            }
         }
     }
 };

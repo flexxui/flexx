@@ -16,13 +16,15 @@ class MyApp(ui.App):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 2
+        TEST = 4
         
         if TEST == 1:
-            with ui.HBox(self, flex=1) as self.hbox1:
+            with ui.VBox(self, flex=1) as self.hbox1:
                 self.b1 = ui.Button(text='Hola', flex=1)
                 self.b2 = ui.Button(text='Hello world', flex=0)
-                self.b3 = ui.Button(text='Foo bar', flex=3)
+                self.b2 = ui.Button(text='Hello world', flex=0)
+                self.b2 = ui.Button(text='Hello world', flex=0)
+                self.b3 = ui.Button(text='Foo bar', flex=1)
         
         if TEST == 2:
             with ui.VBox(self) as self.vbox:
@@ -78,10 +80,11 @@ class MyApp(ui.App):
                     ui.Widget(flex=1)
         if TEST == 4:
             with ui.Grid(self) as self.grid:
-                self.b1 = ui.Button(text='Nostretch', pos=(0, 0))
-                self.b2 = ui.Button(text='Hola', pos=(1, 1), flex=(1,1))
+                self.b1 = ui.Button(text='No flex', pos=(0, 0))
+                self.b2 = ui.Button(text='Hola', pos=(1, 1), flex=(1, 1))
                 self.b3 = ui.Button(text='Hello world', pos=(2, 2), flex=(2, 1))
                 self.b4 = ui.Button(text='Foo bar', pos=(4, 4), flex=(1, 2))
+                self.b5 = ui.Button(text='no flex again', pos=(5, 5))
         
         if TEST == 5:
             with ui.PinBoard(self) as self.grid:
