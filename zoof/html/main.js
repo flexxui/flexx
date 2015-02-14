@@ -8,14 +8,13 @@
 "use strict";
 
 
-// Init zoof namespace
-var zoof = {};
-zoof.lastmsg = null;
-zoof.ws = null;
-
 
 zoof.init = function () {
-    zoof.initSocket();
+    if (zoof.isExported) {
+        zoof.runExportedApp();
+    } else {
+        zoof.initSocket();
+    }
     zoof.initLogging();
 };
 
@@ -29,6 +28,33 @@ zoof.exit = function () {
 
 window.addEventListener('load', zoof.init, false);
 window.addEventListener('beforeunload', zoof.exit, false);
+
+
+zoof.command = function (msg) {   
+    var log, link;
+    log = document.getElementById('log');    
+    if (msg.search('EVAL ') === 0) {
+        /*jslint nomen: true, evil: true*/
+        window._ = eval(msg.slice(5));
+        ws.send('RET ' + window._);  // send back result
+
+    } else if (msg.search('EXEC ') === 0) {
+        /*jslint nomen: true, evil: true*/
+        eval(msg.slice(5));  // like eval, but do not return result
+        /*jslint nomen: false, evil: false*/
+    } else if (msg.search('TITLE ') === 0) {
+        document.title = msg.slice(6);
+    } else if (msg.search('ICON ') === 0) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        link.href = msg.slice(5);
+        document.getElementsByTagName('head')[0].appendChild(link);
+    } else if (msg.search('OPEN ') === 0) {
+        window.win1 = window.open(msg.slice(5), 'new', 'chrome');
+    } else {
+        log.innerHTML += msg + "<br />";
+    }
+};
 
 
 zoof.initSocket = function () {
@@ -48,31 +74,10 @@ zoof.initSocket = function () {
     ws.binaryType = "arraybuffer";
     
     ws.onmessage = function (evt) {
-        var log, msg, link;
-        log = document.getElementById('log');
+        var msg;        
         zoof.lastmsg = evt.data;
         msg = decodeUtf8(evt.data);
-        if (msg.search('EVAL ') === 0) {
-            /*jslint nomen: true, evil: true*/
-            window._ = eval(msg.slice(5));
-            ws.send('RET ' + window._);  // send back result
-            
-        } else if (msg.search('EXEC ') === 0) {
-            /*jslint nomen: true, evil: true*/
-            eval(msg.slice(5));  // like eval, but do not return result
-            /*jslint nomen: false, evil: false*/
-        } else if (msg.search('TITLE ') === 0) {
-            document.title = msg.slice(6);
-        } else if (msg.search('ICON ') === 0) {
-            link = document.createElement('link');
-            link.rel = 'icon';
-            link.href = msg.slice(5);
-            document.getElementsByTagName('head')[0].appendChild(link);
-        } else if (msg.search('OPEN ') === 0) {
-            window.win1 = window.open(msg.slice(5), 'new', 'chrome');
-        } else {
-            log.innerHTML += msg + "<br />";
-        }
+        zoof.command(msg);
     };
     
     ws.onclose = function (ev) {

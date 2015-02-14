@@ -16,7 +16,7 @@ class MyApp(ui.App):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 4
+        TEST = 3
         
         if TEST == 1:
             with ui.VBox(self, flex=1) as self.hbox1:
@@ -98,6 +98,9 @@ class MyApp(ui.App):
 #     def init(self):
 #         self.b = ui.Button(self, 'Hello world')
 
-app = MyApp()
+app = MyApp('export')
 keep_alive()
-ui.run(runtime='xul')
+ui.run()
+
+app._ws.write_html('/home/almar/projects/pylib/zoof/zoof/html/test.html')
+# todo: do "export:/home/etc"

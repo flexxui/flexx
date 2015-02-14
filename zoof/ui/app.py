@@ -37,6 +37,7 @@ App is used (not yet implemented/decided).
 
 """
 
+import os
 import inspect
 
 import tornado.ioloop
@@ -176,40 +177,13 @@ def port_hash(name):
     return 49152 + (val % 2**14)
 
 
-def run(runtime='xul', host='localhost', port=None):
-    """ Start the user interface
-    
-    This will do a couple of things:
-    
-    * All subclasses of App in the caller namespace are registered as apps.
-    * The server is started for UI runtimes to connect to.
-    * If specified, a runtime is launched for each application class.
-    * The even-loop is started.
-    
-    This function generally does not return until the application is
-    stopped, although it will try to behave nicely in interactive
-    environments (e.g. IEP, Spyder, IPython notebook), so the caller
-    should take into account that the function may return emmidiately.
-    
-    """
-    # todo: make it work in IPython (should be easy since its tornnado too
-    # todo: allow ioloop already running (e.g. integration with ipython)
-    
+def create_server(host='localhost', port=None):
     global _tornado_app 
     
     # Check that its not already running
     if _tornado_app is not None:
-        raise RuntimeError('zoof.ui eventloop already running')
-    
-    # Detect App classes in caller namespace
-    app_names = manager.get_app_names()
-    frame = inspect.currentframe()
-    for ob in frame.f_back.f_locals.values():
-        if isinstance(ob, type) and issubclass(ob, App):
-            #_app_classes.append(ob)
-            if ob.__name__ not in app_names:
-                manager.register_app_class(ob)
-                print('found', ob.__name__)
+        return
+        #raise RuntimeError('zoof.ui server already created')
     
     # Create server
     from .serve import ZoofTornadoApplication
@@ -230,22 +204,55 @@ def run(runtime='xul', host='localhost', port=None):
             raise RuntimeError('Could not bind to free address')    
     
     # Notify address, so its easy to e.g. copy and paste in the browser
+    _tornado_app.serving_at = host, port
     print('Serving apps at http://%s:%i/' % (host, port))
+
+
+def run():  # (runtime='xul', host='localhost', port=None):
+    """ Start the user interface
+    
+    This will do a couple of things:
+    
+    * All subclasses of App in the caller namespace are registered as apps.
+    * The server is started for UI runtimes to connect to.
+    * If specified, a runtime is launched for each application class.
+    * The even-loop is started.
+    
+    This function generally does not return until the application is
+    stopped, although it will try to behave nicely in interactive
+    environments (e.g. IEP, Spyder, IPython notebook), so the caller
+    should take into account that the function may return emmidiately.
+    
+    """
+    # todo: make it work in IPython (should be easy since its tornnado too
+    # todo: allow ioloop already running (e.g. integration with ipython)
+    
+    # Detect App classes in caller namespace
+    app_names = manager.get_app_names()
+    frame = inspect.currentframe()
+    for ob in frame.f_back.f_locals.values():
+        if isinstance(ob, type) and issubclass(ob, App):
+            #_app_classes.append(ob)
+            if ob.__name__ not in app_names:
+                manager.register_app_class(ob)
+                print('found', ob.__name__)
+    
+    create_server()
     
     # Launch runtime for each app
-    if runtime:
-        for name in manager.get_app_names():
-            # We get an app instance and associate the runtime with it. 
-            # We assume that the runtime will be the first to connect, and thus
-            # pick up this app instance. But this is in no way guaranteed.
-            # todo: guarante that runtime connects to exactlty this app
-            app = manager.get_pendig_app(name)
-            icon = app._config.icon
-            icon = icon if icon.image_sizes() else None
-            app._runtime = launch('http://localhost:%i/%s/' % (port, name), 
-                                  runtime=runtime, 
-                                  size=app.config.size,
-                                  icon=icon, title=app.config.title)
+    # if runtime:
+    #     for name in manager.get_app_names():
+    #         # We get an app instance and associate the runtime with it. 
+    #         # We assume that the runtime will be the first to connect, and thus
+    #         # pick up this app instance. But this is in no way guaranteed.
+    #         # todo: guarante that runtime connects to exactlty this app
+    #         app = manager.get_pendig_app(name)
+    #         icon = app._config.icon
+    #         icon = icon if icon.image_sizes() else None
+    #         app._runtime = launch('http://localhost:%i/%s/' % (port, name), 
+    #                               runtime=runtime, 
+    #                               size=app.config.size,
+    #                               icon=icon, title=app.config.title)
     
     # Start event loop
     _tornado_loop.start()
@@ -283,29 +290,29 @@ def create_enum(*members):
     return type('Enum', (), enums)
 
 
-class BaseWidget(object):
-    
-    def __init__(self, parent):
-        self._parent = None
-        self._children = []
-        self._set_parent(parent)
-    
-    @property
-    def parent(self):
-        return self._parent
-    
-    def _set_parent(self, new_parent):
-        old_parent = self._parent
-        if old_parent is not None:
-            while self in old_parent._children:
-                old_parent._children.remove(self)
-        if new_parent is not None:
-            new_parent._children.append(self)
-        self._parent = new_parent
-    
-    @property
-    def children(self):
-        return list(self._children)
+# class BaseWidget(object):
+#     
+#     def __init__(self, parent):
+#         self._parent = None
+#         self._children = []
+#         self._set_parent(parent)
+#     
+#     @property
+#     def parent(self):
+#         return self._parent
+#     
+#     def _set_parent(self, new_parent):
+#         old_parent = self._parent
+#         if old_parent is not None:
+#             while self in old_parent._children:
+#                 old_parent._children.remove(self)
+#         if new_parent is not None:
+#             new_parent._children.append(self)
+#         self._parent = new_parent
+#     
+#     @property
+#     def children(self):
+#         return list(self._children)
 
 # In tk, tk.Tk() creates the main window, further windows should be
 # created with tk.TopLevel()
@@ -313,7 +320,7 @@ class BaseWidget(object):
 # In Fltk a Frame can be toplevel or not
 
 
-class App(BaseWidget):
+class App(object):
     """ Base application object
     
     A subclass of the App class represents an application, and also its
@@ -352,8 +359,8 @@ class App(BaseWidget):
     
     _config = Config()  # Set default config
     
-    def __init__(self):
-        BaseWidget.__init__(self, None)
+    def __init__(self, runtime=None):
+        #BaseWidget.__init__(self, None)
         # Init websocket, will be set when a connection is made
         self._ws = None
         # Init runtime that is connected with this app instance
@@ -361,9 +368,29 @@ class App(BaseWidget):
         
         # Init
         self._widget_counter = 0
+        self._children = []
         
         # Register this app instance
-        manager._add_app_instance(self)
+        if runtime == 'export':
+            self._ws = Exporter(self)
+            self.init()
+        elif runtime:
+            manager._add_app_instance(self)
+            create_server()
+            host, port = _tornado_app.serving_at
+            # We get an app instance and associate the runtime with it. 
+            # We assume that the runtime will be the first to connect, and thus
+            # pick up this app instance. But this is in no way guaranteed.
+            # todo: guarante that runtime connects to exactlty this app
+            icon = self._config.icon
+            icon = icon if icon.image_sizes() else None
+            self._runtime = launch('http://%s:%i/%s/' % (host, port, self.name), 
+                                   runtime=runtime, 
+                                   size=self.config.size,
+                                   icon=icon, title=self.config.title)
+        else:
+            manager._add_app_instance(self)
+        
         print('Instantiate app %s' % self.__class__.__name__)
     
     def __repr__(self):
@@ -419,11 +446,15 @@ class App(BaseWidget):
             return self.STATUS.CLOSED  # connection closed
     
     @property
-    def parent(self):
-        """ For compatibility with widgets. The parent of an App is
-        always None.
-        """
-        return None
+    def children(self):
+        return list(self._children)
+        
+    # @property
+    # def parent(self):
+    #     """ For compatibility with widgets. The parent of an App is
+    #     always None.
+    #     """
+    #     return None
     
     def _exec(self, code):
         """ Like eval, but without returning the result value.
@@ -442,6 +473,44 @@ class App(BaseWidget):
             raise RuntimeError('App not connected')
         self._ws.command('EVAL ' + code)
     
+
+
+class Exporter(object):
+    """ Export apps to standalone HTML.
+    """
+    
+    def __init__(self, app):
+        self._commands = []
+        self.close_code = None  # simulate web socket
+        
+        # todo: how to export icons
+        self.command('ICON %s.ico' % app.id)
+        self.command('TITLE %s' % app._config.title)
+        
+    def command(self, cmd):
+        self._commands.append(cmd)
+    
+    def write_html(self, filename):
+        from .serve import HTML_DIR
+        HTML_BASE = open(os.path.join(HTML_DIR, 'index.html'), 'rt').read()
+        
+        # Create lines to launch app
+        lines = []
+        lines.append('zoof.isExported = true;')
+        lines.append('')
+        lines.append('zoof.runExportedApp = function () {')
+        lines.extend(['    zoof.command(%r);' % c for c in self._commands])
+        lines.append('};')
+        lines.append('</script>')
+        
+        # Fill in template
+        html = HTML_BASE.replace('zoof.isExported = false;', '\n        '.join(lines))
+        
+        # Write to file
+        open(filename, 'wt').write(html)
+        print('Exported app to %r' % filename)
+
+
 
 class DefaultApp(App):
     pass

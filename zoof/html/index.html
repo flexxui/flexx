@@ -7,11 +7,17 @@
 </head>
 
 <body id='body'>
-
+    <script>
+        // Init zoof namespace
+        window.zoof = {};
+        zoof.lastmsg = null;
+        zoof.ws = null;
+        zoof.isExported = false;
+    </script>
     <script src="serialize.js"></script>
     <script src="main.js"></script>
     <script src="layouts.js"></script>
-    
+        
     <!--
     <div>
         <input type="text" id="msg" value="message">

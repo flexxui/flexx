@@ -1,7 +1,7 @@
 
 import json
 
-from .app import App, BaseWidget
+from .app import App
 
 
 class NativeElement(object):
@@ -12,7 +12,7 @@ class NativeElement(object):
         # That would be great for debugging ...
 
 
-class Widget(BaseWidget):
+class Widget(object):
     """ Base widget class
     
     All widgets derive from this class. On itself, this type of widget
@@ -28,7 +28,11 @@ class Widget(BaseWidget):
             else:
                 raise ValueError('Parent must be given unless it is '
                                  'instantiated a widget context.')
-        BaseWidget.__init__(self, parent)
+        
+        self._parent = None
+        self._children = []
+        self._set_parent(parent)
+        
         self._flex = flex if isinstance(flex, tuple) else (flex, flex)
         self._pos = pos
         app = self.get_app()
@@ -37,6 +41,23 @@ class Widget(BaseWidget):
         
         # Call function to create js_object
         self._create_js_object()
+    
+    @property
+    def parent(self):
+        return self._parent
+    
+    def _set_parent(self, new_parent):
+        old_parent = self._parent
+        if old_parent is not None:
+            while self in old_parent._children:
+                old_parent._children.remove(self)
+        if new_parent is not None:
+            new_parent._children.append(self)
+        self._parent = new_parent
+    
+    @property
+    def children(self):
+        return list(self._children)
     
     def _create_js_object(self, **kwargs):
         """ This method can be overloaded to populate the dict used
