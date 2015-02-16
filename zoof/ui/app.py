@@ -38,6 +38,7 @@ App is used (not yet implemented/decided).
 """
 
 import os
+import time
 import inspect
 
 import tornado.ioloop
@@ -77,7 +78,7 @@ class AppManager(object):
             raise ValueError('App with name %r already registered' % name)
         self._apps[name] = app_class, [], []
     
-    def _add_app_instance(self, app):
+    def _add_pending_app_instance(self, app):
         """ Add an app instance as a pending app. User internally.
         Friend method of the App class.
         """
@@ -96,41 +97,45 @@ class AppManager(object):
             raise RuntimeError('Cannot add app instances that are/were '
                                'already connected')
     
-    def get_pendig_app(self, name):
-        """ Get an app instance for the given app name
-        
-        The returned app is a "pending" app, which implies that it is
-        not yet connected. It may already exist before this function
-        is called. Used in start() to associate a runtime object.
-        """
-        # todo: remove app instance when disconnected
-        cls, pending, connected = self._apps[name]
-        if pending:
-            return pending[0]
-        else:
-            app = cls()  # instantiation adds to pending via add_app_instance
-            return app
-    
-    def connect_an_app(self, name, ws):
+    def connect_an_app(self, ws, name, app_id=None):
         """ Connect a pending app instance
         
         Called by the websocket object upon connecting, thus initiating
         the application.
         """
         cls, pending, connected = self._apps[name]
-        # Get app (from pending if possible)
-        if not pending:
-            cls()  # create class, instance ends up in pending
-        app = pending.pop(0)
+        # Get a pending app instance with specific id, or a new instance
+        print('connecting', name, app_id)
+        if app_id:
+            for app in pending:
+                if app.id == app_id:
+                    pending.remove(app)
+                    break
+            else:
+                raise RuntimeError('Asked for app id %r, '
+                                   'but could not find it' % app_id)
+        else:
+            app = cls(runtime=None)  # don't create a runtime for it
         # Add app to connected, set ws
         assert app.status == app.STATUS.PENDING
         connected.append(app)
-        app._ws = ws
+        app._ws = ws  # This is what changes the status to CONNECTED
         # The app can now be used
         ws.command('ICON %s.ico' % app.id)
         ws.command('TITLE %s' % app._config.title)
         app.init()
         return app
+    
+    def close_an_app(self, app):
+        """ Close an application object. This is called by the websocket
+        when the connection is closed. The manager will remove the app
+        from the list of connected instances.
+        """
+        cls, pending, connected = self._apps[app.name]
+        try:
+            connected.remove(app)
+        except ValueError:
+            pass
     
     def has_app_name(self, name):
         """ Returns True if name is a registered appliciation name
@@ -177,7 +182,7 @@ def port_hash(name):
     return 49152 + (val % 2**14)
 
 
-def create_server(host='localhost', port=None):
+def init_server(host='localhost', port=None):
     global _tornado_app 
     
     # Check that its not already running
@@ -237,22 +242,7 @@ def run():  # (runtime='xul', host='localhost', port=None):
                 manager.register_app_class(ob)
                 print('found', ob.__name__)
     
-    create_server()
-    
-    # Launch runtime for each app
-    # if runtime:
-    #     for name in manager.get_app_names():
-    #         # We get an app instance and associate the runtime with it. 
-    #         # We assume that the runtime will be the first to connect, and thus
-    #         # pick up this app instance. But this is in no way guaranteed.
-    #         # todo: guarante that runtime connects to exactlty this app
-    #         app = manager.get_pendig_app(name)
-    #         icon = app._config.icon
-    #         icon = icon if icon.image_sizes() else None
-    #         app._runtime = launch('http://localhost:%i/%s/' % (port, name), 
-    #                               runtime=runtime, 
-    #                               size=app.config.size,
-    #                               icon=icon, title=app.config.title)
+    init_server()
     
     # Start event loop
     _tornado_loop.start()
@@ -263,13 +253,13 @@ def stop():
     """
     _tornado_loop.stop()
 
-
-def process_events():
-    """ Process events
-    
-    Call this to keep the application working while running in a loop.
-    """
-    _tornado_loop.run_sync(lambda x=None: None)
+# # todo: this does not work if the event loop is running!
+# def process_events():
+#     """ Process events
+#     
+#     Call this to keep the application working while running in a loop.
+#     """
+#     _tornado_loop.run_sync(lambda x=None: None)
 
 
 def call_later(delay, callback, *args, **kwargs):
@@ -359,7 +349,7 @@ class App(object):
     
     _config = Config()  # Set default config
     
-    def __init__(self, runtime=None):
+    def __init__(self, runtime='xul'):
         #BaseWidget.__init__(self, None)
         # Init websocket, will be set when a connection is made
         self._ws = None
@@ -371,25 +361,32 @@ class App(object):
         self._children = []
         
         # Register this app instance
-        if runtime == 'export':
+        if runtime == '<export>':
             self._ws = Exporter(self)
             self.init()
         elif runtime:
-            manager._add_app_instance(self)
-            create_server()
+            manager._add_pending_app_instance(self)
+            init_server()
             host, port = _tornado_app.serving_at
-            # We get an app instance and associate the runtime with it. 
-            # We assume that the runtime will be the first to connect, and thus
-            # pick up this app instance. But this is in no way guaranteed.
-            # todo: guarante that runtime connects to exactlty this app
+            # We associate the runtime with this specific app instance by
+            # including the app id to the url. In this way, it is pretty
+            # much guaranteed that the runtime will connect to *this* app.
             icon = self._config.icon
             icon = icon if icon.image_sizes() else None
-            self._runtime = launch('http://%s:%i/%s/' % (host, port, self.name), 
+            name = self.name + '-' + self.id
+            self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
                                    runtime=runtime, 
                                    size=self.config.size,
                                    icon=icon, title=self.config.title)
-        else:
-            manager._add_app_instance(self)
+            # Now wait until connected, if possible
+            timeout = time.time() + 5.0
+            try:
+                while (self._ws is None) and (time.time() < timeout):
+                    _tornado_loop.run_sync(lambda x=None: None)
+                    time.sleep(0.005)
+            except RuntimeError:
+                print('Tornado event loop already running: Return from app '
+                      'initialziation before runtime could connect.')
         
         print('Instantiate app %s' % self.__class__.__name__)
     
@@ -473,6 +470,16 @@ class App(object):
             raise RuntimeError('App not connected')
         self._ws.command('EVAL ' + code)
     
+    @classmethod
+    def export(cls, filename):
+        """ Classmethod to export the app to HTML
+        
+        This will instantiate an app object, capture all commands that
+        it produces in init(), and stores this in a standalone HTML
+        document specified by filename.
+        """
+        app = cls(runtime='<export>')
+        app._ws.write_html(filename)
 
 
 class Exporter(object):
@@ -501,15 +508,82 @@ class Exporter(object):
         lines.append('zoof.runExportedApp = function () {')
         lines.extend(['    zoof.command(%r);' % c for c in self._commands])
         lines.append('};')
-        lines.append('</script>')
         
         # Fill in template
         html = HTML_BASE.replace('zoof.isExported = false;', '\n        '.join(lines))
         
+        # Minify
+        # todo: these names must be parsed from html or read from serve.py
+        for fname in ['serialize.js', 'main.js', 'layouts.js']:
+            code = open(os.path.join(HTML_DIR, fname), 'rt').read()
+            minified = self._minify(code)
+            needle = '<script src="%s"></script>' % fname
+            html = html.replace(needle, '<script>%s</script>' % minified)
+        for fname in ['main.css']:
+            code = open(os.path.join(HTML_DIR, fname), 'rt').read()
+            minified = self._minify(code)
+            needle = '<link rel="stylesheet" type="text/css" href="%s">' % fname
+            html = html.replace(needle, '<style>%s</style>' % minified)
+            
+            
         # Write to file
         open(filename, 'wt').write(html)
         print('Exported app to %r' % filename)
-
+    
+    
+    def _minify(self, code):
+        """ Very minimal JS minification algorithm. Can probably be better.
+        May contain bugs. Only operates well on JS without syntax errors.
+        """
+        space_safe = ' =+-/*&|(){},.><:;'
+        chars = ['\n']
+        self._i = -1
+        def read():
+            self._i += 1
+            if self._i < len(code):
+                return code[self._i]
+        def to_end_of_string(c0):
+            chars.append(c0)
+            while True:
+                c = read()
+                chars.append(c)
+                if c == c0 and chars[-1] != '\\':
+                    return
+        def to_end_of_line_comment():
+            while True:
+                c = read()
+                if c == '\n':
+                    return
+        def to_end_of_mutiline_comment():
+            lastchar = ''
+            while True:
+                c = read()
+                if c == '/' and lastchar == '*':
+                    return
+                lastchar = c
+        while True:
+            c = read()
+            if not c:
+                break  # end of code
+            elif c == "'" or c == '"':
+                to_end_of_string(c)
+            elif c == '/' and chars[-1] == '/':
+                chars.pop(-1)
+                to_end_of_line_comment()
+            elif c == '*' and chars[-1] == '/':
+                chars.pop(-1)
+                to_end_of_mutiline_comment()
+            elif c in '\t\r\n':
+                pass
+            elif c in ' ':
+                if chars[-1] not in space_safe:
+                    chars.append(c)
+            elif c in space_safe and chars[-1] == ' ':
+                chars[-1] = c  # replace last char
+            else:
+                chars.append(c)
+        chars.pop(0)
+        return ''.join(chars)
 
 
 class DefaultApp(App):

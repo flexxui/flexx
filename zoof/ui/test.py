@@ -1,11 +1,9 @@
+import time
 import zoof
 from zoof import ui
 
-def keep_alive():
-    __iep__.process_commands()
-    ui.call_later(0.1, keep_alive)
-
-
+import faulthandler
+faulthandler.enable()
 
 class MyApp(ui.App):
     
@@ -16,7 +14,7 @@ class MyApp(ui.App):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 3
+        TEST = 2
         
         if TEST == 1:
             with ui.VBox(self, flex=1) as self.hbox1:
@@ -94,13 +92,12 @@ class MyApp(ui.App):
             
         #self.win = ui.Window(self, 'A new window!')
         
-# class MyApp2(ui.App):
-#     def init(self):
-#         self.b = ui.Button(self, 'Hello world')
+class MyApp2(ui.App):
+    def init(self):
+        self.b = ui.Button(self, 'Hello world')
 
-app = MyApp('export')
-keep_alive()
+app = MyApp('xul')
 ui.run()
+app.b1.set_text('asdasd')
 
-app._ws.write_html('/home/almar/projects/pylib/zoof/zoof/html/test.html')
-# todo: do "export:/home/etc"
+MyApp.export('/home/almar/test.html')

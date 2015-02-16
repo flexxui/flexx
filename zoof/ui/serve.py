@@ -75,41 +75,74 @@ class MainHandler(tornado.web.RequestHandler):
     
     def get(self, path=None):
         print('get', path)
-        app_name = path.rstrip('/')
-        app_name = app_name if app_name.isidentifier() else None
+        
+        # Analyze path to derive components
+        # app_name - class name of the app, must be a valid identifier
+        # app_id - optional id to associate connection to a specific instance
+        # file_name - path (can have slashes) to a file
+        parts = [p for p in path.split('/') if p]
+        if parts and parts[0].split('-')[0].isidentifier():
+            app_name, _, app_id = parts[0].partition('-')
+            file_name = '/'.join(parts[1:])
+        else:
+            app_name, app_id = None, None
+            file_name = '/'.join(parts)
+        
+        # todo: maybe when app_id is given, redirect to normal name, but
+        # modify zoof.app_id in index.html, so that the websocket can connect
+        # with id ... (mmm also not very nice)
         
         if not path:
             # Not a path, index / home page
-            self.write('Root selected, apps available: %r' % 
-                       manager.get_app_names())
+            all_apps = ['<a href="%s">%s</a>' % (name, name) for name in 
+                        manager.get_app_names()]
+            all_apps = ', '.join(all_apps)
+            self.write('Root selected, apps available: %s' % all_apps)
+        
         elif app_name:
-            # This looks like an app, redirect, serve app, or error
-            if not '/' in path:
-                self.redirect('/%s/' % app_name)
-            elif manager.has_app_name(app_name):
-                self.write(self.application.load('index.html'))
-            else:
-                self.write('No app %r is being hosted right now' % app_name)
-        elif path.endswith('.ico') and '/' in path:
-            # Icon, look it up from the app instance
-            app_name, filename = path.split('/', 1)
-            id = filename.split('.')[0]
-            if manager.has_app_name(app_name):
-                app = manager.get_app_by_id(app_name, id)
-                if app:
-                    self.write(app._config.icon.to_bytes())
+            # App name given. But is it the app, or a resource for it?
+            
+            if not file_name:
+                # This looks like an app, redirect, serve app, or error
+                if not '/' in path:
+                    self.redirect('/%s/' % app_name)
+                elif app_id:
+                    app = manager.get_app_by_id(app_name, app_id)
+                    if app and app.status == app.STATUS.PENDING:
+                         self.write(self.application.load('index.html'))
+                    else:
+                        self.write('App %r with id %r is not available' % 
+                                   (app_name, app_id))
+                elif manager.has_app_name(app_name):
+                    self.write(self.application.load('index.html'))
+                else:
+                    self.write('No app %r is hosted right now' % app_name)
+            elif file_name.endswith('.ico'):
+                # Icon, look it up from the app instance
+                id = file_name.split('.')[0]
+                if manager.has_app_name(app_name):
+                    app = manager.get_app_by_id(app_name, id)
+                    if app:
+                        self.write(app._config.icon.to_bytes())
+            elif file_name:
+                # A resource, e.g. js/css/icon
+                if file_name.endswith('.css'):
+                    self.set_header("Content-Type", 'text/css')
+                try:
+                    res = self.application.load(file_name)
+                except IOError:
+                    #self.write('invalid resource')
+                    super().write_error(404)
+                else:
+                    self.write(res)
+        
+        elif file_name:
+            # filename in root. We don't support that yet
+            self.write('Invalid file % r' % file_ame)
+        
         else:
-            # Another resource, e.g. js/css/icon
-            app_name, filename = path.split('/', 1)
-            if path.endswith('.css'):
-                self.set_header("Content-Type", 'text/css')
-            try:
-                res = self.application.load(filename)
-            except IOError:
-                #self.write('invalid resource')
-                super().write_error(404)
-            else:
-                self.write(res)
+            # In theory this cannot happen
+            self.write('This should not happen')
     
     def write_error(self, status_code, **kwargs):
         # does not work?
@@ -145,9 +178,9 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         self.set_nodelay(True)
         
         print('new ws connection', path)
-        app_name = path.strip('/')
+        app_name, _, app_id = path.strip('/').partition('-')
         if manager.has_app_name(app_name):
-            app = manager.connect_an_app(app_name, self)
+            self._app = manager.connect_an_app(self, app_name, app_id)
             self.write_message("Hello World", binary=True)
         else:
             self.close(1003, "Could not associate socket with an app.")
@@ -176,6 +209,8 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         code = self.close_code or 0
         reason = self.close_reason or self.known_reasons.get(code, '')
         print('detected close: %s (%i)' % (reason, code))
+        manager.close_an_app(self._app)
+        self._app = None  # Allow cleaning up
     
     def on_pong(self, data):
         """ Called when our ping is returned.

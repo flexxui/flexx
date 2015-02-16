@@ -30,13 +30,13 @@ window.addEventListener('load', zoof.init, false);
 window.addEventListener('beforeunload', zoof.exit, false);
 
 
-zoof.command = function (msg) {   
+zoof.command = function (msg) {
     var log, link;
-    log = document.getElementById('log');    
+    log = document.getElementById('log');
     if (msg.search('EVAL ') === 0) {
         /*jslint nomen: true, evil: true*/
         window._ = eval(msg.slice(5));
-        ws.send('RET ' + window._);  // send back result
+        zoof.ws.send('RET ' + window._);  // send back result
 
     } else if (msg.search('EXEC ') === 0) {
         /*jslint nomen: true, evil: true*/
@@ -60,6 +60,8 @@ zoof.command = function (msg) {
 zoof.initSocket = function () {
     var loc, url, ws;
     
+    zoof.lastmsg = null;
+    
     // Check WebSocket support
     if (window.WebSocket === undefined) {
         document.body.innerHTML = 'This browser does not support WebSockets';
@@ -74,7 +76,7 @@ zoof.initSocket = function () {
     ws.binaryType = "arraybuffer";
     
     ws.onmessage = function (evt) {
-        var msg;        
+        var msg;
         zoof.lastmsg = evt.data;
         msg = decodeUtf8(evt.data);
         zoof.command(msg);
