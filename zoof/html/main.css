@@ -29,10 +29,65 @@ body {
     padding: 0px;  
 }
 
-
 .zf-pinboard {
     position: relative;
 }
+
+.zf-hbox, .zf-vbox {    
+    display: -webkit-flex;
+    display: -ms-flexbox;  /* IE 10 */
+    display: -ms-flex;     /* IE 11 */    
+    display: -moz-flex;
+    display: flex;
+    /*
+    justify-content: stretch;  /* start, end, center, space-between, space-around * /
+    align-items: stretch;
+    align-content: stretch;
+    */    
+}
+
+.box-align-center { -webkit-align-items: center; -ms-align-items: center; -moz-align-items: center; align-items: center; }
+.box-align-center { -webkit-align-items: center; -ms-align-items: center; -moz-align-items: center; align-items: center; }
+
+.zf-hbox > .zf-hbox, .zf-hbox > .zf-vbox {
+    width: auto;
+}
+.zf-vbox > .zf-hbox, .zf-vbox > .zf-vbox {
+    height: auto;
+}
+
+
+.zf-hbox {
+    -webkit-flex-flow: row;
+    -ms-flex-flow: row;
+    -moz-flex-flow: row;    
+    flex-flow: row;
+    /*border: 1px dashed #44e;*/
+    width: 100%;    
+}
+
+.zf-vbox {
+    -webkit-flex-flow: column;
+    -ms-flex-flow: column;    
+    -moz-flex-flow: column;    
+    flex-flow: column;   
+    /*border: 1px dashed #e44;*/
+    height: 100%;
+    width: 100%;
+}
+
+/* flexes */
+.zf-hbox > div, .zf-vbox > div { -webkit-flex-grow: 1; -ms-flex-grow: 1; -moz-flex-grow: 1; flex-grow: 1; }
+.flex0 { -ms-flex-grow: 0; -webkit-flex-grow: 0; flex-grow: 0; }
+.flex1 { -ms-flex-grow: 1; -webkit-flex-grow: 1; flex-grow: 1; }
+.flex2 { -ms-flex-grow: 2; -webkit-flex-grow: 2; flex-grow: 2; }
+.flex3 { -ms-flex-grow: 3; -webkit-flex-grow: 3; flex-grow: 3; }
+.flex4 { -ms-flex-grow: 4; -webkit-flex-grow: 4; flex-grow: 4; }
+.flex5 { -ms-flex-grow: 5; -webkit-flex-grow: 5; flex-grow: 5; }
+.flex6 { -ms-flex-grow: 6; -webkit-flex-grow: 6; flex-grow: 6; }
+.flex7 { -ms-flex-grow: 7; -webkit-flex-grow: 7; flex-grow: 7; }
+.flex8 { -ms-flex-grow: 8; -webkit-flex-grow: 8; flex-grow: 8; }
+.flex9 { -ms-flex-grow: 9; -webkit-flex-grow: 9; flex-grow: 9; }
 
 
 /* ========== Widgets in a layout ========== */

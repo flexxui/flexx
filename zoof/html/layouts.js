@@ -99,22 +99,83 @@ zoof.setStyle = function (id) {
 
 zoof.createWidget = function (D) {
     var e = zoof.createWidgetElement('div', D);
+    return e;
 };
 
 
 zoof.createLabel = function (D) {
     var e = zoof.createWidgetElement('div', D);
     e.innerHTML = D.text;
+    return e;
 };
 
 
 zoof.createButton = function (D) {
     var e = zoof.createWidgetElement('button', D);
     e.innerHTML = D.text;
+    return e;
 };
 
 
+zoof.createBox = function (D) {
+    var e;
+    e = zoof.createWidgetElement('div', D);
+            
+    // layout margin is implemented by table padding
+    e.style.padding = D.margin;
+        
+    e.applyLayout = function () { };
+    
+    e.applyBoxStyle = function (e, sty, value) {
+        var prefix, prefixes, i;
+        prefixes = ['-webkit-', '-ms-', '-moz-', ''];
+        for (i = 0; i < prefixes.length; i += 1) {
+            prefix = prefixes[i];
+            e.style[prefix + sty] = value;
+        }
+    };
+    return e;
+};
+
 zoof.createHBox = function (D) {
+    var e = zoof.createBox(D);
+        
+    e.appendWidget = function (child) {
+        e.appendChild(child);
+        e.applyBoxStyle(child, 'flex-grow', child.hflex);
+        if (child.hflex > 0) {
+            e.applyBoxStyle(child, 'flex-basis', 0);
+        }
+        // todo: make this work also when items are removed and inserted
+        if (e.children.length > 1) {
+            child.style['margin-left'] = D.spacing;
+        }
+        // todo: flex-shrink?
+    };
+    
+    // todo: allow setting these dynamically from Python (in a scalabale way)
+    e.applyBoxStyle(e, 'align-items', 'center');  // flex-start, flex-end, center, baseline, stretch
+    e.applyBoxStyle(e, 'justify-content', 'space-around');  // flex-start, flex-end, center, space-between, space-around
+    return e;
+};
+
+zoof.createVBox = function (D) {
+    var e = zoof.createBox(D);
+    e.appendWidget = function (child) {
+        e.appendChild(child);
+        e.applyBoxStyle(child, 'flex-grow', child.vflex);
+        if (child.vflex > 0) {
+            e.applyBoxStyle(child, 'flex-basis', 0);
+        }
+    };
+    
+    e.applyBoxStyle(e, 'align-items', 'stretch');
+    e.applyBoxStyle(e, 'justify-content', 'space-around');
+    return e;
+};
+
+
+zoof.createTableHBox = function (D) {
     var e, row;
     
     e = zoof.createWidgetElement('table', D);
@@ -150,7 +211,7 @@ zoof.createHBox = function (D) {
 };
 
 
-zoof.createVBox = function (D) {
+zoof.createTableVBox = function (D) {
     var e = zoof.createWidgetElement('table', D);
     
     e.appendWidget = function (child) {

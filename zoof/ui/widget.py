@@ -21,7 +21,7 @@ class Widget(object):
     
     _counter = 0  # to produce unique id's
     
-    def __init__(self, parent=None, flex=0, pos=(0, 0)):
+    def __init__(self, parent=None, flex=1, pos=(0, 0)):
         if parent is None:
             if _default_parent:
                 parent = _default_parent[-1]
