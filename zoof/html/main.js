@@ -14,8 +14,8 @@ zoof.init = function () {
         zoof.runExportedApp();
     } else {
         zoof.initSocket();
+        zoof.initLogging();
     }
-    zoof.initLogging();
 };
 
 

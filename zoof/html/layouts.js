@@ -325,11 +325,11 @@ zoof.applyTableLayout = function (table) {
     
     // If no flexes are given; assign each equal
     if (cum_vflex === 0) {
-        vflexes.fill(zoof.AUTOFLEX);
+        for (i = 0; i < vflexes.length; i += 1) {  vflexes[i] = zoof.AUTOFLEX; }
         cum_vflex = vflexes.length * zoof.AUTOFLEX;
     }
     if (cum_hflex === 0) {
-        hflexes.fill(zoof.AUTOFLEX);
+        for (i = 0; i < hflexes.length; i += 1) {  hflexes[i] = zoof.AUTOFLEX; }
         cum_hflex = hflexes.length * zoof.AUTOFLEX;
     }
     

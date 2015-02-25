@@ -471,7 +471,7 @@ class App(object):
         self._ws.command('EVAL ' + code)
     
     @classmethod
-    def export(cls, filename):
+    def export(cls, filename=None):
         """ Classmethod to export the app to HTML
         
         This will instantiate an app object, capture all commands that
@@ -479,8 +479,10 @@ class App(object):
         document specified by filename.
         """
         app = cls(runtime='<export>')
-        app._ws.write_html(filename)
-
+        if filename is None:
+            return app._ws.to_html()
+        else:
+            return app._ws.write_html(filename)
 
 class Exporter(object):
     """ Export apps to standalone HTML.
@@ -498,6 +500,13 @@ class Exporter(object):
         self._commands.append(cmd)
     
     def write_html(self, filename):
+        html = self.to_html()
+        open(filename, 'wt').write(html)
+        print('Exported app to %r' % filename)
+    
+    def to_html(self):
+        """ Return HTML string
+        """
         from .serve import HTML_DIR
         HTML_BASE = open(os.path.join(HTML_DIR, 'index.html'), 'rt').read()
         
@@ -524,12 +533,8 @@ class Exporter(object):
             minified = self._minify(code)
             needle = '<link rel="stylesheet" type="text/css" href="%s">' % fname
             html = html.replace(needle, '<style>%s</style>' % minified)
-            
-            
-        # Write to file
-        open(filename, 'wt').write(html)
-        print('Exported app to %r' % filename)
-    
+        
+        return html
     
     def _minify(self, code):
         """ Very minimal JS minification algorithm. Can probably be better.

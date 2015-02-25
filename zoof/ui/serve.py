@@ -128,6 +128,8 @@ class MainHandler(tornado.web.RequestHandler):
                 # A resource, e.g. js/css/icon
                 if file_name.endswith('.css'):
                     self.set_header("Content-Type", 'text/css')
+                elif file_name.endswith('.js'):
+                    self.set_header("Content-Type", 'application/x-javascript')
                 try:
                     res = self.application.load(file_name)
                 except IOError:
@@ -138,7 +140,7 @@ class MainHandler(tornado.web.RequestHandler):
         
         elif file_name:
             # filename in root. We don't support that yet
-            self.write('Invalid file % r' % file_ame)
+            self.write('Invalid file % r' % file_name)
         
         else:
             # In theory this cannot happen
