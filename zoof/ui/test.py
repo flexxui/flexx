@@ -14,7 +14,7 @@ class MyApp(ui.App):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 2
+        TEST = 6
         
         if TEST == 1:
             with ui.VBox(self, flex=1) as self.hbox1:
@@ -89,7 +89,12 @@ class MyApp(ui.App):
                 self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
                 self.b2 = ui.Button(text='Dynamic at (20%, 20%)', pos=(0.2, 0.2))
                 self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
-            
+        
+        if TEST == 6:
+            with ui.Splitter(self):
+                self.b1 = ui.Button(text='Hola', flex=1)
+                self.b2 = ui.Button(text='Hello world', flex=0)
+                
         #self.win = ui.Window(self, 'A new window!')
         
 class MyApp2(ui.App):

@@ -457,3 +457,91 @@ zoof.adaptLayoutToSizeChange = function (event) {
         }
     }
 };
+
+
+
+zoof.createSplitter = function (D) {
+    var e, container, ghost, widget, widgets, divider, dividers, i, w2;
+    
+    e = zoof.createWidgetElement('div', D);
+    
+    widgets = [];
+    dividers = [];
+    
+    // Add container. We need a contain that is absolutely positioned,
+    // because the children are positoned relative to the first absolutely 
+    // positioned parent.
+    container = document.createElement("div");
+    container.classList.add('zf-splitter-container');
+    e.appendChild(container);
+    
+    // Add Ghost (the thing the usr grabs and moves around)
+    ghost = document.createElement("div");
+    ghost.classList.add('zf-splitter-ghost');
+    container.appendChild(ghost);
+    ghost.style.visibility = 'hidden';
+    
+    // Divider width
+    w2 = 3; // half of divider width    
+    ghost.style.width = 2 * w2 + 'px';
+    
+    // Flag to indicate dragging
+    e.isdragging = 0;
+    
+    e.appendWidget = function (child) {
+        /* Add to container and create divider if there is something to divide.
+        */
+        container.appendChild(child);        
+        widgets.push(child);
+        if (widgets.length >= 2) {
+            divider = document.createElement("div");
+            divider.classList.add('zf-splitter-divider');
+            divider.style.width = 2 * w2 + 'px';
+            divider.addEventListener('mousedown', e.on_mousedown, false);
+            divider.dividerIndex = dividers.length;
+            container.appendChild(divider);
+            dividers.push(divider);
+            e.moveSlider(divider.dividerIndex, 300);
+        }
+    };
+    
+    e.applyLayout = function () {
+        /* Keep container in its max size
+        */
+        container.style.width = e.clientWidth + 'px';
+        container.style.height = e.clientHeight + 'px';
+    };
+        
+    e.moveSlider = function (i, t) {
+        ghost.style.left = (t - w2) + 'px';
+        dividers[i].style.left = (t - w2) + 'px';
+        widgets[i].style.width = (t - w2) + 'px';
+        widgets[i + 1].style.left = (t + w2) + 'px';
+        widgets[i + 1].style.width = (container.clientWidth - t - w2) + 'px';  // there seems to be a margin?        
+    };
+    
+    e.on_mousedown = function (ev) {
+        e.isdragging = ev.target.dividerIndex + 1;
+        e.on_mousemove(ev.target.dividerIndex, ev.clientX);
+        ghost.style.visibility = 'visible';
+        //ev.dataTransfer.setData("Text", ev.target.id); // for dragging
+    };
+    
+    e.on_mousemove = function (ev) {
+        if (e.isdragging) {
+            ghost.style.left = (ev.clientX - w2) + 'px';
+        }
+    };
+    
+    e.on_mouseup = function (ev) {
+        if (e.isdragging) {
+            i = e.isdragging - 1;
+            e.isdragging = 0;
+            ghost.style.visibility = 'hidden';
+            e.moveSlider(i, ev.clientX);
+        }
+    };
+    
+    container.addEventListener('mousemove', e.on_mousemove, false);
+    window.addEventListener('mouseup', e.on_mouseup, false);
+};

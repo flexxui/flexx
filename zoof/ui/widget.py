@@ -236,3 +236,9 @@ class PinBoard(Layout):
     than 1, the value is interpreted as pixels. If smaller than 1, it
     is interpreted as a percentage of the layout's size.
     """
+
+
+class Splitter(Layout):
+    """ A splitter has a divider between the widgets, which can be
+    dragged by the user to determine the size of the sub-widgets.
+    """

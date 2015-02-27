@@ -76,7 +76,7 @@ body {
     width: 100%;
 }
 
-/* flexes */
+/* flexes 
 .zf-hbox > div, .zf-vbox > div { -webkit-flex-grow: 1; -ms-flex-grow: 1; -moz-flex-grow: 1; flex-grow: 1; }
 .flex0 { -ms-flex-grow: 0; -webkit-flex-grow: 0; flex-grow: 0; }
 .flex1 { -ms-flex-grow: 1; -webkit-flex-grow: 1; flex-grow: 1; }
@@ -88,7 +88,38 @@ body {
 .flex7 { -ms-flex-grow: 7; -webkit-flex-grow: 7; flex-grow: 7; }
 .flex8 { -ms-flex-grow: 8; -webkit-flex-grow: 8; flex-grow: 8; }
 .flex9 { -ms-flex-grow: 9; -webkit-flex-grow: 9; flex-grow: 9; }
+*/
 
+
+.zf-splitter > .zf-splitter-container {
+    position: absolute;
+    background: #ccf;
+}
+
+.zf-splitter-container > .zf-widget {
+    position: absolute;
+    height: 100%;
+    transition: left 0.3s, width 0.3s, right 0.3s;    
+}
+
+.zf-splitter-divider, .zf-splitter-ghost {
+    position: absolute;
+    top: 0px;
+    width: 6px; /* overridden in JS */
+    height: 100%;  /* todo: this is a hsplitter, I suppose */
+    cursor: ew-resize;
+}
+
+.zf-splitter-divider {
+    background: #555;    
+    z-index: 998;
+    transition: left 0.3s;
+}
+
+.zf-splitter-ghost {
+    background: #777;    
+    z-index: 999;
+}
 
 /* ========== Widgets in a layout ========== */
 
