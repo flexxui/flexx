@@ -238,7 +238,7 @@ class PinBoard(Layout):
     """
 
 
-class Splitter(Layout):
-    """ A splitter has a divider between the widgets, which can be
-    dragged by the user to determine the size of the sub-widgets.
+class HSplit(Layout):
+    """ The HSplit horizontally splits the available space in regions,
+    which size can be set by the user by dragging the divider.
     """

@@ -91,7 +91,7 @@ body {
 */
 
 
-.zf-splitter > .zf-splitter-container {
+.zf-hsplit > .zf-splitter-container {
     /* width and heigth set by JS. This is a layout boundary 
       http://wilsonpage.co.uk/introducing-layout-boundaries/ */
     overflow: hidden;
@@ -123,6 +123,7 @@ body {
     background: none;    
     box-shadow:  0px 0px 12px #777;
     z-index: 999;
+    transition: visibility 0.25s;
 }
 
 .dotransition > .zf-widget, .dotransition > .zf-splitter-divider {

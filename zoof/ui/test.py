@@ -91,9 +91,14 @@ class MyApp(ui.App):
                 self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
         
         if TEST == 6:
-            with ui.Splitter(self):
-                self.b1 = ui.Label(text='Hola')
-                self.b2 = ui.Button(text='Hello world')
+            with ui.HBox(self):
+                ui.Button(text='Button in hbox', flex=1)
+                with ui.HSplit(flex=1):
+                    self.b0 = ui.Button(text='Button in splitter')
+                    with ui.HBox():
+                        self.b1 = ui.Button(text='Right A', flex=0)
+                        self.b2 = ui.Button(text='Right B', flex=1)
+                        self.b3 = ui.Button(text='Right C', flex=2)
                 
         #self.win = ui.Window(self, 'A new window!')
         

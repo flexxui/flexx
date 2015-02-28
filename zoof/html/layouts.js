@@ -460,7 +460,7 @@ zoof.adaptLayoutToSizeChange = function (event) {
 
 
 
-zoof.createSplitter = function (D) {
+zoof.createHSplit = function (D) {
     var e, container, ghost, widget, widgets, divider, dividers,
         i, w2, minWidth;
     
