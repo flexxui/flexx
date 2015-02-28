@@ -92,14 +92,18 @@ body {
 
 
 .zf-splitter > .zf-splitter-container {
+    /* width and heigth set by JS. This is a layout boundary 
+      http://wilsonpage.co.uk/introducing-layout-boundaries/ */
+    overflow: hidden;
     position: absolute;
     background: #ccf;
+    top: 0px;
+    left: 0px;    
 }
 
 .zf-splitter-container > .zf-widget {
     position: absolute;
     height: 100%;
-    transition: left 0.3s, width 0.3s, right 0.3s;    
 }
 
 .zf-splitter-divider, .zf-splitter-ghost {
@@ -111,14 +115,18 @@ body {
 }
 
 .zf-splitter-divider {
-    background: #555;    
+    background: #eee;    
     z-index: 998;
-    transition: left 0.3s;
 }
 
-.zf-splitter-ghost {
-    background: #777;    
+.zf-splitter-ghost {    
+    background: none;    
+    box-shadow:  0px 0px 12px #777;
     z-index: 999;
+}
+
+.dotransition > .zf-widget, .dotransition > .zf-splitter-divider {
+    transition: left 0.3s, width 0.3s, right 0.3s;
 }
 
 /* ========== Widgets in a layout ========== */

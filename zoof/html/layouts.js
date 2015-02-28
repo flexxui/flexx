@@ -461,10 +461,11 @@ zoof.adaptLayoutToSizeChange = function (event) {
 
 
 zoof.createSplitter = function (D) {
-    var e, container, ghost, widget, widgets, divider, dividers, i, w2;
+    var e, container, ghost, widget, widgets, divider, dividers,
+        i, w2, minWidth;
     
     e = zoof.createWidgetElement('div', D);
-    
+        
     widgets = [];
     dividers = [];
     
@@ -481,17 +482,22 @@ zoof.createSplitter = function (D) {
     container.appendChild(ghost);
     ghost.style.visibility = 'hidden';
     
-    // Divider width
+    // Divider width    
     w2 = 3; // half of divider width    
     ghost.style.width = 2 * w2 + 'px';
     
     // Flag to indicate dragging
     e.isdragging = 0;
     
+    minWidth = 10;
+    function clipWidth(t) {
+        return Math.min(e.clientWidth - minWidth, Math.max(minWidth, t));
+    }
+    
     e.appendWidget = function (child) {
         /* Add to container and create divider if there is something to divide.
         */
-        container.appendChild(child);        
+        container.appendChild(child);
         widgets.push(child);
         if (widgets.length >= 2) {
             divider = document.createElement("div");
@@ -501,18 +507,29 @@ zoof.createSplitter = function (D) {
             divider.dividerIndex = dividers.length;
             container.appendChild(divider);
             dividers.push(divider);
-            e.moveSlider(divider.dividerIndex, 300);
+            e.moveSlider(divider.dividerIndex, 0.5);
         }
     };
     
-    e.applyLayout = function () {
+    e.applyLayout = function () {}; // dummy    
+    
+    e.on_resize = function () {
         /* Keep container in its max size
         */
+        var i;
         container.style.width = e.clientWidth + 'px';
         container.style.height = e.clientHeight + 'px';
+        container.classList.remove('dotransition');
+        for (i = 0; i < dividers.length; i += 1) {
+            e.moveSlider(i, dividers[i].tInPerc);
+        }
     };
-        
+                
     e.moveSlider = function (i, t) {
+        if (t < 1) {
+            t *= e.clientWidth;
+        }
+        dividers[i].tInPerc = t / e.clientWidth;
         ghost.style.left = (t - w2) + 'px';
         dividers[i].style.left = (t - w2) + 'px';
         widgets[i].style.width = (t - w2) + 'px';
@@ -521,27 +538,36 @@ zoof.createSplitter = function (D) {
     };
     
     e.on_mousedown = function (ev) {
+        container.classList.add('dotransition');  //
+        ev.stopPropagation();
+        ev.preventDefault();
         e.isdragging = ev.target.dividerIndex + 1;
-        e.on_mousemove(ev.target.dividerIndex, ev.clientX);
+        e.moveSlider(ev.target.dividerIndex, ev.clientX);
         ghost.style.visibility = 'visible';
         //ev.dataTransfer.setData("Text", ev.target.id); // for dragging
     };
     
     e.on_mousemove = function (ev) {
         if (e.isdragging) {
-            ghost.style.left = (ev.clientX - w2) + 'px';
+            ev.stopPropagation();
+            ev.preventDefault();
+            ghost.style.left = clipWidth(ev.clientX - w2) + 'px';
         }
     };
     
     e.on_mouseup = function (ev) {
+        var t;
         if (e.isdragging) {
+            ev.stopPropagation();
+            ev.preventDefault();
             i = e.isdragging - 1;
             e.isdragging = 0;
             ghost.style.visibility = 'hidden';
-            e.moveSlider(i, ev.clientX);
+            e.moveSlider(i, clipWidth(ev.clientX));
         }
     };
     
+    e.addEventListener('resize', e.on_resize, false);
     container.addEventListener('mousemove', e.on_mousemove, false);
     window.addEventListener('mouseup', e.on_mouseup, false);
 };

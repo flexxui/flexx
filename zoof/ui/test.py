@@ -92,8 +92,8 @@ class MyApp(ui.App):
         
         if TEST == 6:
             with ui.Splitter(self):
-                self.b1 = ui.Button(text='Hola', flex=1)
-                self.b2 = ui.Button(text='Hello world', flex=0)
+                self.b1 = ui.Label(text='Hola')
+                self.b2 = ui.Button(text='Hello world')
                 
         #self.win = ui.Window(self, 'A new window!')
         
