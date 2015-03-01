@@ -517,8 +517,10 @@ zoof.createHSplit = function (D) {
         /* Keep container in its max size
         */
         var i;
-        container.style.width = e.clientWidth + 'px';
-        container.style.height = e.clientHeight + 'px';
+        container.style.left = e.offsetLeft + 'px';
+        container.style.top = e.offsetTop + 'px';
+        container.style.width = e.offsetWidth + 'px';
+        container.style.height = e.offsetHeight + 'px';
         container.classList.remove('dotransition');
         for (i = 0; i < dividers.length; i += 1) {
             e.moveSlider(i, dividers[i].tInPerc);
@@ -542,7 +544,7 @@ zoof.createHSplit = function (D) {
         ev.stopPropagation();
         ev.preventDefault();
         e.isdragging = ev.target.dividerIndex + 1;
-        e.moveSlider(ev.target.dividerIndex, ev.clientX);
+        e.moveSlider(ev.target.dividerIndex, ev.clientX - e.offsetLeft);
         ghost.style.visibility = 'visible';
         //ev.dataTransfer.setData("Text", ev.target.id); // for dragging
     };
@@ -551,7 +553,7 @@ zoof.createHSplit = function (D) {
         if (e.isdragging) {
             ev.stopPropagation();
             ev.preventDefault();
-            ghost.style.left = clipWidth(ev.clientX - w2) + 'px';
+            ghost.style.left = clipWidth(ev.clientX - e.offsetLeft - w2) + 'px';
         }
     };
     
@@ -563,7 +565,7 @@ zoof.createHSplit = function (D) {
             i = e.isdragging - 1;
             e.isdragging = 0;
             ghost.style.visibility = 'hidden';
-            e.moveSlider(i, clipWidth(ev.clientX));
+            e.moveSlider(i, clipWidth(ev.clientX - e.offsetLeft));
         }
     };
     
