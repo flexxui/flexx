@@ -21,7 +21,7 @@ class Widget(object):
     
     _counter = 0  # to produce unique id's
     
-    def __init__(self, parent=None, flex=0, pos=(0, 0)):
+    def __init__(self, parent=None, flex=0, pos=(0, 0), minWidth=0):
         if parent is None:
             if _default_parent:
                 parent = _default_parent[-1]
@@ -38,6 +38,8 @@ class Widget(object):
         app = self.get_app()
         app._widget_counter += 1
         self._id = self.__class__.__name__ + str(app._widget_counter)
+        
+        self._style_props = dict(minWidth=minWidth)
         
         # Call function to create js_object
         self._create_js_object()
@@ -82,6 +84,7 @@ class Widget(object):
         
     def _create_js_object_real(self, **kwargs):
         
+        kwargs.update(self._style_props)
         eval = self.get_app()._exec
         funcname = 'create' + self.__class__.__name__
         eval('zoof.%s(%s);' % (funcname, json.dumps(kwargs)))

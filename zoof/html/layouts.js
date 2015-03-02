@@ -39,6 +39,10 @@ zoof.createWidgetElement = function (type, D) {
     e.style.left = (D.pos[0] > 1 ? D.pos[0] + "px" : D.pos[0] * 100 + "%");
     e.style.top = (D.pos[1] > 1 ? D.pos[1] + "px" : D.pos[1] * 100 + "%");
     
+    // Set style props
+    // todo: generalize this
+    e.style.minWidth = D.minWidth + 'px';
+    
     // Add to parent
     par = zoof.get(D.parent);
     if (typeof par.appendWidget === 'function') {
@@ -46,7 +50,7 @@ zoof.createWidgetElement = function (type, D) {
     } else {
         par.appendChild(e);
     }
-    
+        
     // Add callback for resizing    
     e.checkResize = function () {
         /* This needs to be called if there is a chance that the widget has
@@ -464,7 +468,7 @@ zoof.adaptLayoutToSizeChange = function (event) {
 zoof.createHSplit = function (D) {
     var e, container, ghost, widget, widgets, divider, dividers,
         i, w2, minWidth,
-        onResize, onMouseDown, onMouseMove, onMouseUp, clipT;
+        onResize, onMouseDown, onMouseMove, onMouseUp, clipT, setOwnMinSize;
     
     e = zoof.createWidgetElement('div', D);
     
@@ -535,6 +539,7 @@ zoof.createHSplit = function (D) {
                 e.moveDivider(i, newTs[i]);
             }
         }
+        setOwnMinSize();
     };
     
     e.applyLayout = function () {}; // dummy    
@@ -563,6 +568,17 @@ zoof.createHSplit = function (D) {
     };
     
     //  Private functions
+    
+    setOwnMinSize = function () {
+        var w = 50,
+            h = 50;
+        for (i = 0; i < widgets.length; i += 1) {
+            w += 2 * w2 + parseFloat(widgets[i].style.minWidth) || minWidth;
+            h += 2 * w2 + parseFloat(widgets[i].style.minHeight) || minWidth;
+        }        
+        e.style.minWidth = w + 'px';
+        e.style.minHeight = h + 'px';
+    };
     
     minWidth = 20;
     clipT = function (i, t) {

@@ -14,7 +14,7 @@ class MyApp(ui.App):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 6
+        TEST = 7
         
         if TEST == 1:
             with ui.VBox(self, flex=1) as self.hbox1:
@@ -92,19 +92,19 @@ class MyApp(ui.App):
         
         if TEST == 6:
             with ui.HSplit(self):
-                ui.Button(text='Right A', flex=0)
-                ui.Button(text='Right B', flex=1)
-                ui.Button(text='Right C', flex=2)
+                ui.Button(text='Right A', minWidth=120)
+                ui.Button(text='Right B', minWidth=70)
+                ui.Button(text='Right C')
                 # ui.Button(text='Right D', flex=2)
                 # ui.Button(text='Right E', flex=2)
                 # ui.Button(text='Right F', flex=2)
     
         if TEST == 7:
             with ui.HBox(self):
-                ui.Button(text='Button in hbox', flex=1)
-                with ui.HSplit(flex=2):
-                    ui.Button(text='Button in splitter')
-                    with ui.HBox():
+                ui.Button(text='Button in hbox', flex=0)
+                with ui.HSplit(flex=1):
+                    ui.Button(text='Button in splitter', minWidth=100)
+                    with ui.HBox(minWidth=100):
                         ui.Button(text='Right A', flex=0)
                         ui.Button(text='Right B', flex=1)
                         ui.Button(text='Right C', flex=2)
