@@ -91,6 +91,15 @@ class MyApp(ui.App):
                 self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
         
         if TEST == 6:
+            with ui.HSplit(self):
+                ui.Button(text='Right A', flex=0)
+                ui.Button(text='Right B', flex=1)
+                ui.Button(text='Right C', flex=2)
+                # ui.Button(text='Right D', flex=2)
+                # ui.Button(text='Right E', flex=2)
+                # ui.Button(text='Right F', flex=2)
+    
+        if TEST == 7:
             with ui.HBox(self):
                 ui.Button(text='Button in hbox', flex=1)
                 with ui.HSplit(flex=2):

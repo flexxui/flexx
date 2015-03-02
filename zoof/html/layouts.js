@@ -8,7 +8,7 @@
 "use strict";
 
 zoof.widgets = {};
-zoof.AUTOFLEX = 729;  // magic number unlikely to occut in practice
+zoof.AUTOFLEX = 729;  // magic number unlikely to occur in practice
 
 
 zoof.get = function (id) {
@@ -161,6 +161,7 @@ zoof.createHBox = function (D) {
 
 zoof.createVBox = function (D) {
     var e = zoof.createBox(D);
+    
     e.appendWidget = function (child) {
         e.appendChild(child);
         e.applyBoxStyle(child, 'flex-grow', child.vflex);
@@ -462,14 +463,16 @@ zoof.adaptLayoutToSizeChange = function (event) {
 
 zoof.createHSplit = function (D) {
     var e, container, ghost, widget, widgets, divider, dividers,
-        i, w2, minWidth;
+        i, w2, minWidth,
+        onResize, onMouseDown, onMouseMove, onMouseUp, clipT;
     
     e = zoof.createWidgetElement('div', D);
-        
+    
+    // List of child elements and dividers to split them
     widgets = [];
     dividers = [];
     
-    // Add container. We need a contain that is absolutely positioned,
+    // Add container. We need a container that is absolutely positioned,
     // because the children are positoned relative to the first absolutely 
     // positioned parent.
     container = document.createElement("div");
@@ -486,34 +489,100 @@ zoof.createHSplit = function (D) {
     w2 = 3; // half of divider width    
     ghost.style.width = 2 * w2 + 'px';
     
-    // Flag to indicate dragging
-    e.isdragging = 0;
-    
-    minWidth = 10;
-    function clipWidth(t) {
-        return Math.min(e.clientWidth - minWidth, Math.max(minWidth, t));
-    }
+    // Flag to indicate dragging, the number indicates which divider is dragged (-1)
+    ghost.isdragging = 0;
+        
+    // Public methods
     
     e.appendWidget = function (child) {
+        return e.insertWidget(child, widgets.length);
+    };
+    
+    e.insertWidget = function (child, index) {
         /* Add to container and create divider if there is something to divide.
         */
+        var needSize, newTs, tPrev, curSize, sizeLeft;
         container.appendChild(child);
-        widgets.push(child);
+        widgets.splice(index, 0, child);
         if (widgets.length >= 2) {
             divider = document.createElement("div");
             divider.classList.add('zf-splitter-divider');
             divider.style.width = 2 * w2 + 'px';
-            divider.addEventListener('mousedown', e.on_mousedown, false);
+            divider.addEventListener('mousedown', onMouseDown, false);
             divider.dividerIndex = dividers.length;
+            divider.t = e.clientWidth;
+            divider.tInPerc = 1.0;
             container.appendChild(divider);
-            dividers.push(divider);
-            e.moveSlider(divider.dividerIndex, 0.5);
+            dividers.push(divider);  // does not have to be inserted at index 
+            
+            // Set new divider positions; take space from each widget
+            needSize = e.clientWidth / widgets.length;
+            sizeLeft = e.clientWidth - needSize;
+            newTs = [];
+            for (i = 0; i < dividers.length; i += 1) {
+                if (i !== index - 1) {
+                    tPrev = (i > 0) ? dividers[i - 1].t : 0;
+                    curSize = (dividers[i].t - tPrev);
+                    newTs.push(curSize * sizeLeft / e.clientWidth);
+                    //console.log([index, i, t, dividers[i].t, curSize, newTs[i]]);
+                } else {
+                    newTs.push(needSize);
+                }
+                newTs[i] += newTs[i - 1] || 0;
+            }
+            //console.log([newTs + '', sizeLeft]);
+            for (i = 0; i < dividers.length; i += 1) {
+                e.moveDivider(i, newTs[i]);
+            }
         }
     };
     
     e.applyLayout = function () {}; // dummy    
+                    
+    e.moveDivider = function (i, t) {
+        /* Move the given divider.
+        Each divider keep
+        */
+        var begin, end;
+        if (t < 1) {
+            t *= e.clientWidth;
+        }
+        t = clipT(i, t);
+        // Store data
+        dividers[i].t = t;
+        dividers[i].tInPerc = t / e.clientWidth;  // to use during resizing
+        // Set divider and ghost
+        ghost.style.left = (t - w2) + 'px';
+        dividers[i].style.left = (t - w2) + 'px';
+        // Set widgets
+        begin = (i - 1 < 0) ? 0 : dividers[i - 1].t + w2;
+        end = (i + 1 >= dividers.length) ? e.clientWidth : dividers[i + 1].t - w2;
+        widgets[i].style.width = (t - begin - w2) + 'px';
+        widgets[i + 1].style.left = (t + w2) + 'px';
+        widgets[i + 1].style.width = (end - t - w2) + 'px';  // there seems to be a margin?        
+    };
     
-    e.on_resize = function () {
+    //  Private functions
+    
+    minWidth = 20;
+    clipT = function (i, t) {
+        /* Clip the t value, taking into account the boundary of the 
+        splitter itself, neighboring dividers, and the minimum sizes 
+        of widget elements.
+        */
+        var min, max;
+        // Get min and max towards edges or other dividers
+        min = (i > 0) ? dividers[i - 1].t : 0;
+        max = (i < dividers.length - 1) ? dividers[i + 1].t : e.clientWidth;
+        // Take minimum width of widget into account
+        // todo: this assumes the minWidth is specied in pixels, not e.g em.
+        min += 2 * w2 + parseFloat(widgets[i].style.minWidth) || minWidth;
+        max -= 2 * w2 + parseFloat(widgets[i + 1].style.minWidth) || minWidth;
+        // Clip
+        return Math.min(max, Math.max(min, t));
+    };
+    
+    onResize = function () {
         /* Keep container in its max size
         */
         var i;
@@ -523,53 +592,44 @@ zoof.createHSplit = function (D) {
         container.style.height = e.offsetHeight + 'px';
         container.classList.remove('dotransition');
         for (i = 0; i < dividers.length; i += 1) {
-            e.moveSlider(i, dividers[i].tInPerc);
+            e.moveDivider(i, dividers[i].tInPerc);
         }
-    };
-                
-    e.moveSlider = function (i, t) {
-        if (t < 1) {
-            t *= e.clientWidth;
-        }
-        dividers[i].tInPerc = t / e.clientWidth;
-        ghost.style.left = (t - w2) + 'px';
-        dividers[i].style.left = (t - w2) + 'px';
-        widgets[i].style.width = (t - w2) + 'px';
-        widgets[i + 1].style.left = (t + w2) + 'px';
-        widgets[i + 1].style.width = (container.clientWidth - t - w2) + 'px';  // there seems to be a margin?        
     };
     
-    e.on_mousedown = function (ev) {
+    onMouseDown = function (ev) {
         container.classList.add('dotransition');  //
         ev.stopPropagation();
         ev.preventDefault();
-        e.isdragging = ev.target.dividerIndex + 1;
-        e.moveSlider(ev.target.dividerIndex, ev.clientX - e.offsetLeft);
+        ghost.isdragging = ev.target.dividerIndex + 1;
+        e.moveDivider(ev.target.dividerIndex, ev.clientX - e.offsetLeft);
         ghost.style.visibility = 'visible';
         //ev.dataTransfer.setData("Text", ev.target.id); // for dragging
     };
     
-    e.on_mousemove = function (ev) {
-        if (e.isdragging) {
+    onMouseMove = function (ev) {
+        if (ghost.isdragging) {
             ev.stopPropagation();
             ev.preventDefault();
-            ghost.style.left = clipWidth(ev.clientX - e.offsetLeft - w2) + 'px';
+            i = ghost.isdragging - 1;
+            ghost.style.left = clipT(i, ev.clientX - e.offsetLeft - w2) + 'px';
         }
     };
     
-    e.on_mouseup = function (ev) {
+    onMouseUp = function (ev) {
         var t;
-        if (e.isdragging) {
+        if (ghost.isdragging) {
             ev.stopPropagation();
             ev.preventDefault();
-            i = e.isdragging - 1;
-            e.isdragging = 0;
+            i = ghost.isdragging - 1;
+            ghost.isdragging = 0;
             ghost.style.visibility = 'hidden';
-            e.moveSlider(i, clipWidth(ev.clientX - e.offsetLeft));
+            e.moveDivider(i, clipT(i, ev.clientX - e.offsetLeft));
         }
     };
     
-    e.addEventListener('resize', e.on_resize, false);
-    container.addEventListener('mousemove', e.on_mousemove, false);
-    window.addEventListener('mouseup', e.on_mouseup, false);
+    // Bind event handlers
+    e.addEventListener('resize', onResize, false);
+    container.addEventListener('mousemove', onMouseMove, false);
+    window.addEventListener('mouseup', onMouseUp, false);
+    return e;
 };
