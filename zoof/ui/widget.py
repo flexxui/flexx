@@ -17,11 +17,24 @@ class Widget(object):
     
     All widgets derive from this class. On itself, this type of widget
     represents an empty space, and can be useful as a filler.
+    
+    Properties
+    ----------
+    parent (widget) : the widget that this widget is a child of.
+    flex (scalar|tuple) : how flexible this widget is when used in a
+        layout such as an hbox or vbox. By using a tuple, the flex can
+        be set independently for the horizontal and vertical direction.
+    pos (tuple) : the position of this widget in a Grid or PinBoard layout.
+    min_width (scalar) : the minimum width of the widget in pixels.
+    min_height (scalar) : the minimum height of the widget in pixels.
+    css (str) : css styling to apply to the HTML element that represents
+         this widget, e.g. ``css='background: #f00; padding: 2em;'``.
     """
     
     _counter = 0  # to produce unique id's
     
-    def __init__(self, parent=None, flex=0, pos=(0, 0), minWidth=0):
+    def __init__(self, parent=None, flex=0, pos=(0, 0), 
+                 min_width=0, min_height=0, css=''):
         if parent is None:
             if _default_parent:
                 parent = _default_parent[-1]
@@ -39,10 +52,21 @@ class Widget(object):
         app._widget_counter += 1
         self._id = self.__class__.__name__ + str(app._widget_counter)
         
-        self._style_props = dict(minWidth=minWidth)
+        self._min_width = min_width
+        self._min_height = min_height
+        self._css = css
         
         # Call function to create js_object
         self._create_js_object()
+    
+    def __enter__(self):
+        _default_parent.append(self)
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        assert self is _default_parent.pop(-1)
+        if value is None:
+            self.update()
     
     @property
     def parent(self):
@@ -61,6 +85,9 @@ class Widget(object):
     def children(self):
         return list(self._children)
     
+    def update(self):
+        pass
+    
     def _create_js_object(self, **kwargs):
         """ This method can be overloaded to populate the dict used
         by JS to create the widget. Overloaded versions should simpy
@@ -74,22 +101,23 @@ class Widget(object):
         # Get parent
         parent = 'body' if isinstance(self.parent, App) else self.parent.id
         
-        self._create_js_object_real(id=self.id, 
-                                    className=classes, 
+        self._create_js_object_real(id=self.id,
+                                    className=classes,
+                                    
                                     parent=parent,
                                     pos=self._pos,
                                     hflex=self._flex[0],
                                     vflex=self._flex[1],
+                                    css=self._css,
+                                    min_width=self._min_width,
+                                    min_height=self._min_height,
                                     **kwargs)
-        
+    
     def _create_js_object_real(self, **kwargs):
         
-        kwargs.update(self._style_props)
         eval = self.get_app()._exec
         funcname = 'create' + self.__class__.__name__
         eval('zoof.%s(%s);' % (funcname, json.dumps(kwargs)))
-        eval('zoof.setProps("%s", "flex", %s);' % (self.id, self._flex))
-        # todo: remove setProps, apply via the dict
     
     def get_app(self):
         node = self.parent
@@ -188,14 +216,6 @@ class Layout(Widget):
         eval = self.get_app()._exec
         eval('zoof.get(%r).applyLayout();' % self.id)
     
-    def __enter__(self):
-        _default_parent.append(self)
-        return self
-    
-    def __exit__(self, type, value, traceback):
-        assert self is _default_parent.pop(-1)
-        if value is None:
-            self.update()
 
 # todo: spacing and margin for all layouts
 # todo: combine JS code for layouts?

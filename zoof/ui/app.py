@@ -346,7 +346,7 @@ class App(object):
         def __call__(self, app):
             app._config = self
             return app
-    
+        
     _config = Config()  # Set default config
     
     def __init__(self, runtime='xul'):
@@ -389,6 +389,15 @@ class App(object):
                       'initialziation before runtime could connect.')
         
         print('Instantiate app %s' % self.__class__.__name__)
+    
+    def __enter__(self):
+        from .widget import _default_parent
+        _default_parent.append(self)
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        from .widget import _default_parent
+        assert self is _default_parent.pop(-1)
     
     def __repr__(self):
         s = self.status.lower()

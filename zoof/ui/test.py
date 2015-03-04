@@ -14,7 +14,7 @@ class MyApp(ui.App):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 7
+        TEST = 2
         
         if TEST == 1:
             with ui.VBox(self, flex=1) as self.hbox1:
@@ -25,34 +25,38 @@ class MyApp(ui.App):
                 self.b3 = ui.Button(text='Foo bar', flex=1)
         
         if TEST == 2:
-            with ui.VBox(self) as self.vbox:
-                
-                ui.Label(text='Flex 0 0 0', flex=0)
-                with ui.HBox(flex=0) as self.hbox2:
-                    self.b1 = ui.Button(text='Hola', flex=0)
-                    self.b2 = ui.Button(text='Hello world', flex=0)
-                    self.b3 = ui.Button(text='Foo bar', flex=0)
-                
-                ui.Label(text='Flex 1 0 3', flex=0)
-                with ui.HBox(flex=0) as self.hbox1:
-                    self.b1 = ui.Button(text='Hola', flex=1)
-                    self.b2 = ui.Button(text='Hello world', flex=0)
-                    self.b3 = ui.Button(text='Foo bar', flex=3)
-                
-                ui.Label(text='margin 10 (around layout)', flex=0)
-                with ui.HBox(flex=0, margin=10) as self.hbox2:
-                    self.b1 = ui.Button(text='Hola', flex=0)
-                    self.b2 = ui.Button(text='Hello world', flex=0)
-                    self.b3 = ui.Button(text='Foo bar', flex=0)
-                
-                ui.Label(text='spacing 10 (inter-widget)', flex=0)
-                with ui.HBox(flex=0, spacing=10) as self.hbox2:
-                    self.b1 = ui.Button(text='Hola', flex=0)
-                    self.b2 = ui.Button(text='Hello world', flex=0)
-                    self.b3 = ui.Button(text='Foo bar', flex=0)
-                
-                ui.Widget(flex=1)
-                ui.Label(text='Note the spacer Widget above', flex=0)
+            with self:
+                with ui.HBox():
+                    ui.Widget(flex=1)
+                    
+                    with ui.VBox(flex=0) as self.vbox:
+                        
+                        ui.Label(text='Flex 0 0 0', flex=0)
+                        with ui.HBox(flex=0) as self.hbox2:
+                            self.b1 = ui.Button(text='Hola', flex=0)
+                            self.b2 = ui.Button(text='Hello world', flex=0)
+                            self.b3 = ui.Button(text='Foo bar', flex=0)
+                        
+                        ui.Label(text='Flex 1 0 3', flex=0)
+                        with ui.HBox(flex=0) as self.hbox1:
+                            self.b1 = ui.Button(text='Hola', flex=1)
+                            self.b2 = ui.Button(text='Hello world', flex=0)
+                            self.b3 = ui.Button(text='Foo bar', flex=3)
+                        
+                        ui.Label(text='margin 10 (around layout)', flex=0)
+                        with ui.HBox(flex=0, margin=10) as self.hbox2:
+                            self.b1 = ui.Button(text='Hola', flex=0)
+                            self.b2 = ui.Button(text='Hello world', flex=0)
+                            self.b3 = ui.Button(text='Foo bar', flex=0)
+                        
+                        ui.Label(text='spacing 10 (inter-widget)', flex=0)
+                        with ui.HBox(flex=0, spacing=10) as self.hbox2:
+                            self.b1 = ui.Button(text='Hola', flex=0)
+                            self.b2 = ui.Button(text='Hello world', flex=0)
+                            self.b3 = ui.Button(text='Foo bar', flex=0)
+                        
+                        ui.Widget(flex=1)
+                        ui.Label(text='Note the spacer Widget above', flex=0)
         
         if TEST == 3:
             with ui.HBox(self, spacing=20):
@@ -92,8 +96,8 @@ class MyApp(ui.App):
         
         if TEST == 6:
             with ui.HSplit(self):
-                ui.Button(text='Right A', minWidth=120)
-                ui.Button(text='Right B', minWidth=70)
+                ui.Button(text='Right A', min_width=120)
+                ui.Button(text='Right B', min_width=70)
                 ui.Button(text='Right C')
                 # ui.Button(text='Right D', flex=2)
                 # ui.Button(text='Right E', flex=2)
@@ -103,20 +107,22 @@ class MyApp(ui.App):
             with ui.HBox(self):
                 ui.Button(text='Button in hbox', flex=0)
                 with ui.HSplit(flex=1):
-                    ui.Button(text='Button in splitter', minWidth=100)
-                    with ui.HBox(minWidth=100):
-                        ui.Button(text='Right A', flex=0)
+                    ui.Button(text='Button in splitter', min_width=100)
+                    with ui.HBox(min_width=100):
+                        ui.Button(text='Right A', flex=0, css='background:#f00; padding:2em;')
                         ui.Button(text='Right B', flex=1)
                         ui.Button(text='Right C', flex=2)
                 
         #self.win = ui.Window(self, 'A new window!')
-        
+
+
 class MyApp2(ui.App):
     def init(self):
         self.b = ui.Button(self, 'Hello world')
 
+
 app = MyApp('xul')
 ui.run()
-app.b1.set_text('asdasd')
+# app.b1.set_text('asdasd')
 
-MyApp.export('/home/almar/test.html')
+# MyApp.export('/home/almar/test.html')

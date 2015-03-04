@@ -182,7 +182,11 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         print('new ws connection', path)
         app_name, _, app_id = path.strip('/').partition('-')
         if manager.has_app_name(app_name):
-            self._app = manager.connect_an_app(self, app_name, app_id)
+            try:
+                self._app = manager.connect_an_app(self, app_name, app_id)
+            except Exception as err:
+                self.close(1003, "Could not launch app: %r" % err)
+                raise
             self.write_message("Hello World", binary=True)
         else:
             self.close(1003, "Could not associate socket with an app.")

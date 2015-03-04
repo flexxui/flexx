@@ -30,18 +30,21 @@ zoof.createWidgetElement = function (type, D) {
     e.id = D.id;
     zoof.widgets[D.id] = e;
     
-    e.className = D.className;
+    e.className = D.className;  // represents the Python class and all bases up to Widget
+    
     e.hflex = D.hflex;
     e.vflex = D.vflex;
     e.zfInfo = D;  // store info used to create the widget
     
-    // Set position. Ignored unless position is absolute or relative
+    // Set position. pos is used in Grid and PinBoard layout
+    // Ignored unless position is absolute or relative
     e.style.left = (D.pos[0] > 1 ? D.pos[0] + "px" : D.pos[0] * 100 + "%");
     e.style.top = (D.pos[1] > 1 ? D.pos[1] + "px" : D.pos[1] * 100 + "%");
     
-    // Set style props
-    // todo: generalize this
-    e.style.minWidth = D.minWidth + 'px';
+    // Set some style-related props
+    e.style.minWidth = D.min_width + 'px';
+    e.style.minHeight = D.min_height + 'px';
+    e.style.cssText += D.css;
     
     // Add to parent
     par = zoof.get(D.parent);
@@ -50,7 +53,7 @@ zoof.createWidgetElement = function (type, D) {
     } else {
         par.appendChild(e);
     }
-        
+    
     // Add callback for resizing    
     e.checkResize = function () {
         /* This needs to be called if there is a chance that the widget has
@@ -79,7 +82,16 @@ zoof.createWidgetElement = function (type, D) {
     } else {
         par.addEventListener('resize', e.checkResize, false);
     }
-            
+    
+    // Properties - not used yet ...
+    e.setMinWidth = function (val) { e.style.minWidth = val + 'px'; };
+    e.setMinHeight = function (val) { e.style.minHeight = val + 'px'; };
+    e.setPos = function (pos) {
+        e.style.left = (pos[0] > 1 ? pos[0] + "px" : pos[0] * 100 + "%");
+        e.style.top  = (pos[1] > 1 ? pos[1] + "px" : pos[1] * 100 + "%");
+        e.parentWidget.updateLayout();
+    };
+    
     return e;
 };
 
@@ -575,7 +587,7 @@ zoof.createHSplit = function (D) {
         for (i = 0; i < widgets.length; i += 1) {
             w += 2 * w2 + parseFloat(widgets[i].style.minWidth) || minWidth;
             h += 2 * w2 + parseFloat(widgets[i].style.minHeight) || minWidth;
-        }        
+        }
         e.style.minWidth = w + 'px';
         e.style.minHeight = h + 'px';
     };
