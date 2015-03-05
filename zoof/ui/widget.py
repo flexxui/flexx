@@ -265,3 +265,8 @@ class HSplit(Layout):
     """ The HSplit horizontally splits the available space in regions,
     which size can be set by the user by dragging the divider.
     """
+
+
+class PHSplit(Layout):
+    """ Phosphor splitter
+    """

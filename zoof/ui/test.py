@@ -14,7 +14,7 @@ class MyApp(ui.App):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 2
+        TEST = 6
         
         if TEST == 1:
             with ui.VBox(self, flex=1) as self.hbox1:
@@ -95,7 +95,7 @@ class MyApp(ui.App):
                 self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
         
         if TEST == 6:
-            with ui.HSplit(self):
+            with ui.PHSplit(self):
                 ui.Button(text='Right A', min_width=120)
                 ui.Button(text='Right B', min_width=70)
                 ui.Button(text='Right C')

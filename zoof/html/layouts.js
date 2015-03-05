@@ -661,3 +661,37 @@ zoof.createHSplit = function (D) {
     window.addEventListener('mouseup', onMouseUp, false);
     return e;
 };
+
+
+zoof.createPHSplit = function (D) {
+    var e, container,
+        onResize;
+    e = zoof.createWidgetElement('div', D);
+    container = new window.phosphor.ui.splitter.Splitter(0);
+    window.ccc = container;  // debugging
+    //e.appendChild(container.node);
+    
+    e.applyLayout = function () {}; // dummy    
+    
+    onResize = function () {
+        /* Keep container in its max size
+        */
+        return;
+        var i;
+        container.node.style.left = e.offsetLeft + 'px';
+        container.node.style.top = e.offsetTop + 'px';
+        container.node.style.width = e.offsetWidth + 'px';
+        container.node.style.height = e.offsetHeight + 'px';
+    };
+    container.attach(e);
+    container.fitToHost();
+    
+    e.appendWidget = function (child) {
+        var widget = new window.phosphor.ui.widget.Widget();
+        widget.node.appendChild(child);
+        container.addWidget(widget);
+    };
+    
+    
+    
+};

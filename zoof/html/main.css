@@ -132,6 +132,11 @@ body {
     transition: visibility 0.25s;
 }
 
+/* Phosphor */
+.p-SplitterHandle-overlay {
+    box-shadow:  0px 0px 12px #777;
+}
+
 .dotransition > .zf-widget, .dotransition > .zf-splitter-divider {
     transition: left 0.3s, width 0.3s, right 0.3s;
 }
