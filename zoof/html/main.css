@@ -187,3 +187,126 @@ body {
     border: 1px solid blue;
 }
 /**/
+
+
+
+/*** Phoshphor ***/
+.p-DockPanel {
+  padding-right: 2px;
+  padding-bottom: 2px;
+}
+.p-TabBar {
+  min-height: 24px;
+}
+.p-TabBar::after {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  content: '';
+  z-index: 0;
+  background: #c0c0c0;
+}
+.p-TabBar-inner {
+  bottom: 1px;
+  z-index: 1;
+}
+.p-TabBar-inner > .p-Tab {
+  font: 12px Helvetica, Arial, sans-serif;
+  height: 21px;
+  padding: 0px 10px;
+  background: #e5e5e5;
+  border: 1px solid #c0c0c0;
+  border-bottom: none;
+}
+.p-TabBar-inner > .p-Tab.p-selected {
+  height: 24px;
+  background: #fff;
+  transform: translateY(1px);
+}
+.p-TabBar-inner > .p-Tab:hover:not(.p-selected) {
+  background: #f0f0f0;
+}
+.p-TabBar-inner > .p-Tab > span {
+  line-height: 21px;
+}
+.p-Tab.p-floating {
+  font: 12px Helvetica, Arial, sans-serif;
+  height: 24px;
+  padding: 0px 10px;
+  background: #fff;
+  box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+.p-Tab.p-floating > span {
+  line-height: 21px;
+}
+.p-Tab.p-closable > .p-Tab-close-icon:before {
+  content: '\f00d';
+  font-family: FontAwesome;
+}
+.p-DockPanel > .p-StackWidget {
+  padding: 10px;
+  background: #fff;
+  border: 1px solid #c0c0c0;
+  border-top: none;
+  box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+}
+.p-DockPanel-overlay {
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(0,0,0,0.6);
+}
+
+.p-MenuBar {
+  position: static;
+  top: auto;
+  left: auto;
+  width: auto;
+  height: auto;
+  min-height: 24px;
+  padding-left: 5px;
+  background: #fafafa;
+  color: rgba(0,0,0,0.87);
+  border-bottom: 1px solid #ddd;
+  font: 13px Helvetica, Arial, sans-serif;
+}
+.p-MenuBar-item {
+  padding: 4px 8px;
+  border-left: 1px solid transparent;
+  border-right: 1px solid transparent;
+}
+.p-MenuBar-item.p-active {
+  background: #e5e5e5;
+}
+.p-MenuBar-item.p-disabled {
+  color: rgba(0,0,0,0.26);
+}
+.p-MenuBar-item.p-active.p-selected {
+  z-index: 1000000;
+  background: #fff;
+  border-left: 1px solid #c0c0c0;
+  border-right: 1px solid #c0c0c0;
+  box-shadow: 0px 0px 6px rgba(0,0,0,0.2);
+}
+.p-MenuBar-item.p-separator-type {
+  border-left: 1px solid #ddd;
+}
+.p-MenuBar-menu {
+  transform: translateY(-1px);
+}
+.p-Menu {
+  background: #fff;
+  color: rgba(0,0,0,0.87);
+  border: 1px solid #c0c0c0;
+  font: 12px Helvetica, Arial, sans-serif;
+  box-shadow: 0px 1px 6px rgba(0,0,0,0.2);
+}
+.p-Menu-item.p-active {
+  background: #e5e5e5;
+}
+.p-Menu-item.p-disabled {
+  color: rgba(0,0,0,0.26);
+}
+.p-Menu-item.p-separator-type > span::after {
+  border-top: 1px solid #ddd;
+}

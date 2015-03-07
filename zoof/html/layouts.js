@@ -691,7 +691,84 @@ zoof.createPHSplit = function (D) {
         widget.node.appendChild(child);
         container.addWidget(widget);
     };
+        
+};
+
+zoof.createPDockArea = function (D) {
+    var e, container,
+        onResize;
+    e = zoof.createWidgetElement('div', D);
+    container = new window.phosphor.ui.dockarea.DockArea(0);
+    window.ccc = container;  // debugging
+    //e.appendChild(container.node);
     
+    e.applyLayout = function () {}; // dummy    
     
+    onResize = function () {
+        /* Keep container in its max size
+        */
+        return;
+        var i;
+        container.node.style.left = e.offsetLeft + 'px';
+        container.node.style.top = e.offsetTop + 'px';
+        container.node.style.width = e.offsetWidth + 'px';
+        container.node.style.height = e.offsetHeight + 'px';
+    };
+    container.attach(e);
+    container.fitToHost();
     
+    e.appendWidget = function (child) {
+        var name = 'fooo';
+        var widget = new window.phosphor.ui.dockwidget.DockWidget(name);
+        widget.node.appendChild(child);
+        widget.tab.closable = true;
+        container.addWidget(widget);
+    };
+};
+
+zoof.createMenuBar = function (D) {
+    var e, container,
+        onResize;
+    e = zoof.createWidgetElement('div', D);
+    container = new window.phosphor.ui.menubar.MenuBar();
+    window.ccc = container;  // debugging
+    //e.appendChild(container.node);  
+    
+    container.attach(e);
+    container.fitToHost();
+    
+    e.appendWidget = function (child) {
+        container.addItem(child);
+        //container._m_items.push(child);
+        console.log('adding ' + D.name + ' to menu bar');
+    };
+    return e;
+};
+
+/*
+zoof.createMenu = function (D) {
+    var e = new window.phosphor.ui.menu.Menu({'text': D.text});
+    zoof.widgets[D.id] = e;
+    
+    e.appendWidget = function (child) {
+        e.addItem(child);
+    };
+    return e;
+};
+*/
+
+zoof.createMenuItem = function (D) {
+    var menu = new window.phosphor.ui.menu.Menu();
+    var e = new window.phosphor.ui.menuitem.MenuItem({'text': D.text, 'submenu': menu});
+    window.cccc = window.cccc || e;
+    zoof.widgets[D.id] = e;
+    
+    var par = zoof.get(D.parent);
+    par.appendWidget(e);
+    
+    e.appendWidget = function (child) {
+        menu.addItem(child);
+    };
+    
+    return e;
 };

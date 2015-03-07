@@ -14,7 +14,7 @@ class MyApp(ui.App):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 6
+        TEST = 8
         
         if TEST == 1:
             with ui.VBox(self, flex=1) as self.hbox1:
@@ -95,7 +95,8 @@ class MyApp(ui.App):
                 self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
         
         if TEST == 6:
-            with ui.PHSplit(self):
+            #with ui.PHSplit(self):
+            with ui.PDockArea(self):
                 ui.Button(text='Right A', min_width=120)
                 ui.Button(text='Right B', min_width=70)
                 ui.Button(text='Right C')
@@ -112,6 +113,17 @@ class MyApp(ui.App):
                         ui.Button(text='Right A', flex=0, css='background:#f00; padding:2em;')
                         ui.Button(text='Right B', flex=1)
                         ui.Button(text='Right C', flex=2)
+        
+        if TEST == 8:
+            with ui.MenuBar(self):
+                with ui.MenuItem(text='File'):
+                    ui.MenuItem(text='New')
+                    ui.MenuItem(text='Open')
+                    ui.MenuItem(text='Save')
+                with ui.MenuItem(text='Edit'):
+                    ui.MenuItem(text='Cut')
+                    ui.MenuItem(text='Copy')
+                    ui.MenuItem(text='Paste')
                 
         #self.win = ui.Window(self, 'A new window!')
 

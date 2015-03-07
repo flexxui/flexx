@@ -270,3 +270,33 @@ class HSplit(Layout):
 class PHSplit(Layout):
     """ Phosphor splitter
     """
+
+
+class PDockArea(Layout):
+    """ Phosphor dock area
+    """
+
+class MenuBar(Widget):
+    """ Phosphor menu bar
+    """
+
+class Menu(Widget):
+    """ Phosphor menu
+    """
+    def __init__(self, parent=None, text='Blaa', **kwargs):
+        self._text = text
+        super().__init__(parent, **kwargs)
+    
+    def _create_js_object_real(self, **kwargs):
+        super()._create_js_object_real(text=self._text, **kwargs)
+        
+
+class MenuItem(Widget):
+    """ Phosphor menu item
+    """
+    def __init__(self, parent=None, text='action', **kwargs):
+        self._text = text
+        super().__init__(parent, **kwargs)
+    
+    def _create_js_object_real(self, **kwargs):
+        super()._create_js_object_real(text=self._text, **kwargs)
