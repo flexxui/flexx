@@ -1,20 +1,23 @@
 import time
+import logging
+
 import zoof
 from zoof import ui
 
 import faulthandler
 faulthandler.enable()
+#logging.log
 
 class MyApp(ui.App):
     
     _config = ui.App.Config(title='Zoof test app', size=(400, 300),
-                            icon='https://assets-cdn.github.com/favicon.ico')
+                            )#icon='https://assets-cdn.github.com/favicon.ico')
                
     def init(self):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 8
+        TEST = 1
         
         if TEST == 1:
             with ui.VBox(self, flex=1) as self.hbox1:

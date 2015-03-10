@@ -109,7 +109,7 @@ zoof.initLogging = function () {
     
     // Set new functions
     console.log = function (msg) {
-        zoof.ws.send("INFO " + msg);
+        zoof.ws.send("PRINT " + msg);
         console.ori_log(msg);
     };
     console.info = function (msg) {

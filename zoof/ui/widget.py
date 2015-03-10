@@ -178,6 +178,11 @@ class Label(Widget):
         self.get_app()._exec(t.format(id=self._id, text=text))
 
 
+## Try Py -> JS decorator
+
+from .compile import js
+
+
 class Button(Widget):
     """ A Button is a widget than can be clicked on to invoke an action
     """
@@ -185,15 +190,27 @@ class Button(Widget):
     def __init__(self, parent=None, text='Click me', **kwargs):
         self._text = text
         super().__init__(parent, **kwargs)
+        
+        eval = self.get_app()._exec
+        # todo: arg .js -> I want eady access to info about that func
+        eval('zoof.widgets.%s.%s' % (self.id, self.hello.js.jscode[5:]))
+        eval('zoof.widgets.%s.%s' % (self.id, self.set_text.js.jscode[5:]))
     
     def _create_js_object_real(self, **kwargs):
         super()._create_js_object_real(text=self._text, **kwargs)
     
-    def set_text(self, text):
+    def _set_text(self, text):
         self._text = text
         t = 'document.getElementById("{id}").innerHTML = "{text}"'
         self.get_app()._exec(t.format(id=self._id, text=text))
-
+    
+    @js
+    def set_text(self, text):
+        this.innerHTML = text  # todo: self -> this
+    
+    @js
+    def hello(self, text):
+        print('Hello world!')
 
 _default_parent = []
 

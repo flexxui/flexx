@@ -203,6 +203,8 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             logging.error('JS - ' + message[6:].strip())
         elif message.startswith('WARN '):
             logging.warn('JS - ' + message[5:].strip())
+        elif message.startswith('PRINT '):
+            print(message[5:].strip())
         elif message.startswith('INFO '):
             logging.info('JS - ' + message[5:].strip())
         else:
