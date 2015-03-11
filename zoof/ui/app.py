@@ -389,6 +389,8 @@ class App(object):
                       'initialziation before runtime could connect.')
         
         print('Instantiate app %s' % self.__class__.__name__)
+        global default_app
+        default_app = self
     
     def __enter__(self):
         from .widget import _default_parent
@@ -599,6 +601,13 @@ class Exporter(object):
         chars.pop(0)
         return ''.join(chars)
 
+
+default_app = None
+def current_app():
+    global default_app
+    if default_app is None:
+        default_app = App()
+    return default_app
 
 class DefaultApp(App):
     pass

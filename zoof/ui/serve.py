@@ -109,12 +109,14 @@ class MainHandler(tornado.web.RequestHandler):
                 elif app_id:
                     app = manager.get_app_by_id(app_name, app_id)
                     if app and app.status == app.STATUS.PENDING:
-                         self.write(self.application.load('index.html'))
+                        #self.write(self.application.load('index.html'))
+                        self.serve_index()
                     else:
                         self.write('App %r with id %r is not available' % 
                                    (app_name, app_id))
                 elif manager.has_app_name(app_name):
-                    self.write(self.application.load('index.html'))
+                    #self.write(self.application.load('index.html'))
+                    self.serve_index()
                 else:
                     self.write('No app %r is hosted right now' % app_name)
             elif file_name.endswith('.ico'):
@@ -145,6 +147,15 @@ class MainHandler(tornado.web.RequestHandler):
         else:
             # In theory this cannot happen
             self.write('This should not happen')
+    
+    def serve_index(self):
+        src = self.application.load('index.html')
+        from .mirrored import MIRRORED_CLASSES
+        js = '\n'
+        for cls in MIRRORED_CLASSES:
+            js += '\n' + cls.get_js()
+        src = src.replace(b'JS_INSERT_HERE', js.encode())
+        self.write(src)
     
     def write_error(self, status_code, **kwargs):
         # does not work?
