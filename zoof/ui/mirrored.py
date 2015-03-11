@@ -9,6 +9,18 @@ else:
     string_types = basestring,
 
 
+# From six.py
+def with_metaclass(meta, *bases):
+    """Create a base class with a metaclass."""
+    # This requires a bit of explanation: the basic idea is to make a dummy
+    # metaclass for one level of class instantiation that replaces itself with
+    # the actual metaclass.
+    class metaclass(meta):
+        def __new__(cls, name, this_bases, d):
+            return meta(name, bases, d)
+    return type.__new__(metaclass, 'temporary_class', (), {})
+
+
 def is_immutable(ob):
     """ Test whether an object is immutable.
     """
@@ -23,92 +35,6 @@ def is_immutable(ob):
         return True
     else:
         return False
-
-
-def has_props(cls):
-    """ Finalize the props found on the given class and its bases.
-    
-    You create a class, no matter where it inherits from, decorate it
-    with this function, and your props will work. However, by instead
-    inheriting from HasProps you get a few extra nicities.
-    """
-    # Check if we can exit early 
-    if '__props__' in cls.__dict__:
-        return cls
-    # Collect props defined on the given class
-    props = {}
-    for name, prop in cls.__dict__.items():
-        if isinstance(prop, type) and issubclass(val, Prop):
-            props[name] = prop()
-        if isinstance(prop, Prop):
-            props[name] = prop
-    # Finalize all found props
-    for name, prop in props.items():
-        if not prop._name:
-            prop._name = name
-            setattr(cls, prop._private_name, prop.default)
-    # Assign props for this class (this marks the props as finalized)
-    cls.__props__ = set(props.keys())
-    # Recurse to base classes
-    for base in cls.__bases__:
-        if base not in (object, HasProps):
-            has_props(base)
-    return cls
-
-
-class HasProps(object):
-    """ A base class for objects that have props.
-    
-    """
-
-    # Some implementations of this pattern (e.g. Bokeh) use metaclasses
-    # to finalize the props. However, the props really only need to be
-    # finalized when being used on instances. Therefore I went with
-    # this lighter approach (at least for now).
-    
-    def __init__(self, **kwargs):
-        # Variables changed since creation
-        self._changed_props = set()
-        # Finalize props (e.g. ensure they have a name)
-        has_props(self.__class__)
-        # Assign 
-        for name, val in kwargs.items():
-            setattr(self, name, val)
-        self.reset_changed_props()
-    
-    @property
-    def changed_props(self):
-        """ Get a set of names of props that changed since object creation
-        or the last call to reset_changed_props().
-        """
-        return _changed_props
-    
-    def reset_changed_props(self):
-        self._changed_props = set()
-    
-    @classmethod
-    def props(cls, withbases=True):
-        props = set()
-        def collect(cls):
-            props.update(cls.__props__)
-            if withbases:
-                for base in cls.__bases__:
-                    if hasattr(base, '__props__'):
-                        collect(base)
-        collect(cls)
-        return props
-    
-    def __setattr__(self, name, value):
-        if name.startswith("_"):
-            super(HasProps, self).__setattr__(name, value)
-        else:
-            props = sorted(self.props())
-            if name in props:
-                super(HasProps, self).__setattr__(name, value)
-            else:
-                matches, text = props, "possible"
-                raise AttributeError("unexpected attribute %r to %s." %
-                                    (name, self.__class__.__name__))
 
 
 class Prop(object):
@@ -203,7 +129,93 @@ class Prop(object):
     
     def validate(self, value):
         raise NotImplementedError()
+
+
+# Note, we need Prop defined before HasProps, because we need to test
+# isinstance(cls, Prop) in the meta class (on class creation)
+
+
+class HasPropsMeta(type):
+    """ Meta class for HasProps
+    * Sets __props__ attribute on the class
+    * Set the name of each prop
+    * Initialize value for each prop (to default)
+    """
     
+    CLASSES = []
+    
+    def __init__(cls, name, bases, dct):
+        
+        HasPropsMeta.CLASSES.append(cls)
+        
+        # Collect props defined on the given class
+        props = {}
+        for name, prop in dct.items():
+            if isinstance(prop, type) and issubclass(prop, Prop):
+                prop = prop()
+                setattr(cls, name, prop)  # allow setting just class
+            if isinstance(prop, Prop):
+                props[name] = prop
+        # Finalize all found props
+        for name, prop in props.items():
+            assert prop._name is None
+            prop._name = name
+            setattr(cls, prop._private_name, prop.default)
+        # Cache prop names
+        cls.__props__ = set(props.keys())
+        # Proceeed as normal
+        type.__init__(cls, name, bases, dct)
+
+
+class HasProps(with_metaclass(HasPropsMeta, object)):
+    """ A base class for objects that have props.
+    
+    """
+    
+    def __init__(self, **kwargs):
+        # Variables changed since creation
+        self._changed_props = set()
+        # Assign 
+        for name, val in kwargs.items():
+            setattr(self, name, val)
+        self.reset_changed_props()
+    
+    @property
+    def changed_props(self):
+        """ Get a set of names of props that changed since object creation
+        or the last call to reset_changed_props().
+        """
+        return _changed_props
+    
+    def reset_changed_props(self):
+        self._changed_props = set()
+    
+    @classmethod
+    def props(cls, withbases=True):
+        props = set()
+        def collect(cls):
+            props.update(cls.__props__)
+            if withbases:
+                for base in cls.__bases__:
+                    if hasattr(base, '__props__'):
+                        collect(base)
+        collect(cls)
+        return props
+    
+    def __setattr__(self, name, value):
+        if name.startswith("_"):
+            super(HasProps, self).__setattr__(name, value)
+        else:
+            props = sorted(self.props())
+            if name in props:
+                super(HasProps, self).__setattr__(name, value)
+            else:
+                matches, text = props, "possible"
+                raise AttributeError("unexpected attribute %r to %s." %
+                                    (name, self.__class__.__name__))
+
+
+## The propery implementations
 
 class Bool(Prop):
     _default = False
@@ -214,7 +226,7 @@ class Bool(Prop):
 
 class Int(Prop):
     _default = 0
-    
+    # todo: min, max?
     def validate(self, val):
         if not isinstance(val, (int, float)):
             raise ValueError('Int prop %r requires a scalar.' % self.name)
@@ -241,7 +253,7 @@ class Str(Prop):
 
 class Tuple(Prop):
     _default = ()
-    
+    # todo: allowed lengths?
     def __init__(self, item_type, default=None, help=None):
         Prop.__init__(self, default, help)
         item_type = item_type if isinstance(item_type, tuple) else (item_type, )
@@ -287,18 +299,14 @@ class Color(Prop):
             raise ValueError('Color prop %r requires str or tuple.' % self.name)
 
 
+## -----
 # todo: the above is generic and need to go in utils, below is JS related
 
 
-MIRRORED_CLASSES = []
+def get_mirrored_classes():
+    return [c for c in HasPropsMeta.CLASSES if issubclass(c, Mirrored)]
 
-# todo: arg, we need metaclass anyway
-def is_mirrored(cls):
-    MIRRORED_CLASSES.append(cls)
-    return cls
 
-@has_props
-@is_mirrored
 class Mirrored(HasProps):
     """ Instances of this class will have a mirror object in JS. The
     props of the two are synchronised.
@@ -309,7 +317,7 @@ class Mirrored(HasProps):
     
     def __init__(self, **kwargs):
         HasProps.__init__(self, **kwargs)
-        from .app import current_app
+        from zoof.ui.app import current_app
         self._app = current_app()
         Mirrored._counter += 1
         self._id = self.__class__.__name__ + str(Mirrored._counter)
@@ -353,30 +361,28 @@ class Mirrored(HasProps):
             js.append('};')
         # Methods
         return '\n'.join(js)
-        
-            
-            
-        
-        
-        
-        
 
-class Foo(Mirrored):
+
+class Foo(HasProps):
     
     size = Int(help='the size of the foo')
-    color = Color()
-    names = Tuple(str)
+    
     
     def __init__(self, x, **kwargs):
-        Mirrored.__init__(self, **kwargs)
+        HasProps.__init__(self, **kwargs)
         self._x = x
     
     def methodb(self):
         """ this is method b"""
         pass
+
+
+class Bar(Foo):
+    color = Color
+    names = Tuple(str)
     
-    
+
 if __name__ == '__main__':
-    a = Foo(1, size=4)
+    a = Bar(1, size=4)
 #Foo.size.__doc__ = 'asd'
     

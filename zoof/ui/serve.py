@@ -150,9 +150,9 @@ class MainHandler(tornado.web.RequestHandler):
     
     def serve_index(self):
         src = self.application.load('index.html')
-        from .mirrored import MIRRORED_CLASSES
+        from .mirrored import get_mirrored_classes
         js = '\n'
-        for cls in MIRRORED_CLASSES:
+        for cls in get_mirrored_classes():
             js += '\n' + cls.get_js()
         src = src.replace(b'JS_INSERT_HERE', js.encode())
         self.write(src)
