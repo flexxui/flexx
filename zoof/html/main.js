@@ -69,8 +69,9 @@ zoof.initSocket = function () {
     }
     
     // Open web socket in binary mode
-    loc = location;
-    url = "ws://" + loc.hostname + ':' + loc.port + "/" + loc.pathname + "/ws";
+    //loc = location;
+    //url = "ws://" + loc.hostname + ':' + loc.port + "/" + loc.pathname + "/ws";
+    url = zoof.ws_url;
     ws = new window.WebSocket(url);
     zoof.ws = ws;
     ws.binaryType = "arraybuffer";
@@ -83,18 +84,22 @@ zoof.initSocket = function () {
     };
     
     ws.onclose = function (ev) {
-        document.body.innerHTML = 'Lost connection with GUI server:<br >';
-        document.body.innerHTML += ev.reason + " (" + ev.code + ")";
+        var msg = '';
+        msg += 'Lost connection with GUI server: ';
+        msg += ev.reason + " (" + ev.code + ")";
+        if (zoof.is_full_page) {
+            document.body.innerHTML = msg;
+        } else {
+            console.info(msg);
+        }
     };
     
     ws.onopen = function (ev) {
-        var log = document.getElementById('log');
-        log += 'Socket connected' + "<br />";
+        console.info('Socket connected');
     };
     
     ws.onerror = function (ev) {
-        var log = document.getElementById('log');
-        log.innerHTML += 'Socket error' + ev.error + "<br />";
+        console.error('Socket connected');
     };
 };
 

@@ -119,11 +119,7 @@ class AppManager(object):
         # Add app to connected, set ws
         assert app.status == app.STATUS.PENDING
         connected.append(app)
-        app._ws = ws  # This is what changes the status to CONNECTED
-        # The app can now be used
-        ws.command('ICON %s.ico' % app.id)
-        ws.command('TITLE %s' % app._config.title)
-        app.init()
+        app._connect_client(ws)  # set ws, call init() etc,
         return app
     
     def close_an_app(self, app):
@@ -145,7 +141,9 @@ class AppManager(object):
     def get_app_names(self):
         """ Get a list of registered application names
         """
-        return list(self._apps.keys())
+        # Give all names, but exclude Default app
+        # todo: filter via isinstance?
+        return [name for name in self._apps.keys() if name != 'DefaultApp']
     
     def get_app_by_id(self, name, id):
         """ Get app by name and id
@@ -245,7 +243,18 @@ def run():  # (runtime='xul', host='localhost', port=None):
     init_server()
     
     # Start event loop
-    _tornado_loop.start()
+    if not (hasattr(_tornado_loop, '_running') and _tornado_loop._running):
+        _tornado_loop.start()
+
+    return JupyterChecker()
+
+is_notebook = False
+
+class JupyterChecker(object):
+    def _repr_html_(self):
+        global is_notebook
+        is_notebook = True
+        return "I can see this is the notebook"
 
 
 def stop():
@@ -360,6 +369,10 @@ class App(object):
         self._widget_counter = 0
         self._children = []
         
+        # While the client is not connected, we keep a queue of
+        # commands, which are send to the client as soon as it connects
+        self._pending_commands = []
+        
         # Register this app instance
         if runtime == '<export>':
             self._ws = Exporter(self)
@@ -378,19 +391,7 @@ class App(object):
                                    runtime=runtime, 
                                    size=self.config.size,
                                    icon=icon, title=self.config.title)
-            # Now wait until connected, if possible
-            timeout = time.time() + 5.0
-            try:
-                while (self._ws is None) and (time.time() < timeout):
-                    _tornado_loop.run_sync(lambda x=None: None)
-                    time.sleep(0.005)
-            except RuntimeError:
-                print('Tornado event loop already running: Return from app '
-                      'initialziation before runtime could connect.')
-        
         print('Instantiate app %s' % self.__class__.__name__)
-        global default_app
-        default_app = self
     
     def __enter__(self):
         from .widget import _default_parent
@@ -404,6 +405,18 @@ class App(object):
     def __repr__(self):
         s = self.status.lower()
         return '<App %r (%s) at 0x%x>' % (self.__class__.__name__, s, id(self))
+    
+    def _connect_client(self, ws):
+        # Set websocket object - this is what changes the status to CONNECTED
+        self._ws = ws  
+        # Set some app specifics
+        self._ws.command('ICON %s.ico' % self.id)
+        self._ws.command('TITLE %s' % self._config.title)
+        # Send pending commands
+        for command in self._pending_commands:
+            self._ws.command(command)
+        # Call user-init (create ui elements, etc.)
+        self.init()
     
     @property
     def config(self):
@@ -464,12 +477,20 @@ class App(object):
     #     """
     #     return None
     
+    def _send_command(self, command):
+        """ Send the command, add to pending queue, or error when closed.
+        """
+        if self.status == self.STATUS.CONNECTED:
+            self._ws.command(command)
+        elif self.status == self.STATUS.PENDING:
+            self._pending_commands.append(command)
+        else:
+            raise RuntimeError('Cannot send commands; app is closed') 
+    
     def _exec(self, code):
         """ Like eval, but without returning the result value.
         """
-        if self._ws is None:
-            raise RuntimeError('App not connected')
-        self._ws.command('EXEC ' + code)
+        self._send_command('EXEC ' + code)
     
     def eval(self, code):
         """ Evaluate the given JavaScript code in the client
@@ -479,7 +500,7 @@ class App(object):
         """
         if self._ws is None:
             raise RuntimeError('App not connected')
-        self._ws.command('EVAL ' + code)
+        self._send_command('EVAL ' + code)
     
     @classmethod
     def export(cls, filename=None):
@@ -494,6 +515,49 @@ class App(object):
             return app._ws.to_html()
         else:
             return app._ws.write_html(filename)
+
+
+class DefaultApp(App):
+    """ The default app makes it possible to show ui elements without
+    explicitly creating an app class. The idea is that only one non-closed
+    instance of this class exists at all times.
+    """
+    # todo: enforce this singleton-ishness in some way?
+    # 
+    # def __init__(self, *args, **kwargs):
+    #     self._in_nb = False
+    #     App.__init__(self, *args, **kwargs)
+    
+    def _repr_html_(self):
+        from .clientcode import clientCode
+        #self._in_nb = True
+        host, port = _tornado_app.serving_at
+        url = 'ws://%s:%i/DefaultApp-%s/ws' % (host, port, self.id)
+        t = "Injecting JS/CSS"
+        t += "<style>\n%s\n</style>\n" % clientCode.get_css()
+        t += "<script>\n%s\n</script>" % clientCode.get_js()
+        t += "<script>zoof.ws_url=%r; zoof.is_full_page=false; zoof.init();</script>" % url
+        return t
+
+
+class JupyterApp(DefaultApp):
+    """ A default app for the Jupyter (formerly IPython) notebook.
+    """
+    pass
+
+
+_default_app = None
+def get_default_app():
+    """ Get the default app instance. Creates an instance if it does not
+    yet exist or if the existing instance has closed.
+    """
+    global _default_app
+    runtime = None if is_notebook else 'browser'  # todo: what runtime?
+    if (_default_app is None) or (_default_app.status == App.STATUS.CLOSED):
+        _default_app = DefaultApp(runtime=runtime)
+    return _default_app
+
+
 
 class Exporter(object):
     """ Export apps to standalone HTML.
@@ -600,15 +664,3 @@ class Exporter(object):
                 chars.append(c)
         chars.pop(0)
         return ''.join(chars)
-
-
-default_app = None
-def current_app():
-    global default_app
-    if default_app is None:
-        default_app = App()
-    return default_app
-
-class DefaultApp(App):
-    pass
-

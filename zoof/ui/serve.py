@@ -10,6 +10,7 @@ import tornado.websocket
 
 from ..webruntime.common import default_icon
 from .app import manager, call_later
+from .clientcode import clientCode
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -53,16 +54,17 @@ class ZoofTornadoApplication(tornado.web.Application):
         tornado.web.Application.__init__(self, 
             [(r"/(.*)/ws", WSHandler), (r"/(.*)", MainHandler), ])
         self._cache = {}
+        clientCode.collect()  # collect JS from mirrored classes now
     
-    def load(self, fname):
-        """ Load a file with the given name. Returns bytes.
-        """
-        if fname not in self._cache:
-            filename = os.path.join(HTML_DIR, fname)
-            blob = open(filename, 'rb').read()
-            return blob  # todo: bypasse cache
-            self._cache[fname] = blob
-        return self._cache[fname]
+    # def load(self, fname):
+    #     """ Load a file with the given name. Returns bytes.
+    #     """
+    #     if fname not in self._cache:
+    #         filename = os.path.join(HTML_DIR, fname)
+    #         blob = open(filename, 'rb').read()
+    #         return blob  # todo: bypasse cache
+    #         self._cache[fname] = blob
+    #     return self._cache[fname]
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -110,13 +112,15 @@ class MainHandler(tornado.web.RequestHandler):
                     app = manager.get_app_by_id(app_name, app_id)
                     if app and app.status == app.STATUS.PENDING:
                         #self.write(self.application.load('index.html'))
-                        self.serve_index()
+                        #self.serve_index()
+                        self.write(clientCode.get_page().encode())
                     else:
                         self.write('App %r with id %r is not available' % 
                                    (app_name, app_id))
                 elif manager.has_app_name(app_name):
                     #self.write(self.application.load('index.html'))
-                    self.serve_index()
+                    #self.serve_index()
+                    self.write(clientCode.get_page().encode())
                 else:
                     self.write('No app %r is hosted right now' % app_name)
             elif file_name.endswith('.ico'):
@@ -133,7 +137,9 @@ class MainHandler(tornado.web.RequestHandler):
                 elif file_name.endswith('.js'):
                     self.set_header("Content-Type", 'application/x-javascript')
                 try:
-                    res = self.application.load(file_name)
+                    raise RuntimeError('This is for page_light, but we might never implement that')
+                    #res = self.application.load(file_name)
+                    #res = clientCode.load(file_name).encode())
                 except IOError:
                     #self.write('invalid resource')
                     super().write_error(404)
@@ -148,14 +154,14 @@ class MainHandler(tornado.web.RequestHandler):
             # In theory this cannot happen
             self.write('This should not happen')
     
-    def serve_index(self):
-        src = self.application.load('index.html')
-        from .mirrored import get_mirrored_classes
-        js = '\n'
-        for cls in get_mirrored_classes():
-            js += '\n' + cls.get_js()
-        src = src.replace(b'JS_INSERT_HERE', js.encode())
-        self.write(src)
+    # def serve_index(self):
+    #     src = self.application.load('index.html')
+    #     from .mirrored import get_mirrored_classes
+    #     js = '\n'
+    #     for cls in get_mirrored_classes():
+    #         js += '\n' + cls.get_js()
+    #     src = src.replace(b'JS_INSERT_HERE', js.encode())
+    #     self.write(src)
     
     def write_error(self, status_code, **kwargs):
         # does not work?
@@ -225,11 +231,12 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     def on_close(self):
         """ Called when the connection is closed.
         """
-        code = self.close_code or 0
+        self.close_code = code = self.close_code or 0
         reason = self.close_reason or self.known_reasons.get(code, '')
         print('detected close: %s (%i)' % (reason, code))
-        manager.close_an_app(self._app)
-        self._app = None  # Allow cleaning up
+        if hasattr(self, '_app'):
+            manager.close_an_app(self._app)
+            self._app = None  # Allow cleaning up
     
     def on_pong(self, data):
         """ Called when our ping is returned.
@@ -247,5 +254,5 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         self.close(1000, 'closed by server')
     
     # Uncomment this to allow cross-domain access
-    #def check_origin(self, origin):
-    #    return True
+    def check_origin(self, origin):
+        return True
