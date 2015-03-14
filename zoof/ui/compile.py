@@ -48,8 +48,10 @@ def js(func):
     
     def caller(self, *args):
         eval = self.get_app()._exec
+        args = ['self'] + list(args)  # todo: remove self?
         a = ', '.join([repr(arg) for arg in args])
-        eval('zoof.widgets.%s.%s("self", %s)' % (self.id, func.__name__, a))
+        eval('zoof.widgets.%s.%s(%s)' % (self.id, func.__name__, a))
+        
     
     caller.js = JSFuction(func.__name__, code)
     
@@ -206,13 +208,14 @@ class JSParser:
     # def parse_IfExp
     
     def parse_Attribute(self, node):
-        name = node.value.id
+        self.parse_node(node.value)
+        
         attr = node.attr
         alias = self.COMMON_METHODS.get(attr, None)
-        if alias:
-            name = '(%s.%s || %s.%s)' % (name, attr, name, alias)
+        if False:#alias:
+            name = '.(%s||%s)' % (attr, alias)
         else:
-            name = '%s.%s' % (name, attr)
+            name = '.' + attr
         self._addjs(name)
     
     

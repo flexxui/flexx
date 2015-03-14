@@ -307,6 +307,8 @@ def get_mirrored_classes():
     return [c for c in HasPropsMeta.CLASSES if issubclass(c, Mirrored)]
 
 
+from zoof.ui.compile import js
+
 class Mirrored(HasProps):
     """ Instances of this class will have a mirror object in JS. The
     props of the two are synchronised.
@@ -317,18 +319,27 @@ class Mirrored(HasProps):
     
     def __init__(self, **kwargs):
         HasProps.__init__(self, **kwargs)
-        from zoof.ui.app import current_app
-        self._app = current_app()
+        from zoof.ui.app import get_default_app
+        self._app = get_default_app()
         Mirrored._counter += 1
         self._id = self.__class__.__name__ + str(Mirrored._counter)
         
         import json
-        funcname = self.__class__.__name__
+        clsname = self.__class__.__name__
         props = {}
         for name in self.props():
             props[name] = getattr(self, name)
-        self._app._exec('zoof.widgets.%s = new zoof.%s(%s);' % (self.id, funcname, json.dumps(props)))
+        cmd = 'zoof.widgets.%s = new zoof.%s(%s);' % (self.id, clsname, json.dumps(props))
+        print(cmd)
+        self._app._exec(cmd)
         
+        # todo: get notified when a prop changes, pend a call via call_later
+        # todo: collect more changed props if they come by
+        # todo: in the callback send all prop updates to js
+    
+    def get_app(self):
+        return self._app
+    
     @property
     def id(self):
         return self._id
@@ -337,12 +348,18 @@ class Mirrored(HasProps):
         """ this is method a """
         pass
     
+    @js
+    def test_js_method(self):
+        alert('Testing!')
+    
     @classmethod
     def get_js(cls):
         cls_name = cls.__name__
         js = []
         # Main functions
+        # todo: zoof.classes.xx
         js.append('zoof.%s = function (props) {' % cls_name)
+        #js.append('    zoof.widgets[id] = this;')  # Just do zoof.widgets[id] = new XX
         js.append('    for (var name in props) {')
         js.append('        if (props.hasOwnProperty(name)) {')
         js.append('            this["_" + name] = props[name];')
@@ -360,6 +377,11 @@ class Mirrored(HasProps):
             js.append('    return this._%s;' % name)
             js.append('};')
         # Methods
+        for name in dir(cls):
+            func = getattr(cls, name)
+            if hasattr(func, 'js'):
+                code = func.js.jscode.split(' ', 1)[1]  # todo: we now split on space in "var xxx = function ..."
+                js.append('zoof.%s.prototype.%s' % (cls_name, code))
         return '\n'.join(js)
 
 
@@ -367,13 +389,35 @@ class Foo(HasProps):
     
     size = Int(help='the size of the foo')
     
-    
     def __init__(self, x, **kwargs):
         HasProps.__init__(self, **kwargs)
         self._x = x
     
     def methodb(self):
         """ this is method b"""
+        pass
+
+
+class Button2(Mirrored):
+    
+    text = Str()
+    
+    def __init__(self):
+        Mirrored.__init__(self)
+        self._js_init()  # todo: allow a js __init__
+    
+    @js
+    def _js_init(self):
+        # todo: allow setting a placeholder DOM element, or any widget parent
+        this.node = document.createElement('button')
+        zoof.get('body').appendChild(this.node);
+        this.node.innerHTML = 'Look, a button!'
+    
+    @js
+    def set_text(self, txt):
+        this.node.innerHTML = self
+    
+    def _repr_html_(self):
         pass
 
 

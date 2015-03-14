@@ -211,6 +211,7 @@ def init_server(host='localhost', port=None):
     print('Serving apps at http://%s:%i/' % (host, port))
 
 
+# todo: ui.run looks weird in IPython. Maybe ui.load() or start()
 def run():  # (runtime='xul', host='localhost', port=None):
     """ Start the user interface
     
@@ -251,10 +252,27 @@ def run():  # (runtime='xul', host='localhost', port=None):
 is_notebook = False
 
 class JupyterChecker(object):
+    """ This gets returned by run(), so that in the IPython notebook
+    _repr_html_() gets called. When this happens, we know we are in the
+    Jupyter notebook, or at least in something that can display html.
+    In the HTML that we then produce, we put the whole flexx library.
+    """
     def _repr_html_(self):
         global is_notebook
         is_notebook = True
-        return "I can see this is the notebook"
+        
+        app = get_default_app()  # does not launch runtime if is_notebook
+        
+        from .clientcode import clientCode
+        host, port = _tornado_app.serving_at
+        name = app.name + '-' + app.id
+        url = 'ws://%s:%i/%s/ws' % (host, port, name)
+        t = "Injecting JS/CSS."
+        t += "<style>\n%s\n</style>\n" % clientCode.get_css()
+        t += "<script>\n%s\n</script>" % clientCode.get_js()
+        t += "<script>zoof.ws_url=%r; zoof.is_full_page=false; zoof.init();</script>" % url
+        t += "Ready to go."
+        return t
 
 
 def stop():
@@ -377,6 +395,8 @@ class App(object):
         if runtime == '<export>':
             self._ws = Exporter(self)
             self.init()
+        elif runtime == 'notebook':
+            manager._add_pending_app_instance(self)
         elif runtime:
             manager._add_pending_app_instance(self)
             init_server()
@@ -523,21 +543,6 @@ class DefaultApp(App):
     instance of this class exists at all times.
     """
     # todo: enforce this singleton-ishness in some way?
-    # 
-    # def __init__(self, *args, **kwargs):
-    #     self._in_nb = False
-    #     App.__init__(self, *args, **kwargs)
-    
-    def _repr_html_(self):
-        from .clientcode import clientCode
-        #self._in_nb = True
-        host, port = _tornado_app.serving_at
-        url = 'ws://%s:%i/DefaultApp-%s/ws' % (host, port, self.id)
-        t = "Injecting JS/CSS"
-        t += "<style>\n%s\n</style>\n" % clientCode.get_css()
-        t += "<script>\n%s\n</script>" % clientCode.get_js()
-        t += "<script>zoof.ws_url=%r; zoof.is_full_page=false; zoof.init();</script>" % url
-        return t
 
 
 class JupyterApp(DefaultApp):
@@ -552,7 +557,7 @@ def get_default_app():
     yet exist or if the existing instance has closed.
     """
     global _default_app
-    runtime = None if is_notebook else 'browser'  # todo: what runtime?
+    runtime = 'notebook' if is_notebook else 'browser'  # todo: what runtime?
     if (_default_app is None) or (_default_app.status == App.STATUS.CLOSED):
         _default_app = DefaultApp(runtime=runtime)
     return _default_app

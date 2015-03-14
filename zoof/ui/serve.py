@@ -4,6 +4,7 @@
 import sys
 import os
 import logging
+import urllib
 
 import tornado.web
 import tornado.websocket
@@ -253,6 +254,16 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         """
         self.close(1000, 'closed by server')
     
-    # Uncomment this to allow cross-domain access
     def check_origin(self, origin):
-        return True
+        """ Handle cross-domain access; override default same origin
+        policy. By default the hostname and port must be equal. We only
+        requirde de portname to be equal. This allows us to embed in
+        the IPython notebook.
+        """
+        host, port = self.application.serving_at  # set by us
+        incoming_host = urllib.parse.urlparse(origin).hostname
+        if host == incoming_host:
+            return True
+        else:
+            print('Connection refused from %s' % origin)
+            return False
