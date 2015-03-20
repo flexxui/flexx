@@ -259,6 +259,8 @@ class JupyterChecker(object):
     """
     def _repr_html_(self):
         global is_notebook
+        if is_notebook:
+            return "Zoof.ui already loaded"  # Don't inject twice
         is_notebook = True
         
         app = get_default_app()  # does not launch runtime if is_notebook
@@ -274,6 +276,7 @@ class JupyterChecker(object):
         t += "Ready to go."
         return t
 
+#todo: can we use  IPython.core.displaypub as displaypub.publish_display_data?
 
 def stop():
     """ Stop the event loop

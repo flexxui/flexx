@@ -21,22 +21,6 @@ def with_metaclass(meta, *bases):
     return type.__new__(metaclass, 'temporary_class', (), {})
 
 
-def is_immutable(ob):
-    """ Test whether an object is immutable.
-    """
-    if ob is None:
-        return True
-    elif isinstance(ob, (bool, int, float, string_types)):
-        return True
-    elif isinstance(ob, tuple):
-        for child in ob:
-            if not is_immutable(child):
-                return False
-        return True
-    else:
-        return False
-
-
 class Prop(object):
     """ A prop can be assigned to a class attribute.
     
@@ -54,10 +38,10 @@ class Prop(object):
                 assert isinstance(val, int, float)  # require scalars
                 return float(val)  # always store as float
     
-    Any prop can only store immutable objects. This includes tuples,
-    provided that the items it contains are immutable too. A prop may
-    accept* mutable values, but the data must be stored as an immutable
-    object.
+    Any prop can only store hashable objects. This includes tuples,
+    provided that the items it contains are hashable too. A prop may
+    accept* nonhashable values (e.g. list), but the data must be stored
+    as an immutable object.
     
     Prop objects are attached to classes, and behave like properties
     because they implement the data descriptor protocol (__get__,
@@ -87,12 +71,22 @@ class Prop(object):
     def __set__(self, obj, value):
         # Validate value, may return a "cleaned up" version
         value = self.validate(value)
-        assert is_immutable(value)
+        
+        # Set 
+        try:
+            newhash = hash(value)
+        except TypeError:
+            raise TypeError('Prop values need to be hashable, %r is not.' % 
+                            type(value).__name__)
         
         # If same as old value, early exit
-        old = self._get(obj)
-        if value == old:
+        #old = self._get(obj)
+        #if value == old:
+        oldhash = getattr(obj, self._private_name + '_hash')
+        if newhash == oldhash:
             return
+        else:
+            setattr(obj, self._private_name + '_hash', newhash)
         
         # Update
         if hasattr(obj, '_changed_props'):
@@ -161,6 +155,7 @@ class HasPropsMeta(type):
             assert prop._name is None
             prop._name = name
             setattr(cls, prop._private_name, prop.default)
+            setattr(cls, prop._private_name + '_hash', hash(prop.default))
         # Cache prop names
         cls.__props__ = set(props.keys())
         # Proceeed as normal
@@ -299,6 +294,27 @@ class Color(Prop):
             raise ValueError('Color prop %r requires str or tuple.' % self.name)
 
 
+class Instance(Prop):
+    _default = None
+    
+    def __init__(self, item_type, default=None, help=None):
+        Prop.__init__(self, default, help)
+        item_type = item_type if isinstance(item_type, tuple) else (item_type, )
+        self._item_types = item_type
+    
+    def validate(self, val):
+        if val is None:
+            return val
+        elif isinstance(val, self._item_types):
+            return val
+        else:
+            item_types = ', '.join([t.__name__ for t in self._item_types])
+            this_type = val.__class__.__name__
+            raise ValueError('Instance prop %r needs items to be in '
+                             '[%s], but got %s.' % 
+                             (self.name, item_types, this_type))
+    
+    
 ## -----
 # todo: the above is generic and need to go in utils, below is JS related
 
@@ -398,7 +414,40 @@ class Foo(HasProps):
         pass
 
 
-class Button2(Mirrored):
+class Widget(Mirrored):
+    
+    parent = Instance(Mirrored)  # todo: can we set ourselves?
+    
+    container_id = Str()  # used if parent is None
+    
+    def __init__(self, parent):
+        # todo: -> parent is widget or ref to div element
+        Mirrored.__init__(self)
+        self._js_init()  # todo: allow a js __init__
+    
+    @js
+    def _js_init(self):
+        pass
+    
+    @js
+    def set_cointainer_id(self, id):
+        #if self._parent:
+        #    return
+        print('setting container id', id)
+        el = document.getElementById(id)
+        el.appendChild(this.node)
+    
+    def _repr_html_(self):
+        container_id = self.id + '_container'
+        # Set container id, this gets applied in the next event loop
+        # iteration, so by the time it gets called in JS, the div that
+        # we define below will have been created.
+        from .app import call_later
+        call_later(0, self.set_cointainer_id, container_id) # todo: always do calls in next iter
+        return "<div id=%s />" % container_id
+
+
+class Button(Widget):
     
     text = Str()
     
@@ -415,10 +464,7 @@ class Button2(Mirrored):
     
     @js
     def set_text(self, txt):
-        this.node.innerHTML = self
-    
-    def _repr_html_(self):
-        pass
+        this.node.innerHTML = txt
 
 
 class Bar(Foo):

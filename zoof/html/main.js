@@ -106,7 +106,9 @@ zoof.initSocket = function () {
 
 zoof.initLogging = function () {
     var errorHandler;
-    
+    if (console.ori_log) {
+        return;  // already initialized the loggers
+    }
     // Keep originals
     console.ori_log = console.log;
     console.ori_info = console.info || console.log;

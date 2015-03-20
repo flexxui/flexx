@@ -37,7 +37,7 @@ JS-HERE
 
 JS_BOOTSTRAP = """
 // Init zoof namespace
-window.zoof = {};
+window.zoof = window.zoof || {};
 zoof.ws = null;
 zoof.is_full_page = true;
 zoof.ws_url = "ws://" + location.hostname + ':' + location.port + "/" + location.pathname + "/ws";
