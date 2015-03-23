@@ -374,6 +374,7 @@ class Mirrored(HasProps):
         js = []
         # Main functions
         # todo: zoof.classes.xx
+        # todo: use Object.defineProperty(this, name, xx) to allow setters and getters
         js.append('zoof.%s = function (props) {' % cls_name)
         #js.append('    zoof.widgets[id] = this;')  # Just do zoof.widgets[id] = new XX
         js.append('    for (var name in props) {')

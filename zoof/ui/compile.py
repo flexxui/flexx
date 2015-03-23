@@ -4,6 +4,12 @@ from astpp import dump, parseprint  # 3d party
 
 
 class JSFuction:
+    """ Definition of a javascript function.
+    
+    Allows getting access to the original Python code and the JS code. Also
+    allows calling the JS function from Python.
+    """
+    
     def __init__(self, name, code):
         self._name = name
         self._pycode = code
@@ -38,7 +44,13 @@ class JSFuction:
 
 
 def js(func):
-    """ Decorator
+    """ Decorate a function with this to make it a JavaScript function.
+    
+    The decorated function is replaced by a function that you can call to
+    invoke the JavaScript function in the web runtime.
+    
+    The returned function has a ``js`` attribute, which is a JSFunction
+    object that can be used to get access to Python and JS code.
     """
     # todo: if function consists of multi-line string, just use that as the JS code
     lines, linenr = inspect.getsourcelines(func)
@@ -59,11 +71,16 @@ def js(func):
     #return lambda *x, **y: print('This is a JS func')
 
 
+def py2js(code):
+    node = ast.parse(code)
+    parser = JSParser(node)
+    return parser.dump()
+
 
 class JSParser:
     """ Transcompile Python to JS.
     This does not intend to support the full Python stack on JS. It is
-    more a way to write JS with a Pythonesque syntax. Like Coffeescript:
+    more a way to write JS with a Pythonesque syntax. Like Coffeescript,
     it's just JavaScript!
     
     The purpose is to allow definition of JS code inside your Python
@@ -72,13 +89,49 @@ class JSParser:
     
     COMMON_METHODS = dict(append='push')
     
+    NAME_MAP = {
+        'self': 'this',
+        'True': 'true',
+        'False': 'false',
+        'None': 'null',
+        #'int': '_int',
+        #'float': '_float',
+        #'py_builtins' : '___py_hard_to_collide',
+    }
+    
+    BINARY_OP = {
+        'Add'    : '+',
+        'Sub'    : '-',
+        'Mult'   : '*',
+        'Div'    : '/',
+        'Mod'    : '%',
+        'LShift' : '<<',
+        'RShift' : '>>',
+        'BitOr'  : '|',
+        'BitXor' : '^',
+        'BitAnd' : '&',
+    }
+
+    COMP_OP = {
+            'Eq'    : "==",
+            'NotEq' : "!=",
+            'Lt'    : "<",
+            'LtE'   : "<=",
+            'Gt'    : ">",
+            'GtE'   : ">=",
+            'Is'    : "===",
+            'IsNot' : "is not", # Not implemented yet
+        }
+    
     def __init__(self, node):
         self._root = node
-        self._js = []
+        # self._js = []
         self._stack = []
         self._indent = 0
         self._push_stack()
-        self.parse_node(node)
+        self._parts = self.parse(node)
+        if self._parts:
+            self._parts[0] = self._parts[0].lstrip()
     
     def _push_stack(self):
         self._stack.append({})
@@ -89,73 +142,89 @@ class JSParser:
     @property
     def vars(self):
         return list(self._stack[-1].keys())
-        
-    def _addjs(self, code):
-        self._js.append(code)
     
-    def _addjsline(self, code):
-        self._js.append('\n' + self._indent * '    ' + code)
     
-    def _removejs(self, count=1):
-        for i in range(count):
-            self._js.pop(-1)
+    # def write(self, code):
+    #     self._js.append(code)
+    # 
+    # def writeline(self, code):
+    #     self._js.append('\n' + self._indent * '    ' + code)
+    # 
+    # def unwrite(self, count=1):
+    #     for i in range(count):
+    #         self._js.pop(-1)
     
     def dump(self):
         """ Dumpt the JS code.
         """
-        return ''.join(self._js)
+        return ''.join(self._parts)
+        #code = ''.join(self._js)
+        #return code.strip() + '\n'
     
-    @classmethod
-    def py2js(cls, code):
-        return css(code).dump()
-    
-    def parse_node(self, node):
+    def newline(self, code=''):
+        return '\n' + self._indent * '    ' + code
+        
+    def parse(self, node):
         """ Parse a node. Check node type and dispatch to one of the
         specific parse functions. Raises error if we cannot parse this
         type of node. 
+        
+        Returns a list of strings.
         """
         nodeType = node.__class__.__name__
         parse_func = getattr(self, 'parse_' + nodeType, None)
         if parse_func:
-            return parse_func(node)
+            res = parse_func(node)
+            # Return as list also if a tuple or string was returned
+            assert res is not None
+            if isinstance(res, tuple):
+                res = list(res)
+            if not isinstance(res, list):
+                res = [res]
+            return res
         else:
             raise NotImplementedError('Cannot parse %s nodes yet' % nodeType)
     
     ## Literals
     
     def parse_Num(self, node):
-        self._addjs(repr(node.n))
+        return repr(node.n)
     
     def parse_Str(self, node):
-        self._addjs(repr(node.s))
+        return repr(node.s)
     
     def parse_Bytes(self, node):
         raise NotImplementedError('No Bytes in JS')
     
     def parse_NameConstant(self, node):
+        # Py3k
         M = {True: 'true', False: 'false', None: 'null'}
-        self._addjs(M[node.value])
+        return M[node.value]
     
     def parse_List(self, node):
-        self._addjs('[')
+        code = ['[']
         for child in node.elts:
-            self.parse_node(child)
-            self._addjs(', ')
-        self._removejs()
-        self._addjs(']')
+            code += self.parse(child)
+            code.append(', ')
+        if node.elts:
+            code.pop(-1)  # skip last comma
+        code.append(']')
+        return code
     
     def parse_Tuple(self, node):
         return self.parse_List()  # tuple = ~ list in JS
     
     def parse_Dict(self, node):
-        self._addjs('{')
+        code = ['{']
         for key, val in zip(node.keys, node.values):
-            self.parse_node(key)
-            self._addjs(': ')
-            self.parse_node(val)
-            self._addjs(', ')
-        self._removejs()
-        self._addjs('}')
+            code += self.parse(key)
+            code.append(': ')
+            code += self.parse(val)
+            code.append(', ')
+        if node.keys:
+            code.pop(-1)  # skip last comma
+        code.append('}')
+        return code
         
     def parse_Set(self, node):
         raise NotImplementedError('No Set in JS')
@@ -163,87 +232,158 @@ class JSParser:
     ## Variables
     
     def parse_Name(self, node):
-        self._addjs(node.id)
+        id = node.id
+        id = self.NAME_MAP.get(id, id)
+        
+        #if id in self.builtin:  -> max, min, sum
+        #    id = "py_builtins." + id;
         # todo: ctx Load, Store, Del?
-    
+        return id
+       
     # def parse_Starred 
     
     ## Expressions
     
     def parse_Expr(self, node):
         """ Expression (not stored in a variable) """
-        self._addjsline('')
-        self.parse_node(node.value)
-        self._addjs(';')
+        code = [self.newline()]
+        code += self.parse(node.value)
+        code.append(';')
+        return code
     
     # def parse_UnaryOp
-    # def parse_ BinOp
+    
+    def parse_BinOp(self, node):
+        # if isinstance(node.op, ast.Mod) and isinstance(node.left, ast.Str):
+        #     left = self.parse(node.left)
+        #     if isinstance(node.right, (ast.Tuple, ast.List)):
+        #         right = self.visit(node.right)
+        #         return "vsprintf(js(%s), js(%s))" % (left, right)
+        #     else:
+        #         right = self.visit(node.right)
+        #         return "sprintf(js(%s), %s)" % (left, right)
+        left = ''.join(self.parse(node.left))
+        right = ''.join(self.parse(node.right))
+
+        if isinstance(node.op, ast.Pow):
+            return ["Math.pow(", left, ", ", right, ")"]
+        elif isinstance(node.op, ast.FloorDiv):
+            return ["Math.floor(", left, "/", right, ")"]
+        else:
+            op = ' %s ' % self.BINARY_OP[node.op.__class__.__name__]
+            return [left, op, right]
+    
     # def parse_BoolOp
     # def parse_Compare
     
     def parse_Call(self, node):
         """ A function call """
-        self.parse_node(node.func)
+        func = self.parse(node.func)
         
-        # if isinstance(node.func, ast.Name):
-        #     name = node.func.id
-        #         
-        # else:  # Attribute
-        #     name = node.func.value.id + '.' + node.func.attr
-        name = self._js[-1]
-        if name == 'print':
-            self._removejs()
-            self._addjs('console.log(')
-            for arg in node.args:
-                self.parse_node(arg)
-                self._addjs(' + " " + ')
-        else:
-            self._addjs('(')
-            for arg in node.args:
-                self.parse_node(arg)
-                self._addjs(', ')
-        self._removejs()  # remove last comma
-        self._addjs(')')
+        # todo: print -> console.log
+        
+        args = [''.join(self.parse(arg)) for arg in node.args]
+        
+        # kwargs are passed as a dict (as one extra argument)
+        if node.keywords:
+            keywords = []
+            for kw in node.keywords:
+                val = ''.join(self.parse(kw.value))
+                keywords.append("%s: %s" % (kw.arg, val))
+            args.append("{" + ", ".join(keywords) + "}")
+        
+        return func + ["("] + args + [")"]
     
     # def parse_IfExp
     
     def parse_Attribute(self, node):
-        self.parse_node(node.value)
-        
-        attr = node.attr
-        alias = self.COMMON_METHODS.get(attr, None)
-        if False:#alias:
-            name = '.(%s||%s)' % (attr, alias)
-        else:
-            name = '.' + attr
-        self._addjs(name)
+        return "%s.%s" % (''.join(self.parse(node.value)), node.attr)
     
     
     ## Statements
     
     def parse_Assign(self, node):
         """ Variable assignment. """
-        self._addjsline('')
-        for name in node.targets:
-            if isinstance(name, ast.Name):
-                if name.id not in self.vars:
-                    self._addjs('var ')
-                self._addjs(name.id)
-                self._stack[-1][name] = node.value
+        code = [self.newline()]
+        
+        # Parse targets
+        newvars = []
+        for target in node.targets:
+            var = ''.join(self.parse(target))
+            if isinstance(target, ast.Name):
+                if var not in self.vars:
+                    newvars.append((var, target))
+                code.append(var)
+            elif isinstance(target, ast.Attribute):
+                code.append(var)
+                #js = self.write("%s.__setattr__(\"%s\", %s);" % (self.visit(target.value), str(target.attr), value))
             else:
-                self.parse_node(name)
-            self._addjs(' = ')
-            
-        self.parse_node(node.value)
-        self._addjs(';')
+                raise JSError("Unsupported assignment type")
+            code.append(' = ')
+        
+        # Take care of new variables
+        for var, target in newvars:
+            self._stack[-1][var] = node.value
+        if len(newvars) == 1:
+            code.insert(1, 'var ')
+        elif len(newvars) > 1:
+            code.insert(0, 'var ' + ', '.join(newvars.keys) + ';')
+            code.insert(0, self.newline())
+        
+        # Parse right side
+        code += self.parse(node.value)
+        code.append(';')
+        return code
     
+    def visit_Assign(self, node):
+        assert len(node.targets) == 1
+        target = node.targets[0]
+        #~ if self._class_name:
+            #~ target = self._class_name + '.' + target
+        value = self.visit(node.value)
+        if isinstance(target, (ast.Tuple, ast.List)):
+            dummy = self.new_dummy()
+            self.write("var %s = %s;" % (dummy, value))
+
+            for i, target in enumerate(target.elts):
+                var = self.visit(target)
+                declare = ""
+                if isinstance(target, ast.Name):
+                    if not (var in self._scope):
+                        self._scope.append(var)
+                        declare = "var "
+                self.write("%s%s = %s.__getitem__(%d);" % (declare,
+                    var, dummy, i))
+        elif isinstance(target, ast.Subscript) and isinstance(target.slice, ast.Index):
+            # found index assignment
+            self.write("%s.__setitem__(%s, %s);" % (self.visit(target.value),
+                self.visit(target.slice), value))
+        elif isinstance(target, ast.Subscript) and isinstance(target.slice, ast.Slice):
+            # found slice assignmnet
+            self.write("%s.__setslice__(%s, %s, %s);" % (self.visit(target.value),
+                self.visit(target.slice.lower), self.visit(target.slice.upper),
+                value))
+        else:
+            var = self.visit(target)
+            if isinstance(target, ast.Name):
+                if not (var in self._scope):
+                    self._scope.append(var)
+                    declare = "var "
+                else:
+                    declare = ""
+                self.write("%s%s = %s;" % (declare, var, value))
+            elif isinstance(target, ast.Attribute):
+                js = self.write("%s.__setattr__(\"%s\", %s);" % (self.visit(target.value), str(target.attr), value))
+            else:
+                raise JSError("Unsupported assignment type")
+                
     # parse_AugAssign   -> x += 1
     # parse_Raise
     # parse_Assert
     # parse_Delete
     
     def parse_Pass(self, node):
-        pass  # :)
+        return []
     
     
     ## Control flow
@@ -265,41 +405,98 @@ class JSParser:
     
     def parse_FunctionDef(self, node):
         """ A function definition """
-        self._addjsline('var %s = function (' % node.name)
+        
+        code = [self.newline('var %s = function (' % node.name)]
+        
         # Args
+        # if not isinstance(arg, ast.Name):
+        #     raise JSError("tuples in argument list are not supported")
         argnames = [(arg.arg if hasattr(arg, 'arg') else arg.name)
                     for arg in node.args.args]  # py2/py3
         for name in argnames:
-            self._addjs(name); self._addjs(', ')
-        self._removejs()  # remove last comma
+            code.append(name)
+        if argnames:
+            code.pop(-1)
+        
         # Check
+        if node.decorator_list:
+            raise NotImplementedError('No support for decorators')
         if node.args.kwonlyargs:
             raise NotImplementedError('No support for keyword only arguments')
         if node.args.kwarg:
             raise NotImplementedError('No support for kwargs')
         # Prepare for content
-        self._addjs(') {')
+        code.append(') {')
         self._indent += 1
         # Apply defaults
         offset = len(argnames) - len(node.args.defaults)
         for name, default in zip(argnames[offset:], node.args.defaults):
-            self._addjsline(name + ' ||= ')
-            self.parse_node(default)
-            self._addjs(';')
+            x = '%s ||= %s;' % (name, ''.join(self.parse(default)))
+            code.append(self.newline(x))
+        
         # Handle varargs
         if node.args.vararg:
-            self._addjsline(node.args.vararg.arg + ' = ' + 
-                            'arguments.slice(%i);' % len(argnames))
+            code.append(self.newline(node.args.vararg.arg + ' = ' + 
+                                'arguments.slice(%i);' % len(argnames)))
         # Apply content
         for child in node.body:
-            self.parse_node(child)
+            code += self.parse(child)
+        
         # Wrap up
         self._indent -= 1
-        self._addjsline('};')
+        code.append('};')
+        return code
+    
+    def _functiondef(self, node):
+        is_static = False
+        is_javascript = False
+        if node.decorator_list:
+            if len(node.decorator_list) == 1 and \
+                    isinstance(node.decorator_list[0], ast.Name) and \
+                    node.decorator_list[0].id == "JavaScript":
+                is_javascript = True # this is our own decorator
+            elif self._class_name and \
+                    len(node.decorator_list) == 1 and \
+                    isinstance(node.decorator_list[0], ast.Name) and \
+                    node.decorator_list[0].id == "staticmethod":
+                is_static = True
+            else:
+                raise JSError("decorators are not supported")
+
+        # XXX: disable $def for now, because it doesn't work in IE:
         
+        else:
+            defaults = [None]*(len(node.args.args) - len(node.args.defaults)) + node.args.defaults
+
+            args = []
+            defaults2 = []
+            for arg, default in zip(node.args.args, defaults):
+                if not isinstance(arg, ast.Name):
+                    raise JSError("tuples in argument list are not supported")
+                if default:
+                    defaults2.append("%s: %s" % (arg.id, self.visit(default)))
+                args.append(arg.id)
+            defaults = "{" + ", ".join(defaults2) + "}"
+            args = ", ".join(args)
+            self.write("var %s = $def(%s, function(%s) {" % (node.name,
+                defaults, args))
+            self._scope = [arg.id for arg in node.args.args]
+            self.indent()
+            for stmt in node.body:
+                self.visit(stmt)
+            self.dedent()
+            self.write("});")
     #def parse_Lambda
     
-    #def parse_Return
+    def parse_Return(self, node):
+        if node.value is not None:
+            code = ['return ']
+            code += self.parse(node.value)
+            code.append(';')
+            return code
+        else:
+            return "return;"
+    
     #def parse_Yield
     #def parse_YieldFrom
     #def parse_Global
@@ -317,22 +514,33 @@ class JSParser:
     
     def parse_Module(self, node):
         """ Module level. Just skip. """
+        code = []
         for child in node.body:
-            self.parse_node(child)
-    
-    
+            code += self.parse(child)
+        return code
     
     ## Imports - no imports
 
 
 if __name__ == '__main__':
+    
+    print(py2js('foo.bar = 2'))
+    
+    1/0
+    @js
+    def t_func():
+        2
+    
     class Foo:
         @js
         def bar(self, bar, spam=4, *more):
+            __SIMPLE_TYPES__
             foo = 'hello'
             foo = [1, 2]
             foo.append(3)
+            __ATTRIBUTES__
             foo.bar = 'asd'
+            __PRINTING_AND_FORMATTING__
             print(spam, 'world!', 5., [1,2,3])
     
     
@@ -342,4 +550,5 @@ if __name__ == '__main__':
     print('----')
     # for node in ast.walk(foo.bar):
     #     print(node)
-    print(foo.bar)
+    print(foo.bar.js)
+    
