@@ -1,6 +1,42 @@
+"""
+
+Parts of this code are inspired by / taken from the py2js project.
+
+
+Supported:
+
+* numbers, strings
+* print function (no ``end`` and ``sep`` though)
+* multiple assignment
+* lists (becomes JS array)
+* tuple (becomes JS array)
+* dicts (becomes JS objects)
+* function calls
+* function defs can have *args
+* calling a function with keyword args (are passed via an object arg)
+* Power and integer division operators
+
+Not currently supported:
+
+* tuple packing/unpacking
+* function defs cannot have ``**kwargs``
+* cannot call a function with ``*args``
+
+Probably never suppored:
+
+* Most Python buildins
+* importing
+
+
+"""
+
 import inspect
 import ast
 from astpp import dump, parseprint  # 3d party
+
+
+class JSError(NotImplementedError):
+    pass
 
 
 class JSFuction:
@@ -13,8 +49,13 @@ class JSFuction:
     def __init__(self, name, code):
         self._name = name
         self._pycode = code
-        self._ast = ast.parse(code)
-        self._jscode = JSParser(self._ast).dump()
+        
+        # Convert to JS, but strip function name, 
+        # so that string starts with "function ( ..."
+        node = ast.parse(code)
+        p = JSParser(node)
+        p._parts[0] = 'function' + p._parts[0].split('function', 1)[1]
+        self._jscode = p.dump()
     
     def __call__(self, *args):
         #raise RuntimeError('This is a JavaScript function.')
@@ -30,12 +71,12 @@ class JSFuction:
     def jscode(self):
         return self._jscode
     
-    @property
-    def ast(self):
-        return self._ast
+    # @property
+    # def ast(self):
+    #     return self._ast
     
     def __repr__(self):
-        return '<JSFunction (print to see JS code) at 0x%x>' % id(self)
+        return '<JSFunction (print to see code) at 0x%x>' % id(self)
     
     def __str__(self):
         pytitle = '== Python code that defined this function =='
@@ -94,6 +135,7 @@ class JSParser:
         'True': 'true',
         'False': 'false',
         'None': 'null',
+        #'print': 'console.log',  # handled explicitly, also args
         #'int': '_int',
         #'float': '_float',
         #'py_builtins' : '___py_hard_to_collide',
@@ -183,7 +225,7 @@ class JSParser:
                 res = [res]
             return res
         else:
-            raise NotImplementedError('Cannot parse %s nodes yet' % nodeType)
+            raise JSError('Cannot parse %s nodes yet' % nodeType)
     
     ## Literals
     
@@ -194,7 +236,7 @@ class JSParser:
         return repr(node.s)
     
     def parse_Bytes(self, node):
-        raise NotImplementedError('No Bytes in JS')
+        raise JSError('No Bytes in JS')
     
     def parse_NameConstant(self, node):
         # Py3k
@@ -227,7 +269,7 @@ class JSParser:
         return code
         
     def parse_Set(self, node):
-        raise NotImplementedError('No Set in JS')
+        raise JSError('No Set in JS')
     
     ## Variables
     
@@ -238,8 +280,14 @@ class JSParser:
         #if id in self.builtin:  -> max, min, sum
         #    id = "py_builtins." + id;
         # todo: ctx Load, Store, Del?
+        # todo: implement min, max, sum
         return id
-       
+      
+    def parse_arg(self, node):
+        # todo: was this py2k or py3k?
+        name = node.arg
+        return self.NAME_MAP.get(name, name)
+    
     # def parse_Starred 
     
     ## Expressions
@@ -254,6 +302,7 @@ class JSParser:
     # def parse_UnaryOp
     
     def parse_BinOp(self, node):
+        # from py2js
         # if isinstance(node.op, ast.Mod) and isinstance(node.left, ast.Str):
         #     left = self.parse(node.left)
         #     if isinstance(node.right, (ast.Tuple, ast.List)):
@@ -280,9 +329,8 @@ class JSParser:
         """ A function call """
         func = self.parse(node.func)
         
-        # todo: print -> console.log
-        
-        args = [''.join(self.parse(arg)) for arg in node.args]
+        # Create list of args - keep as parts: each element is a list
+        args = [self.parse(arg) for arg in node.args]
         
         # kwargs are passed as a dict (as one extra argument)
         if node.keywords:
@@ -290,9 +338,27 @@ class JSParser:
             for kw in node.keywords:
                 val = ''.join(self.parse(kw.value))
                 keywords.append("%s: %s" % (kw.arg, val))
-            args.append("{" + ", ".join(keywords) + "}")
+            args.append(["{" + ", ".join(keywords) + "}"])
         
-        return func + ["("] + args + [")"]
+        if func[0] == 'print':
+            # Deal with print function
+            if node.keywords:
+                raise JSError('Cannot use kwargs with print().')
+            args = [''.join(arg) for arg in args]
+            if len(args) > 1:
+                args = ['(%s)' % arg for arg in args]
+            args_concat = ' + " " + '.join(args)
+            return 'console.log(' + args_concat + ')'
+        
+        else:
+            # Normal func
+            argswithcommas = []
+            for arg in args:
+                argswithcommas.extend(arg)
+                argswithcommas.append(', ')
+            if argswithcommas:
+                argswithcommas.pop(-1)
+            return func + ["("] + argswithcommas + [")"]
     
     # def parse_IfExp
     
@@ -327,7 +393,8 @@ class JSParser:
         if len(newvars) == 1:
             code.insert(1, 'var ')
         elif len(newvars) > 1:
-            code.insert(0, 'var ' + ', '.join(newvars.keys) + ';')
+            names = [v[0] for v in newvars]
+            code.insert(0, 'var ' + ', '.join(names) + ';')
             code.insert(0, self.newline())
         
         # Parse right side
@@ -388,7 +455,24 @@ class JSParser:
     
     ## Control flow
     
-    #def parse_If
+    def parse_If(self, node):
+        code = ['if (']
+        code += self.parse(node.test)
+        code.append(') {')
+        self._indent += 1
+        for stmt in node.body:
+            code += self.parse(stmt)
+        self._indent -= 1
+        if node.orelse:
+            code.append("} else {")
+            self._indent += 1
+            for stmt in node.orelse:
+                code += self.parse(stmt)
+            self._indent -= 1
+        code.append(self.newline("}"))
+        return code
+
+        
     #def parse_For
     #def parse_While
     #def parse_Break
@@ -408,43 +492,58 @@ class JSParser:
         
         code = [self.newline('var %s = function (' % node.name)]
         
-        # Args
-        # if not isinstance(arg, ast.Name):
-        #     raise JSError("tuples in argument list are not supported")
-        argnames = [(arg.arg if hasattr(arg, 'arg') else arg.name)
-                    for arg in node.args.args]  # py2/py3
-        for name in argnames:
-            code.append(name)
+        # Collect args
+        argnames = []
+        for arg in node.args.args:
+            if not isinstance(arg, (ast.arg, ast.Name)):
+                raise JSError("tuples in argument list are not supported")
+            name = ''.join(self.parse(arg))
+            if name != 'this':
+                argnames.append(name)
+                # Add code and comma
+                code.append(name)
+                code.append(', ')
         if argnames:
-            code.pop(-1)
+            code.pop(-1)  # pop last comma
         
         # Check
+        # todo: keyword arguments follow same procedure as in parse_call
         if node.decorator_list:
-            raise NotImplementedError('No support for decorators')
+            raise JSError('No support for decorators')
         if node.args.kwonlyargs:
-            raise NotImplementedError('No support for keyword only arguments')
+            raise JSError('No support for keyword only arguments')
         if node.args.kwarg:
-            raise NotImplementedError('No support for kwargs')
+            raise JSError('No support for kwargs')
+        
         # Prepare for content
         code.append(') {')
         self._indent += 1
+        
         # Apply defaults
         offset = len(argnames) - len(node.args.defaults)
         for name, default in zip(argnames[offset:], node.args.defaults):
-            x = '%s ||= %s;' % (name, ''.join(self.parse(default)))
+            x = '%s = %s || %s;' % (name, name, ''.join(self.parse(default)))
             code.append(self.newline(x))
         
         # Handle varargs
         if node.args.vararg:
-            code.append(self.newline(node.args.vararg.arg + ' = ' + 
-                                'arguments.slice(%i);' % len(argnames)))
+            asarray = 'Array.prototype.slice.call(arguments)'
+            name = node.args.vararg.arg
+            if not argnames:
+                # Make available under *arg name
+                #code.append(self.newline('var %s = arguments;' % name))
+                code.append(self.newline('var %s = %s;' % (name, asarray)))
+            else:
+                # Slice it
+                code.append(self.newline('var %s = %s.slice(%i);' % 
+                            (name, asarray, len(argnames))))
         # Apply content
         for child in node.body:
             code += self.parse(child)
         
         # Wrap up
         self._indent -= 1
-        code.append('};')
+        code.append(self.newline('};'))
         return code
     
     def _functiondef(self, node):
@@ -486,16 +585,17 @@ class JSParser:
                 self.visit(stmt)
             self.dedent()
             self.write("});")
+    
     #def parse_Lambda
     
     def parse_Return(self, node):
         if node.value is not None:
-            code = ['return ']
+            code = [self.newline('return ')]
             code += self.parse(node.value)
             code.append(';')
             return code
         else:
-            return "return;"
+            return self.newline("return;")
     
     #def parse_Yield
     #def parse_YieldFrom
