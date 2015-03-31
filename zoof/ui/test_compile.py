@@ -3,17 +3,20 @@
 
 import subprocess
 
+from pytest import raises
 from zoof.util.testing import run_tests_if_main
-from zoof.ui.compile import js, py2js
+from zoof.ui.compile import js, py2js, JSError
 
 
-def evaljs(code):
+def evaljs(code, whitespace=True):
     """ Evaluate code in node. Return last result as string.
     """
     res = subprocess.check_output(['node', '-p', '-e', code])
     res = res.decode().rstrip()
     if res.endswith('undefined'):
         res = res[:-9].rstrip()
+    if not whitespace:
+        res = nowhitespace(res)
     return res
 
 def evalpy(code):
@@ -25,14 +28,10 @@ def nowhitespace(s):
     return s.replace('\n', '').replace('\t', '').replace(' ', '')
 
 
-@js
-def func1():
-    return 2 + 3
-
     
-class TestClass:
-    
-    ## Tests for single-line statements/expressions
+class TestExpressions:
+    """ Tests for single-line statements/expressions
+    """
     
     def test_special(self):
         assert py2js('') == ''
@@ -93,84 +92,9 @@ class TestClass:
         
         assert py2js('[1,2,3]') == '[1, 2, 3];'
         assert py2js('{foo: 3, bar: 4}') == '{foo: 3, bar: 4};'
-    
-    def test_func_calls(self):
-        assert py2js('foo()') == 'foo();'
-        assert py2js('foo(3, 4)') == 'foo(3, 4);'
-        assert py2js('foo(3, 4+1)') == 'foo(3, 4 + 1);'
-        assert py2js('foo(x=1, y=2)') == 'foo({x: 1, y: 2});'
-        assert py2js('foo(3, 4, x=1, y=2)') == 'foo(3, 4, {x: 1, y: 2});'
-    
-    ## Test functions
-    
-    def test_func1(self):
-        code = func1.js.jscode
-        lines = [line for line in code.split('\n') if line]
-        
-        assert len(lines) == 3  # only three lines
-        assert lines[0] == 'function () {'  # no args
-        assert lines[1].startswith('  ')  # indented
-        assert lines[2] == '};'  # dedented
-    
-    @js
-    def method1(self):
-        return 2 + 3
-    
-    def test_method1(self):
-        code = self.method1.js.jscode
-        lines = [line for line in code.split('\n') if line]
-        
-        assert len(lines) == 3  # only three lines
-        assert lines[0] == 'function () {'  # no args, no self/this
-        assert lines[1].startswith('  ')  # indented
-        assert lines[2] == '};'  # dedented 
-    
-    @js
-    def method2(self, foo, bar=4):
-        return foo + bar
-    
-    def test_default_args(self):
-        code = self.method2.js.jscode
-        lines = [line for line in code.split('\n') if line]
-        
-        assert lines[0] == 'function (foo, bar) {'
-        assert 'bar = bar || 4' in code
-        
-        assert evaljs('x=' + code + 'x(2)') == '6'
-        assert evaljs('x=' + code + 'x(2, 2)') == '4'
-    
-    @js
-    def method3(self, *args):
-        return args
-    
-    def test_var_args3(self):
-        code = self.method3.js.jscode
-        lines = [line for line in code.split('\n') if line]
-        
-        assert evaljs('x=' + code + 'x(2, 3)').replace(' ', '') == '[2,3]'
-        assert evaljs('x=' + code + 'x()').replace(' ', '') == '[]'    
-    
-    @js
-    def method4(self, foo, *args):
-        return args
-    
-    def test_var_args4(self):
-        code = self.method4.js.jscode
-        lines = [line for line in code.split('\n') if line]
-        
-        assert evaljs('x=' + code + 'x(0, 2, 3)').replace(' ', '') == '[2,3]'
-        assert evaljs('x=' + code + 'x(0)').replace(' ', '') == '[]' 
-    
-    @js
-    def method5(self):
-        return self.foo
-    
-    def test_self_becomes_this(self):
-        code = self.method5.js.jscode
-        lines = [line.strip() for line in code.split('\n') if line]
-        assert 'return this.foo;' in lines
-    
-    ## Control flow
+
+
+class TestConrolFlow:
     
     def test_if(self):
         # Normal if
@@ -291,9 +215,106 @@ class TestClass:
         # Test else
         assert evalpy(for9 + 'if i==3:break\nelse: print(99)\n0') == '0'
         assert evalpy(for9 + 'if i==30:break\nelse: print(99)\n0') == '99\n0'
+
+
+@js
+def func1():
+    return 2 + 3
+
+
+class TestFuctions:
     
+    def test_func_calls(self):
+        assert py2js('foo()') == 'foo();'
+        assert py2js('foo(3, 4)') == 'foo(3, 4);'
+        assert py2js('foo(3, 4+1)') == 'foo(3, 4 + 1);'
+        assert py2js('foo(3, *args)')  # JS is complex, just test it compiles
+        
+        # Does not work
+        raises(JSError, py2js, 'foo(x=1, y=2)')
+        raises(JSError, py2js, 'foo(**kwargs)')
     
-    ## Special functions
+    def test_func1(self):
+        code = func1.js.jscode
+        lines = [line for line in code.split('\n') if line]
+        
+        assert len(lines) == 3  # only three lines
+        assert lines[0] == 'function () {'  # no args
+        assert lines[1].startswith('  ')  # indented
+        assert lines[2] == '};'  # dedented
+    
+    @js
+    def method1(self):
+        return 2 + 3
+    
+    def test_method1(self):
+        code = self.method1.js.jscode
+        lines = [line for line in code.split('\n') if line]
+        
+        assert len(lines) == 3  # only three lines
+        assert lines[0] == 'function () {'  # no args, no self/this
+        assert lines[1].startswith('  ')  # indented
+        assert lines[2] == '};'  # dedented 
+    
+    @js
+    def method2(self, foo, bar=4):
+        return foo + bar
+    
+    def test_default_args(self):
+        code = self.method2.js.jscode
+        lines = [line for line in code.split('\n') if line]
+        
+        assert lines[0] == 'function (foo, bar) {'
+        assert 'bar = bar || 4' in code
+        
+        assert evaljs('x=' + code + 'x(2)') == '6'
+        assert evaljs('x=' + code + 'x(2, 2)') == '4'
+    
+    @js
+    def method3(self, *args):
+        return args
+    
+    def test_var_args3(self):
+        code1 = 'var x = ' + self.method3.js.jscode
+        lines = [line for line in code1.split('\n') if line]
+        
+        code2 = py2js('x(2, 3)')
+        assert evaljs(code1 + code2, False) == '[2,3]'
+        code2 = py2js('x()')
+        assert evaljs(code1 + code2, False) == '[]'
+        code2 = py2js('a=[2,3]\nx(*a)')
+        assert evaljs(code1 + code2, False) == '[2,3]'
+        code2 = py2js('a=[2,3]\nx(1,2,*a)')
+        assert evaljs(code1 + code2, False) == '[1,2,2,3]'
+    
+    @js
+    def method4(self, foo, *args):
+        return args
+    
+    def test_var_args4(self):
+        code1 = 'var x = ' + self.method4.js.jscode
+        lines = [line for line in code1.split('\n') if line]
+        
+        code2 = py2js('x(0, 2, 3)')
+        assert evaljs(code1 + code2, False) == '[2,3]'
+        code2 = py2js('x(0)')
+        assert evaljs(code1 + code2, False) == '[]'
+        code2 = py2js('a=[0,2,3]\nx(*a)')
+        assert evaljs(code1 + code2, False) == '[2,3]'
+        code2 = py2js('a=[2,3]\nx(0,1,2,*a)')
+        assert evaljs(code1 + code2, False) == '[1,2,2,3]'
+    
+    @js
+    def method5(self):
+        return self.foo
+    
+    def test_self_becomes_this(self):
+        code = self.method5.js.jscode
+        lines = [line.strip() for line in code.split('\n') if line]
+        assert 'return this.foo;' in lines
+
+
+class TestSpecial:
     
     def test_builtins(self):
         assert py2js('max(3, 4)') == 'max(3, 4);'
@@ -330,7 +351,8 @@ class TestClass:
 
 run_tests_if_main()
 
-
 if __name__ == '__main__':
-    t = TestClass()
-    
+    t = TestFuctions()
+    # t.test_func_calls()
+    # t.test_var_args3()
+    # t.test_var_args4()

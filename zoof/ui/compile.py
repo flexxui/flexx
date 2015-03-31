@@ -17,8 +17,8 @@ Supported basics:
 * while-loops
 * for-loops using range()
 * while and for loops support continue, break, and else-clauses
-* function calls with keyword args (are passed via an object arg)
-* function defs can have *args
+* function calls can have *args (but no keywords or **kwargs)
+* function defs can have default arguments, *args (but no kwargs)
 * Slicing (though not with step)
 * Use of ``self`` is translated to ``this``
 
@@ -41,8 +41,6 @@ Probably never suppored:
 * set (JS has no set)
 * Most Python buildins
 * importing
-
-
 
 
 User guide stuff:
@@ -424,6 +422,7 @@ class JSParser:
         return op.join(values)
     
     def parse_Compare(self, node):
+        
         # Check
         if len(node.ops) != 1:
             raise JSError('Comparisons with multiple ops is not supported.')
@@ -464,7 +463,7 @@ class JSParser:
         if argswithcommas:
             argswithcommas.pop(-1)
         
-        # Hanlde special functions and methods
+        # Handle special functions and methods
         res = None
         if method_name in self._methods:
             res = self._methods[method_name](node, full_name, argswithcommas)
@@ -473,17 +472,29 @@ class JSParser:
         if res is not None:
             return res
         
-        # kwargs are passed as a dict (as one extra argument)
+        # Check for keywords (not supported) after handling special functions
         if node.keywords:
-            keywords = []
-            for kw in node.keywords:
-                val = ''.join(self.parse(kw.value))
-                keywords.append("%s: %s" % (kw.arg, val))
-            comma = ', ' if argswithcommas else ''
-            argswithcommas.append(comma + "{" + ", ".join(keywords) + "}")
+            raise JSError('function calls do not support keyword arguments')
+        if node.kwargs:
+            raise JSError('function calls do not support **kwargs')
         
-        # Normal func
-        return [full_name + "("] + argswithcommas + [")"]
+        if node.starargs:
+            # Func with star args
+            if '(' in full_name:
+                raise JSError('Function call only supports *args if used on '
+                              'a plain object.')
+            starname = ''.join(self.parse(node.starargs))
+            code = []
+            if method_name:
+                code += [base_name, '.apply(', base_name, ', [']
+            else:
+                code += [full_name, '.apply(null, [']
+            code += argswithcommas
+            code += ['].concat(', starname, '))']
+            return code
+        else:
+            # Normal func
+            return [full_name, "("] + argswithcommas + [")"]
     
     def parse_IfExp(self, node):
         # in "a if b else c"
@@ -839,7 +850,6 @@ class JSParser:
             code.pop(-1)  # pop last comma
         
         # Check
-        # todo: keyword arguments follow same procedure as in parse_call
         if node.decorator_list:
             raise JSError('No support for decorators')
         if node.args.kwonlyargs:
@@ -1029,9 +1039,8 @@ class JSParser:
 if __name__ == '__main__':
     
     
-    print(py2js('for i in [1,2,3]:pass'))
-    print(py2js('for i in x.keys():pass'))
-    print(py2js('len(a, b)'))
+    print(py2js('foo(a, b, *c)'))
+    print(py2js('foo.bar(a, b, *c)'))
     
     
     1/0
