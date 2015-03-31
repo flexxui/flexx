@@ -316,6 +316,10 @@ class TestFuctions:
         lines = [line.strip() for line in code.split('\n') if line]
         assert 'return this.foo;' in lines
     
+    def test_lambda(self):
+        assert evalpy('f=lambda x:x+1\nf(2)') == '3'
+        assert evalpy('(lambda x:x+1)(2)') == '3'
+        
     @js
     def method_scope(self):
         def foo(z):

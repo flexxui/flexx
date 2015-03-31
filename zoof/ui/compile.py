@@ -119,7 +119,7 @@ class JSFuction:
         # so that string starts with "function ( ..."
         node = ast.parse(code)
         p = JSParser(node)
-        p._parts[0] = 'function' + p._parts[0].split('function', 1)[1]
+        p._parts[0] = ''  # remove "var xx = "
         self._jscode = p.dump()
     
     def __call__(self, *args):
@@ -237,8 +237,7 @@ class JSParser:
         'And'    : '&&',
         'Or'     : '||',
     }
-
-    # todo: I think == should become ===, or not? Does JS have identity comp?
+    
     COMP_OP = {
             'Eq'    : "==",
             'NotEq' : "!=",
@@ -247,7 +246,7 @@ class JSParser:
             'Gt'    : ">",
             'GtE'   : ">=",
             'Is'    : "===",
-            'IsNot' : "!==", # Not implemented yet
+            'IsNot' : "!==",
         }
     
     def __init__(self, node):
@@ -826,10 +825,15 @@ class JSParser:
     
     ## Functions and class definitions
     
-    def parse_FunctionDef(self, node):
-        """ A function definition """
+    def parse_FunctionDef(self, node, lambda_=False):
+        """ Common code for the FunctionDef and Lambda nodes.
+        """
         
-        code = [self.lf('var %s = function (' % node.name)]
+        # Init function definition
+        code = []
+        if not lambda_:
+            code.append(self.lf('var %s = ' % node.name))
+        code.append('function (')
         
         # Collect args
         argnames = []
@@ -846,7 +850,7 @@ class JSParser:
             code.pop(-1)  # pop last comma
         
         # Check
-        if node.decorator_list:
+        if (not lambda_) and node.decorator_list:
             raise JSError('No support for decorators')
         if node.args.kwonlyargs:
             raise JSError('No support for keyword only arguments')
@@ -877,56 +881,25 @@ class JSParser:
                 code.append(self.lf('var %s = %s.slice(%i);' % 
                             (name, asarray, len(argnames))))
         # Apply content
-        for child in node.body:
-            code += self.parse(child)
+        if lambda_:
+            code.append('return ')
+            code += self.parse(node.body)
+            code.append(';')
+        else:
+            for child in node.body:
+                code += self.parse(child)
         
         # Wrap up
         self._indent -= 1
-        code.append(self.lf('};'))
+        if lambda_:
+            code.append('}')
+        else:
+            code.append(self.lf('};'))
         self.pop_stack()
         return code
     
-    def _functiondef(self, node):
-        is_static = False
-        is_javascript = False
-        if node.decorator_list:
-            if len(node.decorator_list) == 1 and \
-                    isinstance(node.decorator_list[0], ast.Name) and \
-                    node.decorator_list[0].id == "JavaScript":
-                is_javascript = True  # this is our own decorator
-            elif self._class_name and \
-                    len(node.decorator_list) == 1 and \
-                    isinstance(node.decorator_list[0], ast.Name) and \
-                    node.decorator_list[0].id == "staticmethod":
-                is_static = True
-            else:
-                raise JSError("decorators are not supported")
-
-        # XXX: disable $def for now, because it doesn't work in IE:
-        
-        else:
-            defaults = [None]*(len(node.args.args) - len(node.args.defaults)) + node.args.defaults
-
-            args = []
-            defaults2 = []
-            for arg, default in zip(node.args.args, defaults):
-                if not isinstance(arg, ast.Name):
-                    raise JSError("tuples in argument list are not supported")
-                if default:
-                    defaults2.append("%s: %s" % (arg.id, self.visit(default)))
-                args.append(arg.id)
-            defaults = "{" + ", ".join(defaults2) + "}"
-            args = ", ".join(args)
-            self.write("var %s = $def(%s, function(%s) {" % (node.name,
-                defaults, args))
-            self._scope = [arg.id for arg in node.args.args]
-            self.indent()
-            for stmt in node.body:
-                self.visit(stmt)
-            self.dedent()
-            self.write("});")
-    
-    #def parse_Lambda
+    def parse_Lambda(self, node):
+        return self.parse_FunctionDef(node, True)
     
     def parse_Return(self, node):
         if node.value is not None:
@@ -1037,7 +1010,7 @@ class JSParser:
 if __name__ == '__main__':
     
     
-    print(py2js('a["asd"] = 3'))
+    print(py2js('lambda x:x+1'))
     print(py2js('foo.bar(a, b, *c)'))
     
     
