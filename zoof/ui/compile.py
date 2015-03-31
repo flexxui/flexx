@@ -527,7 +527,8 @@ class JSParser:
                 code.append(var)
             elif isinstance(target, ast.Attribute):
                 code.append(var)
-                #js = self.write("%s.__setattr__(\"%s\", %s);" % (self.visit(target.value), str(target.attr), value))
+            elif isinstance(target, ast.Subscript):
+                code.append(var)
             else:
                 raise JSError("Unsupported assignment type")
             code.append(' = ')
@@ -1036,7 +1037,7 @@ class JSParser:
 if __name__ == '__main__':
     
     
-    print(py2js('foo(a, b, *c)'))
+    print(py2js('a["asd"] = 3'))
     print(py2js('foo.bar(a, b, *c)'))
     
     

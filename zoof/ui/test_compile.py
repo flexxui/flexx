@@ -19,10 +19,10 @@ def evaljs(code, whitespace=True):
         res = nowhitespace(res)
     return res
 
-def evalpy(code):
+def evalpy(code, whitespace=True):
     """ Evaluate python code (after translating to js)
     """
-    return evaljs(py2js(code))
+    return evaljs(py2js(code), whitespace)
 
 def nowhitespace(s):
     return s.replace('\n', '').replace('\t', '').replace(' ', '')
@@ -74,6 +74,9 @@ class TestExpressions:
         assert py2js('self') == 'this;'
         assert py2js('self.foo') == 'this.foo;'
         
+        # Indexing
+        assert evalpy('a=[0,0]\na[0]=2\na[1]=3\na', False) == '[2,3]'
+    
     def test_aug_assignments(self):
         # assign + bin op
         assert evalpy('x=5; x+=1; x') == '6'
