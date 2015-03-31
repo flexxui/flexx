@@ -265,15 +265,15 @@ class JSParser:
                 self._methods[name[7:]] = getattr(self, name)
         
         # Parse
-        self._push_stack()
+        self.push_stack()
         self._parts = self.parse(node)
         if self._parts:
             self._parts[0] = self._parts[0].lstrip()
     
-    def _push_stack(self):
+    def push_stack(self):
         self._stack.append(set())
     
-    def _pop_stack(self):
+    def pop_stack(self):
         self._stack.pop(-1)
     
     @property
@@ -364,13 +364,9 @@ class JSParser:
     ## Variables
     
     def parse_Name(self, node):
+        # node.ctx can be Load, Store, Del -> can be of use somewhere?
         id = node.id
         id = self.NAME_MAP.get(id, id)
-        
-        #if id in self.builtin:  -> max, min, sum
-        #    id = "py_builtins." + id;
-        # todo: ctx Load, Store, Del?
-        # todo: implement min, max, sum
         return id
       
     def parse_arg(self, node):
@@ -423,7 +419,6 @@ class JSParser:
     
     def parse_Compare(self, node):
         
-        # Check
         if len(node.ops) != 1:
             raise JSError('Comparisons with multiple ops is not supported.')
         if len(node.comparators) != 1:
@@ -860,6 +855,7 @@ class JSParser:
         # Prepare for content
         code.append(') {')
         self._indent += 1
+        self.push_stack()
         
         # Apply defaults
         offset = len(argnames) - len(node.args.defaults)
@@ -886,6 +882,7 @@ class JSParser:
         # Wrap up
         self._indent -= 1
         code.append(self.lf('};'))
+        self.pop_stack()
         return code
     
     def _functiondef(self, node):

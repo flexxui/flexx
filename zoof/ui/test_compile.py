@@ -305,13 +305,33 @@ class TestFuctions:
         assert evaljs(code1 + code2, False) == '[1,2,2,3]'
     
     @js
-    def method5(self):
+    def method_this(self):
         return self.foo
     
     def test_self_becomes_this(self):
-        code = self.method5.js.jscode
+        code = self.method_this.js.jscode
         lines = [line.strip() for line in code.split('\n') if line]
         assert 'return this.foo;' in lines
+    
+    @js
+    def method_scope(self):
+        def foo(z):
+            y = 2
+            stub = False
+            return x + y + z
+        x = 1
+        y = 0
+        y = 1
+        z = 1
+        res = foo(3)
+        stub = True
+        return res + y  # should return 1+2+3+1 == 7
+    
+    def test_scope(self):
+        code = 'var x = ' + self.method_scope.js.jscode
+        assert code.count('var y') == 2
+        assert code.count('var stub') == 2
+        assert evaljs(code + 'x()') == '7'
 
 
 class TestSpecial:
@@ -353,6 +373,7 @@ run_tests_if_main()
 
 if __name__ == '__main__':
     t = TestFuctions()
+    # t.test_scope()
     # t.test_func_calls()
     # t.test_var_args3()
     # t.test_var_args4()
