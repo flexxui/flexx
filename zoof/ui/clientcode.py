@@ -56,7 +56,8 @@ class ClientCode(object):
     def __init__(self):
         self._files = OrderedDict()
         self._cache = {}
-        self._mirrored = None
+        self._mirrored_js = None
+        self._mirrored_css = None
         
         self._in_nb = False
         self._collected = False
@@ -75,7 +76,7 @@ class ClientCode(object):
                 self._files[fname] = os.path.join(HTML_DIR, fname)
         
         # Determine CSS files
-        for fname in ['main.css', 'layouts.css', 'phosphor-ui.min.css']:
+        for fname in ['main.css', 'layouts.css', ]:#'phosphor-ui.min.css']:
             if fname.startswith('phosphor'):
                 self._files[fname] = os.path.join(HTML_DIR, 'phosphor', fname)
             else:
@@ -83,9 +84,10 @@ class ClientCode(object):
         
         # Collect JS from mirrored classes
         from .mirrored import get_mirrored_classes
-        self._mirrored = []
+        self._mirrored_js, self._mirrored_css = [], []
         for cls in get_mirrored_classes():
-            self._mirrored.append(cls.get_js())
+            self._mirrored_js.append(cls.get_js())
+            self._mirrored_css.append(cls.get_css())
     
     def load(self, fname):
         """ Get the source of the given file as a string.
@@ -114,7 +116,7 @@ class ClientCode(object):
                 parts.append(self.load(fname))
         # Mirrored code
         parts.append('// Python -> JS code')
-        for src in self._mirrored:
+        for src in self._mirrored_js:
             parts.append(src)
         return '\n\n'.join(parts)
     
@@ -128,6 +130,10 @@ class ClientCode(object):
             if fname.endswith('.css'):
                 parts.append('/* ===== %s ===== */' % fname)
                 parts.append(self.load(fname))
+        # Mirrored code
+        parts.append('/* ===== Python-defined CSS ===== */')
+        for src in self._mirrored_css:
+            parts.append(src)
         return '\n\n'.join(parts)
     
     def get_page(self):

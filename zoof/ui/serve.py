@@ -111,7 +111,7 @@ class MainHandler(tornado.web.RequestHandler):
                     self.redirect('/%s/' % app_name)
                 elif app_id:
                     app = manager.get_app_by_id(app_name, app_id)
-                    if app and app.status == app.STATUS.PENDING:
+                    if app: # todo: ? and app.status == app.STATUS.PENDING:
                         #self.write(self.application.load('index.html'))
                         #self.serve_index()
                         self.write(clientCode.get_page().encode())
@@ -225,6 +225,17 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             print(message[5:].strip())
         elif message.startswith('INFO '):
             logging.info('JS - ' + message[5:].strip())
+        elif message.startswith('PROP '):
+            # todo: seems weird to deal with here. implement this by registring some handler?
+            _, id, prop, value = message.split(' ', 3)
+            from .mirrored import Mirrored
+            import json
+            ob = Mirrored._instances.get(id, None)
+            if ob is not None:
+                # Note that this will again sync with JS, but it stops there:
+                # eventual synchronity
+                print('setting from js:', prop)
+                setattr(ob, prop, json.loads(value))
         else:
             print('message received %s' % message)
             self.write_message('echo ' + message, binary=True)

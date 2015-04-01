@@ -104,7 +104,7 @@ class JSError(NotImplementedError):
     pass
 
 
-class JSFuction:
+class JSFunction:
     """ Definition of a javascript function.
     
     Allows getting access to the original Python code and the JS code. Also
@@ -127,6 +127,10 @@ class JSFuction:
         eval = self.get_app()._exec
         a = ', '.join([repr(arg) for arg in args])
         eval('zoof.widgets.%s.%s("self", %s)' % (self._ob.id, self._name, a))
+    
+    @property
+    def name(self):
+        return self._name
     
     @property
     def pycode(self):
@@ -171,7 +175,7 @@ def js(func):
         eval('zoof.widgets.%s.%s(%s)' % (self.id, func.__name__, a))
         
     
-    caller.js = JSFuction(func.__name__, code)
+    caller.js = JSFunction(func.__name__, code)
     
     return caller
     #return lambda *x, **y: print('This is a JS func')
@@ -343,7 +347,7 @@ class JSParser:
         return code
     
     def parse_Tuple(self, node):
-        return self.parse_List()  # tuple = ~ list in JS
+        return self.parse_List(node)  # tuple = ~ list in JS
     
     def parse_Dict(self, node):
         code = ['{']

@@ -2,6 +2,7 @@
 """
 
 import sys
+import weakref
 
 if sys.version_info[0] >= 3:
     string_types = str,
@@ -80,7 +81,7 @@ class Prop(object):
                             type(value).__name__)
         
         # If same as old value, early exit
-        #old = self._get(obj)
+        old = self._get(obj)
         #if value == old:
         oldhash = getattr(obj, self._private_name + '_hash')
         if newhash == oldhash:
@@ -90,15 +91,13 @@ class Prop(object):
         
         # Update
         if hasattr(obj, '_changed_props'):
-            obj._changed_props.add(self.name)
+            obj._changed_props.append(self.name)
         setattr(obj, self._private_name, value)
-        
-        # if hasattr(obj, '_trigger'):
-        #     if hasattr(obj, '_block_callbacks') and obj._block_callbacks:
-        #         obj._callback_queue.append((self.name, old, value))
-        #     else:
-        #         obj._trigger(self.name, old, value)
-
+        # Listeners
+        if hasattr(obj, '_prop_listeners'):
+            for callback in obj._prop_listeners.get(self.name, []):
+                callback(self.name, old, value)
+    
     def __delete__(self, obj):
         if hasattr(obj, self._private_name):
             delattr(obj, self._private_name)
@@ -140,7 +139,7 @@ class HasPropsMeta(type):
     
     def __init__(cls, name, bases, dct):
         
-        HasPropsMeta.CLASSES.append(cls)
+        HasPropsMeta.CLASSES.append(cls)  # todo: dict by full qualified name?
         
         # Collect props defined on the given class
         props = {}
@@ -169,7 +168,9 @@ class HasProps(with_metaclass(HasPropsMeta, object)):
     
     def __init__(self, **kwargs):
         # Variables changed since creation
-        self._changed_props = set()
+        self._changed_props = []
+        # Callbacks for each property
+        self._prop_listeners = {}
         # Assign 
         for name, val in kwargs.items():
             setattr(self, name, val)
@@ -177,13 +178,23 @@ class HasProps(with_metaclass(HasPropsMeta, object)):
     
     @property
     def changed_props(self):
-        """ Get a set of names of props that changed since object creation
+        """ Get a list of names of props that changed since object creation
         or the last call to reset_changed_props().
         """
-        return _changed_props
+        return self._changed_props
     
     def reset_changed_props(self):
-        self._changed_props = set()
+        self._changed_props = []
+    
+    def add_listener(self, prop_name, callback):
+        """ Add a callback for the given property.
+        
+        When the value of that property changes, the callback is
+        called with three parametes: name, old value, new value.
+        """
+        callbacks = self._prop_listeners.setdefault(prop_name, [])
+        callbacks.append(callback)
+        # todo: smarter system using weakref to object and method name to avoid mem leak
     
     @classmethod
     def props(cls, withbases=True):
@@ -330,7 +341,13 @@ class Mirrored(HasProps):
     props of the two are synchronised.
     """
     
+    _instances = weakref.WeakValueDictionary()
+    
+    CSS = ""
+    
     name = Str()
+    id = Str()  # todo: readonly
+    
     _counter = 0
     
     def __init__(self, **kwargs):
@@ -338,7 +355,10 @@ class Mirrored(HasProps):
         from zoof.ui.app import get_default_app
         self._app = get_default_app()
         Mirrored._counter += 1
-        self._id = self.__class__.__name__ + str(Mirrored._counter)
+        self.id = self.__class__.__name__ + str(Mirrored._counter)
+        
+        Mirrored._instances[self._id] = self
+        
         
         import json
         clsname = self.__class__.__name__
@@ -352,13 +372,22 @@ class Mirrored(HasProps):
         # todo: get notified when a prop changes, pend a call via call_later
         # todo: collect more changed props if they come by
         # todo: in the callback send all prop updates to js
-    
+        
+        # Register callbacks
+        for name in self.props():
+            self.add_listener(name, self._sync_prop)
+        
     def get_app(self):
         return self._app
     
-    @property
-    def id(self):
-        return self._id
+    # @property
+    # def id(self):
+    #     return self._id
+    
+    def _sync_prop(self, name, old, new):
+        print('_sync_prop', name, new)
+        cmd = 'zoof.widgets.%s.set_prop_no_sync(%r, %r);' % (self.id, name, new)
+        self._app._exec(cmd)
     
     def methoda(self):
         """ this is method a """
@@ -368,38 +397,71 @@ class Mirrored(HasProps):
     def test_js_method(self):
         alert('Testing!')
     
+    @js
+    def set_prop_no_sync(self, name, val):
+        # To set props from Python without sending a sync pulse back
+        print('set_prop_no_sync', name, val)
+        if self['_set_'+name]:
+            val2 = self['_set_' + name](val)
+            if val2 is not undefined:
+                val = val2
+        self['_' + name] = val
+    
+    @js
+    def _getter_setter(name):
+        # Provide scope for closures
+        def getter():
+            if self['_get_'+name]:
+                return self['_get_' + name]()
+            else:
+                return self['_' + name]
+        def setter(val):
+            self.set_prop_no_sync(name, val)
+            # todo: need to json here
+            zoof.ws.send('PROP ' + self.id + ' ' + name + ' "' + val + '"')
+        return getter, setter
+    
+    @js
+    def __jsinit__(self, props):
+        
+        # Create properties
+        for name in props:
+            opts = {"enumerable": True}
+            gs = self._getter_setter(name)
+            opts['get'] = gs[0]
+            opts['set'] = gs[1]
+            Object.defineProperty(self, name, opts)
+        
+        # Init
+        if self._jsinit:
+            self._jsinit()
+        # Assign initial values
+        for name in props:
+            self.set_prop_no_sync(name, props[name])
+            #self[name] = props[name]
+    
     @classmethod
     def get_js(cls):
         cls_name = cls.__name__
         js = []
+        
         # Main functions
         # todo: zoof.classes.xx
-        # todo: use Object.defineProperty(this, name, xx) to allow setters and getters
-        js.append('zoof.%s = function (props) {' % cls_name)
-        #js.append('    zoof.widgets[id] = this;')  # Just do zoof.widgets[id] = new XX
-        js.append('    for (var name in props) {')
-        js.append('        if (props.hasOwnProperty(name)) {')
-        js.append('            this["_" + name] = props[name];')
-        js.append('        }')
-        js.append('    }')
-        js.append('};')
-        # Property setters and getters
-        # todo: do we need *all* properties to be mirrored in JS?
         # todo: we could reduce JS code by doing inheritance in JS
-        for name in cls.props():  # todo: only works if there was once an instance
-            js.append('zoof.%s.prototype.set_%s = function (val) {' % (cls_name, name))
-            js.append('    this._%s = val;' % name)
-            js.append('};')
-            js.append('zoof.%s.prototype.get_%s = function () {' % (cls_name, name))
-            js.append('    return this._%s;' % name)
-            js.append('};')
+        js.append('zoof.%s = ' % cls_name)
+        js.append(cls.__jsinit__.js.jscode)
+        
         # Methods
         for name in dir(cls):
             func = getattr(cls, name)
-            if hasattr(func, 'js'):
-                code = func.js.jscode.split(' ', 1)[1]  # todo: we now split on space in "var xxx = function ..."
-                js.append('zoof.%s.prototype.%s' % (cls_name, code))
+            if hasattr(func, 'js') and hasattr(func.js, 'jscode'):
+                code = func.js.jscode
+                js.append('zoof.%s.prototype.%s = %s' % (cls_name, name, code))
         return '\n'.join(js)
+    
+    @classmethod
+    def get_css(cls):
+        return cls.CSS
 
 
 class Foo(HasProps):
@@ -413,59 +475,6 @@ class Foo(HasProps):
     def methodb(self):
         """ this is method b"""
         pass
-
-
-class Widget(Mirrored):
-    
-    parent = Instance(Mirrored)  # todo: can we set ourselves?
-    
-    container_id = Str()  # used if parent is None
-    
-    def __init__(self, parent):
-        # todo: -> parent is widget or ref to div element
-        Mirrored.__init__(self)
-        self._js_init()  # todo: allow a js __init__
-    
-    @js
-    def _js_init(self):
-        pass
-    
-    @js
-    def set_cointainer_id(self, id):
-        #if self._parent:
-        #    return
-        print('setting container id', id)
-        el = document.getElementById(id)
-        el.appendChild(this.node)
-    
-    def _repr_html_(self):
-        container_id = self.id + '_container'
-        # Set container id, this gets applied in the next event loop
-        # iteration, so by the time it gets called in JS, the div that
-        # we define below will have been created.
-        from .app import call_later
-        call_later(0, self.set_cointainer_id, container_id) # todo: always do calls in next iter
-        return "<div id=%s />" % container_id
-
-
-class Button(Widget):
-    
-    text = Str()
-    
-    def __init__(self):
-        Mirrored.__init__(self)
-        self._js_init()  # todo: allow a js __init__
-    
-    @js
-    def _js_init(self):
-        # todo: allow setting a placeholder DOM element, or any widget parent
-        this.node = document.createElement('button')
-        zoof.get('body').appendChild(this.node);
-        this.node.innerHTML = 'Look, a button!'
-    
-    @js
-    def set_text(self, txt):
-        this.node.innerHTML = txt
 
 
 class Bar(Foo):
