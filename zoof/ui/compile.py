@@ -97,7 +97,7 @@ User guide stuff:
 import re
 import inspect
 import ast
-from astpp import dump, parseprint  # 3d party
+# from astpp import dump, parseprint  # 3d party
 
 
 class JSError(NotImplementedError):
@@ -869,7 +869,7 @@ class JSParser:
         # Apply defaults
         offset = len(argnames) - len(node.args.defaults)
         for name, default in zip(argnames[offset:], node.args.defaults):
-            x = '%s = %s || %s;' % (name, name, ''.join(self.parse(default)))
+            x = '%s = (%s === undefined) ? %s: %s;' % (name, name, ''.join(self.parse(default)), name)
             code.append(self.lf(x))
         
         # Handle varargs

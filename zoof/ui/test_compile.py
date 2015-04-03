@@ -268,10 +268,11 @@ class TestFuctions:
         lines = [line for line in code.split('\n') if line]
         
         assert lines[0] == 'function (foo, bar) {'
-        assert 'bar = bar || 4' in code
+        assert '4' in code
         
         assert evaljs('x=' + code + 'x(2)') == '6'
         assert evaljs('x=' + code + 'x(2, 2)') == '4'
+        assert evaljs('x=' + code + 'x(0, 0)') == '0'
     
     @js
     def method3(self, *args):

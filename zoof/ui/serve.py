@@ -39,8 +39,14 @@ def _zoof_run_callback(self, callback, *args, **kwargs):
 def _patch_tornado():
     WebSocketProtocol = tornado.websocket.WebSocketProtocol
     if not hasattr(WebSocketProtocol, '_orig_run_callback'):
-        WebSocketProtocol._orig_run_callback = WebSocketProtocol._run_callback
-        WebSocketProtocol._run_callback = _zoof_run_callback
+        
+        if not hasattr(WebSocketProtocol, 'async_callback'):
+            WebSocketProtocol._orig_run_callback = WebSocketProtocol._run_callback
+            WebSocketProtocol._run_callback = _zoof_run_callback
+        else:
+            WebSocketProtocol._orig_run_callback = WebSocketProtocol.async_callback
+            WebSocketProtocol.async_callback = _zoof_run_callback
+            
 
 
 _patch_tornado()
@@ -194,9 +200,13 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     def open(self, path=None):
         """ Called when a new connection is made.
         """
+        if not hasattr(self, 'close_code'):  # old version of Tornado?
+            self.close_code, self.close_reason = None, None
+        
         # Don't collect messages to send them more efficiently, just send asap
         self.set_nodelay(True)
-        
+        if isinstance(path, bytes):
+            path = path.decode()
         print('new ws connection', path)
         app_name, _, app_id = path.strip('/').partition('-')
         if manager.has_app_name(app_name):
@@ -227,7 +237,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             logging.info('JS - ' + message[5:].strip())
         elif message.startswith('PROP '):
             # todo: seems weird to deal with here. implement this by registring some handler?
-            _, id, prop, value = message.split(' ', 3)
+            _, id, prop, txt = message.split(' ', 3)
             from .mirrored import Mirrored
             import json
             ob = Mirrored._instances.get(id, None)
@@ -235,7 +245,8 @@ class WSHandler(tornado.websocket.WebSocketHandler):
                 # Note that this will again sync with JS, but it stops there:
                 # eventual synchronity
                 print('setting from js:', prop)
-                setattr(ob, prop, json.loads(value))
+                val = getattr(ob.__class__, prop).from_json(txt)
+                setattr(ob, prop, val)
         else:
             print('message received %s' % message)
             self.write_message('echo ' + message, binary=True)

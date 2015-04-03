@@ -1,5 +1,26 @@
-from .mirrored import Mirrored, Instance, Str, Tuple, js
+import json
 
+from .mirrored import Prop, Mirrored, Instance, Str, Tuple, js, get_instance_by_id
+
+
+class WidgetProp(Prop):
+    _default = None
+    
+    def validate(self, val):
+        if val is None or isinstance(val, Widget):
+            return val
+        else:
+            raise ValueError('Prop %s must be a Widget or None, got %r' % 
+                             (self.name, val.__class__.__name__))
+    
+    def to_json(self, value):
+        # Widgets are kept track of via their id
+        if value is None:
+            return json.dumps(None)
+        return json.dumps(value.id)
+    
+    def from_json(self, txt):
+        return get_instance_by_id(json.loads(txt))
 
 
 class Widget(Mirrored):
@@ -8,8 +29,8 @@ class Widget(Mirrored):
     
     """
     
-    parent = Instance(Mirrored)  # todo: can we set our own class?
-    children = Tuple(Mirrored)  # todo: can we make this readonly?
+    parent = WidgetProp()
+    children = Tuple(WidgetProp)  # todo: can we make this readonly?
     
     container_id = Str()  # used if parent is None
     
@@ -35,6 +56,22 @@ class Widget(Mirrored):
     #     if new_parent is not None:
     #         new_parent._children.append(self)
     #     self._parent = new_parent
+    
+    # todo: oh crap, we need _js_set_parent() or something if we will allow _set_x in Python
+    @js
+    def _get_parent(self):  # In js we store it internally as the id
+        if self._parent is None:
+            return None
+        return zoof.widgets[self._parent]  # todo: rename to index both in JS and Py
+    
+    @js
+    def _set_parent(self, val):
+        if val is None:
+            return None
+        elif val.toLowerCase is undefined:  # string (id) or object
+            return val.id
+        else:
+            return val
     
     @js
     def set_cointainer_id(self, id):

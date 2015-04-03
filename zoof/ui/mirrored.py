@@ -3,6 +3,7 @@
 
 import sys
 import weakref
+import json
 
 if sys.version_info[0] >= 3:
     string_types = str,
@@ -122,6 +123,12 @@ class Prop(object):
     
     def validate(self, value):
         raise NotImplementedError()
+    
+    def to_json(self, value):
+        return json.dumps(value)
+    
+    def from_json(self, txt):
+        return json.loads(txt)
 
 
 # Note, we need Prop defined before HasProps, because we need to test
@@ -195,6 +202,9 @@ class HasProps(with_metaclass(HasPropsMeta, object)):
         callbacks = self._prop_listeners.setdefault(prop_name, [])
         callbacks.append(callback)
         # todo: smarter system using weakref to object and method name to avoid mem leak
+    
+    # todo: or simply allow _set_prop(name, old, new)? who needs to be aware
+    # of changes? If only subclasses, don't bother with a callback system ...
     
     @classmethod
     def props(cls, withbases=True):
@@ -304,6 +314,7 @@ class Color(Prop):
         else:
             raise ValueError('Color prop %r requires str or tuple.' % self.name)
 
+    
 
 class Instance(Prop):
     _default = None
@@ -333,6 +344,11 @@ class Instance(Prop):
 def get_mirrored_classes():
     return [c for c in HasPropsMeta.CLASSES if issubclass(c, Mirrored)]
 
+def get_instance_by_id(id):
+    """ Get js object corresponding to the given id, or None if it does
+    not exist. 
+    """
+    return Mirrored._instances.get(id, None)
 
 from zoof.ui.compile import js
 
@@ -364,7 +380,8 @@ class Mirrored(HasProps):
         clsname = self.__class__.__name__
         props = {}
         for name in self.props():
-            props[name] = getattr(self, name)
+            val = getattr(self, name)
+            props[name] = getattr(self.__class__, name).to_json(val)
         cmd = 'zoof.widgets.%s = new zoof.%s(%s);' % (self.id, clsname, json.dumps(props))
         print(cmd)
         self._app._exec(cmd)
@@ -386,7 +403,9 @@ class Mirrored(HasProps):
     
     def _sync_prop(self, name, old, new):
         print('_sync_prop', name, new)
-        cmd = 'zoof.widgets.%s.set_prop_no_sync(%r, %r);' % (self.id, name, new)
+        txt = getattr(self.__class__, name).to_json(new)
+        print('sending json', txt)
+        cmd = 'zoof.widgets.%s._set_prop_from_py(%r, %r);' % (self.id, name, txt)
         self._app._exec(cmd)
     
     def methoda(self):
@@ -398,9 +417,12 @@ class Mirrored(HasProps):
         alert('Testing!')
     
     @js
-    def set_prop_no_sync(self, name, val):
+    def _set_prop_from_py(self, name, val, tojson=True):
         # To set props from Python without sending a sync pulse back
-        print('set_prop_no_sync', name, val)
+        # and also to convert from json
+        if tojson:
+            val = JSON.parse(val)
+        #print('_set_prop_from_py', name, val)
         if self['_set_'+name]:
             val2 = self['_set_' + name](val)
             if val2 is not undefined:
@@ -416,9 +438,9 @@ class Mirrored(HasProps):
             else:
                 return self['_' + name]
         def setter(val):
-            self.set_prop_no_sync(name, val)
-            # todo: need to json here
-            zoof.ws.send('PROP ' + self.id + ' ' + name + ' "' + val + '"')
+            self._set_prop_from_py(name, val, False)
+            txt = JSON.stringify(self['_' + name])
+            zoof.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
         return getter, setter
     
     @js
@@ -437,7 +459,7 @@ class Mirrored(HasProps):
             self._jsinit()
         # Assign initial values
         for name in props:
-            self.set_prop_no_sync(name, props[name])
+            self._set_prop_from_py(name, props[name])
             #self[name] = props[name]
     
     @classmethod
