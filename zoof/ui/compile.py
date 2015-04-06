@@ -97,7 +97,11 @@ User guide stuff:
 import re
 import inspect
 import ast
+import types
+
 # from astpp import dump, parseprint  # 3d party
+
+# todo: typeof operator -> typeof function or isinstance?
 
 
 class JSError(NotImplementedError):
@@ -162,6 +166,15 @@ def js(func):
     The returned function has a ``js`` attribute, which is a JSFunction
     object that can be used to get access to Python and JS code.
     """
+    if not isinstance(func, types.FunctionType):
+        raise ValueError('The js decorator can only decorate real functions.')
+    
+    # Get name - strip "__js" suffix if it's present
+    name = func.__name__
+    if name.endswith('__js'):
+        name = name[:-4]
+    
+    # Get code
     # todo: if function consists of multi-line string, just use that as the JS code
     lines, linenr = inspect.getsourcelines(func)
     indent = len(lines[0]) - len(lines[0].lstrip())
@@ -172,11 +185,11 @@ def js(func):
         eval = self.get_app()._exec
         args = ['self'] + list(args)  # todo: remove self?
         a = ', '.join([repr(arg) for arg in args])
-        eval('zoof.widgets.%s.%s(%s)' % (self.id, func.__name__, a))
-        
+        eval('zoof.widgets.%s.%s(%s)' % (self.id, name, a))
     
-    caller.js = JSFunction(func.__name__, code)
+    caller.js = JSFunction(name, code)
     
+    # todo: should we even allow calling the js function?
     return caller
     #return lambda *x, **y: print('This is a JS func')
 

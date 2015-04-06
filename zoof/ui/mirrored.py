@@ -474,10 +474,11 @@ class Mirrored(HasProps):
         js.append(cls.__jsinit__.js.jscode)
         
         # Methods
-        for name in dir(cls):
-            func = getattr(cls, name)
+        for key in dir(cls):
+            func = getattr(cls, key)
             if hasattr(func, 'js') and hasattr(func.js, 'jscode'):
                 code = func.js.jscode
+                name = func.js.name
                 js.append('zoof.%s.prototype.%s = %s' % (cls_name, name, code))
         return '\n'.join(js)
     

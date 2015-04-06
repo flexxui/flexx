@@ -114,7 +114,7 @@ class Button(Widget):
         this.node.innerHTML = 'Look, a button!'
     
     @js
-    def _set_text(self, txt):
+    def _set_text__js(self, txt):
         print('_set_text', txt)
         this.node.innerHTML = txt
 

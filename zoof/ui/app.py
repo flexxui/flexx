@@ -233,6 +233,7 @@ def run():  # (runtime='xul', host='localhost', port=None):
     
     # Detect App classes in caller namespace
     app_names = manager.get_app_names()
+    # todo: this may not work on stackless Python implementations
     frame = inspect.currentframe()
     for ob in frame.f_back.f_locals.values():
         if isinstance(ob, type) and issubclass(ob, App):
