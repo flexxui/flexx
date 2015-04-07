@@ -170,6 +170,11 @@ def js(func):
         raise ValueError('The js decorator can only decorate real functions.')
     
     # Get name - strip "__js" suffix if it's present
+    # This allow mangling the function name on the Python side, to allow
+    # the same name for a function in both Py and JS. I investigated
+    # other solutions, from class-inside-class constructions to
+    # black-magic decorators that auto-mangle the function name. I settled
+    # on just allowing "func_name__js".
     name = func.__name__
     if name.endswith('__js'):
         name = name[:-4]
@@ -206,6 +211,8 @@ def unify(x):
     """
     if isinstance(x, (tuple, list)):
         x = ''.join(x)
+    if x[0] in '\'"' and x[0] == x[-1] and x.count(x[0]) == 2:
+        return x
     if not x.isalnum():
         return '(%s)' % x
     return x
@@ -1019,6 +1026,15 @@ class JSParser:
         base, method = func.rsplit('.', 1)
         code = []
         code.append('(%s.append || %s.push).apply(%s, [' % (base, base, base))
+        code += args
+        code.append('])')
+        return code
+    
+    def method_remove(self, node, func, args):
+        base, method = func.rsplit('.', 1)
+        code = []
+        remove_func = 'function (x) {%s.splice(%s.indexOf(x), 1);}' % (base, base)
+        code.append('(%s.remove || %s).apply(%s, [' % (base, remove_func, base))
         code += args
         code.append('])')
         return code

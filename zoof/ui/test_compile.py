@@ -47,6 +47,11 @@ class TestExpressions:
         assert py2js('4 > 3') == '4 > 3;'  # Comparisons
         assert py2js('4 is 3') == '4 === 3;'
         
+        # No parentices around strings
+        assert py2js('"abc" + "def"') == "'abc' + 'def';"
+        assert py2js("'abc' + 'def'") == "'abc' + 'def';"
+        assert py2js("'abc' + \"'def\"") == "'abc' + \"'def\";"
+        
         # Test outcome
         assert evalpy('2+3') == '5'  # Binary
         assert evalpy('6/3') == '2'
@@ -375,6 +380,10 @@ class TestSpecial:
     
     def test_append(self):
         assert nowhitespace(evalpy('a = [2]; a.append(3); a')) == '[2,3]'
+    
+    def test_remove(self):
+        assert nowhitespace(evalpy('a = [2, 3]; a.remove(3); a')) == '[2]'
+        assert nowhitespace(evalpy('a = [2, 3]; a.remove(2); a')) == '[3]'
 
 
 run_tests_if_main()

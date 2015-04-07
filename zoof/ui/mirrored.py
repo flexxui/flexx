@@ -70,11 +70,28 @@ class Prop(object):
         else:
             raise ValueError("both 'obj' and 'owner' are None, don't know what to do")
     
+    def _get(self, obj):
+        """ Get the value from the object that this is a prop of. 
+        """
+        # if not hasattr(obj, self._private_name):
+        #     setattr(obj, self._private_name, self.default)
+        return getattr(obj, self._private_name)
+    
     def __set__(self, obj, value):
+        # todo: check readonly
+        self._set(obj, value)
+    
+    def _set(self, obj, value):
+        """ Set the value from the object that this a prop of. This
+        bypasses read-only, thus forming a way for classes to set
+        read-only attributes internally.
+        """
         # Validate value, may return a "cleaned up" version
         value = self.validate(value)
         
-        # Set 
+        # Get hash. We force all prop values to be hashable. There is
+        # no point in having prop change notification if the values are
+        # mutable.
         try:
             newhash = hash(value)
         except TypeError:
@@ -90,14 +107,20 @@ class Prop(object):
         else:
             setattr(obj, self._private_name + '_hash', newhash)
         
-        # Update
-        if hasattr(obj, '_changed_props'):
-            obj._changed_props.append(self.name)
+        # Apply
         setattr(obj, self._private_name, value)
-        # Listeners
-        if hasattr(obj, '_prop_listeners'):
-            for callback in obj._prop_listeners.get(self.name, []):
-                callback(self.name, old, value)
+        
+        # Notify, first dynamic, then static, just like IPython traits
+        callbacks = []
+        callbacks += obj._prop_listeners.get(self.name, ())
+        callbacks += obj._prop_listeners.get('', ())  # any prop
+        callback = getattr(obj, '_%s_changed' % self.name, None)
+        if callback is not None:
+            callbacks.append(callback)
+        
+        for callback in callbacks:
+            # todo:  allow less args: https://github.com/ipython/ipython/blob/master/traitlets/traitlets.py#L661
+            callback(self.name, old, value)
     
     def __delete__(self, obj):
         if hasattr(obj, self._private_name):
@@ -114,12 +137,6 @@ class Prop(object):
     @property
     def default(self):
         return self._default
-    
-    def _get(self, obj):
-        """ Get the value from the object that this is a prop of. """
-        # if not hasattr(obj, self._private_name):
-        #     setattr(obj, self._private_name, self.default)
-        return getattr(obj, self._private_name)
     
     def validate(self, value):
         raise NotImplementedError()
@@ -174,24 +191,11 @@ class HasProps(with_metaclass(HasPropsMeta, object)):
     """
     
     def __init__(self, **kwargs):
-        # Variables changed since creation
-        self._changed_props = []
         # Callbacks for each property
         self._prop_listeners = {}
         # Assign 
         for name, val in kwargs.items():
             setattr(self, name, val)
-        self.reset_changed_props()
-    
-    @property
-    def changed_props(self):
-        """ Get a list of names of props that changed since object creation
-        or the last call to reset_changed_props().
-        """
-        return self._changed_props
-    
-    def reset_changed_props(self):
-        self._changed_props = []
     
     def add_listener(self, prop_name, callback):
         """ Add a callback for the given property.
@@ -218,11 +222,17 @@ class HasProps(with_metaclass(HasPropsMeta, object)):
         collect(cls)
         return props
     
+    def _set_prop(self, name, value):
+        """ Method to set a property. 
+        """
+        getattr(self.__class__, name)._set(self, value)
+    
+    
     def __setattr__(self, name, value):
         if name.startswith("_"):
             super(HasProps, self).__setattr__(name, value)
         else:
-            props = sorted(self.props())
+            props = self.props()
             if name in props:
                 super(HasProps, self).__setattr__(name, value)
             else:
@@ -272,22 +282,26 @@ class Tuple(Prop):
     # todo: allowed lengths?
     def __init__(self, item_type, default=None, help=None):
         Prop.__init__(self, default, help)
-        item_type = item_type if isinstance(item_type, tuple) else (item_type, )
-        self._item_types = item_type
+        assert isinstance(item_type, type) and issubclass(item_type, Prop)
+        #item_type = item_type if isinstance(item_type, tuple) else (item_type, )
+        #self._item_types = item_type
+        self._item_prop = item_type()
     
     def validate(self, val):
-        
         if isinstance(val, (tuple, list)):
-            for e in val:
-                if not isinstance(e, self._item_types):
-                    item_types = ', '.join([t.__name__ for t in self._item_types])
-                    this_type = e.__class__.__name__
-                    raise ValueError('Tuple prop %r needs items to be in '
-                                     '[%s], but got %s.' % 
-                                     (self.name, item_types, this_type))
-            return val
+            return tuple([self._item_prop.validate(e) for e in val])
         else:
             raise ValueError('Tuple prop %r requires tuple or list.' % self.name)
+    
+    def to_json(self, val):
+        jsonparts = [self._item_prop.to_json(e) for e in val]
+        pyparts = [json.loads(txt) for txt in jsonparts]
+        return json.dumps(pyparts)
+    
+    def from_json(self, txt):
+        pyparts = json.loads(txt)
+        jsonparts = [json.dumps(e) for e in pyparts]
+        return [self._item_prop.from_json(txt) for txt in jsonparts]
 
 
 class Color(Prop):
@@ -392,8 +406,10 @@ class Mirrored(HasProps):
         
         # Register callbacks
         for name in self.props():
+            if name in ('children', ):
+                continue  # todo: implement via Tuple(WidgetProp, sync=False)?
             self.add_listener(name, self._sync_prop)
-        
+    
     def get_app(self):
         return self._app
     
@@ -421,13 +437,20 @@ class Mirrored(HasProps):
         # To set props from Python without sending a sync pulse back
         # and also to convert from json
         if tojson:
-            val = JSON.parse(val)
+            if self['_from_json_'+name]:  # == function 
+                val = self['_from_json_'+name](val)
+            else:
+                val = JSON.parse(val)
+            val = None if val is undefined else val
         #print('_set_prop_from_py', name, val)
-        if self['_set_'+name]:
-            val2 = self['_set_' + name](val)
-            if val2 is not undefined:
-                val = val2
+        # if self['_set_'+name]:
+        #     val2 = self['_set_' + name](val)
+        #     if val2 is not undefined:
+        #         val = val2
+        old = self['_' + name]
         self['_' + name] = val
+        if self['_'+name+'_changed']:
+            self['_'+name+'_changed'](name, old, val)
     
     @js
     def _getter_setter(name):
@@ -439,12 +462,21 @@ class Mirrored(HasProps):
                 return self['_' + name]
         def setter(val):
             self._set_prop_from_py(name, val, False)
-            txt = JSON.stringify(self['_' + name])
+            value = self['_' + name]
+            if self['_to_json_'+name]:  # == function
+                txt = self['_to_json_'+name](value)
+            else:
+                txt = JSON.stringify(value)
             zoof.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
         return getter, setter
     
     @js
     def __jsinit__(self, props):
+        
+        # Set id alias. In most browsers this shows up as the first element
+        # of the object, which makes it easy to identify objects while
+        # debugging. This attribute should *not* be used.
+        self.__id = props['id']
         
         # Create properties
         for name in props:
@@ -459,8 +491,8 @@ class Mirrored(HasProps):
             self._jsinit()
         # Assign initial values
         for name in props:
+            self['_'+name] = None  # init
             self._set_prop_from_py(name, props[name])
-            #self[name] = props[name]
     
     @classmethod
     def get_js(cls):
@@ -473,13 +505,27 @@ class Mirrored(HasProps):
         js.append('zoof.%s = ' % cls_name)
         js.append(cls.__jsinit__.js.jscode)
         
-        # Methods
         for key in dir(cls):
+            # Methods
             func = getattr(cls, key)
             if hasattr(func, 'js') and hasattr(func.js, 'jscode'):
                 code = func.js.jscode
                 name = func.js.name
                 js.append('zoof.%s.prototype.%s = %s' % (cls_name, name, code))
+            
+            # Property json methods
+            # todo: implement property functions for validation, to_json and from_json in zoof.props
+            # todo: more similar API and prop handling in py and js
+            elif isinstance(func, Prop) and hasattr(func, 'validate'):
+                prop = func
+                propname = key
+                funcs = [getattr(prop, x, None) for x in ('to_json__js', 'from_json__js')]
+                funcs = [func for func in funcs if func is not None]
+                for func in funcs:
+                    code = func.js.jscode
+                    name = '_%s_%s' % (func.js.name, propname)
+                    js.append('zoof.%s.prototype.%s = %s' % (cls_name, name, code))
+        
         return '\n'.join(js)
     
     @classmethod
@@ -502,7 +548,7 @@ class Foo(HasProps):
 
 class Bar(Foo):
     color = Color
-    names = Tuple(str)
+    names = Tuple(Str)
     
 
 if __name__ == '__main__':

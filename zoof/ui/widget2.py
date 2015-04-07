@@ -10,7 +10,7 @@ class WidgetProp(Prop):
         if val is None or isinstance(val, Widget):
             return val
         else:
-            raise ValueError('Prop %s must be a Widget or None, got %r' % 
+            raise ValueError('Prop %r must be a Widget or None, got %r' % 
                              (self.name, val.__class__.__name__))
     
     def to_json(self, value):
@@ -21,6 +21,17 @@ class WidgetProp(Prop):
     
     def from_json(self, txt):
         return get_instance_by_id(json.loads(txt))
+    
+    @js
+    def to_json__js(self, value):
+        if value is None:
+            return JSON.stringify(None)
+        else:
+            return JSON.stringify(value.id)
+    
+    @js
+    def from_json__js(self, value):
+        return zoof.widgets[JSON.parse(value)]
 
 
 class Widget(Mirrored):
@@ -48,30 +59,32 @@ class Widget(Mirrored):
     def _js_init(self):
         pass
     
-    # def _set_parent(self, new_parent):
-    #     old_parent = self.parent
-    #     if old_parent is not None:
-    #         while self in old_parent.children:
-    #             old_parent._children.remove(self)
-    #     if new_parent is not None:
-    #         new_parent._children.append(self)
-    #     self._parent = new_parent
-    
-    # todo: oh crap, we need _js_set_parent() or something if we will allow _set_x in Python
-    @js
-    def _get_parent(self):  # In js we store it internally as the id
-        if self._parent is None:
-            return None
-        return zoof.widgets[self._parent]  # todo: rename to index both in JS and Py
+    def _parent_changed(self, name, old_parent, new_parent):
+        print('setting parent in Py')
+        if old_parent is not None:
+            children = list(old_parent.children)
+            while self in children:
+                children.remove(self)
+            old_parent._set_prop('children', children)  # bypass readonly
+        if new_parent is not None:
+            children = list(new_parent.children)
+            children.append(self)
+            new_parent._set_prop('children', children)
     
     @js
-    def _set_parent(self, val):
-        if val is None:
-            return None
-        elif val.toLowerCase is undefined:  # string (id) or object
-            return val.id
-        else:
-            return val
+    def _parent_changed__js(self, name, old_parent, new_parent):
+        print('setting parent in JS')
+        if old_parent is not None:
+            children = old_parent.children
+            while children.indexOf(self) >= 0:  # todo: "self in children"
+                children.remove(self)
+            #old_parent._set_prop('children', children)  # bypass readonly
+            old_parent.children = children
+        if new_parent is not None:
+            children = new_parent.children
+            children.append(self)
+            #new_parent._set_prop('children', children)
+            new_parent.children = children
     
     @js
     def set_cointainer_id(self, id):
@@ -99,7 +112,7 @@ class Button(Widget):
     }
     """
     
-    text = Str()
+    text = Str('push me')
     
     def __init__(self):
         Mirrored.__init__(self)
@@ -114,7 +127,7 @@ class Button(Widget):
         this.node.innerHTML = 'Look, a button!'
     
     @js
-    def _set_text__js(self, txt):
+    def _text_changed__js(self, name, old, txt):
         print('_set_text', txt)
         this.node.innerHTML = txt
 
@@ -133,7 +146,7 @@ class Label(Widget):
         this.node.innerHTML = 'a label'
     
     @js
-    def _set_text(self, txt):
+    def _text_changed__js(self, name, old, txt):
         this.node.innerHTML = txt
 
 
