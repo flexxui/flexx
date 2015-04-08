@@ -99,7 +99,9 @@ import inspect
 import ast
 import types
 
-# from astpp import dump, parseprint  # 3d party
+# Some names that parties may want to import to fool pyflakes
+window = 'JS-WINDOW'
+undefined = 'JS-UNDEFINED'
 
 # todo: typeof operator -> typeof function or isinstance?
 
@@ -211,11 +213,13 @@ def unify(x):
     """
     if isinstance(x, (tuple, list)):
         x = ''.join(x)
+    
     if x[0] in '\'"' and x[0] == x[-1] and x.count(x[0]) == 2:
+        return x  # string
+    elif x.isidentifier() or x.isalnum():
         return x
-    if not x.isalnum():
+    else:
         return '(%s)' % x
-    return x
 
 
 class JSParser:
@@ -636,6 +640,13 @@ class JSParser:
     ## Control flow
     
     def parse_If(self, node):
+        if (isinstance(node.test, ast.Compare) and 
+            isinstance(node.test.left, ast.Name) and 
+            node.test.left.id == '__name__'):
+                # Ignore ``__name__ == '__main__'``, since it may be
+                # used inside a PyScript file for the compiling.
+                return []
+        
         code = [self.lf('if (')]
         code += self.parse(node.test)
         code.append(') {')
@@ -984,9 +995,19 @@ class JSParser:
     
     ## Imports - no imports
 
-    # parse_Import
-    # parse_ImportFrom
-    # parse_alias
+    def parse_Import(self, node):
+        raise JSError('Imports not supported.')
+    
+    def parse_ImportFrom(self, node):
+        if node.module == __name__:
+            # User is probably importing names from here to allow
+            # writing the JS code and command to parse it in one module.
+            # Ignore this import.
+            return []
+        raise JSError('Imports not supported.')
+    
+    def parse_alias(self, node):
+        raise JSError('Imports not supported.')
     
     def parse_Module(self, node):
         """ Module level. Just skip. """

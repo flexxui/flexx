@@ -47,10 +47,16 @@ class TestExpressions:
         assert py2js('4 > 3') == '4 > 3;'  # Comparisons
         assert py2js('4 is 3') == '4 === 3;'
         
-        # No parentices around strings
+        # No parentices around names, numbers and strings
+        assert py2js('foo + bar') == "foo + bar;"
+        assert py2js('_foo3 + _bar4') == "_foo3 + _bar4;"
+        assert py2js('3 + 4') == "3 + 4;"
         assert py2js('"abc" + "def"') == "'abc' + 'def';"
         assert py2js("'abc' + 'def'") == "'abc' + 'def';"
         assert py2js("'abc' + \"'def\"") == "'abc' + \"'def\";"
+        
+        # But they should be if it gets more complex
+        assert py2js('foo + bar == 3') == "(foo + bar) == 3;"
         
         # Test outcome
         assert evalpy('2+3') == '5'  # Binary
@@ -101,9 +107,17 @@ class TestExpressions:
         assert py2js('[1,2,3]') == '[1, 2, 3];'
         assert py2js('{foo: 3, bar: 4}') == '{foo: 3, bar: 4};'
 
+    
+    def test_ignore_import_of_compiler(self):
+        modname = py2js.__module__
+        assert py2js('from %s import x, y, z\n42' % modname) == '42;'
+
 
 class TestConrolFlow:
     
+    def test_ignore_if_name_is_main(self):
+        assert py2js('if __name__ == "__main__":4') == ''
+        
     def test_if(self):
         # Normal if
         assert evalpy('if True: 4\nelse: 5') == '4'
