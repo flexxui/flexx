@@ -4,12 +4,14 @@
 import sys
 import os
 import logging
+import urllib
 
 import tornado.web
 import tornado.websocket
 
 from ..webruntime.common import default_icon
 from .app import manager, call_later
+from .clientcode import clientCode
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -37,8 +39,14 @@ def _zoof_run_callback(self, callback, *args, **kwargs):
 def _patch_tornado():
     WebSocketProtocol = tornado.websocket.WebSocketProtocol
     if not hasattr(WebSocketProtocol, '_orig_run_callback'):
-        WebSocketProtocol._orig_run_callback = WebSocketProtocol._run_callback
-        WebSocketProtocol._run_callback = _zoof_run_callback
+        
+        if not hasattr(WebSocketProtocol, 'async_callback'):
+            WebSocketProtocol._orig_run_callback = WebSocketProtocol._run_callback
+            WebSocketProtocol._run_callback = _zoof_run_callback
+        else:
+            WebSocketProtocol._orig_run_callback = WebSocketProtocol.async_callback
+            WebSocketProtocol.async_callback = _zoof_run_callback
+            
 
 
 _patch_tornado()
@@ -53,16 +61,17 @@ class ZoofTornadoApplication(tornado.web.Application):
         tornado.web.Application.__init__(self, 
             [(r"/(.*)/ws", WSHandler), (r"/(.*)", MainHandler), ])
         self._cache = {}
+        clientCode.collect()  # collect JS from mirrored classes now
     
-    def load(self, fname):
-        """ Load a file with the given name. Returns bytes.
-        """
-        if fname not in self._cache:
-            filename = os.path.join(HTML_DIR, fname)
-            blob = open(filename, 'rb').read()
-            return blob  # todo: bypasse cache
-            self._cache[fname] = blob
-        return self._cache[fname]
+    # def load(self, fname):
+    #     """ Load a file with the given name. Returns bytes.
+    #     """
+    #     if fname not in self._cache:
+    #         filename = os.path.join(HTML_DIR, fname)
+    #         blob = open(filename, 'rb').read()
+    #         return blob  # todo: bypasse cache
+    #         self._cache[fname] = blob
+    #     return self._cache[fname]
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -108,13 +117,17 @@ class MainHandler(tornado.web.RequestHandler):
                     self.redirect('/%s/' % app_name)
                 elif app_id:
                     app = manager.get_app_by_id(app_name, app_id)
-                    if app and app.status == app.STATUS.PENDING:
-                         self.write(self.application.load('index.html'))
+                    if app: # todo: ? and app.status == app.STATUS.PENDING:
+                        #self.write(self.application.load('index.html'))
+                        #self.serve_index()
+                        self.write(clientCode.get_page().encode())
                     else:
                         self.write('App %r with id %r is not available' % 
                                    (app_name, app_id))
                 elif manager.has_app_name(app_name):
-                    self.write(self.application.load('index.html'))
+                    #self.write(self.application.load('index.html'))
+                    #self.serve_index()
+                    self.write(clientCode.get_page().encode())
                 else:
                     self.write('No app %r is hosted right now' % app_name)
             elif file_name.endswith('.ico'):
@@ -131,7 +144,9 @@ class MainHandler(tornado.web.RequestHandler):
                 elif file_name.endswith('.js'):
                     self.set_header("Content-Type", 'application/x-javascript')
                 try:
-                    res = self.application.load(file_name)
+                    raise RuntimeError('This is for page_light, but we might never implement that')
+                    #res = self.application.load(file_name)
+                    #res = clientCode.load(file_name).encode())
                 except IOError:
                     #self.write('invalid resource')
                     super().write_error(404)
@@ -145,6 +160,15 @@ class MainHandler(tornado.web.RequestHandler):
         else:
             # In theory this cannot happen
             self.write('This should not happen')
+    
+    # def serve_index(self):
+    #     src = self.application.load('index.html')
+    #     from .mirrored import get_mirrored_classes
+    #     js = '\n'
+    #     for cls in get_mirrored_classes():
+    #         js += '\n' + cls.get_js()
+    #     src = src.replace(b'JS_INSERT_HERE', js.encode())
+    #     self.write(src)
     
     def write_error(self, status_code, **kwargs):
         # does not work?
@@ -176,9 +200,13 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     def open(self, path=None):
         """ Called when a new connection is made.
         """
+        if not hasattr(self, 'close_code'):  # old version of Tornado?
+            self.close_code, self.close_reason = None, None
+        
         # Don't collect messages to send them more efficiently, just send asap
         self.set_nodelay(True)
-        
+        if isinstance(path, bytes):
+            path = path.decode()
         print('new ws connection', path)
         app_name, _, app_id = path.strip('/').partition('-')
         if manager.has_app_name(app_name):
@@ -207,6 +235,18 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             print(message[5:].strip())
         elif message.startswith('INFO '):
             logging.info('JS - ' + message[5:].strip())
+        elif message.startswith('PROP '):
+            # todo: seems weird to deal with here. implement this by registring some handler?
+            _, id, prop, txt = message.split(' ', 3)
+            from .mirrored import Mirrored
+            import json
+            ob = Mirrored._instances.get(id, None)
+            if ob is not None:
+                # Note that this will again sync with JS, but it stops there:
+                # eventual synchronity
+                print('setting from js:', prop)
+                val = getattr(ob.__class__, prop).from_json(txt)
+                setattr(ob, prop, val)
         else:
             print('message received %s' % message)
             self.write_message('echo ' + message, binary=True)
@@ -214,11 +254,12 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     def on_close(self):
         """ Called when the connection is closed.
         """
-        code = self.close_code or 0
+        self.close_code = code = self.close_code or 0
         reason = self.close_reason or self.known_reasons.get(code, '')
         print('detected close: %s (%i)' % (reason, code))
-        manager.close_an_app(self._app)
-        self._app = None  # Allow cleaning up
+        if hasattr(self, '_app'):
+            manager.close_an_app(self._app)
+            self._app = None  # Allow cleaning up
     
     def on_pong(self, data):
         """ Called when our ping is returned.
@@ -235,6 +276,16 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         """
         self.close(1000, 'closed by server')
     
-    # Uncomment this to allow cross-domain access
-    #def check_origin(self, origin):
-    #    return True
+    def check_origin(self, origin):
+        """ Handle cross-domain access; override default same origin
+        policy. By default the hostname and port must be equal. We only
+        requirde de portname to be equal. This allows us to embed in
+        the IPython notebook.
+        """
+        host, port = self.application.serving_at  # set by us
+        incoming_host = urllib.parse.urlparse(origin).hostname
+        if host == incoming_host:
+            return True
+        else:
+            print('Connection refused from %s' % origin)
+            return False

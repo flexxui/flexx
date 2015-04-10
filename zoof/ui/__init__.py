@@ -8,3 +8,5 @@ from .widget import Widget, Window, Label, Button
 from .widget import HBox, VBox, Form, Grid, PinBoard
 from .widget import HSplit
 from .widget import PHSplit, PDockArea, MenuItem, Menu, MenuBar
+
+from . import widget2

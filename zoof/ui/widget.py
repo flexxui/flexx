@@ -1,7 +1,7 @@
 
 import json
 
-from .app import App
+from .app import App, get_default_app
 
 
 class NativeElement(object):
@@ -39,8 +39,9 @@ class Widget(object):
             if _default_parent:
                 parent = _default_parent[-1]
             else:
-                raise ValueError('Parent must be given unless it is '
-                                 'instantiated a widget context.')
+                parent = get_default_app()
+                #raise ValueError('Parent must be given unless it is '
+                #                 'instantiated a widget context.')
         
         self._parent = None
         self._children = []
