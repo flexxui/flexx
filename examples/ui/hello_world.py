@@ -1,4 +1,4 @@
-from zoof import ui
+from flexx import ui
 
 class MyApp(ui.App):
     def init(self):

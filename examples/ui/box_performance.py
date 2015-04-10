@@ -3,8 +3,8 @@ one with hboxes in vboxes in hboxes. For performance testing
 """
 
 import time
-import zoof
-from zoof import ui
+import flexx
+from flexx import ui
 
 
 class MyApp1(ui.App):
@@ -65,5 +65,5 @@ class MyApp2(ui.App):
 app = MyApp1()
 ui.run()
 
-#MyApp1.export('/home/almar/projects/pylib/zoof/_website/_static/boxdemo_table1.html')
-#MyApp2.export('/home/almar/projects/pylib/zoof/_website/_static/boxdemo_table2.html')
+#MyApp1.export('/home/almar/dev/pylib/flexx/_website/_static/boxdemo_table1.html')
+#MyApp2.export('/home/almar/dev/pylib/flexx/_website/_static/boxdemo_table2.html')
