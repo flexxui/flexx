@@ -49,6 +49,7 @@ coverage.xml
 
 # Sphinx documentation and website
 docs/_build/
+doc/_build/
 _website/
 _gh-pages/
 
