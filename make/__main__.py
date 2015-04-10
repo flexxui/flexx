@@ -1,12 +1,15 @@
-# Launch maker
+# License: consider this public domain
 
-import os
 import sys
-from make import Maker
+import os
 
-START_DIR = os.path.abspath(os.getcwd())
+ROOT_DIR = os.path.abspath(os.path.join(__file__, '..', '..'))
 
-try:
-    Maker(sys.argv)
-finally:
-    os.chdir(START_DIR)
+# Import make - clean up to avoid side-effects
+sys.path.insert(0, ROOT_DIR)
+import make
+sys.path.pop(0)
+if 'make' in sys.path:
+    sys.path.remove('make')
+
+make.main()
