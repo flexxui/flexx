@@ -55,7 +55,7 @@ def run_tests_if_main(show_coverage=False):
     fname = str(local_vars['__file__'])
     _clear_our_modules()
     _enable_faulthandler()
-    pytest.main('-v -x --color=yes --cov zoof '
+    pytest.main('-v -x --color=yes --cov flexx '
                 '--cov-config .coveragerc --cov-report html %s' % repr(fname))
     if show_coverage:
         import webbrowser

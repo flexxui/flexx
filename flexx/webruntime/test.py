@@ -1,4 +1,4 @@
-from zoof.webruntime import launch
+from flexx.webruntime import launch
 
 # Define icon
 icon = None
@@ -8,8 +8,8 @@ icon = None
 #icon = icondir + 'ieplogo.ico'
 
 
-#target = 'file:///home/almar/projects/pylib/zoof/zoof/exp/learn_html5.html'
-target = 'http://zoof.io'
+#target = 'file:///home/almar/projects/pylib/flexx/flexx/exp/learn_html5.html'
+target = 'http://python.org'
 
 rt1 = launch(target, 'xul', title='my xul app', icon=icon)
-#rt2 = launch('http://zoof.io')
+#rt2 = launch('http://python.org')

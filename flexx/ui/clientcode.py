@@ -15,7 +15,7 @@ INDEX = """
 <html>
 <head>
 <meta charset="utf-8">
-<title>Zoof UI</title>
+<title>Flexx UI</title>
 
 <style>
 CSS-HERE
@@ -36,12 +36,12 @@ JS-HERE
 """
 
 JS_BOOTSTRAP = """
-// Init zoof namespace
-window.zoof = window.zoof || {};
-zoof.ws = null;
-zoof.is_full_page = true;
-zoof.ws_url = "ws://" + location.hostname + ':' + location.port + "/" + location.pathname + "/ws";
-zoof.isExported = false;
+// Init flexx namespace
+window.flexx = window.flexx || {};
+flexx.ws = null;
+flexx.is_full_page = true;
+flexx.ws_url = "ws://" + location.hostname + ':' + location.port + "/" + location.pathname + "/ws";
+flexx.isExported = false;
 """
 
 CSS_BOOTSTRAP = """

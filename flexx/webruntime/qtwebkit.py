@@ -7,11 +7,11 @@ import time
 from .common import WebRuntime
 
 # todo: set size, pos, icon, title
-# Note that this runtime allows us a very high degree of control by
+# Note that this runtime could allow us a very high degree of control by
 # e.g. passing commands through stdin.
 
 CODE_TO_RUN = """
-from zoof.qt import QtGui, QtCore, QtWebKit
+from flexx.qt import QtGui, QtCore, QtWebKit
 url = "{url}"
 app = QtGui.QApplication([])
 m = QtWebKit.QWebView(None)

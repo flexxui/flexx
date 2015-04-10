@@ -1,5 +1,5 @@
-zoof.webruntime
----------------
+flexx.webruntime
+----------------
 
 The purpose of the webruntime subpackage is to provide a means to launch
 a web runtime that looks and feels as a desktop application. There is

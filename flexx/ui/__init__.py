@@ -1,4 +1,4 @@
-""" zoof.ui
+""" flexx.ui
 
 GUI toolkit based on web technology with a Pythonic API.
 """

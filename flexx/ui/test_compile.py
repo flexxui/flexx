@@ -4,8 +4,8 @@
 import subprocess
 
 from pytest import raises
-from zoof.util.testing import run_tests_if_main
-from zoof.ui.compile import js, py2js, JSError
+from flexx.util.testing import run_tests_if_main
+from flexx.ui.compile import js, py2js, JSError
 
 
 def evaljs(code, whitespace=True):

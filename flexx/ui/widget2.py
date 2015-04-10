@@ -31,7 +31,7 @@ class WidgetProp(Prop):
     
     @js
     def from_json__js(self, value):
-        return zoof.widgets[JSON.parse(value)]
+        return flexx.widgets[JSON.parse(value)]
 
 
 class Widget(Mirrored):
@@ -123,7 +123,7 @@ class Button(Widget):
         # todo: allow setting a placeholder DOM element, or any widget parent
         this.node = document.createElement('button')
         this.node.className = className
-        zoof.get('body').appendChild(this.node);
+        flexx.get('body').appendChild(this.node);
         this.node.innerHTML = 'Look, a button!'
     
     @js
@@ -142,7 +142,7 @@ class Label(Widget):
         # todo: allow setting a placeholder DOM element, or any widget parent
         this.node = document.createElement('div')
         this.node.className = className
-        zoof.get('body').appendChild(this.node);
+        flexx.get('body').appendChild(this.node);
         this.node.innerHTML = 'a label'
     
     @js
@@ -163,7 +163,7 @@ class Layout(Widget):
         # todo: allow setting a placeholder DOM element, or any widget parent
         this.node = document.createElement('div')
         this.node.className = className
-        zoof.get('body').appendChild(this.node);
+        flexx.get('body').appendChild(this.node);
     
     
 class HBox(Layout):

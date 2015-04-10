@@ -3,7 +3,7 @@ import os
 import threading
 import cProfile as profile
 
-from zoof.lib import yoton2
+from flexx.lib import yoton2
 
 class HelpThread(threading.Thread):
     

@@ -15,11 +15,11 @@ from .common import WebRuntime, create_temp_app_dir
 
 
 def get_template():
-    return {"name": "zoof_ui_app",
+    return {"name": "flexx_ui_app",
             "main": "",
             "nodejs": False,
             "single-instance": False,
-            "description": "an app made with Zoof ui",
+            "description": "an app made with Flexx ui",
             "version": "1.0",
             "keywords": [],
             

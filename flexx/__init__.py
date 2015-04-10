@@ -1,2 +1,2 @@
-""" Zoof main module.
+""" Flexx main module.
 """

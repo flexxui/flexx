@@ -6,7 +6,7 @@ Windows, OSX, Linux and Raspberry Pi.
 Developer notes
 ---------------
 
-We keep track of runtimes in appdata/zoof/webruntimes, Xul runtimes
+We keep track of runtimes in appdata/flexx/webruntimes, Xul runtimes
 have a 'xul_' prefix. In principle we have just one, the one that is
 most up to date. We can use firefox as a runtime, in case we symlink to
 it (or on Windows copy the whole runtime). Later we may also download
@@ -20,7 +20,7 @@ xulrunner/firefox executable. On OSX we make a new xulrunner.app that
 mimics the entire runtime via symlinks.
 
 Xul wants a specific directory structure with a few files that define
-the app. We write this on the fly to appdata/zoof/temp_apps. We create
+the app. We write this on the fly to appdata/flexx/temp_apps. We create
 a new app for each time we launch an application. We also take good
 care to clean up the old ones. On Linux and OSX the runtime app
 (symlink) is also stored in this directory.
@@ -65,7 +65,7 @@ MAIN_XUL = """
     xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
     id="{windowid}"
     title="{title}"
-    windowtype="zoofui:main"
+    windowtype="flexxui:main"
     width="640"
     height="480"
     sizemode="normal"
@@ -96,7 +96,7 @@ function startup() {
         //window.open(arguments[0], arguments[1], "chrome," + arguments[2]);
     };
     //document.getElementById("thebrowser").open = window.open;
-    //window.open("http://zoof.io", "hello", "chrome,width=400,height=300");
+    //window.open("http://python.org", "hello", "chrome,width=400,height=300");
 }
 
 var resizefunc = function(ev) {
@@ -280,10 +280,10 @@ class XulRuntime(WebRuntime):
         # Dict with all values that are injected in the file templates
         # All values can be overriden via kwargs
         D = dict(vendor='None',
-                 name='zoof_ui_app',
+                 name='flexx_ui_app',
                  version='1.0',
                  buildid='1',
-                 id='some.app@zoof.io',
+                 id='some.app@flexx.io',
                  windowid='xx',
                  title='XUL app runtime', 
                  url='http://example.com', 
@@ -293,7 +293,7 @@ class XulRuntime(WebRuntime):
         # Create values that need to be unique
         D['windowid'] = 'W' + id
         D['name'] = 'app_' + id
-        D['id'] = 'app_' + id + '@zoof.io'
+        D['id'] = 'app_' + id + '@flexx.io'
         
         # Fill in arguments in file contents
         manifest_link = 'manifest chrome/chrome.manifest'
@@ -359,7 +359,7 @@ class XulRuntime(WebRuntime):
                     break
         
         # Get dir with runtimes and list of subdirs (that represent versions)
-        xuldir = op.join(appdata_dir('zoof'), 'webruntimes')
+        xuldir = op.join(appdata_dir('flexx'), 'webruntimes')
         if not op.isdir(xuldir):
             os.mkdir(xuldir)
         dnames = [d for d in sorted(os.listdir(xuldir)) if d.startswith('xul')]

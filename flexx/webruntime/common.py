@@ -10,7 +10,7 @@ import atexit
 import threading
 import subprocess
 
-from zoof.webruntime.icon import Icon
+from .webruntime.icon import Icon
 
 
 class WebRuntime(object):
@@ -113,7 +113,7 @@ def create_temp_app_dir(prefix, suffix='', cleanup=60):
     """
     
     # Select main dir
-    maindir = os.path.join(appdata_dir('zoof'), 'temp_apps')
+    maindir = os.path.join(appdata_dir('flexx'), 'temp_apps')
     if not os.path.isdir(maindir):
         os.mkdir(maindir)
     

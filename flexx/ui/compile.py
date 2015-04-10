@@ -132,7 +132,7 @@ class JSFunction:
         #raise RuntimeError('This is a JavaScript function.')
         eval = self.get_app()._exec
         a = ', '.join([repr(arg) for arg in args])
-        eval('zoof.widgets.%s.%s("self", %s)' % (self._ob.id, self._name, a))
+        eval('flexx.widgets.%s.%s("self", %s)' % (self._ob.id, self._name, a))
     
     @property
     def name(self):
@@ -192,7 +192,7 @@ def js(func):
         eval = self.get_app()._exec
         args = ['self'] + list(args)  # todo: remove self?
         a = ', '.join([repr(arg) for arg in args])
-        eval('zoof.widgets.%s.%s(%s)' % (self.id, name, a))
+        eval('flexx.widgets.%s.%s(%s)' % (self.id, name, a))
     
     caller.js = JSFunction(name, code)
     

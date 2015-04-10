@@ -1,8 +1,8 @@
 import time
 import logging
 
-import zoof
-from zoof import ui
+import flexx
+from flexx import ui
 
 import faulthandler
 faulthandler.enable()
@@ -10,7 +10,7 @@ faulthandler.enable()
 
 class MyApp(ui.App):
     
-    _config = ui.App.Config(title='Zoof test app', size=(400, 300),
+    _config = ui.App.Config(title='Flexx test app', size=(400, 300),
                             )#icon='https://assets-cdn.github.com/favicon.ico')
                
     def init(self):

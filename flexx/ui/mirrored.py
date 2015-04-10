@@ -364,7 +364,7 @@ def get_instance_by_id(id):
     """
     return Mirrored._instances.get(id, None)
 
-from zoof.ui.compile import js
+from flexx.ui.compile import js
 
 class Mirrored(HasProps):
     """ Instances of this class will have a mirror object in JS. The
@@ -382,7 +382,7 @@ class Mirrored(HasProps):
     
     def __init__(self, **kwargs):
         HasProps.__init__(self, **kwargs)
-        from zoof.ui.app import get_default_app
+        from flexx.ui.app import get_default_app
         self._app = get_default_app()
         Mirrored._counter += 1
         self.id = self.__class__.__name__ + str(Mirrored._counter)
@@ -396,7 +396,7 @@ class Mirrored(HasProps):
         for name in self.props():
             val = getattr(self, name)
             props[name] = getattr(self.__class__, name).to_json(val)
-        cmd = 'zoof.widgets.%s = new zoof.%s(%s);' % (self.id, clsname, json.dumps(props))
+        cmd = 'flexx.widgets.%s = new flexx.%s(%s);' % (self.id, clsname, json.dumps(props))
         print(cmd)
         self._app._exec(cmd)
         
@@ -421,7 +421,7 @@ class Mirrored(HasProps):
         print('_sync_prop', name, new)
         txt = getattr(self.__class__, name).to_json(new)
         print('sending json', txt)
-        cmd = 'zoof.widgets.%s._set_prop_from_py(%r, %r);' % (self.id, name, txt)
+        cmd = 'flexx.widgets.%s._set_prop_from_py(%r, %r);' % (self.id, name, txt)
         self._app._exec(cmd)
     
     def methoda(self):
@@ -467,7 +467,7 @@ class Mirrored(HasProps):
                 txt = self['_to_json_'+name](value)
             else:
                 txt = JSON.stringify(value)
-            zoof.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
+            flexx.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
         return getter, setter
     
     @js
@@ -500,9 +500,9 @@ class Mirrored(HasProps):
         js = []
         
         # Main functions
-        # todo: zoof.classes.xx
+        # todo: flexx.classes.xx
         # todo: we could reduce JS code by doing inheritance in JS
-        js.append('zoof.%s = ' % cls_name)
+        js.append('flexx.%s = ' % cls_name)
         js.append(cls.__jsinit__.js.jscode)
         
         for key in dir(cls):
@@ -511,10 +511,10 @@ class Mirrored(HasProps):
             if hasattr(func, 'js') and hasattr(func.js, 'jscode'):
                 code = func.js.jscode
                 name = func.js.name
-                js.append('zoof.%s.prototype.%s = %s' % (cls_name, name, code))
+                js.append('flexx.%s.prototype.%s = %s' % (cls_name, name, code))
             
             # Property json methods
-            # todo: implement property functions for validation, to_json and from_json in zoof.props
+            # todo: implement property functions for validation, to_json and from_json in flexx.props
             # todo: more similar API and prop handling in py and js
             elif isinstance(func, Prop) and hasattr(func, 'validate'):
                 prop = func
@@ -524,7 +524,7 @@ class Mirrored(HasProps):
                 for func in funcs:
                     code = func.js.jscode
                     name = '_%s_%s' % (func.js.name, propname)
-                    js.append('zoof.%s.prototype.%s = %s' % (cls_name, name, code))
+                    js.append('flexx.%s.prototype.%s = %s' % (cls_name, name, code))
         
         return '\n'.join(js)
     

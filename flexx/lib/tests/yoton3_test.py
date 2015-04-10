@@ -1,4 +1,4 @@
-from zoof.lib.yoton3 import Connection
+from flexx.lib.yoton3 import Connection
 
 c1 = Connection()
 c2 = Connection()

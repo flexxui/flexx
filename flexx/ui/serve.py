@@ -1,4 +1,4 @@
-""" zoof.gui client based serving a web page using tornado.
+""" flexx.ui client based serving a web page using tornado.
 """
 
 import sys
@@ -18,7 +18,7 @@ THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 HTML_DIR = os.path.join(os.path.dirname(THIS_DIR), 'html')
 
 
-def _zoof_run_callback(self, callback, *args, **kwargs):
+def _flexx_run_callback(self, callback, *args, **kwargs):
     """ Patched version of Tornado's _run_callback that sets traceback
     info when an exception occurs, so that we can do PM debugging.
     """
@@ -42,17 +42,17 @@ def _patch_tornado():
         
         if not hasattr(WebSocketProtocol, 'async_callback'):
             WebSocketProtocol._orig_run_callback = WebSocketProtocol._run_callback
-            WebSocketProtocol._run_callback = _zoof_run_callback
+            WebSocketProtocol._run_callback = _flexx_run_callback
         else:
             WebSocketProtocol._orig_run_callback = WebSocketProtocol.async_callback
-            WebSocketProtocol.async_callback = _zoof_run_callback
+            WebSocketProtocol.async_callback = _flexx_run_callback
             
 
 
 _patch_tornado()
 
 
-class ZoofTornadoApplication(tornado.web.Application):
+class FlexxTornadoApplication(tornado.web.Application):
     """ Simple subclass of tornado Application.
     
     Has functionality for serving our html/css/js files, and caching them.
@@ -98,7 +98,7 @@ class MainHandler(tornado.web.RequestHandler):
             file_name = '/'.join(parts)
         
         # todo: maybe when app_id is given, redirect to normal name, but
-        # modify zoof.app_id in index.html, so that the websocket can connect
+        # modify flexx.app_id in index.html, so that the websocket can connect
         # with id ... (mmm also not very nice)
         
         if not path:
@@ -174,9 +174,9 @@ class MainHandler(tornado.web.RequestHandler):
         # does not work?
         print('in write_error', repr(status_code))
         if status_code == 404:
-            self.write('zoof.gui wants you to connect to root (404)')
+            self.write('flexx.ui wants you to connect to root (404)')
         else:
-            self.write('Zoof ui encountered an error: <br /><br />')
+            self.write('Flexx ui encountered an error: <br /><br />')
             super().write_error(status_code, **kwargs)
     
     def on_finish(self):

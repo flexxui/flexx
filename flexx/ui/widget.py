@@ -118,7 +118,7 @@ class Widget(object):
         
         eval = self.get_app()._exec
         funcname = 'create' + self.__class__.__name__
-        eval('zoof.%s(%s);' % (funcname, json.dumps(kwargs)))
+        eval('flexx.%s(%s);' % (funcname, json.dumps(kwargs)))
     
     def get_app(self):
         node = self.parent
@@ -194,8 +194,8 @@ class Button(Widget):
         
         eval = self.get_app()._exec
         # todo: arg .js -> I want eady access to info about that func
-        eval('zoof.widgets.%s.%s' % (self.id, self.hello.js.jscode[5:]))
-        eval('zoof.widgets.%s.%s' % (self.id, self.set_text.js.jscode[5:]))
+        eval('flexx.widgets.%s.%s' % (self.id, self.hello.js.jscode[5:]))
+        eval('flexx.widgets.%s.%s' % (self.id, self.set_text.js.jscode[5:]))
     
     def _create_js_object_real(self, **kwargs):
         super()._create_js_object_real(text=self._text, **kwargs)
@@ -232,7 +232,7 @@ class Layout(Widget):
 
     def update(self):
         eval = self.get_app()._exec
-        eval('zoof.get(%r).applyLayout();' % self.id)
+        eval('flexx.get(%r).applyLayout();' % self.id)
     
 
 # todo: spacing and margin for all layouts

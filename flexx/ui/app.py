@@ -3,7 +3,7 @@
 What one process does
 ---------------------
 
-In zoof.io, each server process hosts on a single URL (domain+port).
+In flexx.ui, each server process hosts on a single URL (domain+port).
 But can serve multiple applications via different paths.
 
 Each process uses one tornado IOLoop (the default one), and exactly one
@@ -45,7 +45,7 @@ import tornado.ioloop
 import tornado.web
 
 from ..webruntime.icon import Icon  # todo: move to util
-from zoof.webruntime import launch
+from flexx.webruntime import launch
 
 # Create/get the tornado event loop
 _tornado_loop = tornado.ioloop.IOLoop.instance()
@@ -55,7 +55,7 @@ _tornado_app = None
 
 
 class AppManager(object):
-    """ There is one AppManager class (in zoof.ui.app.manager). It's
+    """ There is one AppManager class (in flexx.ui.app.manager). It's
     purpose is to manage the application classes and instances. It is
     mostly used internally, but advanced users may use it too.
     """
@@ -186,18 +186,18 @@ def init_server(host='localhost', port=None):
     # Check that its not already running
     if _tornado_app is not None:
         return
-        #raise RuntimeError('zoof.ui server already created')
+        #raise RuntimeError('flexx.ui server already created')
     
     # Create server
-    from .serve import ZoofTornadoApplication
-    _tornado_app = ZoofTornadoApplication()
+    from .serve import FlexxTornadoApplication
+    _tornado_app = FlexxTornadoApplication()
     
     # Start server (find free port number if port not given)
     if port is not None:
         _tornado_app.listen(port, host)
     else:
         for i in range(100):
-            port = port_hash('zoof+%i' % i)
+            port = port_hash('flexx+%i' % i)
             try:
                 _tornado_app.listen(port, host)
                 break
@@ -261,7 +261,7 @@ class JupyterChecker(object):
     def _repr_html_(self):
         global is_notebook
         if is_notebook:
-            return "Zoof.ui already loaded"  # Don't inject twice
+            return "flexx.ui already loaded"  # Don't inject twice
         is_notebook = True
         
         app = get_default_app()  # does not launch runtime if is_notebook
@@ -273,7 +273,7 @@ class JupyterChecker(object):
         t = "Injecting JS/CSS."
         t += "<style>\n%s\n</style>\n" % clientCode.get_css()
         t += "<script>\n%s\n</script>" % clientCode.get_js()
-        t += "<script>zoof.ws_url=%r; zoof.is_full_page=false; zoof.init();</script>" % url
+        t += "<script>flexx.ws_url=%r; flexx.is_full_page=false; flexx.init();</script>" % url
         t += "Ready to go."
         return t
 
@@ -358,7 +358,7 @@ class App(object):
     STATUS = create_enum('PENDING', 'CONNECTED', 'CLOSED')
     
     class Config(object):
-        """ Config(title='Zoof app', icon=None, size=(640, 480))
+        """ Config(title='Flexx app', icon=None, size=(640, 480))
         
         args:
             title (str): the window title
@@ -367,7 +367,7 @@ class App(object):
                 be applied in browser windows.
         """
         
-        def __init__(self, title='Zoof app', icon=None, size=(640, 480)):
+        def __init__(self, title='Flexx app', icon=None, size=(640, 480)):
             self.title = title
             self.icon = Icon()
             if icon:
@@ -596,14 +596,14 @@ class Exporter(object):
         
         # Create lines to launch app
         lines = []
-        lines.append('zoof.isExported = true;')
+        lines.append('flexx.isExported = true;')
         lines.append('')
-        lines.append('zoof.runExportedApp = function () {')
-        lines.extend(['    zoof.command(%r);' % c for c in self._commands])
+        lines.append('flexx.runExportedApp = function () {')
+        lines.extend(['    flexx.command(%r);' % c for c in self._commands])
         lines.append('};')
         
         # Fill in template
-        html = HTML_BASE.replace('zoof.isExported = false;', '\n        '.join(lines))
+        html = HTML_BASE.replace('flexx.isExported = false;', '\n        '.join(lines))
         
         # Minify
         # todo: these names must be parsed from html or read from serve.py
