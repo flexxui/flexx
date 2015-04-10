@@ -11,15 +11,6 @@ zoof.widgets = {};
 zoof.AUTOFLEX = 729;  // magic number unlikely to occur in practice
 
 
-zoof.get = function (id) {
-    if (id === 'body') {
-        return document.body;
-    } else {
-        return zoof.widgets[id];
-    }
-};
-
-
 zoof.createWidgetElement = function (type, D) {
     /* Used by all createX functions to create the HTML element, assign
        id and class name, and insert the element in the DOM.

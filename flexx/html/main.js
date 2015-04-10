@@ -1,42 +1,50 @@
 /*
-    Main script for zoof.js
+    Main script for flexx.js
 */
 
 /* JSLint config */
-/*global zoof, decodeUtf8 */
+/*global flexx, decodeUtf8 */
 /*jslint browser: true, node: true, continue:true */
 "use strict";
 
 
 
-zoof.init = function () {
-    if (zoof.isExported) {
-        zoof.runExportedApp();
+flexx.init = function () {
+    if (flexx.isExported) {
+        flexx.runExportedApp();
     } else {
-        zoof.initSocket();
-        zoof.initLogging();
+        flexx.initSocket();
+        flexx.initLogging();
     }
 };
 
 
-zoof.exit = function () {
-    if (zoof.ws) {
-        zoof.ws.close();
+flexx.exit = function () {
+    if (flexx.ws) {
+        flexx.ws.close();
     }
 };
 
+flexx.widgets = {};
+flexx.get = function (id) {
+    if (id === 'body') {
+        return document.body;
+    } else {
+        return flexx.widgets[id];
+    }
+};
 
-window.addEventListener('load', zoof.init, false);
-window.addEventListener('beforeunload', zoof.exit, false);
+window.addEventListener('load', flexx.init, false);
+window.addEventListener('beforeunload', flexx.exit, false);
 
 
-zoof.command = function (msg) {
+flexx.command = function (msg) {
     var log, link;
     log = document.getElementById('log');
     if (msg.search('EVAL ') === 0) {
         /*jslint nomen: true, evil: true*/
         window._ = eval(msg.slice(5));
-        zoof.ws.send('RET ' + window._);  // send back result
+        flexx.ws.send('RET ' + window._);  // send back result
 
     } else if (msg.search('EXEC ') === 0) {
         /*jslint nomen: true, evil: true*/
@@ -57,10 +65,10 @@ zoof.command = function (msg) {
 };
 
 
-zoof.initSocket = function () {
+flexx.initSocket = function () {
     var loc, url, ws;
     
-    zoof.lastmsg = null;
+    flexx.lastmsg = null;
     
     // Check WebSocket support
     if (window.WebSocket === undefined) {
@@ -71,23 +79,23 @@ zoof.initSocket = function () {
     // Open web socket in binary mode
     //loc = location;
     //url = "ws://" + loc.hostname + ':' + loc.port + "/" + loc.pathname + "/ws";
-    url = zoof.ws_url;
+    url = flexx.ws_url;
     ws = new window.WebSocket(url);
-    zoof.ws = ws;
+    flexx.ws = ws;
     ws.binaryType = "arraybuffer";
     
     ws.onmessage = function (evt) {
         var msg;
-        zoof.lastmsg = evt.data;
+        flexx.lastmsg = evt.data;
         msg = decodeUtf8(evt.data);
-        zoof.command(msg);
+        flexx.command(msg);
     };
     
     ws.onclose = function (ev) {
         var msg = '';
         msg += 'Lost connection with GUI server: ';
         msg += ev.reason + " (" + ev.code + ")";
-        if (zoof.is_full_page) {
+        if (flexx.is_full_page) {
             document.body.innerHTML = msg;
         } else {
             console.info(msg);
@@ -104,7 +112,7 @@ zoof.initSocket = function () {
 };
 
 
-zoof.initLogging = function () {
+flexx.initLogging = function () {
     var errorHandler;
     if (console.ori_log) {
         return;  // already initialized the loggers
@@ -116,15 +124,15 @@ zoof.initLogging = function () {
     
     // Set new functions
     console.log = function (msg) {
-        zoof.ws.send("PRINT " + msg);
+        flexx.ws.send("PRINT " + msg);
         console.ori_log(msg);
     };
     console.info = function (msg) {
-        zoof.ws.send("INFO " + msg);
+        flexx.ws.send("INFO " + msg);
         console.ori_info(msg);
     };
     console.warn = function (msg) {
-        zoof.ws.send("WARN " + msg);
+        flexx.ws.send("WARN " + msg);
         console.ori_warn(msg);
     };
     
@@ -134,6 +142,6 @@ zoof.initLogging = function () {
     errorHandler = function (ev) {
         // ev: message, url, linenumber
         var intro = "On line " + ev.lineno + " in " + ev.filename + ":";
-        zoof.ws.send("ERROR " + intro + '\n    ' + ev.message);
+        flexx.ws.send("ERROR " + intro + '\n    ' + ev.message);
     };
 };

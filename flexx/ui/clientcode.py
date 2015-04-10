@@ -68,7 +68,7 @@ class ClientCode(object):
         self._collected = True
         
         # Determine JS files
-        for fname in ['serialize.js', 'main.js', 'layouts.js',
+        for fname in ['serialize.js', 'main.js', #'layouts.js',
                      ]:# 'phosphor-core.min.js', 'phosphor-ui.min.js']:
             if fname.startswith('phosphor'):
                 self._files[fname] = os.path.join(HTML_DIR, 'phosphor', fname)
@@ -76,7 +76,7 @@ class ClientCode(object):
                 self._files[fname] = os.path.join(HTML_DIR, fname)
         
         # Determine CSS files
-        for fname in ['main.css', 'layouts.css', ]:#'phosphor-ui.min.css']:
+        for fname in []:#['main.css', 'layouts.css', ]:#'phosphor-ui.min.css']:
             if fname.startswith('phosphor'):
                 self._files[fname] = os.path.join(HTML_DIR, 'phosphor', fname)
             else:
