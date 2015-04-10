@@ -5,13 +5,13 @@ import subprocess
 
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
-from flexx.ui.compile import js, py2js, JSError
+from flexx.pyscript import js, py2js, JSError
 
 
 def evaljs(code, whitespace=True):
     """ Evaluate code in node. Return last result as string.
     """
-    res = subprocess.check_output(['node', '-p', '-e', code])
+    res = subprocess.check_output(['nodejs', '-p', '-e', code])
     res = res.decode().rstrip()
     if res.endswith('undefined'):
         res = res[:-9].rstrip()
