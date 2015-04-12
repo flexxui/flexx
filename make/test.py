@@ -10,7 +10,7 @@ import sys
 from make import ROOT_DIR, TEST_DIR, NAME, run
 
 
-def test(arg):
+def test(arg=''):
    
     if not arg:
         return run('help', 'test')

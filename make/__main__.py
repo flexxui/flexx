@@ -21,8 +21,8 @@ import make
 assert ROOT_DIR == make.ROOT_DIR
 
 
-def run(command, arg):
-    """ Run command with specified arg.
+def run(command, *args):
+    """ Run command with specified args.
     """
     # Import the module that defines the command
     if not op.isfile(op.join(THIS_DIR, command + '.py')):
@@ -35,16 +35,15 @@ def run(command, arg):
     if f is None:
         sys.exit('Module %s.py does not contain function %s().' % 
                  (command, command))
-    f(arg)
+    f(*args)
 
 
 def main():
     if len(sys.argv) == 1:
-        run('help', '')
+        run('help')
     else:
         command = sys.argv[1].strip()
-        arg = ' '.join(sys.argv[2:]).strip()
-        run(command, arg)
+        run(command, *sys.argv[2:])
 
 
 # Put some funcs in make namespace

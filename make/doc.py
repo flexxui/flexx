@@ -9,7 +9,7 @@ import os
 from make import run, DOC_DIR, DOC_BUILD_DIR
 from make._sphinx import sphinx_clean, sphinx_build, sphinx_show
 
-def doc(arg):
+def doc(arg=''):
     
     # Prepare
     

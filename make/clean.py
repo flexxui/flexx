@@ -8,7 +8,7 @@ import fnmatch
 from make import ROOT_DIR
 
 
-def clean(arg=''):
+def clean():
     
     count1, count2 = 0, 0
     
