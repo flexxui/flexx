@@ -16,7 +16,7 @@
 import sys
 import os
 
-ROOT_DIR = os.path.abspath(os.path.join(__file__, '..', '..', '..'))
+ROOT_DIR = os.path.abspath(os.path.join(__file__, '..', '..'))
 sys.path.insert(0, ROOT_DIR)
 
 import flexx

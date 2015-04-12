@@ -9,7 +9,7 @@ Show the list of available commands, or details on a command.
 import os
 import sys
 
-from make import THIS_DIR
+from make import THIS_DIR, NAME
 
 
 def help(command=''):
@@ -21,7 +21,8 @@ def help(command=''):
                 fname.endswith('.py') and
                 fname.count('.') == 1 and
                 not fname.startswith('_')]
-        print('python make <command> [arg]\n')
+        print('Developer tools for project %s\n' % NAME.capitalize())
+        print('  python make <command> [arg]\n')
         for fname in sorted(fnames):
             modname = fname[:-3]
             doc = get_doc_for_file(fname)

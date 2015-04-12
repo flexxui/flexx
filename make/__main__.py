@@ -1,15 +1,53 @@
 # License: consider this public domain
 
+from __future__ import absolute_import, division, print_function
+
 import sys
 import os
+import os.path as op
 
-ROOT_DIR = os.path.abspath(os.path.join(__file__, '..', '..'))
 
-# Import make - clean up to avoid side-effects
+THIS_DIR = op.dirname(op.abspath(__file__))
+ROOT_DIR = op.dirname(THIS_DIR)
+
+# Setup paths
+os.chdir(ROOT_DIR)
 sys.path.insert(0, ROOT_DIR)
-import make
-sys.path.pop(0)
 if 'make' in sys.path:
     sys.path.remove('make')
 
-make.main()
+# Import __init__ with project specific dirs
+import make
+assert ROOT_DIR == make.ROOT_DIR
+
+
+def run(command, arg):
+    """ Run command with specified arg.
+    """
+    # Import the module that defines the command
+    if not op.isfile(op.join(THIS_DIR, command + '.py')):
+        sys.exit('Invalid command: %r' % command)
+    makemodule = __import__('make.'+command)
+    # Get the corresponding function
+    m = getattr(makemodule, command)
+    f = getattr(m, command, None)
+    # Call or fail
+    if f is None:
+        sys.exit('Module %s.py does not contain function %s().' % 
+                 (command, command))
+    f(arg)
+
+
+def main():
+    if len(sys.argv) == 1:
+        run('help', '')
+    else:
+        command = sys.argv[1].strip()
+        arg = ' '.join(sys.argv[2:]).strip()
+        run(command, arg)
+
+
+# Put some funcs in make namespace
+make.run = run
+
+main()
