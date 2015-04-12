@@ -6,19 +6,21 @@ Tools for developers, such as testing, building docs/website, etc.
 
 Usage::
     
-    python make command [arg]
+    python make command [arg1 [arg2 [...]]]
 
 Adding commands
 ---------------
 
 To add a command, create a file `command.py` that defines a function
-`command()` that accepts one optional argument. 
+`command()`.
 
 Shared code can be put in separate modules. Prepend modules that are
 not commands with an underscore.
 
 Names that you can `from make import ...`:
 
+* run - function to run any command. E.g. to show details when no args
+  are specified: `run('help', 'mycommand')`
 * NAME - the name of the project
 * THIS_DIR - the path of the make directory
 * ROOT_DIR - the root path of the repository
