@@ -119,27 +119,3 @@ class FileForTesting(object):
     
     def revert(self):
         sys.stdout = self._original
-
-
-## Patching
-
-# todo: remove this when its in the release of pytest (I contributed it)
-def pytest_runtest_call(item):
-    """ Variant of pytest_runtest_call() that stores traceback info for
-    postmortem debugging.
-    """
-    try:
-        runner.pytest_runtest_call_orig(item)
-    except Exception:
-        type, value, tb = sys.exc_info()
-        tb = tb.tb_next  # Skip *this* frame
-        sys.last_type = type
-        sys.last_value = value
-        sys.last_traceback = tb
-        del tb  # Get rid of it in this namespace
-        raise
-
-# Monkey-patch pytest
-if not runner.pytest_runtest_call.__module__.startswith(PACKAGE_NAME):
-    runner.pytest_runtest_call_orig = runner.pytest_runtest_call
-    runner.pytest_runtest_call = pytest_runtest_call
