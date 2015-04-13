@@ -18,6 +18,7 @@ import os
 
 ROOT_DIR = os.path.abspath(os.path.join(__file__, '..', '..'))
 sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, os.path.abspath('scripts'))
 
 import flexx
 from flexx import util, webruntime
@@ -37,6 +38,7 @@ from flexx import util, webruntime
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'pyscriptexample',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

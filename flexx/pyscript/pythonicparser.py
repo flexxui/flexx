@@ -1,6 +1,9 @@
 from .baseparser import BaseParser, JSError, unify
 
 
+# todo: self-> this define here?
+
+
 class PythonicParser(BaseParser):
     """ Parser to transcompile Python to JS, allowing more Pythonic code.
     
