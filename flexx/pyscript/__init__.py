@@ -90,7 +90,7 @@ User guide stuff:
     a.append(x)
 """
 
-from .base import BaseParser, JSError
+from .baseparser import BaseParser, JSError
 from .pythonicparser import PythonicParser
 from .functions import JSFunction, js, py2js, evaljs, evalpy
 

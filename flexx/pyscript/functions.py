@@ -1,7 +1,5 @@
-import ast
 import types
 import inspect
-import ast
 import subprocess
 
 from .pythonicparser import PythonicParser
@@ -10,8 +8,7 @@ from .pythonicparser import PythonicParser
 def py2js(code):
     """ Translate Python code to JavaScript.
     """
-    node = ast.parse(code)
-    parser = PythonicParser(node)
+    parser = PythonicParser(code)
     return parser.dump()
 
 
@@ -88,8 +85,7 @@ class JSFunction:
         
         # Convert to JS, but strip function name, 
         # so that string starts with "function ( ..."
-        node = ast.parse(code)
-        p = PythonicParser(node)
+        p = PythonicParser(code)
         p._parts[0] = ''  # remove "var xx = "
         self._jscode = p.dump()
     
@@ -110,10 +106,6 @@ class JSFunction:
     @property
     def jscode(self):
         return self._jscode
-    
-    # @property
-    # def ast(self):
-    #     return self._ast
     
     def __repr__(self):
         return '<JSFunction (print to see code) at 0x%x>' % id(self)

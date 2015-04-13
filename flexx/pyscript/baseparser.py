@@ -42,8 +42,8 @@ class BaseParser(object):
     one-to-one conversion. Additional conversions to allow more
     Pythesque code are implemented in PythonicParser.
     
-    Instantiate this class with an ast-node. Retrieve the JS code using
-    the dump() method.
+    Instantiate this class with the Python code. Retrieve the JS code
+    using the dump() method.
     """
     
     COMMON_METHODS = dict(append='push')
@@ -91,8 +91,8 @@ class BaseParser(object):
             'IsNot' : "!==",
         }
     
-    def __init__(self, node):
-        self._root = node
+    def __init__(self, code):
+        self._root = ast.parse(code)
         self._stack = []
         self._indent = 0
         self._dummy_counter = 0
@@ -107,7 +107,7 @@ class BaseParser(object):
         
         # Parse
         self.push_stack()
-        self._parts = self.parse(node)
+        self._parts = self.parse(self._root)
         if self._parts:
             self._parts[0] = self._parts[0].lstrip()
     
@@ -122,7 +122,7 @@ class BaseParser(object):
         return self._stack[-1]
     
     def dump(self):
-        """ Dumpt the JS code.
+        """ Get the JS code as a string.
         """
         return ''.join(self._parts)
     

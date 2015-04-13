@@ -1,6 +1,4 @@
-import ast
-
-from .base import BaseParser, JSError, unify
+from .baseparser import BaseParser, JSError, unify
 
 
 class PythonicParser(BaseParser):
