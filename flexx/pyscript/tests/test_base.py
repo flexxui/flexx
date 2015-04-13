@@ -1,34 +1,17 @@
 """ Tests for Py to JS compilation
 """
 
-import subprocess
-
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
-from flexx.pyscript import js, py2js, JSError
 
+from flexx.pyscript import js, JSError, py2js, evaljs, evalpy
+from flexx import pyscript
 
-def evaljs(code, whitespace=True):
-    """ Evaluate code in node. Return last result as string.
-    """
-    res = subprocess.check_output(['nodejs', '-p', '-e', code])
-    res = res.decode().rstrip()
-    if res.endswith('undefined'):
-        res = res[:-9].rstrip()
-    if not whitespace:
-        res = nowhitespace(res)
-    return res
-
-def evalpy(code, whitespace=True):
-    """ Evaluate python code (after translating to js)
-    """
-    return evaljs(py2js(code), whitespace)
 
 def nowhitespace(s):
     return s.replace('\n', '').replace('\t', '').replace(' ', '')
 
 
-    
 class TestExpressions:
     """ Tests for single-line statements/expressions
     """
@@ -109,7 +92,7 @@ class TestExpressions:
 
     
     def test_ignore_import_of_compiler(self):
-        modname = py2js.__module__
+        modname = pyscript.__name__
         assert py2js('from %s import x, y, z\n42' % modname) == '42;'
 
 
@@ -361,50 +344,4 @@ class TestFuctions:
         assert evaljs(code + 'x()') == '7'
 
 
-class TestSpecial:
-    
-    def test_builtins(self):
-        assert py2js('max(3, 4)') == 'max(3, 4);'
-    
-    def test_print(self):
-        # Test code
-        assert py2js('print()') == 'console.log();'
-        assert py2js('print(3)') == 'console.log(3);'
-        assert py2js('foo.print()') == 'foo.print();'
-        
-        # Test single
-        assert evalpy('print(3)') == '3'
-        assert evalpy('print(3); print(3)') == '3\n3'
-        assert evalpy('print(); print(3)') == '\n3'  # Test \n
-        assert evalpy('print("hello world")') == 'hello world'
-        # Test multiple args
-        assert evalpy('print(3, "hello")') == '3 hello'
-        assert evalpy('print(3+1, "hello", 3+1)') == '4 hello 4'
-        # Test sep and end
-        assert evalpy('print(3, 4, 5)') == '3 4 5'
-        assert evalpy('print(3, 4, 5, sep="")') == '345'
-        assert evalpy('print(3, 4, 5, sep="\\n")') == '3\n4\n5'
-        assert evalpy('print(3, 4, 5, sep="--")') == '3--4--5'
-        assert evalpy('print(3, 4, 5, end="-")') == '3 4 5-'
-        assert evalpy('print(3, 4, 5, end="\\n\\n-")') == '3 4 5\n\n-'
-    
-    def test_len(self):
-        assert py2js('len(a)') == 'a.length;'
-        assert py2js('len(a, b)') == 'len(a, b);'
-    
-    def test_append(self):
-        assert nowhitespace(evalpy('a = [2]; a.append(3); a')) == '[2,3]'
-    
-    def test_remove(self):
-        assert nowhitespace(evalpy('a = [2, 3]; a.remove(3); a')) == '[2]'
-        assert nowhitespace(evalpy('a = [2, 3]; a.remove(2); a')) == '[3]'
-
-
 run_tests_if_main()
-
-if __name__ == '__main__':
-    t = TestFuctions()
-    # t.test_scope()
-    # t.test_func_calls()
-    # t.test_var_args3()
-    # t.test_var_args4()

@@ -1,96 +1,9 @@
 """
-
 Parts of this code are inspired by / taken from the py2js project.
 
 Useful links:
  * https://greentreesnakes.readthedocs.org/en/latest/nodes.html
-
-Supported basics:
-
-* numbers, strings
-* Binary, unary and boolean operations
-* power and integer division operations
-* multiple variable assignment
-* lists, tuples, dicts (respectively become JS arrays, arrays, objects)
-* comparisons (== -> ==, is -> ===)
-* if-statements and single-line if-expression
-* while-loops
-* for-loops using range()
-* while and for loops support continue, break, and else-clauses
-* function calls can have *args (but no keywords or **kwargs)
-* function defs can have default arguments, *args (but no kwargs)
-* Slicing (though not with step)
-* Use of ``self`` is translated to ``this``
-
-Supported Python conveniences:
-
-* print() becomes console.log (no ``end`` and ``sep`` though)
-* len(x) becomes x.length 
-
-Not currently supported:
-
-* The ``in`` operator 
-* tuple packing/unpacking
-* function defs cannot have ``**kwargs``
-* cannot call a function with ``*args``
-* Exceptions, assertions, delete
-
-Probably never suppored:
-
-* Slicing with steps
-* set (JS has no set)
-* Most Python buildins
-* importing
-
-
-User guide stuff:
-    
-    # "self" is replaced with "this"
-    self.foo
-    
-    # Printing just works
-    print('some test')
-    print(a, b, c, sep='-')
-    
-    ## For loops
-    
-    # You can use range for explicit for-loops. You can also iterate
-    # directly over values in an array, string or dict. In case of
-    # dicts, we using ``.keys()``, ``.values()`` and
-    # ``items()`` should provide slightly increased performance.
-    
-    # Using range() yields true for-loops
-    for i in range(10):
-        print(i)
-    for i in range(100, 10, -2):
-        print(i)
-    
-    # One way to iterate over an array
-    for i in range(len(arr)):
-        print(arr[i])
-    
-    # But this is equally valid (and fast)
-    for element in arr:
-        print(element)
-    
-    # Similarly, iteration over strings
-    for char in "foo bar":
-        print(c)
-    
-    # Plain iteration over a dict costs a small overhead
-    for key in d:
-        print(key)
-        
-    # Which is why we recommend the following syntax
-    for key in d.keys():
-        print(key)
-    for val in d.values():
-        print(val)
-    for key, val in d.items():
-        print(key, val, sep=': ')
-    
-    # Some methods get replaced
-    a.append(x)
+ * https://github.com/qsnake/py2js/blob/master/py2js/__init__.py
 
 """
 
@@ -99,112 +12,12 @@ import inspect
 import ast
 import types
 
-# Some names that parties may want to import to fool pyflakes
-window = 'JS-WINDOW'
-undefined = 'JS-UNDEFINED'
-
 # todo: typeof operator -> typeof function or isinstance?
 
-
-class JSError(NotImplementedError):
+class JSError(Exception):
+    """ Exception raised when unable to convert Python to JS.
+    """
     pass
-
-
-class JSFunction:
-    """ Definition of a javascript function.
-    
-    Allows getting access to the original Python code and the JS code. Also
-    allows calling the JS function from Python.
-    """
-    
-    def __init__(self, name, code):
-        self._name = name
-        self._pycode = code
-        
-        # Convert to JS, but strip function name, 
-        # so that string starts with "function ( ..."
-        node = ast.parse(code)
-        p = JSParser(node)
-        p._parts[0] = ''  # remove "var xx = "
-        self._jscode = p.dump()
-    
-    def __call__(self, *args):
-        #raise RuntimeError('This is a JavaScript function.')
-        eval = self.get_app()._exec
-        a = ', '.join([repr(arg) for arg in args])
-        eval('flexx.widgets.%s.%s("self", %s)' % (self._ob.id, self._name, a))
-    
-    @property
-    def name(self):
-        return self._name
-    
-    @property
-    def pycode(self):
-        return self._pycode
-    
-    @property
-    def jscode(self):
-        return self._jscode
-    
-    # @property
-    # def ast(self):
-    #     return self._ast
-    
-    def __repr__(self):
-        return '<JSFunction (print to see code) at 0x%x>' % id(self)
-    
-    def __str__(self):
-        pytitle = '== Python code that defined this function =='
-        jstitle = '== JS Code that represents this function =='
-        return pytitle + '\n' + self.pycode + '\n' + jstitle + self.jscode
-
-
-def js(func):
-    """ Decorate a function with this to make it a JavaScript function.
-    
-    The decorated function is replaced by a function that you can call to
-    invoke the JavaScript function in the web runtime.
-    
-    The returned function has a ``js`` attribute, which is a JSFunction
-    object that can be used to get access to Python and JS code.
-    """
-    if not isinstance(func, types.FunctionType):
-        raise ValueError('The js decorator can only decorate real functions.')
-    
-    # Get name - strip "__js" suffix if it's present
-    # This allow mangling the function name on the Python side, to allow
-    # the same name for a function in both Py and JS. I investigated
-    # other solutions, from class-inside-class constructions to
-    # black-magic decorators that auto-mangle the function name. I settled
-    # on just allowing "func_name__js".
-    name = func.__name__
-    if name.endswith('__js'):
-        name = name[:-4]
-    
-    # Get code
-    # todo: if function consists of multi-line string, just use that as the JS code
-    lines, linenr = inspect.getsourcelines(func)
-    indent = len(lines[0]) - len(lines[0].lstrip())
-    lines = [line[indent:] for line in lines]
-    code = ''.join(lines[1:])
-    
-    def caller(self, *args):
-        eval = self.get_app()._exec
-        args = ['self'] + list(args)  # todo: remove self?
-        a = ', '.join([repr(arg) for arg in args])
-        eval('flexx.widgets.%s.%s(%s)' % (self.id, name, a))
-    
-    caller.js = JSFunction(name, code)
-    
-    # todo: should we even allow calling the js function?
-    return caller
-    #return lambda *x, **y: print('This is a JS func')
-
-
-def py2js(code):
-    node = ast.parse(code)
-    parser = JSParser(node)
-    return parser.dump()
 
 
 def unify(x):
@@ -222,14 +35,15 @@ def unify(x):
         return '(%s)' % x
 
 
-class JSParser:
-    """ Transcompile Python to JS.
-    This does not intend to support the full Python stack on JS. It is
-    more a way to write JS with a Pythonesque syntax. Like Coffeescript,
-    it's just JavaScript!
+class BaseParser(object):
+    """ Base parser to transcompile Python to JS
     
-    The purpose is to allow definition of JS code inside your Python
-    code. No need to learn another language.
+    Base parser to convert Python to JavaScript. This implements
+    one-to-one conversion. Additional conversions to allow more
+    Pythesque code are implemented in PythonicParser.
+    
+    Instantiate this class with an ast-node. Retrieve the JS code using
+    the dump() method.
     """
     
     COMMON_METHODS = dict(append='push')
@@ -999,7 +813,8 @@ class JSParser:
         raise JSError('Imports not supported.')
     
     def parse_ImportFrom(self, node):
-        if node.module == __name__:
+        
+        if ('.' + node.module).endswith('pyscript'):
             # User is probably importing names from here to allow
             # writing the JS code and command to parse it in one module.
             # Ignore this import.
@@ -1015,83 +830,3 @@ class JSParser:
         for child in node.body:
             code += self.parse(child)
         return code
-    
-    
-    ## Functions and methods that we handle specifically
-    
-    def function_print(self, node, func, args):
-        # Process keywords
-        sep, end = '" "', ''
-        for kw in node.keywords:
-            if kw.arg == 'sep':
-                sep = ''.join(self.parse(kw.value))
-            elif kw.arg == 'end':
-                end = ''.join(self.parse(kw.value))
-            elif kw.arg in ('file', 'flush'):
-                raise JSError('print() file and flush args not supported')
-            else:
-                raise JSError('Invalid argument for print(): %r' % kw.arg)
-        
-        # Combine args
-        args = [unify(self.parse(arg)) for arg in node.args]
-        end = (" + %s" % end) if (args and end and end != '\n') else ''
-        combiner = ' + %s + ' % sep
-        args_concat = combiner.join(args)
-        return 'console.log(' + args_concat + end + ')'
-    
-    def function_len(self, node, func, args):
-        if len(args) == 1:
-            return unify(args[0]), '.length'
-    
-    def method_append(self, node, func, args):
-        base, method = func.rsplit('.', 1)
-        code = []
-        code.append('(%s.append || %s.push).apply(%s, [' % (base, base, base))
-        code += args
-        code.append('])')
-        return code
-    
-    def method_remove(self, node, func, args):
-        base, method = func.rsplit('.', 1)
-        code = []
-        remove_func = 'function (x) {%s.splice(%s.indexOf(x), 1);}' % (base, base)
-        code.append('(%s.remove || %s).apply(%s, [' % (base, remove_func, base))
-        code += args
-        code.append('])')
-        return code
-
-
-if __name__ == '__main__':
-    
-    
-    print(py2js('lambda x:x+1'))
-    print(py2js('foo.bar(a, b, *c)'))
-    
-    
-    1/0
-    
-    @js
-    def t_func():
-        2
-    
-    class Foo:
-        @js
-        def bar(self, bar, spam=4, *more):
-            __SIMPLE_TYPES__
-            foo = 'hello'
-            foo = [1, 2]
-            foo.append(3)
-            __ATTRIBUTES__
-            foo.bar = 'asd'
-            __PRINTING_AND_FORMATTING__
-            print(spam, 'world!', 5., [1,2,3])
-    
-    
-    foo = Foo()
-    #print(dump(foo.bar))
-    
-    print('----')
-    # for node in ast.walk(foo.bar):
-    #     print(node)
-    print(foo.bar.js)
-    
