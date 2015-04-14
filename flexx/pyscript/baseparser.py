@@ -387,48 +387,6 @@ class BaseParser(object):
         code.append(';')
         return code
     
-    def visit_Assign(self, node):
-        assert len(node.targets) == 1
-        target = node.targets[0]
-        #~ if self._class_name:
-            #~ target = self._class_name + '.' + target
-        value = self.visit(node.value)
-        if isinstance(target, (ast.Tuple, ast.List)):
-            dummy = self.new_dummy()
-            self.write("var %s = %s;" % (dummy, value))
-
-            for i, target in enumerate(target.elts):
-                var = self.visit(target)
-                declare = ""
-                if isinstance(target, ast.Name):
-                    if not (var in self._scope):
-                        self._scope.append(var)
-                        declare = "var "
-                self.write("%s%s = %s.__getitem__(%d);" % (declare,
-                    var, dummy, i))
-        elif isinstance(target, ast.Subscript) and isinstance(target.slice, ast.Index):
-            # found index assignment
-            self.write("%s.__setitem__(%s, %s);" % (self.visit(target.value),
-                self.visit(target.slice), value))
-        elif isinstance(target, ast.Subscript) and isinstance(target.slice, ast.Slice):
-            # found slice assignmnet
-            self.write("%s.__setslice__(%s, %s, %s);" % (self.visit(target.value),
-                self.visit(target.slice.lower), self.visit(target.slice.upper),
-                value))
-        else:
-            var = self.visit(target)
-            if isinstance(target, ast.Name):
-                if not (var in self._scope):
-                    self._scope.append(var)
-                    declare = "var "
-                else:
-                    declare = ""
-                self.write("%s%s = %s;" % (declare, var, value))
-            elif isinstance(target, ast.Attribute):
-                js = self.write("%s.__setattr__(\"%s\", %s);" % (self.visit(target.value), str(target.attr), value))
-            else:
-                raise JSError("Unsupported assignment type")
-    
     def parse_AugAssign(self, node):  # -> x += 1
         target = ''.join(self.parse(node.target))
         value = ''.join(self.parse(node.value))
@@ -768,15 +726,22 @@ class BaseParser(object):
     ## Subscripting
     
     def parse_Subscript(self, node):
-        code = self.parse(node.value)
+        
+        value_list = self.parse(node.value)
+        slice_list = self.parse(node.slice)
+        
+        code = []
+        code += value_list
         
         if isinstance(node.slice, ast.Index):
             code.append('[')
-            code += self.parse(node.slice.value)
-            code.append(']') 
-        else:
+            if slice_list[0].startswith('-'):
+                code.append(unify(value_list) + '.length ')
+            code += slice_list
+            code.append(']')
+        else:  # ast.Slice
             code.append('.slice(')
-            code += self.parse(node.slice)
+            code += slice_list
             code.append(')')
         return code
     

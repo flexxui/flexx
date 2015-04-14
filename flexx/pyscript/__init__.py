@@ -26,7 +26,7 @@ are JavaScript objects. PyScript allows writing Pythonic code by
 converting a subset of functions and methods. E.g. you can use
 ``print()``, ``len()`` and ``max()``, ``L.append()``, ``L.remove()``,
 and this functionality will probably be extended over time. See the
-lists below for what is currently supported.
+list below for what is currently supported.
 
 
 Support
@@ -34,27 +34,23 @@ Support
 
 Supported basics:
 
-* numbers, strings
-* binary, unary and boolean operations
-* power and integer division operations
-* multiple variable assignment
-* lists, tuples, dicts (respectively become JS arrays, arrays, objects)
-* comparisons (== -> ==, is -> ===)
+* numbers, strings, lists, dicts (the latter become JS arrays and objects)
+* operations: binary, unary, boolean, power, integer division
+* comparisons (``==`` -> ``==``, ``is`` -> ``===``)
+* slicing (though not with step)
 * if-statements and single-line if-expression
-* while-loops
-* for-loops using range()
+* while-loops and for-loops supporting continue, break, and else-clauses
+* for-loops using `range()`
 * for-loop over arrays
-* for-loop over dict/object ``.keys()``, ``.values()`` and ``.items()``
-* while and for loops support continue, break, and else-clauses
-* function calls can have ``*args`` (but no keywords or ``**kwargs``)
-* function defs can have default arguments, ``*args`` (but not ``**kwargs``)
-* Slicing (though not with step)
-* Use of ``self`` is translated to ``this``
+* for-loop over dict/object using ``.keys()``, ``.values()`` and ``.items()``
+* function calls can have ``*args``
+* function defs can have default arguments and ``*args``
 
 Supported Python conveniences:
 
-* print() becomes console.log (no ``end`` and ``sep`` though)
-* len(x) becomes x.length 
+* use of ``self`` is translated to ``this``
+* ``print()`` becomes ``console.log()`` (also support ``sep`` and ``end``)
+* ``len(x)`` becomes ``x.length``
 
 Not currently supported:
 
@@ -70,74 +66,10 @@ Probably never suppored (because it's hard to map to JS):
 * the set class (JS has no set)
 * support for ``**kwargs``
 
-
-Quick user guide
-----------------
-
-.. pyscript_example::
-    
-    ## Basics
-    
-    # Creating lists and dicts
-    foo = [1,2,3]
-    bar = {'a': 1, b: 2}
-    
-    # If statements
-    foo = bar if True else None
-
-
-    ## For loops
-
-    # Using range() yields true for-loops
-    for i in range(10):
-        print(i)
-    
-    for i in range(100, 10, -2):
-        print(i)
-    
-    # One way to iterate over an array
-    for i in range(len(arr)):
-        print(arr[i])
-    
-    # But this is equally valid (and fast)
-    for element in arr:
-        print(element)
-    
-    # Similarly, iteration over strings
-    for char in "foo bar":
-        print(c)
-    
-    # Plain iteration over a dict costs a small overhead
-    for key in d:
-        print(key)
-    
-    # Which is why we recommend using keys(), values(), or items()
-    for key in d.keys():
-        print(key)
-    
-    for val in d.values():
-        print(val)
-    
-    for key, val in d.items():
-        print(key, val, sep=': ')
-
-
-    ## Pythonic sugar
-
-    # "self" is replaced with "this"
-    self.foo
-    
-    # Printing just works
-    print('some test')
-    print(a, b, c, sep='-')
-    
-    # Call a.append() if it exists, otherwise a.push()
-    a.append(x)
-    
-    # Similar for remove()
-    a.remove(x)
-
 """
+
+# Note: the user guide is in the docs
+
 
 from .baseparser import BaseParser, JSError
 from .pythonicparser import PythonicParser

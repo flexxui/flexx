@@ -4,12 +4,31 @@
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.pyscript import js, JSError, py2js, evaljs, evalpy
+from flexx.pyscript import js, JSError, py2js, evaljs, evalpy, BaseParser
 from flexx import pyscript
 
 
 def nowhitespace(s):
     return s.replace('\n', '').replace('\t', '').replace(' ', '')
+
+
+class TestParser(BaseParser):
+    
+    def function_foo_foo(self, node, func, args):
+        return 'xxx'
+    
+    def method_bar_bar(self, node, func, args):
+        return 'yyy'
+
+
+class TestTheBaseParser:
+    
+    def test_special_functions(self):
+        assert TestParser("foo_foo()").dump() == 'xxx;'
+        assert TestParser("bar_bar()").dump() == 'bar_bar();'
+        
+        assert TestParser("foo.bar_bar()").dump() == 'yyy;'
+        assert TestParser("foo.foo_foo()").dump() == 'foo.foo_foo();'
 
 
 class TestExpressions:
@@ -50,6 +69,19 @@ class TestExpressions:
         assert evalpy('- 3') == '-3'
         assert evalpy('True and False') == 'false'  # Boolean
         assert evalpy('True or False') == 'true'
+    
+    def test_indexing_and_slicing(self):
+        c = 'a = [1, 2, 3, 4, 5]\n'
+        
+        # Indexing
+        assert evalpy(c + 'a[2]') == '3'
+        assert evalpy(c + 'a[-2]') == '4'
+        
+        # Slicing
+        assert evalpy(c + 'a[:]') == '[ 1, 2, 3, 4, 5 ]'
+        assert evalpy(c + 'a[1:-1]') == '[ 2, 3, 4 ]'
+        
+        
     
     def test_assignments(self):
         assert py2js('foo = 3') == 'var foo = 3;'  # with var
@@ -234,6 +266,7 @@ class TestFuctions:
         assert py2js('foo(3, 4)') == 'foo(3, 4);'
         assert py2js('foo(3, 4+1)') == 'foo(3, 4 + 1);'
         assert py2js('foo(3, *args)')  # JS is complex, just test it compiles
+        assert py2js('a.foo(3, *args)')  # JS is complex, just test it compiles
         
         # Does not work
         raises(JSError, py2js, 'foo(x=1, y=2)')
@@ -250,7 +283,7 @@ class TestFuctions:
     
     @js
     def method1(self):
-        return 2 + 3
+        return
     
     def test_method1(self):
         code = self.method1.js.jscode

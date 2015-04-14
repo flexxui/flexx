@@ -47,7 +47,7 @@ def visit_pyscript_example_html(self, node):
     pre_style = "style='margin:2px; border:0px;'"
     
     self.body.append("<table>")
-    self.body.append("<tr><td style='text-align:right;'> <b>PyScript</b>&nbsp;&nbsp; </td><td>&nbsp;&nbsp; <b>JS</b> </td></tr>")
+    self.body.append("<tr><td style='text-align:right;'> <i>PyScript</i>&nbsp;&nbsp; </td><td>&nbsp;&nbsp; <i>JS</i> </td></tr>")
     
     for py in parts:
         

@@ -35,6 +35,9 @@ class TestBuildins:
         assert evalpy('print(3, 4, 5, sep="--")') == '3--4--5'
         assert evalpy('print(3, 4, 5, end="-")') == '3 4 5-'
         assert evalpy('print(3, 4, 5, end="\\n\\n-")') == '3 4 5\n\n-'
+        
+        raises(JSError, py2js, 'print(foo, file=x)')
+        raises(JSError, py2js, 'print(foo, bar=x)')
     
     def test_len(self):
         assert py2js('len(a)') == 'a.length;'
