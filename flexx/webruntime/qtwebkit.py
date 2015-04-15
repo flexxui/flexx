@@ -11,7 +11,22 @@ from .common import WebRuntime
 # e.g. passing commands through stdin.
 
 CODE_TO_RUN = """
-from flexx.qt import QtGui, QtCore, QtWebKit
+import sys
+
+qt = None
+try:
+    from PyQt4 import QtCore, QtGui, QtWebKit
+    qt = 'pyqt4'
+except ImportError:
+    try:
+        from PySide import QtCore, QtGui, QtWebKit
+        qt = 'pyside'
+    except ImportError:
+        pass
+
+if not qt:
+    sys.exit('Cannot import Qt')
+
 url = "{url}"
 app = QtGui.QApplication([])
 m = QtWebKit.QWebView(None)

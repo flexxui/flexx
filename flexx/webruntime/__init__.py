@@ -1,10 +1,12 @@
 """
 This module provides a runtime to run applications based on HTML5 and
-associated technologies. There are several runtimes available:
+associated technologies. There are several runtimes available.
 
 
-App runtimes
+The runtimes
 ------------
+
+App runtimes:
 
 * xul - Mozilla's app framework. Make use of the same engine as Firefox.
   Available where Firefox is installed.
@@ -13,18 +15,14 @@ App runtimes
 * pyqt - Use QWebkit as a runtime. No WebGL here though.
 * chrome-app
 
-
-Browsers
---------
+Browsers:
 
 * browser - launch the default browser
 * browser-firefox - launch firefox browser
 * browser-chrome - launch chrome/chromium browser
 * browser-x = launch browser x (if supported by webbrowser module)
 
-
-Other runtimes currently not supported
---------------------------------------
+Other runtimes currently not supported:
 
 * MSHTML - uses the trident engine (like IE does), I think we want this one
 * pywebkitgtk - not really cross-platform
@@ -57,8 +55,8 @@ def launch(url, runtime=None,
            title='', size=(640, 480), pos=None, icon=None):
     """ Launch a web runtime in a new process
     
-    Returns an object that can be used to control (to some extent) the
-    runtime.
+    Returns a WebRuntime object that can be used to control (to some
+    extent) the runtime.
     
     Parameters
     ----------

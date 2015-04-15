@@ -14,6 +14,9 @@ from .icon import Icon
 
 
 class WebRuntime(object):
+    """ Base class for all runtimes.
+    """
+    
     def __init__(self, **kwargs):
         assert 'url' in kwargs
         self._kwargs = kwargs
