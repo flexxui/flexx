@@ -72,7 +72,7 @@ def js(func):
     
     # def caller(self, *args):
     #     eval = self.get_app()._exec
-    #     args = ['self'] + list(args)  # todo: remove self?
+    #     args = ['self'] + list(args)
     #     a = ', '.join([repr(arg) for arg in args])
     #     eval('flexx.widgets.%s.%s(%s)' % (self.id, name, a))
     # 

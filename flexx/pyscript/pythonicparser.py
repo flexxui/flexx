@@ -41,6 +41,7 @@ class PythonicParser(BaseParser):
         
         else:
             # User defined type, use instanceof
+            # http://tobyho.com/2011/01/28/checking-types-in-javascript/
             cmp = unify(cls)
             if cmp[0] == '(':
                 raise JSError('isinstance() can only compare to simple types')

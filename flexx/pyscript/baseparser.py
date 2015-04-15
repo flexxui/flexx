@@ -12,7 +12,6 @@ import inspect
 import ast
 import types
 
-# todo: typeof operator -> typeof function or isinstance?
 
 class JSError(Exception):
     """ Exception raised when unable to convert Python to JS.
@@ -29,7 +28,8 @@ def unify(x):
     
     if x[0] in '\'"' and x[0] == x[-1] and x.count(x[0]) == 2:
         return x  # string
-    elif x.isidentifier() or x.isalnum():
+    #elif x.isidentifier() or x.isalnum():
+    elif re.match(r'^[.\w]*$', x):  # identifier, numbers, dots
         return x
     else:
         return '(%s)' % x

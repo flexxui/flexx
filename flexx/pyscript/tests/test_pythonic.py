@@ -54,6 +54,10 @@ class TestBuildins:
         assert evalpy('isinstance({}, list)') == 'false'
         assert evalpy('isinstance({}, "array")') == 'false'
         
+        assert evalpy('isinstance(eval, types.FunctionType)') == 'true'
+        assert evalpy('isinstance(eval, FunctionType)') == 'true'
+        assert evalpy('isinstance(3, types.FunctionType)') == 'false'
+        
         # own class
         code = 'function MyClass () {return this;}\nx = new MyClass();\n'
         assert evaljs(code + py2js('isinstance(x, "object")')) == 'true'

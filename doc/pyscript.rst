@@ -12,9 +12,11 @@ Pyscript API
 The PyScript module has a few dummy constants that can be imported and
 used in your code to let e.g. pyflakes know that the variable exists.
 
-.. data:: window
 .. data:: undefined
-    
+.. data:: window
+.. data:: document
+.. data:: Object
+
 
 ----
 

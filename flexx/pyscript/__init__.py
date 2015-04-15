@@ -80,3 +80,5 @@ from .functions import JSFunction, js, py2js, evaljs, evalpy
 # Some names that parties may want to import to fool pyflakes
 window = 'JS-WINDOW'
 undefined = 'JS-UNDEFINED'
+document = 'JS-DOCUMENT'
+Object = 'JS-OBJECT'
