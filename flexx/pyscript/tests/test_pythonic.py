@@ -11,6 +11,56 @@ def nowhitespace(s):
 
 class TestBuildins:
     
+    def test_isinstance(self):
+        # The resulting code is not particularly pretty, so we just
+        # test outcome
+        
+        assert evalpy('isinstance(3.0, list) == True') == 'false'
+        assert evalpy('isinstance(3.0, float) == True') == 'true'
+        
+        assert evalpy('x={}; isinstance(x.foo, "undefined")') == 'true'
+        
+        assert evalpy('isinstance(None, "null")') == 'true'
+        assert evalpy('isinstance(undefined, "undefined")') == 'true'
+        #
+        assert evalpy('isinstance(None, "undefined")') == 'false'
+        assert evalpy('isinstance(undefined, "null")') == 'false'
+        
+        assert evalpy('isinstance(3, float)') == 'true'
+        assert evalpy('isinstance(3, "number")') == 'true'
+        #
+        #assert evalpy('isinstance(3, int)') == 'false'  # int is not defined
+        
+        assert evalpy('isinstance("", str)') == 'true'
+        assert evalpy('isinstance("", "string")') == 'true'
+        #
+        assert evalpy('isinstance("", list)') == 'false'
+        
+        assert evalpy('isinstance(True, bool)') == 'true'
+        assert evalpy('isinstance(True, "boolean")') == 'true'
+        #
+        assert evalpy('isinstance(True, float)') == 'false'
+        
+        assert evalpy('isinstance([], list)') == 'true'
+        assert evalpy('isinstance([], "array")') == 'true'
+        #
+        assert evalpy('isinstance([], "object")') == 'false'
+        assert evalpy('isinstance([], "Object")') == 'false'
+        assert evalpy('isinstance([], dict)') == 'false'
+        
+        assert evalpy('isinstance({}, dict)') == 'true'
+        assert evalpy('isinstance({}, "object")') == 'true'
+        #
+        assert evalpy('isinstance({}, list)') == 'false'
+        assert evalpy('isinstance({}, "array")') == 'false'
+        
+        # own class
+        code = 'function MyClass () {return this;}\nx = new MyClass();\n'
+        assert evaljs(code + py2js('isinstance(x, "object")')) == 'true'
+        assert evaljs(code + py2js('isinstance(x, "Object")')) == 'true'
+        assert evaljs(code + py2js('isinstance(x, "MyClass")')) == 'true'
+        assert evaljs(code + py2js('isinstance(x, MyClass)')) == 'true'
+    
     def test_max(self):
         assert py2js('max(3, 4)') == 'max(3, 4);'
     

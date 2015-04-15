@@ -37,6 +37,7 @@ Supported basics:
 * numbers, strings, lists, dicts (the latter become JS arrays and objects)
 * operations: binary, unary, boolean, power, integer division
 * comparisons (``==`` -> ``==``, ``is`` -> ``===``)
+* ``isinstance()`` without the crappyness of ``typeof``
 * slicing (though not with step)
 * if-statements and single-line if-expression
 * while-loops and for-loops supporting continue, break, and else-clauses

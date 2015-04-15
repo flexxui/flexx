@@ -296,6 +296,8 @@ class BaseParser(object):
         
         # Create list of args - keep as parts: each element is a list
         args = [self.parse(arg) for arg in node.args]
+        
+        # flatten args and add commas
         argswithcommas = []
         for arg in args:
             argswithcommas.extend(arg)
@@ -306,9 +308,9 @@ class BaseParser(object):
         # Handle special functions and methods
         res = None
         if method_name in self._methods:
-            res = self._methods[method_name](node, full_name, argswithcommas)
+            res = self._methods[method_name](node, base_name)
         elif full_name in self._functions:
-            res = self._functions[full_name](node, full_name, argswithcommas)
+            res = self._functions[full_name](node)
         if res is not None:
             return res
         

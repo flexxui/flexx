@@ -1,4 +1,4 @@
-import types
+from types import FunctionType
 import inspect
 import subprocess
 
@@ -48,7 +48,7 @@ def js(func):
     
     if isinstance(func, JSFunction):
         return func
-    if not isinstance(func, types.FunctionType):
+    if not isinstance(func, FunctionType):
         raise ValueError('The js decorator only accepts real functions.')
     
     # Get name - strip "__js" suffix if it's present

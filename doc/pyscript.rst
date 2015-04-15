@@ -82,6 +82,28 @@ Quick user guide
     a.remove(x)
     
     
+    ## Instance testing using isinstance
+    
+    # Basic types
+    isinstance(3, float)  # in JS there are no ints
+    isinstance('', str)
+    isinstance([], list)
+    isinstance({}, dict)
+    isinstance(foo, types.FunctionType)
+    
+    # Can also use JS strings
+    isinstance(3, 'number')
+    isinstance('', 'string')
+    isinstance([], 'array')
+    isinstance({}, 'object')
+    isinstance(foo, 'function')
+    
+    # You can use it on your own types too ...
+    isinstance(x, MyClass)
+    isinstance(x, 'MyClass')  # equivalent
+    isinstance(x, 'Object')  # also yields true (subclass of Object)
+    
+    
     ## If statements
     
     if val > 7:

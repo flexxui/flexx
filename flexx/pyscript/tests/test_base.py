@@ -14,11 +14,11 @@ def nowhitespace(s):
 
 class TestParser(BaseParser):
     
-    def function_foo_foo(self, node, func, args):
+    def function_foo_foo(self, node):
         return 'xxx'
     
-    def method_bar_bar(self, node, func, args):
-        return 'yyy'
+    def method_bar_bar(self, node, base):
+        return base
 
 
 class TestTheBaseParser:
@@ -27,8 +27,8 @@ class TestTheBaseParser:
         assert TestParser("foo_foo()").dump() == 'xxx;'
         assert TestParser("bar_bar()").dump() == 'bar_bar();'
         
-        assert TestParser("foo.bar_bar()").dump() == 'yyy;'
-        assert TestParser("foo.foo_foo()").dump() == 'foo.foo_foo();'
+        assert TestParser("xxx.bar_bar()").dump() == 'xxx;'
+        assert TestParser("xxx.foo_foo()").dump() == 'xxx.foo_foo();'
 
 
 class TestExpressions:
