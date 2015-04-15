@@ -36,20 +36,25 @@ def unify(x):
 
 
 class BaseParser(object):
-    """ Base parser to transcompile Python to JS
-    
-    Base parser to convert Python to JavaScript. This implements
+    """ Base parser to convert Python to JavaScript. This implements
     one-to-one conversion. Additional conversions to allow more
     Pythesque code are implemented in PythonicParser.
     
     Instantiate this class with the Python code. Retrieve the JS code
     using the dump() method.
+    
+    In a subclass, you can implement methods called "function_x" or
+    "method_x", which will then be called during parsing when a
+    function/method with name "x" is encountered. (The PythonicParser
+    uses this mechanism.)
     """
     
-    COMMON_METHODS = dict(append='push')
+    # Developer notes:
+    # The parse_x() functions are called by parse() with the node of
+    # type x. They should return a string or a list of strings. parse()
+    # always returns a list of strings.
     
     NAME_MAP = {
-        'self': 'this',
         'True': 'true',
         'False': 'false',
         'None': 'null',
@@ -130,13 +135,13 @@ class BaseParser(object):
         """ Line feed - create a new line with the correct indentation.
         """
         return '\n' + self._indent * '    ' + code
-        
+    
     def dummy(self, name=''):
         """ Get a unique name.
         """
         self._dummy_counter += 1
         return 'dummy%i_%s' % (self._dummy_counter, name)
-        
+    
     def parse(self, node):
         """ Parse a node. Check node type and dispatch to one of the
         specific parse functions. Raises error if we cannot parse this
@@ -221,7 +226,7 @@ class BaseParser(object):
     ## Expressions
     
     def parse_Expr(self, node):
-        """ Expression (not stored in a variable) """
+        # Expression (not stored in a variable)
         code = [self.lf()]
         code += self.parse(node.value)
         code.append(';')
@@ -279,7 +284,6 @@ class BaseParser(object):
         return "%s %s %s" % (left, op, right)
     
     def parse_Call(self, node):
-        """ A function call """
         
         # Get full function name and method name if it exists
         if isinstance(node.func, ast.Attribute):
@@ -633,8 +637,7 @@ class BaseParser(object):
     ## Functions and class definitions
     
     def parse_FunctionDef(self, node, lambda_=False):
-        """ Common code for the FunctionDef and Lambda nodes.
-        """
+        # Common code for the FunctionDef and Lambda nodes.
         
         # Init function definition
         code = []
@@ -693,8 +696,30 @@ class BaseParser(object):
             code += self.parse(node.body)
             code.append(';')
         else:
-            for child in node.body:
-                code += self.parse(child)
+            body = node.body[:]
+            # Get docstring (if present) and fix its indentation
+            docstring = None
+            if (node.body and isinstance(node.body[0], ast.Expr) and 
+                              isinstance(node.body[0].value, ast.Str)):
+                docstring = body.pop(0).value.s.strip()
+                lines = docstring.splitlines()
+                getindent = lambda x: len(x) - len(x.strip())
+                indent = getindent(lines[1]) if (len(lines) > 1) else 0
+                lines[0] = ' ' * indent + lines[0]
+                lines = [line[indent:] for line in lines]
+                docstring = '\n'.join(lines)
+            
+            if docstring and not body:
+                # Raw JS
+                for line in docstring.splitlines():
+                    code.append(self.lf(line))
+            else:
+                # Normal function
+                if docstring:
+                    for line in docstring.splitlines():
+                        code.append(self.lf('// ' + line))
+                for child in body:
+                    code += self.parse(child)
         
         # Wrap up
         self._indent -= 1
@@ -790,7 +815,7 @@ class BaseParser(object):
         raise JSError('Imports not supported.')
     
     def parse_Module(self, node):
-        """ Module level. Just skip. """
+        # Module level. Just skip.
         code = []
         for child in node.body:
             code += self.parse(child)

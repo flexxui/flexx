@@ -1,14 +1,13 @@
 from .baseparser import BaseParser, JSError, unify
 
 
-# todo: self-> this define here?
-
-
 class PythonicParser(BaseParser):
-    """ Parser to transcompile Python to JS, allowing more Pythonic code.
-    
-    This allows for print(), len(), list methods, etc.
+    """ Parser to transcompile Python to JS, allowing more Pythonic
+    code, like ``self``, ``print()``, ``len()``, list methods, etc.
     """
+    
+    NAME_MAP = {'self': 'this', }
+    NAME_MAP.update(BaseParser.NAME_MAP)
     
     def function_print(self, node, func, args):
         # Process keywords

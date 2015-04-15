@@ -13,7 +13,10 @@ def py2js(code):
 
 
 def evaljs(code, whitespace=True):
-    """ Evaluate code in Node.js. Return last result as a string.
+    """ Evaluate JavaScript code in Node.js. 
+    
+    Return last result as a string. If whitespace is False, the whitespace
+    is stripped removed from the result.
     """
     res = subprocess.check_output(['nodejs', '-p', '-e', code])
     res = res.decode().rstrip()
@@ -25,22 +28,28 @@ def evaljs(code, whitespace=True):
 
 
 def evalpy(code, whitespace=True):
-    """ Evaluate python code in Node.js (after translating to js).
+    """ Evaluate PyScript code in Node.js (after translating to JS).
+    
+    Return last result as a string. If whitespace is False, the whitespace
+    is stripped removed from the result.
     """
     return evaljs(py2js(code), whitespace)
 
 
 def js(func):
-    """ Decorate a function with this to make it a JavaScript function.
+    """ Turn a function into a JavaScript function, usable as a decorator.
     
-    The decorated function is replaced by a function that you can call to
+    The given function is replaced by a function that you can call to
     invoke the JavaScript function in the web runtime.
     
     The returned function has a ``js`` attribute, which is a JSFunction
     object that can be used to get access to Python and JS code.
     """
+    
+    if isinstance(func, JSFunction):
+        return func
     if not isinstance(func, types.FunctionType):
-        raise ValueError('The js decorator can only decorate real functions.')
+        raise ValueError('The js decorator only accepts real functions.')
     
     # Get name - strip "__js" suffix if it's present
     # This allow mangling the function name on the Python side, to allow
@@ -53,30 +62,27 @@ def js(func):
         name = name[:-4]
     
     # Get code
-    # todo: if function consists of multi-line string, just use that as the JS code
     lines, linenr = inspect.getsourcelines(func)
     indent = len(lines[0]) - len(lines[0].lstrip())
     lines = [line[indent:] for line in lines]
-    code = ''.join(lines[1:])
+    if lines[0].startswith('@'):
+        code = ''.join(lines[1:])  # decorated function
+    else:
+        code = ''.join(lines)  # function object explicitly passed to js()
     
-    def caller(self, *args):
-        eval = self.get_app()._exec
-        args = ['self'] + list(args)  # todo: remove self?
-        a = ', '.join([repr(arg) for arg in args])
-        eval('flexx.widgets.%s.%s(%s)' % (self.id, name, a))
+    # def caller(self, *args):
+    #     eval = self.get_app()._exec
+    #     args = ['self'] + list(args)  # todo: remove self?
+    #     a = ', '.join([repr(arg) for arg in args])
+    #     eval('flexx.widgets.%s.%s(%s)' % (self.id, name, a))
+    # 
+    # caller.js = JSFunction(name, code)
     
-    caller.js = JSFunction(name, code)
-    
-    # todo: should we even allow calling the js function?
-    return caller
-    #return lambda *x, **y: print('This is a JS func')
+    return JSFunction(name, code)
 
 
-class JSFunction:
-    """ Definition of a javascript function.
-    
-    Allows getting access to the original Python code and the JS code. Also
-    allows calling the JS function from Python.
+class JSFunction(object):
+    """ Placeholder for storing the original Python code and the JS code.
     """
     
     def __init__(self, name, code):
@@ -88,12 +94,7 @@ class JSFunction:
         p = PythonicParser(code)
         p._parts[0] = ''  # remove "var xx = "
         self._jscode = p.dump()
-    
-    def __call__(self, *args):
-        #raise RuntimeError('This is a JavaScript function.')
-        eval = self.get_app()._exec
-        a = ', '.join([repr(arg) for arg in args])
-        eval('flexx.widgets.%s.%s("self", %s)' % (self._ob.id, self._name, a))
+        assert self._jscode.startswith('function')
     
     @property
     def name(self):
@@ -107,6 +108,9 @@ class JSFunction:
     def jscode(self):
         return self._jscode
     
+    def __call__(self, *args, **kwargs):
+        raise RuntimeError('Cannot call a JS function directly from Python')
+    
     def __repr__(self):
         return '<JSFunction (print to see code) at 0x%x>' % id(self)
     
@@ -114,5 +118,3 @@ class JSFunction:
         pytitle = '== Python code that defined this function =='
         jstitle = '== JS Code that represents this function =='
         return pytitle + '\n' + self.pycode + '\n' + jstitle + self.jscode
-
-

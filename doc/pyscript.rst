@@ -147,3 +147,10 @@ Quick user guide
     # Support for *args
     def foo(x, *values):
         bar(x+1, *values)
+    
+    # To write raw JS, define a function with only a docstring
+    def bar(a, b):
+        """
+        var c = 4;
+        return a + b + c;
+        """

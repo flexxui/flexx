@@ -45,6 +45,7 @@ Supported basics:
 * for-loop over dict/object using ``.keys()``, ``.values()`` and ``.items()``
 * function calls can have ``*args``
 * function defs can have default arguments and ``*args``
+* lambda expressions
 
 Supported Python conveniences:
 
