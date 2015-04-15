@@ -40,7 +40,6 @@ Memory considerations
 
 import os
 
-from .icon import Icon
 from .common import WebRuntime, default_icon
 from .xul import XulRuntime
 from .nodewebkit import NodeWebkitRuntime

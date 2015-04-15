@@ -10,7 +10,7 @@ import atexit
 import threading
 import subprocess
 
-from .icon import Icon
+from ..util.icon import Icon
 
 
 class WebRuntime(object):

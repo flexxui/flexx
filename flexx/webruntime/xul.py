@@ -35,7 +35,7 @@ import subprocess
 import os.path as op
 
 from .common import WebRuntime, create_temp_app_dir, appdata_dir, default_icon
-from .icon import Icon
+from ..util.icon import Icon
 
 # todo: title should change with title of web page?
 # todo: enable setting position/size at runtime?
