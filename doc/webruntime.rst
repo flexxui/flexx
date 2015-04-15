@@ -1,5 +1,5 @@
-----------------
-flexx.webruntime
-----------------
+----------------------
+The webruntime module
+----------------------
 
 .. automodule:: flexx.webruntime

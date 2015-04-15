@@ -1,5 +1,5 @@
-----------
-flexx.util
-----------
+---------------
+The util module
+---------------
 
 .. automodule:: flexx.util

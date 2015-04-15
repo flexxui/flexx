@@ -1,6 +1,6 @@
----------------
-PyScript module
----------------
+-------------------
+The pyscript module
+-------------------
 
 .. automodule:: flexx.pyscript
 
