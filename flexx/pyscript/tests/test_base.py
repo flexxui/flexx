@@ -84,17 +84,17 @@ class TestExpressions:
         
     
     def test_assignments(self):
-        assert py2js('foo = 3') == 'var foo = 3;'  # with var
+        assert py2js('foo = 3') == 'var foo;\nfoo = 3;'  # with var
         assert py2js('foo.bar = 3') == 'foo.bar = 3;'  # without var
         
         code = py2js('foo = 3; bar = 4')  # define both
-        assert code.count('var') == 2
+        assert code.count('var') == 1
         code = py2js('foo = 3; foo = 4')  # only define first time
         assert code.count('var') == 1
         
         code = py2js('foo = bar = 3')  # multiple assignment
         assert 'foo = bar = 3' in code
-        assert 'var foo, bar' in code
+        assert 'var bar, foo' in code  # alphabetic order
         
         # self -> this
         assert py2js('self') == 'this;'
@@ -165,9 +165,9 @@ class TestConrolFlow:
         assert ' in ' not in py2js('for i in {1:2, 2:3}: pass')
         
         # Test declaration of iteration variable
-        assert 'var i;' in py2js('for i in x: pass')
-        assert 'var i' in py2js('i=""\nfor i in x: pass')
-        assert 'var i' not in py2js('j=i=""\nfor i in x: pass')
+        assert 'var aa' in py2js('for aa in x: pass')
+        assert 'var aa' in py2js('aa=""\nfor aa in x: pass')
+        assert 'var aa' in py2js('j=aa=""\nfor aa in x: pass')
         
         # Test output for range
         assert evalpy('for i in range(3):\n  print(i)') == '0\n1\n2'
@@ -366,6 +366,7 @@ class TestFuctions:
             def foo(z):
                 y = 2
                 stub = False
+                only_here = 1
                 return x + y + z
             x = 1
             y = 0
@@ -374,10 +375,16 @@ class TestFuctions:
             res = foo(3)
             stub = True
             return res + y  # should return 1+2+3+1 == 7
-            
+        
         code = 'var x = ' + func.jscode
-        assert code.count('var y') == 2
-        assert code.count('var stub') == 2
+        vars1 = code.splitlines()[1]
+        vars2 = code.splitlines()[3]
+        assert vars1.strip().startswith('var ')
+        assert vars2.strip().startswith('var ')
+        
+        assert 'y' in vars1 and 'y' in vars2
+        assert 'stub' in vars1 and 'stub' in vars2
+        assert 'only_here' in vars2 and 'only_here' not in vars1
         assert evaljs(code + 'x()') == '7'
 
     def test_raw_js(self):

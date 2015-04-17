@@ -81,7 +81,10 @@ Not currently supported:
 
 * the ``in`` operator 
 * tuple packing/unpacking
-* exceptions, assertions, delete
+* raising and catching exceptions
+* assertions
+* delete
+* List comprehensions
 * importing
 * most Python builtin functions
 
@@ -90,6 +93,8 @@ Probably never suppored (because it's hard to map to JS):
 * slicing with steps
 * the set class (JS has no set)
 * support for ``**kwargs``
+* The ``with`` statement
+* Generators (i.e. ``yield``)
 
 """
 

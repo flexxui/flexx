@@ -47,6 +47,14 @@ class BaseParser(object):
     "method_x", which will then be called during parsing when a
     function/method with name "x" is encountered. (The PythonicParser
     uses this mechanism.)
+    
+    While working on ast parsing, this resource is very helpful:
+    https://greentreesnakes.readthedocs.org
+    
+    parameters:
+        code (str): the Python code to parse.
+        namespace (str, optional): if given, put the resulting JS in a
+            module with the given name.
     """
     
     # Developer notes:
@@ -96,7 +104,7 @@ class BaseParser(object):
             'IsNot' : "!==",
         }
     
-    def __init__(self, code):
+    def __init__(self, code, namespace=None):
         self._root = ast.parse(code)
         self._stack = []
         self._indent = 0
@@ -112,24 +120,96 @@ class BaseParser(object):
         
         # Parse
         self.push_stack()
+        if namespace:
+            self._indent += 1
         self._parts = self.parse(self._root)
-        if self._parts:
-            self._parts[0] = self._parts[0].lstrip()
-    
-    def push_stack(self):
-        self._stack.append(set())
-    
-    def pop_stack(self):
-        self._stack.pop(-1)
-    
-    @property
-    def vars(self):
-        return self._stack[-1]
+        ns = self._stack[0][1]
+        dec = self.pop_stack()
+        if dec:
+            self._parts.insert(0, self.lf(dec))
+        
+        # Post-process
+        if namespace:
+            self._indent -= 1
+            code = self._parts
+            code.insert(0, 'function () {\n')
+            code.append('\n\n')
+            code.append('    /* CREATING MODULE */\n')
+            code.append('    if (window.%s === undefined) {\n' % namespace)
+            code.append('        window.%s = {};\n' % namespace)
+            code.append('    }\n')
+            for name in sorted(ns):
+                code.append('    window.%s.%s = %s;\n' % (namespace, name, name))
+            code.append('}()\n')
+        else:
+            if self._parts:
+                self._parts[0] = self._parts[0].lstrip()
     
     def dump(self):
         """ Get the JS code as a string.
         """
         return ''.join(self._parts)
+    
+    def push_stack(self, name=None):
+        """ New stack. Match a call to this with a call to pop_stack()
+        and process the resulting line to declare the used variables.
+        If name is not given, pushes root or function namespace to the stack.
+        if name is given, pushes a class namespace on the stack. 
+        """
+        if name is None:
+            self._stack.append((None, set()))  # Inside function or in root
+        elif name:
+            self._stack.append((name, set()))  # Inside class
+        else:
+            raise JSError('Stack must be None or a nonempty string')
+    
+    def pop_stack(self):
+        """ Pop the current stack and return a string that contains
+        the declaration of all variables.
+        """
+        nsname, ns = self._stack.pop(-1)
+        if ns:
+            return 'var ' + ', '.join(sorted(ns)) + ';'
+        else:
+            return ''
+    
+    def with_prefix(self, name, new=False):
+        """ Add class prefix to a variable name if necessary.
+        """
+        nsname, ns = self._stack[-1]
+        if nsname is None:
+            return name  # regular namespace
+        else:
+            return nsname + '.prototype.' + name  # class
+    
+    # def register_vars(self, *vars):
+    #     """ Declare the given variables if necessary. Also registers
+    #     the variables to be present in the current namespace.
+    #     Should be given the non-prefixed variable names.
+    #     Return string.
+    #     """
+    #     nsname, ns = self._stack[-1]
+    #     
+    #     # Get declarations
+    #     result = ''
+    #     if nsname is None:
+    #         todeclare = []
+    #         for var in vars:
+    #             if var not in ns:
+    #                 todeclare.append(var)
+    #         if todeclare:
+    #             result = 'var ' + ', '.join(todeclare) + ';'
+    #     
+    #     # Register names
+    #     for var in vars:
+    #         assert not '.' in var
+    #         ns.add(var)
+    #     
+    #     return result
+    
+    @property
+    def vars(self):
+        return self._stack[-1][1]
     
     def lf(self, code=''):
         """ Line feed - create a new line with the correct indentation.
@@ -137,10 +217,12 @@ class BaseParser(object):
         return '\n' + self._indent * '    ' + code
     
     def dummy(self, name=''):
-        """ Get a unique name.
+        """ Get a unique name. The name is added to vars.
         """
         self._dummy_counter += 1
-        return 'dummy%i_%s' % (self._dummy_counter, name)
+        name = 'dummy%i_%s' % (self._dummy_counter, name)
+        self.vars.add(name)
+        return name
     
     def parse(self, node):
         """ Parse a node. Check node type and dispatch to one of the
@@ -212,9 +294,12 @@ class BaseParser(object):
     def parse_Name(self, node):
         # node.ctx can be Load, Store, Del -> can be of use somewhere?
         id = node.id
-        id = self.NAME_MAP.get(id, id)
+        if id in self.vars:
+            id = self.with_prefix(id)
+        else:
+            id = self.NAME_MAP.get(id, id)
         return id
-      
+    
     def parse_arg(self, node):
         # Py3k only
         name = node.arg
@@ -368,9 +453,7 @@ class BaseParser(object):
         for target in node.targets:
             var = ''.join(self.parse(target))
             if isinstance(target, ast.Name):
-                if var not in self.vars:
-                    self.vars.add(var)
-                    newvars.append((var, target))
+                self.vars.add(var)
                 code.append(var)
             elif isinstance(target, ast.Attribute):
                 code.append(var)
@@ -379,14 +462,6 @@ class BaseParser(object):
             else:
                 raise JSError("Unsupported assignment type")
             code.append(' = ')
-        
-        # Take care of new variables
-        if len(newvars) == 1:
-            code.insert(1, 'var ')
-        elif len(newvars) > 1:
-            names = [v[0] for v in newvars]
-            code.insert(0, 'var ' + ', '.join(names) + ';')
-            code.insert(0, self.lf())
         
         # Parse right side
         code += self.parse(node.value)
@@ -489,15 +564,13 @@ class BaseParser(object):
         # Prepare variable to detect else
         if node.orelse:
             else_dummy = self.dummy('else')
-            code.append(self.lf('var %s = true;' % else_dummy))
+            code.append(self.lf('%s = true;' % else_dummy))
         
         # Declare iteration variable if necessary
         if target not in self.vars:
             self.vars.add(target)
-            code.append(self.lf('var %s;' % target))
         if target2 and target2 not in self.vars:
             self.vars.add(target2)
-            code.append(self.lf('var %s;' % target2))
         
         if iter.startswith('range('):  # Explicit iteration 
             # Get range args
@@ -521,7 +594,7 @@ class BaseParser(object):
         elif sure_is_dict:  # Enumeration over an object (i.e. a dict)
             # Create dummy vars
             d_seq = self.dummy('sequence')
-            code.append(self.lf('var %s = %s;' % (d_seq, iter)))
+            code.append(self.lf('%s = %s;' % (d_seq, iter)))
             # The loop
             code += self.lf(), 'for (', target, ' in ', d_seq, ') {'
             self._indent += 1
@@ -545,16 +618,14 @@ class BaseParser(object):
             d_seq = self.dummy('sequence')
             d_iter = self.dummy('iter')
             d_len = self.dummy('length')
-            code.append(self.lf('var %s, %s, %s = %s;' % 
-                                (d_iter, d_len, d_seq, iter)))
+            code.append(self.lf('%s = %s;' % (d_seq, iter)))
             
             # Replace sequence with dict keys if its a dict
             # Note that Object.keys() only yields own enumerable properties
             code.append(self.lf('if ((typeof %s === "object") && '
                                 '(!Array.isArray(%s))) {' % (d_seq, d_seq)))
             
-            code.append(self.lf('    var %s = Object.keys(%s);' % 
-                                (d_seq, d_seq)))
+            code.append(self.lf('    %s = Object.keys(%s);' % (d_seq, d_seq)))
             code.append(self.lf('}'))
             
             # The loop
@@ -602,7 +673,7 @@ class BaseParser(object):
         # Prepare variable to detect else
         if node.orelse:
             else_dummy = self.dummy('else')
-            code.append(self.lf('var %s = true;' % else_dummy))
+            code.append(self.lf('%s = true;' % else_dummy))
         
         # The loop itself
         code.append(self.lf("while (%s) {" % test))
@@ -647,7 +718,10 @@ class BaseParser(object):
         # Init function definition
         code = []
         if not lambda_:
-            code.append(self.lf('var %s = ' % node.name))
+            prefixed = self.with_prefix(node.name)
+            if prefixed == node.name:  # normal function vs method
+                self.vars.add(node.name)
+            code.append(self.lf('%s = ' % prefixed))
         code.append('function (')
         
         # Collect args
@@ -666,7 +740,7 @@ class BaseParser(object):
         
         # Check
         if (not lambda_) and node.decorator_list:
-            raise JSError('No support for decorators')
+            raise JSError('No support for function decorators')
         if node.args.kwonlyargs:
             raise JSError('No support for keyword only arguments')
         if node.args.kwarg:
@@ -674,8 +748,13 @@ class BaseParser(object):
         
         # Prepare for content
         code.append(') {')
+        pre_code, code = code, []
         self._indent += 1
         self.push_stack()
+        
+        # Add argnames to known vars
+        for name in argnames:
+            self.vars.add(name)
         
         # Apply defaults
         offset = len(argnames) - len(node.args.defaults)
@@ -687,13 +766,14 @@ class BaseParser(object):
         if node.args.vararg:
             asarray = 'Array.prototype.slice.call(arguments)'
             name = node.args.vararg.arg
+            self.vars.add(name)
             if not argnames:
                 # Make available under *arg name
-                #code.append(self.lf('var %s = arguments;' % name))
-                code.append(self.lf('var %s = %s;' % (name, asarray)))
+                #code.append(self.lf('%s = arguments;' % name))
+                code.append(self.lf('%s = %s;' % (name, asarray)))
             else:
                 # Slice it
-                code.append(self.lf('var %s = %s.slice(%i);' % 
+                code.append(self.lf('%s = %s.slice(%i);' % 
                             (name, asarray, len(argnames))))
         # Apply content
         if lambda_:
@@ -731,9 +811,15 @@ class BaseParser(object):
         if lambda_:
             code.append('}')
         else:
-            code.append(self.lf('};'))
-        self.pop_stack()
-        return code
+            code.append(self.lf('};\n'))
+            # Remove argnames from known vars, we don't want to "var" them
+            for name in argnames:
+                self.vars.discard(name)
+            dec = self.pop_stack()
+            if dec:
+                pre_code.append(self.lf('    ' + dec))
+        
+        return pre_code + code
     
     def parse_Lambda(self, node):
         return self.parse_FunctionDef(node, True)
@@ -751,7 +837,39 @@ class BaseParser(object):
     #def parse_YieldFrom
     #def parse_Global
     #def parse_NonLocal
-    #def parse_ClassDef 
+    
+    def parse_ClassDef(self, node):
+        
+        # Checks
+        for base in node.bases:
+            if not isinstance(base, ast.Name):
+                raise JSError('Base classes must be simple names.')
+        if len(node.bases) > 1:
+            raise JSError('Multiple inheritance not (yet) supported.')
+        if node.keywords or node.starargs or node.kwargs:
+            raise JSError('Metaclasses not supported.')
+        if node.decorator_list:
+            raise JSError('Class decorators not supported.')
+        
+        base_class = node.bases[0].id if node.bases else None
+        
+        code = [self.lf('%s = function () {' % node.name),
+                self.lf('    if (this.__init__) {'),
+                self.lf('       this.__init__.apply(this, arguments);'),
+                self.lf('    }'),
+                self.lf('};\n'),
+                ]
+        
+        self.vars.add(node.name)
+        self.push_stack(node.name)
+        for sub in node.body:
+            code += self.parse(sub)
+        code.append('\n')
+        self.pop_stack() 
+        # no need to declare variables, because they're prefixed
+        
+        
+        return code
     
     ## Subscripting
     
