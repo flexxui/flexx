@@ -43,11 +43,14 @@ def visit_pyscript_example_html(self, node):
     code = '\n'.join(lines)
     parts = code.split('\n\n')
     
-    td_style = "style='vertical-align:top; min-width:300px;'"  # width:50%;
-    pre_style = "style='margin:2px; border:0px;'"
+    td_style = "style='vertical-align:top;'"  # width:50%;
+    pre_style = "style='margin:2px; padding: 2px; border:0px;'"
+    
+    
+    self.body.append("<style> div.hiddenjs {height: 1.2em; width: 2em; overflow:hidden; } div.hiddenjs:hover {height: initial; width: initial;}</style>\n")
     
     self.body.append("<table>")
-    self.body.append("<tr><td style='text-align:right;'> <i>PyScript</i>&nbsp;&nbsp; </td><td>&nbsp;&nbsp; <i>JS</i> </td></tr>")
+    #self.body.append("<tr><td style='text-align:right;'> <i>PyScript</i>&nbsp;&nbsp; </td><td>&nbsp;&nbsp; <i>JS</i> </td></tr>")
     
     for py in parts:
         
@@ -63,9 +66,12 @@ def visit_pyscript_example_html(self, node):
         js_html = highlight(js, javaScriptLexer, htmlFormatter)
         py_html = py_html.replace("<pre>", '<pre %s>' % pre_style)
         js_html = js_html.replace("<pre>", '<pre %s>' % pre_style)
+        js_html = "<div class='hiddenjs'>JS %s</div>" % js_html
+        
+        #self.body.append("%s <div class='hiddenjs'><a>&nbsp;</a> %s</div>" % (py_html, js_html))
         self.body.append("<tr><td %s>%s</td><td %s>%s</td></tr>" % 
                          (td_style, py_html, td_style, js_html))
-    
+        
     self.body.append("</table>")
     
 def depart_pyscript_example_html(self, node):
