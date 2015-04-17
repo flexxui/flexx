@@ -425,7 +425,7 @@ class BaseParser(object):
                 # used inside a PyScript file for the compiling.
                 return []
         
-        code = [self.lf('if (')]
+        code = [self.lf('if (')]  # first part (popped in elif parsing)
         code += self.parse(node.test)
         code.append(') {')
         self._indent += 1
@@ -433,15 +433,18 @@ class BaseParser(object):
             code += self.parse(stmt)
         self._indent -= 1
         if node.orelse:
-            code.append("} else {")
-            self._indent += 1
-            for stmt in node.orelse:
-                code += self.parse(stmt)
-            self._indent -= 1
-        code.append(self.lf("}"))
+            if len(node.orelse) == 1 and isinstance(node.orelse[0], ast.If):
+                code.append(self.lf("} else if ("))
+                code += self.parse(node.orelse[0])[1:-1]  # skip first and last
+            else:
+                code.append(self.lf("} else {"))
+                self._indent += 1
+                for stmt in node.orelse:
+                    code += self.parse(stmt)
+                self._indent -= 1
+        code.append(self.lf("}"))  # last part (popped in elif parsing)
         return code
-
-        
+    
     def parse_For(self, node):
         
         iter = ''.join(self.parse(node.iter))
