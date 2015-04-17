@@ -16,6 +16,8 @@
 import sys
 import os
 
+import sphinx
+
 ROOT_DIR = os.path.abspath(os.path.join(__file__, '..', '..'))
 sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, os.path.abspath('scripts'))
@@ -31,14 +33,15 @@ from flexx import util, webruntime
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-needs_sphinx = '1.3'
+#needs_sphinx = '1.3'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+sphinxver = sphinx.version_info
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',  # numpydoc/google style docstrings (sphinx>=v1.3)
+    'sphinx.ext.napoleon' if sphinxver >= (1, 3) else 'sphinxcontrib.napoleon',
     'pyscriptexample',
 ]
 
