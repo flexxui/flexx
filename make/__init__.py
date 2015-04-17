@@ -16,6 +16,6 @@ ROOT_DIR = op.dirname(THIS_DIR)
 
 # Definions - these change per project
 NAME = 'flexx'
-DOC_DIR = op.join(ROOT_DIR, 'doc')
+DOC_DIR = op.join(ROOT_DIR, 'docs')
 DOC_BUILD_DIR = op.join(DOC_DIR, '_build')
 TEST_DIR = op.join(ROOT_DIR, NAME)
