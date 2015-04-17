@@ -40,12 +40,12 @@ def sphinx_build(src_dir, build_dir):
     
     try:
         ret = 0
-        ret = sphinx.main(('sphinx-build',  # Dummy
+        ret = sphinx.main(['sphinx-build',  # Dummy
                           '-b', 'html',
                           '-d', op.join(build_dir, 'doctrees'),
                           src_dir,  # Source
                           op.join(build_dir, 'html'),  # Dest
-                          ))
+                          ])
     except SystemExit:
         pass
     if ret != 0:

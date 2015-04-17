@@ -5,20 +5,31 @@ import subprocess
 from .pythonicparser import PythonicParser
 
 
-def py2js(code):
+def py2js(pycode):
     """ Translate Python code to JavaScript.
+    
+    parameters:
+        pycode (str): the Python code to transalate.
+    
+    returns:
+        jscode (str): the resulting JavaScript.
     """
-    parser = PythonicParser(code)
+    parser = PythonicParser(pycode)
     return parser.dump()
 
 
-def evaljs(code, whitespace=True):
+def evaljs(jscode, whitespace=True):
     """ Evaluate JavaScript code in Node.js. 
     
-    Return last result as a string. If whitespace is False, the whitespace
-    is stripped removed from the result.
+    parameters:
+        jscode (str): the JavaScript code to evaluate.
+        whitespace (bool): if whitespace is False, the whitespace
+            is removed from the result.
+    
+    returns:
+        result (str): the last result as a string.
     """
-    res = subprocess.check_output(['nodejs', '-p', '-e', code])
+    res = subprocess.check_output(['nodejs', '-p', '-e', jscode])
     res = res.decode().rstrip()
     if res.endswith('undefined'):
         res = res[:-9].rstrip()
@@ -27,23 +38,35 @@ def evaljs(code, whitespace=True):
     return res
 
 
-def evalpy(code, whitespace=True):
+def evalpy(pycode, whitespace=True):
     """ Evaluate PyScript code in Node.js (after translating to JS).
     
-    Return last result as a string. If whitespace is False, the whitespace
-    is stripped removed from the result.
+    parameters
+    ----------
+    pycode : str
+        the PyScript code to evaluate.
+    whitespace : bool
+        if whitespace is False, the whitespace is removed from the result.
+    
+    returns
+    -------
+    result : str
+        the last result as a string.
     """
+    # delibirate numpy doc style to see if napoleon handles it the same
     return evaljs(py2js(code), whitespace)
 
 
 def js(func):
-    """ Turn a function into a JavaScript function, usable as a decorator.
+    """ Turn a function into a JavaScript function.
     
-    The given function is replaced by a function that you can call to
-    invoke the JavaScript function in the web runtime.
+    parameters:
+        func (function): The function to transtate. If this is a 
+            JSFunction object, it is returned as-is.
     
-    The returned function has a ``js`` attribute, which is a JSFunction
-    object that can be used to get access to Python and JS code.
+    returns:
+        jsfunction (JSFunction): An object that has a ``jscode``
+        ``pycode`` and ``name`` attribute.
     """
     
     if isinstance(func, JSFunction):
