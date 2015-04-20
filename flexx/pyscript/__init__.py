@@ -103,7 +103,7 @@ Probably never suppored (because it's hard to map to JS):
 
 from .baseparser import BaseParser, JSError
 from .pythonicparser import PythonicParser
-from .functions import JSFunction, js, py2js, evaljs, evalpy
+from .functions import JSCode, js, py2js, evaljs, evalpy
 
 # Some names that parties may want to import to fool pyflakes
 window = 'JS-WINDOW'

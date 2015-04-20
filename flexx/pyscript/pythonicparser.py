@@ -73,6 +73,34 @@ class PythonicParser(BaseParser):
         else:
             return None  # don't apply this feature
     
+    def function_sum(self, node):
+        if len(node.args) == 1:
+            return (unify(self.parse(node.args[0])), 
+                    '.reduce(function(a, b) {return a + b;})')
+        else:
+            raise JSError('sum() needs exactly one argument')
+    
+    def function_max(self, node):
+        if len(node.args) == 0:
+            raise JSError('max() needs at least one argument')
+        elif len(node.args) == 1:
+            arg = ''.join(self.parse(node.args[0]))
+            return 'Math.max.apply(null, ', arg, ')'
+        else:
+            args = ', '.join([unify(self.parse(arg)) for arg in node.args])
+            return 'Math.max(', args, ')'
+    
+    def function_min(self, node):
+        if len(node.args) == 0:
+            raise JSError('min() needs at least one argument')
+        elif len(node.args) == 1:
+            arg = ''.join(self.parse(node.args[0]))
+            return 'Math.min.apply(null, ', arg, ')'
+        else:
+            args = ', '.join([unify(self.parse(arg)) for arg in node.args])
+            return 'Math.min(', args, ')'
+    
+    
     def method_append(self, node, base):
         if len(node.args) == 1: 
             code = []

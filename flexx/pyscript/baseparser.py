@@ -104,7 +104,7 @@ class BaseParser(object):
             'IsNot' : "!==",
         }
     
-    def __init__(self, code, namespace=None):
+    def __init__(self, code, module=None):
         self._root = ast.parse(code)
         self._stack = []
         self._indent = 0
@@ -119,28 +119,31 @@ class BaseParser(object):
                 self._methods[name[7:]] = getattr(self, name)
         
         # Parse
-        self.push_stack()
-        if namespace:
+        self.push_stack('module', module or '')
+        if module:
             self._indent += 1
         self._parts = self.parse(self._root)
-        ns = self._stack[0][1]
-        dec = self.pop_stack()
-        if dec:
+        ns = self.pop_stack()
+        if ns:
+            dec = 'var ' + ', '.join(sorted(ns)) + ';'
             self._parts.insert(0, self.lf(dec))
         
         # Post-process
-        if namespace:
+        if module:
             self._indent -= 1
             code = self._parts
-            code.insert(0, 'function () {\n')
+            code.insert(0, '(function () {\n')
             code.append('\n\n')
-            code.append('    /* CREATING MODULE */\n')
-            code.append('    if (window.%s === undefined) {\n' % namespace)
-            code.append('        window.%s = {};\n' % namespace)
+            code.append('    /* ===== CREATING MODULE ===== */\n')
+            code.append('    if (window===undefined) {var window = global;}')
+            code.append('    if (window.%s === undefined) {\n' % module)
+            code.append('        window.%s = {};\n' % module)
             code.append('    }\n')
             for name in sorted(ns):
-                code.append('    window.%s.%s = %s;\n' % (namespace, name, name))
-            code.append('}()\n')
+                if name.startswith('_'):
+                    continue
+                code.append('    window.%s.%s = %s;\n' % (module, name, name))
+            code.append('})();\n')
         else:
             if self._parts:
                 self._parts[0] = self._parts[0].lstrip()
@@ -150,66 +153,32 @@ class BaseParser(object):
         """
         return ''.join(self._parts)
     
-    def push_stack(self, name=None):
-        """ New stack. Match a call to this with a call to pop_stack()
-        and process the resulting line to declare the used variables.
-        If name is not given, pushes root or function namespace to the stack.
-        if name is given, pushes a class namespace on the stack. 
+    def push_stack(self, type, name):
+        """ New namespace stack. Match a call to this with a call to
+        pop_stack() and process the resulting line to declare the used
+        variables. type must be 'module', 'class' or 'function'.
         """
-        if name is None:
-            self._stack.append((None, set()))  # Inside function or in root
-        elif name:
-            self._stack.append((name, set()))  # Inside class
-        else:
-            raise JSError('Stack must be None or a nonempty string')
+        assert type in ('module', 'class', 'function')
+        self._stack.append((type, name, set()))
     
     def pop_stack(self):
-        """ Pop the current stack and return a string that contains
-        the declaration of all variables.
+        """ Pop the current stack and return the namespace.
         """
-        nsname, ns = self._stack.pop(-1)
-        if ns:
-            return 'var ' + ', '.join(sorted(ns)) + ';'
-        else:
-            return ''
+        nstype, nsname, ns = self._stack.pop(-1)
+        return ns
     
     def with_prefix(self, name, new=False):
         """ Add class prefix to a variable name if necessary.
         """
-        nsname, ns = self._stack[-1]
-        if nsname is None:
-            return name  # regular namespace
+        nstype, nsname, ns = self._stack[-1]
+        if nstype == 'class':
+            return nsname + '.prototype.' + name
         else:
-            return nsname + '.prototype.' + name  # class
-    
-    # def register_vars(self, *vars):
-    #     """ Declare the given variables if necessary. Also registers
-    #     the variables to be present in the current namespace.
-    #     Should be given the non-prefixed variable names.
-    #     Return string.
-    #     """
-    #     nsname, ns = self._stack[-1]
-    #     
-    #     # Get declarations
-    #     result = ''
-    #     if nsname is None:
-    #         todeclare = []
-    #         for var in vars:
-    #             if var not in ns:
-    #                 todeclare.append(var)
-    #         if todeclare:
-    #             result = 'var ' + ', '.join(todeclare) + ';'
-    #     
-    #     # Register names
-    #     for var in vars:
-    #         assert not '.' in var
-    #         ns.add(var)
-    #     
-    #     return result
+            return name
     
     @property
     def vars(self):
-        return self._stack[-1][1]
+        return self._stack[-1][2]
     
     def lf(self, code=''):
         """ Line feed - create a new line with the correct indentation.
@@ -377,18 +346,8 @@ class BaseParser(object):
             full_name = base_name + '.' + method_name
         else:
             method_name = ''
+            base_name = ''
             full_name = unify(self.parse(node.func))
-        
-        # Create list of args - keep as parts: each element is a list
-        args = [self.parse(arg) for arg in node.args]
-        
-        # flatten args and add commas
-        argswithcommas = []
-        for arg in args:
-            argswithcommas.extend(arg)
-            argswithcommas.append(', ')
-        if argswithcommas:
-            argswithcommas.pop(-1)
         
         # Handle special functions and methods
         res = None
@@ -399,29 +358,47 @@ class BaseParser(object):
         if res is not None:
             return res
         
+        # Handle normally
+        if base_name.endswith('._base_class'):  # super() was used
+            return [full_name] + self._get_args(node, 'this', True)
+        else:
+            return [full_name] + self._get_args(node, base_name)
+    
+    def _get_args(self, node, base_name, use_call_or_apply=False):
+        """ Get arguments for function call. Does checking for keywords and
+        handles starargs. The first element in the returned list is either
+        "(" or ".apply(".
+        """
         # Check for keywords (not supported) after handling special functions
         if node.keywords:
             raise JSError('function calls do not support keyword arguments')
         if node.kwargs:
             raise JSError('function calls do not support **kwargs')
         
+        base_name = base_name or 'null'
+        
+        # flatten args and add commas
+        argswithcommas = []
+        for arg in node.args:
+            argswithcommas.extend(self.parse(arg))
+            argswithcommas.append(', ')
+        if argswithcommas:
+            argswithcommas.pop(-1)
+        
         if node.starargs:
-            # Func with star args
-            if '(' in full_name:
-                raise JSError('Function call only supports *args if used on '
-                              'a plain object.')
             starname = ''.join(self.parse(node.starargs))
-            code = []
-            if method_name:
-                code += [base_name, '.apply(', base_name, ', [']
-            else:
-                code += [full_name, '.apply(null, [']
+            code = ['.apply(', base_name, ', [']
             code += argswithcommas
             code += ['].concat(', starname, '))']
             return code
+        elif use_call_or_apply:
+            if argswithcommas:
+                return [".call(", base_name, ', '] + argswithcommas + [")"]
+            else:
+                return [".call(", base_name, ")"]
         else:
             # Normal func
-            return [full_name, "("] + argswithcommas + [")"]
+            return ["("] + argswithcommas + [")"]
     
     def parse_IfExp(self, node):
         # in "a if b else c"
@@ -453,8 +430,11 @@ class BaseParser(object):
         for target in node.targets:
             var = ''.join(self.parse(target))
             if isinstance(target, ast.Name):
-                self.vars.add(var)
-                code.append(var)
+                if '.' in var:
+                    code.append(var)
+                else:
+                    self.vars.add(var)
+                    code.append(self.with_prefix(var))
             elif isinstance(target, ast.Attribute):
                 code.append(var)
             elif isinstance(target, ast.Subscript):
@@ -750,7 +730,7 @@ class BaseParser(object):
         code.append(') {')
         pre_code, code = code, []
         self._indent += 1
-        self.push_stack()
+        self.push_stack('function', '' if lambda_ else node.name)
         
         # Add argnames to known vars
         for name in argnames:
@@ -812,11 +792,12 @@ class BaseParser(object):
             code.append('}')
         else:
             code.append(self.lf('};\n'))
-            # Remove argnames from known vars, we don't want to "var" them
+            # Pop stack, declare vars, but exclude our argnames
+            ns = self.pop_stack()
             for name in argnames:
-                self.vars.discard(name)
-            dec = self.pop_stack()
-            if dec:
+                ns.discard(name)
+            if ns:
+                dec = 'var ' + ', '.join(sorted(ns)) + ';'
                 pre_code.append(self.lf('    ' + dec))
         
         return pre_code + code
@@ -851,25 +832,58 @@ class BaseParser(object):
         if node.decorator_list:
             raise JSError('Class decorators not supported.')
         
-        base_class = node.bases[0].id if node.bases else None
+        # Get base class (not the constructor)
+        base_class = node.bases[0].id if node.bases else 'Object'
+        if base_class.lower() == 'object':  # maybe Python "object"
+            base_class = 'Object'
+        else:
+            base_class = base_class + '.prototype'  
         
+        # Write constructor    
         code = [self.lf('%s = function () {' % node.name),
+                #self.lf('    this._base_class = %s;' % base_class),
                 self.lf('    if (this.__init__) {'),
                 self.lf('       this.__init__.apply(this, arguments);'),
                 self.lf('    }'),
-                self.lf('};\n'),
+                self.lf('};'),
                 ]
         
+        # Apply inheritance
+        if base_class != 'Object':
+            code.append(self.lf('%s.prototype = Object.create(%s);' %
+                                (node.name, base_class)))
+        code.append(self.lf('%s.prototype._base_class = %s;' % 
+                            (node.name, base_class)))
+        code.append('\n')
+        
+        # Body ...
         self.vars.add(node.name)
-        self.push_stack(node.name)
+        self.push_stack('class', node.name)
         for sub in node.body:
             code += self.parse(sub)
         code.append('\n')
         self.pop_stack() 
         # no need to declare variables, because they're prefixed
         
-        
         return code
+    
+    def function_super(self, node):
+        # allow using super() in methods
+        if node.args:
+            raise JSError('super() accepts 0 or 1 arguments.')
+        if len(self._stack) < 3:  # module, class, function
+            raise JSError('can only use super() inside a method.')
+        
+        # Find the class of this function. We could also use 
+        # this._base_class, but by using the class, we mimic Python better.
+        nstype1, nsname1, _ = self._stack[-1]
+        nstype2, nsname2, _ = self._stack[-2]
+        if not (nstype1 == 'function' and nstype2 == 'class'):
+            raise JSError('can only use super() inside a method.')
+        
+        base_class = nsname2
+        return '%s.prototype._base_class' % base_class
+    
     
     ## Subscripting
     

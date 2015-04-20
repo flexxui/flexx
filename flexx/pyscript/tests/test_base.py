@@ -271,6 +271,18 @@ class TestFuctions:
         # Does not work
         raises(JSError, py2js, 'foo(x=1, y=2)')
         raises(JSError, py2js, 'foo(**kwargs)')
+        
+        code = "def foo(x): return x + 1\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(3)') == '4'
+        assert evalpy(code + 'd.foo(3)') == '4'
+        
+        code = "def foo(x, *xx): return x + sum(xx)\nd = {'foo':foo}\nfive=[2, 3]\n"
+        assert evalpy(code + 'foo(1, 2, 3)') == '6'
+        assert evalpy(code + 'd.foo(1, 2, 3)') == '6'
+        #
+        assert evalpy(code + 'foo(1, *five)') == '6'
+        assert evalpy(code + 'd.foo(1, *five)') == '6'
+    
     
     def test_func1(self):
         code = func1.jscode
@@ -416,4 +428,104 @@ class TestFuctions:
         assert code.count('// a docstring') == 1
 
 
+class TestClasses:
+    
+    
+    def test_class(self):
+        @js
+        class MyClass:
+            
+            foo = 7
+            foo = foo + 1
+            
+            def __init__(self):
+                self.bar = 7
+            def addOne(self):
+                self.bar += 1
+        
+        code = MyClass.jscode + 'var m = new MyClass();'
+        
+        assert evaljs(code + 'm.bar;') == '7'
+        assert evaljs(code + 'm.addOne();m.bar;') == '8'
+            
+        # class vars
+        assert evaljs(code + 'm.foo;') == '8'
+    
+    
+    def test_inheritance_and_super(self):
+        
+        class MyClass1:
+            def __init__(self):
+                self.bar = 7
+            def add(self, x=1):
+                self.bar += x
+            def addTwo(self):
+                self.bar += 2
+        
+        class MyClass2(MyClass1):
+            def addTwo(self):
+                super().addTwo()
+                self.bar += 1  # haha, we add three!
+        
+        class MyClass3(MyClass2):
+            def addTwo(self):
+                super().addTwo()
+                self.bar += 1  # haha, we add four!
+            def addFour(self):
+                super().add(4)
+        
+        code = js(MyClass1).jscode + js(MyClass2).jscode + js(MyClass3).jscode
+        code += 'var m1=new MyClass1(), m2=new MyClass2(), m3=new MyClass3();'
+        
+        # m1
+        assert evaljs(code + 'm1.bar;') == '7'
+        assert evaljs(code + 'm1.add();m1.bar;') == '8'
+        assert evaljs(code + 'm1.addTwo();m1.bar;') == '9'
+        # m2
+        assert evaljs(code + 'm2.bar;') == '7'
+        assert evaljs(code + 'm2.add();m2.bar;') == '8'
+        assert evaljs(code + 'm2.addTwo();m2.bar;') == '10'
+        # m3
+        assert evaljs(code + 'm3.bar;') == '7'
+        assert evaljs(code + 'm3.add();m3.bar;') == '8'
+        assert evaljs(code + 'm3.addTwo();m3.bar;') == '11'
+        assert evaljs(code + 'm3.addFour();m3.bar;') == '11'  # super with args
+        
+        # Inhertance m1
+        assert evaljs(code + 'm1 instanceof MyClass3;') == 'false'
+        assert evaljs(code + 'm1 instanceof MyClass2;') == 'false'
+        assert evaljs(code + 'm1 instanceof MyClass1;') == 'true'
+        assert evaljs(code + 'm1 instanceof Object;') == 'true'
+        
+        # Inhertance m2
+        assert evaljs(code + 'm2 instanceof MyClass3;') == 'false'
+        assert evaljs(code + 'm2 instanceof MyClass2;') == 'true'
+        assert evaljs(code + 'm2 instanceof MyClass1;') == 'true'
+        assert evaljs(code + 'm2 instanceof Object;') == 'true'
+        
+        # Inhertance m3
+        assert evaljs(code + 'm3 instanceof MyClass3;') == 'true'
+        assert evaljs(code + 'm3 instanceof MyClass2;') == 'true'
+        assert evaljs(code + 'm3 instanceof MyClass1;') == 'true'
+        assert evaljs(code + 'm3 instanceof Object;') == 'true'
+
+
+class TestModules:
+    
+    def test_module(self):
+        
+        code = BaseParser('foo=3;bar=4;_priv=0;', 'mymodule').dump()
+        
+        # Test that global variables exist
+        assert evaljs(code+'mymodule.foo+mymodule.bar') == '7'
+        
+        # And privates do not
+        assert evaljs(code+'mymodule._priv===undefined') == 'true'
+
+
 run_tests_if_main()
+# if __name__ == '__main__':
+#     t = TestClasses()
+#     t.test_class()
+#     t.test_inheritance()
+

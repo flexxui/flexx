@@ -66,7 +66,15 @@ class TestBuildins:
         assert evaljs(code + py2js('isinstance(x, MyClass)')) == 'true'
     
     def test_max(self):
-        assert py2js('max(3, 4)') == 'max(3, 4);'
+        assert evalpy('max([3, 4, 5, 1]);') == '5'
+        assert evalpy('max(3, 4, 5, 1);') == '5'
+    
+    def test_min(self):
+        assert evalpy('min([3, 4, 1, 5, 2]);') == '1'
+        assert evalpy('min(3, 4, 1, 5, 2);') == '1'
+    
+    def test_sum(self):
+        assert evalpy('sum([3, 4, 1, 5, 2]);') == '15'
     
     def test_print(self):
         # Test code

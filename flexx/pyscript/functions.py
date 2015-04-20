@@ -74,22 +74,34 @@ def script2js(filename, namespace=None):
     open(filename2, 'wt').write(jscode)
 
 
-def js(func):
-    """ Turn a function into a JavaScript function.
+def js(ob):
+    """ Get the JavaScript code for a class or function. Can be used
+    as a decorator.
     
-    parameters:
-        func (function): The function to transtate. If this is a 
-            JSFunction object, it is returned as-is.
+    Parameters:
+        func (class, function): The function or class to transtate. If
+            this is already JSCode object, it is returned as-is. 
     
-    returns:
-        jsfunction (JSFunction): An object that has a ``jscode``
-        ``pycode`` and ``name`` attribute.
+    Returns:
+        jscode (JSCode): An object that has a ``jscode``, ``pycode`` and
+            ``name`` attribute.
+    
+    Note:
+        The Python source code for classes is acquired by name; avoid
+        decorating classes in modules where multiple classes with the
+        same name are defined. This is a consequence of classes not
+        having a corresponding code object (in contrast to functions).
     """
     
-    if isinstance(func, JSFunction):
-        return func
-    if not isinstance(func, FunctionType):
-        raise ValueError('The js decorator only accepts real functions.')
+    if isinstance(ob, JSCode):
+        return ob
+    elif isinstance(ob, type):
+        thetype = 'class'
+    elif isinstance(ob, FunctionType):
+        thetype = 'function'
+    else:
+        raise ValueError('The js decorator only accepts classes '
+                         'and real functions.')
     
     # Get name - strip "__js" suffix if it's present
     # This allow mangling the function name on the Python side, to allow
@@ -97,65 +109,84 @@ def js(func):
     # other solutions, from class-inside-class constructions to
     # black-magic decorators that auto-mangle the function name. I settled
     # on just allowing "func_name__js".
-    name = func.__name__
+    name = ob.__name__
     if name.endswith('__js'):
         name = name[:-4]
     
     # Get code
-    lines, linenr = inspect.getsourcelines(func)
+    try:
+        lines, linenr = inspect.getsourcelines(ob)
+    except Exception as err:
+        raise ValueError('Could not get source code for object: %s' % err)
     indent = len(lines[0]) - len(lines[0].lstrip())
     lines = [line[indent:] for line in lines]
     if lines[0].startswith('@'):
-        code = ''.join(lines[1:])  # decorated function
+        code = ''.join(lines[1:])  # decorated function/class
     else:
-        code = ''.join(lines)  # function object explicitly passed to js()
+        code = ''.join(lines)  # object explicitly passed to js()
     
-    # def caller(self, *args):
-    #     eval = self.get_app()._exec
-    #     args = ['self'] + list(args)
-    #     a = ', '.join([repr(arg) for arg in args])
-    #     eval('flexx.widgets.%s.%s(%s)' % (self.id, name, a))
-    # 
-    # caller.js = JSFunction(name, code)
-    
-    return JSFunction(name, code)
+    return JSCode(thetype, name, code)
 
 
-class JSFunction(object):
-    """ Placeholder for storing the original Python code and the JS code.
+class JSCode(object):
+    """ Placeholder for storing the original Python code and the JS
+    code for a class or function.
     """
     
-    def __init__(self, name, code):
+    def __init__(self, thetype, name, pycode):
+        assert thetype in ('function', 'class')
+        self._type = thetype
         self._name = name
-        self._pycode = code
+        self._pycode = pycode
         
-        # Convert to JS, but strip function name, 
-        # so that string starts with "function ( ..."
-        p = PythonicParser(code)
-        p._parts[0] = ''  # remove "var xx"
-        p._parts[1] = ''  # remove "xx = "
-        self._jscode = p.dump()
-        assert self._jscode.startswith('function')
+        p = PythonicParser(pycode)
+        
+        if thetype == 'function':
+            # Convert to JS, but strip function name, 
+            # so that string starts with "function ( ..."
+            p._parts[0] = ''  # remove "var xx"
+            p._parts[1] = ''  # remove "xx = "
+            self._jscode = p.dump()
+            assert self._jscode.startswith('function')
+        elif thetype == 'class':
+            self._jscode = p.dump()
+            assert self._jscode.startswith('var %s' % name)
+    
+    @property
+    def type(self):
+        """ "function" or "class".
+        """
+        return self._type
     
     @property
     def name(self):
+        """ The name of the class or function.
+        """
         return self._name
     
     @property
     def pycode(self):
+        """ The Python code that defines this function/class.
+        """
         return self._pycode
     
     @property
     def jscode(self):
+        """ The resulting JavaScript code for this function/class.
+        """
         return self._jscode
     
     def __call__(self, *args, **kwargs):
-        raise RuntimeError('Cannot call a JS function directly from Python')
+        action = {'function': 'call', 'class': 'instantiate'}[self._type]
+        raise RuntimeError('Cannot %s a JS %s directly from Python' % 
+                           (action, self._type))
     
     def __repr__(self):
-        return '<JSFunction (print to see code) at 0x%x>' % id(self)
+        
+        return '<JSCode %s (print to see code) at 0x%x>' % (self._type, 
+                                                            id(self))
     
     def __str__(self):
-        pytitle = '== Python code that defined this function =='
-        jstitle = '== JS Code that represents this function =='
+        pytitle = '== Python code that defines this %s ==' % self._type
+        jstitle = '== JS Code that represents this %s ==' % self._type
         return pytitle + '\n' + self.pycode + '\n' + jstitle + self.jscode
