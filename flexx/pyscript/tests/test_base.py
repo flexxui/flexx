@@ -80,8 +80,6 @@ class TestExpressions:
         # Slicing
         assert evalpy(c + 'a[:]') == '[ 1, 2, 3, 4, 5 ]'
         assert evalpy(c + 'a[1:-1]') == '[ 2, 3, 4 ]'
-        
-        
     
     def test_assignments(self):
         assert py2js('foo = 3') == 'var foo;\nfoo = 3;'  # with var
@@ -102,6 +100,10 @@ class TestExpressions:
         
         # Indexing
         assert evalpy('a=[0,0]\na[0]=2\na[1]=3\na', False) == '[2,3]'
+        
+        # Tuple unpacking
+        evalpy('x=[1,2,3]\na, b, c = x\nb', False) == '2'
+        evalpy('a,b,c = [1,2,3]\nc,b,a = a,b,c\n[a,b,c]', False) == '[3,2,1]'
     
     def test_aug_assignments(self):
         # assign + bin op
@@ -417,15 +419,14 @@ class TestFuctions:
         
         @js
         def func(a, b):
-            """ a docstring 
-            """
+            """ docstring """
             return a + b
         
         code = 'var x = ' + func.jscode
         assert evaljs(code + 'x(100, 10)') == '110'
         assert evaljs(code + 'x("x", 10)') == 'x10'
         
-        assert code.count('// a docstring') == 1
+        assert code.count('// docstring') == 1
 
 
 class TestClasses:
@@ -434,7 +435,7 @@ class TestClasses:
     def test_class(self):
         @js
         class MyClass:
-            
+            """ docstring """
             foo = 7
             foo = foo + 1
             
@@ -445,6 +446,7 @@ class TestClasses:
         
         code = MyClass.jscode + 'var m = new MyClass();'
         
+        assert code.count('// docstring') == 1
         assert evaljs(code + 'm.bar;') == '7'
         assert evaljs(code + 'm.addOne();m.bar;') == '8'
             
@@ -514,7 +516,10 @@ class TestModules:
     
     def test_module(self):
         
-        code = BaseParser('foo=3;bar=4;_priv=0;', 'mymodule').dump()
+        code = BaseParser('"docstring"\nfoo=3;bar=4;_priv=0;', 'mymodule').dump()
+        
+        # Has docstring
+        assert code.count('// docstring') == 1
         
         # Test that global variables exist
         assert evaljs(code+'mymodule.foo+mymodule.bar') == '7'

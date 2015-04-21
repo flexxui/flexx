@@ -60,6 +60,7 @@ Supported basics:
 * numbers, strings, lists, dicts (the latter become JS arrays and objects)
 * operations: binary, unary, boolean, power, integer division
 * comparisons (``==`` -> ``==``, ``is`` -> ``===``)
+* tuple packing and unpacking
 * ``isinstance()`` without the crappyness of ``typeof``
 * slicing (though not with step)
 * if-statements and single-line if-expression
@@ -70,17 +71,20 @@ Supported basics:
 * function calls can have ``*args``
 * function defs can have default arguments and ``*args``
 * lambda expressions
+* classes, with (single) inheritance
+* the use of super()
+* Creation of "modules"
 
 Supported Python conveniences:
 
 * use of ``self`` is translated to ``this``
 * ``print()`` becomes ``console.log()`` (also support ``sep`` and ``end``)
 * ``len(x)`` becomes ``x.length``
+* min(), max() and sum()
 
 Not currently supported:
 
 * the ``in`` operator 
-* tuple packing/unpacking
 * raising and catching exceptions
 * assertions
 * delete

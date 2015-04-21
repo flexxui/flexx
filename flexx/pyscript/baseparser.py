@@ -7,6 +7,7 @@ Useful links:
 
 """
 
+import sys
 import re
 import inspect
 import ast
@@ -118,11 +119,26 @@ class BaseParser(object):
             elif name.startswith('method_'):
                 self._methods[name[7:]] = getattr(self, name)
         
-        # Parse
+        # Prepare
         self.push_stack('module', module or '')
         if module:
             self._indent += 1
-        self._parts = self.parse(self._root)
+        
+        # Parse
+        try:
+            self._parts = self.parse(self._root)
+        except JSError as err:
+            # Give smarter error message
+            _, _, tb = sys.exc_info()
+            try:
+               msg = self._better_js_error(tb)
+            except Exception:  # pragma: no cover
+                raise(err)
+            else:
+                err.args = (msg + ':\n' + str(err), )
+                raise(err)
+        
+        # Finish
         ns = self.pop_stack()
         if ns:
             dec = 'var ' + ', '.join(sorted(ns)) + ';'
@@ -135,7 +151,7 @@ class BaseParser(object):
             code.insert(0, '(function () {\n')
             code.append('\n\n')
             code.append('    /* ===== CREATING MODULE ===== */\n')
-            code.append('    if (window===undefined) {var window = global;}')
+            code.append('    if (window===undefined) {var window = global;}\n')
             code.append('    if (window.%s === undefined) {\n' % module)
             code.append('        window.%s = {};\n' % module)
             code.append('    }\n')
@@ -152,6 +168,30 @@ class BaseParser(object):
         """ Get the JS code as a string.
         """
         return ''.join(self._parts)
+    
+    def _better_js_error(self, tb):  # pragma: no cover
+        """ If we get a JSError, we try to get the corresponding node
+        and print the lineno as well as the function etc.
+        """
+        node = None
+        classNode = None
+        funcNode = None
+        while tb.tb_next:
+            tb = tb.tb_next
+            node = tb.tb_frame.f_locals.get('node', node)
+            classNode = node if isinstance(node, ast.ClassDef) else classNode
+            funcNode = node if isinstance(node, ast.FunctionDef) else funcNode
+        
+        msg = 'Error processing %s-node' % (node.__class__.__name__)
+        if classNode:
+            msg += ' in class "%s"' % classNode.name
+        if funcNode:
+            msg += ' in function "%s"' % funcNode.name
+        if hasattr(node, 'lineno'):
+            msg += ' on line %i' % node.lineno
+        if hasattr(node, 'col_offset'):
+            msg += ':%i' % node.col_offset
+        return msg
     
     def push_stack(self, type, name):
         """ New namespace stack. Match a call to this with a call to
@@ -426,7 +466,7 @@ class BaseParser(object):
         code = [self.lf()]
         
         # Parse targets
-        newvars = []
+        tuple = []
         for target in node.targets:
             var = ''.join(self.parse(target))
             if isinstance(target, ast.Name):
@@ -439,6 +479,10 @@ class BaseParser(object):
                 code.append(var)
             elif isinstance(target, ast.Subscript):
                 code.append(var)
+            elif isinstance(target, (ast.Tuple, ast.List)):
+                dummy = self.dummy()
+                code.append(dummy)
+                tuple = [unify(self.parse(x)) for x in target.elts]
             else:
                 raise JSError("Unsupported assignment type")
             code.append(' = ')
@@ -446,6 +490,14 @@ class BaseParser(object):
         # Parse right side
         code += self.parse(node.value)
         code.append(';')
+        
+        # Handle tuple unpacking
+        if tuple:
+            code.append(self.lf())
+            for i, x in enumerate(tuple):
+                self.vars.add(x)
+                code.append('%s = %s[%i];' % (x, dummy, i))
+        
         return code
     
     def parse_AugAssign(self, node):  # -> x += 1
@@ -692,6 +744,25 @@ class BaseParser(object):
     
     ## Functions and class definitions
     
+    
+    def _get_docstring(self, node):
+        """ If a docstring is present, in the body of the given node,
+        remove that string node and return it as a string, corrected
+        for indentation and stripped. If no docstring is present return
+        empty string.
+        """
+        docstring = ''
+        if (node.body and isinstance(node.body[0], ast.Expr) and 
+                          isinstance(node.body[0].value, ast.Str)):
+            docstring = node.body.pop(0).value.s.strip()
+            lines = docstring.splitlines()
+            getindent = lambda x: len(x) - len(x.strip())
+            indent = getindent(lines[1]) if (len(lines) > 1) else 0
+            lines[0] = ' ' * indent + lines[0]
+            lines = [line[indent:] for line in lines]
+            docstring = '\n'.join(lines)
+        return docstring
+    
     def parse_FunctionDef(self, node, lambda_=False):
         # Common code for the FunctionDef and Lambda nodes.
         
@@ -761,29 +832,16 @@ class BaseParser(object):
             code += self.parse(node.body)
             code.append(';')
         else:
-            body = node.body[:]
-            # Get docstring (if present) and fix its indentation
-            docstring = None
-            if (node.body and isinstance(node.body[0], ast.Expr) and 
-                              isinstance(node.body[0].value, ast.Str)):
-                docstring = body.pop(0).value.s.strip()
-                lines = docstring.splitlines()
-                getindent = lambda x: len(x) - len(x.strip())
-                indent = getindent(lines[1]) if (len(lines) > 1) else 0
-                lines[0] = ' ' * indent + lines[0]
-                lines = [line[indent:] for line in lines]
-                docstring = '\n'.join(lines)
-            
-            if docstring and not body:
+            docstring = self._get_docstring(node)
+            if docstring and not node.body:
                 # Raw JS
                 for line in docstring.splitlines():
                     code.append(self.lf(line))
             else:
                 # Normal function
-                if docstring:
-                    for line in docstring.splitlines():
-                        code.append(self.lf('// ' + line))
-                for child in body:
+                for line in docstring.splitlines():
+                    code.append(self.lf('// ' + line))
+                for child in node.body:
                     code += self.parse(child)
         
         # Wrap up
@@ -839,14 +897,15 @@ class BaseParser(object):
         else:
             base_class = base_class + '.prototype'  
         
-        # Write constructor    
-        code = [self.lf('%s = function () {' % node.name),
-                #self.lf('    this._base_class = %s;' % base_class),
-                self.lf('    if (this.__init__) {'),
-                self.lf('       this.__init__.apply(this, arguments);'),
-                self.lf('    }'),
-                self.lf('};'),
-                ]
+        # Write constructor
+        code = []
+        code.append(self.lf('%s = function () {' % node.name))
+        for line in self._get_docstring(node).splitlines():
+            code.append(self.lf('    // ' + line))
+        code.append(self.lf('    if (this.__init__) {'))
+        code.append(self.lf('       this.__init__.apply(this, arguments);'))
+        code.append(self.lf('    }'))
+        code.append(self.lf('};'))
         
         # Apply inheritance
         if base_class != 'Object':
@@ -953,7 +1012,17 @@ class BaseParser(object):
     
     def parse_Module(self, node):
         # Module level. Just skip.
+        
+        # Get docstring, but only if in module mode (i.e. top stack has a name)
+        docstring = ''
+        if self._stack[0][1]:
+            docstring = self._get_docstring(node)
+        
         code = []
+        if docstring:
+            for line in docstring.splitlines():
+                code.append(self.lf('// ' + line))
+            code.append('\n')
         for child in node.body:
             code += self.parse(child)
         return code
