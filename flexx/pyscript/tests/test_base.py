@@ -256,6 +256,23 @@ class TestConrolFlow:
         assert evalpy(for9 + 'if i==30:break\nelse: print(99)\n0') == '99\n0'
 
 
+class TestExceptions:
+    
+    def test_raise(self):
+        
+        assert 'throw' in py2js('raise MyException("foo")')
+        assert 'MyException' in py2js('raise MyException("foo")')
+        assert 'foo' in py2js('raise MyException("foo")')
+        
+        # todo: we cannot eval-test this while we have no catch
+    
+    def test_assert(self):
+        
+        assert 'throw' in py2js('assert True')
+        evalpy('assert true; 7') == '7'
+        evalpy('assert true, "msg"; 7') == '7'
+
+
 @js
 def func1():
     return 2 + 3

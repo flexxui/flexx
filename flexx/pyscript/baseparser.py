@@ -13,6 +13,7 @@ import inspect
 import ast
 import types
 
+# todo: when using x = Foo(), insert "new"
 
 class JSError(Exception):
     """ Exception raised when unable to convert Python to JS.
@@ -151,14 +152,14 @@ class BaseParser(object):
             code.insert(0, '(function () {\n')
             code.append('\n\n')
             code.append('    /* ===== CREATING MODULE ===== */\n')
-            code.append('    if (window===undefined) {var window = global;}\n')
-            code.append('    if (window.%s === undefined) {\n' % module)
-            code.append('        window.%s = {};\n' % module)
+            code.append('    // note that "this" is the global object\n')
+            code.append('    if (this.%s === undefined) {\n' % module)
+            code.append('        this.%s = {};\n' % module)
             code.append('    }\n')
             for name in sorted(ns):
                 if name.startswith('_'):
                     continue
-                code.append('    window.%s.%s = %s;\n' % (module, name, name))
+                code.append('    this.%s.%s = %s;\n' % (module, name, name))
             code.append('})();\n')
         else:
             if self._parts:
@@ -513,9 +514,40 @@ class BaseParser(object):
             op = ' %s= ' % self.BINARY_OP[node.op.__class__.__name__]
             return [nl, target, op, value]
     
-    # parse_Raise
+    def parse_Raise(self, node):
+        # We simply raise the exception as a string
+        if sys.version_info >= (3, ):
+            if node.exc is None:
+                raise JSError('When raising, provide an error object.')
+            if node.cause is not None:
+                raise JSError('When raising, "cause" is not supported.')
+            err = ''.join(self.parse(node.exc))
+            return "throw %r" % err
+        else:
+            if node.type is None:
+                raise JSError('When raising, provide a type.')
+            if node.inst is not None:
+                raise JSError('When raising, "instance" is not supported.')
+            if node.tback is not None:
+                raise JSError('When raising, "tback" is not supported.')
+            err = ''.join(self.parse(node.type))
+            return "throw %r" % err
     
-    # parse_Assert
+    def parse_Assert(self, node):
+        
+        test = ''.join(self.parse(node.test))
+        msg = test
+        if node.msg:
+            msg = ''.join(self.parse(node.msg))
+        
+        code = []
+        code.append('if (!(')
+        code += test
+        code.append(')) {')
+        code.append('throw "AssertionError: ')
+        code.append(msg)
+        code.append('";}')
+        return code
     
     # parse_Delete
     
