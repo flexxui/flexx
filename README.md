@@ -13,11 +13,20 @@ we recommend having Firefox installed.
 Flexx consists of several modules which can be individually used; none
 of the modules are imported by default.
 
-* ui - the ui toolkit, most people will use just this
-* webruntime - launch a web runtime (xul application, browser etc.)
-* pyscript - Python to JavaScript compiler
-* properties - or util.properties? - A property system similar to IPython's 
+* ui - the ui toolkit, most people will use just this.
+* webruntime - launch a web runtime (xul application, browser etc.).
+* pyscript - Python to JavaScript compiler.
+* properties - or util.properties? - A property system similar to IPython's
   traitlets or bokeh's properties.
-* util - various utilities related to application development
-* lui - a lightweight UI toolkit based on OpenGL designed to work
-  everywhere that can be used as a fallback
+* util - various utilities related to application development.
+* lui - an experimental lightweight UI toolkit based on OpenGL designed
+  to work everywhere that can be used as a fallback.
+
+
+Current status
+--------------
+
+Flexx is still very much a work in progress. Please don't go use it
+just yet. The ui part is not even working yet. The exception might be
+the webruntime and pyscript modules, although their API's may still
+change as well.
