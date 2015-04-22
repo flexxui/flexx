@@ -12,7 +12,6 @@ import sys
 import re
 import ast
 
-# todo: when using x = Foo(), insert "new"
 
 class JSError(Exception):
     """ Exception raised when unable to convert Python to JS.

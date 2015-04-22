@@ -248,7 +248,12 @@ class Parser1(Parser0):
         if base_name.endswith('._base_class'):  # super() was used
             return [full_name] + self._get_args(node, 'this', True)
         else:
-            return [full_name] + self._get_args(node, base_name)
+            code = [full_name] + self._get_args(node, base_name)
+            # Insert "new" if this looks like a class
+            if ((full_name and full_name[0].upper() == full_name[0]) or
+                (method_name and method_name[0].upper() == method_name[0])):
+                code.insert(0, 'new ')
+            return code
     
     def _get_args(self, node, base_name, use_call_or_apply=False):
         """ Get arguments for function call. Does checking for keywords and

@@ -144,6 +144,12 @@ class TestExpressions:
         assert evalpy('d={"_base_class": console};d._base_class.log(4)') == '4'
         assert evalpy('d={"_base_class": console};d._base_class.log()') == ''
     
+    def test_instantiation(self):
+        # Test creating instances
+        assert 'new' in py2js('a = Foo()')
+        jscode = 'function Foo() {this.x = 3}\nx=1;\n'
+        assert evaljs(jscode + py2js('a=Foo()\nx')) == '1'
+        
     def test_pass(self):
         assert py2js('pass') == ''
     
