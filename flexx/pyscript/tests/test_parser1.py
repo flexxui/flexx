@@ -146,7 +146,13 @@ class TestExpressions:
     
     def test_pass(self):
         assert py2js('pass') == ''
-
+    
+    def test_delete(self):
+        assert evalpy('d={}\nd.foo=3\n\nd') == "{ foo: 3 }"
+        assert evalpy('d={}\nd.foo=3\ndel d.foo\nd') == '{}'
+        assert evalpy('d={}\nd.foo=3\nd.bar=3\ndel d.foo\nd') == '{ bar: 3 }'
+        assert evalpy('d={}\nd.foo=3\nd.bar=3\ndel d.foo, d["bar"]\nd') == '{}'
+        
 
 class TestModules:
     

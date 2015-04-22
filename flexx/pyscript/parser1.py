@@ -62,6 +62,9 @@ tuple packing and unpacking (a.k.a. destructuring assignment).
     
     # And unpack them
     a1, a2, a3 = a
+    
+    # Deleting variables
+    del bar.foo
 
 
 Comparisons
@@ -340,7 +343,13 @@ class Parser1(Parser0):
             op = ' %s= ' % self.BINARY_OP[node.op.__class__.__name__]
             return [nl, target, op, value]
     
-    # parse_Delete
+    def parse_Delete(self, node):
+        code = []
+        for target in node.targets:
+            code.append(self.lf('delete '))
+            code += self.parse(target)
+            code.append(';')
+        return code
     
     def parse_Pass(self, node):
         return []

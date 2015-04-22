@@ -87,7 +87,6 @@ Not currently supported:
 * the ``in`` operator
 * raising and catching exceptions
 * assertions
-* delete
 * List comprehensions
 * importing
 * most Python builtin functions
