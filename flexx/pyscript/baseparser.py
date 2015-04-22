@@ -9,9 +9,7 @@ Useful links:
 
 import sys
 import re
-import inspect
 import ast
-import types
 
 # todo: when using x = Foo(), insert "new"
 
@@ -65,9 +63,9 @@ class BaseParser(object):
     # always returns a list of strings.
     
     NAME_MAP = {
-        'True': 'true',
-        'False': 'false',
-        'None': 'null',
+        'True'  : 'true',
+        'False' : 'false',
+        'None'  : 'null',
     }
     
     BINARY_OP = {
@@ -96,15 +94,15 @@ class BaseParser(object):
     }
     
     COMP_OP = {
-            'Eq'    : "==",
-            'NotEq' : "!=",
-            'Lt'    : "<",
-            'LtE'   : "<=",
-            'Gt'    : ">",
-            'GtE'   : ">=",
-            'Is'    : "===",
-            'IsNot' : "!==",
-        }
+        'Eq'    : "==",
+        'NotEq' : "!=",
+        'Lt'    : "<",
+        'LtE'   : "<=",
+        'Gt'    : ">",
+        'GtE'   : ">=",
+        'Is'    : "===",
+        'IsNot' : "!==",
+    }
     
     def __init__(self, code, module=None):
         self._root = ast.parse(code)
@@ -132,7 +130,7 @@ class BaseParser(object):
             # Give smarter error message
             _, _, tb = sys.exc_info()
             try:
-               msg = self._better_js_error(tb)
+                msg = self._better_js_error(tb)
             except Exception:  # pragma: no cover
                 raise(err)
             else:
@@ -237,7 +235,7 @@ class BaseParser(object):
     def parse(self, node):
         """ Parse a node. Check node type and dispatch to one of the
         specific parse functions. Raises error if we cannot parse this
-        type of node. 
+        type of node.
         
         Returns a list of strings.
         """
@@ -557,12 +555,12 @@ class BaseParser(object):
     ## Control flow
     
     def parse_If(self, node):
-        if (isinstance(node.test, ast.Compare) and 
-            isinstance(node.test.left, ast.Name) and 
-            node.test.left.id == '__name__'):
-                # Ignore ``__name__ == '__main__'``, since it may be
-                # used inside a PyScript file for the compiling.
-                return []
+        if (True and isinstance(node.test, ast.Compare) and
+                     isinstance(node.test.left, ast.Name) and
+                     node.test.left.id == '__name__'):
+            # Ignore ``__name__ == '__main__'``, since it may be
+            # used inside a PyScript file for the compiling.
+            return []
         
         code = [self.lf('if (')]  # first part (popped in elif parsing)
         code += self.parse(node.test)
@@ -636,7 +634,7 @@ class BaseParser(object):
         if target2 and target2 not in self.vars:
             self.vars.add(target2)
         
-        if iter.startswith('range('):  # Explicit iteration 
+        if iter.startswith('range('):  # Explicit iteration
             # Get range args
             args = iter.split('(', 1)[1].rsplit(')', 1)[0]
             nums = [x.strip() for x in args.split(',')]
@@ -662,13 +660,13 @@ class BaseParser(object):
             # The loop
             code += self.lf(), 'for (', target, ' in ', d_seq, ') {'
             self._indent += 1
-            code.append(self.lf('if (!%s.hasOwnProperty(%s)){ continue; }' % 
+            code.append(self.lf('if (!%s.hasOwnProperty(%s)){ continue; }' %
                                 (d_seq, target)))
             # Set second/alt iteration variable
             if target2:
                 code.append(self.lf('%s = %s[%s];' % (target2, d_seq, target)))
         
-        else:  # Enumeration 
+        else:  # Enumeration
         
             # We cannot know whether the thing to iterate over is an
             # array or a dict. We use a for-iterarion (otherwise we
@@ -694,7 +692,7 @@ class BaseParser(object):
             
             # The loop
             code.append(self.lf('%s = %s.length;' % (d_len, d_seq)))
-            code.append(self.lf('for (%s = 0; %s < %s; %s += 1) {' % 
+            code.append(self.lf('for (%s = 0; %s < %s; %s += 1) {' %
                                 (d_iter, d_iter, d_len, d_iter)))
             self._indent += 1
             code.append(self.lf('%s = %s[%s];' % (target, d_seq, d_iter)))
@@ -784,7 +782,7 @@ class BaseParser(object):
         empty string.
         """
         docstring = ''
-        if (node.body and isinstance(node.body[0], ast.Expr) and 
+        if (node.body and isinstance(node.body[0], ast.Expr) and
                           isinstance(node.body[0].value, ast.Str)):
             docstring = node.body.pop(0).value.s.strip()
             lines = docstring.splitlines()
@@ -842,7 +840,8 @@ class BaseParser(object):
         # Apply defaults
         offset = len(argnames) - len(node.args.defaults)
         for name, default in zip(argnames[offset:], node.args.defaults):
-            x = '%s = (%s === undefined) ? %s: %s;' % (name, name, ''.join(self.parse(default)), name)
+            d = ''.join(self.parse(default))
+            x = '%s = (%s === undefined) ? %s: %s;' % (name, name, d, name)
             code.append(self.lf(x))
         
         # Handle varargs
@@ -856,7 +855,7 @@ class BaseParser(object):
                 code.append(self.lf('%s = %s;' % (name, asarray)))
             else:
                 # Slice it
-                code.append(self.lf('%s = %s.slice(%i);' % 
+                code.append(self.lf('%s = %s.slice(%i);' %
                             (name, asarray, len(argnames))))
         # Apply content
         if lambda_:
@@ -927,7 +926,7 @@ class BaseParser(object):
         if base_class.lower() == 'object':  # maybe Python "object"
             base_class = 'Object'
         else:
-            base_class = base_class + '.prototype'  
+            base_class = base_class + '.prototype'
         
         # Write constructor
         code = []
@@ -943,7 +942,7 @@ class BaseParser(object):
         if base_class != 'Object':
             code.append(self.lf('%s.prototype = Object.create(%s);' %
                                 (node.name, base_class)))
-        code.append(self.lf('%s.prototype._base_class = %s;' % 
+        code.append(self.lf('%s.prototype._base_class = %s;' %
                             (node.name, base_class)))
         code.append('\n')
         
@@ -953,7 +952,7 @@ class BaseParser(object):
         for sub in node.body:
             code += self.parse(sub)
         code.append('\n')
-        self.pop_stack() 
+        self.pop_stack()
         # no need to declare variables, because they're prefixed
         
         return code
@@ -965,7 +964,7 @@ class BaseParser(object):
         if len(self._stack) < 3:  # module, class, function
             raise JSError('can only use super() inside a method.')
         
-        # Find the class of this function. We could also use 
+        # Find the class of this function. We could also use
         # this._base_class, but by using the class, we mimic Python better.
         nstype1, nsname1, _ = self._stack[-1]
         nstype2, nsname2, _ = self._stack[-2]
@@ -974,7 +973,6 @@ class BaseParser(object):
         
         base_class = nsname2
         return '%s.prototype._base_class' % base_class
-    
     
     ## Subscripting
     
@@ -1012,7 +1010,7 @@ class BaseParser(object):
         if node.upper:
             code.append(',')
             code += self.parse(node.upper)
-        return code 
+        return code
     
     def parse_ExtSlice(self, node):
         raise JSError('Multidimensional slicing not supported in JS')

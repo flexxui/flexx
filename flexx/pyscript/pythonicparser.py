@@ -18,24 +18,26 @@ class PythonicParser(BaseParser):
         if cls[0] in '"\'':
             cls = cls[1:-1]  # remove quotes
         
-        BASIC_TYPES = 'number', 'boolean', 'string', 'function', 'array', 'object', 'null', 'undefined'
+        BASIC_TYPES = ('number', 'boolean', 'string', 'function', 'array',
+                       'object', 'null', 'undefined')
         
         MAP = {'(int, float)': 'number', '(float, int)': 'number', 'float': 'number',
                'str': 'string', 'basestring': 'string', 'string_types': 'string',
                'bool': 'boolean',
                'FunctionType': 'function', 'types.FunctionType': 'function',
-               'list': 'array', 'tuple': 'array', '(list, tuple)': 'array', '(tuple, list)': 'array',
+               'list': 'array', 'tuple': 'array',
+               '(list, tuple)': 'array', '(tuple, list)': 'array',
                'dict': 'object',
-              }
+        }
         
         cmp = MAP.get(cls, cls)
         
         if cmp.lower() in BASIC_TYPES:
-            # Basic type, use Object.prototype.toString 
+            # Basic type, use Object.prototype.toString
             # http://stackoverflow.com/questions/11108877
-            return ["({}).toString.call(", 
-                    ob, 
-                    ").match(/\s([a-zA-Z]+)/)[1].toLowerCase() === ", 
+            return ["({}).toString.call(",
+                    ob,
+                    ").match(/\s([a-zA-Z]+)/)[1].toLowerCase() === ",
                     repr(cmp.lower())
                     ]
         
@@ -75,7 +77,7 @@ class PythonicParser(BaseParser):
     
     def function_sum(self, node):
         if len(node.args) == 1:
-            return (unify(self.parse(node.args[0])), 
+            return (unify(self.parse(node.args[0])),
                     '.reduce(function(a, b) {return a + b;})')
         else:
             raise JSError('sum() needs exactly one argument')
@@ -102,7 +104,7 @@ class PythonicParser(BaseParser):
     
     
     def method_append(self, node, base):
-        if len(node.args) == 1: 
+        if len(node.args) == 1:
             code = []
             code.append('(%s.append || %s.push).apply(%s, [' % (base, base, base))
             code += self.parse(node.args[0])
@@ -110,7 +112,7 @@ class PythonicParser(BaseParser):
             return code
     
     def method_remove(self, node, base):
-        if len(node.args) == 1: 
+        if len(node.args) == 1:
             code = []
             remove_func = 'function (x) {%s.splice(%s.indexOf(x), 1);}' % (base, base)
             code.append('(%s.remove || %s).apply(%s, [' % (base, remove_func, base))

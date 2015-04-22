@@ -20,7 +20,7 @@ def py2js(pycode):
 
 
 def evaljs(jscode, whitespace=True):
-    """ Evaluate JavaScript code in Node.js. 
+    """ Evaluate JavaScript code in Node.js.
     
     parameters:
         jscode (str): the JavaScript code to evaluate.
@@ -80,7 +80,7 @@ def js(ob):
     
     Parameters:
         func (class, function): The function or class to transtate. If
-            this is already JSCode object, it is returned as-is. 
+            this is already JSCode object, it is returned as-is.
     
     Returns:
         jscode (JSCode): An object that has a ``jscode``, ``pycode`` and
@@ -142,7 +142,7 @@ class JSCode(object):
         p = PythonicParser(pycode)
         
         if thetype == 'function':
-            # Convert to JS, but strip function name, 
+            # Convert to JS, but strip function name,
             # so that string starts with "function ( ..."
             p._parts[0] = ''  # remove "var xx"
             p._parts[1] = ''  # remove "xx = "
@@ -178,12 +178,12 @@ class JSCode(object):
     
     def __call__(self, *args, **kwargs):
         action = {'function': 'call', 'class': 'instantiate'}[self._type]
-        raise RuntimeError('Cannot %s a JS %s directly from Python' % 
+        raise RuntimeError('Cannot %s a JS %s directly from Python' %
                            (action, self._type))
     
     def __repr__(self):
         
-        return '<JSCode %s (print to see code) at 0x%x>' % (self._type, 
+        return '<JSCode %s (print to see code) at 0x%x>' % (self._type,
                                                             id(self))
     
     def __str__(self):

@@ -5,7 +5,6 @@ from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
 from flexx.pyscript import js, py2js, evaljs, evalpy, JSCode
-from flexx import pyscript
 
 
 def test_py2js():
@@ -125,7 +124,7 @@ def test_raw_js():
     
     @js
     def func(a, b):
-        """ 
+        """
         var c = 3;
         return a + b + c;
         """

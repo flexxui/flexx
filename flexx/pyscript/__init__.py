@@ -1,6 +1,6 @@
 """
 The pyscript module provides functionality for converting Python code
-to JavaScript. 
+to JavaScript.
 
 PyScript is just JavaScript
 ---------------------------
@@ -8,7 +8,7 @@ PyScript is just JavaScript
 In contrast to projects like Skulpt or PyJS, the purpose is *not* to
 enable full Python support in the browser. PyScript allows you to write
 JavaScript using Python syntax, but (simular to CoffeeScript), it's
-just JavaScript. 
+just JavaScript.
 
 This means that depending on what you want to achieve, you still need
 to know a thing or two about how JavaScript works.
@@ -84,7 +84,7 @@ Supported Python conveniences:
 
 Not currently supported:
 
-* the ``in`` operator 
+* the ``in`` operator
 * raising and catching exceptions
 * assertions
 * delete
@@ -105,12 +105,12 @@ Probably never suppored (because it's hard to map to JS):
 # Note: the user guide is in the docs
 
 
-from .baseparser import BaseParser, JSError
-from .pythonicparser import PythonicParser
-from .functions import JSCode, js, py2js, evaljs, evalpy
+from .baseparser import BaseParser, JSError  # noqa
+from .pythonicparser import PythonicParser  # noqa
+from .functions import JSCode, js, py2js, evaljs, evalpy  # noqa
 
 # Some names that parties may want to import to fool pyflakes
-window = 'JS-WINDOW'
-undefined = 'JS-UNDEFINED'
-document = 'JS-DOCUMENT'
-Object = 'JS-OBJECT'
+window = 'JS-WINDOW'  # noqa
+undefined = 'JS-UNDEFINED'  # noqa
+document = 'JS-DOCUMENT'  # noqa
+Object = 'JS-OBJECT'  # noqa

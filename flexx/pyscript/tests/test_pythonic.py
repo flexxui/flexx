@@ -2,7 +2,7 @@
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.pyscript import js, JSError, py2js, evaljs, evalpy
+from flexx.pyscript import JSError, py2js, evaljs, evalpy
 
 
 def nowhitespace(s):

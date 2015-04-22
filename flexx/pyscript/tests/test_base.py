@@ -182,7 +182,7 @@ class TestConrolFlow:
         code = py2js('for k in [7, 8]:\n  print(k)')
         assert ' in ' not in code and evaljs(code) == '7\n8'
         
-        # Test enumeration over dicts 
+        # Test enumeration over dicts
         # Python cannot see its a dict, and uses a for-loop
         code = py2js('d = {3:7, 4:8}\nfor k in d:\n  print(k)')
         assert ' in ' not in code and evaljs(code) == '3\n4'
@@ -323,7 +323,7 @@ class TestFuctions:
         assert len(lines) == 3  # only three lines
         assert lines[0] == 'function () {'  # no args, no self/this
         assert lines[1].startswith('  ')  # indented
-        assert lines[2] == '};'  # dedented 
+        assert lines[2] == '};'  # dedented
     
     def test_default_args(self):
         
@@ -348,7 +348,7 @@ class TestFuctions:
             return args
         
         code1 = 'var x = ' + func.jscode
-        lines = [line for line in code1.split('\n') if line]
+        # lines = [line for line in code1.split('\n') if line]
         
         code2 = py2js('x(2, 3)')
         assert evaljs(code1 + code2, False) == '[2,3]'
@@ -366,7 +366,7 @@ class TestFuctions:
             return args
         
         code1 = 'var x = ' + func.jscode
-        lines = [line for line in code1.split('\n') if line]
+        #lines = [line for line in code1.split('\n') if line]
         
         code2 = py2js('x(0, 2, 3)')
         assert evaljs(code1 + code2, False) == '[2,3]'
@@ -396,15 +396,15 @@ class TestFuctions:
         def func(self):
             def foo(z):
                 y = 2
-                stub = False
-                only_here = 1
+                stub = False  # noqa
+                only_here = 1  # noqa
                 return x + y + z
             x = 1
             y = 0
-            y = 1
-            z = 1
+            y = 1  # noqa
+            z = 1  # noqa
             res = foo(3)
-            stub = True
+            stub = True  # noqa
             return res + y  # should return 1+2+3+1 == 7
         
         code = 'var x = ' + func.jscode
@@ -422,7 +422,7 @@ class TestFuctions:
         
         @js
         def func(a, b):
-            """ 
+            """
             var c = 3;
             return a + b + c;
             """
@@ -550,4 +550,3 @@ run_tests_if_main()
 #     t = TestClasses()
 #     t.test_class()
 #     t.test_inheritance()
-
