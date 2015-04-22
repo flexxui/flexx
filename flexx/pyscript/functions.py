@@ -83,14 +83,14 @@ def js(ob):
             this is already JSCode object, it is returned as-is.
     
     Returns:
-        jscode (JSCode): An object that has a ``jscode``, ``pycode`` and
-            ``name`` attribute.
+        jscode (JSCode): An object that has a ``jscode``, ``pycode``
+        and ``name`` attribute.
     
-    Note:
-        The Python source code for classes is acquired by name; avoid
-        decorating classes in modules where multiple classes with the
-        same name are defined. This is a consequence of classes not
-        having a corresponding code object (in contrast to functions).
+    Note that the Python source code for a class is acquired by name.
+    Therefore one should avoid decorating classes in modules where
+    multiple classes with the same name are defined. This is a
+    consequence of classes not having a corresponding code object (in
+    contrast to functions).
     """
     
     if isinstance(ob, JSCode):

@@ -1,7 +1,7 @@
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.pyscript import js, JSError, py2js, evaljs, evalpy, Parser
+from flexx.pyscript import JSError, py2js, evaljs, evalpy, Parser
 from flexx import pyscript
 
 
@@ -141,8 +141,8 @@ class TestExpressions:
         assert evaljs(jscode + py2js('a=[1,2]; foo(*a)')) == '3'
         
         # Test super (is tested for real in test_parser3.py
-        assert evaljs(jscode + py2js('d={"_base_class": console};d._base_class.log(4)')) == '4'
-        assert evaljs(jscode + py2js('d={"_base_class": console};d._base_class.log()')) == ''
+        assert evalpy('d={"_base_class": console};d._base_class.log(4)') == '4'
+        assert evalpy('d={"_base_class": console};d._base_class.log()') == ''
     
     def test_pass(self):
         assert py2js('pass') == ''

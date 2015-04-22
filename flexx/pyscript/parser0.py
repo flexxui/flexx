@@ -1,5 +1,6 @@
 """
-Parts of this code are inspired by / taken from the py2js project.
+Parts of this code (and in the other modules that define the parser
+class) are inspired by / taken from the py2js project.
 
 Useful links:
  * https://greentreesnakes.readthedocs.org/en/latest/nodes.html

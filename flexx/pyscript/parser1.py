@@ -1,3 +1,100 @@
+"""
+
+The basics
+----------
+
+Most types just work, common Python names are converted to their JavaScript
+equivalents.
+
+.. pyscript_example::
+    
+    # Simple operations
+    3 + 4 -1
+    3 * 7 / 9
+    5**2
+    7 // 2
+    
+    # Basic types
+    [True, False, None]
+    
+    # Lists and dicts
+    foo = [1, 2, 3]
+    bar = {'a': 1, b: 2}
+
+
+Slicing and subscriping
+-----------------------
+
+.. pyscript_example::
+
+    # Slicing lists
+    foo = [1, 2, 3, 4, 5]
+    foo[2:]
+    foo[2:-2]
+    
+    # Slicing strings
+    bar = 'abcdefghij'
+    bar[2:]
+    bar[2:-2]
+    
+    # Subscripting
+    foo = {'bar': 3}
+    foo['bar']
+    foo.bar  # Works in JS, but not in Python
+
+
+Assignments
+-----------
+
+Declaration of variables is handled automatically. Also support for
+tuple packing and unpacking (a.k.a. destructuring assignment).
+
+.. pyscript_example::
+    
+    # Declare foo
+    foo = 3
+    
+    # But not here
+    bar.foo = 3
+    
+    # Pack items in an array
+    a = 1, 2, 3
+    
+    # And unpack them
+    a1, a2, a3 = a
+
+
+Comparisons
+-----------
+
+.. pyscript_example::
+    
+    # Identity
+    foo is bar
+    
+    # Equality (loose equality in JS)
+    foo == bar
+
+    # Test for null
+    foo is None
+    
+    # Test for JS undefined
+    foo is undefined
+
+
+Function calls
+--------------
+
+.. pyscript_example::
+    
+    # Buisiness as usual
+    foo(a, b)
+    
+    # Support for star args (but not **kwargs)
+    foo(*a)
+
+"""
+
 import ast
 
 from .parser0 import Parser0, JSError, unify  # noqa

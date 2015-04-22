@@ -61,9 +61,8 @@ Supported basics:
 * operations: binary, unary, boolean, power, integer division
 * comparisons (``==`` -> ``==``, ``is`` -> ``===``)
 * tuple packing and unpacking
-* ``isinstance()`` without the crappyness of ``typeof``
-* slicing (though not with step)
-* if-statements and single-line if-expression
+* slicing with start end end (though not with step)
+* if-statements and single-line if-expressions
 * while-loops and for-loops supporting continue, break, and else-clauses
 * for-loops using `range()`
 * for-loop over arrays
@@ -71,14 +70,15 @@ Supported basics:
 * function calls can have ``*args``
 * function defs can have default arguments and ``*args``
 * lambda expressions
-* classes, with (single) inheritance
-* the use of super()
+* classes, with (single) inheritance, and the use of super()
 * Creation of "modules"
 
 Supported Python conveniences:
 
 * use of ``self`` is translated to ``this``
 * ``print()`` becomes ``console.log()`` (also support ``sep`` and ``end``)
+* ``isinstance()`` Just Works (for primitive types as well as
+  user-defined classes)
 * ``len(x)`` becomes ``x.length``
 * min(), max() and sum()
 
@@ -98,13 +98,30 @@ Probably never suppored (because it's hard to map to JS):
 * the set class (JS has no set)
 * support for ``**kwargs``
 * The ``with`` statement
-* Generators (i.e. ``yield``)
+* Generators (i.e. ``yield``)?
 
 """
 
-# Note: the user guide is in the docs
+# NOTE: The code for the parser is quite long, especially if you want
+# to document it well. Therefore it is split in multiple modules, which
+# are simply numbered 0, 1, 2, etc. Here in the __init__, we define
+# which parser is *the* parser. This gives us the freedom to split the
+# parser in smaller piecers if we want.
+#
+# In the docstring of every parser module we maintain a brief user-guide
+# demonstrating the features defined in that module. In the docs these
+# docstrings are combined into one complete guide.
 
-from .parser3 import Parser3, JSError  # noqa
+from .parser0 import JSError  # noqa
+from .parser3 import Parser2
+from .parser3 import Parser3
+
+
+class BasicParser(Parser2):
+    """ A parser without the Pythonic features for converting builtin
+    functions and common methods.
+    """
+    pass
 
 
 class Parser(Parser3):

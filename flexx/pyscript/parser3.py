@@ -1,3 +1,74 @@
+"""
+
+Pythonic sugar
+--------------
+
+Several common buildin functions are automatically translated to
+JavaScript.
+
+.. pyscript_example::
+
+    # "self" is replaced with "this"
+    self.foo
+    
+    # Printing just works
+    print('some test')
+    print(a, b, c, sep='-')
+    
+    # Getting the length of a string of array
+    len(foo)
+    
+    # min and max
+    min(foo)
+    min(a, b, c)
+    max(foo)
+    max(a, b, c)
+    
+    # Summing elements
+    sum(foo)
+
+
+The isinstance function
+-----------------------
+
+The ``isinstance()`` function works for all JS primitive types, but also
+for user-defined classes.
+
+.. pyscript_example::
+
+    # Basic types
+    isinstance(3, float)  # in JS there are no ints
+    isinstance('', str)
+    isinstance([], list)
+    isinstance({}, dict)
+    isinstance(foo, types.FunctionType)
+    
+    # Can also use JS strings
+    isinstance(3, 'number')
+    isinstance('', 'string')
+    isinstance([], 'array')
+    isinstance({}, 'object')
+    isinstance(foo, 'function')
+    
+    # You can use it on your own types too ...
+    isinstance(x, MyClass)
+    isinstance(x, 'MyClass')  # equivalent
+    isinstance(x, 'Object')  # also yields true (subclass of Object)
+
+
+List methods
+------------
+
+.. pyscript_example::
+
+    # Call a.append() if it exists, otherwise a.push()
+    a.append(x)
+    
+    # Similar for remove()
+    a.remove(x)
+
+"""
+
 from .parser2 import Parser2, JSError, unify  # noqa
 
 

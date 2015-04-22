@@ -43,7 +43,8 @@ def visit_pyscript_example_html(self, node):
     code = '\n'.join(lines)
     parts = code.split('\n\n')
     
-    td_style = "style='vertical-align:top;'"  # width:50%;
+    td_style1 = "style='vertical-align:top; min-width:300px;'"
+    td_style2 = "style='vertical-align:top;'"
     pre_style = "style='margin:2px; padding: 2px; border:0px;'"
     
     
@@ -55,8 +56,10 @@ def visit_pyscript_example_html(self, node):
     for py in parts:
         
         if py.strip().startswith('##'):
-            text = py.lstrip(' \n#\t')
-            self.body.append('<tr><td %s><b>%s</b></td><td %s></td></tr>' % 
+            lines = [line.lstrip(' \n#\t') for line in py.splitlines()]
+            lines[0] = '<b>%s</b><br />' % lines[0]
+            text = ''.join(lines)
+            self.body.append('<tr><td %s>%s</td><td %s></td></tr>' % 
                              (td_style, text, td_style))
             continue
         
@@ -70,7 +73,7 @@ def visit_pyscript_example_html(self, node):
         
         #self.body.append("%s <div class='hiddenjs'><a>&nbsp;</a> %s</div>" % (py_html, js_html))
         self.body.append("<tr><td %s>%s</td><td %s>%s</td></tr>" % 
-                         (td_style, py_html, td_style, js_html))
+                         (td_style1, py_html, td_style2, js_html))
         
     self.body.append("</table>")
     

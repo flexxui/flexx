@@ -1,3 +1,114 @@
+"""
+
+If statements
+-------------
+
+
+.. pyscript_example::
+
+    if val > 7:
+        result = 42
+    elif val > 1:
+        result = 1
+    else:
+        result = 0
+    
+    # One-line if
+    result = 42 if truth else 0
+    
+    
+Looping
+-------
+
+There is support for while loops and for-loops in several forms.
+Both support ``continue``, ``break`` and the ``else`` clause.
+
+.. pyscript_example::
+
+    # While loops map well to JS
+    val = 0
+    while val < 10:
+        val += 1
+    
+    # Using range() yields true for-loops
+    for i in range(10):
+        print(i)
+    
+    for i in range(100, 10, -2):
+        print(i)
+    
+    # One way to iterate over an array
+    for i in range(len(arr)):
+        print(arr[i])
+    
+    # But this is equally valid (and fast)
+    for element in arr:
+        print(element)
+    
+    # Similarly, iteration over strings
+    for char in "foo bar":
+        print(c)
+    
+    # Plain iteration over a dict costs a small overhead
+    for key in d:
+        print(key)
+    
+    # Which is why we recommend using keys(), values(), or items()
+    for key in d.keys():
+        print(key)
+    
+    for val in d.values():
+        print(val)
+    
+    for key, val in d.items():
+        print(key, val, sep=': ')
+    
+    
+Functions
+---------
+
+.. pyscript_example::
+
+    def display(val):
+        print(val)
+    
+    # Support for *args
+    def foo(x, *values):
+        bar(x+1, *values)
+    
+    # To write raw JS, define a function with only a docstring
+    def bar(a, b):
+        '''
+        var c = 4;
+        return a + b + c;
+        '''
+    
+    # Lambda expressions
+    foo = lambda x: x**2
+
+
+Classes
+-------
+
+Classes are translated to the JavaScript prototypal class paragigm,
+which means that they should play well with other JS libraries and e.g.
+`instanceof`. Inheritance is supported, but not multiple inheritance.
+Further, `super()` works just as in Python 3.
+
+.. pyscript_example::
+    
+    class Foo:
+        a_class_attribute = 4
+        def __init__(self):
+            self.x = 3
+    
+    class Bar(Foo):
+        def __init__(self):
+            super.__init__()
+            self.x += 1
+
+"""
+
 import ast
 import sys
 
@@ -469,4 +580,3 @@ class Parser2(Parser1):
         
         base_class = nsname2
         return '%s.prototype._base_class' % base_class
-    

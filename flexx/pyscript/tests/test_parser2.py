@@ -1,8 +1,8 @@
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.pyscript import js, JSError, py2js, evaljs, evalpy, Parser
-from flexx import pyscript
+from flexx.pyscript import js, JSError, py2js, evaljs, evalpy
+
 
 def nowhitespace(s):
     return s.replace('\n', '').replace('\t', '').replace(' ', '')
