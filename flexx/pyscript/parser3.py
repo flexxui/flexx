@@ -1,13 +1,15 @@
-from .baseparser import BaseParser, JSError, unify
+from .parser2 import Parser2, JSError, unify  # noqa
 
 
-class PythonicParser(BaseParser):
+class Parser3(Parser2):
     """ Parser to transcompile Python to JS, allowing more Pythonic
     code, like ``self``, ``print()``, ``len()``, list methods, etc.
     """
     
     NAME_MAP = {'self': 'this', }
-    NAME_MAP.update(BaseParser.NAME_MAP)
+    NAME_MAP.update(Parser2.NAME_MAP)
+    
+    ## Functions
     
     def function_isinstance(self, node):
         if len(node.args) != 2:
@@ -102,6 +104,7 @@ class PythonicParser(BaseParser):
             args = ', '.join([unify(self.parse(arg)) for arg in node.args])
             return 'Math.min(', args, ')'
     
+    ## List methods
     
     def method_append(self, node, base):
         if len(node.args) == 1:

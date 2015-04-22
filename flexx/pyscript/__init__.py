@@ -104,12 +104,35 @@ Probably never suppored (because it's hard to map to JS):
 
 # Note: the user guide is in the docs
 
+from .parser3 import Parser3, JSError  # noqa
 
-from .baseparser import BaseParser, JSError  # noqa
-from .pythonicparser import PythonicParser  # noqa
+
+class Parser(Parser3):
+    """ Parser to convert Python to JavaScript.
+    
+    Instantiate this class with the Python code. Retrieve the JS code
+    using the dump() method.
+    
+    In a subclass, you can implement methods called "function_x" or
+    "method_x", which will then be called during parsing when a
+    function/method with name "x" is encountered. Several methods and
+    functions are already implemented in this way.
+    
+    While working on ast parsing, this resource is very helpful:
+    https://greentreesnakes.readthedocs.org
+    
+    parameters:
+        code (str): the Python code to parse.
+        module (str, optional): if given, put the resulting JS in a
+            module with the given name.
+    """
+    pass
+
+
 from .functions import JSCode, js, py2js, evaljs, evalpy  # noqa
 
-# Some names that parties may want to import to fool pyflakes
+
+# Some names that users may want to import to fool pyflakes
 window = 'JS-WINDOW'  # noqa
 undefined = 'JS-UNDEFINED'  # noqa
 document = 'JS-DOCUMENT'  # noqa
