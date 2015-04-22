@@ -72,6 +72,8 @@ Supported basics:
 * lambda expressions
 * classes, with (single) inheritance, and the use of super()
 * Creation of "modules"
+* raising and catching exceptions
+* assertions
 
 Supported Python conveniences:
 
@@ -85,9 +87,7 @@ Supported Python conveniences:
 Not currently supported:
 
 * the ``in`` operator
-* raising and catching exceptions
-* assertions
-* List comprehensions
+* list comprehensions
 * importing
 * most Python builtin functions
 

@@ -107,6 +107,36 @@ Further, `super()` works just as in Python 3.
             super.__init__()
             self.x += 1
 
+
+Exceptions
+----------
+
+Raised exceptions are translated to a JavaScript Error objects, for
+which the ``name`` attribute is set to the type of the exception being
+raised. When catching exceptions the name attribute is checked (if its
+an Error object. You can raise strings or any other kind of object, but
+you can only catch Error objects.
+
+.. pyscript_example::
+    
+    # Throwing/raising exceptions
+    raise SomeError('asd')
+    raise AnotherError()
+    raise "In JS you can throw anything"
+    raise 4
+    
+    # Assertions work too
+    assert foo == 3
+    assert bar == 4, "bar should be 4"
+    
+    # Catching exceptions
+    try:
+        raise IndexError('blabla')
+    except IndexError as err:
+        print(err)
+    except Exception:
+       print('something went wrong')
+
 """
 
 import ast
@@ -122,14 +152,14 @@ class Parser2(Parser1):
     ## Exceptions
     
     def parse_Raise(self, node):
-        # We simply raise the exception as a string
+        # We raise the exception as an Error object
+        
         if sys.version_info >= (3, ):
             if node.exc is None:
                 raise JSError('When raising, provide an error object.')
             if node.cause is not None:
                 raise JSError('When raising, "cause" is not supported.')
-            err = ''.join(self.parse(node.exc))
-            return "throw %r" % err
+            err_node = node.exc
         else:  # pragma: no cover
             if node.type is None:
                 raise JSError('When raising, provide a type.')
@@ -137,8 +167,37 @@ class Parser2(Parser1):
                 raise JSError('When raising, "instance" is not supported.')
             if node.tback is not None:
                 raise JSError('When raising, "tback" is not supported.')
-            err = ''.join(self.parse(node.type))
-            return "throw %r" % err
+            err_node = node.exc
+        
+        # Get cls and msg
+        err_cls, err_msg = None, "''"
+        if isinstance(err_node, ast.Name):
+            err_cls = err_node.id
+        elif isinstance(err_node, ast.Call):
+            err_cls = err_node.func.id
+            err_msg = ''.join([unify(self.parse(arg)) for arg in err_node.args])
+        else:
+            err_msg = ''.join(self.parse(err_node))
+        
+        err_name = 'err_%i' % self._indent
+        self.vars.add(err_name)
+        
+        # Build code to throw
+        code = []
+        if err_cls:
+            code.append(self.lf("%s = " % err_name))
+            code.append('new Error(')
+        else:
+            code.append(self.lf("throw "))
+        code.append(err_msg)
+        if err_cls:
+            code.append(');')
+            code.append(' %s.name = "%s";' % (err_name, err_cls))
+            code.append(' throw %s;' % err_name)
+        else:
+            code.append(';')
+        
+        return code
     
     def parse_Assert(self, node):
         
@@ -148,12 +207,78 @@ class Parser2(Parser1):
             msg = ''.join(self.parse(node.msg))
         
         code = []
-        code.append('if (!(')
+        code.append(self.lf('if (!('))
         code += test
         code.append(')) {')
-        code.append('throw "AssertionError: ')
+        code.append('throw "AssertionError: ')  # don't bother with new Error
         code.append(msg)
         code.append('";}')
+        return code
+    
+    def parse_Try(self, node):
+        # Python >= 3.3
+        if node.finalbody:
+            raise JSError('No support for try-finally clause.')
+        
+        return self.parse_TryExcept(node)
+    
+    def parse_TryFinally(self, node):
+        # Python < 3.3
+        raise JSError('No support for try-finally clause.')
+    
+    def parse_TryExcept(self, node):
+        # Python < 3.3
+        if node.orelse:
+            raise JSError('No support for try-else clause.')
+        
+        code = []
+        
+        # Try
+        code.append(self.lf('try {'))
+        self._indent += 1
+        for n in node.body:
+            code += self.parse(n)
+        self._indent -= 1
+        code.append(self.lf('}'))
+        
+        # Except
+        self._indent += 1
+        err_name = 'err_%i' % self._indent
+        code.append(' catch(%s) {' % err_name)
+        for i, handler in enumerate(node.handlers):
+            if i == 0:
+                code.append(self.lf(''))
+            else:
+                code.append(' else ')
+            code += self.parse(handler)
+        
+        self._indent -= 1
+        code.append(self.lf('}'))  # end catch
+        
+        return code
+        
+    def parse_ExceptHandler(self, node):
+        err_name = 'err_%i' % self._indent
+        
+        # Setup the catch
+        code = []
+        err_type = unify(self.parse(node.type)) if node.type else ''
+        if err_type and err_type != 'Exception':
+            code.append('if (%s instanceof Error && %s.name === "%s") {' %
+                        (err_name, err_name, err_type))
+        else:
+            code.append('{')
+        self._indent += 1
+        if node.name:
+            code.append(self.lf('%s = %s;' % (node.name, err_name)))
+            self.vars.add(node.name)
+        
+        # Insert the body
+        for n in node.body:
+            code += self.parse(n)
+        self._indent -= 1
+        
+        code.append(self.lf('}'))
         return code
     
     ## Control flow
@@ -385,15 +510,7 @@ class Parser2(Parser1):
     def parse_Continue(self, node):
         return self.lf('continue;')
     
-    #def parse_Try
-    #def parse_TryFinally
-    #def parse_ExceptHandler
-    
-    #def parse_With
-    #def parse_Withitem
-    
     ## Functions and class definitions
-    
     
     def parse_FunctionDef(self, node, lambda_=False):
         # Common code for the FunctionDef and Lambda nodes.
@@ -510,11 +627,6 @@ class Parser2(Parser1):
         else:
             return self.lf("return;")
     
-    #def parse_Yield
-    #def parse_YieldFrom
-    #def parse_Global
-    #def parse_NonLocal
-    
     def parse_ClassDef(self, node):
         
         # Checks
@@ -580,3 +692,12 @@ class Parser2(Parser1):
         
         base_class = nsname2
         return '%s.prototype._base_class' % base_class
+    
+    
+    #def parse_With
+    #def parse_Withitem
+    
+    #def parse_Yield
+    #def parse_YieldFrom
+    #def parse_Global
+    #def parse_NonLocal

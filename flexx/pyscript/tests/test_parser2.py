@@ -142,14 +142,43 @@ class TestExceptions:
         assert 'MyException' in py2js('raise MyException("foo")')
         assert 'foo' in py2js('raise MyException("foo")')
         
-        # todo: we cannot eval-test this while we have no catch
+        catcher = 'try { %s } catch(err) { console.log(err); }'
+        assert evaljs(catcher % py2js('raise "foo"')) == 'foo'
+        assert evaljs(catcher % py2js('raise 42')) == '42'
+        assert evaljs(catcher % py2js('raise ValueError')).count('ValueError')
+        assert evaljs(catcher % py2js('raise ValueError("foo")')).count('foo')
     
     def test_assert(self):
         
         assert 'throw' in py2js('assert True')
         evalpy('assert true; 7') == '7'
         evalpy('assert true, "msg"; 7') == '7'
-
+        
+        catcher = 'try { %s } catch(err) { console.log(err); }'
+        assert evaljs(catcher % py2js('assert false')).count('AssertionError')
+        assert evaljs(catcher % py2js('assert false, "foo"')).count('foo')
+    
+    def test_catching(self):
+        
+        @js
+        def catchtest(x):
+            try:
+                if x == 1:
+                    raise ValueError('foo')
+                elif x == 2:
+                    raise RuntimeError('foo')
+                else:
+                    raise "oh crap"
+            except ValueError:
+                print('value-error')
+            except RuntimeError:
+                print('runtime-error')
+            except Exception:
+                print('other-error')
+        
+        assert evaljs('var f = ' + catchtest.jscode + 'f(1)') == 'value-error'
+        assert evaljs('var f = ' + catchtest.jscode + 'f(2)') == 'runtime-error'
+        assert evaljs('var f = ' + catchtest.jscode + 'f(3)') == 'other-error'
 
 @js
 def func1():

@@ -15,7 +15,7 @@ JavaScript.
     print('some test')
     print(a, b, c, sep='-')
     
-    # Getting the length of a string of array
+    # Getting the length of a string or array
     len(foo)
     
     # min and max
