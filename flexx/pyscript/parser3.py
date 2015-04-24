@@ -67,6 +67,17 @@ List methods
     # Similar for remove()
     a.remove(x)
 
+
+Dict methods
+------------
+
+.. pyscript_example::
+    
+    a = {'foo', 3}
+    a['foo']
+    a.get('foo', 0)
+    a.get('foo')
+
 """
 
 from .parser2 import Parser2, JSError, unify  # noqa
@@ -193,3 +204,13 @@ class Parser3(Parser2):
             code += self.parse(node.args[0])
             code.append('])')
             return code
+    
+    ## Dict methods
+    
+    def method_get(self, node, base):
+        if len(node.args) in (1, 2):
+            key = unify(self.parse(node.args[0]))
+            default = 'null'
+            if len(node.args) == 2:
+                default = unify(self.parse(node.args[1]))
+            return '(%s[%s] || %s)' % (base, key, default)

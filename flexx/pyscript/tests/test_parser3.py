@@ -116,4 +116,13 @@ class TestListMethods:
         assert nowhitespace(evalpy('a = [2, 3]; a.remove(2); a')) == '[3]'
 
 
+class TestDictMethods:
+    
+    def test_get(self):
+        assert evalpy('a = {"foo":3}; a.get("foo")') == '3'
+        assert evalpy('a = {"foo":3}; a.get("foo", 0)') == '3'
+        assert evalpy('a = {"foo":3}; a.get("bar")') == 'null'
+        assert evalpy('a = {"foo":3}; a.get("bar", 0)') == '0'
+
+
 run_tests_if_main()
