@@ -43,6 +43,17 @@ Slicing and subscriping
     foo.bar  # Works in JS, but not in Python
 
 
+String formatting
+-----------------
+
+Basic string formatting is supported for "%s", "%f", and "%i".
+
+.. pyscript_example::
+    
+    "value: %f" % val
+    "%s: %f" % (name, val)
+
+
 Assignments
 -----------
 
@@ -99,6 +110,7 @@ Function calls
 """
 
 import ast
+import re
 
 from .parser0 import Parser0, JSError, unify  # noqa
 
@@ -178,15 +190,10 @@ class Parser1(Parser0):
         return op, right
     
     def parse_BinOp(self, node):
-        # from py2js
-        # if isinstance(node.op, ast.Mod) and isinstance(node.left, ast.Str):
-        #     left = self.parse(node.left)
-        #     if isinstance(node.right, (ast.Tuple, ast.List)):
-        #         right = self.visit(node.right)
-        #         return "vsprintf(js(%s), js(%s))" % (left, right)
-        #     else:
-        #         right = self.visit(node.right)
-        #         return "sprintf(js(%s), %s)" % (left, right)
+        if isinstance(node.op, ast.Mod) and isinstance(node.left, ast.Str):
+            # Modulo on a string is string formatting in Python
+            return self._format_string(node)
+        
         left = unify(self.parse(node.left))
         right = unify(self.parse(node.right))
         
@@ -197,6 +204,34 @@ class Parser1(Parser0):
         else:
             op = ' %s ' % self.BINARY_OP[node.op.__class__.__name__]
             return [left, op, right]
+    
+    def _format_string(self, node):
+        # Get left end, stripped from the separator
+        left = ''.join(self.parse(node.left))
+        sep, left = left[0], left[1:-1]
+        # Get items
+        if isinstance(node.right, (ast.Tuple, ast.List)):
+            items = [unify(self.parse(n)) for n in node.right.elts]
+        else:
+            items = [unify(self.parse(node.right))]
+        # Get matches
+        matches = list(re.finditer(r'%[0-9\.\+\-\#]*[sdeEfgGioxXc]', left))
+        if len(matches) != len(items):
+            raise JSError('In string formatting, number of placeholders '
+                            'does not match number of replacements')
+        # Format
+        code = []
+        start = 0
+        for i, m in enumerate(matches):
+            fmt = m.group(0)
+            if fmt in ('%s', '%f', '%i'):
+                code.append(sep + left[start:m.start()] + sep)
+                code.append(' + ' + items[i] + ' + ')
+            else:
+                raise JSError('Unsupported string formatting %r' % fmt)
+            start = m.end()
+        code.append(sep + left[start:] + sep) 
+        return code
     
     def parse_BoolOp(self, node):
         op = ' %s ' % self.BOOL_OP[node.op.__class__.__name__]

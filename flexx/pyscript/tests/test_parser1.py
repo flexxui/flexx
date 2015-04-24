@@ -69,6 +69,14 @@ class TestExpressions:
         assert evalpy('- 3') == '-3'
         assert evalpy('True and False') == 'false'  # Boolean
         assert evalpy('True or False') == 'true'
+        
+        # string formatting
+        assert evalpy('"%s" % "bar"') == 'bar'
+        assert evalpy('"-%s-" % "bar"') == '-bar-'
+        assert evalpy('"foo %s foo" % "bar"') == 'foo bar foo'
+        assert evalpy('"x %i" % 6') == 'x 6'
+        assert evalpy('"x %f" % 6') == 'x 6'
+        assert evalpy('"%s: %f" % ("value", 6)') == 'value: 6'
     
     def test_indexing_and_slicing(self):
         c = 'a = [1, 2, 3, 4, 5]\n'
