@@ -46,8 +46,6 @@ class TestExpressions:
         assert py2js('not 2') == '!2;'  # Unary
         assert py2js('-(2+3)') == '-(2 + 3);'
         assert py2js('True and False') == 'true && false;'  # Boolean
-        assert py2js('4 > 3') == '4 > 3;'  # Comparisons
-        assert py2js('4 is 3') == '4 === 3;'
         
         # No parentices around names, numbers and strings
         assert py2js('foo + bar') == "foo + bar;"
@@ -77,6 +75,30 @@ class TestExpressions:
         assert evalpy('"x %i" % 6') == 'x 6'
         assert evalpy('"x %f" % 6') == 'x 6'
         assert evalpy('"%s: %f" % ("value", 6)') == 'value: 6'
+    
+    def test_comparisons(self):
+        
+        assert py2js('4 > 3') == '4 > 3;'
+        assert py2js('4 is 3') == '4 === 3;'
+        
+        assert evalpy('4 > 4') == 'false'
+        assert evalpy('4 >= 4') == 'true'
+        assert evalpy('4 < 3') == 'false'
+        assert evalpy('4 <= 4') == 'true'
+        assert evalpy('4 == 3') == 'false'
+        assert evalpy('4 != 3') == 'true'
+        
+        assert evalpy('4 == "4"') == 'true'  # yuck!
+        assert evalpy('4 is "4"') == 'false'
+        assert evalpy('4 is not "4"') == 'true'
+        
+        assert evalpy('"c" in "abcd"') == 'true'
+        assert evalpy('"x" in "abcd"') == 'false'
+        assert evalpy('"x" not in "abcd"') == 'true'
+        
+        assert evalpy('3 in [1,2,3,4]') == 'true'
+        assert evalpy('9 in [1,2,3,4]') == 'false'
+        assert evalpy('9 not in [1,2,3,4]') == 'true'
     
     def test_indexing_and_slicing(self):
         c = 'a = [1, 2, 3, 4, 5]\n'

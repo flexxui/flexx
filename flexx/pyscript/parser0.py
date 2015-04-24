@@ -6,6 +6,11 @@ Useful links:
  * https://greentreesnakes.readthedocs.org/en/latest/nodes.html
  * https://github.com/qsnake/py2js/blob/master/py2js/__init__.py
 
+Known limitations for Browsers. Probably best if we provide a piece of
+code that can be executed to add functionality to types for these
+situations:
+ * Array.indexOf supported from IE 9 - we use it in the In operator
+
 """
 
 import sys

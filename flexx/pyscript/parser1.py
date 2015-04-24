@@ -94,6 +94,10 @@ Comparisons
     
     # Test for JS undefined
     foo is undefined
+    
+    # Testing for containment
+    "foo" in "this has foo in it"
+    3 in [0, 1, 2, 3, 4]
 
 
 Function calls
@@ -246,17 +250,16 @@ class Parser1(Parser0):
             raise JSError('Comparisons with multiple comps is not supported.')
         
         opnode = node.ops[0]
-        comp = node.comparators[0]
-        op = self.COMP_OP[opnode.__class__.__name__]
-        
-        if isinstance(op, ast.In):
-            raise JSError('The "in" operator is currently not supported.')
-        elif isinstance(op, ast.NotIn):
-            raise JSError('The "in" operator is currently not supported.')
-        
         left = unify(self.parse(node.left))
-        right = unify(self.parse(comp))
-        return "%s %s %s" % (left, op, right)
+        right = unify(self.parse(node.comparators[0]))
+        
+        if isinstance(opnode, ast.In):
+            return "%s.indexOf(%s) >= 0" % (right, left)
+        elif isinstance(opnode, ast.NotIn):
+            return "%s.indexOf(%s) < 0" % (right, left)
+        else:
+            op = self.COMP_OP[opnode.__class__.__name__]
+            return "%s %s %s" % (left, op, right)
     
     def parse_Call(self, node):
         

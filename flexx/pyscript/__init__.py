@@ -58,9 +58,10 @@ Support
 Supported basics:
 
 * numbers, strings, lists, dicts (the latter become JS arrays and objects)
-* operations: binary, unary, boolean, power, integer division
+* operations: binary, unary, boolean, power, integer division, in-operator
 * comparisons (``==`` -> ``==``, ``is`` -> ``===``)
 * tuple packing and unpacking
+* basic string formatting
 * slicing with start end end (though not with step)
 * if-statements and single-line if-expressions
 * while-loops and for-loops supporting continue, break, and else-clauses
@@ -86,7 +87,6 @@ Supported Python conveniences:
 
 Not currently supported:
 
-* the ``in`` operator
 * list comprehensions
 * importing
 * most Python builtin functions
