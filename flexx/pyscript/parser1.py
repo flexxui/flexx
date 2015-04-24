@@ -228,7 +228,7 @@ class Parser1(Parser0):
         start = 0
         for i, m in enumerate(matches):
             fmt = m.group(0)
-            if fmt in ('%s', '%f', '%i'):
+            if fmt in ('%s', '%f', '%i', '%d'):
                 code.append(sep + left[start:m.start()] + sep)
                 code.append(' + ' + items[i] + ' + ')
             else:
