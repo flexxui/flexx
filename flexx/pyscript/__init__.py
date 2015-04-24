@@ -58,20 +58,20 @@ Support
 Supported basics:
 
 * numbers, strings, lists, dicts (the latter become JS arrays and objects)
-* operations: binary, unary, boolean, power, integer division, in-operator
+* operations: binary, unary, boolean, power, integer division, ``in`` operator
 * comparisons (``==`` -> ``==``, ``is`` -> ``===``)
 * tuple packing and unpacking
 * basic string formatting
 * slicing with start end end (though not with step)
 * if-statements and single-line if-expressions
 * while-loops and for-loops supporting continue, break, and else-clauses
-* for-loops using `range()`
+* for-loops using ``range()``
 * for-loop over arrays
 * for-loop over dict/object using ``.keys()``, ``.values()`` and ``.items()``
 * function calls can have ``*args``
 * function defs can have default arguments and ``*args``
 * lambda expressions
-* classes, with (single) inheritance, and the use of super()
+* classes, with (single) inheritance, and the use of ``super()``
 * Creation of "modules"
 * raising and catching exceptions
 * assertions
@@ -79,24 +79,21 @@ Supported basics:
 Supported Python conveniences:
 
 * use of ``self`` is translated to ``this``
-* ``print()`` becomes ``console.log()`` (also support ``sep`` and ``end``)
+* ``print()`` becomes ``console.log()`` (also supports ``sep`` and ``end``)
 * ``isinstance()`` Just Works (for primitive types as well as
   user-defined classes)
 * ``len(x)`` becomes ``x.length``
-* min(), max() and sum()
+* ``min()``, ``max()`` and ``sum()``
 
 Not currently supported:
 
-* list comprehensions
-* importing
-* most Python builtin functions
-
-Probably never suppored (because it's hard to map to JS):
-
-* slicing with steps
-* the set class (JS has no set)
-* support for ``**kwargs``
-* The ``with`` statement
+* list comprehensions (will certainly be supported at some point)
+* more Python builtin functions (e.g. ``issubclass``, ``zip``, ``sorted``, ...)
+* importing (as a means for binding similar to require.js)
+* the ``set`` class (JS has no set, but we could create one?)
+* slicing with steps (JS does not support this)
+* support for ``**kwargs`` (maps badly to JS call mechanism)
+* The ``with`` statement (no equivalent in JS)
 * Generators (i.e. ``yield``)?
 
 """

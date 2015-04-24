@@ -18,6 +18,10 @@ JavaScript.
     # Getting the length of a string or array
     len(foo)
     
+    # Rounding
+    round(foo)  # round to nearest integer
+    int(foo)  # round towards 0 as in Python
+    
     # min and max
     min(foo)
     min(a, b, c)
@@ -165,6 +169,20 @@ class Parser3(Parser2):
                     '.reduce(function(a, b) {return a + b;})')
         else:
             raise JSError('sum() needs exactly one argument')
+    
+    def function_round(self, node):
+        if len(node.args) == 1:
+            arg = ''.join(self.parse(node.args[0]))
+            return 'Math.round(', arg, ')'
+        else:
+            raise JSError('round() needs at least one argument')
+    
+    def function_int(self, node):
+        if len(node.args) == 1:
+            arg = ''.join(self.parse(node.args[0]))
+            return '(%s<0? Math.ceil(%s): Math.floor(%s))' % (arg, arg, arg)
+        else:
+            raise JSError('int() needs at least one argument')
     
     def function_max(self, node):
         if len(node.args) == 0:
