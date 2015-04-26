@@ -234,7 +234,7 @@ class Parser1(Parser0):
             else:
                 raise JSError('Unsupported string formatting %r' % fmt)
             start = m.end()
-        code.append(sep + left[start:] + sep) 
+        code.append(sep + left[start:] + sep)
         return code
     
     def parse_BoolOp(self, node):
@@ -253,10 +253,14 @@ class Parser1(Parser0):
         left = unify(self.parse(node.left))
         right = unify(self.parse(node.comparators[0]))
         
-        if isinstance(opnode, ast.In):
-            return "%s.indexOf(%s) >= 0" % (right, left)
-        elif isinstance(opnode, ast.NotIn):
-            return "%s.indexOf(%s) < 0" % (right, left)
+        if isinstance(opnode, (ast.In, ast.NotIn)):
+            dummy = self.dummy()
+            s = "((%s = %s).indexOf ? %s : Object.keys(%s)).indexOf(%s)" % (
+                dummy, right, dummy, dummy, left)
+            if isinstance(opnode, ast.In):
+                return s + ' >= 0'
+            else:
+                return s + ' < 0'
         else:
             op = self.COMP_OP[opnode.__class__.__name__]
             return "%s %s %s" % (left, op, right)
@@ -288,8 +292,9 @@ class Parser1(Parser0):
         else:
             code = [full_name] + self._get_args(node, base_name)
             # Insert "new" if this looks like a class
-            if ((full_name and full_name[0].upper() == full_name[0]) or
-                (method_name and method_name[0].upper() == method_name[0])):
+            if ((full_name and full_name[0].lower() != full_name[0]) or
+                (method_name and method_name[0].lower() != method_name[0] and
+                 base_name != 'this')):
                 code.insert(0, 'new ')
             return code
     

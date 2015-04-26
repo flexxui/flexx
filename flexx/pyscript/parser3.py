@@ -81,10 +81,21 @@ Dict methods
     a['foo']
     a.get('foo', 0)
     a.get('foo')
+    a.keys()
 
 """
 
 from .parser2 import Parser2, JSError, unify  # noqa
+
+# List of possibly relevant builtin functions:
+#
+# abs all any bin bool callable chr complex delattr dict dir divmod
+# enumerate eval exec filter float format getattr globals hasattr hash
+# hex id int isinstance issubclass iter len list locals map max min next
+# object oct ord pow print property range repr reversed round set setattr
+# slice sorted str sum super tuple type vars zip
+#
+# Further, all methods of: list, dict, str, set?
 
 
 class Parser3(Parser2):
@@ -217,7 +228,7 @@ class Parser3(Parser2):
     def method_remove(self, node, base):
         if len(node.args) == 1:
             code = []
-            remove_func = 'function (x) {%s.splice(%s.indexOf(x), 1);}' % (base, base)
+            remove_func = 'function (x) {this.splice(this.indexOf(x), 1);}'
             code.append('(%s.remove || %s).apply(%s, [' % (base, remove_func, base))
             code += self.parse(node.args[0])
             code.append('])')
@@ -232,3 +243,7 @@ class Parser3(Parser2):
             if len(node.args) == 2:
                 default = unify(self.parse(node.args[1]))
             return '(%s[%s] || %s)' % (base, key, default)
+    
+    def method_keys(self, node, base):
+        if len(node.args) == 0:
+            return 'Object.keys(%s)' % base

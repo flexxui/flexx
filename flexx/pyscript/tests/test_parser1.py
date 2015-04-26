@@ -99,6 +99,9 @@ class TestExpressions:
         assert evalpy('3 in [1,2,3,4]') == 'true'
         assert evalpy('9 in [1,2,3,4]') == 'false'
         assert evalpy('9 not in [1,2,3,4]') == 'true'
+        
+        assert evalpy('"bar" in {"foo": 3}') == 'false'
+        assert evalpy('"foo" in {"foo": 3}') == 'true'
     
     def test_indexing_and_slicing(self):
         c = 'a = [1, 2, 3, 4, 5]\n'
@@ -177,6 +180,11 @@ class TestExpressions:
     def test_instantiation(self):
         # Test creating instances
         assert 'new' in py2js('a = Foo()')
+        assert 'new' not in py2js('a = foo()')
+        assert 'new' not in py2js('a = _foo()')
+        assert 'new' not in py2js('a = _Foo()')
+        assert 'new' not in py2js('a = this.Foo()')
+        
         jscode = 'function Foo() {this.x = 3}\nx=1;\n'
         assert evaljs(jscode + py2js('a=Foo()\nx')) == '1'
         

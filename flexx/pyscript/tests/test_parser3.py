@@ -126,7 +126,8 @@ class TestListMethods:
     def test_remove(self):
         assert nowhitespace(evalpy('a = [2, 3]; a.remove(3); a')) == '[2]'
         assert nowhitespace(evalpy('a = [2, 3]; a.remove(2); a')) == '[3]'
-
+        assert nowhitespace(evalpy('x = {"a":[2, 3]}; x.a.remove(2); x.a')) == '[3]'
+        
 
 class TestDictMethods:
     
@@ -135,6 +136,9 @@ class TestDictMethods:
         assert evalpy('a = {"foo":3}; a.get("foo", 0)') == '3'
         assert evalpy('a = {"foo":3}; a.get("bar")') == 'null'
         assert evalpy('a = {"foo":3}; a.get("bar", 0)') == '0'
+    
+    def test_keys(self):
+        assert evalpy('a = {"foo":3}; a.keys()') == "[ 'foo' ]"
 
 
 run_tests_if_main()

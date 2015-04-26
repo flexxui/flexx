@@ -68,7 +68,7 @@ class TestConrolFlow:
         assert ' in ' not in code and evaljs(code) == '7\n8'
         # .keys()
         code = py2js('d = {3:7, 4:8}\nfor k in d.keys():\n  print(d[k])')
-        assert ' in ' in code and evaljs(code) == '7\n8'
+        assert evaljs(code) == '7\n8'  # and ' in ' in code
         # .values()
         code = py2js('d = {3:7, 4:8}\nfor v in d.values():\n  print(v)')
         assert ' in ' in code and evaljs(code) == '7\n8'
@@ -434,5 +434,30 @@ class TestClasses:
         assert evaljs(code + 'm3 instanceof MyClass2;') == 'true'
         assert evaljs(code + 'm3 instanceof MyClass1;') == 'true'
         assert evaljs(code + 'm3 instanceof Object;') == 'true'
+    
+    
+    def test_calling_method_from_init(self):
+        
+        # Note that all class names inside a module need to be unique
+        # for js() to find the correct source.
+        
+        class MyClass11:
+            def __init__(self):
+                self._res = self.m1() + self.m2() + self.m3()
+            def m1(self):
+                return 100
+            def m2(self):
+                return 10
+        
+        class MyClass12(MyClass11):
+            def m2(self):
+                return 20
+            def m3(self):
+                return 2
+        
+        code = js(MyClass11).jscode + js(MyClass12).jscode
+        code += 'm = new MyClass12(); m._res'
+        assert evaljs(code) == '122'
+
 
 run_tests_if_main()

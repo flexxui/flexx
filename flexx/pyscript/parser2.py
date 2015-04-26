@@ -144,6 +144,7 @@ import sys
 
 from .parser1 import Parser1, JSError, unify  # noqa
 
+# todo: tuple unpacking in for-loops (for x, y, z in xxyyzz)
 
 class Parser2(Parser1):
     """ Parser that adds control flow, functions, classes, and exceptions.
@@ -187,9 +188,10 @@ class Parser2(Parser1):
         if err_cls:
             code.append(self.lf("%s = " % err_name))
             code.append('new Error(')
+            code.append(repr(err_cls + ':') + ' + ')
         else:
             code.append(self.lf("throw "))
-        code.append(err_msg)
+        code.append(err_msg or '""')
         if err_cls:
             code.append(');')
             code.append(' %s.name = "%s";' % (err_name, err_cls))
@@ -412,7 +414,10 @@ class Parser2(Parser1):
                 code.append(self.lf('%s = %s[%s];' % (target2, d_seq, target)))
         
         else:  # Enumeration
-        
+            
+            # todo: since we have xx.keys -> Object.keys(xx)
+            # we no longer detect the keys enumeration, is that a problem?
+            
             # We cannot know whether the thing to iterate over is an
             # array or a dict. We use a for-iterarion (otherwise we
             # cannot be sure of the element order for arrays). Before
