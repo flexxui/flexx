@@ -83,6 +83,14 @@ Dict methods
     a.get('foo')
     a.keys()
 
+
+Str methods
+-----------
+
+.. pyscript_example::
+
+    "foobar".startswith('foo')
+
 """
 
 from .parser2 import Parser2, JSError, unify  # noqa
@@ -247,3 +255,10 @@ class Parser3(Parser2):
     def method_keys(self, node, base):
         if len(node.args) == 0:
             return 'Object.keys(%s)' % base
+    
+    ## Str methods
+    
+    def method_startswith(self, node, base):
+        if len(node.args) == 1:
+            arg = unify(self.parse(node.args[0]))
+            return unify(base), '.indexOf(', arg, ') == 0'

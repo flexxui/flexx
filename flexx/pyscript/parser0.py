@@ -40,6 +40,46 @@ def unify(x):
         return '(%s)' % x
 
 
+# https://github.com/umdjs/umd/blob/master/returnExports.js
+UMD = """
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        // AMD. Register as an anonymous module.
+        define([%s], factory);
+    } else if (typeof exports === 'object') {
+        // Node. Does not work with strict CommonJS, but only CommonJS-like
+        // environments that support module.exports, like Node.
+        module.exports = factory(%s);
+        root.%s = module.exports;  // also create global module
+    } else {
+        // Browser globals (root is window)
+        root.%s = factory(%s);
+    }
+}(this, function (%s) {
+""".lstrip()  # "dep", require("dep"), name, root.dep, dep
+
+
+def get_module_preamble(name, deps):
+    """ Wrap code in a module compatible with UMD (Universal Module
+    Definition), making it work with AMD (i.e. require), Node, plain
+    browser.
+    
+    Parameters:
+        name (str): the name of the module
+        deps (list): dependency names
+    Returns:
+        code: a preamble to prepend the actual module code with.
+        Don't forget to return the namespace, and put ``}));`` at the end.
+    """
+    
+    dep_strings = ', '.join([repr(dep) for dep in deps])
+    dep_requires = ', '.join(['require(%s)' % repr(dep) for dep in deps])
+    dep_names = ', '.join(deps)
+    dep_fullnames = ', '.join('root.' + dep for dep in deps)
+    
+    return UMD % (dep_strings, dep_requires, name, name, dep_fullnames, dep_names)
+
+
 class Parser0(object):
     """ The Base parser class. Implements a couple of methods that
     the actual parser classes need.
@@ -134,19 +174,13 @@ class Parser0(object):
         # Post-process
         if module:
             self._indent -= 1
+            exports = [name for name in sorted(ns) if not name.startswith('_')]
+            export_keyvals = [repr(name) + ': ' + name for name in exports]
             code = self._parts
-            code.insert(0, '(function () {\n')
-            code.append('\n\n')
-            code.append('    /* ===== CREATING MODULE ===== */\n')
-            code.append('    // note that "this" is the global object\n')
-            code.append('    if (this.%s === undefined) {\n' % module)
-            code.append('        this.%s = {};\n' % module)
-            code.append('    }\n')
-            for name in sorted(ns):
-                if name.startswith('_'):
-                    continue
-                code.append('    this.%s.%s = %s;\n' % (module, name, name))
-            code.append('})();\n')
+            code.insert(0, get_module_preamble(module, []))
+            code.append('\n    return {%s};\n' % ', '.join(export_keyvals))
+            code.append('}));\n')
+            
         else:
             if self._parts:
                 self._parts[0] = self._parts[0].lstrip()

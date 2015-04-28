@@ -219,7 +219,7 @@ class Parser1(Parser0):
         else:
             items = [unify(self.parse(node.right))]
         # Get matches
-        matches = list(re.finditer(r'%[0-9\.\+\-\#]*[sdeEfgGioxXc]', left))
+        matches = list(re.finditer(r'%[0-9\.\+\-\#]*[srdeEfgGioxXc]', left))
         if len(matches) != len(items):
             raise JSError('In string formatting, number of placeholders '
                             'does not match number of replacements')
@@ -244,6 +244,8 @@ class Parser1(Parser0):
     
     def parse_Compare(self, node):
         
+        # todo: when a comparison is singleton, do some tricks to
+        # allow doing "if (a)" with a an array -> in JS this is always True
         if len(node.ops) != 1:
             raise JSError('Comparisons with multiple ops is not supported.')
         if len(node.comparators) != 1:
@@ -268,10 +270,15 @@ class Parser1(Parser0):
     def parse_Call(self, node):
         
         # Get full function name and method name if it exists
+        
         if isinstance(node.func, ast.Attribute):
             method_name = node.func.attr
             base_name = unify(self.parse(node.func.value))
             full_name = base_name + '.' + method_name
+        elif isinstance(node.func, ast.Subscript):
+            base_name = unify(self.parse(node.func.value))
+            full_name = unify(self.parse(node.func))
+            method_name = ''
         else:
             method_name = ''
             base_name = ''
@@ -292,9 +299,12 @@ class Parser1(Parser0):
         else:
             code = [full_name] + self._get_args(node, base_name)
             # Insert "new" if this looks like a class
-            if ((full_name and full_name[0].lower() != full_name[0]) or
-                (method_name and method_name[0].lower() != method_name[0] and
-                 base_name != 'this')):
+            if base_name == 'this':
+                pass
+            elif method_name:
+                if method_name[0].lower() != method_name[0]:
+                    code.insert(0, 'new ')
+            elif full_name[0].lower() != full_name[0]:
                 code.insert(0, 'new ')
             return code
     
@@ -320,6 +330,7 @@ class Parser1(Parser0):
             argswithcommas.pop(-1)
         
         if node.starargs:
+            # Note that this goes wrong if the original code uses apply()
             starname = ''.join(self.parse(node.starargs))
             code = ['.apply(', base_name, ', [']
             code += argswithcommas

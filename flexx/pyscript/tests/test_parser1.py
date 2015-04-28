@@ -176,6 +176,11 @@ class TestExpressions:
         # Test super (is tested for real in test_parser3.py
         assert evalpy('d={"_base_class": console};d._base_class.log(4)') == '4'
         assert evalpy('d={"_base_class": console};d._base_class.log()') == ''
+        
+        jscode = 'var foo = function () {return this.val};'
+        jscode += 'var d = {"foo": foo, "val": 7};\n'
+        assert evaljs(jscode + py2js('d["foo"]()')) == '7'
+        assert evaljs(jscode + py2js('d["foo"](*[3, 4])')) == '7'
     
     def test_instantiation(self):
         # Test creating instances
@@ -184,6 +189,7 @@ class TestExpressions:
         assert 'new' not in py2js('a = _foo()')
         assert 'new' not in py2js('a = _Foo()')
         assert 'new' not in py2js('a = this.Foo()')
+        assert 'new' not in py2js('a = JSON.stringify(x)')
         
         jscode = 'function Foo() {this.x = 3}\nx=1;\n'
         assert evaljs(jscode + py2js('a=Foo()\nx')) == '1'

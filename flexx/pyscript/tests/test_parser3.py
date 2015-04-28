@@ -141,4 +141,13 @@ class TestDictMethods:
         assert evalpy('a = {"foo":3}; a.keys()') == "[ 'foo' ]"
 
 
+
+class TestStrMethods:
+    
+    def test_startswith(self):
+        assert evalpy('"foobar".startswith("foo")') == "true"
+        assert evalpy('"foobar".startswith("bar")') == "false"
+        assert evalpy('("fo" + "obar").startswith("foo")') == "true"
+        
+
 run_tests_if_main()
