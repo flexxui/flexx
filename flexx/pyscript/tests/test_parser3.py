@@ -136,7 +136,13 @@ class TestDictMethods:
         assert evalpy('a = {"foo":3}; a.get("foo", 0)') == '3'
         assert evalpy('a = {"foo":3}; a.get("bar")') == 'null'
         assert evalpy('a = {"foo":3}; a.get("bar", 0)') == '0'
-    
+        assert evalpy('{"foo":3}.get("foo")') == '3'
+        assert evalpy('{"foo":3}.get("bar", 0)') == '0'
+        
+        # Test that if a get exists, that one is used
+        fun = 'def fun(x): return 42\n'
+        assert evalpy(fun + 'a = {"get": fun}; a.get("bar")') == '42'
+        
     def test_keys(self):
         assert evalpy('a = {"foo":3}; a.keys()') == "[ 'foo' ]"
 

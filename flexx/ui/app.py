@@ -44,7 +44,7 @@ import inspect
 import tornado.ioloop
 import tornado.web
 
-from ..webruntime.icon import Icon  # todo: move to util
+from ..util.icon import Icon
 from flexx.webruntime import launch
 
 # Create/get the tornado event loop

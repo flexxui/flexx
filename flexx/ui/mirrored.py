@@ -5,7 +5,8 @@ import sys
 import weakref
 import json
 
-from flexx.properties import HasProps, Int, Str
+from ..properties import HasPropsMeta, HasProps, Prop, Int, Str
+from ..pyscript import js, JSCode
 
 if sys.version_info[0] >= 3:
     string_types = str,
@@ -22,7 +23,6 @@ def get_instance_by_id(id):
     """
     return Mirrored._instances.get(id, None)
 
-from flexx.ui.compile import js
 
 class Mirrored(HasProps):
     """ Instances of this class will have a mirror object in JS. The
@@ -161,14 +161,14 @@ class Mirrored(HasProps):
         # todo: flexx.classes.xx
         # todo: we could reduce JS code by doing inheritance in JS
         js.append('flexx.%s = ' % cls_name)
-        js.append(cls.__jsinit__.js.jscode)
+        js.append(cls.__jsinit__.jscode)
         
         for key in dir(cls):
             # Methods
             func = getattr(cls, key)
-            if hasattr(func, 'js') and hasattr(func.js, 'jscode'):
-                code = func.js.jscode
-                name = func.js.name
+            if isinstance(func, JSCode):
+                code = func.jscode
+                name = func.name
                 js.append('flexx.%s.prototype.%s = %s' % (cls_name, name, code))
             
             # Property json methods
@@ -180,8 +180,8 @@ class Mirrored(HasProps):
                 funcs = [getattr(prop, x, None) for x in ('to_json__js', 'from_json__js')]
                 funcs = [func for func in funcs if func is not None]
                 for func in funcs:
-                    code = func.js.jscode
-                    name = '_%s_%s' % (func.js.name, propname)
+                    code = func.jscode
+                    name = '_%s_%s' % (func.name, propname)
                     js.append('flexx.%s.prototype.%s = %s' % (cls_name, name, code))
         
         return '\n'.join(js)

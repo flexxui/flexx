@@ -34,9 +34,18 @@ flexx.get = function (id) {
     }
 };
 
-window.addEventListener('load', flexx.init, false);
-window.addEventListener('beforeunload', flexx.exit, false);
-
+if (typeof window === 'undefined' && typeof exports === 'object') {
+    // nodejs
+    setTimeout(flexx.init, 0);
+    // bind to exit, ctrl-c and errors
+    process.on('exit', flexx.exit, false);
+    process.on('SIGINT', flexx.exit, false);
+    process.on('uncaughtException', flexx.exit, false);
+} else {
+    // browser
+    window.addEventListener('load', flexx.init, false);
+    window.addEventListener('beforeunload', flexx.exit, false);
+}
 
 flexx.command = function (msg) {
     var log, link;

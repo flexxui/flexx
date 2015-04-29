@@ -1,6 +1,8 @@
 import json
 
-from .mirrored import Prop, Mirrored, Instance, Str, Tuple, js, get_instance_by_id
+from ..pyscript import js
+from ..properties import Prop, Instance, Str, Tuple
+from .mirrored import Mirrored, get_instance_by_id
 
 
 class WidgetProp(Prop):

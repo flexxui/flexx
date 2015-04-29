@@ -24,5 +24,5 @@ immutable object.
 Need more docs.
 """
 
-from .base import Prop, HasProps
+from .base import Prop, HasProps, HasPropsMeta
 from .props import Bool, Int, Float, Str, Tuple, Color, Instance

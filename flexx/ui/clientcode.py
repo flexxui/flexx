@@ -48,6 +48,8 @@ CSS_BOOTSTRAP = """
 """
 
 
+# todo: is this still needed when we use PyScript throughout?
+
 class ClientCode(object):
     """ Collect code that the client needs and provide a few ways to
     get the code to the client.

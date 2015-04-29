@@ -105,6 +105,7 @@ from .parser2 import Parser2, JSError, unify  # noqa
 #
 # Further, all methods of: list, dict, str, set?
 
+# todo: make these more robust by not applying the Python version if a JS version exists.
 
 class Parser3(Parser2):
     """ Parser to transcompile Python to JS, allowing more Pythonic
@@ -246,11 +247,25 @@ class Parser3(Parser2):
     
     def method_get(self, node, base):
         if len(node.args) in (1, 2):
+            # Get name to call object - use simple name if we can
+            ob_name = base
+            ob_name1 = base
+            if not base.isalnum():
+                dummy = self.dummy()
+                ob_name = dummy
+                ob_name1 = '(%s=%s)' % (dummy, base)
+            # Get args
             key = unify(self.parse(node.args[0]))
             default = 'null'
+            normal_args = ''.join(self.parse(node.args[0]))
             if len(node.args) == 2:
                 default = unify(self.parse(node.args[1]))
-            return '(%s[%s] || %s)' % (base, key, default)
+                normal_args += ', ' + ''.join(self.parse(node.args[1]))
+            # Compose
+            dict_get = '(%s[%s] || %s)' % (ob_name, key, default)
+            normal_get = '%s.get(%s)' % (ob_name, normal_args)
+            return '(/*py-dict.get*/typeof %s.get==="function" ? %s : %s)' % (
+                    ob_name1, normal_get, dict_get)
     
     def method_keys(self, node, base):
         if len(node.args) == 0:

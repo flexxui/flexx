@@ -1,4 +1,4 @@
-""" flexx.ui client based serving a web page using tornado.
+""" flexx.ui client serving a web page using Tornado.
 """
 
 import sys
@@ -14,7 +14,6 @@ from .app import manager, call_later
 from .clientcode import clientCode
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
-
 HTML_DIR = os.path.join(os.path.dirname(THIS_DIR), 'html')
 
 
@@ -46,7 +45,6 @@ def _patch_tornado():
         else:
             WebSocketProtocol._orig_run_callback = WebSocketProtocol.async_callback
             WebSocketProtocol.async_callback = _flexx_run_callback
-            
 
 
 _patch_tornado()
