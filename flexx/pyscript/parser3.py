@@ -77,7 +77,7 @@ Dict methods
 
 .. pyscript_example::
     
-    a = {'foo', 3}
+    a = {'foo': 3}
     a['foo']
     a.get('foo', 0)
     a.get('foo')

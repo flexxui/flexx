@@ -96,6 +96,15 @@ Not currently supported:
 * The ``with`` statement (no equivalent in JS)
 * Generators (i.e. ``yield``)?
 
+Caveats:
+
+* PyScript does no attempt to fix the weird truthfulness rules of
+  JavaScript. Empty arrays and empty dicts evaluate to True. Use
+  ``len(arr)`` and ``len(d.keys())`` to work around this.
+* JavasScript has a concept of `null` (i.e. `None`), as well as
+  `undefined`. Sometimes you may want to use ``if x is None or x is
+  undefined: ...``.
+
 """
 
 # NOTE: The code for the parser is quite long, especially if you want

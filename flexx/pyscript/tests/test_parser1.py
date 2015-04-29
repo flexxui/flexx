@@ -103,6 +103,28 @@ class TestExpressions:
         assert evalpy('"bar" in {"foo": 3}') == 'false'
         assert evalpy('"foo" in {"foo": 3}') == 'true'
     
+    def test_truthfulness_of_basic_types(self):
+        # Numbers
+        assert evalpy('"T" if (1) else "F"') == 'T'
+        assert evalpy('"T" if (0) else "F"') == 'F'
+        
+        # Strings
+        assert evalpy('"T" if ("a") else "F"') == 'T'
+        assert evalpy('"T" if ("") else "F"') == 'F'
+        
+        # Arrays - yuk!
+        assert evalpy('"T" if ([1, 2, 3]) else "F"') == 'T'
+        assert evalpy('"T" if ([]) else "F"') == 'T'
+        
+        # Dicts - yuk!
+        assert evalpy('"T" if ({"foo": 3}) else "F"') == 'T'
+        assert evalpy('"T" if ({}) else "F"') == 'T'
+        
+        # None - undefined
+        assert evalpy('None is null') == 'true'
+        assert evalpy('None is undefined') == 'false'
+        assert evalpy('undefined is undefined') == 'true'
+    
     def test_indexing_and_slicing(self):
         c = 'a = [1, 2, 3, 4, 5]\n'
         

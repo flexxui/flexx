@@ -64,8 +64,8 @@ Both support ``continue``, ``break`` and the ``else`` clause.
         print(key, val, sep=': ')
     
     
-Functions
----------
+Defining functions
+------------------
 
 .. pyscript_example::
 
@@ -87,8 +87,8 @@ Functions
     foo = lambda x: x**2
 
 
-Classes
--------
+Defining classes
+----------------
 
 Classes are translated to the JavaScript prototypal class paragigm,
 which means that they should play well with other JS libraries and e.g.

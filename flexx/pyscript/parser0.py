@@ -10,6 +10,7 @@ Known limitations for Browsers. Probably best if we provide a piece of
 code that can be executed to add functionality to types for these
 situations:
  * Array.indexOf supported from IE 9 - we use it in the In operator
+ * Object.keys supported from IE 9 - we use it in method_keys()
 
 """
 

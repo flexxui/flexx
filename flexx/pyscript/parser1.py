@@ -100,6 +100,35 @@ Comparisons
     3 in [0, 1, 2, 3, 4]
 
 
+Truthy and Falsy
+----------------
+
+The same rules for truthfulness apply as in JavaScript. This leads to
+some *unexpected behavior with respect to arrays and dicts*.
+Unfortunately, fixing these inconsistencies would lead to other problems,
+e.g. with ``value = value or ['default', 'value'].
+
+.. pyscript_example::
+
+    # These evaluate to False:
+    0
+    NaN
+    ""  # empty string
+    None  # JS null
+    undefined
+    
+    # All other values result in True, including these:
+    "0"
+    []  # empty array
+    {}  # empty dicts (dicts are objects in JS)
+    
+    # When testing an array or dict to be empty, always use this:
+    if len(arr):
+       do_stuff()
+    if len(d.keys()):
+        do_stuff()
+
+
 Function calls
 --------------
 
