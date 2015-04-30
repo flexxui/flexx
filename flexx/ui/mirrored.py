@@ -17,6 +17,7 @@ else:
 def get_mirrored_classes():
     return [c for c in HasPropsMeta.CLASSES if issubclass(c, Mirrored)]
 
+
 def get_instance_by_id(id):
     """ Get js object corresponding to the given id, or None if it does
     not exist. 
@@ -189,23 +190,3 @@ class Mirrored(HasProps):
     @classmethod
     def get_css(cls):
         return cls.CSS
-
-
-class Foo(HasProps):
-    
-    size = Int(help='the size of the foo')
-    
-    def __init__(self, x, **kwargs):
-        HasProps.__init__(self, **kwargs)
-        self._x = x
-    
-    def methodb(self):
-        """ this is method b"""
-        pass
-
-
-
-if __name__ == '__main__':
-    a = Bar(1, size=4)
-#Foo.size.__doc__ = 'asd'
-    

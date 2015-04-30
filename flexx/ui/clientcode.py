@@ -6,6 +6,7 @@ export mechanism.
 
 import os
 from collections import OrderedDict
+from ..pyscript import js
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 HTML_DIR = os.path.join(os.path.dirname(THIS_DIR), 'html')
@@ -22,6 +23,8 @@ CSS-HERE
 </style>
 
 <script>
+"use strict";
+
 JS-HERE
 </script>
 
@@ -47,6 +50,181 @@ flexx.isExported = false;
 CSS_BOOTSTRAP = """
 """
 
+@js
+class FlexxJS:
+    """ JavaScript Flexx module.
+    """
+    
+    def __init__(self):
+        """ Bootstrap Flexx. """
+        
+        self.ws = None
+        self.last_msg = None
+        self.is_full_page = True
+        self.ws_url = ("ws://" + location.hostname + ':' + location.port +
+                       "/" + location.pathname + "/ws")
+        self.is_exported = False
+        self.widgets = {}
+        
+        if typeof(window) is 'undefined' and typeof(exports) is 'object':
+            # nodejs
+            root.setTimeout(flexx.init, 0)
+            # bind to exit, ctrl-c and errors
+            process.on('exit', self.exit, False)
+            process.on('SIGINT', self.exit, False)
+            process.on('uncaughtException', self.exit, False)
+        else:
+            # browser
+            window.addEventListener('load', self.init, False)
+            window.addEventListener('beforeunload', self.exit, False)
+    
+    def init(self):
+        """ Called after document is loaded. """
+        if flexx.is_exported:
+            flexx.runExportedApp()
+        else:
+            flexx.initSocket()
+            flexx.initLogging()
+    
+    def exit(self):
+        """ Called when runtime is about to quit. """
+        if this.ws:  # is not null or undefined
+            this.ws.close()
+    
+    def get(self, id):
+        if id == 'body':
+            return document.body
+        else:
+            return this.widgets[id]
+    
+    def initSocket(self):
+        # Check WebSocket support
+        if (window.WebSocket is undefined):
+            document.body.innerHTML = 'This browser does not support WebSockets'
+            return
+        # Open web socket in binary mode
+        self.ws = ws = window.WebSocket(flexx.ws_url)
+        ws.binaryType = "arraybuffer"
+        # Connect
+        ws.onopen = self.on_ws_open
+        ws.onmessage = self.on_ws_message
+        ws.onclose = self.on_ws_close
+        ws.onerror  = self.on_ws_error
+    
+    def on_ws_open(self, evt):
+        console.info('Socket connected')
+    
+    def on_ws_message(self, evt):
+        flexx.last_msg = evt.data
+        msg = decodeUtf8(evt.data)
+        flexx.command(msg)
+    
+    def on_ws_close(self, evt):
+        msg = 'Lost connection with server: %s (%i)' % (evt.reason, evt.code)
+        if flexx.is_full_page:
+            document.body.innerHTML = msg
+        else:
+            console.info(msg)
+    
+    def on_ws_error(self, evt):
+        console.error('Socket error')
+    
+    def initLogging(self):
+        if console.ori_log:
+            return  # already initialized the loggers
+        # Keep originals
+        console.ori_log = console.log
+        console.ori_info = console.info or console.log
+        console.ori_warn = console.warn or console.log
+        # Set new versions
+        console.log = self.log
+        console.info = self.info
+        console.warn = self.warn
+        # Create error handlers, so that JS errors get into Python
+        window.addEventListener('error', self.errorHandler, False)
+    
+    def log(self, msg):
+        flexx.ws.send("PRINT " + msg)
+        console.ori_log(msg)
+    
+    def info(self, msg):
+        flexx.ws.send("INFO " + msg)
+        console.ori_info(msg)
+    
+    def warn(self, msg):
+        flexx.ws.send("WARN " + msg)
+        console.ori_warn(msg)
+    
+    def on_error(self, evt):
+        # evt: message, url, linenumber
+        msg = "On line %i in %s:\n%s" % (evt.lineno, ev.filename, evt.message)
+        flexx.ws.send("ERROR " + msg)
+    
+    def command(self, msg):
+        """ Execute a command received from the server.
+        """
+        if msg.startswith('PRINT '):
+            console.ori_log(msg[6:])
+        elif msg.startswith('EVAL '):
+            window._ = window.eval(msg[5:])
+            flexx.ws.send('RET ' + window._)  # send back result
+        elif msg.startswith('EXEC '):
+            window.eval(msg[5:])  # like eval, but do not return result
+        elif msg.startswith('TITLE '):
+            document.title = msg[6:]
+        elif msg.startswith('ICON '):
+            link = document.createElement('link')
+            link.rel = 'icon'
+            link.href = msg[5:]
+            document.head.appendChild(link)
+            #document.getElementsByTagName('head')[0].appendChild(link);
+        elif msg.startswith('OPEN '):
+            window.win1 = window.open(msg[5:], 'new', 'chrome')
+        else:
+            console.warn('Invalid command: ' + msg)
+
+
+@js
+def decodeUtf8(arrayBuffer):
+    """
+    var result = "",
+        i = 0,
+        c = 0,
+        c1 = 0,
+        c2 = 0,
+        c3 = 0,
+        data = new window.Uint8Array(arrayBuffer);
+
+    // If we have a BOM skip it
+    if (data.length >= 3 && data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) {
+        i = 3;
+    }
+
+    while (i < data.length) {
+        c = data[i];
+
+        if (c < 128) {
+            result += String.fromCharCode(c);
+            i += 1;
+        } else if (c > 191 && c < 224) {
+            if (i + 1 >= data.length) {
+                throw "UTF-8 Decode failed. Two byte character was truncated.";
+            }
+            c2 = data[i + 1];
+            result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+            i += 2;
+        } else {
+            if (i + 2 >= data.length) {
+                throw "UTF-8 Decode failed. Multi byte character was truncated.";
+            }
+            c2 = data[i + 1];
+            c3 = data[i + 2];
+            result += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+            i += 3;
+        }
+    }
+    return result;
+    """
 
 # todo: is this still needed when we use PyScript throughout?
 
@@ -69,20 +247,20 @@ class ClientCode(object):
             return
         self._collected = True
         
-        # Determine JS files
-        for fname in ['serialize.js', 'main.js', #'layouts.js',
-                     ]:# 'phosphor-core.min.js', 'phosphor-ui.min.js']:
-            if fname.startswith('phosphor'):
-                self._files[fname] = os.path.join(HTML_DIR, 'phosphor', fname)
-            else:
-                self._files[fname] = os.path.join(HTML_DIR, fname)
-        
-        # Determine CSS files
-        for fname in []:#['main.css', 'layouts.css', ]:#'phosphor-ui.min.css']:
-            if fname.startswith('phosphor'):
-                self._files[fname] = os.path.join(HTML_DIR, 'phosphor', fname)
-            else:
-                self._files[fname] = os.path.join(HTML_DIR, fname)
+        # # Determine JS files
+        # for fname in ['serialize.js', #'main.js', #'layouts.js',
+        #              ]:# 'phosphor-core.min.js', 'phosphor-ui.min.js']:
+        #     if fname.startswith('phosphor'):
+        #         self._files[fname] = os.path.join(HTML_DIR, 'phosphor', fname)
+        #     else:
+        #         self._files[fname] = os.path.join(HTML_DIR, fname)
+        # 
+        # # Determine CSS files
+        # for fname in []:#['main.css', 'layouts.css', ]:#'phosphor-ui.min.css']:
+        #     if fname.startswith('phosphor'):
+        #         self._files[fname] = os.path.join(HTML_DIR, 'phosphor', fname)
+        #     else:
+        #         self._files[fname] = os.path.join(HTML_DIR, fname)
         
         # Collect JS from mirrored classes
         from .mirrored import get_mirrored_classes
@@ -110,7 +288,10 @@ class ClientCode(object):
         """
         self.collect()
         parts = []
-        parts.append(JS_BOOTSTRAP)
+        #parts.append(JS_BOOTSTRAP)
+        parts.append(FlexxJS.jscode)
+        parts.append('\nvar flexx = new FlexxJS();\n')
+        parts.append('var decodeUtf8 = ' + decodeUtf8.jscode)
         # Files
         for fname in self._files:
             if fname.endswith('.js'):

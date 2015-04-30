@@ -587,7 +587,7 @@ class Parser2(Parser1):
             code += self.parse(node.body)
             code.append(';')
         else:
-            docstring = self.get_docstring(node)
+            docstring = self.pop_docstring(node)
             if docstring and not node.body:
                 # Raw JS
                 for line in docstring.splitlines():
@@ -655,7 +655,7 @@ class Parser2(Parser1):
         # Write constructor
         code = []
         code.append(self.lf('%s = function () {' % node.name))
-        for line in self.get_docstring(node).splitlines():
+        for line in self.pop_docstring(node).splitlines():
             code.append(self.lf('    // ' + line))
         code.append(self.lf('    if (this.__init__) {'))
         code.append(self.lf('       this.__init__.apply(this, arguments);'))

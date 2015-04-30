@@ -255,7 +255,7 @@ class Parser0(object):
         self.vars.add(name)
         return name
     
-    def get_docstring(self, node):
+    def pop_docstring(self, node):
         """ If a docstring is present, in the body of the given node,
         remove that string node and return it as a string, corrected
         for indentation and stripped. If no docstring is present return
@@ -267,7 +267,7 @@ class Parser0(object):
             docstring = node.body.pop(0).value.s.strip()
             lines = docstring.splitlines()
             getindent = lambda x: len(x) - len(x.strip())
-            indent = getindent(lines[1]) if (len(lines) > 1) else 0
+            indent = min([getindent(x) for x in lines[1:]]) if (len(lines) > 1) else 0
             lines[0] = ' ' * indent + lines[0]
             lines = [line[indent:] for line in lines]
             docstring = '\n'.join(lines)

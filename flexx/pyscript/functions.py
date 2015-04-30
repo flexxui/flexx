@@ -113,8 +113,11 @@ def js(ob):
     # black-magic decorators that auto-mangle the function name. I settled
     # on just allowing "func_name__js".
     name = ob.__name__
-    if name.endswith('__js'):
-        name = name[:-4]
+    if name.endswith('_js'):
+        if thetype == 'function':
+            name = name[:-3].rstrip('_')
+        else:
+            raise RuntimeError('Cannot strip "_js" from class defs.')
     
     # Get code
     try:

@@ -5,6 +5,7 @@ import sys
 import os
 import logging
 import urllib
+import traceback
 
 import tornado.web
 import tornado.websocket
@@ -169,12 +170,17 @@ class MainHandler(tornado.web.RequestHandler):
     #     self.write(src)
     
     def write_error(self, status_code, **kwargs):
-        # does not work?
-        print('in write_error', repr(status_code))
-        if status_code == 404:
+        if status_code == 404:  # does not work?
             self.write('flexx.ui wants you to connect to root (404)')
         else:
-            self.write('Flexx ui encountered an error: <br /><br />')
+            msg = 'Flexx.ui encountered an error: <br /><br />'
+            try:  # try providing a useful message; tough luck if this fails
+                type, value, tb = kwargs['exc_info']
+                tb_str = ''.join(traceback.format_tb(tb))
+                msg += '<pre>%s\n%s</pre>' % (tb_str, str(value))
+            except Exception:
+                pass
+            self.write(msg)
             super().write_error(status_code, **kwargs)
     
     def on_finish(self):
@@ -213,7 +219,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             except Exception as err:
                 self.close(1003, "Could not launch app: %r" % err)
                 raise
-            self.write_message("Hello World", binary=True)
+            self.write_message("PRINT Hello World from server", binary=True)
         else:
             self.close(1003, "Could not associate socket with an app.")
     
