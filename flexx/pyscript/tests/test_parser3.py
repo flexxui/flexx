@@ -118,6 +118,12 @@ class TestBuildins:
         assert py2js('len(a, b)') == 'len(a, b);'
 
 
+class TestExtra:
+    
+    def test_perf_counter(self):
+        evalpy('t0=perf_counter(); t1=perf_counter(); (t1-t0)').startswith('0.0')
+
+
 class TestListMethods:
     
     def test_append(self):

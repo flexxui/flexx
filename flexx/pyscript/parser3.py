@@ -1,7 +1,7 @@
 """
 
-Pythonic sugar
---------------
+Python Builtins
+---------------
 
 Several common buildin functions are automatically translated to
 JavaScript.
@@ -58,6 +58,18 @@ for user-defined classes.
     isinstance(x, MyClass)
     isinstance(x, 'MyClass')  # equivalent
     isinstance(x, 'Object')  # also yields true (subclass of Object)
+
+
+Additional sugar
+----------------
+
+.. pyscript_example::
+    
+    # High resolution timer (as in time.perf_counter on Python 3)
+    t0 = perf_counter()
+    do_something()
+    t1 = perf_counter()
+    print('this took me', t1-t0, 'seconds')
 
 
 List methods
@@ -223,6 +235,13 @@ class Parser3(Parser2):
         else:
             args = ', '.join([unify(self.parse(arg)) for arg in node.args])
             return 'Math.min(', args, ')'
+    
+    def function_perf_counter(self, node):
+        if len(node.args) == 0:
+            # Work in nodejs and browser
+            dummy = self.dummy()
+            return '(typeof(process) === "undefined" ? performance.now() : ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy)
+    
     
     ## List methods
     
