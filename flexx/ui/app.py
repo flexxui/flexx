@@ -424,6 +424,12 @@ class App(object):
                                    runtime=runtime, 
                                    size=self.config.size,
                                    icon=icon, title=self.config.title)
+            if runtime == 'nodejs':
+                loc = "{'hostname': 'localhost', 'port':'%i', 'pathname': '%s'}"
+                loc = loc % (port, name)
+                self._runtime.run_code('var location = %s;' % loc)
+                self._runtime.run_code(clientCode.get_js())
+        
         print('Instantiate app %s' % self.__class__.__name__)
     
     def register_mirrored(self, cls):

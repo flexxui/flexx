@@ -10,10 +10,10 @@ App runtimes:
 
 * xul - Mozilla's app framework. Make use of the same engine as Firefox.
   Available where Firefox is installed.
-* nw.js (previously node-webkit) - An app runtime based on Chromium and
+* nwjs (previously node-webkit) - An app runtime based on Chromium and
   node.js.
 * pyqt - Use QWebkit as a runtime. No WebGL here though.
-* chrome-app
+* chromeapp - Native-ish looking apps via chrome/chromium.
 
 Browsers:
 
@@ -22,7 +22,11 @@ Browsers:
 * browser-chrome - launch chrome/chromium browser
 * browser-x = launch browser x (if supported by webbrowser module)
 
-Other runtimes currently not supported:
+Other:
+
+* nodejs - Not for user interfaces, but for computations and testing.
+
+Runtimes currently not supported:
 
 * MSHTML - uses the trident engine (like IE does), I think we want this one
 * pywebkitgtk - not really cross-platform
@@ -46,6 +50,7 @@ from .nodewebkit import NodeWebkitRuntime
 from .browser import BrowserRuntime
 from .qtwebkit import PyQtRuntime
 from .chromeapp import ChromeAppRuntime
+from .nodejs import NodejsRuntime
 
 # todo: auto-select a runtime that is available
 
@@ -63,7 +68,7 @@ def launch(url, runtime=None,
         The url to open. Can be a local file (prefix with "file://").
     runtime : str
         The runtime to use. Can be 'xul', 'pyqt', 'nwjs', 'chromeapp',
-        'browser', 'browser-firefox', 'browser-chrome', and more.
+        'browser', 'firefox', and more.
     title : str
         Window title. Some runtimes may override the window title with
         the value specified in the HTML head section.
@@ -111,6 +116,8 @@ def launch(url, runtime=None,
     elif runtime.startswith('browser-'):
         Runtime = BrowserRuntime
         browsertype = runtime.split('-', 1)[1]
+    elif runtime =='nodejs':
+        Runtime = NodejsRuntime
     else:
         raise ValueError('Unknown web runtime %r.' % runtime)
     

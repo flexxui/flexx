@@ -54,25 +54,27 @@ class FlexxJS:
     
     def __init__(self):
         """ Bootstrap Flexx. """
+        
         self.ws = None
         self.last_msg = None
         self.is_full_page = True
-        self.ws_url = ("ws://" + location.hostname + ':' + location.port +
-                       "/" + location.pathname + "/ws")
+        self.ws_url = ('ws://%s:%s/%s/ws' % (location.hostname, location.port, 
+                                             location.pathname))
         self.is_exported = False
         self.widgets = {}
         self.classes = {}
         self.instances = {}
         
-        if typeof(window) is 'undefined' and typeof(exports) is 'object':
-            # nodejs
-            root.setTimeout(flexx.init, 0)
-            # bind to exit, ctrl-c and errors
+        if typeof(window) is 'undefined' and typeof(module) is 'object':
+            # nodejs (call exit on exit and ctrl-c
+            self._global = root
+            self.nodejs = True
+            root.setTimeout(self.init, 0.0001)
             process.on('exit', self.exit, False)
             process.on('SIGINT', self.exit, False)
-            process.on('uncaughtException', self.exit, False)
         else:
             # browser
+            self._global = window
             window.addEventListener('load', self.init, False)
             window.addEventListener('beforeunload', self.exit, False)
     
@@ -86,33 +88,44 @@ class FlexxJS:
     
     def exit(self):
         """ Called when runtime is about to quit. """
-        if this.ws:  # is not null or undefined
-            this.ws.close()
+        if self.ws:  # is not null or undefined
+            self.ws.close()
+            self.ws = None
     
     def get(self, id):
         if id == 'body':
             return document.body
         else:
-            return this.instances[id]
+            return self.instances[id]
     
     def initSocket(self):
         # Check WebSocket support
-        if (window.WebSocket is undefined):
-            document.body.innerHTML = 'This browser does not support WebSockets'
-            return
+        if self.nodejs:
+            try:
+                WebSocket = require('ws') 
+            except Exception:
+                # Better error message
+                raise "FAIL: you need to 'npm install ws'."
+        else:
+            WebSocket = window.WebSocket
+            if (window.WebSocket is undefined):
+                document.body.innerHTML = 'This browser does not support WebSockets'
+                raise "FAIL: need websocket"
         # Open web socket in binary mode
-        self.ws = ws = window.WebSocket(flexx.ws_url)
+        self.ws = ws = WebSocket(flexx.ws_url)
         ws.binaryType = "arraybuffer"
         
         def on_ws_open(evt):
             console.info('Socket connected')
         def on_ws_message(evt):
-            flexx.last_msg = evt.data
-            msg = flexx.decodeUtf8(evt.data)
+            flexx.last_msg = evt.data or evt
+            msg = flexx.decodeUtf8(flexx.last_msg)
             flexx.command(msg)
         def on_ws_close(evt):
-            msg = 'Lost connection with server: %s (%i)' % (evt.reason, evt.code)
-            if flexx.is_full_page:
+            msg = 'Lost connection with server'
+            if evt and evt.reason:  # nodejs-ws does not have it?
+                msg += ': %s (%i)' % (evt.reason, evt.code)
+            if flexx.is_full_page and not self.nodejs:
                 document.body.innerHTML = msg
             else:
                 console.info(msg)
@@ -120,10 +133,16 @@ class FlexxJS:
             console.error('Socket error')
         
         # Connect
-        ws.onopen = on_ws_open
-        ws.onmessage = on_ws_message
-        ws.onclose = on_ws_close
-        ws.onerror  = on_ws_error
+        if self.nodejs:
+            ws.on('open', on_ws_open)
+            ws.on('message', on_ws_message)
+            # ws.on('close', on_ws_close)
+            # ws.on('error', on_ws_error)
+        else:
+            ws.onopen = on_ws_open
+            ws.onmessage = on_ws_message
+            ws.onclose = on_ws_close
+            ws.onerror  = on_ws_error
     
     def initLogging(self):
         if console.ori_log:
@@ -143,8 +162,11 @@ class FlexxJS:
             flexx.ws.send("WARN " + msg)
             console.ori_warn(msg)
         def on_error(self, evt):
-            # evt: message, url, linenumber
-            msg = "On line %i in %s:\n%s" % (evt.lineno, evt.filename, evt.message)
+            msg = evt
+            if evt.message and evt.lineno:  # message, url, linenumber (not in nodejs)
+                msg = "On line %i in %s:\n%s" % (evt.lineno, evt.filename, evt.message)
+            elif evt.stack:
+                msg = evt.stack
             flexx.ws.send("ERROR " + msg)
         
         # Set new versions
@@ -152,7 +174,10 @@ class FlexxJS:
         console.info = info
         console.warn = warn
         # Create error handler, so that JS errors get into Python
-        window.addEventListener('error', on_error, False)
+        if self.nodejs:
+            process.on('uncaughtException', on_error, False)
+        else:
+            window.addEventListener('error', on_error, False)
     
     def command(self, msg):
         """ Execute a command received from the server.
@@ -160,18 +185,20 @@ class FlexxJS:
         if msg.startswith('PRINT '):
             console.ori_log(msg[6:])
         elif msg.startswith('EVAL '):
-            window._ = window.eval(msg[5:])
-            flexx.ws.send('RET ' + window._)  # send back result
+            self._global._ = eval(msg[5:])
+            flexx.ws.send('RET ' + self._global._)  # send back result
         elif msg.startswith('EXEC '):
-            window.eval(msg[5:])  # like eval, but do not return result
+            eval(msg[5:])  # like eval, but do not return result
         elif msg.startswith('TITLE '):
-            document.title = msg[6:]
+            if not self.nodejs:
+                document.title = msg[6:]
         elif msg.startswith('ICON '):
-            link = document.createElement('link')
-            link.rel = 'icon'
-            link.href = msg[5:]
-            document.head.appendChild(link)
-            #document.getElementsByTagName('head')[0].appendChild(link);
+            if not self.nodejs:
+                link = document.createElement('link')
+                link.rel = 'icon'
+                link.href = msg[5:]
+                document.head.appendChild(link)
+                #document.getElementsByTagName('head')[0].appendChild(link);
         elif msg.startswith('OPEN '):
             window.win1 = window.open(msg[5:], 'new', 'chrome')
         else:
@@ -185,7 +212,7 @@ class FlexxJS:
             c1 = 0,
             c2 = 0,
             c3 = 0,
-            data = new window.Uint8Array(arrayBuffer);
+            data = new Uint8Array(arrayBuffer);
     
         // If we have a BOM skip it
         if (data.length >= 3 && data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) {
@@ -280,7 +307,7 @@ class GlobalClientCode(object):
         parts = []
         parts.append('/* ===== Flexx module ===== */')
         parts.append(FlexxJS.jscode)
-        parts.append('window.flexx = new FlexxJS();\n')
+        parts.append('var flexx = new FlexxJS();\n')
         # # Files
         # for fname in self._files:
         #     if fname.endswith('.js'):

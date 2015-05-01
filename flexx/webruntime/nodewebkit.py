@@ -113,7 +113,6 @@ class NodeWebkitRuntime(WebRuntime):
         
         # Icon?
         if self._kwargs.get('icon'):
-            print(self._kwargs.get('icon'))
             icon = self._kwargs.get('icon')
             icon_path = os.path.join(app_path, 'app.png')  # nw can handle ico
             icon.write(icon_path)

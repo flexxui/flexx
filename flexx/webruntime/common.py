@@ -6,6 +6,7 @@ import os
 import sys
 import time
 import shutil
+import logging
 import atexit
 import threading
 import subprocess
@@ -32,7 +33,10 @@ class WebRuntime(object):
         if self._proc is None:
             return
         # Terminate, wait for a bit, kill
+        self._proc.we_closed_it = True
         if self._proc.poll() is None:
+            if self._proc.stdin:
+                self._proc.stdin.close()
             self._proc.terminate()
             timeout = time.time() + 0.25
             while time.time() > timeout:
@@ -44,11 +48,12 @@ class WebRuntime(object):
         # Discart process
         self._proc = None
     
-    def _start_subprocess(self, cmd, **env):
+    def _start_subprocess(self, cmd, stdin=None, **env):
         environ = os.environ.copy()
         environ.update(env)
         try:
             self._proc = subprocess.Popen(cmd, env=environ,
+                                          stdin=stdin,
                                           stdout=subprocess.PIPE, 
                                           stderr=subprocess.STDOUT)
         except OSError:
@@ -60,6 +65,7 @@ class WebRuntime(object):
         """ Launch the runtime.
         """
         if self._proc is None: 
+            logging.info('launching %s' % self.__class__.__name__)
             self._launch()
         else:
             raise RuntimeError('WebRuntime already running')
@@ -74,7 +80,7 @@ class WebRuntime(object):
 
 
 class StreamReader(threading.Thread):
-    """ Reads stdout of process and print
+    """ Reads stdout of process and log
     
     This needs to be done in a separate thread because reading from a
     PYPE blocks.
@@ -91,20 +97,35 @@ class StreamReader(threading.Thread):
         self.join(timeout)
     
     def run(self):
+        msgs = []
         while not self._exit:
             time.sleep(0.001)
+            # Get and clean msg
             msg = self._process.stdout.readline()  # <-- Blocks here
             if not msg:
-                break  # Process dead  
+                break  # Process dead
             if not isinstance(msg, str):
                 msg = msg.decode('utf-8', 'ignore')
-            print('UI: ' + msg)
+            msg = msg.rstrip()
+            # Process the message
+            if msg == '> undefined' or not msg:
+                continue  # nodejs stubs
+            msgs.append(msg)
+            msgs[:-32] = []
+            logging.debug('webruntime: ' + msg)
         
         # Poll to get return code. Polling also helps to really
         # clean the process up
         while self._process.poll() is None:
             time.sleep(0.05)
-        print('runtime process stopped (%i)' % self._process.poll())
+        code = self._process.poll()
+        if hasattr(self._process, 'we_closed_it') and self._process.we_closed_it:
+            logging.info('runtime process terminated by us')
+        elif not code:
+            logging.info('runtime process stopped')
+        else:
+            logging.error('runtime process stopped (%i), stdout:\n%s' % 
+                          (code, '\n'.join(msgs)))
 
 
 def create_temp_app_dir(prefix, suffix='', cleanup=60):

@@ -31,6 +31,7 @@ import os
 import sys
 import time
 import shutil
+import logging
 import subprocess
 import os.path as op
 
@@ -210,7 +211,7 @@ def copy_xul_runtime(dir1, dir2):
             if op.isfile(exe):
                 break
         shutil.copy2(exe, op.join(dir2, 'xulrunner' + ext))
-        print('Copied firefox (in %1.2f s)' % (time.time()-t0))
+        logging.info('Copied firefox (in %1.2f s)' % (time.time()-t0))
     except Exception:
         # Clean up
         shutil.rmtree(dir2)
@@ -267,7 +268,6 @@ class XulRuntime(WebRuntime):
                                'Please install firefox.')
         
         # Launch
-        print('launching XUL app')
         cmd = [exe, '-app', op.join(app_path, 'application.ini')]
         #cmd.append('-jsconsole')  # for debugging
         self._start_subprocess(cmd)
@@ -372,7 +372,7 @@ class XulRuntime(WebRuntime):
         # Clean up old runtimes (do before installing new ff, because
         # we may be "updating" it)
         for dname in (obsolete + dnames[:-1]):
-            print('clearing', dname)
+            logging.info('Clearing XUL runtime at %s' % dname)
             try:
                 shutil.rmtree(op.join(xuldir, dname))
             except (OSError, IOError):
