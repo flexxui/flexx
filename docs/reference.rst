@@ -8,5 +8,5 @@ Reference
    ui
    webruntime
    properties
-   pyscript
+   pyscript/index
    util

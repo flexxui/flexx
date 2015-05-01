@@ -17,7 +17,7 @@ that's already installed on the system.
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    
    start
    reference

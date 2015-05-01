@@ -59,28 +59,24 @@ def launch(url, runtime=None,
            title='', size=(640, 480), pos=None, icon=None):
     """ Launch a web runtime in a new process
     
-    Returns a WebRuntime object that can be used to control (to some
-    extent) the runtime.
+    Parameters:
+        url (str): The url to open. Can be a local file (prefix with "file://").
+        runtime (str) : The runtime to use. Can be 'xul', 'pyqt', 'nwjs', 
+            'chromeapp', 'browser', 'firefox', and more.
+        title (str): Window title. Some runtimes may override the window
+            title with the value specified in the HTML head section.
+        size (tuple of ints): The size in pixels of the window. Some
+            runtimes may ignore this.
+        pos (tuple of ints): The position of the window. Some runtimes may
+            ignore this.
+        icon (str | Icon): Icon instance or path to an icon file (png or
+            ico). Some runtimes may ignore this. The icon will be
+            automatically converted to png/ico/icns, depending on what's
+            needed by the platform.
     
-    Parameters
-    ----------
-    url : str
-        The url to open. Can be a local file (prefix with "file://").
-    runtime : str
-        The runtime to use. Can be 'xul', 'pyqt', 'nwjs', 'chromeapp',
-        'browser', 'firefox', and more.
-    title : str
-        Window title. Some runtimes may override the window title with
-        the value specified in the HTML head section.
-    size: tuple of ints
-        The size in pixels of the window. Some runtimes may ignore this.
-    pos : tuple of ints
-        The position of the window. Some runtimes may ignore this.
-    icon : str | Icon
-        Icon instance or path to an icon file (png or ico). Some
-        runtimes may ignore this. The icon will be automatically
-        converted to png/ico/icns, depending on what's needed by the
-        platform.
+    Returns:
+        webruntime (WebRuntime): An object that can be used to control the
+        runtime to some extend.
     """
     
     runtime = runtime or 'xul'

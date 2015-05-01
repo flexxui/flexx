@@ -10,11 +10,7 @@ Flexx has no dependencies. To use ``flexx.ui`` you need a browser. To
 run apps that look like desktop apps, we recommend having Firefox
 installed.
 
-
-Developer dependencies
-----------------------
-
-For running the tests, you need:
+Developers that want to run the tests need:
 
 * pytest (a Python package, get it via conda or pip)
 * flake8 (a Python package, get it via conda or pip)

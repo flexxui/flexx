@@ -26,3 +26,6 @@ Webruntime API
 
 .. autoclass:: flexx.webruntime.PyQtRuntime
   :members:
+
+.. autoclass:: flexx.webruntime.NodejsRuntime
+  :members:

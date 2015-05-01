@@ -1,16 +1,5 @@
--------------------
-The pyscript module
--------------------
-
-Introduction
+PyScript API
 ============
-
-.. automodule:: flexx.pyscript
-
-
-Pyscript API
-============
-
 
 The PyScript module has a few dummy constants that can be imported and
 used in your code to let e.g. pyflakes know that the variable exists.
@@ -39,15 +28,3 @@ get closer to the metal by using and/or extending the parser classes.
 .. autoclass:: flexx.pyscript.Parser
 
 .. autoclass:: flexx.pyscript.BasicParser
-
-----
-
-
-Quick user guide
-================
-
-.. automodule:: flexx.pyscript.parser1
-
-.. automodule:: flexx.pyscript.parser2
-
-.. automodule:: flexx.pyscript.parser3
