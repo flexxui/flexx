@@ -3,8 +3,8 @@
 What one process does
 ---------------------
 
-In flexx.ui, each server process hosts on a single URL (domain+port).
-But can serve multiple applications via different paths.
+In flexx.ui, each server process hosts on a single URL (domain+port),
+but can serve multiple applications via different paths.
 
 Each process uses one tornado IOLoop (the default one), and exactly one
 Tornado Application object.
@@ -19,7 +19,7 @@ To connect to the application `MyApp`, you should connect to
 "http://domain:port/MyApp".
 
 Each connection features a bidirectional websocket through which most
-of the comminication will go. There is thus one websocket per
+of the communication will go. There is thus one websocket per
 application instance. Per application instance, multiple windows
 can be opened (via JS ``window.open()``). These windows shall be
 controlled via the websocket of the main window.
@@ -45,7 +45,9 @@ import tornado.ioloop
 import tornado.web
 
 from ..util.icon import Icon
-from flexx.webruntime import launch
+from .clientcode import clientCode  # global client code
+from .mirrored import Mirrored
+from ..webruntime import launch
 
 # Create/get the tornado event loop
 _tornado_loop = tornado.ioloop.IOLoop.instance()
@@ -266,7 +268,6 @@ class JupyterChecker(object):
         
         app = get_default_app()  # does not launch runtime if is_notebook
         
-        from .clientcode import clientCode
         host, port = _tornado_app.serving_at
         name = app.name + '-' + app.id
         url = 'ws://%s:%i/%s/ws' % (host, port, name)
@@ -302,7 +303,7 @@ def call_later(delay, callback, *args, **kwargs):
     else:
         _tornado_loop.call_later(delay, callback, *args, **kwargs)
 
-# todo: move to ..util
+# todo: move to ..util --- no, replace with a Prop enum
 def create_enum(*members):
     """ Create an enum type from given string arguments.
     """
@@ -387,6 +388,14 @@ class App(object):
         # Init runtime that is connected with this app instance
         self._runtime = None
         
+        global _current_app
+        _current_app = self
+        
+        # Object to manage the client code (JS/CSS/HTML)
+        self._known_codes = set()
+        for cls in clientCode._js_codes:
+            self._known_codes.add(cls)
+        
         # Init
         self._widget_counter = 0
         self._children = []
@@ -416,6 +425,21 @@ class App(object):
                                    size=self.config.size,
                                    icon=icon, title=self.config.title)
         print('Instantiate app %s' % self.__class__.__name__)
+    
+    def register_mirrored(self, cls):
+        """ Register the given class. If already registered, this function
+        does nothing.
+        """
+        if not (isinstance(cls, type) and issubclass(cls, Mirrored)):
+            raise ValueError('Not a Mirrored class')
+        h = cls.get_jshash()
+        if h in self._known_codes:
+            return
+        self._known_codes.add(h)
+        
+        # Define class
+        #print('Dynamically defining class!', cls)
+        self._exec(cls.get_js())
     
     def __enter__(self):
         from .widget import _default_parent
@@ -458,7 +482,7 @@ class App(object):
     
     @property
     def id(self):
-        """ The id of this app as a string
+        """ The unique identifier of this app as a string
         """
         return '%x' % id(self)
     
@@ -547,13 +571,15 @@ class DefaultApp(App):
     instance of this class exists at all times.
     """
     # todo: enforce this singleton-ishness in some way?
-
+    # todo: remove concept of default app, in favor of current app?
 
 class JupyterApp(DefaultApp):
     """ A default app for the Jupyter (formerly IPython) notebook.
     """
     pass
 
+
+_current_app = None
 
 _default_app = None
 def get_default_app():
@@ -566,6 +592,12 @@ def get_default_app():
         _default_app = DefaultApp(runtime=runtime)
     return _default_app
 
+def get_current_app():
+    global _current_app
+    runtime = 'notebook' if is_notebook else 'browser'  # todo: what runtime?
+    if (_current_app is None) or (_current_app.status == App.STATUS.CLOSED):
+        App(runtime=runtime)
+    return _current_app
 
 
 class Exporter(object):

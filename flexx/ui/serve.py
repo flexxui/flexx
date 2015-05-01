@@ -60,7 +60,6 @@ class FlexxTornadoApplication(tornado.web.Application):
         tornado.web.Application.__init__(self, 
             [(r"/(.*)/ws", WSHandler), (r"/(.*)", MainHandler), ])
         self._cache = {}
-        clientCode.collect()  # collect JS from mirrored classes now
     
     # def load(self, fname):
     #     """ Load a file with the given name. Returns bytes.

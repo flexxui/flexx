@@ -37,6 +37,8 @@ class WidgetProp(Prop):
 
 
 class Widget(Mirrored):
+    """ Base widget class.
+    """
     
     CSS = """
     

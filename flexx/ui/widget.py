@@ -194,8 +194,8 @@ class Button(Widget):
         
         eval = self.get_app()._exec
         # todo: arg .js -> I want eady access to info about that func
-        eval('flexx.widgets.%s.%s' % (self.id, self.hello.js.jscode[5:]))
-        eval('flexx.widgets.%s.%s' % (self.id, self.set_text.js.jscode[5:]))
+        eval('flexx.instances.%s.%s' % (self.id, self.hello.js.jscode[5:]))
+        eval('flexx.instances.%s.%s' % (self.id, self.set_text.js.jscode[5:]))
     
     def _create_js_object_real(self, **kwargs):
         super()._create_js_object_real(text=self._text, **kwargs)

@@ -4,6 +4,7 @@
 import sys
 import weakref
 import json
+import hashlib
 
 from ..properties import HasPropsMeta, HasProps, Prop, Int, Str
 from ..pyscript import js, JSCode
@@ -41,13 +42,15 @@ class Mirrored(HasProps):
     
     def __init__(self, **kwargs):
         HasProps.__init__(self, **kwargs)
-        from flexx.ui.app import get_default_app
-        self._app = get_default_app()
+        from flexx.ui.app import get_default_app, get_current_app  # avoid circular ref
+        self._app = get_current_app()
         Mirrored._counter += 1
         self.id = self.__class__.__name__ + str(Mirrored._counter)
         
         Mirrored._instances[self._id] = self
         
+        # Make sure we can use this class in JS
+        self._app.register_mirrored(self.__class__)
         
         import json
         clsname = self.__class__.__name__
@@ -55,7 +58,7 @@ class Mirrored(HasProps):
         for name in self.props():
             val = getattr(self, name)
             props[name] = getattr(self.__class__, name).to_json(val)
-        cmd = 'flexx.widgets.%s = new flexx.%s(%s);' % (self.id, clsname, json.dumps(props))
+        cmd = 'flexx.instances.%s = new flexx.classes.%s(%s);' % (self.id, clsname, json.dumps(props))
         print(cmd)
         self._app._exec(cmd)
         
@@ -80,7 +83,11 @@ class Mirrored(HasProps):
         print('_sync_prop', name, new)
         txt = getattr(self.__class__, name).to_json(new)
         print('sending json', txt)
-        cmd = 'flexx.widgets.%s._set_prop_from_py(%r, %r);' % (self.id, name, txt)
+        cmd = 'flexx.instances.%s._set_prop_from_py(%r, %r);' % (self.id, name, txt)
+        self._app._exec(cmd)
+    
+    def call_method(self, code):
+        cmd = 'flexx.instances.%s.%s' % (self.id, code)
         self._app._exec(cmd)
     
     def methoda(self):
@@ -154,6 +161,11 @@ class Mirrored(HasProps):
             self._set_prop_from_py(name, props[name])
     
     @classmethod
+    def get_jshash(cls):
+        # todo: when we cache code to the filesystem, this hash needs to be based on code
+        return hashlib.sha256(cls.__name__.encode()).digest()
+    
+    @classmethod
     def get_js(cls):
         cls_name = cls.__name__
         js = []
@@ -161,7 +173,7 @@ class Mirrored(HasProps):
         # Main functions
         # todo: flexx.classes.xx
         # todo: we could reduce JS code by doing inheritance in JS
-        js.append('flexx.%s = ' % cls_name)
+        js.append('flexx.classes.%s = ' % cls_name)
         js.append(cls.__jsinit__.jscode)
         
         for key in dir(cls):
@@ -170,7 +182,7 @@ class Mirrored(HasProps):
             if isinstance(func, JSCode):
                 code = func.jscode
                 name = func.name
-                js.append('flexx.%s.prototype.%s = %s' % (cls_name, name, code))
+                js.append('flexx.classes.%s.prototype.%s = %s' % (cls_name, name, code))
             
             # Property json methods
             # todo: implement property functions for validation, to_json and from_json in flexx.props
@@ -183,8 +195,9 @@ class Mirrored(HasProps):
                 for func in funcs:
                     code = func.jscode
                     name = '_%s_%s' % (func.name, propname)
-                    js.append('flexx.%s.prototype.%s = %s' % (cls_name, name, code))
+                    js.append('flexx.classes.%s.prototype.%s = %s' % (cls_name, name, code))
         
+        # todo: give it an id
         return '\n'.join(js)
     
     @classmethod

@@ -2,6 +2,7 @@ import os
 from types import FunctionType
 import inspect
 import subprocess
+import hashlib
 
 from . import Parser
 
@@ -145,6 +146,13 @@ class JSCode(object):
         self._name = name
         self._pycode = pycode
         
+        # Get hash for this code
+        # todo: if we are ever going to cahche JS code accross sessions,
+        # this string needs to be updated when the pyscript codebase changes
+        h = hashlib.sha256('pyscript version 1'.encode())
+        h.update(pycode.encode())
+        self._hash = h.digest()
+        
         p = Parser(pycode)
         
         if thetype == 'function':
@@ -169,6 +177,15 @@ class JSCode(object):
         """ The name of the class or function.
         """
         return self._name
+    
+    @property
+    def jshash(self):
+        """ The cryptographic hash (as a 32-element bytes object) for
+        this piece of code, based on the PyScript code.
+        Two JSCode objects with the same hash are guaranteed to contain
+        the same code.
+        """
+        return self._hash
     
     @property
     def pycode(self):

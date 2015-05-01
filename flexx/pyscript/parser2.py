@@ -527,7 +527,10 @@ class Parser2(Parser1):
             if prefixed == node.name:  # normal function vs method
                 self.vars.add(node.name)
             code.append(self.lf('%s = ' % prefixed))
-        code.append('function (')
+            #code.append('function %s (' % node.name)
+            code.append('function (')
+        else:
+            code.append('function (')
         
         # Collect args
         argnames = []
