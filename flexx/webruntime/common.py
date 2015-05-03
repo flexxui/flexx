@@ -5,11 +5,13 @@ Common code for all runtimes.
 import os
 import sys
 import time
+import atexit
 import shutil
 import logging
 import atexit
 import threading
 import subprocess
+
 
 from ..util.icon import Icon
 
@@ -48,12 +50,11 @@ class WebRuntime(object):
         # Discart process
         self._proc = None
     
-    def _start_subprocess(self, cmd, stdin=None, **env):
+    def _start_subprocess(self, cmd, **env):
         environ = os.environ.copy()
         environ.update(env)
         try:
             self._proc = subprocess.Popen(cmd, env=environ,
-                                          stdin=stdin,
                                           stdout=subprocess.PIPE, 
                                           stderr=subprocess.STDOUT)
         except OSError:
@@ -89,12 +90,14 @@ class StreamReader(threading.Thread):
         threading.Thread.__init__(self)
         
         self._process = process
-        self.setDaemon(True)
         self._exit = False
+        self.setDaemon(True)
+        atexit.register(self.stop)
     
-    def stop(self, timeout=1.0):
+    def stop(self, wait=None):
         self._exit = True
-        self.join(timeout)
+        if wait is not None:
+            self.join(wait)
     
     def run(self):
         msgs = []
@@ -114,10 +117,15 @@ class StreamReader(threading.Thread):
             msgs[:-32] = []
             logging.debug('webruntime: ' + msg)
         
+        if self._exit:
+            return  # might be interpreter shutdown, don't print
+        
         # Poll to get return code. Polling also helps to really
         # clean the process up
         while self._process.poll() is None:
             time.sleep(0.05)
+        
+        # Notify
         code = self._process.poll()
         if hasattr(self._process, 'we_closed_it') and self._process.we_closed_it:
             logging.info('runtime process terminated by us')
@@ -125,7 +133,7 @@ class StreamReader(threading.Thread):
             logging.info('runtime process stopped')
         else:
             logging.error('runtime process stopped (%i), stdout:\n%s' % 
-                          (code, '\n'.join(msgs)))
+                        (code, '\n'.join(msgs)))
 
 
 def create_temp_app_dir(prefix, suffix='', cleanup=60):

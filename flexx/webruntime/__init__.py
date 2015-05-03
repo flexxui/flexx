@@ -56,7 +56,7 @@ from .nodejs import NodejsRuntime
 
 
 def launch(url, runtime=None, 
-           title='', size=(640, 480), pos=None, icon=None):
+           title='', size=(640, 480), pos=None, icon=None, **kwargs):
     """ Launch a web runtime in a new process
     
     Parameters:
@@ -73,6 +73,7 @@ def launch(url, runtime=None,
             ico). Some runtimes may ignore this. The icon will be
             automatically converted to png/ico/icns, depending on what's
             needed by the platform.
+        kwargs: addition arguments specific to the runtime.
     
     Returns:
         webruntime (WebRuntime): An object that can be used to control the
@@ -119,6 +120,6 @@ def launch(url, runtime=None,
     
     # Create runtime, launch, and return 
     rt = Runtime(url=url, title=title, size=size, pos=pos, icon=icon, 
-                 browsertype=browsertype)
+                 browsertype=browsertype, **kwargs)
     rt.launch()
     return rt

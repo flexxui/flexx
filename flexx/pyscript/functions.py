@@ -20,6 +20,25 @@ def py2js(pycode):
     return parser.dump()
 
 
+NODE_EXE = None
+def get_node_exe():
+    """ Small utility that provides the node exe. The first time this
+    is called both 'nodejs' and 'node' are tried. To override the
+    executable path, set the ``FLEXX_NODE_EXE`` environment variable.
+    """
+    # This makes things work on Ubuntu's nodejs as well as other node
+    # implementations, and allows users to set the node exe if necessary
+    global NODE_EXE
+    NODE_EXE = os.getenv('FLEXX_NODE_EXE') or NODE_EXE
+    if NODE_EXE is None:
+        NODE_EXE = 'nodejs'
+        try:
+            subprocess.check_output([NODE_EXE, '-v'])
+        except Exception:
+            NODE_EXE = 'node'
+    return NODE_EXE
+
+
 def evaljs(jscode, whitespace=True):
     """ Evaluate JavaScript code in Node.js.
     
@@ -31,7 +50,7 @@ def evaljs(jscode, whitespace=True):
     returns:
         result (str): the last result as a string.
     """
-    res = subprocess.check_output(['nodejs', '-p', '-e', jscode])
+    res = subprocess.check_output([get_node_exe(), '-p', '-e', jscode])
     res = res.decode().rstrip()
     if res.endswith('undefined'):
         res = res[:-9].rstrip()

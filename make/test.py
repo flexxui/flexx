@@ -37,7 +37,7 @@ def test_unit():
     try:
         return pytest.main('-v --cov %s --cov-config .coveragerc '
                             '--cov-report %s %s' % 
-                            (NAME, cov_report, TEST_DIR))
+                            (NAME, cov_report, repr(TEST_DIR)))
     finally:
         m = __import__(NAME)
         print('Tests were performed on', str(m))

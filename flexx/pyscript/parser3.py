@@ -240,7 +240,7 @@ class Parser3(Parser2):
         if len(node.args) == 0:
             # Work in nodejs and browser
             dummy = self.dummy()
-            return '(typeof(process) === "undefined" ? performance.now() : ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy)
+            return '(typeof(process) === "undefined" ? performance.now()*1e-3 : ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy)
     
     
     ## List methods

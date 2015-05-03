@@ -58,20 +58,21 @@ class FlexxJS:
         self.ws = None
         self.last_msg = None
         self.is_full_page = True
+        # For nodejs, the location is set by the flexx nodejs runtime.
         self.ws_url = ('ws://%s:%s/%s/ws' % (location.hostname, location.port, 
                                              location.pathname))
         self.is_exported = False
         self.widgets = {}
         self.classes = {}
         self.instances = {}
-        
         if typeof(window) is 'undefined' and typeof(module) is 'object':
             # nodejs (call exit on exit and ctrl-c
             self._global = root
             self.nodejs = True
-            root.setTimeout(self.init, 0.0001)
+            root.setTimeout(self.init, 1)  # ms
             process.on('exit', self.exit, False)
             process.on('SIGINT', self.exit, False)
+            root.setTimeout(self.exit, 10000000)  # keep alive ~35k years
         else:
             # browser
             self._global = window
@@ -85,7 +86,7 @@ class FlexxJS:
         else:
             flexx.initSocket()
             flexx.initLogging()
-    
+        
     def exit(self):
         """ Called when runtime is about to quit. """
         if self.ws:  # is not null or undefined
@@ -93,6 +94,8 @@ class FlexxJS:
             self.ws = None
     
     def get(self, id):
+        """ Get instance
+        """
         if id == 'body':
             return document.body
         else:
@@ -102,7 +105,8 @@ class FlexxJS:
         # Check WebSocket support
         if self.nodejs:
             try:
-                WebSocket = require('ws') 
+                WebSocket = require('ws')  # does not work on Windows?
+                #WebSocket = require('websocket').client
             except Exception:
                 # Better error message
                 raise "FAIL: you need to 'npm install ws'."
@@ -136,8 +140,8 @@ class FlexxJS:
         if self.nodejs:
             ws.on('open', on_ws_open)
             ws.on('message', on_ws_message)
-            # ws.on('close', on_ws_close)
-            # ws.on('error', on_ws_error)
+            ws.on('close', on_ws_close)
+            ws.on('error', on_ws_error)
         else:
             ws.onopen = on_ws_open
             ws.onmessage = on_ws_message

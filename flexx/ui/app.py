@@ -420,15 +420,14 @@ class App(object):
             icon = self._config.icon
             icon = icon if icon.image_sizes() else None
             name = self.name + '-' + self.id
-            self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
-                                   runtime=runtime, 
-                                   size=self.config.size,
-                                   icon=icon, title=self.config.title)
             if runtime == 'nodejs':
-                loc = "{'hostname': 'localhost', 'port':'%i', 'pathname': '%s'}"
-                loc = loc % (port, name)
-                self._runtime.run_code('var location = %s;' % loc)
-                self._runtime.run_code(clientCode.get_js())
+                self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
+                                       runtime=runtime, code=clientCode.get_js())
+            else:
+                self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
+                                       runtime=runtime,
+                                       size=self.config.size,
+                                       icon=icon, title=self.config.title)
         
         print('Instantiate app %s' % self.__class__.__name__)
     

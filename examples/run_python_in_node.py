@@ -44,7 +44,8 @@ class PrimeFinder(ui.mirrored.Mirrored):
         self.call_method('_find_prime(%i)' % n)
 
 
-app = ui.App('nodejs')  # Create flexx app with a nodejs runtime
+# Create flexx app with a nodejs runtime (you could also use e.g. firefox here)
+app = ui.App('nodejs')
 
 finder = PrimeFinder()
 finder.find_prime_py(2000)  # 0.7 s
