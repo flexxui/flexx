@@ -6,9 +6,9 @@ Getting started
 Dependencies
 ------------
 
-Flexx has no dependencies. To use ``flexx.ui`` you need a browser. To
-run apps that look like desktop apps, we recommend having Firefox
-installed.
+The only dependency of Flexx is Tornado (a pure Python package). To use
+``flexx.ui`` you need a browser. To run apps that look like desktop
+apps, we recommend having Firefox installed.
 
 Developers that want to run the tests need:
 

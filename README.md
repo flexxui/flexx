@@ -1,14 +1,17 @@
 Flexx
 =====
 
-Flexx is a Python tookit for creating graphical user interfaces (GUI's),
-that uses web technology for its rendering. You can use Flexx to create
-desktop applications as well as web applications. Flexx can also be
-used from within the Jupyter notebook.
+Flexx is a cross-platform, pure Python tookit for creating graphical
+user interfaces (GUI's), that uses web technology for its rendering.
+You can use Flexx to create desktop applications as well as web
+applications. 
 
-Flexx is pure Python, and has no dependencies other than the browser
-that's already installed on the system. To run apps in desktop-mode,
-we recommend having Firefox installed.
+Flexx can also be used to run a subset of Python in a web runtime (e.g.
+Nodejs), and can be used from within the Jupyter notebook.
+
+Flexx is pure Python, and its only dependencies are Tornado and a
+browser. To run apps in desktop-mode, we recommend having Firefox
+installed.
 
 Flexx consists of several modules which can be individually used; none
 of the modules are imported by default.
