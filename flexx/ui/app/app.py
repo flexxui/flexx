@@ -45,10 +45,12 @@ import logging
 import tornado.ioloop
 import tornado.web
 
-from ..util.icon import Icon
+from ...util.icon import Icon
+from ...webruntime import launch
+
 from .clientcode import clientCode  # global client code
 from .mirrored import Mirrored
-from ..webruntime import launch
+
 
 # Create/get the tornado event loop
 _tornado_loop = tornado.ioloop.IOLoop.instance()

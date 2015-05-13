@@ -6,9 +6,9 @@ import weakref
 import json
 import hashlib
 
-from ..properties import HasPropsMeta, HasProps, Prop, Int, Str
-from ..pyscript import js, JSCode
-from ..pyscript.parser2 import get_class_definition
+from ...properties import HasPropsMeta, HasProps, Prop, Int, Str
+from ...pyscript import js, JSCode
+from ...pyscript.parser2 import get_class_definition
 
 if sys.version_info[0] >= 3:
     string_types = str,

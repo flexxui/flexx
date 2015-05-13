@@ -9,7 +9,8 @@ This streamlines the inclusion in Jupyter and our export mechanism.
 
 import os
 from collections import OrderedDict
-from ..pyscript import js
+
+from ...pyscript import js
 
 # todo: minification
 
@@ -296,7 +297,7 @@ class ClientCode(object):
         self._cache = {}
         
         # todo: make this configurable
-        self._mode = 'dynamic'
+        self._mode = 'split'
         
         self._preloaded_mirrored_classes = set()
         

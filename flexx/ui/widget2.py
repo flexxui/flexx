@@ -2,7 +2,7 @@ import json
 
 from ..pyscript import js
 from ..properties import Prop, Instance, Str, Tuple, Float
-from .mirrored import Mirrored, get_instance_by_id
+from . import Mirrored, get_instance_by_id
 
 
 class WidgetProp(Prop):

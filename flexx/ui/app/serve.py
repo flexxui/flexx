@@ -10,7 +10,8 @@ import traceback
 import tornado.web
 import tornado.websocket
 
-from ..webruntime.common import default_icon
+from ...webruntime.common import default_icon
+
 from .app import manager, call_later
 from .clientcode import clientCode
 
