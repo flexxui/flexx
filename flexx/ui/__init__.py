@@ -10,3 +10,4 @@ from .app import run, stop, App, call_later
 #from .widget import PHSplit, PDockArea, MenuItem, Menu, MenuBar
 
 from . import widget2
+from .widget2 import Mirrored

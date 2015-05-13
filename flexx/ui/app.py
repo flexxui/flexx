@@ -40,6 +40,7 @@ App is used (not yet implemented/decided).
 import os
 import time
 import inspect
+import logging
 
 import tornado.ioloop
 import tornado.web
@@ -391,10 +392,13 @@ class App(object):
         global _current_app
         _current_app = self
         
+        #Collect client code for Mirrored classes when the first app is created
+        clientCode.collect()
+        
         # Object to manage the client code (JS/CSS/HTML)
-        self._known_codes = set()
-        for cls in clientCode._js_codes:
-            self._known_codes.add(cls)
+        self._known_mirrored_classes = set()
+        for cls in clientCode._preloaded_mirrored_classes:
+            self._known_mirrored_classes.add(cls)
         
         # Init
         self._widget_counter = 0
@@ -437,14 +441,27 @@ class App(object):
         """
         if not (isinstance(cls, type) and issubclass(cls, Mirrored)):
             raise ValueError('Not a Mirrored class')
-        h = cls.get_jshash()
-        if h in self._known_codes:
+        
+        if cls in self._known_mirrored_classes:
             return
-        self._known_codes.add(h)
+        
+        # Make sure the base classes are defined first
+        for cls2 in cls.mro()[1:]:
+            if not issubclass(cls2, Mirrored):  # True if cls2 is Mirrored
+                break
+            if cls2 not in self._known_mirrored_classes:
+                self.register_mirrored(cls2)
+        
+        # Register
+        self._known_mirrored_classes.add(cls)
         
         # Define class
-        #print('Dynamically defining class!', cls)
-        self._exec(cls.get_js())
+        print('Dynamically defining class!', cls)
+        js = cls.get_js()
+        css = cls.get_css()
+        self._send_command('DEFINE-JS ' + js)
+        if css.strip():
+            self._send_command('DEFINE-CSS ' + css)
     
     def __enter__(self):
         from .widget import _default_parent
@@ -605,6 +622,7 @@ def get_current_app():
     return _current_app
 
 
+# todo: move to clientcode
 class Exporter(object):
     """ Export apps to standalone HTML.
     """

@@ -338,7 +338,7 @@ class Parser2(Parser1):
         if isinstance(node.target, ast.Name):
             target = node.target.id
             target2 = None
-            if iter.endswith('.keys()'):
+            if iter.endswith('.keys()'):  # this does not get called now...
                 sure_is_dict = True
                 iter = iter.rsplit('.', 1)[0]
             if iter.endswith('.values()'):
@@ -655,23 +655,11 @@ class Parser2(Parser1):
         else:
             base_class = base_class + '.prototype'
         
-        # Write constructor
+        # Define function that acts as class constructor
         code = []
-        code.append(self.lf('%s = function () {' % node.name))
-        for line in self.pop_docstring(node).splitlines():
-            code.append(self.lf('    // ' + line))
-        code.append(self.lf('    if (this.__init__) {'))
-        code.append(self.lf('       this.__init__.apply(this, arguments);'))
-        code.append(self.lf('    }'))
-        code.append(self.lf('};'))
-        
-        # Apply inheritance
-        if base_class != 'Object':
-            code.append(self.lf('%s.prototype = Object.create(%s);' %
-                                (node.name, base_class)))
-        code.append(self.lf('%s.prototype._base_class = %s;' %
-                            (node.name, base_class)))
-        code.append('\n')
+        for line in get_class_definition(node.name, base_class, 
+                                         self.pop_docstring(node)):
+            code.append(self.lf(line))
         
         # Body ...
         self.vars.add(node.name)
@@ -686,13 +674,19 @@ class Parser2(Parser1):
     
     def function_super(self, node):
         # allow using super() in methods
+        # Note that in parse_Call() we ensure that a call using super
+        # uses .call(this, ...) so that the instance is handled ok.
+        
         if node.args:
             raise JSError('super() accepts 0 or 1 arguments.')
         if len(self._stack) < 3:  # module, class, function
-            raise JSError('can only use super() inside a method.')
+            #raise JSError('can only use super() inside a method.')
+            # We just provide "super()" and hope that the user will
+            # replace the code (as we do in the Mirrored class).
+            return 'super()'
         
-        # Find the class of this function. We could also use
-        # this._base_class, but by using the class, we mimic Python better.
+        # Find the class of this function. Using this._base_class would work
+        # in simple situations, but not when there's two levels of super().
         nstype1, nsname1, _ = self._stack[-1]
         nstype2, nsname2, _ = self._stack[-2]
         if not (nstype1 == 'function' and nstype2 == 'class'):
@@ -709,3 +703,26 @@ class Parser2(Parser1):
     #def parse_YieldFrom
     #def parse_Global
     #def parse_NonLocal
+
+
+
+def get_class_definition(name, base='Object', docstring=''):
+    """ Get a list of lines that defines a class in JS.
+    Used in the parser as well as by flexx.ui.Mirrored.
+    """
+    code = []
+    
+    code.append('%s = function () {' % name)
+    for line in docstring.splitlines():
+        code.append('    // ' + line)
+    code.append('    if (this.__init__) {')
+    code.append('       this.__init__.apply(this, arguments);')
+    code.append('    }')
+    code.append('};')
+    
+    if base != 'Object':
+        code.append('%s.prototype = Object.create(%s);' % (name, base))
+    code.append('%s.prototype._base_class = %s;' % (name, base))
+    
+    code.append('\n')
+    return code

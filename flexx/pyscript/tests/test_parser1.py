@@ -207,6 +207,7 @@ class TestExpressions:
     def test_instantiation(self):
         # Test creating instances
         assert 'new' in py2js('a = Foo()')
+        assert 'new' in py2js('a = x.Foo()')
         assert 'new' not in py2js('a = foo()')
         assert 'new' not in py2js('a = _foo()')
         assert 'new' not in py2js('a = _Foo()')

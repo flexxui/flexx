@@ -8,6 +8,7 @@ import hashlib
 
 from ..properties import HasPropsMeta, HasProps, Prop, Int, Str
 from ..pyscript import js, JSCode
+from ..pyscript.parser2 import get_class_definition
 
 if sys.version_info[0] >= 3:
     string_types = str,
@@ -42,6 +43,7 @@ class Mirrored(HasProps):
     
     def __init__(self, **kwargs):
         HasProps.__init__(self, **kwargs)
+        
         from flexx.ui.app import get_default_app, get_current_app  # avoid circular ref
         self._app = get_current_app()
         Mirrored._counter += 1
@@ -52,6 +54,7 @@ class Mirrored(HasProps):
         # Make sure we can use this class in JS
         self._app.register_mirrored(self.__class__)
         
+        # Instantiate JavaScript version of this class
         import json
         clsname = self.__class__.__name__
         props = {}
@@ -59,7 +62,7 @@ class Mirrored(HasProps):
             val = getattr(self, name)
             props[name] = getattr(self.__class__, name).to_json(val)
         cmd = 'flexx.instances.%s = new flexx.classes.%s(%s);' % (self.id, clsname, json.dumps(props))
-        print(cmd)
+        #print(cmd)
         self._app._exec(cmd)
         
         # todo: get notified when a prop changes, pend a call via call_later
@@ -80,9 +83,8 @@ class Mirrored(HasProps):
     #     return self._id
     
     def _sync_prop(self, name, old, new):
-        print('_sync_prop', name, new)
         txt = getattr(self.__class__, name).to_json(new)
-        print('sending json', txt)
+        #print('sending json', txt)
         cmd = 'flexx.instances.%s._set_prop_from_py(%r, %r);' % (self.id, name, txt)
         self._app._exec(cmd)
     
@@ -99,7 +101,7 @@ class Mirrored(HasProps):
         alert('Testing!')
     
     @js
-    def _set_prop_from_py(self, name, val, tojson=True):
+    def _js_set_prop_from_py(self, name, val, tojson=True):
         # To set props from Python without sending a sync pulse back
         # and also to convert from json
         if tojson:
@@ -119,7 +121,7 @@ class Mirrored(HasProps):
             self['_'+name+'_changed'](name, old, val)
     
     @js
-    def _getter_setter(name):
+    def _js_getter_setter(name):
         # Provide scope for closures
         def getter():
             if self['_get_'+name]:
@@ -137,13 +139,12 @@ class Mirrored(HasProps):
         return getter, setter
     
     @js
-    def __jsinit__(self, props):
+    def _js__init__(self, props):
         
         # Set id alias. In most browsers this shows up as the first element
         # of the object, which makes it easy to identify objects while
         # debugging. This attribute should *not* be used.
         self.__id = props['id']
-        
         # Create properties
         for name in props:
             opts = {"enumerable": True}
@@ -151,38 +152,45 @@ class Mirrored(HasProps):
             opts['get'] = gs[0]
             opts['set'] = gs[1]
             Object.defineProperty(self, name, opts)
+            #self['_'+name] = props[name]  # init so values are available in _init()
         
         # Init
-        if self._jsinit:
-            self._jsinit()
-        # Assign initial values
+        if self._init:
+            self._init()
+        
+        # Assign initial values - trigger what needs to be done
         for name in props:
             self['_'+name] = None  # init
             self._set_prop_from_py(name, props[name])
     
-    @classmethod
-    def get_jshash(cls):
-        # todo: when we cache code to the filesystem, this hash needs to be based on code
-        return hashlib.sha256(cls.__name__.encode()).digest()
+    @js
+    def _js_init(self):
+        pass  # Subclasses should overload this
     
     @classmethod
     def get_js(cls):
-        cls_name = cls.__name__
+        # todo: move this to app/clientcode
+        cls_name = 'flexx.classes.' + cls.__name__
+        base = object if (cls is Mirrored) else cls.mro()[1]
+        base_class = 'Object'
+        if cls is not Mirrored:
+            base_class = 'flexx.classes.%s.prototype' % cls.mro()[1].__name__
+        
         js = []
+        js.extend(get_class_definition(cls_name, base_class))
         
-        # Main functions
-        # todo: flexx.classes.xx
-        # todo: we could reduce JS code by doing inheritance in JS
-        js.append('flexx.classes.%s = ' % cls_name)
-        js.append(cls.__jsinit__.jscode)
-        
-        for key in dir(cls):
+        # # Main functions
+        # # todo: flexx.classes.xx
+        # # todo: we could reduce JS code by doing inheritance in JS
+        # js.append('flexx.classes.%s = ' % cls_name)
+        # js.append(cls.__jsinit__.jscode
+        for key, func in cls.__dict__.items():
             # Methods
-            func = getattr(cls, key)
+            # func = getattr(cls, key)
             if isinstance(func, JSCode):
-                code = func.jscode
+                code = func.jscode.replace('super()', base_class)  # fix super
                 name = func.name
-                js.append('flexx.classes.%s.prototype.%s = %s' % (cls_name, name, code))
+                js.append('%s.prototype.%s = %s' % (cls_name, name, code))
             
             # Property json methods
             # todo: implement property functions for validation, to_json and from_json in flexx.props
@@ -195,11 +203,12 @@ class Mirrored(HasProps):
                 for func in funcs:
                     code = func.jscode
                     name = '_%s_%s' % (func.name, propname)
-                    js.append('flexx.classes.%s.prototype.%s = %s' % (cls_name, name, code))
+                    js.append('%s.prototype.%s = %s' % (cls_name, name, code))
         
         # todo: give it an id
         return '\n'.join(js)
     
     @classmethod
     def get_css(cls):
-        return cls.CSS
+        return cls.__dict__.get('CSS', '')
+

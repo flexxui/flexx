@@ -114,6 +114,15 @@ def js(ob):
     multiple classes with the same name are defined. This is a
     consequence of classes not having a corresponding code object (in
     contrast to functions).
+    
+    Note that function names can be mangled to avoid clashing: "_js"
+    is stripped from both ends::
+    
+        def _js_method_a():
+            pass  # becomes "_method_a"
+        def method_b_js():
+            pass  # becomes "method_b"
+    
     """
     
     if isinstance(ob, JSCode):
@@ -133,9 +142,15 @@ def js(ob):
     # black-magic decorators that auto-mangle the function name. I settled
     # on just allowing "func_name__js".
     name = ob.__name__
+    # todo: only keep latter mangling approach?
     if name.endswith('_js'):
         if thetype == 'function':
             name = name[:-3].rstrip('_')
+        else:
+            raise RuntimeError('Cannot strip "_js" from class defs.')
+    if name.startswith('_js'):
+        if thetype == 'function':
+            name = name[3:]
         else:
             raise RuntimeError('Cannot strip "_js" from class defs.')
     

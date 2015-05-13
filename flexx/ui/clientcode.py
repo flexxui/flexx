@@ -17,43 +17,36 @@ from ..pyscript import js
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 HTML_DIR = os.path.join(os.path.dirname(THIS_DIR), 'html')
 
-INDEX = """
-<!doctype html>
+INDEX = """<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
 <title>Flexx UI</title>
 
-<style>
-"use strict""
+CSS-FLEXX
+CSS-FLEXX-UI
+CSS-OTHER
 
-CSS-HERE
-</style>
-
-<script>
-"use strict";
-
-JS-HERE
-</script>
+JS-FLEXX
+JS-FLEXX-UI
+JS-OTHER
 
 </head>
 
-<body id='body'>
-    
-    <div id="log" style="display: none;"> LOG:<br><br></div>
+<body id='body'></body>
 
-</body>
 </html>
 """
 
 
+
 @js
 class FlexxJS:
-    """ JavaScript Flexx module.
+    """ JavaScript Flexx module. This provides the connection between
+    the Python and JS (via a websocket).
     """
     
     def __init__(self):
-        """ Bootstrap Flexx. """
         
         self.ws = None
         self.last_msg = None
@@ -94,7 +87,7 @@ class FlexxJS:
             self.ws = None
     
     def get(self, id):
-        """ Get instance
+        """ Get instance of a Mirrored class.
         """
         if id == 'body':
             return document.body
@@ -102,6 +95,9 @@ class FlexxJS:
             return self.instances[id]
     
     def initSocket(self):
+        """ Make the connection to Python.
+        """
+        
         # Check WebSocket support
         if self.nodejs:
             try:
@@ -149,6 +145,8 @@ class FlexxJS:
             ws.onerror  = on_ws_error
     
     def initLogging(self):
+        """ Setup logging so that messages are proxied to Python.
+        """
         if console.ori_log:
             return  # already initialized the loggers
         # Keep originals
@@ -193,6 +191,17 @@ class FlexxJS:
             flexx.ws.send('RET ' + self._global._)  # send back result
         elif msg.startswith('EXEC '):
             eval(msg[5:])  # like eval, but do not return result
+        elif msg.startswith('DEFINE-JS '):
+            eval(msg[10:])
+            #el = document.createElement("script")
+            #el.innerHTML = msg[10:]
+            #document.body.appendChild(el)
+        elif msg.startswith('DEFINE-CSS '):
+            # http://stackoverflow.com/a/707580/2271927
+            el = document.createElement("style")
+            el.type = "text/css"
+            el.innerHTML = msg[11:]
+            document.body.appendChild(el)
         elif msg.startswith('TITLE '):
             if not self.nodejs:
                 document.title = msg[6:]
@@ -250,8 +259,35 @@ class FlexxJS:
         """
 
 
-class GlobalClientCode(object):
+class ClientCode(object):
     """
+    This class provides means to deliver client code (HTML/JS/CSS) to
+    the web runtime, or export an app for running it later. It can
+    handle a variety of delivery methods and operate in multiple
+    different modes. There is only one instance of this class per
+    process.
+    
+    Delivery method:
+    
+    * serve: serving an app via Tornado; the "default" behavior.
+    * notebook: serve via the Jupyter notebook.
+    * export: export an app to an HTML file.
+    
+    Modes:
+    
+    * split (default): the JS/CSS is served via different files.
+    * single: everything is served via a single page. Intended for
+      exporing apps as single files.
+    * dynamic: all of the Mirrored classes will be defined dynamically.
+      Note that this makes debugging difficult. Mainly intended for
+      testing purposes.
+    
+    Note that any Mirrored classes defined after the first app is
+    created will be dynamically defined, regardless of the chosen mode
+    (after all, the page will already have been served).
+    
+    Note that not all delivery methods support all modes.
+    
     """
     
     def __init__(self):
@@ -259,14 +295,38 @@ class GlobalClientCode(object):
         self._files = OrderedDict()
         self._cache = {}
         
-        self._js_codes = []
-        self._css_codes = []
+        # todo: make this configurable
+        self._mode = 'dynamic'
+        
+        self._preloaded_mirrored_classes = set()
+        
+        # Init JS and CSS lists
+        self._js = { 'flexx': [], 'flexx-ui': [], 'other': []}
+        self._css = {'flexx': [], 'flexx-ui': [], 'other': []}
+        
+        # Init flexx core code
+        self._js['flexx'].append(FlexxJS.jscode)
+        self._js['flexx'].append('var flexx = new FlexxJS();\n')
     
-    @classmethod
+    
     def collect(self):
-        if self._global_js_codes:
+        """ The first time this is called, all existing Mirrored classes
+        are collected, and their JS and CSS extracted. Any further calls
+        to this method have no effect. This method is called upon app
+        creation.
+        
+        The collected JS and CSS will be served via HTML; any Mirrored
+        classes that are used later on will be dynamically defined (i.e.
+        injected) via the websocket interface.
+        """
+        if self._preloaded_mirrored_classes:
+            return
+        if self._mode == 'dynamic':
+            # Prevent from being called again
+            self._preloaded_mirrored_classes.add(None) 
             return
         
+        # todo: Maybe at some point we may want to include external js files?
         # # Determine JS files
         # for fname in ['serialize.js', #'main.js', #'layouts.js',
         #              ]:# 'phosphor-core.min.js', 'phosphor-ui.min.js']:
@@ -284,18 +344,28 @@ class GlobalClientCode(object):
         
         # Collect JS from mirrored classes
         from .mirrored import get_mirrored_classes
-        # self._mirrored_js, self._mirrored_css = [], []
-        # todo: try not collecting, it should still work; all func provided via socket
+        
         for cls in get_mirrored_classes():
-            #self._mirrored_js.append(cls.get_js())
-            #self._mirrored_css.append(cls.get_css())
-            #self._global_js_codes.append(cls)
-            self._global_css_codes.append(cls.get_css())
-
+            self._preloaded_mirrored_classes.add(cls)
+            if cls.__module__.startswith('flexx.app'):
+                key = 'flexx'
+            elif cls.__module__.startswith('flexx.ui'):
+                key = 'flexx-ui'
+            else:
+                key = 'other'
+            self._js[key].append(cls.get_js())
+            self._css[key].append(cls.get_css())
+        
+        # todo: we can add caching here so we don't have to parse the PyScript from flexx classes
+    
     def load(self, fname):
         """ Get the source of the given file as a string.
         """
-        if fname not in self._files:
+        if fname.endswith('.js') and fname[:-3] in self._js:
+            return self.get_js(fname[:-3])
+        elif fname.endswith('.css') and fname[:-4] in self._css:
+            return self.get_css(fname[:-4])
+        elif fname not in self._files:
             raise IOError('Invalid source file')
         elif fname in self._cache:
             return self._cache[fname]
@@ -305,95 +375,55 @@ class GlobalClientCode(object):
             #self._cache[fname] = src  # caching disabled for easer dev
             return src
     
-    def get_js(self):
-        """ Get all JavaScript as a single string.
+    def get_js(self, selection='all'):
+        """ Get JavaScript as a single string.
         """
-        parts = []
-        parts.append('/* ===== Flexx module ===== */')
-        parts.append(FlexxJS.jscode)
-        parts.append('var flexx = new FlexxJS();\n')
-        # # Files
-        # for fname in self._files:
-        #     if fname.endswith('.js'):
-        #         parts.append('/* ===== %s ===== */' % fname)
-        #         parts.append(self.load(fname))
-        # Mirrored code
-        parts.append('/* ===== mirrored classes ===== */')
-        for cls in self._js_codes:
-            parts.append(cls.get_js())
-            self._known_codes.add(cls.get_jshash())
+        parts = ['"use strict";']
+        if selection == 'all':
+            for key in ('flexx', 'flexx-ui', 'other'):
+                parts.extend(self._js[key])
+        else:
+            parts.extend(self._js[selection])
         return '\n\n'.join(parts)
     
-    def get_css(self):
-        """ Get all CSS packed in a single <style> tag.
+    def get_css(self, selection='all'):
+        """ Get CSS as a single string.
         """
         parts = []
-        # for fname in self._files:
-        #     if fname.endswith('.css'):
-        #         parts.append('/* ===== %s ===== */' % fname)
-        #         parts.append(self.load(fname))
-        # Mirrored code
-        parts.append('/* ===== Python-defined CSS ===== */')
-        for src in self._css_codes:
-            parts.append(src)
+        if selection == 'all':
+            for key in ('flexx', 'flexx-ui', 'other'):
+                parts.extend(self._css[key])
+        else:
+            parts.extend(self._css[selection])
         return '\n\n'.join(parts)
     
     def get_page(self):
         """ Get the string for a single HTML page that can show a Flexx app.
         """
+        mode = self._mode
+        
+        # Init source code from template
         src = INDEX
-        src = src.replace('CSS-HERE', self.get_css())
-        src = src.replace('JS-HERE', self.get_js())
+        
+        # Fill in the missing pieces (client code)
+        for key in ('flexx-ui', 'other', 'flexx'):
+            if ((mode == 'single') or 
+                (mode == 'split' and key == 'other') or 
+                (mode == 'dynamic' and key == 'flexx')):
+                js = "<script>\n/* JS for %s */\n%s\n</script>" % (key, self.get_js(key))
+                css = "<style>\n%s\n</style>" % self.get_css(key)
+            elif mode == 'split':
+                js = "<script src='%s.js'></script>" % key
+                css = "<link rel='stylesheet' type='text/css' href='%s.css' />" % key
+            elif mode == 'dynamic':
+                js, css = '', ''
+            else:
+                raise ValueError('Invalid mode: %r' % mode)
+            src = src.replace('JS-'+key.upper(), js)
+            src = src.replace('CSS-'+key.upper(), css)
+        
         return src
-    
-    def get_page_light(self):
-        """ Get a page that relies on external flexx.js and flexx.css.
-        """
-        raise NotImplementedError()
-    
-    def build(self, dirname):
-        """ Create the flexx js library and css file. Place in the given dir.
-        """
-        assert os.path.isdir(dirname)
-        with open(os.path.join(dirname, 'flexx.js')) as f:
-            f.write(self.get_js())
-        with open(os.path.join(dirname, 'flexx.css')) as f:
-            f.write(self.get_css())
 
 
-# class ClientCode(object):
-#     """ Collect code that the client needs and provide a few ways to
-#     get the code to the client.
-#     """
-#     
-#     def __init__(self):
-#         
-#         self._in_nb = False
-#         
-#         self.collect()  # happens only once
-#         
-#         self._known_codes = set()
-#         for cls in globalClientCode._js_codes:
-#             self._known_codes.add(cls)
-#     
-#     def add_code(self, mirrored_class):
-#         if not (isinstance(mirrored_class, type) and hasattr(mirrored_class, 'get_js') and hasattr(mirrored_class, 'get_jshash')):
-#             raise ValueError('Not a Mirrored class')
-#         if mirrored_class.get_jshas() not in self._known_codes:
-#             self._js_codes.append(mirrored_class)
-#     
-#     
-#     def export(self, filename):
-#         """ Export the current app to a single HTML page.
-#         """
-#         # todo: needs commands
-#         with open(filename, 'wt') as f:
-#             f.write(self.get_page())
-#     
-#     def export_light(self, filename):
-#         """ Get a page that relies on external flexx.js and flexx.css.
-#         """
-#         raise NotImplementedError()
-
-
-clientCode = GlobalClientCode()
+# Create the one instance of this class
+clientCode = ClientCode()

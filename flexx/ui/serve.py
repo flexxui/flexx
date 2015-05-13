@@ -142,9 +142,9 @@ class MainHandler(tornado.web.RequestHandler):
                 elif file_name.endswith('.js'):
                     self.set_header("Content-Type", 'application/x-javascript')
                 try:
-                    raise RuntimeError('This is for page_light, but we might never implement that')
+                    #raise RuntimeError('This is for page_light, but we might never implement that')
                     #res = self.application.load(file_name)
-                    #res = clientCode.load(file_name).encode())
+                    res = clientCode.load(file_name).encode()
                 except IOError:
                     #self.write('invalid resource')
                     super().write_error(404)

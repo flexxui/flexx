@@ -1,7 +1,7 @@
 import json
 
 from ..pyscript import js
-from ..properties import Prop, Instance, Str, Tuple
+from ..properties import Prop, Instance, Str, Tuple, Float
 from .mirrored import Mirrored, get_instance_by_id
 
 
@@ -33,7 +33,32 @@ class WidgetProp(Prop):
     
     @js
     def from_json__js(self, value):
-        return flexx.widgets[JSON.parse(value)]
+        return flexx.instances[JSON.parse(value)]
+
+
+# todo: would be nice if Tuple just worked with elements that need custom json ...
+class WidgetsProp(Tuple):
+    
+    def __init__(self, *args, **kwargs):
+        Tuple.__init__(self, WidgetProp, *args, **kwargs)
+    
+    @js
+    def to_json__js(self, value):
+        res = '  '
+        for v in value:
+            if v is None or v.id is undefined:
+                res += JSON.stringify(None)
+            else:
+                res += JSON.stringify(v.id)
+            res += ', '
+        return '[' + res[:-2] + ']'
+    
+    @js
+    def from_json__js(self, value):
+        res = []
+        for v in JSON.parse(value):
+            res.append(flexx.instances[v])
+        return res
 
 
 class Widget(Mirrored):
@@ -44,27 +69,44 @@ class Widget(Mirrored):
     
     """
     
-    parent = WidgetProp()
-    children = Tuple(WidgetProp)  # todo: can we make this readonly?
-    
     container_id = Str()  # used if parent is None
     
-    def __init__(self, parent=None):
+    parent = WidgetProp()
+    #children = Tuple(WidgetProp)  # todo: can we make this readonly?
+    children = WidgetsProp()
+    
+    flex = Float()
+    min_width = Float()
+    min_height = Float()  # todo: or min_size?
+    cssClassName = Str()  # todo: should this be private? Or can we calculate it in JS?
+    
+    
+    def __init__(self, parent=None, **kwargs):
         # todo: -> parent is widget or ref to div element
-        Mirrored.__init__(self)
         
-        self.parent = parent
-        
+        # Provide css class name to 
         classes = ['zf-' + c.__name__.lower() for c in self.__class__.mro()]
-        classes = ' '.join(classes[:1-len(Widget.mro())])
+        classname = ' '.join(classes[:1-len(Widget.mro())])
+        
+        # Pass properties via kwargs
+        kwargs['cssClassName'] = classname
+        kwargs['parent'] = parent
+        
+        Mirrored.__init__(self, **kwargs)
+        
         #self._js_init(classes)  # todo: allow a js __init__
     
     @js
-    def _js_init(self):
-        pass
+    def _js_cssClassName_changed(self, name, old, className):
+        if this.node:
+            this.node.className = className
+    
+    @js
+    def _js_set_child(self, widget):
+        # May be overloaded in layout widgets
+        self.node.appendChild(widget.node)
     
     def _parent_changed(self, name, old_parent, new_parent):
-        print('setting parent in Py')
         if old_parent is not None:
             children = list(old_parent.children)
             while self in children:
@@ -77,7 +119,6 @@ class Widget(Mirrored):
     
     @js
     def _parent_changed__js(self, name, old_parent, new_parent):
-        print('setting parent in JS')
         if old_parent is not None:
             children = old_parent.children
             while children.indexOf(self) >= 0:  # todo: "self in children"
@@ -89,6 +130,7 @@ class Widget(Mirrored):
             children.append(self)
             #new_parent._set_prop('children', children)
             new_parent.children = children
+            new_parent._set_child(self)
     
     @js
     def set_cointainer_id(self, id):
@@ -118,21 +160,20 @@ class Button(Widget):
     
     text = Str('push me')
     
-    def __init__(self):
-        Mirrored.__init__(self)
-        #self._js_init()  # todo: allow a js __init__
+    # def __init__(self):
+    #     Mirrored.__init__(self)
+    #     #self._js_init()  # todo: allow a js __init__
     
     @js
-    def _jsinit(self, className):
+    def _js_init(self):
         # todo: allow setting a placeholder DOM element, or any widget parent
         this.node = document.createElement('button')
-        this.node.className = className
+        #this.node.className = this.cssClassName
         flexx.get('body').appendChild(this.node);
         this.node.innerHTML = 'Look, a button!'
     
     @js
     def _text_changed__js(self, name, old, txt):
-        print('_set_text', txt)
         this.node.innerHTML = txt
 
 
@@ -142,10 +183,10 @@ class Label(Widget):
     text = Str()
     
     @js
-    def _jsinit(self, className='zf-Label zf-Widget'):
+    def _js_init(self):
         # todo: allow setting a placeholder DOM element, or any widget parent
         this.node = document.createElement('div')
-        this.node.className = className
+        #this.node.className = this.cssClassName
         flexx.get('body').appendChild(this.node);
         this.node.innerHTML = 'a label'
     
@@ -158,22 +199,95 @@ class Layout(Widget):
     CSS = """
     
     .zf-layout {
+        width: 100%;
+        height: 100%;
+        margin: 0px;
+        padding: 0px;
+        border-spacing: 0px;
+        border: 0px;
+    }
     
+    .zf-layout > .zf-layout {
+        /* A layout in a layout need to adjust using "natural size" or min-size.  */
+        width: auto;
+        height: auto;
+    }
+    
+    .hcell .vcell {
+        /* inter-widget spacing. padding-left/top is set to "spacing"
+        on each non-first row/column in the layout. */
+        padding: 0px;  
     }
     """
     
     @js
-    def _js_init(self, className='zf-Button zf-Widget'):
-        # todo: allow setting a placeholder DOM element, or any widget parent
-        this.node = document.createElement('div')
-        this.node.className = className
-        flexx.get('body').appendChild(this.node);
+    def _js_applyBoxStyle(self, e, sty, value):
+        for prefix in ['-webkit-', '-ms-', '-moz-', '']:
+            e.style[prefix + sty] = value
+
+
+class Box(Layout):
     
+    CSS = """
+    .zf-hbox, .zf-vbox {
+        display: -webkit-flex;
+        display: -ms-flexbox;  /* IE 10 */
+        display: -ms-flex;     /* IE 11 */
+        display: -moz-flex;
+        display: flex;
+        
+        justify-content: stretch;  /* start, end, center, space-between, space-around * /
+        align-items: stretch;
+        align-content: stretch;
+    }
     
-class HBox(Layout):
+    */
+    .box-align-center { -webkit-align-items: center; -ms-align-items: center; -moz-align-items: center; align-items: center; }
+    .box-align-center { -webkit-align-items: center; -ms-align-items: center; -moz-align-items: center; align-items: center; }
+    */
+    
+    .zf-hbox > .zf-hbox, .zf-hbox > .zf-vbox {
+        width: auto;
+    }
+    .zf-vbox > .zf-hbox, .zf-vbox > .zf-vbox {
+        height: auto;
+    }
+    """
     
     @js
-    def _js_init(self, className):
-        pass
-
+    def _js_init(self):
+        this.node = document.createElement('div')
+        #this.node.className = self.cssClassName
+        flexx.get('body').appendChild(this.node);
     
+    @js
+    def _js_set_child(self, el):
+        self._applyBoxStyle(el.node, 'flex-grow', el.flex)
+        super()._set_child(el)
+
+
+class HBox(Box):
+    
+    CSS = """
+    .zf-hbox {
+        -webkit-flex-flow: row;
+        -ms-flex-flow: row;
+        -moz-flex-flow: row;
+        flex-flow: row;
+        /*border: 1px dashed #44e;*/
+        width: 100%;
+    }
+    """
+
+class VBox(Box):
+    CSS = """
+    .zf-vbox {
+        -webkit-flex-flow: column;
+        -ms-flex-flow: column;
+        -moz-flex-flow: column;
+        flex-flow: column;
+        /*border: 1px dashed #e44;*/
+        height: 100%;
+        width: 100%;
+    }
+    """

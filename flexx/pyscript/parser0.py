@@ -35,8 +35,10 @@ def unify(x):
     if x[0] in '\'"' and x[0] == x[-1] and x.count(x[0]) == 2:
         return x  # string
     #elif x.isidentifier() or x.isalnum():
-    elif re.match(r'^[.\w]*$', x):  # identifier, numbers, dots
-        return x
+    elif re.match(r'^[.\w]*$', x):
+        return x  # identifier, numbers, dots
+    elif x.endswith('()') and re.match(r'^[.\w]*$', x[:-2]):
+        return x  # function calls (e.g. super())
     else:
         return '(%s)' % x
 
@@ -134,6 +136,7 @@ class Parser0(object):
     }
     
     def __init__(self, code, module=None):
+        self._pycode = code  # helpfull during debugging
         self._root = ast.parse(code)
         self._stack = []
         self._indent = 0
@@ -167,7 +170,7 @@ class Parser0(object):
                 raise(err)
         
         # Finish
-        ns = self.pop_stack()
+        ns = self.pop_stack()  # Pop module namespace
         if ns:
             dec = 'var ' + ', '.join(sorted(ns)) + ';'
             self._parts.insert(0, self.lf(dec))

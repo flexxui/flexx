@@ -179,6 +179,18 @@ class TestExceptions:
         assert evaljs('var f = ' + catchtest.jscode + 'f(1)') == 'value-error'
         assert evaljs('var f = ' + catchtest.jscode + 'f(2)') == 'runtime-error'
         assert evaljs('var f = ' + catchtest.jscode + 'f(3)') == 'other-error'
+    
+    def test_catching2(self):
+        
+        @js
+        def catchtest(x):
+            try:
+                raise ValueError('foo')
+            except Exception as err:
+                print(err.message)
+        
+        assert evaljs('var f = ' + catchtest.jscode + 'f(1)').endswith('foo')
+
 
 @js
 def func1():
@@ -436,6 +448,27 @@ class TestClasses:
         assert evaljs(code + 'm3 instanceof Object;') == 'true'
     
     
+    def test_inheritance_super_more(self):
+        
+        class MyClass4:
+            def foo(self):
+                return self
+        
+        class MyClass5(MyClass4):
+            def foo(self, test):
+                return super().foo()
+        
+        def foo():
+            return super().foo()
+        
+        code = js(MyClass4).jscode + js(MyClass5).jscode
+        code += 'var foo = ' + js(foo).jscode.replace('super()', 'MyClass4.prototype')
+        code += 'var m4=new MyClass4(), m5=new MyClass5();'
+        
+        assert evaljs(code + 'm4.foo() === m4') == 'true'
+        assert evaljs(code + 'm4.foo() === m4') == 'true'
+        assert evaljs(code + 'foo.call(m4) === m4') == 'true'
+    
     def test_calling_method_from_init(self):
         
         # Note that all class names inside a module need to be unique
@@ -456,8 +489,9 @@ class TestClasses:
                 return 2
         
         code = js(MyClass11).jscode + js(MyClass12).jscode
-        code += 'm = new MyClass12(); m._res'
-        assert evaljs(code) == '122'
+        assert evaljs(code + 'm = new MyClass12(); m._res') == '122'
+        assert evaljs(code + 'm = new MyClass12(); m.m1()') == '100'
+        
 
 
 run_tests_if_main()

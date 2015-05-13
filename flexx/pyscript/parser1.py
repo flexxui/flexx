@@ -76,6 +76,10 @@ tuple packing and unpacking (a.k.a. destructuring assignment).
     
     # Deleting variables
     del bar.foo
+    
+    # Functions starting with a capital letter
+    # are assumed constructors
+    foo = Foo()
 
 
 Comparisons
@@ -323,7 +327,8 @@ class Parser1(Parser0):
             return res
         
         # Handle normally
-        if base_name.endswith('._base_class'):  # super() was used
+        if base_name.endswith('._base_class') or base_name == 'super()':
+            # super() was used, use "call" to pass "this"
             return [full_name] + self._get_args(node, 'this', True)
         else:
             code = [full_name] + self._get_args(node, base_name)
