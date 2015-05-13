@@ -1,9 +1,11 @@
 """ Base class for objects that live in both Python and JS
+
+This basically implements the syncing of properties.
 """
 
 import sys
-import weakref
 import json
+import weakref
 import hashlib
 
 from ...properties import HasPropsMeta, HasProps, Prop, Int, Str
@@ -17,52 +19,57 @@ else:
 
 
 def get_mirrored_classes():
+    """ Get a list of all known mirrored classes.
+    """
     return [c for c in HasPropsMeta.CLASSES if issubclass(c, Mirrored)]
 
 
 def get_instance_by_id(id):
-    """ Get js object corresponding to the given id, or None if it does
-    not exist. 
+    """ Get instance of Mirrored class corresponding to the given id,
+    or None if it does not exist.
     """
     return Mirrored._instances.get(id, None)
 
 
 class Mirrored(HasProps):
-    """ Instances of this class will have a mirror object in JS. The
-    props of the two are synchronised.
+    """ 
+    Subclass of HasProps for which the instances have a mirror object
+    in JS. The propertiess of the two are synchronised.
     """
     
+    # Keep track of all instances, so we can easily collect al JS/CSS
     _instances = weakref.WeakValueDictionary()
     
+    # Count instances to give each instance a unique id
+    _counter = 0
+    
+    # CSS for this class (no css in the base class)
     CSS = ""
     
-    name = Str()
-    id = Str()  # todo: readonly
+    # Properties:
     
-    _counter = 0
+    id = Str(help='The unique id of this Mirrored instance')  # todo: readonly
     
     def __init__(self, **kwargs):
         HasProps.__init__(self, **kwargs)
         
-        from flexx.ui.app import get_default_app, get_current_app  # avoid circular ref
+        # Associate with an app
+        from flexx.ui.app import get_default_app, get_current_app  # avoid circular import
         self._app = get_current_app()
+        self._app.register_mirrored(self.__class__)  # Ensure the app knows us
+        
+        # Set id and register this instance
         Mirrored._counter += 1
         self.id = self.__class__.__name__ + str(Mirrored._counter)
-        
         Mirrored._instances[self._id] = self
         
-        # Make sure we can use this class in JS
-        self._app.register_mirrored(self.__class__)
-        
         # Instantiate JavaScript version of this class
-        import json
-        clsname = self.__class__.__name__
+        clsname = 'flexx.classes.' + self.__class__.__name__
         props = {}
         for name in self.props():
             val = getattr(self, name)
             props[name] = getattr(self.__class__, name).to_json(val)
-        cmd = 'flexx.instances.%s = new flexx.classes.%s(%s);' % (self.id, clsname, json.dumps(props))
-        #print(cmd)
+        cmd = 'flexx.instances.%s = new %s(%s);' % (self.id, clsname, json.dumps(props))
         self._app._exec(cmd)
         
         # todo: get notified when a prop changes, pend a call via call_later
@@ -75,30 +82,46 @@ class Mirrored(HasProps):
                 continue  # todo: implement via Tuple(WidgetProp, sync=False)?
             self.add_listener(name, self._sync_prop)
     
-    def get_app(self):
-        return self._app
-    
-    # @property
-    # def id(self):
-    #     return self._id
-    
     def _sync_prop(self, name, old, new):
+        """ Callback to sync properties to JS
+        """
+        # Note: the JS function _set_prop_from_py is defined below
         txt = getattr(self.__class__, name).to_json(new)
         #print('sending json', txt)
         cmd = 'flexx.instances.%s._set_prop_from_py(%r, %r);' % (self.id, name, txt)
         self._app._exec(cmd)
     
-    def call_method(self, code):
-        cmd = 'flexx.instances.%s.%s' % (self.id, code)
-        self._app._exec(cmd)
-    
-    def methoda(self):
-        """ this is method a """
-        pass
+    # def call_method(self, code):
+    #     cmd = 'flexx.instances.%s.%s' % (self.id, code)
+    #     self._app._exec(cmd)
     
     @js
-    def test_js_method(self):
-        alert('Testing!')
+    def _js__init__(self, props):
+        
+        # Set id alias. In most browsers this shows up as the first element
+        # of the object, which makes it easy to identify objects while
+        # debugging. This attribute should *not* be used.
+        self.__id = props['id']
+        # Create properties
+        for name in props:
+            opts = {"enumerable": True}
+            gs = self._getter_setter(name)
+            opts['get'] = gs[0]
+            opts['set'] = gs[1]
+            Object.defineProperty(self, name, opts)
+        
+        # Init
+        if self._init:
+            self._init()
+        
+        # Assign initial values - trigger what needs to be done
+        for name in props:
+            self['_'+name] = None  # init
+            self._set_prop_from_py(name, props[name])
+    
+    @js
+    def _js_init(self):
+        pass  # Subclasses should overload this
     
     @js
     def _js_set_prop_from_py(self, name, val, tojson=True):
@@ -110,11 +133,6 @@ class Mirrored(HasProps):
             else:
                 val = JSON.parse(val)
             val = None if val is undefined else val
-        #print('_set_prop_from_py', name, val)
-        # if self['_set_'+name]:
-        #     val2 = self['_set_' + name](val)
-        #     if val2 is not undefined:
-        #         val = val2
         old = self['_' + name]
         self['_' + name] = val
         if self['_'+name+'_changed']:
@@ -137,35 +155,6 @@ class Mirrored(HasProps):
                 txt = JSON.stringify(value)
             flexx.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
         return getter, setter
-    
-    @js
-    def _js__init__(self, props):
-        
-        # Set id alias. In most browsers this shows up as the first element
-        # of the object, which makes it easy to identify objects while
-        # debugging. This attribute should *not* be used.
-        self.__id = props['id']
-        # Create properties
-        for name in props:
-            opts = {"enumerable": True}
-            gs = self._getter_setter(name)
-            opts['get'] = gs[0]
-            opts['set'] = gs[1]
-            Object.defineProperty(self, name, opts)
-            #self['_'+name] = props[name]  # init so values are available in _init()
-        
-        # Init
-        if self._init:
-            self._init()
-        
-        # Assign initial values - trigger what needs to be done
-        for name in props:
-            self['_'+name] = None  # init
-            self._set_prop_from_py(name, props[name])
-    
-    @js
-    def _js_init(self):
-        pass  # Subclasses should overload this
     
     @classmethod
     def get_js(cls):
@@ -211,4 +200,3 @@ class Mirrored(HasProps):
     @classmethod
     def get_css(cls):
         return cls.__dict__.get('CSS', '')
-

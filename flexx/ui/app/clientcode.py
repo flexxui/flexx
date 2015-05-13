@@ -14,6 +14,15 @@ from ...pyscript import js
 
 # todo: minification
 
+# todo: notes on caching:
+# We should provide a means to efficiently cache indidifual JSObjects
+# in a file on disk. Doing this woul automatically speed up the
+# collect() method of clientCode. We could also cache flexx.js et. al.
+# to disk, but its not straightforward to detect when the cache is not
+# valid anymore (source has changed), also, with the caching mechanism
+# above it might not be necessary. Therefore, the flexx.js et al. will
+# probably only be written to disk for export.
+
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 HTML_DIR = os.path.join(os.path.dirname(THIS_DIR), 'html')
@@ -356,8 +365,6 @@ class ClientCode(object):
                 key = 'other'
             self._js[key].append(cls.get_js())
             self._css[key].append(cls.get_css())
-        
-        # todo: we can add caching here so we don't have to parse the PyScript from flexx classes
     
     def load(self, fname):
         """ Get the source of the given file as a string.

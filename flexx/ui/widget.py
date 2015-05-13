@@ -1,4 +1,6 @@
 """ The base widget class.
+
+Implements parenting and other things common to all widgets.
 """
 
 import json
@@ -71,17 +73,18 @@ class Widget(Mirrored):
     
     """
     
+    # Properties
+    
     container_id = Str()  # used if parent is None
     
-    parent = WidgetProp()
+    parent = WidgetProp(help="The parent widget")
     #children = Tuple(WidgetProp)  # todo: can we make this readonly?
-    children = WidgetsProp()
-    
-    flex = Float()
+    children = WidgetsProp(help="A tuple of child widgets")
+    flex = Float(help="How much space this widget takes when contained in a " + 
+                 "layout. A flex of 0 means to take the minimum size.")
     min_width = Float()
     min_height = Float()  # todo: or min_size?
     cssClassName = Str()  # todo: should this be private? Or can we calculate it in JS?
-    
     
     def __init__(self, parent=None, **kwargs):
         # todo: -> parent is widget or ref to div element
@@ -95,8 +98,6 @@ class Widget(Mirrored):
         kwargs['parent'] = parent
         
         Mirrored.__init__(self, **kwargs)
-        
-        #self._js_init(classes)  # todo: allow a js __init__
     
     @js
     def _js_cssClassName_changed(self, name, old, className):
@@ -120,7 +121,7 @@ class Widget(Mirrored):
             new_parent._set_prop('children', children)
     
     @js
-    def _parent_changed__js(self, name, old_parent, new_parent):
+    def _js_parent_changed(self, name, old_parent, new_parent):
         if old_parent is not None:
             children = old_parent.children
             while children.indexOf(self) >= 0:  # todo: "self in children"
@@ -135,7 +136,7 @@ class Widget(Mirrored):
             new_parent._set_child(self)
     
     @js
-    def set_cointainer_id(self, id):
+    def _js_set_cointainer_id(self, id):
         #if self._parent:
         #    return
         print('setting container id', id)
