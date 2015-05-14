@@ -65,12 +65,22 @@ class WidgetsProp(Tuple):
         return res
 
 
+# Keep track of stack of default parents when using widgets
+# as context managers
+
+_default_parent = []
+
 class Widget(Mirrored):
     """ Base widget class.
     """
     
     CSS = """
     
+    .zf-widget {
+        box-sizing: border-box;
+        white-space: nowrap;
+        overflow: hidden;
+    }
     """
     
     # Properties
@@ -89,6 +99,11 @@ class Widget(Mirrored):
     def __init__(self, parent=None, **kwargs):
         # todo: -> parent is widget or ref to div element
         
+        # Apply default parent?
+        if parent is None:
+            if _default_parent:
+                parent = _default_parent[-1]
+        
         # Provide css class name to 
         classes = ['zf-' + c.__name__.lower() for c in self.__class__.mro()]
         classname = ' '.join(classes[:1-len(Widget.mro())])
@@ -98,6 +113,15 @@ class Widget(Mirrored):
         kwargs['parent'] = parent
         
         Mirrored.__init__(self, **kwargs)
+    
+    def __enter__(self):
+        _default_parent.append(self)
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        assert self is _default_parent.pop(-1)
+        #if value is None:
+        #    self.update()
     
     @js
     def _js_cssClassName_changed(self, name, old, className):

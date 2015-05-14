@@ -413,6 +413,8 @@ class App(object):
         # Register this app instance
         if runtime == '<export>':
             self._ws = Exporter(self)
+            global _current_app
+            _current_app = self
             self.init()
         elif runtime == 'notebook':
             manager._add_pending_app_instance(self)
@@ -488,6 +490,8 @@ class App(object):
         for command in self._pending_commands:
             self._ws.command(command)
         # Call user-init (create ui elements, etc.)
+        global _current_app
+        _current_app = self
         self.init()
     
     @property

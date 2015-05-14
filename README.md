@@ -26,6 +26,40 @@ of the modules are imported by default.
   to work everywhere that can be used as a fallback.
 
 
+Example
+-------
+
+Working code example showing buttons layed out using different flex factors::
+
+    from flexx import ui
+
+    class MyApp(ui.App):
+        
+        def init(self):
+            
+            with ui.VBox():
+                
+                with ui.HBox(flex=1):
+                    ui.Button(text='Box A', flex=0)
+                    ui.Button(text='Box B', flex=0)
+                    ui.Button(text='Box C is a bit longer', flex=0)
+                with ui.HBox(flex=0):
+                    ui.Button(text='Box A', flex=1)
+                    ui.Button(text='Box B', flex=1)
+                    ui.Button(text='Box C is a bit longer', flex=1)
+                with ui.HBox(flex=1):
+                    ui.Button(text='Box A', flex=1)
+                    ui.Button(text='Box B', flex=0)
+                    ui.Button(text='Box C is a bit longer', flex=2)
+                with ui.HBox(flex=2):
+                    ui.Button(text='Box A', flex=1)
+                    ui.Button(text='Box B', flex=2)
+                    ui.Button(text='Box C is a bit longer', flex=3)
+    
+    app = MyApp()
+    ui.run()
+
+
 Current status
 --------------
 

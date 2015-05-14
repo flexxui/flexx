@@ -85,10 +85,10 @@ class Mirrored(HasProps):
     def _sync_prop(self, name, old, new):
         """ Callback to sync properties to JS
         """
-        # Note: the JS function _set_prop_from_py is defined below
+        # Note: the JS function _set_property is defined below
         txt = getattr(self.__class__, name).to_json(new)
         #print('sending json', txt)
-        cmd = 'flexx.instances.%s._set_prop_from_py(%r, %r);' % (self.id, name, txt)
+        cmd = 'flexx.instances.%s._set_property(%r, %r, true, true);' % (self.id, name, txt)
         self._app._exec(cmd)
     
     # def call_method(self, code):
@@ -102,6 +102,7 @@ class Mirrored(HasProps):
         # of the object, which makes it easy to identify objects while
         # debugging. This attribute should *not* be used.
         self.__id = props['id']
+        
         # Create properties
         for name in props:
             opts = {"enumerable": True}
@@ -109,25 +110,30 @@ class Mirrored(HasProps):
             opts['get'] = gs[0]
             opts['set'] = gs[1]
             Object.defineProperty(self, name, opts)
-        
-        # Init
-        if self._init:
-            self._init()
-        
-        # Assign initial values - trigger what needs to be done
+       
+        # First init all property values, without calling the changed-func
         for name in props:
-            self['_'+name] = None  # init
-            self._set_prop_from_py(name, props[name])
+            self._set_property(name, props[name], True, False)
+        
+        # Init (with props set to their initial value)
+        self._init()
+        
+        # Emit changed events
+        for name in props:
+            if self['_'+name+'_changed']:
+                self['_'+name+'_changed'](name, None, self['_'+name])
     
     @js
     def _js_init(self):
         pass  # Subclasses should overload this
     
     @js
-    def _js_set_prop_from_py(self, name, val, tojson=True):
-        # To set props from Python without sending a sync pulse back
-        # and also to convert from json
-        if tojson:
+    def _js_set_property(self, name, val, fromjson=False, emit=True):
+        """ Set a property value with control over json conversion
+        and calling of changed-function.
+        """
+        oval = val
+        if fromjson:
             if self['_from_json_'+name]:  # == function 
                 val = self['_from_json_'+name](val)
             else:
@@ -135,7 +141,7 @@ class Mirrored(HasProps):
             val = None if val is undefined else val
         old = self['_' + name]
         self['_' + name] = val
-        if self['_'+name+'_changed']:
+        if emit and self['_'+name+'_changed']:
             self['_'+name+'_changed'](name, old, val)
     
     @js
@@ -147,13 +153,14 @@ class Mirrored(HasProps):
             else:
                 return self['_' + name]
         def setter(val):
-            self._set_prop_from_py(name, val, False)
+            self._set_property(name, val, False, True)
             value = self['_' + name]
             if self['_to_json_'+name]:  # == function
                 txt = self['_to_json_'+name](value)
             else:
                 txt = JSON.stringify(value)
-            flexx.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
+            if name != 'children':  # explicitly skip this
+                flexx.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
         return getter, setter
     
     @classmethod

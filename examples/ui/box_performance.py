@@ -11,17 +11,17 @@ class MyApp1(ui.App):
     
     def init(self):
         
-        with ui.HBox(self):
+        with ui.HBox():
             ui.Button(text='Box A', flex=0)
             ui.Button(text='Box B', flex=0)
-            ui.Button(text='Box C is a bit longer', flex=0)
+            ui.Button(text='Box C is a bit longer', flex=1)
 
 
 class MyApp2(ui.App):
     
     def init(self):
         
-        with ui.HBox(self):
+        with ui.HBox():
             
             with ui.VBox():
                 
@@ -62,7 +62,7 @@ class MyApp2(ui.App):
                     ui.Button(text='Box C is a bit longer', flex=3)
 
 
-app = MyApp1()
+app = MyApp2(runtime='browser')
 ui.run()
 
 #MyApp1.export('/home/almar/dev/pylib/flexx/_website/_static/boxdemo_table1.html')

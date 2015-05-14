@@ -10,6 +10,17 @@ from .widget import Widget
 class Layout(Widget):
     CSS = """
     
+    html {
+        /* set height, so body can have height, and the first layout too */
+        height: 100%;  
+    }
+    
+    body {
+        /* Set height so the first layout can fill whole window */
+        height: 100%;
+        margin: 0px;
+    }
+    
     .zf-layout {
         width: 100%;
         height: 100%;
@@ -19,17 +30,6 @@ class Layout(Widget):
         border: 0px;
     }
     
-    .zf-layout > .zf-layout {
-        /* A layout in a layout need to adjust using "natural size" or min-size.  */
-        width: auto;
-        height: auto;
-    }
-    
-    .hcell .vcell {
-        /* inter-widget spacing. padding-left/top is set to "spacing"
-        on each non-first row/column in the layout. */
-        padding: 0px;  
-    }
     """
     
     @js
@@ -38,7 +38,10 @@ class Layout(Widget):
             e.style[prefix + sty] = value
 
 
+
 class Box(Layout):
+    """ Abstract class for HBox and VBox
+    """
     
     CSS = """
     .zf-hbox, .zf-vbox {
@@ -48,7 +51,7 @@ class Box(Layout):
         display: -moz-flex;
         display: flex;
         
-        justify-content: stretch;  /* start, end, center, space-between, space-around * /
+        justify-content: stretch;  /* start, end, center, space-between, space-around */
         align-items: stretch;
         align-content: stretch;
     }
@@ -75,10 +78,15 @@ class Box(Layout):
     @js
     def _js_set_child(self, el):
         self._applyBoxStyle(el.node, 'flex-grow', el.flex)
+        self._applyBoxStyle(el.node, 'align-items', 'center')  # flex-start, flex-end, center, baseline, stretch
+        self._applyBoxStyle(el.node, 'justify-content', 'space-around')  # flex-start, flex-end, center, space-between, space-around
+       
         super()._set_child(el)
 
 
 class HBox(Box):
+    """ Layout widget to align elements horizontally.
+    """
     
     CSS = """
     .zf-hbox {
@@ -86,20 +94,24 @@ class HBox(Box):
         -ms-flex-flow: row;
         -moz-flex-flow: row;
         flex-flow: row;
-        /*border: 1px dashed #44e;*/
         width: 100%;
+        /*border: 1px dashed #44e;*/
     }
     """
 
+
 class VBox(Box):
+    """ Layout widget to align elements vertically.
+    """
+    
     CSS = """
     .zf-vbox {
         -webkit-flex-flow: column;
         -ms-flex-flow: column;
         -moz-flex-flow: column;
         flex-flow: column;
-        /*border: 1px dashed #e44;*/
         height: 100%;
         width: 100%;
+        /*border: 1px dashed #e44;*/
     }
     """
