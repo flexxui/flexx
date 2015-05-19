@@ -1,7 +1,7 @@
 Flexx
 =====
 
-Flexx is a cross-platform, pure Python tookit for creating graphical
+Flexx is a cross-platform, pure Python toolkit for creating graphical
 user interfaces (GUI's), that uses web technology for its rendering.
 You can use Flexx to create desktop applications as well as web
 applications. 

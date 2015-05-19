@@ -48,7 +48,7 @@ import tornado.web
 from ...util.icon import Icon
 from ...webruntime import launch
 
-from .clientcode import clientCode  # global client code
+from .clientcode import clientCode, Exporter # global client code
 from .mirrored import Mirrored
 
 
@@ -394,12 +394,9 @@ class App(object):
         global _current_app
         _current_app = self
         
-        #Collect client code for Mirrored classes when the first app is created
-        clientCode.collect()
-        
         # Object to manage the client code (JS/CSS/HTML)
         self._known_mirrored_classes = set()
-        for cls in clientCode._preloaded_mirrored_classes:
+        for cls in clientCode.get_defined_mirrored_classes():
             self._known_mirrored_classes.add(cls)
         
         # Init
@@ -413,7 +410,6 @@ class App(object):
         # Register this app instance
         if runtime == '<export>':
             self._ws = Exporter(self)
-            global _current_app
             _current_app = self
             self.init()
         elif runtime == 'notebook':
@@ -626,111 +622,3 @@ def get_current_app():
     if (_current_app is None) or (_current_app.status == App.STATUS.CLOSED):
         App(runtime=runtime)
     return _current_app
-
-
-# todo: move to clientcode
-class Exporter(object):
-    """ Export apps to standalone HTML.
-    """
-    
-    def __init__(self, app):
-        self._commands = []
-        self.close_code = None  # simulate web socket
-        
-        # todo: how to export icons
-        self.command('ICON %s.ico' % app.id)
-        self.command('TITLE %s' % app._config.title)
-        
-    def command(self, cmd):
-        self._commands.append(cmd)
-    
-    def write_html(self, filename):
-        html = self.to_html()
-        open(filename, 'wt').write(html)
-        print('Exported app to %r' % filename)
-    
-    def to_html(self):
-        """ Return HTML string
-        """
-        from .serve import HTML_DIR
-        HTML_BASE = open(os.path.join(HTML_DIR, 'index.html'), 'rt').read()
-        
-        # Create lines to launch app
-        lines = []
-        lines.append('flexx.isExported = true;')
-        lines.append('')
-        lines.append('flexx.runExportedApp = function () {')
-        lines.extend(['    flexx.command(%r);' % c for c in self._commands])
-        lines.append('};')
-        
-        # Fill in template
-        html = HTML_BASE.replace('flexx.isExported = false;', '\n        '.join(lines))
-        
-        # Minify
-        # todo: these names must be parsed from html or read from serve.py
-        for fname in ['serialize.js', 'main.js', 'layouts.js']:
-            code = open(os.path.join(HTML_DIR, fname), 'rt').read()
-            minified = self._minify(code)
-            needle = '<script src="%s"></script>' % fname
-            html = html.replace(needle, '<script>%s</script>' % minified)
-        for fname in ['main.css']:
-            code = open(os.path.join(HTML_DIR, fname), 'rt').read()
-            minified = self._minify(code)
-            needle = '<link rel="stylesheet" type="text/css" href="%s">' % fname
-            html = html.replace(needle, '<style>%s</style>' % minified)
-        
-        return html
-    
-    def _minify(self, code):
-        """ Very minimal JS minification algorithm. Can probably be better.
-        May contain bugs. Only operates well on JS without syntax errors.
-        """
-        space_safe = ' =+-/*&|(){},.><:;'
-        chars = ['\n']
-        self._i = -1
-        def read():
-            self._i += 1
-            if self._i < len(code):
-                return code[self._i]
-        def to_end_of_string(c0):
-            chars.append(c0)
-            while True:
-                c = read()
-                chars.append(c)
-                if c == c0 and chars[-1] != '\\':
-                    return
-        def to_end_of_line_comment():
-            while True:
-                c = read()
-                if c == '\n':
-                    return
-        def to_end_of_mutiline_comment():
-            lastchar = ''
-            while True:
-                c = read()
-                if c == '/' and lastchar == '*':
-                    return
-                lastchar = c
-        while True:
-            c = read()
-            if not c:
-                break  # end of code
-            elif c == "'" or c == '"':
-                to_end_of_string(c)
-            elif c == '/' and chars[-1] == '/':
-                chars.pop(-1)
-                to_end_of_line_comment()
-            elif c == '*' and chars[-1] == '/':
-                chars.pop(-1)
-                to_end_of_mutiline_comment()
-            elif c in '\t\r\n':
-                pass
-            elif c in ' ':
-                if chars[-1] not in space_safe:
-                    chars.append(c)
-            elif c in space_safe and chars[-1] == ' ':
-                chars[-1] = c  # replace last char
-            else:
-                chars.append(c)
-        chars.pop(0)
-        return ''.join(chars)

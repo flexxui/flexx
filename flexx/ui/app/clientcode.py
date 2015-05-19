@@ -33,13 +33,9 @@ INDEX = """<!doctype html>
 <meta charset="utf-8">
 <title>Flexx UI</title>
 
-CSS-FLEXX
-CSS-FLEXX-UI
-CSS-OTHER
+CSS-HOOK
 
-JS-FLEXX
-JS-FLEXX-UI
-JS-OTHER
+JS-HOOK
 
 </head>
 
@@ -292,34 +288,47 @@ class ClientCode(object):
       Note that this makes debugging difficult. Mainly intended for
       testing purposes.
     
-    Note that any Mirrored classes defined after the first app is
-    created will be dynamically defined, regardless of the chosen mode
-    (after all, the page will already have been served).
+    Note that any Mirrored classes defined once the first connects
+    will be dynamically defined, regardless of the chosen mode (after
+    all, the page will already have been served).
     
     Note that not all delivery methods support all modes.
     
     """
     
+    _instance = None
+    
     def __init__(self):
+        
+        # Enforce singleton
+        if ClientCode._instance is not None:
+            raise RuntimeError('ClientCode must be singleton')
+        ClientCode._instance = self
         
         self._files = OrderedDict()
         self._cache = {}
         
-        # todo: make this configurable
-        self._mode = 'split'
-        
         self._preloaded_mirrored_classes = set()
         
-        # Init JS and CSS lists
-        self._js = { 'flexx': [], 'flexx-ui': [], 'other': []}
-        self._css = {'flexx': [], 'flexx-ui': [], 'other': []}
+        # Init dicts for JS and CSS code. The index represents the name
+        # of the .js or .css file, or starts with "index-" in which
+        # case the code should be in the main page.
+        self._js = OrderedDict()
+        self._css = OrderedDict()
         
         # Init flexx core code
+        self._js['flexx'] = []
+        self._css['flexx'] = []
         self._js['flexx'].append(FlexxJS.jscode)
         self._js['flexx'].append('var flexx = new FlexxJS();\n')
     
+    @property
+    def mode(self):
+        """ Get the mode to serve JS/CSS code: 'split', 'single', or 'dynamic'.
+        """
+        return os.getenv('FLEXX_SERVE_MODE', 'split')
     
-    def collect(self):
+    def _collect(self):
         """ The first time this is called, all existing Mirrored classes
         are collected, and their JS and CSS extracted. Any further calls
         to this method have no effect. This method is called upon app
@@ -331,9 +340,7 @@ class ClientCode(object):
         """
         if self._preloaded_mirrored_classes:
             return
-        if self._mode == 'dynamic':
-            # Prevent from being called again
-            self._preloaded_mirrored_classes.add(None) 
+        if self.mode == 'dynamic':
             return
         
         # todo: Maybe at some point we may want to include external js files?
@@ -355,6 +362,11 @@ class ClientCode(object):
         # Collect JS from mirrored classes
         from .mirrored import get_mirrored_classes
         
+        self._js['flexx-ui'] = []
+        self._js['index-other'] = []
+        self._css['flexx-ui'] = []
+        self._css['index-other'] = []
+        
         for cls in get_mirrored_classes():
             self._preloaded_mirrored_classes.add(cls)
             if cls.__module__.startswith('flexx.app'):
@@ -362,9 +374,20 @@ class ClientCode(object):
             elif cls.__module__.startswith('flexx.ui'):
                 key = 'flexx-ui'
             else:
-                key = 'other'
+                key = 'index-other'
             self._js[key].append(cls.get_js())
             self._css[key].append(cls.get_css())
+    
+    def get_defined_mirrored_classes(self):
+        """ Get a list of all mirrored classes that will be defined
+        by serving the JS/CSS code. Returns an empty list when in 
+        'dynamic' mode.
+        """
+        self._collect()
+        if self.mode == 'dynamic':
+            return []
+        else:
+            return self._preloaded_mirrored_classes
     
     def load(self, fname):
         """ Get the source of the given file as a string.
@@ -386,9 +409,10 @@ class ClientCode(object):
     def get_js(self, selection='all'):
         """ Get JavaScript as a single string.
         """
+        self._collect()
         parts = ['"use strict";']
         if selection == 'all':
-            for key in ('flexx', 'flexx-ui', 'other'):
+            for key in self._js:
                 parts.extend(self._js[key])
         else:
             parts.extend(self._js[selection])
@@ -397,41 +421,171 @@ class ClientCode(object):
     def get_css(self, selection='all'):
         """ Get CSS as a single string.
         """
+        self._collect()
         parts = []
         if selection == 'all':
-            for key in ('flexx', 'flexx-ui', 'other'):
+            for key in self._css:
                 parts.extend(self._css[key])
         else:
             parts.extend(self._css[selection])
         return '\n\n'.join(parts)
     
     def get_page(self):
-        """ Get the string for a single HTML page that can show a Flexx app.
+        """ Get the string for an HTML page that can show a Flexx app.
         """
-        mode = self._mode
+        return self._get_page(self.mode)
+    
+    def get_page_for_export(self, commands):
+        """ Get the string for a single exported HTML page.
+        """
+        # Create lines to init app
+        lines = []
+        lines.append('flexx.is_exported = true;\n')
+        lines.append('flexx.runExportedApp = function () {')
+        lines.extend(['    flexx.command(%r);' % c for c in commands])
+        lines.append('};\n')
+        
+        # Create a temporary extra element
+        self._js['index-export'] = ['\n'.join(lines)]
+        try:
+            return self._get_page('single')  # todo: or split, depending on export mode
+        finally:
+            self._js.pop('index-export')
+    
+    def _get_page(self, mode):
+        """ This code takes the template, the collected JS and CSS and
+        composes an index page to serve/export.
+        """
+        assert mode in ('split', 'single', 'dynamic')
         
         # Init source code from template
-        src = INDEX
+        js_elements = []
+        css_elements = []
         
-        # Fill in the missing pieces (client code)
-        for key in ('flexx-ui', 'other', 'flexx'):
+        # Get JS DOM elements
+        for key in self._js:
+            code = self.get_js(key)
+            if not code.strip():
+                continue
+            js = ''
             if ((mode == 'single') or 
-                (mode == 'split' and key == 'other') or 
+                (mode == 'split' and key.startswith('index')) or 
                 (mode == 'dynamic' and key == 'flexx')):
-                js = "<script>\n/* JS for %s */\n%s\n</script>" % (key, self.get_js(key))
-                css = "<style>\n%s\n</style>" % self.get_css(key)
+                js = "<script>\n/* JS for %s */\n%s\n</script>" % (key, code)
             elif mode == 'split':
                 js = "<script src='%s.js'></script>" % key
+            js_elements.append(js)
+        
+        # Get CSS DOM elements
+        for key in self._css:
+            code = self.get_css(key)
+            if not code.strip():
+                continue
+            css = ''
+            if ((mode == 'single') or 
+                (mode == 'split' and key.startswith('index')) or 
+                (mode == 'dynamic' and key == 'flexx')):
+                css = "<style>\n/* CSS for %s */\n%s\n</style>" % (key, code)
+            elif mode == 'split':
                 css = "<link rel='stylesheet' type='text/css' href='%s.css' />" % key
-            elif mode == 'dynamic':
-                js, css = '', ''
-            else:
-                raise ValueError('Invalid mode: %r' % mode)
-            src = src.replace('JS-'+key.upper(), js)
-            src = src.replace('CSS-'+key.upper(), css)
+            css_elements.append(css)
+        
+        # Compose index page
+        src = INDEX
+        src = src.replace('JS-HOOK', '\n\n'.join(js_elements))
+        src = src.replace('CSS-HOOK', '\n\n'.join(css_elements))
         
         return src
 
 
-# Create the one instance of this class
+# Create the one instance of this class. We cannot have one object
+# per app, since serve.py needs get_page() before there is an app.
 clientCode = ClientCode()
+
+
+class Exporter(object):
+    """ Object that can be used by an app inplace of the websocket to
+    export apps to standalone HTML. The object tracks the commands send
+    by the app, so that these can be re-played in the exported document.
+    """
+    
+    def __init__(self, app):
+        self._commands = []
+        self.close_code = None  # simulate web socket
+        
+        # todo: how to export icons
+        self.command('ICON %s.ico' % app.id)
+        self.command('TITLE %s' % app._config.title)
+        
+    def command(self, cmd):
+        self._commands.append(cmd)
+    
+    def write_html(self, filename):
+        """ Write html document to the given file.
+        """
+        # todo: allow writing in split mode
+        html = self.to_html()
+        open(filename, 'wt').write(html)
+        print('Exported app to %r' % filename)
+    
+    def to_html(self):
+        """ Get the HTML string.
+        """
+        return clientCode.get_page_for_export(self._commands)
+    
+
+def minify(code):
+    """ Very minimal JS minification algorithm. Can probably be better.
+    May contain bugs. Only operates well on JS without syntax errors.
+    """
+    space_safe = ' =+-/*&|(){},.><:;'
+    chars = ['\n']
+    class non_local: pass
+    non_local._i = -1
+    
+    def read():
+        non_local._i += 1
+        if non_local._i < len(code):
+            return code[non_local._i]
+    def to_end_of_string(c0):
+        chars.append(c0)
+        while True:
+            c = read()
+            chars.append(c)
+            if c == c0 and chars[-1] != '\\':
+                return
+    def to_end_of_line_comment():
+        while True:
+            c = read()
+            if c == '\n':
+                return
+    def to_end_of_mutiline_comment():
+        lastchar = ''
+        while True:
+            c = read()
+            if c == '/' and lastchar == '*':
+                return
+            lastchar = c
+    while True:
+        c = read()
+        if not c:
+            break  # end of code
+        elif c == "'" or c == '"':
+            to_end_of_string(c)
+        elif c == '/' and chars[-1] == '/':
+            chars.pop(-1)
+            to_end_of_line_comment()
+        elif c == '*' and chars[-1] == '/':
+            chars.pop(-1)
+            to_end_of_mutiline_comment()
+        elif c in '\t\r\n':
+            pass
+        elif c in ' ':
+            if chars[-1] not in space_safe:
+                chars.append(c)
+        elif c in space_safe and chars[-1] == ' ':
+            chars[-1] = c  # replace last char
+        else:
+            chars.append(c)
+    chars.pop(0)
+    return ''.join(chars)
