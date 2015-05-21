@@ -78,8 +78,6 @@ class Mirrored(HasProps):
         
         # Register callbacks
         for name in self.props():
-            if name in ('children', ):
-                continue  # todo: implement via Tuple(WidgetProp, sync=False)?
             self.add_listener(name, self._sync_prop)
     
     def _sync_prop(self, name, old, new):
@@ -159,8 +157,7 @@ class Mirrored(HasProps):
                 txt = self['_to_json_'+name](value)
             else:
                 txt = JSON.stringify(value)
-            if name != 'children':  # explicitly skip this
-                flexx.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
+            flexx.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
         return getter, setter
     
     @classmethod

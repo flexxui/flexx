@@ -366,9 +366,14 @@ class Parser1(Parser0):
         if node.starargs:
             # Note that this goes wrong if the original code uses apply()
             starname = ''.join(self.parse(node.starargs))
-            code = ['.apply(', base_name, ', [']
-            code += argswithcommas
-            code += ['].concat(', starname, '))']
+            code = ['.apply(', base_name, ', ']
+            if argswithcommas:
+                code += ['[']
+                code += argswithcommas
+                code += ['].concat(', starname, '))']
+            else:
+                # the concat thing does not seem to work well with "arguments"
+                code += starname, ')'
             return code
         elif use_call_or_apply:
             if argswithcommas:

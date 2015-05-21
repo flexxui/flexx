@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 
+# Specific to here
+exp/html_examples.txt
+
 # C extensions
 *.so
 
@@ -19,6 +22,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+.ipynb_checkpoints
 
 # Installer logs
 pip-log.txt

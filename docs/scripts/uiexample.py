@@ -34,7 +34,8 @@ def visit_uiexample_html(self, node):
     exec(node.code, NS, NS)
     
     # Export app to html file
-    NS['MyApp'].export(os.path.join(HTML_DIR, 'ui', fname))
+    NS['MyApp'].export(os.path.join(HTML_DIR, 'ui', 'examples', fname))
+    rel_path = '../ui/examples/' + fname
     
     # Styles
     astyle = 'font-size:small; float:right;'
@@ -42,9 +43,9 @@ def visit_uiexample_html(self, node):
     istyle = 'width: 100%; height: 100%; border: 2px solid #094;'
     
     # Show app in iframe, wrapped in a resizable div
-    self.body.append("<a target='new' href='%s' style='%s'>open in new tab</a>" % (fname, astyle))
+    self.body.append("<a target='new' href='%s' style='%s'>open in new tab</a>" % (rel_path, astyle))
     self.body.append("<div style='%s'>" % dstyle % node.height)
-    self.body.append("<iframe src='%s' style='%s'>iframe not supported</iframe>" % (fname, istyle))
+    self.body.append("<iframe src='%s' style='%s'>iframe not supported</iframe>" % (rel_path, istyle))
     self.body.append("</div>")
     self.body.append("<br />")
 

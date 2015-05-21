@@ -17,10 +17,16 @@ that's already installed on the system.
 Contents:
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    
    start
-   reference
+   tutorials/index
+   ui/index
+   pyscript/index
+   webruntime
+   properties
+   util
+   releasenotes
 
 
 Indices and tables

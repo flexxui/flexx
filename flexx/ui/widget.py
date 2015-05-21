@@ -88,8 +88,6 @@ class Widget(Mirrored):
     container_id = Str()  # used if parent is None
     
     parent = WidgetProp(help="The parent widget")
-    #children = Tuple(WidgetProp)  # todo: can we make this readonly?
-    children = WidgetsProp(help="A tuple of child widgets")
     flex = Float(help="How much space this widget takes when contained in a " + 
                  "layout. A flex of 0 means to take the minimum size.")
     min_width = Float()
@@ -98,6 +96,10 @@ class Widget(Mirrored):
     
     def __init__(self, parent=None, **kwargs):
         # todo: -> parent is widget or ref to div element
+        
+        # Childen are not exposed via a HasProps Property, because its
+        # sort of a side-effect of the parent property.
+        self._children = ()
         
         # Apply default parent?
         if parent is None:
@@ -111,8 +113,12 @@ class Widget(Mirrored):
         # Pass properties via kwargs
         kwargs['cssClassName'] = classname
         kwargs['parent'] = parent
-        
         Mirrored.__init__(self, **kwargs)
+    
+    # @js
+    # def _js__init__(self):
+    #     self.children = []  # Init children property
+    #     super().__init__(*arguments)
     
     def __enter__(self):
         _default_parent.append(self)
@@ -124,13 +130,43 @@ class Widget(Mirrored):
         #    self.update()
     
     @js
-    def _js_cssClassName_changed(self, name, old, className):
-        if this.node:
-            this.node.className = className
+    def _js_init(self):
+        """ We use _init() instead of __init__; at this point the prop
+        values are initialized, and the prop changed functions are
+        called *after* this.
+        """
+        self.children = []
+        self._create_node()
+        flexx.get('body').appendChild(this.node)
+        # todo: allow setting a placeholder DOM element, or any widget parent
     
     @js
-    def _js_set_child(self, widget):
+    def _js_create_node(self):
+        this.node = document.createElement('div')
+    
+    @js
+    def _js_cssClassName_changed(self, name, old, className):
+        this.node.className = className
+    
+    ## Children and parent
+    
+    @property
+    def children(self):
+        return self._children
+    
+    def _add_child(self, widget):
+        pass
+    
+    def _remove_child(self, widget):
+        pass
+    
+    @js
+    def _js_add_child(self, widget):
         # May be overloaded in layout widgets
+        self.node.appendChild(widget.node)
+    
+    @js
+    def _js_remove_child(self, widget):
         self.node.appendChild(widget.node)
     
     def _parent_changed(self, name, old_parent, new_parent):
@@ -138,11 +174,15 @@ class Widget(Mirrored):
             children = list(old_parent.children)
             while self in children:
                 children.remove(self)
-            old_parent._set_prop('children', children)  # bypass readonly
+            #old_parent._set_prop('children', children)  # bypass readonly
+            old_parent._children = tuple(children)
+            old_parent._remove_child(self)
         if new_parent is not None:
             children = list(new_parent.children)
             children.append(self)
-            new_parent._set_prop('children', children)
+            #new_parent._set_prop('children', children)
+            new_parent._children = tuple(children)
+            new_parent._add_child(self)
     
     @js
     def _js_parent_changed(self, name, old_parent, new_parent):
@@ -152,12 +192,15 @@ class Widget(Mirrored):
                 children.remove(self)
             #old_parent._set_prop('children', children)  # bypass readonly
             old_parent.children = children
+            old_parent._remove_child(self)
         if new_parent is not None:
             children = new_parent.children
             children.append(self)
             #new_parent._set_prop('children', children)
             new_parent.children = children
-            new_parent._set_child(self)
+            new_parent._add_child(self)
+    
+    ## More 
     
     @js
     def _js_set_cointainer_id(self, id):

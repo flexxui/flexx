@@ -2,9 +2,12 @@
 """
 
 from ..pyscript import js
-from ..properties import Prop, Instance, Str, Tuple, Float
+from ..properties import Prop, Instance, Str, Tuple, Float, Int
 
 from .widget import Widget
+
+
+# todo: rename "zf-" prefix to "xx" or something
 
 
 class Layout(Widget):
@@ -69,19 +72,35 @@ class Box(Layout):
     }
     """
     
-    @js
-    def _js_init(self):
-        this.node = document.createElement('div')
-        #this.node.className = self.cssClassName
-        flexx.get('body').appendChild(this.node);
+    margin = Float()
+    spacing = Float()
     
     @js
-    def _js_set_child(self, el):
-        self._applyBoxStyle(el.node, 'flex-grow', el.flex)
-        self._applyBoxStyle(el.node, 'align-items', 'center')  # flex-start, flex-end, center, baseline, stretch
-        self._applyBoxStyle(el.node, 'justify-content', 'space-around')  # flex-start, flex-end, center, space-between, space-around
-       
-        super()._set_child(el)
+    def _js_create_node(self):
+        this.node = document.createElement('div')
+    
+    @js
+    def _js_add_child(self, widget):
+        self._applyBoxStyle(widget.node, 'flex-grow', widget.flex)
+        #if widget.flex > 0:  widget.applyBoxStyle(el, 'flex-basis', 0)
+        self._spacing_changed('spacing', self.spacing, self.spacing)
+        super()._add_child(widget)
+    
+    @js
+    def _js_remove_child(self, widget):
+        self._spacing_changed('spacing', self.spacing, self.spacing)
+        super()._remove_child(widget)
+    
+    @js
+    def _js_spacing_changed(self, name, old, spacing):
+        if self.children.length:
+            self.children[0].node.style['margin-left'] = '0px'
+            for child in self.children[1:]:
+                child.node.style['margin-left'] = spacing + 'px'
+    
+    @js
+    def _js_margin_changed(self, name, old, margin):
+        self.node.style['padding'] = margin + 'px'
 
 
 class HBox(Box):
@@ -98,7 +117,15 @@ class HBox(Box):
         /*border: 1px dashed #44e;*/
     }
     """
-
+    
+    @js
+    def _js_init(self):
+        super()._init()
+        # align-items: flex-start, flex-end, center, baseline, stretch
+        self._applyBoxStyle(self.node, 'align-items', 'center')
+        #justify-content: flex-start, flex-end, center, space-between, space-around
+        self._applyBoxStyle(self.node, 'justify-content', 'space-around')
+        
 
 class VBox(Box):
     """ Layout widget to align elements vertically.
@@ -115,3 +142,9 @@ class VBox(Box):
         /*border: 1px dashed #e44;*/
     }
     """
+    
+    @js
+    def _js_init(self):
+        super()._init()
+        self._applyBoxStyle(self.node, 'align-items', 'stretch')
+        self._applyBoxStyle(self.node, 'justify-content', 'space-around')

@@ -1,6 +1,6 @@
----------------------
-The properties module
----------------------
+-----------------------------------
+Reference for the properties module
+-----------------------------------
 
 .. automodule:: flexx.properties
 

@@ -26,8 +26,3 @@ Installation
 * Clone the repo and add the root dir to your PYTHONPATH (developer mode)
 
 
-Release notes
--------------
-
-No releases yet :)
-
