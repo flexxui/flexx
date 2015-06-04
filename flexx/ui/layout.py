@@ -159,8 +159,8 @@ class BaseTableLayout(Layout):
     
     CSS = """
     
-    / * Behave well inside hbox/vbox, 
-        we assume no layouts to be nested inside a table layout */
+    /* Behave well inside hbox/vbox, 
+       we assume no layouts to be nested inside a table layout */
     .zf-hbox > .zf-basetablelayout {
         width: auto;
     }
