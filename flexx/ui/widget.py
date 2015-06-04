@@ -6,7 +6,7 @@ Implements parenting and other things common to all widgets.
 import json
 
 from ..pyscript import js
-from ..properties import Prop, Instance, Str, Tuple, Float
+from ..properties import Prop, Instance, Str, Tuple, Float, FloatPair
 from . import Mirrored, get_instance_by_id
 
 class WidgetProp(Prop):
@@ -89,7 +89,7 @@ class Widget(Mirrored):
     
     parent = WidgetProp(help="The parent widget")
     flex = Float(help="How much space this widget takes when contained in a " + 
-                 "layout. A flex of 0 means to take the minimum size.")
+                      "layout. A flex of 0 means to take the minimum size.")
     min_width = Float()
     min_height = Float()  # todo: or min_size?
     cssClassName = Str()  # todo: should this be private? Or can we calculate it in JS?

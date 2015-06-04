@@ -62,7 +62,33 @@ class MyApp2(ui.App):
                     ui.Button(text='Box C is a bit longer', flex=3)
 
 
-app = MyApp2(runtime='browser')
+class MyApp3(ui.App):
+    
+    def init(self):
+        with ui.HBox(spacing=20):
+            with ui.Form() as self.form:
+                # todo: can this be written with one line per row?
+                # e.g. self.b1 = ui.Button(label='Name', text='Hola')
+                ui.Label(text='Name:')
+                self.b1 = ui.Button(text='Hola')
+                ui.Label(text='Age:')
+                self.b2 = ui.Button(text='Hello world')
+                ui.Label(text='Favorite color:')
+                self.b3 = ui.Button(text='Foo bar')
+                #ui.Widget(flex=1)
+            with ui.Form() as self.form:
+                # e.g. self.b1 = ui.Button(label='Name', text='Hola')
+                ui.Widget(flex=1)  # Add a flexer
+                ui.Widget()
+                ui.Label(text='Pet name:')
+                self.b1 = ui.Button(text='Hola')
+                ui.Label(text='Pet Age:')
+                self.b2 = ui.Button(text='Hello world')
+                ui.Label(text='Pet\'s Favorite color:')
+                self.b3 = ui.Button(text='Foo bar')
+                ui.Widget(flex=2)
+
+app = MyApp3(runtime='browser')
 ui.run()
 
 #MyApp1.export('/home/almar/dev/pylib/flexx/_website/_static/boxdemo_table1.html')

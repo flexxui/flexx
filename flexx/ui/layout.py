@@ -11,6 +11,9 @@ from .widget import Widget
 
 
 class Layout(Widget):
+    """ Abstract class for all layout classes.
+    """
+    
     CSS = """
     
     html {
@@ -125,7 +128,7 @@ class HBox(Box):
         self._applyBoxStyle(self.node, 'align-items', 'center')
         #justify-content: flex-start, flex-end, center, space-between, space-around
         self._applyBoxStyle(self.node, 'justify-content', 'space-around')
-        
+
 
 class VBox(Box):
     """ Layout widget to align elements vertically.
@@ -148,3 +151,161 @@ class VBox(Box):
         super()._init()
         self._applyBoxStyle(self.node, 'align-items', 'stretch')
         self._applyBoxStyle(self.node, 'justify-content', 'space-around')
+
+
+class BaseTableLayout(Layout):
+    """ Abstract base class for layouts that use an HTML table.
+    """
+    
+    CSS = """
+    
+    / * Behave well inside hbox/vbox, 
+        we assume no layouts to be nested inside a table layout */
+    .zf-hbox > .zf-basetablelayout {
+        width: auto;
+    }
+    .zf-vbox > .zf-basetablelayout {
+        height: auto;
+    }
+
+    /* In flexed cells, occupy the full space */
+    td.vflex > .zf-widget {
+        height: 100%;
+    }
+    td.hflex > .zf-widget {
+        width: 100%;
+    }
+    """
+    
+    @js
+    def _js_apply_table_layout(self):
+        table = self.node
+        AUTOFLEX = 729  # magic number unlikely to occur in practice
+        
+        # Get table dimensions
+        nrows = len(table.children)
+        ncols = 0
+        for i in range(len(table.children)):
+            row = table.children[i]
+            ncols = max(ncols, len(row.children))
+        if ncols == 0 and nrows == 0:
+            return
+        
+        # Collect flexes
+        vflexes = []
+        hflexes = []
+        for i in range(nrows):
+            row = table.children[i]
+            for j in range(ncols):
+                col = row.children[j]
+                if (col is undefined) or (len(col.children) == 0):
+                    continue
+                vflexes[i] = max(vflexes[i] or 0, col.children[0].vflex or 0)
+                hflexes[j] = max(hflexes[j] or 0, col.children[0].hflex or 0)
+        
+        # What is the cumulative "flex-value"?
+        cum_vflex = vflexes.reduce(lambda pv, cv: pv + cv, 0)
+        cum_hflex = hflexes.reduce(lambda pv, cv: pv + cv, 0)
+        
+        # If no flexes are given; assign each equal
+        if (cum_vflex == 0):
+            for i in range(len(vflexes)):
+                vflexes[i] = AUTOFLEX
+            cum_vflex = len(vflexes) * AUTOFLEX
+        if (cum_hflex == 0):
+            for i in range(len(hflexes)):
+                hflexes[i] = AUTOFLEX
+            cum_hflex = len(hflexes) * AUTOFLEX
+        
+        # Assign css class and height/weight to cells
+        for i in range(nrows):
+            row = table.children[i]
+            row.vflex = vflexes[i] or 0  # Store for use during resizing
+            for j in range(ncols):
+                col = row.children[j];
+                if (col is undefined) or (col.children.length is 0):
+                    continue
+                self._apply_cell_layout(row, col, vflexes[i], hflexes[j], cum_vflex, cum_hflex)
+    
+    @js
+    def _js_apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):
+        raise NotImplementedError()
+
+
+
+class Form(BaseTableLayout):
+    """ A form layout organizes pairs of widgets vertically.
+    """
+    
+    CSS = """
+    .zf-form > tr > td > .zf-label {
+        text-align: right;
+    }
+    """
+    
+    @js
+    def _js_create_node(self):
+        this.node = document.createElement('table')
+        this.node.appendChild(document.createElement('tr'))
+        # todo: we need to keep track of vertical resizing ...
+    
+    @js
+    def _js_add_child(self, widget):
+        # Get row, create if necessary
+        row = this.node.children[-1]
+        itemsInRow = row.children.length
+        if itemsInRow >= 2:
+            row = document.createElement('tr')
+            self.node.appendChild(row)
+        # Create td and add widget to it
+        td = document.createElement("td")
+        row.appendChild(td)
+        td.appendChild(widget.node)
+        #
+        self._update_layout()
+        self._apply_table_layout()
+        # do not call super!
+    
+    @js
+    def _js_update_layout(self):
+        """ Set hflex and vflex on node.
+        """
+        i = 0
+        for widget in self.children:
+            i += 1
+            widget.node.hflex = 0 if (i % 2) else 1
+            widget.node.vflex = widget.flex
+        self._apply_table_layout()
+    
+    @js
+    def _js_remove_child(self, widget):
+        pass
+        # do not call super!
+    
+    @js
+    def _js_apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):
+        AUTOFLEX = 729
+        className = ''
+        if (vflex == AUTOFLEX) or (vflex == 0):
+            row.style.height = 'auto'
+            className += ''
+        else:
+            row.style.height = vflex * 100 / cum_vflex + '%'
+            className += 'vflex'
+        className += ' '
+        if (hflex == 0):
+            col.style.width = 'auto'
+            className += ''
+        else:
+            col.style.width = '100%'
+            className += 'hflex'
+        col.className = className
+
+
+class GridLayout(BaseTableLayout):
+    """ Not implemented.
+    
+    Do we even need it? If we do implement it, we need a way to specify
+    the vertical flex value.
+    """
+
