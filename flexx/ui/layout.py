@@ -178,6 +178,12 @@ class BaseTableLayout(Layout):
     """
     
     @js
+    def _js_init(self):
+        super()._init()
+        that = this
+        self.node.addEventListener('resize', lambda ev: that._adapt_to_size_change(ev), False)
+    
+    @js
     def _js_apply_table_layout(self):
         table = self.node
         AUTOFLEX = 729  # magic number unlikely to occur in practice
@@ -226,6 +232,45 @@ class BaseTableLayout(Layout):
                 if (col is undefined) or (col.children.length is 0):
                     continue
                 self._apply_cell_layout(row, col, vflexes[i], hflexes[j], cum_vflex, cum_hflex)
+    
+    @js
+    def _js_adapt_to_size_change(self, event):
+        """ This function adapts the height (in percent) of the flexible rows
+        of a layout. This is needed because the percent-height applies to the
+        total height of the table. This function is called whenever the
+        table resizes, and adjusts the percent-height, taking the available 
+        remaining table height into account. This is not necesary for the
+        width, since percent-width in colums *does* apply to available width.
+        """
+        table = self.node  # or event.target
+        print('heigh changed', event.heightChanged)
+        if event.heightChanged:
+            
+            # Set one flex row to max, so that non-flex rows have their
+            # minimum size. The table can already have been stretched
+            # a bit, causing the total row-height in % to not be
+            # sufficient from keeping the non-flex rows from growing.
+            for i in range(len(table.children)):
+                row = table.children[i]
+                if (row.vflex > 0):
+                    row.style.height = '100%'
+                    break
+            
+            # Get remaining height: subtract height of each non-flex row
+            remainingHeight = table.clientHeight
+            cum_vflex = 0
+            for i in range(len(table.children)):
+                row = table.children[i]
+                cum_vflex += row.vflex
+                if (row.vflex == 0) and (row.children.length > 0):
+                    remainingHeight -= row.children[0].clientHeight
+            
+            # Apply height % for each flex row
+            remainingPercentage = 100 * remainingHeight / table.clientHeight
+            for i in range(len(table.children)):
+                row = table.children[i]
+                if row.vflex > 0:
+                    row.style.height = round(row.vflex / cum_vflex * remainingPercentage) + 1 + '%'
     
     @js
     def _js_apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):

@@ -136,9 +136,13 @@ class Widget(Mirrored):
         called *after* this.
         """
         self.children = []
+        self._stored_size = 0, 0
         self._create_node()
         flexx.get('body').appendChild(this.node)
         # todo: allow setting a placeholder DOM element, or any widget parent
+        
+        that = this
+        window.addEventListener('resize', lambda : that._check_resize(), False)
     
     @js
     def _js_create_node(self):
@@ -199,6 +203,22 @@ class Widget(Mirrored):
             #new_parent._set_prop('children', children)
             new_parent.children = children
             new_parent._add_child(self)
+        # # Unregister events
+        # parent_node = old_parent.node if (old_parent is not None) else window
+        # parent_node.removeEventListener('resize', self._check_resize, False)
+        # # Register events
+        # parent_node = new_parent.node if (new_parent is not None) else window
+        # parent_node.addEventListener('resize', self._check_resize, False)
+    
+    @js
+    def _js_check_resize(self):
+        node = self.node
+        event = CustomEvent("resize")
+        event.widthChanged = (self._stored_size[0] != node.clientWidth)
+        event.heightChanged = (self._stored_size[1] != node.clientHeight)
+        if event.widthChanged or event.heightChanged:
+            self._stored_size = node.clientWidth, node.clientHeight
+            node.dispatchEvent(event)
     
     ## More 
     
