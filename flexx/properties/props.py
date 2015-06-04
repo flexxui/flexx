@@ -62,11 +62,11 @@ class Tuple(Prop):
     _default = ()
     # todo: allowed lengths?
     def __init__(self, item_type, default=None, help=None):
+        self._item_prop = item_type()
         Prop.__init__(self, default, help)
         assert isinstance(item_type, type) and issubclass(item_type, Prop)
         #item_type = item_type if isinstance(item_type, tuple) else (item_type, )
         #self._item_types = item_type
-        self._item_prop = item_type()
     
     def validate(self, val):
         if isinstance(val, (tuple, list)):
@@ -83,6 +83,27 @@ class Tuple(Prop):
         pyparts = json.loads(txt)
         jsonparts = [json.dumps(e) for e in pyparts]
         return [self._item_prop.from_json(txt) for txt in jsonparts]
+
+
+class FloatPair(Tuple):
+    """ Store a tuple of two floats, and allow setting using a single
+    scalars (setting both to the same value). Convenient for values that
+    apply to two dimensions, like size, position and flex values.
+    """
+    _default = 0.0, 0.0
+    
+    def __init__(self, default=None, help=None):
+        Tuple.__init__(self, Float, default, help)
+    
+    def validate(self, val):
+        if isinstance(val, (int, float)):
+            return float(val), float(val)
+        elif isinstance(val, (tuple, list)):
+            if len(val) != 2:
+                raise ValueError('FloatPair prop needs two values, not %i' % len(val))
+            return tuple([self._item_prop.validate(e) for e in val])
+        else:
+            raise ValueError('FloatPair prop %r requires float, tuple or list.' % self.name)
 
 
 class Color(Prop):

@@ -25,4 +25,4 @@ Need more docs.
 """
 
 from .base import Prop, HasProps, HasPropsMeta
-from .props import Bool, Int, Float, Str, Tuple, Color, Instance
+from .props import Bool, Int, Float, Str, Tuple, FloatPair, Color, Instance
