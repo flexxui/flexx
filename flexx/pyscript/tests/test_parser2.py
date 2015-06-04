@@ -336,7 +336,26 @@ class TestFunctions:
         assert 'stub' in vars1 and 'stub' in vars2
         assert 'only_here' in vars2 and 'only_here' not in vars1
         assert evaljs(code + 'x()') == '7'
-
+    
+    def test_scope2(self):
+        # Avoid regression for bug with lambda and scoping
+        
+        def func1(self):
+            x = 1
+        
+        def func2(self):
+            x = 1
+            y = lambda : None
+        
+        def func3(self):
+            x = 1
+            def y():
+                pass
+        
+        assert 'var x' in js(func1).jscode
+        assert 'var x' in js(func2).jscode
+        assert 'var x' in js(func3).jscode
+    
     def test_raw_js(self):
         
         @js

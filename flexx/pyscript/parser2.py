@@ -606,6 +606,8 @@ class Parser2(Parser1):
         self._indent -= 1
         if lambda_:
             code.append('}')
+            ns = self.pop_stack()  # Should conly consist of arg names
+            assert not ns.difference(argnames)
         else:
             code.append(self.lf('};\n'))
             # Pop stack, declare vars, but exclude our argnames
