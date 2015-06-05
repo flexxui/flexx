@@ -10,6 +10,8 @@ from .widget import Widget
 
 class Button(Widget):
     
+    _EVENT_NAMES = ['click']
+    
     CSS = """
     .zf-button-xx {
         background: #fee;
@@ -25,10 +27,18 @@ class Button(Widget):
     @js
     def _js_create_node(self):
         this.node = document.createElement('button')
+        this._proxy_event(this.node, 'click')
+        
+        # testing ...
+        self.connect_event('click', (self, 'ontheclick'))
     
     @js
     def _text_changed__js(self, name, old, txt):
         this.node.innerHTML = txt
+
+    @js
+    def ontheclick_js(self, event):
+        print('clicked on', event.owner.__id)
 
 
 class Label(Widget):

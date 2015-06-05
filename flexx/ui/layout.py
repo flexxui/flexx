@@ -180,8 +180,7 @@ class BaseTableLayout(Layout):
     @js
     def _js_init(self):
         super()._init()
-        that = this
-        self.node.addEventListener('resize', lambda ev: that._adapt_to_size_change(ev), False)
+        self.connect_event('resize', (self, '_adapt_to_size_change'))
     
     @js
     def _js_apply_table_layout(self):
@@ -243,7 +242,8 @@ class BaseTableLayout(Layout):
         width, since percent-width in colums *does* apply to available width.
         """
         table = self.node  # or event.target
-        print('heigh changed', event.heightChanged)
+        #print('heigh changed', event.heightChanged, event.owner.__id)
+        
         if event.heightChanged:
             
             # Set one flex row to max, so that non-flex rows have their

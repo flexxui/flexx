@@ -46,6 +46,9 @@ class Mirrored(HasProps):
     # CSS for this class (no css in the base class)
     CSS = ""
     
+    # Names of events
+    _EVENT_NAMES = []
+    
     # Properties:
     
     id = Str(help='The unique id of this Mirrored instance')  # todo: readonly
@@ -80,15 +83,6 @@ class Mirrored(HasProps):
         for name in self.props():
             self.add_listener(name, self._sync_prop)
     
-    def _sync_prop(self, name, old, new):
-        """ Callback to sync properties to JS
-        """
-        # Note: the JS function _set_property is defined below
-        txt = getattr(self.__class__, name).to_json(new)
-        #print('sending json', txt)
-        cmd = 'flexx.instances.%s._set_property(%r, %r, true, true);' % (self.id, name, txt)
-        self._app._exec(cmd)
-    
     # def call_method(self, code):
     #     cmd = 'flexx.instances.%s.%s' % (self.id, code)
     #     self._app._exec(cmd)
@@ -100,6 +94,12 @@ class Mirrored(HasProps):
         # of the object, which makes it easy to identify objects while
         # debugging. This attribute should *not* be used.
         self.__id = props['id']
+        
+        # Init events handlers
+        # todo: init all events defined at the class
+        self._event_handlers = {}
+        for event_name in self._EVENT_NAMES:
+            self._event_handlers[event_name] = []
         
         # Create properties
         for name in props:
@@ -124,6 +124,17 @@ class Mirrored(HasProps):
     @js
     def _js_init(self):
         pass  # Subclasses should overload this
+    
+    ## Dealing with props
+    
+    def _sync_prop(self, name, old, new):
+        """ Callback to sync properties to JS
+        """
+        # Note: the JS function _set_property is defined below
+        txt = getattr(self.__class__, name).to_json(new)
+        #print('sending json', txt)
+        cmd = 'flexx.instances.%s._set_property(%r, %r, true, true);' % (self.id, name, txt)
+        self._app._exec(cmd)
     
     @js
     def _js_set_property(self, name, val, fromjson=False, emit=True):
@@ -160,6 +171,64 @@ class Mirrored(HasProps):
             flexx.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
         return getter, setter
     
+    ## JS event system
+    
+    @js
+    def _js_has_handler(self, handler, handlers):
+        """ Test "handler in handlers", but work correctly if handler
+        is a tuple.
+        """
+        if isinstance(handler, list):
+            for i in range(len(handlers)):
+                h = handlers[i]
+                if handler[0] == h[0] and handler[1] == h[1]:
+                    return True
+            else:
+                return False
+        else:
+            return handler in handlers
+    
+    @js
+    def connect_event_js(self, name, handler):
+        if name not in self._event_handlers:
+            raise ValueError('Event %s not known' % name)
+        handlers = self._event_handlers[name]
+        if not self._has_handler(handler, handlers):
+            handlers.append(handler)
+    
+    @js
+    def disconnect_event_js(self, name, handler):
+        if name not in self._event_handlers:
+            raise ValueError('Event %s not known' % name)
+        handlers = self._event_handlers[name]
+        while self._has_handler(handler, handlers):
+            handlers.remove(handler)
+    
+    @js
+    def emit_event_js(self, name, event):
+        if name not in self._event_handlers:
+            raise ValueError('Event %s not known' % name)
+        handlers = self._event_handlers[name]
+        # Prepare event
+        event.owner = self
+        event.type = name
+        # Fire it
+        for handler in handlers:
+            if isinstance(handler, list):
+                ob, name = handler
+                ob[name](event)
+            else:
+                handler(event)
+    
+    @js
+    def _js_proxy_event(self, element, name):
+        """ Easily get JS events from DOM elements in our event system.
+        """
+        that = this
+        element.addEventListener(name, lambda ev: that.emit_event(name, {'cause': ev}), False)
+    
+    ## Static methods
+    
     @classmethod
     def get_js(cls):
         # todo: move this to app/clientcode
@@ -169,8 +238,17 @@ class Mirrored(HasProps):
         if cls is not Mirrored:
             base_class = 'flexx.classes.%s.prototype' % cls.mro()[1].__name__
         
+        # Collect event names
+        event_names = set()
+        for c in cls.mro():
+            event_names.update(c._EVENT_NAMES)
+            if c is Mirrored:
+                break
+        
         js = []
         js.extend(get_class_definition(cls_name, base_class))
+        
+        js.append('%s.prototype._EVENT_NAMES = %r;\n' % (cls_name, list(event_names)))
         
         # # Main functions
         # # todo: flexx.classes.xx
