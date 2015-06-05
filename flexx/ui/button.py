@@ -13,7 +13,7 @@ class Button(Widget):
     _EVENT_NAMES = ['click']
     
     CSS = """
-    .zf-button-xx {
+    .flx-button-xxx {
         background: #fee;
     }
     """
@@ -42,7 +42,7 @@ class Button(Widget):
 
 
 class Label(Widget):
-    CSS = ".zf-label { border: 0px solid #454; }"
+    CSS = ".flx-label { border: 0px solid #454; }"
 
     text = Str('')
     

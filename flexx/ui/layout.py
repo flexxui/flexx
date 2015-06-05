@@ -7,9 +7,6 @@ from ..properties import Prop, Instance, Str, Tuple, Float, Int
 from .widget import Widget
 
 
-# todo: rename "zf-" prefix to "xx" or something
-
-
 class Layout(Widget):
     """ Abstract class for all layout classes.
     """
@@ -27,7 +24,7 @@ class Layout(Widget):
         margin: 0px;
     }
     
-    .zf-layout {
+    .flx-layout {
         width: 100%;
         height: 100%;
         margin: 0px;
@@ -50,7 +47,7 @@ class Box(Layout):
     """
     
     CSS = """
-    .zf-hbox, .zf-vbox {
+    .flx-hbox, .flx-vbox {
         display: -webkit-flex;
         display: -ms-flexbox;  /* IE 10 */
         display: -ms-flex;     /* IE 11 */
@@ -67,10 +64,10 @@ class Box(Layout):
     .box-align-center { -webkit-align-items: center; -ms-align-items: center; -moz-align-items: center; align-items: center; }
     */
     
-    .zf-hbox > .zf-hbox, .zf-hbox > .zf-vbox {
+    .flx-hbox > .flx-hbox, .flx-hbox > .flx-vbox {
         width: auto;
     }
-    .zf-vbox > .zf-hbox, .zf-vbox > .zf-vbox {
+    .flx-vbox > .flx-hbox, .flx-vbox > .flx-vbox {
         height: auto;
     }
     """
@@ -111,7 +108,7 @@ class HBox(Box):
     """
     
     CSS = """
-    .zf-hbox {
+    .flx-hbox {
         -webkit-flex-flow: row;
         -ms-flex-flow: row;
         -moz-flex-flow: row;
@@ -135,7 +132,7 @@ class VBox(Box):
     """
     
     CSS = """
-    .zf-vbox {
+    .flx-vbox {
         -webkit-flex-flow: column;
         -ms-flex-flow: column;
         -moz-flex-flow: column;
@@ -161,18 +158,18 @@ class BaseTableLayout(Layout):
     
     /* Behave well inside hbox/vbox, 
        we assume no layouts to be nested inside a table layout */
-    .zf-hbox > .zf-basetablelayout {
+    .flx-hbox > .flx-basetablelayout {
         width: auto;
     }
-    .zf-vbox > .zf-basetablelayout {
+    .flx-vbox > .flx-basetablelayout {
         height: auto;
     }
 
     /* In flexed cells, occupy the full space */
-    td.vflex > .zf-widget {
+    td.vflex > .flx-widget {
         height: 100%;
     }
-    td.hflex > .zf-widget {
+    td.hflex > .flx-widget {
         width: 100%;
     }
     """
@@ -283,7 +280,7 @@ class Form(BaseTableLayout):
     """
     
     CSS = """
-    .zf-form > tr > td > .zf-label {
+    .flx-form > tr > td > .flx-label {
         text-align: right;
     }
     """
@@ -292,7 +289,6 @@ class Form(BaseTableLayout):
     def _js_create_node(self):
         this.node = document.createElement('table')
         this.node.appendChild(document.createElement('tr'))
-        # todo: we need to keep track of vertical resizing ...
     
     @js
     def _js_add_child(self, widget):

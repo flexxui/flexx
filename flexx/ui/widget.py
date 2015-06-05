@@ -76,7 +76,7 @@ class Widget(Mirrored):
     
     CSS = """
     
-    .zf-widget {
+    .flx-widget {
         box-sizing: border-box;
         white-space: nowrap;
         overflow: hidden;
@@ -109,7 +109,7 @@ class Widget(Mirrored):
                 parent = _default_parent[-1]
         
         # Provide css class name to 
-        classes = ['zf-' + c.__name__.lower() for c in self.__class__.mro()]
+        classes = ['flx-' + c.__name__.lower() for c in self.__class__.mro()]
         classname = ' '.join(classes[:1-len(Widget.mro())])
         
         # Pass properties via kwargs
