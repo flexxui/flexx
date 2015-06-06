@@ -11,10 +11,10 @@ class MyApp1(ui.App):
     
     def init(self):
         
-        with ui.HBox():
+        with ui.VBox():
             ui.Button(text='Box A', flex=0)
             ui.Button(text='Box B', flex=0)
-            ui.Button(text='Box C is a bit longer', flex=1)
+            ui.Button(text='Box C is a bit longer', flex=0)
 
 
 class MyApp2(ui.App):
@@ -66,7 +66,7 @@ class MyApp3(ui.App):
     
     def init(self):
         with ui.HBox(spacing=20):
-            with ui.Form() as self.form:
+            with ui.FormLayout() as self.form:
                 # todo: can this be written with one line per row?
                 # e.g. self.b1 = ui.Button(label='Name', text='Hola')
                 ui.Label(text='Name:')
@@ -76,7 +76,7 @@ class MyApp3(ui.App):
                 ui.Label(text='Favorite color:')
                 self.b3 = ui.Button(text='Foo bar')
                 #ui.Widget(flex=1)
-            with ui.Form() as self.form:
+            with ui.FormLayout() as self.form:
                 # e.g. self.b1 = ui.Button(label='Name', text='Hola')
                 ui.Widget(flex=1)  # Add a flexer
                 ui.Widget()
@@ -88,7 +88,15 @@ class MyApp3(ui.App):
                 self.b3 = ui.Button(text='Foo bar')
                 ui.Widget(flex=2)
 
-app = MyApp3(runtime='browser')
+class MyApp4(ui.App):
+    def init(self):
+        with ui.PinboardLayout():
+            self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
+            self.b2 = ui.Button(text='Dynamic at (20%, 20%)', pos=(0.2, 0.2))
+            self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
+
+
+app = MyApp1(runtime='browser')
 ui.run()
 
 #MyApp1.export('/home/almar/dev/pylib/flexx/_website/_static/boxdemo_table1.html')

@@ -85,7 +85,7 @@ the VBox and HBox always want to fill their space. If we would not put
 the stub widged at the end, there would be space between the elements
 to fill up the whole space.
 
-.. UIExample:: 100
+.. UIExample:: 120
     from flexx import ui
     
     class MyApp(ui.App):
@@ -144,90 +144,71 @@ widgets are organized.
 
 
 
-.. to come:: vla
+
     
-    Form 
-    ----
+FormLayout
+----------
+
+The FormLayout is a specific case of the Grid layout (which will be
+discussed next). It is a very convenient layout when you have a bunch
+of widgets (or labels) next to labels to describe them. Like in a form.
+
+As you can see, you simply specify the elements, and each pair of elements
+is placed on a row. The left row has an implicit flex of zero, and the right
+row an implicit flex of 1. To not stretch the rows, we add a simple stretcher
+element at the end. In the Form layout, the specified flex applies to
+the vertical direction.
+
+.. UIExample:: 200
     
-    The Form layout is a specific case of the Grid layout (which will be
-    discussed next). It is a very convenient layout when you have a buncg
-    of widgets (or labels) next to labels to describe them. Like in a form.
+    from flexx import ui
     
-    As you can see, you simply specify the elements, and each pair of elements
-    is placed on a row. The left row has an implicit flex of zero, and the right
-    row an implicit flex of 1. To not stretch the rows, we add a simple stretcher
-    element at the end. In the Form layout, the specified flex applies to
-    the vertical direction.
-    
-    .. UIExample:: 200
-        
-        from flexx import ui
-        
-        class MyApp(ui.App):
-            def init(self):
-                with ui.Form(self):
-                    ui.Label(text='Pet name:')
-                    self.b1 = ui.Button(text='Hola')
-                    ui.Label(text='Pet Age:')
-                    self.b2 = ui.Button(text='Hello world')
-                    ui.Label(text='Pet\'s Favorite color:')
-                    self.b3 = ui.Button(text='Foo bar')
-                    ui.Widget(flex=1)
-    
-    
-    Grid
-    ----
-    
-    The Grid layout provides a way to layout elements in a grid. It is quite
-    flexible, but less easier to use then the above layouts. In many cases you can
-    get a way with a bunch of HBoxes and VBoxes, and/or a Form layout. Otherwise,
-    here's how Grid works.
-    
-    Each element needs a `pos` argument that is a tuple of two integers
-    that specify the position within the grid to place the element. Flex
-    values can also be given, but here they are tuples: they specify the
-    flex for width and height, respectively.
-    
-    .. UIExample:: 300
-        
-        from flexx import ui
-        
-        class MyApp(ui.App):
-            def init(self):
-                with ui.Grid(self):
-                    self.b1 = ui.Button(text='No flex', pos=(0, 0))
-                    self.b2 = ui.Button(text='Hola', pos=(1, 1), flex=(1, 1))
-                    self.b3 = ui.Button(text='Hello world', pos=(2, 2), flex=(2, 1))
-                    self.b4 = ui.Button(text='Foo bar', pos=(4, 4), flex=(1, 2))
-                    self.b5 = ui.Button(text='no flex again', pos=(5, 5))
-            
+    class MyApp(ui.App):
+        def init(self):
+            with ui.FormLayout():
+                ui.Label(text='Pet name:')
+                self.b1 = ui.Button(text='Hola')
+                ui.Label(text='Pet Age:')
+                self.b2 = ui.Button(text='Hello world')
+                ui.Label(text='Pet\'s Favorite color:')
+                self.b3 = ui.Button(text='Foo bar')
+                ui.Widget(flex=1)
     
     
+GridLayout
+----------
+
+In a GridLayout, child widgets are aligned in a two-dimensional grid.
+This is currently not implemented, but is a relatively simple extension
+of the FormLayout. The main challenge is in the API design to allow the
+user to specify a flex value for both the horizontal and vertical
+direction. 
+
+
+PinboardLayout
+--------------
+
+The PinboardLayout layout provides a free layout without any form of
+alignment. Child widgets are given a certain position (and optionally
+size). When the position or size is larger than 1, it's in pixels. When
+it's smaller than 1, it is regarded a fractional position (i.e. as in
+a percentage of the parent size).
+
+.. UIExample:: 200
     
-    PinBoard
-    --------
+    from flexx import ui
     
-    *Name is subject to change*
+    class MyApp(ui.App):
+        def init(self):
+            with ui.PinboardLayout():
+                self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
+                self.b2 = ui.Button(text='Dynamic at (30%, 30%)', pos=(0.3, 0.3))
+                self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
+
     
-    The PinBoard layout free layout without any form of alignment. Elements
-    are given a certain position and that's where they'll be. The position
-    must be specified via the `pos` argument. When it is larger than 1, it
-    is in pixels. When it is smaller than 1, it is regarded a fractional
-    position (i.e. as in a percentage of the parent size).
-    
-    .. UIExample:: 300
-        
-        from flexx import ui
-        
-        class MyApp(ui.App):
-            def init(self):
-                with ui.PinBoard(self):
-                    self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
-                    self.b2 = ui.Button(text='Dynamic at (20%, 20%)', pos=(0.2, 0.2))
-                    self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
-    
-    
-    
+
+.. blabla :: not yet
+
     HSplit
     ------
     

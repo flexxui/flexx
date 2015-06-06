@@ -275,12 +275,12 @@ class BaseTableLayout(Layout):
 
 
 
-class Form(BaseTableLayout):
+class FormLayout(BaseTableLayout):
     """ A form layout organizes pairs of widgets vertically.
     """
     
     CSS = """
-    .flx-form > tr > td > .flx-label {
+    .flx-formlayout > tr > td > .flx-label {
         text-align: right;
     }
     """
@@ -349,4 +349,25 @@ class GridLayout(BaseTableLayout):
     Do we even need it? If we do implement it, we need a way to specify
     the vertical flex value.
     """
+
+
+class PinboardLayout(Layout):
+    """ A layout that allows positiong child widgets at absolute and
+    relative positions without constraining the widgets with respect to
+    each-other.
+    """
+    
+    CSS = """
+    .flx-pinboardlayout-xxxxx {
+        position: relative;
+    }
+    .flx-pinboardlayout > .flx-widget {
+        position: absolute;
+    }
+    """
+    
+    @js
+    def _js_create_node(self):
+        this.node = document.createElement('div')
+
 

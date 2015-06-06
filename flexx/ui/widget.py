@@ -9,6 +9,7 @@ from ..pyscript import js
 from ..properties import Prop, Instance, Str, Tuple, Float, FloatPair
 from . import Mirrored, get_instance_by_id
 
+
 class WidgetProp(Prop):
     _default = None
     
@@ -92,6 +93,9 @@ class Widget(Mirrored):
     parent = WidgetProp(help="The parent widget")
     flex = Float(help="How much space this widget takes when contained in a " + 
                       "layout. A flex of 0 means to take the minimum size.")
+    pos = FloatPair()
+    size = FloatPair()
+    
     min_width = Float()
     min_height = Float()  # todo: or min_size?
     cssClassName = Str()  # todo: should this be private? Or can we calculate it in JS?
@@ -225,6 +229,26 @@ class Widget(Mirrored):
             window.addEventListener('resize', self._check_resize, False)
         else:
             new_parent.connect_event('resize', self._check_resize)
+    
+    ## Positionion
+    
+    @js
+    def _js_pos_changed(self, name, old, pos):
+        self.node.style.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
+        self.node.style.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
+    
+    @js
+    def _js_size_changed(self, name, old, size):
+        size = size[:]
+        for i in range(2):
+            if size[i] == 0 or size is None or size is undefined:
+                size[i] = ''  # Use size defined by CSS
+            elif size[i] > 1:
+                size[i] = size[i] + 'px'
+            else:
+                size[i] = size[i] * 100 + 'px'
+        self.node.style.width = size[0]
+        self.node.style.height = size[1]
     
     ## More 
     
