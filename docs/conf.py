@@ -44,6 +44,7 @@ extensions = [
     'sphinx.ext.napoleon' if sphinxver >= (1, 3) else 'sphinxcontrib.napoleon',
     'pyscriptexample',
     'uiexample',
+    'flexxdocsgen',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

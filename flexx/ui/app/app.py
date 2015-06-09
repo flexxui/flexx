@@ -218,9 +218,7 @@ def init_server(host='localhost', port=None):
 
 # todo: ui.run looks weird in IPython. Maybe ui.load() or start()
 def run():  # (runtime='xul', host='localhost', port=None):
-    """ Start the user interface
-    
-    This will do a couple of things:
+    """ Start the event loop. This will do a couple of things:
     
     * All subclasses of App in the caller namespace are registered as apps.
     * The server is started for UI runtimes to connect to.
@@ -231,7 +229,6 @@ def run():  # (runtime='xul', host='localhost', port=None):
     stopped, although it will try to behave nicely in interactive
     environments (e.g. IEP, Spyder, IPython notebook), so the caller
     should take into account that the function may return emmidiately.
-    
     """
     # todo: make it work in IPython (should be easy since its tornnado too
     # todo: allow ioloop already running (e.g. integration with ipython)
@@ -348,12 +345,13 @@ def create_enum(*members):
 class App(object):
     """ Base application object
     
-    A subclass of the App class represents an application, and also its
-    main window.
-    
-    Subclass this class to implement for a new application. One instance
+    Subclass this class to implement a new application. One instance
     of this class will be created for each connection. Therefore, any
     data should be stored on the application object; avoid global data.
+    
+    For interactive use, one can also simply instantiate this class,
+    or have it instantiated automatically when you create the first
+    widget.
     """
     
     icon = None  # todo: how to distinguish this class attr from an instance attr?

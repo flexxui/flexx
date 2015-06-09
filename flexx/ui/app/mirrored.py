@@ -19,7 +19,7 @@ else:
 
 
 def get_mirrored_classes():
-    """ Get a list of all known mirrored classes.
+    """ Get a list of all known Mirrored subclasses.
     """
     return [c for c in HasPropsMeta.CLASSES if issubclass(c, Mirrored)]
 
@@ -32,9 +32,21 @@ def get_instance_by_id(id):
 
 
 class Mirrored(HasProps):
-    """ 
-    Subclass of HasProps for which the instances have a mirror object
-    in JS. The propertiess of the two are synchronised.
+    """ Class for which objects exist both in Python and JS. 
+    
+    Each instance of this class has a mirror object in JavaScript, and
+    their properties are synced both ways. Methods can be defined than
+    can be either executed in Python or in JavaScript (by decorating
+    them with ``js``).
+    
+    This class provides the base object for all widget classes in
+    flexx.ui. However, one can also create subclasses that have nothing
+    to do with user interfaces or DOM elements. You could e.g. use it
+    to calculate pi on nodejs.
+    
+    Each instance has a unique id, which is also available in JS.
+    Instances can be looked up by id via the get_instance_by_id()
+    function.
     """
     
     # Keep track of all instances, so we can easily collect al JS/CSS

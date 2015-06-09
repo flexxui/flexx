@@ -34,7 +34,10 @@ def visit_uiexample_html(self, node):
     exec(node.code, NS, NS)
     
     # Export app to html file
-    NS['MyApp'].export(os.path.join(HTML_DIR, 'ui', 'examples', fname))
+    for appname in ('App', 'MyApp'):
+        if appname in NS:
+            NS[appname].export(os.path.join(HTML_DIR, 'ui', 'examples', fname))
+            break
     rel_path = '../ui/examples/' + fname
     
     # Styles

@@ -43,7 +43,47 @@ class Layout(Widget):
 
 
 class Box(Layout):
-    """ Abstract class for HBox and VBox
+    """ Abstract class for HBox and VBox.
+    
+    Child widgets are tiled either horizontally or vertically. The space
+    that each widget takes is determined by its minimal required size
+    and the flex value of each widget.
+    
+    .. UIExample:: 200
+        
+        from flexx import ui
+        
+        class App(ui.App):
+            def init(self):
+                with ui.VBox():
+                    
+                    ui.Label(text='Flex 0 0 0')
+                    with ui.HBox(flex=0):
+                        self.b1 = ui.Button(text='Hola', flex=0)
+                        self.b2 = ui.Button(text='Hello world', flex=0)
+                        self.b3 = ui.Button(text='Foo bar', flex=0)
+                    
+                    ui.Label(text='Flex 1 0 3')
+                    with ui.HBox(flex=0):
+                        self.b1 = ui.Button(text='Hola', flex=1)
+                        self.b2 = ui.Button(text='Hello world', flex=0)
+                        self.b3 = ui.Button(text='Foo bar', flex=3)
+                    
+                    ui.Label(text='margin 10 (around layout)')
+                    with ui.HBox(flex=0, margin=10):
+                        self.b1 = ui.Button(text='Hola', flex=1)
+                        self.b2 = ui.Button(text='Hello world', flex=1)
+                        self.b3 = ui.Button(text='Foo bar', flex=1)
+                    
+                    ui.Label(text='spacing 10 (inter-widget)')
+                    with ui.HBox(flex=0, spacing=10):
+                        self.b1 = ui.Button(text='Hola', flex=1)
+                        self.b2 = ui.Button(text='Hello world', flex=1)
+                        self.b3 = ui.Button(text='Foo bar', flex=1)
+                    
+                    ui.Widget(flex=1)
+                    ui.Label(text='Note the spacer Widget above')
+    
     """
     
     CSS = """
@@ -104,7 +144,8 @@ class Box(Layout):
 
 
 class HBox(Box):
-    """ Layout widget to align elements horizontally.
+    """ Layout widget to distribute elements horizontally.
+    See :doc:`Box` for more info.
     """
     
     CSS = """
@@ -128,7 +169,8 @@ class HBox(Box):
 
 
 class VBox(Box):
-    """ Layout widget to align elements vertically.
+    """ Layout widget to distribute elements vertically.
+    See :doc:`Box` for more info.
     """
     
     CSS = """
@@ -152,6 +194,10 @@ class VBox(Box):
 
 class BaseTableLayout(Layout):
     """ Abstract base class for layouts that use an HTML table.
+    
+    Layouts that use this approach are rather bad in performance when
+    resizing. This is not so much a problem when it is a leaf layout,
+    but we don't recommend embedding such layouts in each-other.
     """
     
     CSS = """
@@ -277,6 +323,24 @@ class BaseTableLayout(Layout):
 
 class FormLayout(BaseTableLayout):
     """ A form layout organizes pairs of widgets vertically.
+    
+    Note: the API may change. maybe the label can be derived from the
+    widgets' ``title`` property?
+    
+    .. UIExample:: 200
+        
+        from flexx import ui
+        
+        class App(ui.App):
+            def init(self):
+                with ui.FormLayout():
+                    ui.Label(text='Pet name:')
+                    self.b1 = ui.Button(text='...')
+                    ui.Label(text='Pet Age:')
+                    self.b2 = ui.Button(text='...')
+                    ui.Label(text="Pet's Favorite color:")
+                    self.b3 = ui.Button(text='...')
+                    ui.Widget(flex=1)
     """
     
     CSS = """
@@ -355,6 +419,18 @@ class PinboardLayout(Layout):
     """ A layout that allows positiong child widgets at absolute and
     relative positions without constraining the widgets with respect to
     each-other.
+    
+    .. UIExample:: 200
+        
+        from flexx import ui
+        
+        class App(ui.App):
+            def init(self):
+                with ui.PinboardLayout():
+                    self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
+                    self.b2 = ui.Button(text='Dynamic at (30%, 30%)', pos=(0.3, 0.3))
+                    self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
+
     """
     
     CSS = """
@@ -373,16 +449,47 @@ class PinboardLayout(Layout):
 
 class Splitter(Layout):
     """ Abstract splitter class.
+    
+    The HSplitter  and VSplitter layouts divide the available space
+    among its child widgets in a similar way that HBox and VBox do,
+    except that the user can divide the space by dragging the
+    divider in between the widgets.
+    
+    Due to constraints of JavaScript, the natural size of child widgets
+    cannot be taken into account. However, the minimum size of child
+    widgets *is* taken into account, and the splitter also sets its own
+    minimum size accordingly.
+    
+    .. UIExample:: 200
+        
+        from flexx import ui
+        
+        class App(ui.App):
+            def init(self):
+                with ui.HSplitter():
+                    ui.Button(text='Left A')
+                    with ui.VSplitter():
+                        ui.Button(text='Right B')
+                        ui.Button(text='Right C')
+                        ui.Button(text='Right D')
+    
     """
     
     CSS = """
     
     /* Behave well inside an hbox/vbox */
-    .flx-hbox > .flx-splitter {
+    .flx-hbox > .flx-splitter, 
+    .flx-hsplitter > flx-splitter-container > .flx-splitter {
         width: auto;
     }
-    .flx-vbox > .flx-splitter {
+    .flx-vbox > .flx-splitter,
+    .flx-vsplitter > flx-splitter-container > .flx-splitter {
         height: auto;
+    }
+    
+    flx-splitter-container > .flx-splitter {
+        height: auto;
+        width: auto;
     }
     
     .flx-splitter > .flx-splitter-container {
@@ -421,9 +528,11 @@ class Splitter(Layout):
         width: 100%;
     }
     
+    /* this does not work well with keeping resize events propagation
     .dotransition > .flx-widget, .dotransition > .flx-splitter-divider {
         transition: left 0.3s, width 0.3s, right 0.3s;
     }
+    */
     
     .flx-splitter-divider {
         background: #eee;    
@@ -434,7 +543,9 @@ class Splitter(Layout):
         background: none;    
         box-shadow:  0px 0px 12px #777;
         z-index: 999;
-        transition: visibility 0.25s;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s;
     }
     
     """
@@ -454,7 +565,8 @@ class Splitter(Layout):
         self._handle = document.createElement("div")
         self._handle.classList.add('flx-splitter-handle')
         self._container.appendChild(self._handle)
-        self._handle.style.visibility = 'hidden'
+        #self._handle.style.visibility = 'hidden'
+        self._handle.style.opacity = '0'
         
         # Dividers are stored on their respective widgets, but we also keep
         # a list, which is synced by _js_ensure_all_dividers
@@ -613,14 +725,17 @@ class Splitter(Layout):
             that.children[i].node.style[width] = (t - begin - w2) + 'px'
             that.children[i + 1].node.style[left] = (t + w2) + 'px'
             that.children[i + 1].node.style[width] = (end - t - w2) + 'px'
+            # We resized our children
+            that.children[i]._check_resize()
+            that.children[i+1]._check_resize()
         
         def set_own_min_size():
             w = h = 50
             for i in range(len(that.children)):
                 w += 2 * w2 + parseFloat(that.children[i].node.style[minWidth]) or minimumWidth
                 h = max(h, parseFloat(that.children[i].node.style[minHeight]))
-            # node.style[minWidth] = w + 'px'
-            # node.style[minHeight] = h + 'px'
+            node.style[minWidth] = w + 'px'
+            node.style[minHeight] = h + 'px'
         
         def clipT(i, t):
             """ Clip the t value, taking into account the boundary of the 
@@ -638,14 +753,15 @@ class Splitter(Layout):
             return Math.min(max, Math.max(min, t))
         
         def on_resize(event):
+            print('RESIZING!')
             # Keep container in its max size
             # No need to take splitter orientation into account here
-            container.style.left = node.offsetLeft + 'px'
-            container.style.top = node.offsetTop + 'px'
-            #container.style.width = node.clientWidth + 'px'
-            #container.style.height = node.clientHeight + 'px'
-            container.style.width = node.offsetWidth + 'px'
-            container.style.height = node.offsetHeight + 'px'
+            container.style.left = '0px'
+            container.style.top = '0px'
+            container.style.width = node.clientWidth + 'px'
+            container.style.height = node.clientHeight + 'px'
+            # container.style.width = node.offsetWidth + 'px'
+            # container.style.height = node.offsetHeight + 'px'
             container.classList.remove('dotransition')
             for i in range(len(dividers)):
                 move_divider(i, dividers[i].tInPerc)
@@ -656,7 +772,8 @@ class Splitter(Layout):
             ev.preventDefault()
             handle.isdragging = ev.target.index + 1
             move_divider(ev.target.index, ev[clientX] - node[offsetLeft])
-            handle.style.visibility = 'visible'
+            #handle.style.visibility = 'visible'
+            handle.style.opacity = '1'
         
         def on_mouse_move(ev):
             if handle.isdragging:
@@ -672,7 +789,8 @@ class Splitter(Layout):
                 ev.preventDefault()
                 i = handle.isdragging - 1
                 handle.isdragging = 0;
-                handle.style.visibility = 'hidden'
+                #handle.style.visibility = 'hidden'
+                handle.style.opacity = '0'
                 move_divider(i, clipT(i, ev[clientX] - node[offsetLeft]))
         
         # Make available as method
@@ -688,10 +806,8 @@ class Splitter(Layout):
 
 
 class HSplitter(Splitter):
-    """ The HSplitter widget divides the available horizontal space
-    among its child widgets in a similar way that the HBox does, except
-    in this case the user can divide the space by dragging the divider
-    in between the widgets.
+    """ Horizontal splitter.
+    See :doc:`Splitter` for more information.
     """
     
     @js
@@ -701,10 +817,8 @@ class HSplitter(Splitter):
         
 
 class VSplitter(Splitter):
-    """ The VSplitter widget divides the available vertical space
-    among its child widgets in a similar way that the VBox does, except
-    in this case the user can divide the space by dragging the divider
-    in between the widgets.
+    """ Vertical splitter.
+    See :doc:`Splitter` for more information.
     """
     
     @js

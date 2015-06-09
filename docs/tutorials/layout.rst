@@ -216,7 +216,7 @@ the minimum size of its children into account. A splitter sets its own
 minimum size as the combined minimum size of its children (plus a little
 extra).
 
-.. UIExample:: 300
+.. UIExample:: 200
     
     from flexx import ui
     
@@ -231,7 +231,7 @@ Let's make it more interesting, a splitter inside a HBox, where the splitter has
 a button on the left and a hbox on the right (min_width is currently not implemented):
 
 
-.. UIExample:: 300
+.. UIExample:: 200
     
     from flexx import ui
     

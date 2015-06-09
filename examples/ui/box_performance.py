@@ -98,14 +98,12 @@ class MyApp4(ui.App):
 
 class MyApp5(ui.App):
     def init(self):
-        with ui.HBox():
-            ui.Button(text='Button in hbox', flex=1, min_width=110)
-            with ui.HSplitter(flex=2):
-                ui.Button(text='Button in hsplit', min_width=110)
-                with ui.HBox():
-                    ui.Button(text='Right A', flex=0)
-                    ui.Button(text='Right B', flex=1)
-                    ui.Button(text='Right C', flex=2)
+        with ui.HSplitter():
+            ui.Button(text='Right A')
+            with ui.VSplitter():
+                ui.Button(text='Right B')
+                ui.Button(text='Right C')
+                ui.Button(text='Right D')
 
     
 app = MyApp5(runtime='browser')

@@ -9,6 +9,19 @@ from .widget import Widget
 
 
 class Button(Widget):
+    """ A simple push button.
+    
+
+    .. UIExample:: 100
+        
+        from flexx import ui
+        
+        class App(ui.App):
+            def init(self):
+                self.b1 = ui.Button(text='Push me!')
+    
+    """
+    
     
     _EVENT_NAMES = ['click']
     

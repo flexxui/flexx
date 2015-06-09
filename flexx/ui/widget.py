@@ -156,10 +156,10 @@ class Widget(Mirrored):
             node = that.node
             # todo: formalize our event object
             event = {'cause': 'window'}  # owner and type set in Mirrored
-            event.widthChanged = (that._stored_size[0] != node.clientWidth)
-            event.heightChanged = (that._stored_size[1] != node.clientHeight)
+            event.widthChanged = (that._stored_size[0] != node.offsetWidth)
+            event.heightChanged = (that._stored_size[1] != node.offsetHeight)
             if event.widthChanged or event.heightChanged:
-                that._stored_size = node.clientWidth, node.clientHeight
+                that._stored_size = node.offsetWidth, node.offsetHeight
                 that.emit_event('resize', event)
         self._check_resize = _check_resize
         self._check_resize()
