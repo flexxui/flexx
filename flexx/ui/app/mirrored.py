@@ -227,6 +227,13 @@ class Mirrored(HasProps):
         that = this
         element.addEventListener(name, lambda ev: that.emit_event(name, {'cause': ev}), False)
     
+    @js
+    def _js_connect_js_event(self, element, event_name, method_name):
+        """ Connect methods of this object to JS events.
+        """
+        that = this
+        element.addEventListener(event_name, lambda ev: that[method_name](ev), False)
+    
     ## Static methods
     
     @classmethod

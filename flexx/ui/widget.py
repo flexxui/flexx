@@ -149,16 +149,20 @@ class Widget(Mirrored):
         # Create closure to check for size changes
         self._stored_size = 0, 0
         that = this
-        def _check_resize(event):
+        def _check_resize():
+            # Re-raise in next event loop iteration
+            setTimeout(_check_resize_now, 0)
+        def _check_resize_now():
             node = that.node
             # todo: formalize our event object
-            event = {'cause': event}  # owner and type set in Mirrored
+            event = {'cause': 'window'}  # owner and type set in Mirrored
             event.widthChanged = (that._stored_size[0] != node.clientWidth)
             event.heightChanged = (that._stored_size[1] != node.clientHeight)
             if event.widthChanged or event.heightChanged:
                 that._stored_size = node.clientWidth, node.clientHeight
                 that.emit_event('resize', event)
         self._check_resize = _check_resize
+        self._check_resize()
     
     @js
     def _js_create_node(self):
@@ -182,12 +186,14 @@ class Widget(Mirrored):
     
     @js
     def _js_add_child(self, widget):
+        """ Add the DOM element. Called right after the child widget is added. """
         # May be overloaded in layout widgets
         self.node.appendChild(widget.node)
     
     @js
     def _js_remove_child(self, widget):
-        self.node.appendChild(widget.node)
+        """ Remove the DOM element. Called right after the child widget is removed. """
+        self.node.removeChild(widget.node)
     
     def _parent_changed(self, name, old_parent, new_parent):
         if old_parent is not None:
@@ -208,16 +214,12 @@ class Widget(Mirrored):
     def _js_parent_changed(self, name, old_parent, new_parent):
         if old_parent is not None:
             children = old_parent.children
-            while children.indexOf(self) >= 0:  # todo: "self in children"
+            while self in children:
                 children.remove(self)
-            #old_parent._set_prop('children', children)  # bypass readonly
-            old_parent.children = children
             old_parent._remove_child(self)
         if new_parent is not None:
             children = new_parent.children
             children.append(self)
-            #new_parent._set_prop('children', children)
-            new_parent.children = children
             new_parent._add_child(self)
         # Unregister events
         if old_parent is None:

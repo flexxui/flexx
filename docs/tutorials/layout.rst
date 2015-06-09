@@ -205,50 +205,48 @@ a percentage of the parent size).
                 self.b2 = ui.Button(text='Dynamic at (30%, 30%)', pos=(0.3, 0.3))
                 self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
 
-    
 
-.. blabla :: not yet
+HSplitter and VSplitter
+-----------------------
 
-    HSplit
-    ------
+The splitters split the available space in regions, which size can be
+set by the user by dragging the divider. Unlike an HBox or VBox, a
+splitter is not aware of the natural size of its content, and only takes
+the minimum size of its children into account. A splitter sets its own
+minimum size as the combined minimum size of its children (plus a little
+extra).
+
+.. UIExample:: 300
     
-    The HSplit horizontally splits the available space in regions, which
-    size can be set by the user by dragging the divider. Unlike an HBox or
-    VBox, a splitter is not aware of the natural size of its content, and
-    only takes the minimum size of its children into account. A splitter
-    sets its own minimum size as the combined minimum size of its children
-    (plus a little extra).
+    from flexx import ui
     
-    .. UIExample:: 300
-        
-        from flexx import ui
-        
-        class MyApp(ui.App):
-            def init(self):
-                with ui.HSplit(self):
-                    ui.Button(text='Right A', min_width=120)
-                    ui.Button(text='Right B', min_width=70)
-                    ui.Button(text='Right C')
+    class MyApp(ui.App):
+        def init(self):
+            with ui.VSplitter():
+                ui.Button(text='Right A', min_width=120)
+                ui.Button(text='Right B', min_width=70)
+                ui.Button(text='Right C')
+
+Let's make it more interesting, a splitter inside a HBox, where the splitter has
+a button on the left and a hbox on the right (min_width is currently not implemented):
+
+
+.. UIExample:: 300
     
-    Let's make it more interesting, a splitter inside a HBox, where the splitter has
-    a button on the left and a hbox on the right:
+    from flexx import ui
     
-    
-    .. UIExample:: 300
-        
-        from flexx import ui
-        
-        class MyApp(ui.App):
-            def init(self):
-                with ui.HBox(self):
-                    ui.Button(text='Button in hbox', flex=0, min_width=110)
-                    with ui.HSplit(flex=2):
-                        ui.Button(text='Button in hsplit', min_width=110)
-                        with ui.HBox():
-                            ui.Button(text='Right A', flex=0)
-                            ui.Button(text='Right B', flex=1)
-                            ui.Button(text='Right C', flex=2)
-    
+    class MyApp(ui.App):
+        def init(self):
+            with ui.HBox():
+                ui.Button(text='Button in hbox', flex=1, min_width=110)
+                with ui.HSplitter(flex=2):
+                    ui.Button(text='Button in hsplit', min_width=110)
+                    with ui.HBox():
+                        ui.Button(text='Right A', flex=0)
+                        ui.Button(text='Right B', flex=1)
+                        ui.Button(text='Right C', flex=2)
+
+
 .. raw:: html
     <!-- Some exta space to allow easy resizing of the last example -->
     <br /><br /><br /><br /><br />

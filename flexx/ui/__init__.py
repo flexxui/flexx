@@ -8,4 +8,4 @@ from .app import Mirrored, get_instance_by_id
 
 from .widget import Widget  #, Window
 from .button import Label, Button
-from .layout import HBox, VBox, FormLayout, PinboardLayout  # Grid
+from .layout import HBox, VBox, FormLayout, PinboardLayout, HSplitter, VSplitter  # Grid

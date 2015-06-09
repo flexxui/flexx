@@ -96,7 +96,19 @@ class MyApp4(ui.App):
             self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
 
 
-app = MyApp1(runtime='browser')
+class MyApp5(ui.App):
+    def init(self):
+        with ui.HBox():
+            ui.Button(text='Button in hbox', flex=1, min_width=110)
+            with ui.HSplitter(flex=2):
+                ui.Button(text='Button in hsplit', min_width=110)
+                with ui.HBox():
+                    ui.Button(text='Right A', flex=0)
+                    ui.Button(text='Right B', flex=1)
+                    ui.Button(text='Right C', flex=2)
+
+    
+app = MyApp5(runtime='browser')
 ui.run()
 
 #MyApp1.export('/home/almar/dev/pylib/flexx/_website/_static/boxdemo_table1.html')

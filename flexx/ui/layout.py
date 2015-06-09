@@ -371,3 +371,334 @@ class PinboardLayout(Layout):
         this.node = document.createElement('div')
 
 
+class Splitter(Layout):
+    """ Abstract splitter class.
+    """
+    
+    CSS = """
+    .flx-splitter > .flx-splitter-container {
+        /* width and heigth set by JS. This is a layout boundary 
+        http://wilsonpage.co.uk/introducing-layout-boundaries/ */
+        overflow: hidden;
+        position: absolute;
+        background: #fcc;
+        top: 0px;
+        left: 0px;    
+    }
+    
+    .flx-hsplitter > .flx-splitter-container > .flx-widget {
+        position: absolute;
+        height: 100%;
+    }
+    .flx-vsplitter > .flx-splitter-container > .flx-widget {
+        position: absolute;
+        width: 100%;
+    }
+    
+    .flx-hsplitter > .flx-splitter-container > .flx-splitter-divider, 
+    .flx-hsplitter > .flx-splitter-container > .flx-splitter-handle {
+        position: absolute;
+        cursor: ew-resize;
+        top: 0px;
+        width: 6px; /* overridden in JS */
+        height: 100%;
+    }
+    .flx-vsplitter > .flx-splitter-container > .flx-splitter-divider,
+    .flx-vsplitter > .flx-splitter-container > .flx-splitter-handle {
+        position: absolute;
+        cursor: ns-resize;
+        left: 0px;
+        height: 6px; /* overridden in JS */
+        width: 100%;
+    }
+    
+    .dotransition > .flx-widget, .dotransition > .flx-splitter-divider {
+        transition: left 0.3s, width 0.3s, right 0.3s;
+    }
+    
+    .flx-splitter-divider {
+        background: #eee;    
+        z-index: 998;
+    }
+    
+    .flx-splitter-handle {    
+        background: none;    
+        box-shadow:  0px 0px 12px #777;
+        z-index: 999;
+        transition: visibility 0.25s;
+    }
+    
+    """
+    
+    @js
+    def _js_create_node(self):
+        this.node = document.createElement('div')
+        
+        # Add container. We need a container that is absolutely
+        # positioned, because the children are positoned relative to
+        # the first absolutely positioned parent.
+        self._container = document.createElement('div')
+        self._container.classList.add('flx-splitter-container')
+        self.node.appendChild(self._container)
+        
+        # Add handle (the thing the user grabs and moves around)
+        self._handle = document.createElement("div")
+        self._handle.classList.add('flx-splitter-handle')
+        self._container.appendChild(self._handle)
+        self._handle.style.visibility = 'hidden'
+        
+        # Dividers are stored on their respective widgets, but we also keep
+        # a list, which is synced by _js_ensure_all_dividers
+        self._dividers = []
+        self._setup()
+    
+    @js
+    def _js_add_child(self, widget):
+        self._insertWidget(widget, self.children.length - 1)
+    
+    @js
+    def _js_remove_child(self, widget):
+        
+        clientWidth = 'clientWidth' if self._horizontal else 'clientHeight'
+        sizeToDistribute = widget.node[clientWidth]
+        
+        # Remove widget
+        self._container.removeChild(widget.node)
+        # Remove its divider
+        t = 0  # store divider position so we can fill the gap
+        if widget._divider:
+            t = widget._divider.t
+            self._container.removeChild(widget._divider)
+            del widget._divider
+        
+        # Update dividers (and re-index them)
+        self._ensure_all_dividers()
+        
+        # Set new divider positions; distribute free space
+        newTs = []
+        tPrev = 0
+        sizeFactor = self.node[clientWidth] / (self.node[clientWidth] - sizeToDistribute)
+        
+        for i in range(len(self.children)-1):
+            divider = self.children[i]._divider
+            curSize = divider.t - tPrev
+            if tPrev < t and divider.t > t:
+                curSize -= divider.t - t  # take missing space into account
+            newTs.push(curSize * sizeFactor)
+            tPrev = divider.t
+            newTs[i] += newTs[i - 1] or 0
+        
+        for i in range(len(self._dividers)):
+            self._move_divider(i, newTs[i])
+        self._set_own_min_size()
+    
+    @js
+    def _js_insertWidget(self, widget, index):
+        """ Add to container and create divider if there is something
+        to divide.
+        """
+        self._container.appendChild(widget.node)
+        
+        clientWidth = 'clientWidth' if self._horizontal else 'clientHeight'
+        # children.splice(index, 0, widget.node);  -- done by our parenting system
+        
+        # Put a divider on all widgets except last, and index them
+        self._ensure_all_dividers()
+        
+        # Set new divider positions; take space from each widget
+        needSize = self.node[clientWidth] / self.children.length
+        sizeFactor= (self.node[clientWidth] - needSize) / self.node[clientWidth]
+        
+        newTs = []
+        tPrev = 0
+        for i in range(len(self.children)-1):
+            divider = self._dividers[i]
+            if i == index:
+                newTs.push(needSize)
+            else:
+                curSize = divider.t - tPrev
+                newTs.push(curSize * sizeFactor)
+                #print(index, i, t, self._dividers[i].t, curSize, newTs[i])
+            tPrev = divider.t
+            newTs[i] += newTs[i - 1] or 0
+        
+        #print(newTs + '', sizeLeft)
+        for i in range(len(self.children)-1):
+            self._move_divider(i, newTs[i])
+        
+        self._set_own_min_size()
+    
+    @js
+    def _js_ensure_all_dividers(self):
+        """ Ensure that all widgets have a divider object (except the last).
+        Also update all divider indices, and dividers array.
+        """
+        width = 'width' if self._horizontal else 'height'
+        clientWidth = 'clientWidth' if self._horizontal else 'clientHeight'
+        
+        self._dividers.length = 0  # http://stackoverflow.com/questions/1232040
+        for i in range(len(self.children)-1):
+            widget = self.children[i]
+            if widget._divider is undefined:
+                widget._divider = divider = document.createElement("div")
+                divider.classList.add('flx-splitter-divider')
+                divider.tInPerc = 1.0
+                divider.style[width] = 2 * self._w2 + 'px'
+                divider.t = self.node[clientWidth]
+                self._container.appendChild(divider)
+                self._connect_js_event(divider, 'mousedown', '_on_mouse_down')
+            # Index
+            widget._divider.index = i
+            self._dividers.append(widget._divider)
+        
+        # Remove any dividers on the last widget
+        if self.children:
+            widget = self.children[-1]
+            if widget._divider:
+                self._container.removeChild(widget._divider)
+                del widget._divider
+    
+    @js
+    def _js_setup(self):
+        """ Setup the splitter dynamics. We use closures that all access
+        the same data.
+        """
+        handle = self._handle
+        container = self._container
+        that = this
+        node = self.node
+        dividers = self._dividers
+        
+        # Measure constants. We name these as if we have a horizontal
+        # splitter, but the actual string might be the vertically
+        # translated version.
+        clientX = 'clientX' if self._horizontal else 'clientY'
+        offsetLeft = 'offsetLeft' if self._horizontal else 'offsetTop'
+        left = 'left' if self._horizontal else 'top'
+        width = 'width' if self._horizontal else 'height'
+        clientWidth = 'clientWidth' if self._horizontal else 'clientHeight'
+        minWidth = 'min-width' if self._horizontal else 'min-height'
+        minHeight = 'min-height' if self._horizontal else 'min-width'
+        
+        minimumWidth = 20
+        w2 = 3  # half of divider width    
+        handle.style[width] = 2 * w2 + 'px'
+        
+        # Flag to indicate dragging, the number indicates which divider is dragged (-1)
+        handle.isdragging = 0
+        
+        def move_divider(i, t):
+            # todo: make this publicly available?
+            if t < 1:
+                t *= node[clientWidth]
+            t = clipT(i, t)
+            # Store data
+            dividers[i].t = t;
+            dividers[i].tInPerc = t / node[clientWidth]  # to use during resizing
+            # Set divider and handler
+            handle.style[left] = dividers[i].style[left] = (t - w2) + 'px'
+            # Set child widgets position on both sides of the divider
+            begin = 0 if (i == 0) else dividers[i-1].t + w2
+            end = node[clientWidth] if (i == len(dividers) - 1) else dividers[i+1].t - w2
+            that.children[i].node.style[left] = begin + 'px'
+            that.children[i].node.style[width] = (t - begin - w2) + 'px'
+            that.children[i + 1].node.style[left] = (t + w2) + 'px'
+            that.children[i + 1].node.style[width] = (end - t - w2) + 'px'
+        
+        def set_own_min_size():
+            w = h = 50
+            for i in range(len(that.children)):
+                w += 2 * w2 + parseFloat(that.children[i].node.style[minWidth]) or minimumWidth
+                h = max(h, parseFloat(that.children[i].node.style[minHeight]))
+            # node.style[minWidth] = w + 'px'
+            # node.style[minHeight] = h + 'px'
+        
+        def clipT(i, t):
+            """ Clip the t value, taking into account the boundary of the 
+            splitter itself, neighboring dividers, and the minimum sizes 
+            of widget elements.
+            """
+            # Get min and max towards edges or other dividers
+            min = dividers[i - 1].t if (i > 0) else 0
+            max = dividers[i + 1].t if (i < dividers.length - 1) else node[clientWidth]
+            # Take minimum width of widget into account
+            # todo: this assumes the minWidth is specified in pixels, not e.g em.
+            min += 2 * w2 + parseFloat(that.children[i].node.style[minWidth]) or minimumWidth
+            max -= 2 * w2 + parseFloat(that.children[i + 1].node.style[minWidth]) or minimumWidth
+            # Clip
+            return Math.min(max, Math.max(min, t))
+        
+        def on_resize(event):
+            # Keep container in its max size
+            # No need to take splitter orientation into account here
+            container.style.left = node.offsetLeft + 'px'
+            container.style.top = node.offsetTop + 'px'
+            #container.style.width = node.clientWidth + 'px'
+            #container.style.height = node.clientHeight + 'px'
+            container.style.width = node.offsetWidth + 'px'
+            container.style.height = node.offsetHeight + 'px'
+            container.classList.remove('dotransition')
+            for i in range(len(dividers)):
+                move_divider(i, dividers[i].tInPerc)
+        
+        def on_mouse_down(ev):
+            container.classList.add('dotransition')
+            ev.stopPropagation()
+            ev.preventDefault()
+            handle.isdragging = ev.target.index + 1
+            move_divider(ev.target.index, ev[clientX] - node[offsetLeft])
+            handle.style.visibility = 'visible'
+        
+        def on_mouse_move(ev):
+            if handle.isdragging:
+                ev.stopPropagation()
+                ev.preventDefault()
+                i = handle.isdragging - 1
+                x = ev[clientX] - node[offsetLeft] - w2
+                handle.style[left] = clipT(i, x) + 'px'
+        
+        def on_mouse_up(ev):
+            if handle.isdragging:
+                ev.stopPropagation()
+                ev.preventDefault()
+                i = handle.isdragging - 1
+                handle.isdragging = 0;
+                handle.style.visibility = 'hidden'
+                move_divider(i, clipT(i, ev[clientX] - node[offsetLeft]))
+        
+        # Make available as method
+        self._set_own_min_size = set_own_min_size
+        self._move_divider = move_divider
+        self._on_mouse_down = on_mouse_down
+        
+        # Connect events
+        self.connect_event('resize', on_resize)
+        container.addEventListener('mousemove', on_mouse_move, False)
+        window.addEventListener('mouseup', on_mouse_up, False)
+        # todo: does JS support mouse grabbing?
+
+
+class HSplitter(Splitter):
+    """ The HSplitter widget divides the available horizontal space
+    among its child widgets in a similar way that the HBox does, except
+    in this case the user can divide the space by dragging the divider
+    in between the widgets.
+    """
+    
+    @js
+    def _js_init(self):
+        self._horizontal = True
+        super()._init()
+        
+
+class VSplitter(Splitter):
+    """ The VSplitter widget divides the available vertical space
+    among its child widgets in a similar way that the VBox does, except
+    in this case the user can divide the space by dragging the divider
+    in between the widgets.
+    """
+    
+    @js
+    def _js_init(self):
+        self._horizontal = False
+        super()._init()
