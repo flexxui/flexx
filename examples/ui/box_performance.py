@@ -105,7 +105,6 @@ class MyApp5(ui.App):
                 ui.Button(text='Right C')
                 ui.Button(text='Right D')
 
-    
 app = MyApp5(runtime='browser')
 ui.run()
 

@@ -73,6 +73,25 @@ _default_parent = []
 
 class Widget(Mirrored):
     """ Base widget class.
+    
+    In HTML-speak, this represents a plain div-element. Not very useful
+    on itself, except perhaps for spacing. Subclass to create something
+    interesting.
+    
+    Example:
+    
+    .. UIExample:: 100
+    
+        from flexx import ui
+        
+        class MyWidget(ui.Widget):
+            CSS = ".flx-mywidget {background:#f00;}"
+        
+        class App(ui.App):
+            def init(self):
+                with ui.HBox():  # show our widget full-window
+                    MyWidget(flex=1)
+    
     """
     
     CSS = """

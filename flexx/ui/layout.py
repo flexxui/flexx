@@ -25,6 +25,7 @@ class Layout(Widget):
     }
     
     .flx-layout {
+        /* sizing of widgets/layouts inside layout is defined per layout */
         width: 100%;
         height: 100%;
         margin: 0px;
@@ -48,6 +49,8 @@ class Box(Layout):
     Child widgets are tiled either horizontally or vertically. The space
     that each widget takes is determined by its minimal required size
     and the flex value of each widget.
+    
+    Example:
     
     .. UIExample:: 200
         
@@ -99,15 +102,18 @@ class Box(Layout):
         align-content: stretch;
     }
     
-    */
+    /*
     .box-align-center { -webkit-align-items: center; -ms-align-items: center; -moz-align-items: center; align-items: center; }
     .box-align-center { -webkit-align-items: center; -ms-align-items: center; -moz-align-items: center; align-items: center; }
     */
     
-    .flx-hbox > .flx-hbox, .flx-hbox > .flx-vbox {
+    /* Make child widgets (and layouts) size correctly */
+    .flx-hbox > .flx-widget {
+        height: 100%;
         width: auto;
     }
-    .flx-vbox > .flx-hbox, .flx-vbox > .flx-vbox {
+    .flx-vbox > .flx-widget {
+        width: 100%;
         height: auto;
     }
     """
@@ -327,6 +333,8 @@ class FormLayout(BaseTableLayout):
     Note: the API may change. maybe the label can be derived from the
     widgets' ``title`` property?
     
+    Example:
+    
     .. UIExample:: 200
         
         from flexx import ui
@@ -420,6 +428,8 @@ class PinboardLayout(Layout):
     relative positions without constraining the widgets with respect to
     each-other.
     
+    Example:
+    
     .. UIExample:: 200
         
         from flexx import ui
@@ -460,6 +470,8 @@ class Splitter(Layout):
     widgets *is* taken into account, and the splitter also sets its own
     minimum size accordingly.
     
+    Example:
+    
     .. UIExample:: 200
         
         from flexx import ui
@@ -477,14 +489,14 @@ class Splitter(Layout):
     
     CSS = """
     
-    /* Behave well inside an hbox/vbox */
-    .flx-hbox > .flx-splitter, 
-    .flx-hsplitter > flx-splitter-container > .flx-splitter {
+    /* Make child widget size ok */
+    .flx-hsplitter > flx-splitter-container > .flx-widget {
         width: auto;
+        height: 100%;
     }
-    .flx-vbox > .flx-splitter,
-    .flx-vsplitter > flx-splitter-container > .flx-splitter {
+    .flx-vsplitter > flx-splitter-container > .flx-widget {
         height: auto;
+        width: 100%;
     }
     
     flx-splitter-container > .flx-splitter {
@@ -753,15 +765,18 @@ class Splitter(Layout):
             return Math.min(max, Math.max(min, t))
         
         def on_resize(event):
-            print('RESIZING!')
             # Keep container in its max size
             # No need to take splitter orientation into account here
-            container.style.left = '0px'
-            container.style.top = '0px'
-            container.style.width = node.clientWidth + 'px'
-            container.style.height = node.clientHeight + 'px'
-            # container.style.width = node.offsetWidth + 'px'
-            # container.style.height = node.offsetHeight + 'px'
+            if window.getComputedStyle(node).position == 'absolute':
+                container.style.left = '0px'
+                container.style.top = '0px'
+                container.style.width = node.clientWidth + 'px'
+                container.style.height = node.clientHeight + 'px'
+            else:
+                container.style.left = node.offsetLeft + 'px'
+                container.style.top = node.offsetTop + 'px'
+                container.style.width = node.offsetWidth + 'px'
+                container.style.height = node.offsetHeight + 'px'
             container.classList.remove('dotransition')
             for i in range(len(dividers)):
                 move_divider(i, dividers[i].tInPerc)

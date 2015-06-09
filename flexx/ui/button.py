@@ -11,7 +11,8 @@ from .widget import Widget
 class Button(Widget):
     """ A simple push button.
     
-
+    Example:
+    
     .. UIExample:: 100
         
         from flexx import ui
@@ -55,6 +56,20 @@ class Button(Widget):
 
 
 class Label(Widget):
+    """ Widget to show text/html.
+    
+    Example:
+    
+    .. UIExample:: 100
+        
+        from flexx import ui
+        
+        class App(ui.App):
+            def init(self):
+                self.b1 = ui.Label(text='This is a label')
+    
+    """
+    
     CSS = ".flx-label { border: 0px solid #454; }"
 
     text = Str('')
