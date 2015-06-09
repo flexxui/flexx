@@ -238,7 +238,7 @@ a button on the left and a hbox on the right (min_width is currently not impleme
     class MyApp(ui.App):
         def init(self):
             with ui.HBox():
-                ui.Button(text='Button in hbox', flex=1, min_width=110)
+                ui.Button(text='Button in hbox', flex=0, min_width=110)
                 with ui.HSplitter(flex=2):
                     ui.Button(text='Button in hsplit', min_width=110)
                     with ui.HBox():

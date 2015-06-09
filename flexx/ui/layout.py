@@ -376,6 +376,15 @@ class Splitter(Layout):
     """
     
     CSS = """
+    
+    /* Behave well inside an hbox/vbox */
+    .flx-hbox > .flx-splitter {
+        width: auto;
+    }
+    .flx-vbox > .flx-splitter {
+        height: auto;
+    }
+    
     .flx-splitter > .flx-splitter-container {
         /* width and heigth set by JS. This is a layout boundary 
         http://wilsonpage.co.uk/introducing-layout-boundaries/ */
