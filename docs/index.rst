@@ -13,6 +13,10 @@ desktop applications as well as web applications.
 Flexx is pure Python, and has no dependencies other than the browser
 that's already installed on the system.
 
+**Current status:** Flexx is in development. Many parts of the API may
+change. Some things are working (like creation of several widgets and
+layouts), other things not (like events).
+
 
 Contents:
 
