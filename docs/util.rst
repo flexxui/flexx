@@ -1,5 +1,5 @@
 -----------------------------
-Reference for the util module
+Reference for the UTIL module
 -----------------------------
 
 .. automodule:: flexx.util

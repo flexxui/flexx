@@ -1,5 +1,5 @@
 -----------------------------------
-Reference for the properties module
+Reference for the PROPERTIES module
 -----------------------------------
 
 .. automodule:: flexx.properties
