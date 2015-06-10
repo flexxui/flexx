@@ -79,7 +79,7 @@ class PlotWidget(Widget):
 
 
 class PlotLayout(Layout):
-    """ High level layout to create a plot with widgets on the side.
+    """ Experimental high-level layout for a plot with widgets on the side.
     
     Example:
     
@@ -114,7 +114,8 @@ class PlotLayout(Layout):
         Widget(flex=1, parent=self._left)
     
     def add_tools(self, name, *args):
-        """ Add a set of widgets and collect them in a "tool" group.
+        """ Add a set of widgets and collect them in a "tool" group by
+        the given name.
         """
         # Take stretch out
         stretch = self._left.children[-1]

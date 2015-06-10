@@ -13,12 +13,22 @@ desktop applications as well as web applications.
 Flexx is pure Python, and has no dependencies other than the browser
 that's already installed on the system.
 
-**Current status:** Flexx is in development. Many parts of the API may
+Current status
+--------------
+
+Flexx is in development. Many parts of the API may
 change. Some things are working (like creation of several widgets and
 layouts), other things not (like events).
 
+Links
+-----
 
-Contents:
+   * Flexx website: http://flexx.readthedocs.org
+   * Flexx code: http://github.com/zoofio/flexx
+
+
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
@@ -34,7 +44,7 @@ Contents:
 
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
