@@ -12,3 +12,4 @@ from .layout import Layout, Box, HBox, VBox
 from .layout import BaseTableLayout, FormLayout, GridLayout
 from .layout import Splitter, HSplitter, VSplitter
 from .layout import PinboardLayout
+from .progressbar import ProgressBar
