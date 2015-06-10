@@ -7,8 +7,8 @@ from .widget import Widget, js
 from .layout import Layout, VBox, HBox
 
 
-class Group(Widget):
-    """ Widget to collect widgets in a group. 
+class Panel(Widget):
+    """ Widget to collect widgets in a named group. 
     
     It does not provide a layout. In HTML speak, this represents a fieldset.
     
@@ -20,7 +20,7 @@ class Group(Widget):
         
         class App(ui.App):
             def init(self):
-                with ui.Group(title='This is a group'):
+                with ui.Panel(title='This is a panel'):
                     with ui.VBox():
                         ui.ProgressBar(value=0.2)
                         ui.Button(text='click me')
@@ -114,7 +114,7 @@ class PlotLayout(Layout):
         Widget(flex=1, parent=self._left)
     
     def add_tools(self, name, *args):
-        """ Add a set of widgets and collect them in a "tool" group by
+        """ Add a set of widgets and collect them in a "tool" panel by
         the given name.
         """
         # Take stretch out
@@ -122,8 +122,8 @@ class PlotLayout(Layout):
         stretch.parent = None
         
         # Add group of widgets
-        group = Group(title=name, parent=self._left, flex=0)
-        vbox = VBox(parent=group)
+        panel = Panel(title=name, parent=self._left, flex=0)
+        vbox = VBox(parent=panel)
         for widget in args:
             widget.parent = vbox
         

@@ -13,4 +13,4 @@ from .layout import BaseTableLayout, FormLayout, GridLayout
 from .layout import Splitter, HSplitter, VSplitter
 from .layout import PinboardLayout
 from .progressbar import ProgressBar
-from .layout2 import Group, PlotWidget, PlotLayout
+from .layout2 import Panel, PlotWidget, PlotLayout
