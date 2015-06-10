@@ -18,6 +18,9 @@ class ProgressBar(Widget):
                     ui.ProgressBar(flex=1, value=0.7)
     
     """
+    
+    CSS = ".flx-progressbar {min-height: 10px;}"
+    
     value = Float(0)
     max_value = Float(1)
     
