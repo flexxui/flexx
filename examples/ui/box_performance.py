@@ -105,7 +105,18 @@ class MyApp5(ui.App):
                 ui.Button(text='Right C')
                 ui.Button(text='Right D')
 
-app = MyApp5(runtime='browser')
+
+class MyApp6(ui.App):
+        def init(self):
+            layout = ui.PlotLayout()
+            layout.add_tools('Edit plot', 
+                                ui.Button(text='do this'),
+                                ui.Button(text='do that'))
+            layout.add_tools('Plot info', 
+                                ui.ProgressBar(value='0.3'),
+                                ui.Label(text='The plot aint pretty'))
+
+app = MyApp6(runtime='browser')
 ui.run()
 
 #MyApp1.export('/home/almar/dev/pylib/flexx/_website/_static/boxdemo_table1.html')
