@@ -49,11 +49,12 @@ UMD = """
     if (typeof define === 'function' && define.amd) {
         // AMD. Register as an anonymous module.
         define([%s], factory);
-    } else if (typeof window === 'undefined' && typeof exports === 'object') {
-        // Node. Does not work with strict CommonJS, but only CommonJS-like
-        // environments that support module.exports, like Node.
+    } else if (typeof exports !== 'undefined') {
+        // Node or CommonJS
         module.exports = factory(%s);
-        root.%s = module.exports;  // also create global module
+        if (typeof window === 'undefined') {
+            root.%s = module.exports;  // also create global module in Node
+        }
     } else {
         // Browser globals (root is window)
         root.%s = factory(%s);
