@@ -78,11 +78,11 @@ def _get_default_parents():
     """
     # Get thread id
     if hasattr(threading, 'current_thread'):
-        id = id(threading.current_thread())
+        tid = id(threading.current_thread())
     else:
-        id = id(threading.currentThread())
+        tid = id(threading.currentThread())
     # Get list of parents for this thread
-    return _default_parents_per_thread.setdefault(id, [])
+    return _default_parents_per_thread.setdefault(tid, [])
 
 
 class Widget(Mirrored):
