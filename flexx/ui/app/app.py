@@ -461,15 +461,6 @@ class App(object):
         if css.strip():
             self._send_command('DEFINE-CSS ' + css)
     
-    def __enter__(self):
-        from .widget import _default_parent
-        _default_parent.append(self)
-        return self
-    
-    def __exit__(self, type, value, traceback):
-        from .widget import _default_parent
-        assert self is _default_parent.pop(-1)
-    
     def __repr__(self):
         s = self.status.lower()
         return '<App %r (%s) at 0x%x>' % (self.__class__.__name__, s, id(self))
