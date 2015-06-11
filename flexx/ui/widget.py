@@ -4,6 +4,7 @@ Implements parenting and other things common to all widgets.
 """
 
 import json
+import threading
 
 from ..pyscript import js
 from ..properties import Prop, Instance, Str, Tuple, Float, FloatPair
@@ -67,9 +68,22 @@ class WidgetsProp(Tuple):
 
 
 # Keep track of stack of default parents when using widgets
-# as context managers
+# as context managers. Have one list for each thread.
 
-_default_parent = []
+_default_parents_per_thread = {}  # dict of threadid -> list
+
+def _get_default_parents():
+    """ Get list that represents the stack of default parents.
+    Each thread has its own stack.
+    """
+    # Get thread id
+    if hasattr(threading, 'current_thread'):
+        id = threading.current_thread().ident
+    else:
+        id = threading.currentThread().ident
+    # Get list of parents for this thread
+    return _default_parents_per_thread.setdefault(id, [])
+
 
 class Widget(Mirrored):
     """ Base widget class.
@@ -128,8 +142,9 @@ class Widget(Mirrored):
         
         # Apply default parent?
         if parent is None:
-            if _default_parent:
-                parent = _default_parent[-1]
+            default_parents = _get_default_parents()
+            if default_parents:
+                parent = default_parents[-1]
         
         # Provide css class name to 
         classes = ['flx-' + c.__name__.lower() for c in self.__class__.mro()]
@@ -146,11 +161,15 @@ class Widget(Mirrored):
     #     super().__init__(*arguments)
     
     def __enter__(self):
-        _default_parent.append(self)
+        # Note that __exit__ is guaranteed to be called, so there is
+        # no need to use weak refs for items stored in default_parents
+        default_parents = _get_default_parents()
+        default_parents.append(self)
         return self
     
     def __exit__(self, type, value, traceback):
-        assert self is _default_parent.pop(-1)
+        default_parents = _get_default_parents()
+        assert self is default_parents.pop(-1)
         #if value is None:
         #    self.update()
     
