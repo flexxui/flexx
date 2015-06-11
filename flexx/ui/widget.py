@@ -78,9 +78,9 @@ def _get_default_parents():
     """
     # Get thread id
     if hasattr(threading, 'current_thread'):
-        id = threading.current_thread().ident
+        id = id(threading.current_thread())
     else:
-        id = threading.currentThread().ident
+        id = id(threading.currentThread())
     # Get list of parents for this thread
     return _default_parents_per_thread.setdefault(id, [])
 
