@@ -40,7 +40,22 @@ class Layout(Widget):
     def _js_applyBoxStyle(self, e, sty, value):
         for prefix in ['-webkit-', '-ms-', '-moz-', '']:
             e.style[prefix + sty] = value
-
+    
+    def swap(self, layout):
+        """ Swap this layout with another layout.
+        
+        Returns the given layout, so that you can do: 
+        ``mylayout = mylayout.swap(HBox())``.
+        """
+        if not isinstance(layout, Layout):
+            raise ValueError('Can only swap a layout with another layout.')
+        for child in self.children:
+            child.parent = layout
+        parent = self.parent
+        self.parent = None
+        layout.parent = parent
+        return layout
+        # todo: if parent = None, they are attached to root ...
 
 
 class Box(Layout):

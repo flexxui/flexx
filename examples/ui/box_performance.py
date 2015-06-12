@@ -11,7 +11,7 @@ class MyApp1(ui.App):
     
     def init(self):
         
-        with ui.VBox():
+        with ui.VBox() as self.l1:
             ui.Button(text='Box A', flex=0)
             ui.Button(text='Box B', flex=0)
             ui.Button(text='Box C is a bit longer', flex=0)
@@ -98,9 +98,9 @@ class MyApp4(ui.App):
 
 class MyApp5(ui.App):
     def init(self):
-        with ui.HSplitter():
+        with ui.HSplitter() as self.l1:
             ui.Button(text='Right A')
-            with ui.VSplitter():
+            with ui.VSplitter() as self.l2:
                 ui.Button(text='Right B')
                 ui.Button(text='Right C')
                 ui.Button(text='Right D')
@@ -109,14 +109,14 @@ class MyApp5(ui.App):
 class MyApp6(ui.App):
         def init(self):
             layout = ui.PlotLayout()
-            layout.add_tools('Edit plot', 
+            layout.add_tools('Edit plot',
                                 ui.Button(text='do this'),
                                 ui.Button(text='do that'))
             layout.add_tools('Plot info', 
                                 ui.ProgressBar(value='0.3'),
                                 ui.Label(text='The plot aint pretty'))
 
-app = MyApp6(runtime='browser')
+app = MyApp1(runtime='browser')
 ui.run()
 
 #MyApp1.export('/home/almar/dev/pylib/flexx/_website/_static/boxdemo_table1.html')
