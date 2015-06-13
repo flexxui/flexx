@@ -29,6 +29,7 @@ Other:
 Runtimes currently not supported:
 
 * MSHTML - uses the trident engine (like IE does), I think we want this one
+* electron - by github (electron.atom.io, based on Chromium)
 * pywebkitgtk - not really cross-platform
 
 
