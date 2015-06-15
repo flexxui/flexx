@@ -17,6 +17,8 @@ BROWSER_MAP = {'chrome': ['google-chrome', 'chrome',
 
 
 class BrowserRuntime(WebRuntime):
+    """ Web runtime bases on the Python webbrowser module.
+    """
     
     def _launch(self):
         

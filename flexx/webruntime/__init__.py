@@ -52,6 +52,7 @@ from .browser import BrowserRuntime
 from .qtwebkit import PyQtRuntime
 from .chromeapp import ChromeAppRuntime
 from .nodejs import NodejsRuntime
+from .selenium import SeleniumRuntime
 
 # todo: auto-select a runtime that is available
 
@@ -114,6 +115,9 @@ def launch(url, runtime=None,
     elif runtime.startswith('browser-'):
         Runtime = BrowserRuntime
         browsertype = runtime.split('-', 1)[1]
+    elif runtime.startswith('selenium'):
+        browsertype = runtime.split('-', 1)[-1]
+        Runtime = SeleniumRuntime
     elif runtime =='nodejs':
         Runtime = NodejsRuntime
     else:

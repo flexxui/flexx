@@ -4,14 +4,15 @@ import subprocess
 
 import flexx
 from selenium import webdriver
-#from sauceclient import SauceClient
+from sauceclient import SauceClient
 
 # it's best to remove the hardcoded defaults and always get these values
 # from environment variables
 credfile = os.path.join(flexx.__file__, '..', '..', '.git', 'sauce')
 USERNAME, ACCESS_KEY = open(credfile, 'rt').read().strip().split('\n')
 
-# sauce = SauceClient(USERNAME, ACCESS_KEY)
+# To get information such as jobs, available browsers, etc.
+sauce = SauceClient(USERNAME, ACCESS_KEY)
 
 browsers = [{"platform": "Mac OS X 10.9",
              "browserName": "chrome",

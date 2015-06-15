@@ -93,6 +93,8 @@ if sys.platform.startswith('win'):
     def screenshot(pid, client=True):
         """ Grab a screenshot of the first visible window of the process
         with the given id. If client is True, no Window decoration is shown.
+        
+        This code is derived from https://github.com/BoboTiG/python-mss
         """
         # Get handle
         hwnd = win_for_pid(pid)
