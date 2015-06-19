@@ -6,5 +6,5 @@ Mirrored classes without the ui.
 
 """
 
-from .app import App, run, stop, call_later, get_default_app, get_current_app
+from .app import run, stop, call_later, this_is_an_app
 from .mirrored import Mirrored, get_instance_by_id, get_mirrored_classes

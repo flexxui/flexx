@@ -146,6 +146,10 @@ class Widget(Mirrored):
             if default_parents:
                 parent = default_parents[-1]
         
+        # Use parent proxy unless proxy was given
+        if parent is not None and not kwargs.get('_proxy', None):
+            kwargs['_proxy'] = parent.proxy
+        
         # Provide css class name to 
         classes = ['flx-' + c.__name__.lower() for c in self.__class__.mro()]
         classname = ' '.join(classes[:1-len(Widget.mro())])
@@ -154,6 +158,15 @@ class Widget(Mirrored):
         kwargs['cssClassName'] = classname
         kwargs['parent'] = parent
         Mirrored.__init__(self, **kwargs)
+        
+        with self:
+            self.init()
+    
+    def init(self):
+        """ Overload this to initialize a cusom widget. Inside, this
+        widget is the current parent.
+        """
+        pass
     
     # @js
     # def _js__init__(self):

@@ -60,106 +60,142 @@ _tornado_app = None
 
 
 class AppManager(object):
-    """ There is one AppManager class (in flexx.ui.app.manager). It's
-    purpose is to manage the application classes and instances. It is
-    mostly used internally, but advanced users may use it too.
+    """ Manage applications, or more specifically, the proxy objects.
+    
+    There is one AppManager class (in flexx.ui.app.manager). It's
+    purpose is to manage the application classes and instances. Intended
+    for internal use.
     """
     
     def __init__(self):
-        self._apps = {}  # name -> (AppClass, pending, connected)
+        # name -> (WidgetClass, pending, connected) - lists contain proxies
+        self._proxies = {}
+        self._default_proxy = None
     
-    def register_app_class(self, app_class):
-        """ Register an application by its class
+    def register_app_class(self, cls):
+        """ Register a widget class as being an application.
         
         Applications are identified by the ``__name__`` attribute of
-        the class. The given class must inherit from ``App``.
+        the class. The given class must inherit from ``Widget``.
         
         After registering a class, it becomes possible to connect to 
         "http://address:port/ClassName". 
         """
-        assert isinstance(app_class, type) and issubclass(app_class, App)
-        name = app_class.__name__
-        if name in self._apps:
-            raise ValueError('App with name %r already registered' % name)
-        self._apps[name] = app_class, [], []
+        from .. import Widget
+        assert isinstance(cls, type) and issubclass(cls, Widget)
+        name = cls.__name__
+        pending, connected = [], []
+        if name in self._proxies and cls is not self._proxies[name][0]:
+            oldCls, pending, connected = self._proxies[name]
+            logging.warn('Re-registering app class %r' % name)
+            #raise ValueError('App with name %r already registered' % name)
+        self._proxies[name] = cls, pending, connected
     
-    def _add_pending_app_instance(self, app):
-        """ Add an app instance as a pending app. User internally.
-        Friend method of the App class.
+    def get_default_proxy(self):
+        """ Get the default proxy that is used for interactive use.
+        
+        When a Mirrored class is created without a proxy, this method
+        is called to get one.
+        
+        The default "app" is served at "http://address:port/__default__".
         """
-        assert isinstance(app, App)
-        name = app.__class__.__name__
-        if name not in self._apps:
-            self.register_app_class(app.__class__)
-        cls, pending, connected = self._apps[name]
-        if not isinstance(app, cls):
-            raise RuntimeError('Given app is not an instance of corresponding '
-                               'registerered class.')
-        if app.status == App.STATUS.PENDING:
-            assert app not in pending
-            pending.append(app)
+        if self._default_proxy is None or self._default_proxy.status == Proxy.STATUS.CLOSED:
+            runtime = 'notebook' if is_notebook else 'browser'  # todo: what runtime?
+            self._default_proxy = Proxy('__default__', runtime, title='Flexx app')
+        return self._default_proxy
+    
+    def add_pending_proxy_instance(self, proxy):
+        """ Add an app instance as a pending app. 
+        
+        This means that the app is created from Python and not yet
+        connected. A runtime has been launched and we're waiting for
+        it to connect.
+        """
+        assert isinstance(proxy, Proxy)
+        assert proxy.app_name in self._proxies
+        
+        cls, pending, connected = self._proxies[proxy.app_name]
+        if proxy.status == Proxy.STATUS.PENDING:
+            assert proxy not in pending
+            pending.append(proxy)
         else:
-            raise RuntimeError('Cannot add app instances that are/were '
+            raise RuntimeError('Cannot add proxy instances that are/were '
                                'already connected')
     
-    def connect_an_app(self, ws, name, app_id=None):
-        """ Connect a pending app instance
+    def connect_client(self, ws, name, app_id=None):
+        """ Connect an incoming client connection to a proxy object
         
         Called by the websocket object upon connecting, thus initiating
-        the application.
+        the application. The connection can be for the default app, for
+        a pending app, or for a fresh app (external connection).
         """
-        cls, pending, connected = self._apps[name]
-        # Get a pending app instance with specific id, or a new instance
+        
         print('connecting', name, app_id)
-        if app_id:
-            for app in pending:
-                if app.id == app_id:
-                    pending.remove(app)
-                    break
-            else:
-                raise RuntimeError('Asked for app id %r, '
-                                   'but could not find it' % app_id)
+        
+        if name == '__default__':
+            proxy = self.get_default_proxy()
+            proxy._connect_client(ws)
+            return proxy
+        
         else:
-            app = cls(runtime=None)  # don't create a runtime for it
-        # Add app to connected, set ws
-        assert app.status == app.STATUS.PENDING
-        connected.append(app)
-        app._connect_client(ws)  # set ws, call init() etc,
-        return app
+            cls, pending, connected = self._proxies[name]
+            
+            if not app_id:
+                # Create a fresh proxy - there already is a runtime
+                proxy = Proxy(cls.__name__, runtime=None)
+                app = cls(_proxy=proxy)
+                proxy._set_widget(app)
+            else:
+                # Search for the app with the specific id
+                for proxy in pending:
+                    if proxy.id == app_id:
+                        pending.remove(proxy)
+                        break
+                else:
+                    raise RuntimeError('Asked for app id %r, '
+                                    'but could not find it' % app_id)
+            
+            # Add app to connected, set ws
+            assert proxy.status == Proxy.STATUS.PENDING
+            proxy._connect_client(ws)
+            connected.append(proxy)
+            return proxy  # For the ws
     
-    def close_an_app(self, app):
-        """ Close an application object. This is called by the websocket
-        when the connection is closed. The manager will remove the app
-        from the list of connected instances.
+    def disconnect_client(self, proxy):
+        """ Close a connection to a client.
+        
+        This is called by the websocket when the connection is closed.
+        The manager will remove the proxy from the list of connected
+        instances.
         """
-        cls, pending, connected = self._apps[app.name]
+        cls, pending, connected = self._proxies[proxy.app_name]
         try:
-            connected.remove(app)
+            connected.remove(proxy)
         except ValueError:
             pass
+        proxy.close()
     
     def has_app_name(self, name):
         """ Returns True if name is a registered appliciation name
         """
-        return name in self._apps.keys()
+        return name == '__default__' or name in self._proxies.keys()
     
     def get_app_names(self):
         """ Get a list of registered application names
         """
-        # Give all names, but exclude Default app
-        # todo: filter via isinstance?
-        return [name for name in self._apps.keys() if name != 'DefaultApp']
+        return [name for name in self._proxies.keys()]
     
-    def get_app_by_id(self, name, id):
-        """ Get app by name and id
+    def get_proxy_by_id(self, name, id):
+        """ Get proxy object by name and id
         """
-        cls, pending, connected = self._apps[name]
-        for app in pending:
-            if app.id == id:
-                return app
-        for app in connected:
-            if app.id == id:
-                return app
+        cls, pending, connected = self._proxies[name]
+        for proxy in pending:
+            if proxy.id == id:
+                return proxy
+        for proxy in connected:
+            if proxy.id == id:
+                return proxy
+
 
 # Create app manager object
 manager = AppManager()
@@ -236,13 +272,13 @@ def run():  # (runtime='xul', host='localhost', port=None):
     # Detect App classes in caller namespace
     app_names = manager.get_app_names()
     # todo: this may not work on stackless Python implementations
-    frame = inspect.currentframe()
-    for ob in frame.f_back.f_locals.values():
-        if isinstance(ob, type) and issubclass(ob, App):
-            #_app_classes.append(ob)
-            if ob.__name__ not in app_names:
-                manager.register_app_class(ob)
-                print('found', ob.__name__)
+    # frame = inspect.currentframe()
+    # for ob in frame.f_back.f_locals.values():
+    #     if isinstance(ob, type) and issubclass(ob, Proxy):
+    #         #_app_classes.append(ob)
+    #         if ob.__name__ not in app_names:
+    #             manager.register_app_class(ob)
+    #             print('found', ob.__name__)
     
     init_server()
     
@@ -269,7 +305,7 @@ class JupyterChecker(object):
         app = get_default_app()  # does not launch runtime if is_notebook
         
         host, port = _tornado_app.serving_at
-        name = app.name + '-' + app.id
+        name = app.app_name + '-' + app.id
         url = 'ws://%s:%i/%s/ws' % (host, port, name)
         t = "Injecting JS/CSS."
         t += "<style>\n%s\n</style>\n" % clientCode.get_css()
@@ -312,126 +348,154 @@ def create_enum(*members):
     return type('Enum', (), enums)
 
 
-# class BaseWidget(object):
-#     
-#     def __init__(self, parent):
-#         self._parent = None
-#         self._children = []
-#         self._set_parent(parent)
-#     
-#     @property
-#     def parent(self):
-#         return self._parent
-#     
-#     def _set_parent(self, new_parent):
-#         old_parent = self._parent
-#         if old_parent is not None:
-#             while self in old_parent._children:
-#                 old_parent._children.remove(self)
-#         if new_parent is not None:
-#             new_parent._children.append(self)
-#         self._parent = new_parent
-#     
-#     @property
-#     def children(self):
-#         return list(self._children)
-
-# In tk, tk.Tk() creates the main window, further windows should be
-# created with tk.TopLevel()
-# In wx, a Frame is the toplevel window
-# In Fltk a Frame can be toplevel or not
-
-
-class App(object):
-    """ Base application object
-    
-    Subclass this class to implement a new application. One instance
-    of this class will be created for each connection. Therefore, any
-    data should be stored on the application object; avoid global data.
-    
-    For interactive use, one can also simply instantiate this class,
-    or have it instantiated automatically when you create the first
-    widget.
+# todo: terminology: widget, app, application, connection, proxy, client
+def this_is_an_app(cls=None, **kwargs):
+    """ Mark a widget as an app.
     """
+    kwargs1 = kwargs
     
-    icon = None  # todo: how to distinguish this class attr from an instance attr?
-    # Maybe we need an AppClass class? for stuff that;s equal for each app instance?
+    def _make_app(cls):
+        
+        def launch(runtime='xul', **kwargs):
+            """ Launch an instance of this app in the specified runtime.
+            """
+            # Get final kwargs list
+            d = {}
+            d.update(kwargs1)
+            d.update(kwargs)
+            # Instantiate widget with a fresh client object
+            proxy = Proxy(cls.__name__, runtime, **d)
+            app = cls(_proxy=proxy)
+            proxy._set_widget(app)
+            # Register the instance at the manager
+            manager.add_pending_proxy_instance(proxy)
+            return app
+        
+        manager.register_app_class(cls)
+        cls.launch = launch
+        return cls
+    
+    if cls is None:
+        return _make_app
+    else:
+        return _make_app(cls)
+
+
+class Proxy(object):
+    """ A proxy between Python and the client runtime
+
+    This class is basically a wrapper for the app widget, the web runtime,
+    and the websocket instance that connects to it.
+    """
     
     STATUS = create_enum('PENDING', 'CONNECTED', 'CLOSED')
     
-    class Config(object):
-        """ Config(title='Flexx app', icon=None, size=(640, 480))
+    def __init__(self, app_name, runtime=None, **runtime_kwargs):
+        # Note: to avoid circular references, do not store the app instance!
         
-        args:
-            title (str): the window title
-            icon (str, Icon): the window icon
-            size (tuple): the wise (width, height) of the window. Cannot
-                be applied in browser windows.
-        """
+        self._app_name = app_name
         
-        def __init__(self, title='Flexx app', icon=None, size=(640, 480)):
-            self.title = title
-            self.icon = Icon()
-            if icon:
-                self.icon.read(icon)
-            self.size = size
-        
-        def __call__(self, app):
-            app._config = self
-            return app
-        
-    _config = Config()  # Set default config
-    
-    def __init__(self, runtime='xul'):
-        #BaseWidget.__init__(self, None)
-        # Init websocket, will be set when a connection is made
-        self._ws = None
-        # Init runtime that is connected with this app instance
+        # Init runtime object (the runtime argument is a string)
         self._runtime = None
         
-        global _current_app
-        _current_app = self
+        # Init websocket, will be set when a connection is made
+        self._ws = None
+        
+        # Unless app_name is __default__, the proxy will have a widget instance
+        self._widget = None
         
         # Object to manage the client code (JS/CSS/HTML)
         self._known_mirrored_classes = set()
         for cls in clientCode.get_defined_mirrored_classes():
             self._known_mirrored_classes.add(cls)
         
-        # Init
-        self._widget_counter = 0
-        self._children = []
-        
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
         self._pending_commands = []
         
-        # Register this app instance
+        if runtime:
+            self._launch_runtime(runtime, **runtime_kwargs)
+    
+    @property
+    def id(self):
+        """ The unique identifier of this app as a string. Used to
+        connect a runtime to a specific client.
+        """
+        return '%x' % id(self)
+    
+    @property
+    def app_name(self):
+        """ The name of the application that this proxy represents.
+        """
+        return self._app_name
+    
+    def __repr__(self):
+        s = self.status.lower()
+        return '<Proxy for %r (%s) at 0x%x>' % (self.app_name, s, id(self))
+    
+    def _launch_runtime(self, runtime, **runtime_kwargs):
         if runtime == '<export>':
             self._ws = Exporter(self)
-            _current_app = self
-            self.init()
         elif runtime == 'notebook':
-            manager._add_pending_app_instance(self)
+            pass
         elif runtime:
-            manager._add_pending_app_instance(self)
             init_server()
             host, port = _tornado_app.serving_at
             # We associate the runtime with this specific app instance by
             # including the app id to the url. In this way, it is pretty
             # much guaranteed that the runtime will connect to *this* app.
-            icon = self._config.icon
-            icon = icon if icon.image_sizes() else None
-            name = self.name + '-' + self.id
+            name = self.app_name
+            if name != '__default__':
+                name += '-' + self.id
             if runtime == 'nodejs':
                 self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
                                        runtime=runtime, code=clientCode.get_js())
             else:
                 self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
-                                       runtime=runtime,
-                                       size=self.config.size,
-                                       icon=icon, title=self.config.title)
+                                       runtime=runtime, **runtime_kwargs)
         
-        print('Instantiate app %s' % self.__class__.__name__)
+        print('Instantiate app client %s' % self.app_name)
+    
+    def _connect_client(self, ws):
+        assert self._ws is None
+        # Set websocket object - this is what changes the status to CONNECTED
+        self._ws = ws  
+        # todo: re-enable this
+        # Set some app specifics
+        # self._ws.command('ICON %s.ico' % self.id)
+        # self._ws.command('TITLE %s' % self._config.title)
+        # Send pending commands
+        for command in self._pending_commands:
+            self._ws.command(command)
+   
+    def _set_widget(self, widget):
+        assert self._widget is None
+        self._widget = widget
+        # todo: connect to title change and icon change events
+    
+    def close(self):
+        """ Close the runtime, if possible
+        """
+        # todo: close via JS
+        if self._runtime:
+            self._runtime.close()
+        if self._widget:
+            self._widget = None  # break circular reference
+    
+    @property
+    def status(self):
+        """ The status of this proxy. Can be PENDING, CONNECTED or
+        CLOSED. See Proxy.STATUS enum.
+        """
+        # todo: is this how we want to do enums throughout?
+        if self._ws is None:
+            return self.STATUS.PENDING  # not connected yet
+        elif self._ws.close_code is None:
+            return self.STATUS.CONNECTED  # alive and kicking
+        else:
+            return self.STATUS.CLOSED  # connection closed
+    
+    ## Widget-facing code
     
     def register_mirrored(self, cls):
         """ Register the given class. If already registered, this function
@@ -460,83 +524,6 @@ class App(object):
         self._send_command('DEFINE-JS ' + js)
         if css.strip():
             self._send_command('DEFINE-CSS ' + css)
-    
-    def __repr__(self):
-        s = self.status.lower()
-        return '<App %r (%s) at 0x%x>' % (self.__class__.__name__, s, id(self))
-    
-    def _connect_client(self, ws):
-        # Set websocket object - this is what changes the status to CONNECTED
-        self._ws = ws  
-        # Set some app specifics
-        self._ws.command('ICON %s.ico' % self.id)
-        self._ws.command('TITLE %s' % self._config.title)
-        # Send pending commands
-        for command in self._pending_commands:
-            self._ws.command(command)
-        # Call user-init (create ui elements, etc.)
-        global _current_app
-        _current_app = self
-        self.init()
-    
-    @property
-    def config(self):
-        """ The app configuration. Setting the configuration after
-        app instantiation has no effect; this represents the config with 
-        which the app was created.
-        """
-        return self._config
-    
-    @property
-    def name(self):
-        """ The name of the app.
-        """
-        return self.__class__.__name__
-    
-    @property
-    def id(self):
-        """ The unique identifier of this app as a string
-        """
-        return '%x' % id(self)
-    
-    def init(self):
-        """ Override this method to initialize the application
-        
-        It gets called right after the connection with the client has
-        been made. This is where you want to create your widgets.
-        """
-        pass
-    
-    def close(self):
-        """ Close the runtime, if possible
-        """
-        # todo: close via JS
-        if self._runtime:
-            self._runtime.close()
-    
-    @property
-    def status(self):
-        """ The status of this application. Can be PENDING, CONNECTED or
-        CLOSED. See App.STATUS enum.
-        """
-        # todo: is this how we want to do enums throughout?
-        if self._ws is None:
-            return self.STATUS.PENDING  # not connected yet
-        elif self._ws.close_code is None:
-            return self.STATUS.CONNECTED  # alive and kicking
-        else:
-            return self.STATUS.CLOSED  # connection closed
-    
-    @property
-    def children(self):
-        return list(self._children)
-        
-    # @property
-    # def parent(self):
-    #     """ For compatibility with widgets. The parent of an App is
-    #     always None.
-    #     """
-    #     return None
     
     def _send_command(self, command):
         """ Send the command, add to pending queue, or error when closed.
@@ -576,38 +563,3 @@ class App(object):
             return app._ws.to_html()
         else:
             return app._ws.write_html(filename)
-
-
-class DefaultApp(App):
-    """ The default app makes it possible to show ui elements without
-    explicitly creating an app class. The idea is that only one non-closed
-    instance of this class exists at all times.
-    """
-    # todo: enforce this singleton-ishness in some way?
-    # todo: remove concept of default app, in favor of current app?
-
-class JupyterApp(DefaultApp):
-    """ A default app for the Jupyter (formerly IPython) notebook.
-    """
-    pass
-
-
-_current_app = None
-
-_default_app = None
-def get_default_app():
-    """ Get the default app instance. Creates an instance if it does not
-    yet exist or if the existing instance has closed.
-    """
-    global _default_app
-    runtime = 'notebook' if is_notebook else 'browser'  # todo: what runtime?
-    if (_default_app is None) or (_default_app.status == App.STATUS.CLOSED):
-        _default_app = DefaultApp(runtime=runtime)
-    return _default_app
-
-def get_current_app():
-    global _current_app
-    runtime = 'notebook' if is_notebook else 'browser'  # todo: what runtime?
-    if (_current_app is None) or (_current_app.status == App.STATUS.CLOSED):
-        App(runtime=runtime)
-    return _current_app

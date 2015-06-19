@@ -65,14 +65,15 @@ class Mirrored(HasProps):
     
     id = Str(help='The unique id of this Mirrored instance')  # todo: readonly
     
-    def __init__(self, **kwargs):
+    def __init__(self, _proxy=None, **kwargs):
         HasProps.__init__(self, **kwargs)
         
         # Associate with an app
-        from flexx.ui.app import get_default_app, get_current_app  # avoid circular import
-        self._app = get_current_app()
-        self._app.register_mirrored(self.__class__)  # Ensure the app knows us
-        
+        from .app import manager
+        if _proxy is None:
+            _proxy = manager.get_default_proxy()
+        self._proxy = _proxy
+            
         # Set id and register this instance
         Mirrored._counter += 1
         self.id = self.__class__.__name__ + str(Mirrored._counter)
@@ -85,7 +86,7 @@ class Mirrored(HasProps):
             val = getattr(self, name)
             props[name] = getattr(self.__class__, name).to_json(val)
         cmd = 'flexx.instances.%s = new %s(%s);' % (self.id, clsname, json.dumps(props))
-        self._app._exec(cmd)
+        self._proxy._exec(cmd)
         
         # todo: get notified when a prop changes, pend a call via call_later
         # todo: collect more changed props if they come by
@@ -95,9 +96,11 @@ class Mirrored(HasProps):
         for name in self.props():
             self.add_listener(name, self._sync_prop)
     
-    # def call_method(self, code):
-    #     cmd = 'flexx.instances.%s.%s' % (self.id, code)
-    #     self._app._exec(cmd)
+    @property
+    def proxy(self):
+        """ The proxy object that connects us to the runtime.
+        """
+        return self._app
     
     @js
     def _js__init__(self, props):
@@ -146,7 +149,7 @@ class Mirrored(HasProps):
         txt = getattr(self.__class__, name).to_json(new)
         #print('sending json', txt)
         cmd = 'flexx.instances.%s._set_property(%r, %r, true, true);' % (self.id, name, txt)
-        self._app._exec(cmd)
+        self._proxy._exec(cmd)
     
     @js
     def _js_set_property(self, name, val, fromjson=False, emit=True):

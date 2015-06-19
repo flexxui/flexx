@@ -115,10 +115,8 @@ class MainHandler(tornado.web.RequestHandler):
                 if not '/' in path:
                     self.redirect('/%s/' % app_name)
                 elif app_id:
-                    app = manager.get_app_by_id(app_name, app_id)
-                    if app: # todo: ? and app.status == app.STATUS.PENDING:
-                        #self.write(self.application.load('index.html'))
-                        #self.serve_index()
+                    proxy = manager.get_proxy_by_id(app_name, app_id)
+                    if proxy:
                         self.write(clientCode.get_page().encode())
                     else:
                         self.write('App %r with id %r is not available' % 
@@ -133,9 +131,10 @@ class MainHandler(tornado.web.RequestHandler):
                 # Icon, look it up from the app instance
                 id = file_name.split('.')[0]
                 if manager.has_app_name(app_name):
-                    app = manager.get_app_by_id(app_name, id)
-                    if app:
-                        self.write(app._config.icon.to_bytes())
+                    client = manager.get_proxy_by_id(app_name, id)
+                    # todo: serve icon stored on app widget
+                    #if app:
+                    #    self.write(app._config.icon.to_bytes())
             elif file_name:
                 # A resource, e.g. js/css/icon
                 if file_name.endswith('.css'):
@@ -215,7 +214,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         app_name, _, app_id = path.strip('/').partition('-')
         if manager.has_app_name(app_name):
             try:
-                self._app = manager.connect_an_app(self, app_name, app_id)
+                self._proxy = manager.connect_client(self, app_name, app_id)
             except Exception as err:
                 self.close(1003, "Could not launch app: %r" % err)
                 raise
@@ -261,9 +260,9 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         self.close_code = code = self.close_code or 0
         reason = self.close_reason or self.known_reasons.get(code, '')
         print('detected close: %s (%i)' % (reason, code))
-        if hasattr(self, '_app'):
-            manager.close_an_app(self._app)
-            self._app = None  # Allow cleaning up
+        if hasattr(self, '_proxy'):
+            manager.disconnect_proxy(self._proxy)
+            self._proxy = None  # Allow cleaning up
     
     def on_pong(self, data):
         """ Called when our ping is returned.
@@ -274,6 +273,12 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     
     def command(self, cmd):
         self.write_message(cmd, binary=True)
+    
+    def close(self, *args):
+        try:
+            tornado.websocket.WebSocketHandler.close(self, *args)
+        except TypeError:
+            tornado.websocket.WebSocketHandler.close(self)  # older Tornado
     
     def close_this(self):
         """ Call this to close the websocket
