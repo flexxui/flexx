@@ -100,7 +100,7 @@ class Mirrored(HasProps):
     def proxy(self):
         """ The proxy object that connects us to the runtime.
         """
-        return self._app
+        return self._proxy
     
     @js
     def _js__init__(self, props):

@@ -261,7 +261,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         reason = self.close_reason or self.known_reasons.get(code, '')
         print('detected close: %s (%i)' % (reason, code))
         if hasattr(self, '_proxy'):
-            manager.disconnect_proxy(self._proxy)
+            manager.disconnect_client(self._proxy)
             self._proxy = None  # Allow cleaning up
     
     def on_pong(self, data):

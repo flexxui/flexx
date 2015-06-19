@@ -69,8 +69,7 @@ class AppManager(object):
     
     def __init__(self):
         # name -> (WidgetClass, pending, connected) - lists contain proxies
-        self._proxies = {}
-        self._default_proxy = None
+        self._proxies = {'__default__': (None, [], [])}
     
     def register_app_class(self, cls):
         """ Register a widget class as being an application.
@@ -99,10 +98,15 @@ class AppManager(object):
         
         The default "app" is served at "http://address:port/__default__".
         """
-        if self._default_proxy is None or self._default_proxy.status == Proxy.STATUS.CLOSED:
+        _, pending, connected = self._proxies['__default__']
+        proxies = pending + connected
+        if proxies:
+            return proxies[-1]
+        else:
             runtime = 'notebook' if is_notebook else 'browser'  # todo: what runtime?
-            self._default_proxy = Proxy('__default__', runtime, title='Flexx app')
-        return self._default_proxy
+            proxy = Proxy('__default__', runtime, title='Flexx app')
+            pending.append(proxy)
+            return proxy
     
     def add_pending_proxy_instance(self, proxy):
         """ Add an app instance as a pending app. 
@@ -132,34 +136,34 @@ class AppManager(object):
         
         print('connecting', name, app_id)
         
-        if name == '__default__':
-            proxy = self.get_default_proxy()
-            proxy._connect_client(ws)
-            return proxy
+        cls, pending, connected = self._proxies[name]
         
-        else:
-            cls, pending, connected = self._proxies[name]
-            
-            if not app_id:
-                # Create a fresh proxy - there already is a runtime
-                proxy = Proxy(cls.__name__, runtime=None)
-                app = cls(_proxy=proxy)
-                proxy._set_widget(app)
+        if name == '__default__':
+            if pending:
+                proxy = pending.pop(-1)
             else:
-                # Search for the app with the specific id
-                for proxy in pending:
-                    if proxy.id == app_id:
-                        pending.remove(proxy)
-                        break
-                else:
-                    raise RuntimeError('Asked for app id %r, '
-                                    'but could not find it' % app_id)
-            
-            # Add app to connected, set ws
-            assert proxy.status == Proxy.STATUS.PENDING
-            proxy._connect_client(ws)
-            connected.append(proxy)
-            return proxy  # For the ws
+                proxy = Proxy(name, runtime=None)
+        
+        elif not app_id:
+            # Create a fresh proxy - there already is a runtime
+            proxy = Proxy(cls.__name__, runtime=None)
+            app = cls(_proxy=proxy)
+            proxy._set_widget(app)
+        else:
+            # Search for the app with the specific id
+            for proxy in pending:
+                if proxy.id == app_id:
+                    pending.remove(proxy)
+                    break
+            else:
+                raise RuntimeError('Asked for app id %r, '
+                                'but could not find it' % app_id)
+        
+        # Add app to connected, set ws
+        assert proxy.status == Proxy.STATUS.PENDING
+        proxy._connect_client(ws)
+        connected.append(proxy)
+        return proxy  # For the ws
     
     def disconnect_client(self, proxy):
         """ Close a connection to a client.
@@ -178,7 +182,7 @@ class AppManager(object):
     def has_app_name(self, name):
         """ Returns True if name is a registered appliciation name
         """
-        return name == '__default__' or name in self._proxies.keys()
+        return name in self._proxies.keys()
     
     def get_app_names(self):
         """ Get a list of registered application names
