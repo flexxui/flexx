@@ -34,22 +34,30 @@ THINGS I FEEL UNCONFORTABLE ABOUT
 * signal name is derived from func, which might be a lambda or buildin.
 * Stray signals on classes ... ?
 
-QUESTIONS
+QUESTIONS / TODO
 
 * serializing signal values to json, maybe support base types and others need
   a __json__ function.
 * Predefined inputs? Str, Int, etc?
+* When binding, update
 
 """
 
 import sys
 import inspect
 import weakref
+import logging
 
 string_types = str  # todo: six
 
 # Global variable that hold all signals that are not yet bound.
 _unbound_signals = set()
+
+
+class UnboundError(Exception):
+    def __init__(self, msg='This signal is not bound.'):
+        Exception.__init__(self, msg)
+
 
 
 def bind_all(ignore_fail=False):
@@ -63,7 +71,8 @@ def bind_all(ignore_fail=False):
     if _unbound_signals:
         # Note the list() in the loop; s.bind() can modify _unbound_signals
         for s in list(_unbound_signals):
-            success = success and s.bind(ignore_fail)
+            bound = s.bind(ignore_fail)  # don't combine this line with the "and"
+            success = success and bound
     return success
 
 
@@ -133,12 +142,16 @@ class Signal(object):
         
         # Flag to indicate that this is a class desciptor, and should not be used
         self._class_desciptor = None
+        if self._func_is_bound and _ob is None:
+            self._class_desciptor = True
         
         # Binding
         self._unbound = 'No binding attempted yet.'
         self.bind(ignore_fail=True)
 
     def __repr__(self):
+        self()  # ensure latest value
+        # todo: should not error!
         des = '-descriptor' if self._class_desciptor else ''
         bound = '(unbound)' if self._unbound else 'with value %r' % self._value
         return '<%s%s %r %s at 0x%x>' % (self.__class__.__name__, des, self._name, 
@@ -165,14 +178,13 @@ class Signal(object):
         except AttributeError:
             new = self._new_instance(instance)
             setattr(instance, private_name, new)
-            print('create new signal instance')
             return new
     
     def _new_instance(self, _self):
-        if isinstance(self, InputSignal):
-            ob = self.__class__(self._func)
-        else:
-            ob = self.__class__(self._func, self._upstream_given, FakeFrame(_self, self._frame.f_globals), _ob=_self)
+        # if isinstance(self, InputSignal):
+        #     ob = self.__class__(self._func)
+        # else:
+        ob = self.__class__(self._func, self._upstream_given, FakeFrame(_self, self._frame.f_globals), _ob=_self)
         return ob
     
     
@@ -182,14 +194,15 @@ class Signal(object):
     def bind(self, ignore_fail=False):
         """ Bind input signals
         
-        Signals that are provided as a string are collected to get the
+        Signals that are provided as a string are resolved to get the
         signal object, and this signal subscribes to the upstream
         signals.
         
-        If collecting the signals from the strings fails, raises an
+        If resolving the signals from the strings fails, raises an
         error. Unless ``ignore_fail`` is True, in which case we return
         True on success.
         """
+        self._dirty = True
         
         # Disable binding for signal placeholders on classes
         if self._class_desciptor:
@@ -200,8 +213,8 @@ class Signal(object):
                 return False
             raise RuntimeError(self._unbound)
         
-        # Collect signals
-        self._unbound = self._collect_signals()
+        # Resolve signals
+        self._unbound = self._resolve_signals()
         if not self._unbound:
             _unbound_signals.discard(self)  # Keep global up to date
         else:
@@ -214,6 +227,9 @@ class Signal(object):
         # Subscribe
         for signal in self._upstream:
             signal._subscribe(self)
+        
+        # If binding complete, set value
+        self._save_update()
     
     def unbind(self):
         """ Unbind this signal, unsubscribing it from the upstream signals.
@@ -222,13 +238,13 @@ class Signal(object):
             s = self._upstream.pop(0)
             s._unsubscribe(self)
     
-    def _collect_signals(self):
-        """ Collect signals from their string path. Return value to
-        store in _unbound (False means success). Should only be called
-        from bind().
+    def _resolve_signals(self):
+        """ Get signals from their string path. Return value to store
+        in _unbound (False means success). Should only be called from
+        bind().
         """
         
-        self._upstream[:] = []
+        upstream = []
         
         for fullname in self._upstream_given:
             nameparts = fullname.split('.')
@@ -245,8 +261,9 @@ class Signal(object):
             # Add to list or fail
             if not isinstance(ob, Signal):
                 return 'Object %r is not a signal.' % fullname
-            self._upstream.append(ob)
+            upstream.append(ob)
         
+        self._upstream[:] = upstream
         return False  # no error
     
     def _subscribe(self, signal):
@@ -271,58 +288,75 @@ class Signal(object):
     
     ## Getting and setting signal value
     
+    def _save_update(self):
+        """ Update our signal, when an error occurs, we print it and set
+        sys.last_X for PM debugging, but return as usual.
+        """
+        try:
+            self()
+        except Exception:
+            # Allow post-mortem debugging
+            type_, value, tb = sys.exc_info()
+            tb = tb.tb_next  # Skip *this* frame
+            sys.last_type = type_
+            sys.last_value = value
+            sys.last_traceback = tb
+            del tb  # Get rid of it in this namespace
+            logging.exception(value)
+    
     @property
     def value(self):
         """ The signal value. 
         """
-        if self._unbound:
-            if self.bind(ignore_fail=True):
-                return self.value
-        elif self._dirty:
-            self._value = self._call(*[s() for s in self._upstream])
-            self._dirty = False
-        return self._value
+        return self()
     
     @property
     def last_value(self):
         """ The previous signal value. 
         """
-        pass
+        pass # todo: last value
     
     def __call__(self, *args):
         
+        # # Bind any unbound signals
+        # if _unbound_signals:
+        #     bind_all(True)
+        
         if not args:
-            return self.value  # Yield the signal value (via the property)
-        elif not isinstance(self, InputSignal):
-            raise RuntimeError('Can only set signal values of InputSignal objects.')
+            # Update value if necessary, then return it
+            if self._unbound:
+                raise UnboundError()
+            if self._dirty:
+                self._dirty = False
+                try:
+                    args2 = [s() for s in self._upstream]
+                except UnboundError:
+                    self._dirty = True
+                    return self._value
+                self._value = self._call(*args2)
+            return self._value
         else:
-            # Set the signal value
-            self._value = self._call(*args)
-            self._dirty = False
-            for signal in self._downstream:
-                signal._set_dirty()
+            raise RuntimeError('Can only set signal values of InputSignal objects.')
     
     def _call(self, *args):
-        # Bind any unbound signals.
-        if _unbound_signals:
-            bind_all(True)
-        
         if self._func_is_bound:
             return self._func(self._ob(), *args)
         else:
             return self._func(*args)
     
-    def _set_dirty(self):
+    def _set_dirty(self, initiator):
         """ Called by upstream signals when their value changes.
         """
+        if self is initiator:
+            return
         # Update self
         self._dirty = True
         # Allow downstream to update
         for signal in self._downstream:
-            signal._set_dirty()
+            signal._set_dirty(initiator)
         # Note: we do not update our value now; lazy evaluation. See
         # the ReactingSignal for pushing changes downstream immediately.
-
+    
 
 # todo: rename to Input
 class InputSignal(Signal):
@@ -334,47 +368,125 @@ class InputSignal(Signal):
     
     """
     
-    def __init__(self, func):
-        Signal.__init__(self, func, [])
+    def __init__(self, func, upstream=[], _frame=None, _ob=None):
+        self._in_init = True
+        Signal.__init__(self, func, upstream, _frame, _ob)
         self._dirty = False
+        self._in_init = False
         try:
             self._value = self._call()
         except Exception:
             pass  # maybe does not handle default values
+    
+    def __call__(self, *args):
+        
+        # # Bind any unbound signals
+        # if _unbound_signals:
+        #     bind_all(True)
+        
+        if not args:
+            if self._unbound:
+                raise UnboundError()
+            # Update value if necessary, then return it
+            if self._dirty:
+                self._dirty = False
+                if self._in_init:
+                    # Try to initialize
+                    try:
+                        self._value = self._call()
+                    except Exception:
+                        pass  # maybe does not handle default values
+                if self._upstream:
+                    try:
+                        args2 = [self._value] + [s() for s in self._upstream]
+                    except UnboundError:
+                        self._dirty = True
+                        return self._value
+                    self._value = self._call(*args2)
+            return self._value
+        
+        elif len(args) > 1:
+            raise TypeError('Setting (i.e. calling an input signal needs 1 argument.')
+        
+        else:
+            # Set the signal value
+            self._value = self._call(args[0])
+            self._dirty = False
+            for signal in self._downstream:
+                signal._set_dirty(self)
+    
+    def _set_dirty(self, initiator):
+        # An input signal that has upstream signals is reactive too.
+        Signal._set_dirty(self, initiator)
+        self._save_update()
 
 
 class ReactingSignal(Signal):
     """ A signal that reacts immediately to changes of upstream signals.
     """ 
-    def _set_dirty(self):
-        Signal._set_dirty(self)
-        self()
+    def _set_dirty(self, initiator):
+        Signal._set_dirty(self, initiator)
+        self._save_update()
 
 
 class HasSignals(object):
+    """ A base class for objects with signals.
+    
+    Creating signals on this class will provide each instance of this
+    class to have corresponding signals. During initialization the
+    signals are bound, and this class has a ``bind_unbound()`` method
+    to easily allow binding any unbound signals at a latere time.
+    
+    Note that signals can be attached to any class, but then each signal
+    will have to be "touched" to create the signal instance, and the
+    signals might not be initially bound.
     """
-    """
+    
     def __init__(self):
         
         # Instantiate signals, its enough to reference them
-        for key, val in self.__class__.__dict__.items():
+        self.__signals__ = []
+        for key, val in sorted(self.__class__.__dict__.items()):
             if isinstance(val, Signal):
                 getattr(self, key)
-        bind_all(ignore_fail=True)
+                self.__signals__.append(key)
+        
+        self.bind_unbound(True)
+    
+    def bind_unbound(self, ignore_fail=False):  # todo: reverse/rename to fail_hard
+        """ Bind any unbound signals associated with this object.
+        """
+        success = True
+        for name in self.__signals__:
+            s = getattr(self, name)
+            if s.unbound:
+                bound = s.bind(ignore_fail)  # dont combine this with next line
+                success = success and bound
+        return success
 
 
 # todo: allow input signals too? ala Celcius Fahrenheid?
-def input(default=None):
-    input_signals = []
+def input(*input_signals):
+    """
+    
+    The input function is called with 0 arguments to initialize the
+    value, is called with 1 argument if the value is set, and called
+    with 1+n arguments when the signal has (n) upstream signals.
+    """
     def _input(func):
-        frame = sys._getframe(1)
+        # todo: create dummy frame
         s = InputSignal(func)#, _frame=frame)
         return s
+    def _input_with_signals(func):
+        frame = sys._getframe(1)
+        s = InputSignal(func, input_signals, _frame=frame)
+        return s
     
-    if callable(default):
-        return _input(default)  # default == func
+    if len(input_signals) == 1 and callable(input_signals[0]):
+        func = input_signals[0]
+        return _input(func)
     else:
-        return _input
+        return _input_with_signals
 
 
 def react(*input_signals):
@@ -434,11 +546,12 @@ class Foo(HasSignals):
         return len(name)  # todo: can do this with just "len"?
     
     @react('name_length1')
-    def update_something(v):
+    def update_something(self, v):
         print('title/name has length', v)
     
     @react('b.title')
     def subtitle(v):
+        1/0
         print('subtitle is', v)
 
 X = InputSignal(str)
@@ -453,14 +566,45 @@ def as_in_name(name):
 
 
 class Temp(HasSignals):
+    """ Example of object that allows the user to get/set temperature
+    in both Celcius and Fahrenheit. Example from the Trellis project.
+    """
     
-    @input
-    def C(v=30): return float(v)
+    @input('F')
+    def C(v=32, f=None):
+        if f is None:
+            return float(v)
+        else:
+            return (f - 32)/1.8
+    
+    @input('C')
+    def F(v=0, c=None):
+        if c is None:
+            return float(v)
+        else:
+            return c * 1.8 + 32
+            
     
     @react('C')
-    def _updateF(self, v):
-        self.F.aarg
+    def show(self, c):
+        print('degrees Celcius: %1.2f' % self.C())
+        print('degrees Fahrenheit: %1.2f' % self.F())
 
+
+class Circular(HasSignals):
+     
+    @react('F')
+    def C(v):
+        return v
+    
+    @react('C')
+    def F(v):
+        return v
+
+t = Temp()
+
+# Dont get in an infinte loop
+c = Circular()
 
 
 def bla0():pass
