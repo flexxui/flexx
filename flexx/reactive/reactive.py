@@ -39,7 +39,9 @@ QUESTIONS / TODO
 * serializing signal values to json, maybe support base types and others need
   a __json__ function.
 * Predefined inputs? Str, Int, etc?
-* When binding, update
+* DONE When binding, update
+* Binding is now simple and predictable, should we be smarter?
+  For instance by binding unbound signals in the same frame when calling?
 
 """
 
@@ -50,30 +52,10 @@ import logging
 
 string_types = str  # todo: six
 
-# Global variable that hold all signals that are not yet bound.
-_unbound_signals = set()
-
 
 class UnboundError(Exception):
     def __init__(self, msg='This signal is not bound.'):
         Exception.__init__(self, msg)
-
-
-
-def bind_all(ignore_fail=False):
-    """ Try to bind all signals that are currently unbound.
-    
-    If this failes, raises an error. Unless ``ignore_fail`` is True,
-    in which case we return True on success.
-    
-    """
-    success = True
-    if _unbound_signals:
-        # Note the list() in the loop; s.bind() can modify _unbound_signals
-        for s in list(_unbound_signals):
-            bound = s.bind(ignore_fail)  # don't combine this line with the "and"
-            success = success and bound
-    return success
 
 
 class FakeFrame(object):
@@ -150,10 +132,9 @@ class Signal(object):
         self.bind(ignore_fail=True)
 
     def __repr__(self):
-        self()  # ensure latest value
         # todo: should not error!
         des = '-descriptor' if self._class_desciptor else ''
-        bound = '(unbound)' if self._unbound else 'with value %r' % self._value
+        bound = '(unbound)' if self.unbound else 'with value %r' % self._value
         return '<%s%s %r %s at 0x%x>' % (self.__class__.__name__, des, self._name, 
                                        bound, id(self))
 
@@ -168,7 +149,7 @@ class Signal(object):
     def __get__(self, instance, owner):
         if not self._class_desciptor:
             self._class_desciptor = True
-            self.bind(True)  # trigger unsubscribe (also from _unbound_signals)
+            self.bind(True)  # trigger unsubscribe
         if instance is None:
             return self
         
@@ -202,12 +183,10 @@ class Signal(object):
         error. Unless ``ignore_fail`` is True, in which case we return
         True on success.
         """
-        self._dirty = True
         
         # Disable binding for signal placeholders on classes
         if self._class_desciptor:
             self.unbind()
-            _unbound_signals.discard(self)
             self._unbound = 'Cannot bind signal descriptors on a class.'
             if ignore_fail:
                 return False
@@ -215,10 +194,7 @@ class Signal(object):
         
         # Resolve signals
         self._unbound = self._resolve_signals()
-        if not self._unbound:
-            _unbound_signals.discard(self)  # Keep global up to date
-        else:
-            _unbound_signals.add(self)  # Keep global up to date
+        if self._unbound:
             if ignore_fail:
                 return False
             else:
@@ -283,7 +259,6 @@ class Signal(object):
         """ False when bound. Otherwise this is a string with a message
         why the signal is not bound.
         """
-        self.bind(True)
         return self._unbound
     
     ## Getting and setting signal value
@@ -317,11 +292,16 @@ class Signal(object):
         pass # todo: last value
     
     def __call__(self, *args):
+        """ Get the signal value.
         
-        # # Bind any unbound signals
-        # if _unbound_signals:
-        #     bind_all(True)
+        If the signals is unbound, raises UnBoundError. If an upstream
+        signal is unbound, errr, what should we do?
+        """
         
+        if self._unbound:
+            self.bind(True)
+        
+        # todo: what to do when an upstream signal (or upstream-upstream) is unbound?
         if not args:
             # Update value if necessary, then return it
             if self._unbound:
@@ -355,7 +335,7 @@ class Signal(object):
         for signal in self._downstream:
             signal._set_dirty(initiator)
         # Note: we do not update our value now; lazy evaluation. See
-        # the ReactingSignal for pushing changes downstream immediately.
+        # the ReactSignal for pushing changes downstream immediately.
     
 
 # todo: rename to Input
@@ -380,9 +360,8 @@ class InputSignal(Signal):
     
     def __call__(self, *args):
         
-        # # Bind any unbound signals
-        # if _unbound_signals:
-        #     bind_all(True)
+        if self._unbound:
+            self.bind(True)
         
         if not args:
             if self._unbound:
@@ -421,7 +400,7 @@ class InputSignal(Signal):
         self._save_update()
 
 
-class ReactingSignal(Signal):
+class ReactSignal(Signal):
     """ A signal that reacts immediately to changes of upstream signals.
     """ 
     def _set_dirty(self, initiator):
@@ -460,154 +439,202 @@ class HasSignals(object):
         for name in self.__signals__:
             s = getattr(self, name)
             if s.unbound:
+                print('unbound', s)
                 bound = s.bind(ignore_fail)  # dont combine this with next line
                 success = success and bound
         return success
 
 
-# todo: allow input signals too? ala Celcius Fahrenheid?
+def _first_arg_is_func(ii):
+    return len(ii) == 1 and (not isinstance(ii[0], Signal)) and callable(ii[0])
+
+
 def input(*input_signals):
-    """
+    """ Decorator to transform a function into a InputSignal object.
     
-    The input function is called with 0 arguments to initialize the
-    value, is called with 1 argument if the value is set, and called
-    with 1+n arguments when the signal has (n) upstream signals.
+    An input signal commonly has 0 input signals, but allows the user
+    to set the output value, by calling the signal with the value as the
+    argument. The function being wrapped should have a single argument.
+    If that argument has a default value, that value will be the
+    signal's initial value. The wrapper function is intended to do
+    validation and cleaning/standardization on the user-specified input.
+    
+    Example:
+    
+        @input
+        def s1(val):
+            return float(val)
+        
+        s1(42)  # Set the value
+    
+    Though not common, an input signal may actually also have upstream
+    signals. In that case, the wrapper function should have additional
+    arguments for the signals. The function is called with no arguments to
+    initialize the value, with one argument if the user sets the value, and
+    with n+1 arguments when any of the (n) signals change.
+    
+    Example:
+    
+        @input('fahrenheit')
+        def celcius(v=32, f=None):
+            if f is None:
+                return float(v)
+            else:
+                return (f - 32) / 1.8
+    
     """
     def _input(func):
         # todo: create dummy frame
-        s = InputSignal(func)#, _frame=frame)
+        s = InputSignal(func)
         return s
     def _input_with_signals(func):
         frame = sys._getframe(1)
         s = InputSignal(func, input_signals, _frame=frame)
         return s
     
-    if len(input_signals) == 1 and callable(input_signals[0]):
-        func = input_signals[0]
-        return _input(func)
+    if _first_arg_is_func(input_signals):
+        return _input(input_signals[0])
     else:
         return _input_with_signals
 
 
-def react(*input_signals):
-    # todo: verify that input signals ar given
-    def _react(func):
-        frame = sys._getframe(1)
-        s = ReactingSignal(func, input_signals, _frame=frame)
-        return s
-    return _react
-
-
-def conduct(*input_signals):  # todo: rename?
-    """ Conduct one or more signal and produce a new signal.
+def signal(*input_signals):  # todo: rename?
+    """ Decorator to transform a function into a Signal object.
     
-    When any of the input signals change, this signal is marked invalid,
+    A signal takes one or more signals as input (specified as arguments
+    to this decorator) and produces a new signal value. The function
+    being wrapped should have an argument for each upstream signal, and
+    its return value is used as the output signal value.
+    
+    Example:
+    
+        @signal('s1', 's2')
+        def adder(val1, val2):
+            return val1 + val2
+    
+    When any of the input signals change, this signal is marked "invalid",
     but it will not retrieve the new signal value until it is requested.
+    This pull machanism differs from the ``react`` decorator.
     """
-    # todo: verify that input signals ar given
-    def _conduct(func):
+    if (not input_signals) or _first_arg_is_func(input_signals):
+        raise ValueError('Input signal must have upstream signals.')
+    
+    def _signal(func):
         frame = sys._getframe(1)
         s = Signal(func, input_signals, _frame=frame)
         return s
-    return _conduct    
+    return _signal    
+
+
+def react(*input_signals):
+    """ Decorator to transform a function into a ReactSignal object.
+    
+    A react signal takes one or more signals as input (specified as
+    arguments to this decorator) and may produce a new signal value.
+    The function being wrapped should have an argument for each upstream
+    signal, and its return value is used as the output signal value.
+    The ReactSignal is commonly used for end-signals, which require no
+    output signal.
+    
+    Example:
+    
+        @react('s1', 's2')
+        def show_values(val1, val2):
+            print(val1, val2)
+    
+    When any of the input signals change, this signal is updated
+    immediately (i.e. the wrapped function is called). This push
+    machanism differs from the ``signal`` decorator.
+    """
+    if (not input_signals) or _first_arg_is_func(input_signals):
+        raise ValueError('Input signal must have upstream signals.')
+    
+    def _react(func):
+        frame = sys._getframe(1)
+        s = ReactSignal(func, input_signals, _frame=frame)
+        return s
+    return _react
+
 
 
 ## =====================================
 # Test
 
+# 
+# class Foo(HasSignals):
+#     
+#     def __init__(self):
+#         HasSignals.__init__(self)
+#         self.b = HasSignals()
+#         self.b.title = InputSignal(float)
+#         self.bind_unbound(True)
+#     
+#     @input
+#     def title(v=''): return str(v)
+#     
+#     @input
+#     def age(v=0): return int(v)
+#     
+#     @input
+#     def weirdInt(self, value=0):
+#         if value < 0:
+#             raise ValueError('weird Int must be above zero')
+#         return value
+#     
+#     @react('title', 'X')
+#     #@react('name', 'age')
+#     def name_length1(self, name, y):
+#         return len(name)  # todo: can do this with just "len"?
+#     
+#     @react('title', 'Y')
+#     #@react('name', 'age')
+#     def name_length2(self, name, y):
+#         return len(name)  # todo: can do this with just "len"?
+#     
+#     @react('name_length1')
+#     def update_something(self, v):
+#         print('title/name has length', v)
+#     
+#     @react('b.title')
+#     def subtitle(v):
+#         print('subtitle is', v)
+# 
+# X = InputSignal(str)
+# 
+# foo = Foo()
+# 
+# Y = InputSignal(str)
+# 
+# @react('foo.titles')
+# def as_in_name(name):
+#     return name.count('a')
+# 
+# 
+# class Temperature(HasSignals):
+#     """ Example of object that allows the user to get/set temperature
+#     in both Celcius and Fahrenheit. Example from the Trellis project.
+#     """
+#     
+#     @input('F')
+#     def C(v=32, f=None):
+#         if f is None:
+#             return float(v)
+#         else:
+#             return (f - 32)/1.8
+#     
+#     @input('C')
+#     def F(v=0, c=None):
+#         if c is None:
+#             return float(v)
+#         else:
+#             return c * 1.8 + 32
+#             
+#     
+#     @react('C')
+#     def show(self, c):
+#         print('degrees Celcius: %1.2f' % self.C())
+#         print('degrees Fahrenheit: %1.2f' % self.F())
+# 
+# t = Temperature()
 
-class Foo(HasSignals):
-    
-    def __init__(self):
-        HasSignals.__init__(self)
-        self.b = HasSignals()
-        self.b.title = InputSignal(float)
-    
-    @input
-    def title(v=''): return str(v)
-    
-    @input
-    def age(v=0): return int(v)
-    
-    @input
-    def weirdInt(self, value=0):
-        if value < 0:
-            raise ValueError('weird Int must be above zero')
-        return value
-    
-    @react('title', 'X')
-    #@react('name', 'age')
-    def name_length1(self, name, y):
-        return len(name)  # todo: can do this with just "len"?
-    
-    @react('title', 'Y')
-    #@react('name', 'age')
-    def name_length2(self, name, y):
-        return len(name)  # todo: can do this with just "len"?
-    
-    @react('name_length1')
-    def update_something(self, v):
-        print('title/name has length', v)
-    
-    @react('b.title')
-    def subtitle(v):
-        1/0
-        print('subtitle is', v)
-
-X = InputSignal(str)
-
-foo = Foo()
-
-Y = InputSignal(str)
-
-@react('foo.titles')
-def as_in_name(name):
-    return name.count('a')
-
-
-class Temp(HasSignals):
-    """ Example of object that allows the user to get/set temperature
-    in both Celcius and Fahrenheit. Example from the Trellis project.
-    """
-    
-    @input('F')
-    def C(v=32, f=None):
-        if f is None:
-            return float(v)
-        else:
-            return (f - 32)/1.8
-    
-    @input('C')
-    def F(v=0, c=None):
-        if c is None:
-            return float(v)
-        else:
-            return c * 1.8 + 32
-            
-    
-    @react('C')
-    def show(self, c):
-        print('degrees Celcius: %1.2f' % self.C())
-        print('degrees Fahrenheit: %1.2f' % self.F())
-
-
-class Circular(HasSignals):
-     
-    @react('F')
-    def C(v):
-        return v
-    
-    @react('C')
-    def F(v):
-        return v
-
-t = Temp()
-
-# Dont get in an infinte loop
-c = Circular()
-
-
-def bla0():pass
-def bla1(self):pass
-def bla2(self, x):pass
 
