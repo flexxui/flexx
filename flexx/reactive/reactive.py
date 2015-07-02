@@ -50,7 +50,11 @@ import inspect
 import weakref
 import logging
 
-string_types = str  # todo: six
+
+if sys.version_info >= (3, ):
+    string_types = str
+else:
+    string_types = basestring
 
 
 class UnboundError(Exception):
@@ -137,8 +141,12 @@ class Signal(object):
         bound = '(unbound)' if self.unbound else 'with value %r' % self._value
         return '<%s%s %r %s at 0x%x>' % (self.__class__.__name__, des, self._name, 
                                        bound, id(self))
-
-    ## Behavior for when attaches to a class
+    
+    @property
+    def name(self):
+        return self._name
+    
+    ## Behavior for when attached to a class
     
     def __set__(self, obj, value):
         raise ValueError('Cannot overwrite a signal; use some_signal(val) on InputSignal objects.')
@@ -204,8 +212,8 @@ class Signal(object):
         for signal in self._upstream:
             signal._subscribe(self)
         
-        # If binding complete, set value
-        self._save_update()
+        # If binding complete, update (or not)
+        self._set_dirty(self)
     
     def unbind(self):
         """ Unbind this signal, unsubscribing it from the upstream signals.
@@ -213,6 +221,7 @@ class Signal(object):
         while self._upstream:
             s = self._upstream.pop(0)
             s._unsubscribe(self)
+        self._unbound = 'Explicitly unbound via unbind()'
     
     def _resolve_signals(self):
         """ Get signals from their string path. Return value to store
@@ -307,13 +316,12 @@ class Signal(object):
             if self._unbound:
                 raise UnboundError()
             if self._dirty:
-                self._dirty = False
                 try:
                     args2 = [s() for s in self._upstream]
                 except UnboundError:
-                    self._dirty = True
                     return self._value
                 self._value = self._call(*args2)
+                self._dirty = False
             return self._value
         else:
             raise RuntimeError('Can only set signal values of InputSignal objects.')
@@ -338,7 +346,6 @@ class Signal(object):
         # the ReactSignal for pushing changes downstream immediately.
     
 
-# todo: rename to Input
 class InputSignal(Signal):
     """ InputSignal objects are special signals for which the value can
     be set by the user, by calling the signal with a single argument.
@@ -368,7 +375,6 @@ class InputSignal(Signal):
                 raise UnboundError()
             # Update value if necessary, then return it
             if self._dirty:
-                self._dirty = False
                 if self._in_init:
                     # Try to initialize
                     try:
@@ -379,9 +385,9 @@ class InputSignal(Signal):
                     try:
                         args2 = [self._value] + [s() for s in self._upstream]
                     except UnboundError:
-                        self._dirty = True
                         return self._value
                     self._value = self._call(*args2)
+                self._dirty = False
             return self._value
         
         elif len(args) > 1:

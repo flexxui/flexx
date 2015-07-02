@@ -98,7 +98,7 @@ def _enable_faulthandler():
 def _clear_our_modules():
     # Remove ourselves from sys.modules to force an import
     for key in list(sys.modules.keys()):
-        if key.startswith(PACKAGE_NAME):
+        if key.startswith(PACKAGE_NAME) and not 'testing' in key:
             del sys.modules[key]
 
 

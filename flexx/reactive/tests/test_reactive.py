@@ -1,12 +1,18 @@
 """ Tests for reactive
 """
 
+import sys
+
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
 from flexx.reactive import input, signal, react, UnboundError
 from flexx.reactive import InputSignal, Signal, ReactSignal
 
+# todo: garbage collecting
+# todo: HasSignals
+
+## Inputs
 
 def test_input_simple():
     
@@ -106,7 +112,7 @@ def test_input_circular():
     assert s2() == 200
 
 
-## ---------------------
+## Signals
 
 
 def test_signal_no_upstream():
@@ -150,9 +156,12 @@ def test_signal_pull():
         s2_called.append(v)
         return v + 2
     
-    assert len(s2_called) == 1
+    assert len(s2_called) == 0  # pull!
+    assert s2() == 13
+    assert s2() == 13
     assert s2() == 13
     assert s1() == 11
+    assert len(s2_called) == 1  # called 3x, updated 1x
     
     s0(20)
     assert len(s2_called) == 1  # lazy evaluation
@@ -177,9 +186,12 @@ def test_signal_push():
         s2_called.append(v)
         return v + 2
     
-    assert len(s2_called) == 1
+    assert len(s2_called) == 1  # updated directly
+    assert s2() == 13
+    assert s2() == 13
     assert s2() == 13
     assert s1() == 11
+    assert len(s2_called) == 1  # called 3x, updated 1x
     
     s0(20)
     assert len(s2_called) == 2  # react directly
@@ -189,9 +201,12 @@ def test_signal_push():
 
 def test_signal_circular():
     
-    @signal('s3')
-    def s1(v):
-        return v + 1
+    @input('s3')
+    def s1(v1=10, v3=None):
+        if v3 is None:
+            return v1
+        else:
+            return v3 + 1
     
     @signal('s1')
     def s2(v):
@@ -209,19 +224,18 @@ def test_signal_circular():
     
     # The fact that we have no recursion-limit-reached here is part of the test
     
-    assert s1() is None
-    assert s3() is None
+    assert s1() is 10
+    assert s3() is 12
     
     # Simulate ...
-    s1._value = 2
-    s2._set_dirty(s1)
+    s1(2)
     
     assert s1() is 2
     assert s2() is 3
     assert s3() is 4
 
 
-## ---------------------------
+## Binding, unbound
 
 
 def test_binding_unbound():
@@ -286,6 +300,92 @@ def test_binding_react():
     # Calling a signal tries to bind it if its unbound
     s2()
     assert len(reacted) == 1 and reacted[0] == 20
+
+
+def test_unbinding():
+    
+    @input
+    def s1(v=10):
+        return float(v)
+    
+    @signal('s1')
+    def s2(v):
+        return v + 1
+    
+    assert not s2.unbound
+    assert len(s2._upstream) == 1
+    
+    s2.unbind()
+    
+    assert s2.unbound
+    assert len(s2._upstream) == 0
+    
+    
+## Misc
+
+def test_func_name():
+    # Allow weird names, though not recommended
+    # todo: do not allow this on hassignal classes.
+    
+    s = Signal(lambda x: x, [])
+    assert 'lambda' in s.name
+    
+    s = Signal(float, [])
+    assert s.name == 'float'
+
+
+def test_errors():
+    
+    # Capture stderr
+    errors = []
+    def _fake_err(msg):
+        errors.append(msg)
+    old_error = sys.stderr.write
+    sys.stderr.write = _fake_err
+    
+    try:
+        reacted = []
+        
+        @input
+        def s1(v=10):
+            return float(v)
+        
+        # creating a react signal binds it, invalidates it, updates it
+        # -> error to stderr
+        
+        @react('s1')
+        def s2(v):
+            reacted.append(v)
+            1/0
+        
+        assert len(reacted) == 1
+        # hooray, we got here safely, but there should be printing to stderr
+        assert 'ZeroDivision' in ''.join(errors)
+        
+        # Updating s1 should invoke the same ...
+        errors[:] = []
+        s1(20)
+        assert len(reacted) == 2
+        assert 'ZeroDivision' in ''.join(errors)
+        
+        # creating a normal signal binds it, invalidates it. Stop
+        # -> on calling, it should raise
+        
+        @signal('s1')
+        def s3(v):
+            reacted.append(v)
+            1/0
+        
+        assert len(reacted) == 2
+        raises(ZeroDivisionError, s3)
+        assert len(reacted) == 3
+        
+        # Calling it again ... raises again
+        raises(ZeroDivisionError, s3)
+        assert len(reacted) == 4
+    
+    finally:
+        sys.stderr.write = old_error  # Set back
 
 
 run_tests_if_main()
