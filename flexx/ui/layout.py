@@ -438,6 +438,7 @@ class GridLayout(BaseTableLayout):
     """
 
 
+# todo: rename? this is called FloatLayout in Kivy
 class PinboardLayout(Layout):
     """ A layout that allows positiong child widgets at absolute and
     relative positions without constraining the widgets with respect to
@@ -504,12 +505,21 @@ class Splitter(Layout):
     
     CSS = """
     
+    /* Behave nice in the notebook */
+    /* todo: give all widgets min-height property that is 20px for hslitter and 50 for vsplitter */
+    .flx-container > .flx-hsplitter {
+       min-height: 30px;
+    }
+    .flx-container > .flx-vsplitter {
+       min-height: 200px;
+    }
+    
     /* Make child widget size ok */
-    .flx-hsplitter > flx-splitter-container > .flx-widget {
+    .flx-hsplitter > .flx-splitter-container > .flx-widget {
         width: auto;
         height: 100%;
     }
-    .flx-vsplitter > flx-splitter-container > .flx-widget {
+    .flx-vsplitter > .flx-splitter-container > .flx-widget {
         height: auto;
         width: 100%;
     }
@@ -721,7 +731,6 @@ class Splitter(Layout):
         # splitter, but the actual string might be the vertically
         # translated version.
         clientX = 'clientX' if self._horizontal else 'clientY'
-        offsetLeft = 'offsetLeft' if self._horizontal else 'offsetTop'
         left = 'left' if self._horizontal else 'top'
         width = 'width' if self._horizontal else 'height'
         clientWidth = 'clientWidth' if self._horizontal else 'clientHeight'
@@ -785,9 +794,13 @@ class Splitter(Layout):
             if window.getComputedStyle(node).position == 'absolute':
                 container.style.left = '0px'
                 container.style.top = '0px'
-                container.style.width = node.clientWidth + 'px'
-                container.style.height = node.clientHeight + 'px'
+                container.style.width = node.offsetWidth + 'px'
+                container.style.height = node.offsetHeight + 'px'
             else:
+                # container.style.left = node.clientLeft + 'px'
+                # container.style.top = node.clientTop + 'px'
+                # container.style.width = node.clientWidth + 'px'
+                # container.style.height = node.clientHeight + 'px'
                 container.style.left = node.offsetLeft + 'px'
                 container.style.top = node.offsetTop + 'px'
                 container.style.width = node.offsetWidth + 'px'
@@ -801,7 +814,9 @@ class Splitter(Layout):
             ev.stopPropagation()
             ev.preventDefault()
             handle.isdragging = ev.target.index + 1
-            move_divider(ev.target.index, ev[clientX] - node[offsetLeft])
+            handle.mouseStartPos = ev[clientX]
+            x = ev[clientX] - node.getBoundingClientRect().x - w2
+            move_divider(ev.target.index, x)
             #handle.style.visibility = 'visible'
             handle.style.opacity = '1'
         
@@ -810,7 +825,7 @@ class Splitter(Layout):
                 ev.stopPropagation()
                 ev.preventDefault()
                 i = handle.isdragging - 1
-                x = ev[clientX] - node[offsetLeft] - w2
+                x = ev[clientX] - node.getBoundingClientRect().x - w2
                 handle.style[left] = clipT(i, x) + 'px'
         
         def on_mouse_up(ev):
@@ -821,7 +836,8 @@ class Splitter(Layout):
                 handle.isdragging = 0;
                 #handle.style.visibility = 'hidden'
                 handle.style.opacity = '0'
-                move_divider(i, clipT(i, ev[clientX] - node[offsetLeft]))
+                x = ev[clientX] - node.getBoundingClientRect().x - w2
+                move_divider(i, clipT(i, x))
         
         # Make available as method
         self._set_own_min_size = set_own_min_size

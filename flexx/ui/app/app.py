@@ -35,6 +35,14 @@ are created, these would be used by the first two connections.
 We may allow not specifying an App class at all, in which case a default
 App is used (not yet implemented/decided).
 
+How it works in the notebook
+----------------------------
+
+In the IPython/Jupyter notebook, the user needs to run ``run()`` (or
+something else?) which will inject JS and CSS into the browser. Then,
+for each widget that gets repr-ed via ``_repr_html_`` first a container
+DOM element is created, in which the widget is displayed.
+
 """
 
 import os
@@ -306,10 +314,9 @@ class JupyterChecker(object):
             return "flexx.ui already loaded"  # Don't inject twice
         is_notebook = True
         
-        app = get_default_app()  # does not launch runtime if is_notebook
-        
         host, port = _tornado_app.serving_at
-        name = app.app_name + '-' + app.id
+        #name = app.app_name + '-' + app.id
+        name = '__default__'
         url = 'ws://%s:%i/%s/ws' % (host, port, name)
         t = "Injecting JS/CSS."
         t += "<style>\n%s\n</style>\n" % clientCode.get_css()

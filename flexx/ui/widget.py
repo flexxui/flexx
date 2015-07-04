@@ -110,6 +110,10 @@ class Widget(Mirrored):
     
     CSS = """
     
+    .flx-container {
+        min-height: 10px; /* splitter sets its own minsize if contained */
+    }
+    
     .flx-widget {
         box-sizing: border-box;
         white-space: nowrap;
@@ -283,6 +287,7 @@ class Widget(Mirrored):
         else:
             new_parent.connect_event('resize', self._check_resize)
     
+   
     ## Positionion
     
     @js
@@ -306,18 +311,24 @@ class Widget(Mirrored):
     ## More 
     
     @js
-    def _js_set_cointainer_id(self, id):
+    def _js_container_id_changed(self, name, old, id):
         #if self._parent:
         #    return
-        print('setting container id', id)
-        el = document.getElementById(id)
-        el.appendChild(this.node)
+        if id:
+            print('setting container id', id)
+            el = document.getElementById(id)
+            el.appendChild(this.node)
+            self._check_resize()
     
     def _repr_html_(self):
+        """ This is to get the widget shown inline in the notebook.
+        """
         container_id = self.id + '_container'
+        def set_cointainer_id():
+            self.container_id = container_id
         # Set container id, this gets applied in the next event loop
         # iteration, so by the time it gets called in JS, the div that
         # we define below will have been created.
         from .app import call_later
-        call_later(0, self.set_cointainer_id, container_id) # todo: always do calls in next iter
-        return "<div id=%s />" % container_id
+        call_later(0.1, set_cointainer_id) # todo: always do calls in next iter
+        return "<div class='flx-container' id=%s />" % container_id
