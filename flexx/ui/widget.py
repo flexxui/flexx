@@ -315,7 +315,6 @@ class Widget(Mirrored):
         #if self._parent:
         #    return
         if id:
-            print('setting container id', id)
             el = document.getElementById(id)
             el.appendChild(this.node)
             self._check_resize()
@@ -323,6 +322,9 @@ class Widget(Mirrored):
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
         """
+        if self.container_id:
+            return "<i>This widget is already shown in this notebook</i>"
+        
         container_id = self.id + '_container'
         def set_cointainer_id():
             self.container_id = container_id

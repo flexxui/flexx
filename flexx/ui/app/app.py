@@ -310,22 +310,24 @@ class JupyterChecker(object):
     """
     def _repr_html_(self):
         global is_notebook
+        from IPython.display import display, Javascript, HTML
         if is_notebook:
-            return "flexx.ui already loaded"  # Don't inject twice
+            return "<i>Flexx already loaded</i>"  # Don't inject twice
         is_notebook = True
         
         host, port = _tornado_app.serving_at
         #name = app.app_name + '-' + app.id
         name = '__default__'
         url = 'ws://%s:%i/%s/ws' % (host, port, name)
-        t = "Injecting JS/CSS."
+        t = "Injecting JS/CSS"
         t += "<style>\n%s\n</style>\n" % clientCode.get_css()
         t += "<script>\n%s\n</script>" % clientCode.get_js()
-        t += "<script>flexx.ws_url=%r; flexx.is_full_page=false; flexx.init();</script>" % url
-        t += "Ready to go."
-        return t
+        t += "<script>flexx.ws_url=%r; flexx.is_notebook=true; flexx.init();</script>" % url
+        
+        #return t + '<i>Flexx is ready to go</i>'
+        display(HTML(t))
+        return '<i>Flexx is ready to go</i>'
 
-#todo: can we use  IPython.core.displaypub as displaypub.publish_display_data?
 
 def stop():
     """ Stop the event loop
@@ -540,7 +542,13 @@ class Proxy(object):
         """ Send the command, add to pending queue, or error when closed.
         """
         if self.status == self.STATUS.CONNECTED:
-            self._ws.command(command)
+            if is_notebook:
+                # In the notebook, we send commands via a JS display, so that
+                # they are also executed when the notebook is exported
+                from IPython.display import display, Javascript
+                display(Javascript('flexx.command(%r);' % command))
+            else:
+                self._ws.command(command)
         elif self.status == self.STATUS.PENDING:
             self._pending_commands.append(command)
         else:

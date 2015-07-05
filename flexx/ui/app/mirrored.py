@@ -183,7 +183,8 @@ class Mirrored(HasProps):
                 txt = self['_to_json_'+name](value)
             else:
                 txt = JSON.stringify(value)
-            flexx.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
+            if flexx.ws is not None:  # we could be exported or in an nbviewer
+                flexx.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
         return getter, setter
     
     ## JS event system

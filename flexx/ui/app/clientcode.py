@@ -56,7 +56,7 @@ class FlexxJS:
         
         self.ws = None
         self.last_msg = None
-        self.is_full_page = True
+        self.is_notebook = False  # if not, we "close" when the ws closes
         # For nodejs, the location is set by the flexx nodejs runtime.
         self.ws_url = ('ws://%s:%s/%s/ws' % (location.hostname, location.port, 
                                              location.pathname))
@@ -82,6 +82,10 @@ class FlexxJS:
         """ Called after document is loaded. """
         if flexx.is_exported:
             flexx.runExportedApp()
+        elif flexx.is_notebook and not (window.IPython and 
+                                        window.IPython.notebook and 
+                                        window.IPython.notebook.session):
+            print('Hey, I am in an exported notebook!')
         else:
             flexx.initSocket()
             flexx.initLogging()
@@ -131,7 +135,7 @@ class FlexxJS:
             msg = 'Lost connection with server'
             if evt and evt.reason:  # nodejs-ws does not have it?
                 msg += ': %s (%i)' % (evt.reason, evt.code)
-            if flexx.is_full_page and not self.nodejs:
+            if (not flexx.is_notebook) and (not self.nodejs):
                 document.body.innerHTML = msg
             else:
                 console.info(msg)
