@@ -118,7 +118,7 @@ class Signal(object):
         
         # Binding
         self._unbound = 'No binding attempted yet.'
-        self.bind(ignore_fail=True)
+        self.bind(False)
 
     def __repr__(self):
         des = '-descriptor' if self._class_desciptor else ''
@@ -152,7 +152,7 @@ class Signal(object):
     def __get__(self, instance, owner):
         if not self._class_desciptor:
             self._class_desciptor = True
-            self.bind(True)  # trigger unsubscribe
+            self.bind(False)  # trigger unsubscribe
         if instance is None:
             return self
         
@@ -167,7 +167,7 @@ class Signal(object):
     
     ## Binding
     
-    def bind(self, ignore_fail=False):
+    def bind(self, raise_on_fail=True):
         """ Bind input signals
         
         Signals that are provided as a string are resolved to get the
@@ -175,7 +175,7 @@ class Signal(object):
         signals.
         
         If resolving the signals from the strings fails, raises an
-        error. Unless ``ignore_fail`` is True, in which case we return
+        error. Unless ``raise_on_fail`` is False, in which case we return
         True on success.
         """
         
@@ -183,17 +183,16 @@ class Signal(object):
         if self._class_desciptor:
             self.unbind()
             self._unbound = 'Cannot bind signal descriptors on a class.'
-            if ignore_fail:
-                return False
-            raise RuntimeError(self._unbound)
+            if raise_on_fail:
+                raise RuntimeError(self._unbound)
+            return False
         
         # Resolve signals
         self._unbound = self._resolve_signals()
         if self._unbound:
-            if ignore_fail:
-                return False
-            else:
-                raise ValueError('Bind error in signal %r: ' % self._name + self._unbound)
+            if raise_on_fail:
+                raise RuntimeError('Bind error in signal %r: ' % self._name + self._unbound)
+            return False
         
         # Subscribe
         for signal in self._upstream:
@@ -303,7 +302,7 @@ class Signal(object):
         update_value compact.
         """
         if self._unbound:
-            self.bind(True)
+            self.bind(False)
         if self._unbound:
             raise UnboundError()
         if self._dirty == True:
@@ -457,7 +456,7 @@ class HasSignals(object):
         
         self.bind_unbound(True)
     
-    def bind_unbound(self, ignore_fail=False):  # todo: reverse/rename to fail_hard
+    def bind_unbound(self, raise_on_fail=True):
         """ Bind any unbound signals associated with this object.
         """
         success = True
@@ -465,7 +464,7 @@ class HasSignals(object):
             s = getattr(self, name)
             if s.unbound:
                 print('unbound', s)
-                bound = s.bind(ignore_fail)  # dont combine this with next line
+                bound = s.bind(raise_on_fail)  # dont combine this with next line
                 success = success and bound
         return success
 

@@ -302,6 +302,7 @@ def test_binding_unbound():
     assert isinstance(s1, Signal)
     assert s1.unbound
     raises(UnboundError, s1)
+    raises(RuntimeError, s1.bind)
     assert 'unbound' in repr(s1).lower()
     
     # todo: what if upstream is unbound?
