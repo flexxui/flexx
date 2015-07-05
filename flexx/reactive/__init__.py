@@ -1,3 +1,3 @@
-from .reactive import input, signal, react, HasSignals
-from .reactive import InputSignal, Signal, ReactSignal, UnboundError
+from .reactive import source, input, signal, react, HasSignals, UnboundError
+from .reactive import SourceSignal, InputSignal, Signal, ReactSignal
 

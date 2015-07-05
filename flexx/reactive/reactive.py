@@ -4,6 +4,8 @@ Signals and reactions, the Functional Reactive Programming approach to events.
 THINGS I FEEL UNCONFORTABLE ABOUT
 
 * signal name is derived from func, which might be a lambda or buildin.
+* "input signals" as a term for upstream signals
+* binding for connecting (vs Python bound methods)
 
 QUESTIONS / TODO
 
@@ -17,6 +19,7 @@ QUESTIONS / TODO
 """
 
 import sys
+import time
 import inspect
 import weakref
 import logging
@@ -100,6 +103,9 @@ class Signal(object):
         
         # Init variables related to the signal value
         self._value = None
+        self._last_value = None
+        self._timestamp = 0
+        self._last_timestamp = 0
         self._dirty = True
         
         # Flag to indicate that this is a class desciptor, and should not be used
@@ -273,9 +279,42 @@ class Signal(object):
     
     @property
     def last_value(self):
-        """ The previous signal value. 
+        """ The previous signal value. Getting this value will *not*
+        update the signal; the returned value corresponds to the value
+        right before the last time that the signal was updated.
         """
-        raise NotImplementedError()  # todo: last value
+        return self._last_value
+    
+    def _set_value(self, value):
+        """ This is like ``self._value = value``, but with bookkeeping.
+        """
+        self._last_value = self._value
+        self._value = value
+        self._last_timestamp = self._timestamp
+        self._timestamp = time.time()
+        self._dirty = False
+    
+    def _get_value(self):
+        """ Get the current value. Some overhead is put here to keep
+        update_value compact.
+        """
+        if self._unbound:
+            self.bind(True)
+        if self._unbound:
+            raise UnboundError()
+        if self._dirty == True:
+            self._update_value()
+        return self._value
+    
+    def _update_value(self):
+        """ Get the latest value from upstream. This method can be overloaded.
+        """
+        try:
+            args2 = [s() for s in self._upstream]
+        except UnboundError:
+            return
+        value = self._call(*args2)
+        self._set_value(value)
     
     def __call__(self, *args):
         """ Get the signal value.
@@ -283,23 +322,10 @@ class Signal(object):
         If the signals is unbound, raises UnBoundError. If an upstream
         signal is unbound, errr, what should we do?
         """
-        
-        if self._unbound:
-            self.bind(True)
-        
         # todo: what to do when an upstream signal (or upstream-upstream) is unbound?
+        
         if not args:
-            # Update value if necessary, then return it
-            if self._unbound:
-                raise UnboundError()
-            if self._dirty:
-                try:
-                    args2 = [s() for s in self._upstream]
-                except UnboundError:
-                    return self._value
-                self._value = self._call(*args2)
-                self._dirty = False
-            return self._value
+            return self._get_value()
         else:
             raise RuntimeError('Can only set signal values of InputSignal objects.')
     
@@ -312,7 +338,7 @@ class Signal(object):
     def _set_dirty(self, initiator):
         """ Called by upstream signals when their value changes.
         """
-        if self is initiator:
+        if self._dirty or self is initiator:
             return
         # Update self
         self._dirty = True
@@ -323,7 +349,51 @@ class Signal(object):
         # the ReactSignal for pushing changes downstream immediately.
 
 
-class InputSignal(Signal):
+class SourceSignal(Signal):
+    """ A signal that has no upstream signals, but produces values by itself.
+    
+    From the programmer's perspective, this is similar to an
+    InputSignal, where the programmer sets the value with the ``_set()``
+    method. Users of the signal should typically *not* use this private
+    method.
+    
+    """
+    
+    def _update_value(self):
+        
+        # Try to initialize, func might not have a default value
+        if self._timestamp == 0:
+            try:
+                value = self._call()
+            except Exception:
+                self._dirty = False
+            else:
+                self._set_value(value)
+                return  # do not get from upstream initially
+        
+        # Get value from upstream
+        if self._upstream:
+            try:
+                args2 = [self._value] + [s() for s in self._upstream]
+            except UnboundError:
+                return
+            value = self._call(*args2)
+            self._set_value(value)
+    
+    def _set(self, value):
+        """ Method for the developer to set the source signal.
+        """
+        self._set_value(self._call(value))
+        for signal in self._downstream:
+            signal._set_dirty(self)
+    
+    def _set_dirty(self, initiator):
+        # An input signal that has upstream signals is reactive too.
+        Signal._set_dirty(self, initiator)
+        self._save_update()
+
+
+class InputSignal(SourceSignal):
     """ InputSignal objects are special signals for which the value can
     be set by the user, by calling the signal with a single argument.
     
@@ -332,55 +402,20 @@ class InputSignal(Signal):
     
     """
     
-    def __init__(self, func, upstream=[], _frame=None, _ob=None):
-        self._in_init = True
-        Signal.__init__(self, func, upstream, _frame, _ob)
-        self._dirty = False
-        self._in_init = False
-        try:
-            self._value = self._call()
-        except Exception:
-            pass  # maybe does not handle default values
-    
     def __call__(self, *args):
+        """ Get the signal value.
         
-        if self._unbound:
-            self.bind(True)
+        If the signals is unbound, raises UnBoundError. If an upstream
+        signal is unbound, errr, what should we do?
+        """
+        # todo: what to do when an upstream signal (or upstream-upstream) is unbound?
         
         if not args:
-            if self._unbound:
-                raise UnboundError()
-            # Update value if necessary, then return it
-            if self._dirty:
-                if self._in_init:
-                    # Try to initialize
-                    try:
-                        self._value = self._call()
-                    except Exception:
-                        pass  # maybe does not handle default values
-                if self._upstream:
-                    try:
-                        args2 = [self._value] + [s() for s in self._upstream]
-                    except UnboundError:
-                        return self._value
-                    self._value = self._call(*args2)
-                self._dirty = False
-            return self._value
-        
-        elif len(args) > 1:
-            raise TypeError('Setting (i.e. calling an input signal needs 1 argument.')
-        
+            return self._get_value()
+        elif len(args) == 1:
+            return self._set(args[0])
         else:
-            # Set the signal value
-            self._value = self._call(args[0])
-            self._dirty = False
-            for signal in self._downstream:
-                signal._set_dirty(self)
-    
-    def _set_dirty(self, initiator):
-        # An input signal that has upstream signals is reactive too.
-        Signal._set_dirty(self, initiator)
-        self._save_update()
+            raise ValueError('Setting an input signal requires exactly one argument')
 
 
 class ReactSignal(Signal):
@@ -432,6 +467,41 @@ def _first_arg_is_func(ii):
     return len(ii) == 1 and (not isinstance(ii[0], Signal)) and callable(ii[0])
 
 
+def source(*input_signals):
+    """ Decorator to transform a function into a SourceSignal object.
+    
+    Source signals produce signal values. The developer can set the
+    value using the ``_set()`` method. The wrapper function is intended
+    can be used to modify the input, in the same way as for the input
+    signal.
+    
+    Example:
+    
+        @source
+        def s1(val):
+            return float(val)
+        
+        # Developer sets value. Users should not use _set()!
+        s1._set(42)
+    
+    Similar to the InputSignal, the SourceSignal may have upstream signals.
+    
+    """
+    def _source(func):
+        frame = FakeFrame(None, {})
+        s = SourceSignal(func, [], _frame=frame)
+        return s
+    def _source_with_signals(func):
+        frame = sys._getframe(1)
+        s = InputSignal(func, input_signals, _frame=frame)
+        return s
+    
+    if _first_arg_is_func(input_signals):
+        return _source(input_signals[0])
+    else:
+        return _source_with_signals
+
+
 def input(*input_signals):
     """ Decorator to transform a function into a InputSignal object.
     
@@ -468,7 +538,7 @@ def input(*input_signals):
     """
     def _input(func):
         frame = FakeFrame(None, {})
-        s = InputSignal(func, _frame=frame)
+        s = InputSignal(func, [], _frame=frame)
         return s
     def _input_with_signals(func):
         frame = sys._getframe(1)

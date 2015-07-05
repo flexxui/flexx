@@ -6,13 +6,32 @@ import sys
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.reactive import input, signal, react, UnboundError
-from flexx.reactive import InputSignal, Signal, ReactSignal
+from flexx.reactive import input, signal, react, source, UnboundError
+from flexx.reactive import SourceSignal, InputSignal, Signal, ReactSignal
 
 # todo: garbage collecting
 # todo: HasSignals
 
 ## Inputs
+
+
+def test_source_simple():
+    # For the rest we only test input signals
+    
+    @source
+    def tester(v=10):
+        return v
+    
+    assert isinstance(tester, Signal)
+    assert isinstance(tester, SourceSignal)
+    
+    assert tester() == 10
+    assert '10' in repr(tester)
+
+    tester._set(20)
+    assert tester() == 20
+    assert '20' in repr(tester)
+
 
 def test_input_simple():
     
@@ -233,6 +252,42 @@ def test_signal_circular():
     assert s1() is 2
     assert s2() is 3
     assert s3() is 4
+
+
+def test_signal_last_value():
+    
+    @input
+    def s0(v=10):
+        return v
+    
+    @signal('s0')
+    def s1(v):
+        return v + 1
+    
+    assert s1.last_value is None
+    s1()  # update
+    assert s1.last_value is None
+    
+    s0(20)
+    assert s1.last_value is None
+    s1()
+    assert s1.last_value == 11
+
+
+def test_react_last_value():
+    
+    @input
+    def s0(v=10):
+        return v
+    
+    @react('s0')
+    def s1(v):
+        return v + 1
+    
+    assert s1.last_value is None
+    
+    s0(20)
+    assert s1.last_value == 11
 
 
 ## Binding, unbound
