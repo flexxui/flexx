@@ -1,4 +1,4 @@
-""" Tests for reactive
+""" Tests signals and decorarors
 """
 
 import sys

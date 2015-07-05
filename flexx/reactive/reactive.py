@@ -36,6 +36,7 @@ class UnboundError(Exception):
         Exception.__init__(self, msg)
 
 
+# todo: we need access to the locals in which the object was instantiated too
 class FakeFrame(object):
     """ Simulate an class instance (usually from HasSignals) as a frame,
     or to have a dummy (empty) frame for pure inputs.
@@ -77,7 +78,7 @@ class Signal(object):
     upstream: a list of signals that this signal depends on.
     """
     
-    def __init__(self, func, upstream, _frame=None, _ob=None):
+    def __init__(self, func, upstream, frame=None, ob=None):
         # Check and set func
         assert callable(func)
         self._func = func
@@ -92,8 +93,8 @@ class Signal(object):
         self._downstream = []
         
         # Frame and object
-        self._frame = _frame or sys._getframe(1)
-        self._ob = weakref.ref(_ob) if (_ob is not None) else lambda x=None: None
+        self._frame = frame or sys._getframe(1)
+        self._ob = weakref.ref(ob) if (ob is not None) else None
         
         # Get whether function is bound
         try:
@@ -101,17 +102,19 @@ class Signal(object):
         except (TypeError, IndexError):
             self._func_is_bound = False
         
+        # Check whether this signals is (supposed to be) on a class, or not
+        self._class_desciptor = None
+        if (ob is None) and self._func_is_bound:
+            self._class_desciptor = True
+        if (ob is not None) and not self._func_is_bound:
+            raise RuntimeError('Bound signals must have self/this argument.')
+        
         # Init variables related to the signal value
         self._value = None
         self._last_value = None
         self._timestamp = 0
         self._last_timestamp = 0
         self._dirty = True
-        
-        # Flag to indicate that this is a class desciptor, and should not be used
-        self._class_desciptor = None
-        if self._func_is_bound and _ob is None:
-            self._class_desciptor = True
         
         # Binding
         self._unbound = 'No binding attempted yet.'
@@ -128,7 +131,8 @@ class Signal(object):
         """ The HasSignals instance that this signal is associated with
         (stored as a weak reference internally). None for plain signals.
         """
-        return self._ob()
+        if self._ob is not None:
+            return self._ob()
     
     @property
     def name(self):
@@ -157,7 +161,7 @@ class Signal(object):
             return getattr(instance, private_name)
         except AttributeError:
             frame = FakeFrame(instance, self._frame.f_globals)
-            new = self.__class__(self._func, self._upstream_given, frame, _ob=instance)
+            new = self.__class__(self._func, self._upstream_given, frame, ob=instance)
             setattr(instance, private_name, new)
             return new
     
@@ -330,7 +334,7 @@ class Signal(object):
             raise RuntimeError('Can only set signal values of InputSignal objects.')
     
     def _call(self, *args):
-        if self._func_is_bound:
+        if self._ob is not None:
             return self._func(self._ob(), *args)
         else:
             return self._func(*args)
@@ -437,6 +441,9 @@ class HasSignals(object):
     Note that signals can be attached to any class, but then each signal
     will have to be "touched" to create the signal instance, and the
     signals might not be initially bound.
+    
+    Functions defined on this class that are wrapped by signals should
+    have a ``self`` argument (``this`` is also allowed).
     """
     
     def __init__(self):
@@ -489,11 +496,11 @@ def source(*input_signals):
     """
     def _source(func):
         frame = FakeFrame(None, {})
-        s = SourceSignal(func, [], _frame=frame)
+        s = SourceSignal(func, [], frame=frame)
         return s
     def _source_with_signals(func):
         frame = sys._getframe(1)
-        s = InputSignal(func, input_signals, _frame=frame)
+        s = InputSignal(func, input_signals, frame=frame)
         return s
     
     if _first_arg_is_func(input_signals):
@@ -538,11 +545,11 @@ def input(*input_signals):
     """
     def _input(func):
         frame = FakeFrame(None, {})
-        s = InputSignal(func, [], _frame=frame)
+        s = InputSignal(func, [], frame=frame)
         return s
     def _input_with_signals(func):
         frame = sys._getframe(1)
-        s = InputSignal(func, input_signals, _frame=frame)
+        s = InputSignal(func, input_signals, frame=frame)
         return s
     
     if _first_arg_is_func(input_signals):
@@ -574,7 +581,7 @@ def signal(*input_signals):  # todo: rename?
     
     def _signal(func):
         frame = sys._getframe(1)
-        s = Signal(func, input_signals, _frame=frame)
+        s = Signal(func, input_signals, frame=frame)
         return s
     return _signal    
 
@@ -604,6 +611,6 @@ def react(*input_signals):
     
     def _react(func):
         frame = sys._getframe(1)
-        s = ReactSignal(func, input_signals, _frame=frame)
+        s = ReactSignal(func, input_signals, frame=frame)
         return s
     return _react
