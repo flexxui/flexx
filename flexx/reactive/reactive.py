@@ -1,45 +1,16 @@
 """
 Signals and reactions, the Functional Reactive Programming approach to events.
 
-How this works
---------------
-
-On subclasses of Reactor, Signal objects can be attached, either directly
-or via the ``@react`` decorator. These signals are converted to
-SignalProp objects on the class by the meta class. The signalprop
-"serves" (via ``__get__``) the actual signal, which is created in the
-__init__, using the original signal as a template.
-
-Signals need to be initialized with a) a function; b) a list of signals
-it depends on; c) the stack frame to look up names (optional).
-Dependencies can be given as string names, which will be looked up when
-binding the signal. In the init of HasProps, all signals are first created
-and then bound; signals may depend on each-other.
-
-The stack frame is provided using ``sys._getframe()``, which is why
-this only works on Python implementations *with* a stack.
-
-In JS, signals by name can only be applied for signals attached on
-Reactor objects.
-"""
-
-
-"""
-
 THINGS I FEEL UNCONFORTABLE ABOUT
 
-* signal binding fails silently. But maybe is ok, because you cannot know the
-  time when the binding is supposed to work. Also the unbound attribute should
-  show what's wrong.
 * signal name is derived from func, which might be a lambda or buildin.
-* Stray signals on classes ... ?
 
 QUESTIONS / TODO
 
 * serializing signal values to json, maybe support base types and others need
   a __json__ function.
 * Predefined inputs? Str, Int, etc?
-* DONE When binding, update
+* Dynamism
 * Binding is now simple and predictable, should we be smarter?
   For instance by binding unbound signals in the same frame when calling?
 
@@ -63,10 +34,14 @@ class UnboundError(Exception):
 
 
 class FakeFrame(object):
-    """ Simulate an object as a frame, to fool Signal.
+    """ Simulate an class instance (usually from HasSignals) as a frame,
+    or to have a dummy (empty) frame for pure inputs.
     """
     def __init__(self, ob, globals):
-        self._ob = weakref.ref(ob)
+        if ob is not None:
+            self._ob = weakref.ref(ob)
+        else:
+            self._ob  = lambda x=None:None
         self._globals = globals
     
     @property
@@ -74,6 +49,7 @@ class FakeFrame(object):
         ob = self._ob() 
         if ob is not None:
             locals = ob.__dict__.copy()
+            # Handle signals. Not using __signals__; works on any class
             for key, val in ob.__class__.__dict__.items():
                 if isinstance(val, Signal):
                     private_name = '_' + key
@@ -136,14 +112,23 @@ class Signal(object):
         self.bind(ignore_fail=True)
 
     def __repr__(self):
-        # todo: should not error!
         des = '-descriptor' if self._class_desciptor else ''
         bound = '(unbound)' if self.unbound else 'with value %r' % self._value
         return '<%s%s %r %s at 0x%x>' % (self.__class__.__name__, des, self._name, 
                                        bound, id(self))
     
     @property
+    def __self__(self):
+        """ The HasSignals instance that this signal is associated with
+        (stored as a weak reference internally). None for plain signals.
+        """
+        return self._ob()
+    
+    @property
     def name(self):
+        """ The name of this signal, as inferred from the function that
+        this signal wraps.
+        """
         return self._name
     
     ## Behavior for when attached to a class
@@ -165,20 +150,12 @@ class Signal(object):
         try:
             return getattr(instance, private_name)
         except AttributeError:
-            new = self._new_instance(instance)
+            frame = FakeFrame(instance, self._frame.f_globals)
+            new = self.__class__(self._func, self._upstream_given, frame, _ob=instance)
             setattr(instance, private_name, new)
             return new
     
-    def _new_instance(self, _self):
-        # if isinstance(self, InputSignal):
-        #     ob = self.__class__(self._func)
-        # else:
-        ob = self.__class__(self._func, self._upstream_given, FakeFrame(_self, self._frame.f_globals), _ob=_self)
-        return ob
-    
-    
     ## Binding
-    
     
     def bind(self, ignore_fail=False):
         """ Bind input signals
@@ -290,7 +267,7 @@ class Signal(object):
     
     @property
     def value(self):
-        """ The signal value. 
+        """ The current signal value.
         """
         return self()
     
@@ -298,7 +275,7 @@ class Signal(object):
     def last_value(self):
         """ The previous signal value. 
         """
-        pass # todo: last value
+        raise NotImplementedError()  # todo: last value
     
     def __call__(self, *args):
         """ Get the signal value.
@@ -344,7 +321,7 @@ class Signal(object):
             signal._set_dirty(initiator)
         # Note: we do not update our value now; lazy evaluation. See
         # the ReactSignal for pushing changes downstream immediately.
-    
+
 
 class InputSignal(Signal):
     """ InputSignal objects are special signals for which the value can
@@ -490,8 +467,8 @@ def input(*input_signals):
     
     """
     def _input(func):
-        # todo: create dummy frame
-        s = InputSignal(func)
+        frame = FakeFrame(None, {})
+        s = InputSignal(func, _frame=frame)
         return s
     def _input_with_signals(func):
         frame = sys._getframe(1)
