@@ -5,7 +5,6 @@ THINGS I FEEL UNCONFORTABLE ABOUT
 
 * signal name is derived from func, which might be a lambda or buildin.
 * "input signals" as a term for upstream signals
-* binding for connecting (vs Python bound methods)
 
 QUESTIONS / TODO
 
@@ -13,8 +12,7 @@ QUESTIONS / TODO
   a __json__ function.
 * Predefined inputs? Str, Int, etc?
 * Dynamism
-* Binding is now simple and predictable, should we be smarter?
-  For instance by binding unbound signals in the same frame when calling?
+
 
 """
 
@@ -31,8 +29,8 @@ else:
     string_types = basestring
 
 
-class UnboundError(Exception):
-    def __init__(self, msg='This signal is not bound.'):
+class SignalConnectionError(Exception):
+    def __init__(self, msg='This signal is not connected.'):
         Exception.__init__(self, msg)
 
 
@@ -116,15 +114,15 @@ class Signal(object):
         self._last_timestamp = 0
         self._dirty = True
         
-        # Binding
-        self._unbound = 'No binding attempted yet.'
-        self.bind(False)
+        # Connecting
+        self._not_connected = 'No connection attempt yet.'
+        self.connect(False)
 
     def __repr__(self):
         des = '-descriptor' if self._class_desciptor else ''
-        bound = '(unbound)' if self.unbound else 'with value %r' % self._value
+        conn = '(not connected)' if self.not_connected else 'with value %r' % self._value
         return '<%s%s %r %s at 0x%x>' % (self.__class__.__name__, des, self._name, 
-                                       bound, id(self))
+                                         conn, id(self))
     
     @property
     def __self__(self):
@@ -152,7 +150,7 @@ class Signal(object):
     def __get__(self, instance, owner):
         if not self._class_desciptor:
             self._class_desciptor = True
-            self.bind(False)  # trigger unsubscribe
+            self.connect(False)  # trigger unsubscribe
         if instance is None:
             return self
         
@@ -165,10 +163,10 @@ class Signal(object):
             setattr(instance, private_name, new)
             return new
     
-    ## Binding
+    ## Connecting
     
-    def bind(self, raise_on_fail=True):
-        """ Bind input signals
+    def connect(self, raise_on_fail=True):
+        """ Connect input signals
         
         Signals that are provided as a string are resolved to get the
         signal object, and this signal subscribes to the upstream
@@ -179,40 +177,40 @@ class Signal(object):
         True on success.
         """
         
-        # Disable binding for signal placeholders on classes
+        # Disable connecting for signal placeholders on classes
         if self._class_desciptor:
-            self.unbind()
-            self._unbound = 'Cannot bind signal descriptors on a class.'
+            self.disconnect()
+            self._not_connected = 'Cannot connect signal descriptors on a class.'
             if raise_on_fail:
-                raise RuntimeError(self._unbound)
+                raise RuntimeError(self._not_connected)
             return False
         
         # Resolve signals
-        self._unbound = self._resolve_signals()
-        if self._unbound:
+        self._not_connected = self._resolve_signals()
+        if self._not_connected:
             if raise_on_fail:
-                raise RuntimeError('Bind error in signal %r: ' % self._name + self._unbound)
+                raise RuntimeError('Connection error in signal %r: ' % self._name + self._not_connected)
             return False
         
         # Subscribe
         for signal in self._upstream:
             signal._subscribe(self)
         
-        # If binding complete, update (or not)
+        # If connecting complete, update (or not)
         self._set_dirty(self)
     
-    def unbind(self):
-        """ Unbind this signal, unsubscribing it from the upstream signals.
+    def disconnect(self):
+        """ Disconnect this signal, unsubscribing it from the upstream signals.
         """
         while self._upstream:
             s = self._upstream.pop(0)
             s._unsubscribe(self)
-        self._unbound = 'Explicitly unbound via unbind()'
+        self._not_connected = 'Explicitly disconnected via disconnect()'
     
     def _resolve_signals(self):
         """ Get signals from their string path. Return value to store
-        in _unbound (False means success). Should only be called from
-        bind().
+        in _not_connected (False means success). Should only be called from
+        connect().
         """
         
         upstream = []
@@ -250,11 +248,11 @@ class Signal(object):
             self._downstream.remove(signal)
     
     @property
-    def unbound(self):
-        """ False when bound. Otherwise this is a string with a message
-        why the signal is not bound.
+    def not_connected(self):
+        """ False when not connected. Otherwise this is a string with
+        a message why the signal is not connected.
         """
-        return self._unbound
+        return self._not_connected
     
     ## Getting and setting signal value
     
@@ -301,10 +299,10 @@ class Signal(object):
         """ Get the current value. Some overhead is put here to keep
         update_value compact.
         """
-        if self._unbound:
-            self.bind(False)
-        if self._unbound:
-            raise UnboundError()
+        if self._not_connected:
+            self.connect(False)
+        if self._not_connected:
+            raise SignalConnectionError()
         if self._dirty == True:
             self._update_value()
         return self._value
@@ -314,7 +312,7 @@ class Signal(object):
         """
         try:
             args2 = [s() for s in self._upstream]
-        except UnboundError:
+        except SignalConnectionError:
             return
         value = self._call(*args2)
         self._set_value(value)
@@ -322,10 +320,10 @@ class Signal(object):
     def __call__(self, *args):
         """ Get the signal value.
         
-        If the signals is unbound, raises UnBoundError. If an upstream
-        signal is unbound, errr, what should we do?
+        If the signals is not connected, raises SignalConnectionError. If an upstream
+        signal is not connected, errr, what should we do?
         """
-        # todo: what to do when an upstream signal (or upstream-upstream) is unbound?
+        # todo: what to do when an upstream signal (or upstream-upstream) is not connected?
         
         if not args:
             return self._get_value()
@@ -378,7 +376,7 @@ class SourceSignal(Signal):
         if self._upstream:
             try:
                 args2 = [self._value] + [s() for s in self._upstream]
-            except UnboundError:
+            except SignalConnectionError:
                 return
             value = self._call(*args2)
             self._set_value(value)
@@ -406,13 +404,6 @@ class InputSignal(SourceSignal):
     """
     
     def __call__(self, *args):
-        """ Get the signal value.
-        
-        If the signals is unbound, raises UnBoundError. If an upstream
-        signal is unbound, errr, what should we do?
-        """
-        # todo: what to do when an upstream signal (or upstream-upstream) is unbound?
-        
         if not args:
             return self._get_value()
         elif len(args) == 1:
@@ -434,12 +425,13 @@ class HasSignals(object):
     
     Creating signals on this class will provide each instance of this
     class to have corresponding signals. During initialization the
-    signals are bound, and this class has a ``bind_unbound()`` method
-    to easily allow binding any unbound signals at a latere time.
+    signals are connected, and this class has a ``connect_signals()``
+    method to easily allow connecting any unconnected signals at a
+    latere time.
     
     Note that signals can be attached to any class, but then each signal
     will have to be "touched" to create the signal instance, and the
-    signals might not be initially bound.
+    signals might not be initially connected.
     
     Functions defined on this class that are wrapped by signals should
     have a ``self`` argument (``this`` is also allowed).
@@ -454,18 +446,17 @@ class HasSignals(object):
                 getattr(self, key)
                 self.__signals__.append(key)
         
-        self.bind_unbound(True)
+        self.connect_signals(True)
     
-    def bind_unbound(self, raise_on_fail=True):
-        """ Bind any unbound signals associated with this object.
+    def connect_signals(self, raise_on_fail=True):
+        """ Connect any disconnected signals associated with this object.
         """
         success = True
         for name in self.__signals__:
             s = getattr(self, name)
-            if s.unbound:
-                print('unbound', s)
-                bound = s.bind(raise_on_fail)  # dont combine this with next line
-                success = success and bound
+            if s.not_connected:
+                connected = s.connect(raise_on_fail)  # dont combine this with next line
+                success = success and connected
         return success
 
 

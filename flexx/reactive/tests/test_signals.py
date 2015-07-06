@@ -6,7 +6,7 @@ import sys
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.reactive import input, signal, react, source, UnboundError
+from flexx.reactive import input, signal, react, source, SignalConnectionError
 from flexx.reactive import SourceSignal, InputSignal, Signal, ReactSignal
 
 # todo: garbage collecting
@@ -117,7 +117,7 @@ def test_input_circular():
         else:
             return v1 + 5
     
-    s1.bind()
+    s1.connect()
     
     assert s1() == 15
     assert s2() == 20
@@ -235,11 +235,11 @@ def test_signal_circular():
     def s3(v):
         return v + 1
     
-    s1.bind()
+    s1.connect()
     
-    assert not s1.unbound
-    assert not s2.unbound
-    assert not s2.unbound
+    assert not s1.not_connected
+    assert not s2.not_connected
+    assert not s2.not_connected
     
     # The fact that we have no recursion-limit-reached here is part of the test
     
@@ -290,48 +290,48 @@ def test_react_last_value():
     assert s1.last_value == 11
 
 
-## Binding, unbound
+## Connecting
 
 
-def test_binding_unbound():
+def test_connecting_disconnected():
     
     @signal('nonexistent1')
     def s1(v):
         return v + 1
     
     assert isinstance(s1, Signal)
-    assert s1.unbound
-    raises(UnboundError, s1)
-    raises(RuntimeError, s1.bind)
-    assert 'unbound' in repr(s1).lower()
+    assert s1.not_connected
+    raises(SignalConnectionError, s1)
+    raises(RuntimeError, s1.connect)
+    assert 'not connected' in repr(s1).lower()
     
-    # todo: what if upstream is unbound?
+    # todo: what if upstream is not connected?
 
 
-def test_binding_signal():
+def test_connecting_signal():
     
     @signal('s1')
     def s2(v):
         return v + 1
     
-    assert s2.unbound
+    assert s2.not_connected
     
     @input
     def s1(v=10):
         return float(v)
     
-    assert s2.unbound
-    assert 'unbound' in repr(s2)
-    assert s2.unbound
+    assert s2.not_connected
+    assert 'not connected' in repr(s2)
+    assert s2.not_connected
     
     s1(20)
-    assert s2.unbound
+    assert s2.not_connected
     
-    # Calling a signal tries to bind it if its unbound
+    # Calling a signal tries to connect it if its not connected
     assert s2() == 21
 
 
-def test_binding_react():
+def test_connecting_react():
     
     reacted = []
     
@@ -339,26 +339,26 @@ def test_binding_react():
     def s2(v):
         reacted.append(v)
     
-    assert s2.unbound
+    assert s2.not_connected
     
     @input
     def s1(v=10):
         return float(v)
     
-    assert s2.unbound
-    assert 'unbound' in repr(s2)
-    assert s2.unbound
+    assert s2.not_connected
+    assert 'not connected' in repr(s2)
+    assert s2.not_connected
     
     s1(20)
-    assert s2.unbound
+    assert s2.not_connected
     assert len(reacted) == 0
     
-    # Calling a signal tries to bind it if its unbound
+    # Calling a signal tries to connect it if its not connected
     s2()
     assert len(reacted) == 1 and reacted[0] == 20
 
 
-def test_unbinding():
+def test_disconnecting():
     
     @input
     def s1(v=10):
@@ -368,12 +368,12 @@ def test_unbinding():
     def s2(v):
         return v + 1
     
-    assert not s2.unbound
+    assert not s2.not_connected
     assert len(s2._upstream) == 1
     
-    s2.unbind()
+    s2.disconnect()
     
-    assert s2.unbound
+    assert s2.not_connected
     assert len(s2._upstream) == 0
     
     
@@ -406,7 +406,7 @@ def test_errors():
         def s1(v=10):
             return float(v)
         
-        # creating a react signal binds it, invalidates it, updates it
+        # creating a react signal connects it, invalidates it, updates it
         # -> error to stderr
         
         @react('s1')
@@ -424,7 +424,7 @@ def test_errors():
         assert len(reacted) == 2
         assert 'ZeroDivision' in ''.join(errors)
         
-        # creating a normal signal binds it, invalidates it. Stop
+        # creating a normal signal connects it, invalidates it. Stop
         # -> on calling, it should raise
         
         @signal('s1')
