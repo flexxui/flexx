@@ -126,6 +126,10 @@ class Signal(object):
         # Check whether this signals is on a class object: a descriptor
         self._class_desciptor = (ob is None) and ('__module__' in self._frame.f_locals)
         
+        # Check that for class descriptors the decorators are used
+        if self._class_desciptor and frame is None:
+            raise RuntimeError('On classes, signals cannot be instantiated directly; use the decorators.')
+            
         # Init variables related to the signal value
         self._value = None
         self._last_value = None

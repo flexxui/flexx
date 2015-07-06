@@ -381,7 +381,6 @@ def test_disconnecting():
 
 def test_func_name():
     # Allow weird names, though not recommended
-    # todo: do not allow this on hassignal classes.
     
     s = Signal(lambda x: x, [])
     assert 'lambda' in s.name
