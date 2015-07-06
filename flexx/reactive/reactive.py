@@ -12,6 +12,7 @@ QUESTIONS / TODO
   a __json__ function.
 * Predefined inputs? Str, Int, etc?
 * Dynamism
+* docs
 
 
 """
@@ -34,35 +35,57 @@ class SignalConnectionError(Exception):
         Exception.__init__(self, msg)
 
 
-# todo: we need access to the locals in which the object was instantiated too
-class FakeFrame(object):
-    """ Simulate an class instance (usually from HasSignals) as a frame,
-    or to have a dummy (empty) frame for pure inputs.
+class StubFrame(object):
+    """ Empty frame for source/input signals without upstream.
     """
-    def __init__(self, ob, globals):
-        if ob is not None:
-            self._ob = weakref.ref(ob)
-        else:
-            self._ob  = lambda x=None:None
-        self._globals = globals
+    @property
+    def f_locals(self):
+        return {}
+    
+    @property
+    def f_globals(self):
+        return {}
+    
+    @property
+    def f_back(self):
+        return self
+
+
+class ObjectFrame(object):
+    """ A proxy frame that gives access to the class instance (usually
+    from HasSignals) as a frame, combined with the frame that the class
+    was defined in.
+    """
+    
+    # We need to store the frame. If we stored the f_locals dict, it
+    # would not be up-to-date by the time we need it. I suspect that
+    # getattr(frame, 'f_locals') updates the dict.
+    
+    def __init__(self, ob, frame):
+        self._ob = weakref.ref(ob)
+        self._frame = frame
     
     @property
     def f_locals(self):
-        ob = self._ob() 
+        locals = self._frame.f_locals.copy()
+        ob = self._ob()
         if ob is not None:
-            locals = ob.__dict__.copy()
+            locals.update(ob.__dict__)
             # Handle signals. Not using __signals__; works on any class
             for key, val in ob.__class__.__dict__.items():
                 if isinstance(val, Signal):
                     private_name = '_' + key
                     if private_name in locals:
                         locals[key] = locals[private_name]
-            return locals
-        return {}
+        return locals
     
     @property
     def f_globals(self):
-        return self._globals
+        return self._frame.f_globals
+    
+    @property
+    def f_back(self):
+        return ObjectFrame(self._ob(), self._frame.f_back)
 
 
 class Signal(object):
@@ -158,7 +181,8 @@ class Signal(object):
         try:
             return getattr(instance, private_name)
         except AttributeError:
-            frame = FakeFrame(instance, self._frame.f_globals)
+            sys._getframe()
+            frame = ObjectFrame(instance, self._frame.f_back)
             new = self.__class__(self._func, self._upstream_given, frame, ob=instance)
             setattr(instance, private_name, new)
             return new
@@ -446,7 +470,7 @@ class HasSignals(object):
                 getattr(self, key)
                 self.__signals__.append(key)
         
-        self.connect_signals(True)
+        self.connect_signals(False)
     
     def connect_signals(self, raise_on_fail=True):
         """ Connect any disconnected signals associated with this object.
@@ -485,7 +509,7 @@ def source(*input_signals):
     
     """
     def _source(func):
-        frame = FakeFrame(None, {})
+        frame = StubFrame()
         s = SourceSignal(func, [], frame=frame)
         return s
     def _source_with_signals(func):
@@ -534,7 +558,7 @@ def input(*input_signals):
     
     """
     def _input(func):
-        frame = FakeFrame(None, {})
+        frame = StubFrame()
         s = InputSignal(func, [], frame=frame)
         return s
     def _input_with_signals(func):
