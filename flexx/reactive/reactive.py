@@ -441,6 +441,23 @@ class ReactSignal(Signal):
         self._save_update()
 
 
+class PropSignal(InputSignal):
+    def __set__(self, obj, value):
+        
+        if obj is None:
+            raise ValueError('Cannot overwrite a signal; use some_signal(val) on InputSignal objects.')
+        
+        s = InputSignal.__get__(self, obj, None)
+        s(value)
+    
+    def __get__(self, obj, owner):
+        s = InputSignal.__get__(self, obj, None)
+        if obj:
+            return s()
+        else:
+            return s
+
+
 class HasSignals(object):
     """ A base class for objects with signals.
     
@@ -465,10 +482,13 @@ class HasSignals(object):
         
         # Instantiate signals, its enough to reference them
         self.__signals__ = []
+        self.__props__ = []
         for key, val in sorted(self.__class__.__dict__.items()):
             if isinstance(val, Signal):
                 getattr(self, key)
                 self.__signals__.append(key)
+                if isinstance(val, PropSignal):
+                    self.__props__.append(key)
         
         self.connect_signals(False)
     
@@ -477,6 +497,8 @@ class HasSignals(object):
         """
         success = True
         for name in self.__signals__:
+            if name in self.__props__:
+                continue
             s = getattr(self, name)
             if s.not_connected:
                 connected = s.connect(raise_on_fail)  # dont combine this with next line
@@ -562,6 +584,21 @@ def input(*input_signals):
         return _input(func)
     else:
         return _input
+
+
+def prop(*input_signals):
+    """ Decorator to transform a function into a InputSignal object.
+   
+    """
+    frame = sys._getframe(1)
+    def _prop(func):
+        return PropSignal(func, input_signals, frame=frame)
+    
+    if _first_arg_is_func(input_signals):
+        func, input_signals = input_signals[0], []
+        return _prop(func)
+    else:
+        return _prop
 
 
 def signal(*input_signals):  # todo: rename?
