@@ -117,18 +117,14 @@ class Signal(object):
         self._frame = frame or sys._getframe(1)
         self._ob = weakref.ref(ob) if (ob is not None) else None
         
-        # Get whether function is bound
+        # Get whether function is a method
         try:
-            self._func_is_bound = inspect.getargspec(func)[0][0] in ('self', 'this')
+            self._func_is_method = inspect.getargspec(func)[0][0] in ('self', 'this')
         except (TypeError, IndexError):
-            self._func_is_bound = False
+            self._func_is_method = False
         
-        # Check whether this signals is (supposed to be) on a class, or not
-        self._class_desciptor = None
-        if (ob is None) and self._func_is_bound:
-            self._class_desciptor = True
-        if (ob is not None) and not self._func_is_bound:
-            raise RuntimeError('Bound signals must have self/this argument.')
+        # Check whether this signals is on a class object: a descriptor
+        self._class_desciptor = (ob is None) and ('__module__' in self._frame.f_locals)
         
         # Init variables related to the signal value
         self._value = None
@@ -171,9 +167,6 @@ class Signal(object):
         raise ValueError('Cannot delete a signal.')
     
     def __get__(self, instance, owner):
-        if not self._class_desciptor:
-            self._class_desciptor = True
-            self.connect(False)  # trigger unsubscribe
         if instance is None:
             return self
         
@@ -355,7 +348,7 @@ class Signal(object):
             raise RuntimeError('Can only set signal values of InputSignal objects.')
     
     def _call(self, *args):
-        if self._ob is not None:
+        if self._func_is_method and self._ob is not None:
             return self._func(self._ob(), *args)
         else:
             return self._func(*args)
@@ -453,12 +446,15 @@ class HasSignals(object):
     method to easily allow connecting any unconnected signals at a
     latere time.
     
+    Upstream signal names can be attributes on the instance, as well
+    as variables in the scope in which the class was defined.
+    
     Note that signals can be attached to any class, but then each signal
     will have to be "touched" to create the signal instance, and the
     signals might not be initially connected.
     
-    Functions defined on this class that are wrapped by signals should
-    have a ``self`` argument (``this`` is also allowed).
+    Functions defined on this class that are wrapped by signals can
+    have a ``self`` argument, but this is not mandatory.
     """
     
     def __init__(self):
@@ -508,19 +504,15 @@ def source(*input_signals):
     Similar to the InputSignal, the SourceSignal may have upstream signals.
     
     """
+    frame = sys._getframe(1)
     def _source(func):
-        frame = StubFrame()
-        s = SourceSignal(func, [], frame=frame)
-        return s
-    def _source_with_signals(func):
-        frame = sys._getframe(1)
-        s = InputSignal(func, input_signals, frame=frame)
-        return s
+        return SourceSignal(func, input_signals, frame=frame)
     
     if _first_arg_is_func(input_signals):
-        return _source(input_signals[0])
+        func, input_signals = input_signals[0], []
+        return _source(func)
     else:
-        return _source_with_signals
+        return _source
 
 
 def input(*input_signals):
@@ -557,19 +549,15 @@ def input(*input_signals):
                 return (f - 32) / 1.8
     
     """
+    frame = sys._getframe(1)
     def _input(func):
-        frame = StubFrame()
-        s = InputSignal(func, [], frame=frame)
-        return s
-    def _input_with_signals(func):
-        frame = sys._getframe(1)
-        s = InputSignal(func, input_signals, frame=frame)
-        return s
+        return InputSignal(func, input_signals, frame=frame)
     
     if _first_arg_is_func(input_signals):
-        return _input(input_signals[0])
+        func, input_signals = input_signals[0], []
+        return _input(func)
     else:
-        return _input_with_signals
+        return _input
 
 
 def signal(*input_signals):  # todo: rename?
