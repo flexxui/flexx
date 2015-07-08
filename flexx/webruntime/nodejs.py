@@ -2,6 +2,12 @@
 
 This runtime is special in that it does not provide visual output,
 but it can be used to e.g. do computing in JavaScript or PyScript.
+
+It also accepts a code attribute to provide the main "script". The url is
+provided to nodejs as the ``location`` variable as it is in a browser.
+
+When hooking this up with the flexx.app systen, nodejs and Python can
+communicate via the websocket.
 """
 
 import os
@@ -40,7 +46,7 @@ def get_node_exe():
 
 def get_js_from_url(url):
     """ Given an url, extract the JavaScript. This abviously does not
-    work when this process/thread is the actuallt serving that url.
+    work when this process/thread is the actually serving that url.
     """
     html = urlopen(url, timeout=5.0).read().decode()
     root, last = url.rsplit('/', 1)

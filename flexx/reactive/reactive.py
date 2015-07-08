@@ -13,6 +13,7 @@ QUESTIONS / TODO
 * Predefined inputs? Str, Int, etc?
 * Dynamism
 * docs
+* asynchronous vs atomic?
 
 
 """
@@ -28,6 +29,18 @@ if sys.version_info >= (3, ):
     string_types = str
 else:
     string_types = basestring
+
+
+# From six.py
+def with_metaclass(meta, *bases):
+    """Create a base class with a metaclass."""
+    # This requires a bit of explanation: the basic idea is to make a dummy
+    # metaclass for one level of class instantiation that replaces itself with
+    # the actual metaclass.
+    class metaclass(meta):
+        def __new__(cls, name, this_bases, d):
+            return meta(name, bases, d)
+    return type.__new__(metaclass, 'temporary_class', (), {})
 
 
 class SignalConnectionError(Exception):
@@ -72,9 +85,10 @@ class ObjectFrame(object):
         if ob is not None:
             locals.update(ob.__dict__)
             # Handle signals. Not using __signals__; works on any class
+            # todo: this does not work with subclasses -> fix and test!
             for key, val in ob.__class__.__dict__.items():
                 if isinstance(val, Signal):
-                    private_name = '_' + key
+                    private_name = '_' + key + '_signal'
                     if private_name in locals:
                         locals[key] = locals[private_name]
         return locals
@@ -104,6 +118,9 @@ class Signal(object):
         assert callable(func)
         self._func = func
         self._name = func.__name__
+        
+        # Set docstring this appears correct in sphinx docs
+        self.__doc__ = 'Signal -> ' + (func.__doc__ or self._name)
         
         # Check and set dependencies
         upstream = [s for s in upstream]
@@ -144,6 +161,7 @@ class Signal(object):
     def __repr__(self):
         des = '-descriptor' if self._class_desciptor else ''
         conn = '(not connected)' if self.not_connected else 'with value %r' % self._value
+        conn = '' if des else conn 
         return '<%s%s %r %s at 0x%x>' % (self.__class__.__name__, des, self._name, 
                                          conn, id(self))
     
@@ -174,7 +192,7 @@ class Signal(object):
         if instance is None:
             return self
         
-        private_name = '_' + self._name
+        private_name = '_' + self._name + '_signal'
         try:
             return getattr(instance, private_name)
         except AttributeError:
@@ -324,7 +342,7 @@ class Signal(object):
             self.connect(False)
         if self._not_connected:
             raise SignalConnectionError()
-        if self._dirty == True:
+        if self._dirty:
             self._update_value()
         return self._value
     
@@ -458,7 +476,40 @@ class PropSignal(InputSignal):
             return s
 
 
-class HasSignals(object):
+class HasSignalsMeta(type):
+    """ Meta class for HasSignals
+    * Set the name of each signal
+    * Sets __signals__ attribute on the class
+    """
+    
+    CLASSES = []
+    
+    def __init__(cls, name, bases, dct):
+        
+        HasSignalsMeta.CLASSES.append(cls)  # todo: dict by full qualified name?
+        
+        # Collect signals defined on this class
+        signals = {}
+        props = {}
+        for name, val in dct.items():
+            if isinstance(val, type) and issubclass(val, Signal):
+                val = val()
+                setattr(cls, name, val)  # allow setting just class
+            if isinstance(val, Signal):
+                signals[name] = val
+                if isinstance(val, PropSignal):
+                    props[name] = val
+        # Finalize all found props
+        for name, signal in signals.items():
+            signal._name = name
+        # Cache prop names
+        cls.__signals__ = [name for name in sorted(signals.keys())]
+        cls.__props__ = [name for name in sorted(props.keys())]
+        # Proceeed as normal
+        type.__init__(cls, name, bases, dct)
+
+
+class HasSignals(with_metaclass(HasSignalsMeta, object)):
     """ A base class for objects with signals.
     
     Creating signals on this class will provide each instance of this
@@ -481,14 +532,9 @@ class HasSignals(object):
     def __init__(self):
         
         # Instantiate signals, its enough to reference them
-        self.__signals__ = []
-        self.__props__ = []
-        for key, val in sorted(self.__class__.__dict__.items()):
-            if isinstance(val, Signal):
-                getattr(self, key)
-                self.__signals__.append(key)
-                if isinstance(val, PropSignal):
-                    self.__props__.append(key)
+        for name in self.__class__.__signals__:
+            val = getattr(self.__class__, name)
+            getattr(self, name)
         
         self.connect_signals(False)
     
