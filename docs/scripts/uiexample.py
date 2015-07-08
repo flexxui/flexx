@@ -4,6 +4,7 @@ Small sphinx extension to show a UI example + result
 
 import os
 import hashlib
+import warnings
 
 from sphinx.util.compat import Directive
 from docutils import nodes
@@ -31,12 +32,19 @@ def visit_uiexample_html(self, node):
     
     # Execute code to create App class
     NS = {}
-    exec(node.code, NS, NS)
+    try:
+        exec(node.code, NS, NS)
+    except Exception as err:
+        warnings.warn('ERROR:' + str(err))
+    # todo: raise once we've got it fixed...
     
     # Export app to html file
     for appname in ('App', 'MyApp'):
         if appname in NS:
-            NS[appname].export(os.path.join(HTML_DIR, 'ui', 'examples', fname))
+            try:
+                NS[appname].export(os.path.join(HTML_DIR, 'ui', 'examples', fname))
+            except Exception as err:
+                warnings.warn('ERROR:' + str(err))
             break
     rel_path = '../ui/examples/' + fname
     

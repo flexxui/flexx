@@ -38,6 +38,7 @@ Contents
    ui/index
    pyscript/index
    webruntime
+   reactive
    properties
    util
    releasenotes
