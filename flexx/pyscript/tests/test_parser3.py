@@ -87,6 +87,24 @@ class TestBuildins:
         assert evalpy('int(3.6)') == '3'
         assert evalpy('int(-3.4)') == '-3'
         assert evalpy('int(-3.6)') == '-3'
+        assert evalpy('"5" + 2') == '52'
+        assert evalpy('int("5") + 2') == '7'  # -> evaluate to number
+        # Note: on Nodejs "5" * 2 also becomes 10 ...
+    
+    def test_float(self):
+        assert evalpy('"5.2" + 2') == '5.22'
+        assert evalpy('float("5") + 2') == '7'
+        assert evalpy('float("5.2") + 2') == '7.2'
+    
+    def test_str(self):
+        assert evalpy('str(5) + 2') == '52'
+        assert evalpy('str("xx") + 2') == 'xx2'
+    
+    def test_bool(self):
+        assert evalpy('bool(5)') == 'true'
+        assert evalpy('bool("xx")') == 'true'
+        assert evalpy('bool(0)') == 'false'
+        assert evalpy('bool("")') == 'false'
     
     def test_print(self):
         # Test code

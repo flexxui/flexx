@@ -30,6 +30,12 @@ JavaScript.
     
     # Summing elements
     sum(foo)
+    
+    # Turning things into numbers, bools and strings
+    str(s)
+    float(x)
+    bool(y)
+    int(z)  # this also rounds towards zero
 
 
 The isinstance function
@@ -210,11 +216,33 @@ class Parser3(Parser2):
             raise JSError('round() needs at least one argument')
     
     def function_int(self, node):
+        # No need to turn into number first
         if len(node.args) == 1:
             arg = ''.join(self.parse(node.args[0]))
             return '(%s<0? Math.ceil(%s): Math.floor(%s))' % (arg, arg, arg)
         else:
-            raise JSError('int() needs at least one argument')
+            raise JSError('int() needs one argument')
+    
+    def function_float(self, node):
+        if len(node.args) == 1:
+            arg = ''.join(self.parse(node.args[0]))
+            return 'Number(%s)' % arg
+        else:
+            raise JSError('float() needs one argument')
+    
+    def function_str(self, node):
+        if len(node.args) == 1:
+            arg = ''.join(self.parse(node.args[0]))
+            return 'String(%s)' % arg
+        else:
+            raise JSError('str() needs one argument')
+    
+    def function_bool(self, node):
+        if len(node.args) == 1:
+            arg = ''.join(self.parse(node.args[0]))
+            return 'Boolean(%s)' % arg
+        else:
+            raise JSError('bool() needs one argument')
     
     def function_max(self, node):
         if len(node.args) == 0:

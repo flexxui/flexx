@@ -104,6 +104,7 @@ Caveats:
 * JavasScript has a concept of `null` (i.e. `None`), as well as
   `undefined`. Sometimes you may want to use ``if x is None or x is
   undefined: ...``.
+* Multiplying a string with a number will yield NaN.
 
 """
 
