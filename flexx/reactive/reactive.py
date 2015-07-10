@@ -350,10 +350,10 @@ class Signal(object):
         """ Get the latest value from upstream. This method can be overloaded.
         """
         try:
-            args2 = [s() for s in self._upstream]
+            args = [s() for s in self._upstream]
         except SignalConnectionError:
             return
-        value = self._call(*args2)
+        value = self._call_func(*args)
         self._set_value(value)
     
     def __call__(self, *args):
@@ -369,7 +369,7 @@ class Signal(object):
         else:
             raise RuntimeError('Can only set signal values of InputSignal objects.')
     
-    def _call(self, *args):
+    def _call_func(self, *args):
         if self._func_is_method and self._ob is not None:
             return self._func(self._ob(), *args)
         else:
@@ -404,7 +404,7 @@ class SourceSignal(Signal):
         # Try to initialize, func might not have a default value
         if self._timestamp == 0:
             try:
-                value = self._call()
+                value = self._call_func()
             except Exception:
                 self._dirty = False
             else:
@@ -414,16 +414,16 @@ class SourceSignal(Signal):
         # Get value from upstream
         if self._upstream:
             try:
-                args2 = [self._value] + [s() for s in self._upstream]
+                args = [self._value] + [s() for s in self._upstream]
             except SignalConnectionError:
                 return
-            value = self._call(*args2)
+            value = self._call_func(*args)
             self._set_value(value)
     
     def _set(self, value):
         """ Method for the developer to set the source signal.
         """
-        self._set_value(self._call(value))
+        self._set_value(self._call_func(value))
         for signal in self._downstream:
             signal._set_dirty(self)
     
