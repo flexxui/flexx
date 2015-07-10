@@ -245,6 +245,7 @@ class Signal(object):
             s = self._upstream.pop(0)
             s._unsubscribe(self)
         self._not_connected = 'Explicitly disconnected via disconnect()'
+        self._dirty = True
     
     def _resolve_signals(self):
         """ Get signals from their string path. Return value to store
@@ -265,9 +266,11 @@ class Signal(object):
                     ob = ob()
                 ob = getattr(ob, name, None)
                 if ob is None:
-                    return 'Signal %r does not exist.' % fullname
+                    break
             # Add to list or fail
-            if not isinstance(ob, Signal):
+            if ob is None:
+                return 'Signal %r does not exist.' % fullname
+            elif not isinstance(ob, Signal):
                 return 'Object %r is not a signal.' % fullname
             upstream.append(ob)
         

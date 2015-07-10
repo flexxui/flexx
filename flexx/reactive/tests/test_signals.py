@@ -376,7 +376,11 @@ def test_disconnecting():
     assert s2.not_connected
     assert len(s2._upstream) == 0
     
-    
+    # Autoconnect
+    s2()
+    assert not s2.not_connected
+
+
 ## Misc
 
 def test_func_name():

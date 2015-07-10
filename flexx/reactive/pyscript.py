@@ -41,7 +41,7 @@ class HasSignals:
                 ok = False
                 try:
                     value = selff._call_func()
-                    ok = True
+                    ok = value is not undefined
                 except Exception:
                     selff._dirty = False
                 if ok:  # todo: pyscript support for else-clause
@@ -99,12 +99,12 @@ class HasSignals:
         selff._set_dirty = _set_dirty
         return selff
     
-    def _create_Signal(func, upstream, selff):
+    def _create_Signal(func, upstream, selff=None):
         # We create the selff function which then serves as the signal object
         # that we populate with attributres, properties and functions.
         obj = this
         
-        if selff is undefined:
+        if selff is None:
             def selff(*args):
                 if not len(args):
                     return selff._get_value()
@@ -157,6 +157,7 @@ class HasSignals:
                 s = selff._upstream.pop(0)
                 s._unsubscribe(selff)
             selff._not_connected = 'Explicitly disconnected via disconnect()'
+            selff._dirty = True
         
         def _resolve_signals():
             upstream = []
@@ -169,10 +170,12 @@ class HasSignals:
                     if ob.IS_SIGNAL:
                         ob = ob()
                     ob = ob[name]
-                    if ob is None:
-                        return 'Signal "%s" does not exist.' % fullname
+                    if ob is undefined:
+                        break
                 # Add to list or fail
-                if not ob.IS_SIGNAL:
+                if ob is undefined:
+                    return 'Signal "%s" does not exist.' % fullname
+                elif not ob.IS_SIGNAL:
                     return 'Object "%s" is not a signal.' % fullname
                 upstream.append(ob)
             
