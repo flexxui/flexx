@@ -25,12 +25,22 @@ class HasSignals:
                 success = success and connected
         return success 
     
+    def _create_property(obj, name, private_name, initial):
+        def getter():
+            return obj[private_name]
+        def setter():
+            raise ValueError(name + ' is not settable')
+        obj[private_name] = initial
+        opts = {"enumerable": True, 'get': getter, 'set': setter}
+        Object.defineProperty(obj, name, opts)
+    
     def _create_signals():
         self.__props__ = []  # todo: get rid of this?
         for name in self.__signals__:
-            func = self['_signal_' + name]
+            func = self['_' + name + '_func']
             creator = self['_create_' + func._signal_type]
-            self[name] = creator.call(self, func, func._upstream)
+            signal = creator.call(self, func, func._upstream)
+            self._create_property(self, name, '_' + name + '_signal', signal)
     
     def _create_SourceSignal(func, upstream, selff):
         
@@ -49,23 +59,20 @@ class HasSignals:
                     return  # do not get from upstream initially
             # Get value from upstream
             if selff._upstream:
-                try:
-                    #args = [s() for s in selff._upstream]
-                    args = [selff._value]  # todo: list comprehension
-                    for s in selff._upstream:
-                        args.append(s())
-                except SignalConnectionError:
-                    return
+                #args = [s() for s in selff._upstream]
+                args = [selff._value]  # todo: pyscript support for list comprehension
+                for s in selff._upstream:
+                    args.append(s())  # can raise SignalConnectionError
                 value = selff._call_func(*args)
                 selff._set_value(value)
         
         def _set(value):
             selff._set_value(selff._call_func(value))
             for s in selff._downstream:
-                s._set_dirty(selff)
+                s._set_dirty(selff)  # do not set this signal dirty!
         
         original_set_dirty = selff._set_dirty
-        def _set_dirty(initiator):
+        def _set_dirty(initiator=None):
             original_set_dirty(initiator)
             selff._save_update()
         
@@ -92,7 +99,7 @@ class HasSignals:
         selff = self._create_Signal(func, upstream)
         
         original_set_dirty = selff._set_dirty
-        def _set_dirty(initiator):
+        def _set_dirty(initiator=None):
             original_set_dirty(initiator)
             selff._save_update()
         
@@ -111,24 +118,13 @@ class HasSignals:
                 else:
                     raise RuntimeError('Can only set signal values of InputSignal objects.')
         
-        def create_property(name, initial):
-            # Init value property
-            def getter():
-                return selff['_' + name]
-            def setter():
-                raise ValueError(name + ' is not settable')
-            selff['_' + name] = initial
-            opts = {"enumerable": True, 'get': getter, 'set': setter}
-            Object.defineProperty(selff, name, opts)
-        
-        
         # Create public attributes
-        create_property('value', None)
-        create_property('last_value', None)
-        create_property('timestamp', 0)
-        create_property('last_timestamp', 0)
-        create_property('not_connected', 'No connection attempt yet.')
-        #create_property('name', func.name)  already is a property
+        self._create_property(selff, 'value', '_value', None)
+        self._create_property(selff, 'last_value', '_last_value', None)
+        self._create_property(selff, 'timestamp', '_timestamp', 0)
+        self._create_property(selff, 'last_timestamp', '_last_timestamp', 0)
+        self._create_property(selff, 'not_connected', '_not_connected', 'No connection attempt yet.')
+        #self._create_property(selff, 'name', '_name', func.name)  already is a property
         
         # Create private attributes
         selff.IS_SIGNAL = True
@@ -150,14 +146,14 @@ class HasSignals:
             for s in selff._upstream:
                 s._subscribe(selff)
             # If connecting complete, update (or not)
-            selff._set_dirty(selff)
+            selff._set_dirty()
         
         def disconnect():
             while len(selff._upstream):
                 s = selff._upstream.pop(0)
                 s._unsubscribe(selff)
             selff._not_connected = 'Explicitly disconnected via disconnect()'
-            selff._dirty = True
+            selff._set_dirty()
         
         def _resolve_signals():
             upstream = []
@@ -167,11 +163,11 @@ class HasSignals:
                 ob = obj[nameparts[0]]
                 # Walk down the object tree to obtain the full path
                 for name in nameparts[1:]:
+                    if ob is undefined:
+                        break
                     if ob.IS_SIGNAL:
                         ob = ob()
                     ob = ob[name]
-                    if ob is undefined:
-                        break
                 # Add to list or fail
                 if ob is undefined:
                     return 'Signal "%s" does not exist.' % fullname
@@ -193,6 +189,8 @@ class HasSignals:
         def _save_update():
             try:
                 selff()
+            except SignalConnectionError:
+                pass
             except Exception as err:
                 print('Error updating signal:', err)
         
@@ -207,28 +205,27 @@ class HasSignals:
             if selff._not_connected:
                 selff.connect(False)
             if selff._not_connected:
-                raise RuntimeError('SignalConnectionError') # todo: SignalConnectionError()?
+                raise SignalConnectionError()
             if selff._dirty:
                 selff._update_value()
             return selff._value
         
         def _update_value():
-            try:
-                #args = [s() for s in selff._upstream]
-                args = []  # todo: list comprehension
-                for s in selff._upstream:
-                    args.append(s())
-            except SignalConnectionError:
-                return
+            #args = [s() for s in selff._upstream]
+            args = []  # todo: pyscript support for list comprehension
+            for s in selff._upstream:
+                args.append(s())  # can raise SignalConnectionError
             value = selff._call_func(*args)
             selff._set_value(value)
         
         def _call_func(*args):
             return func.apply(obj, args)
         
-        def _set_dirty(initiator):
+        def _set_dirty(initiator=None):
             if selff._dirty or selff is initiator:
                 return
+            elif initiator is None:
+                initiator = selff
             # Update self
             selff._dirty = True
             # Allow downstream to update
@@ -275,16 +272,17 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             code = js(val._func).jscode
             code = code.replace('super()', base_class)  # fix super
             signals.append(name)
+            funcname = '_' + name + '_func'
             # Add function def
             t = '%s.prototype.%s = %s'
-            funcs_code.append(t % (cls_name, '_signal_' + name, code))
+            funcs_code.append(t % (cls_name, funcname, code))
             # Add upstream signal names to the function object
             t = '%s.prototype.%s._upstream = %r;\n'
-            funcs_code.append(t % (cls_name, '_signal_' + name, val._upstream_given))
+            funcs_code.append(t % (cls_name, funcname, val._upstream_given))
             # Add type of signal too
             t = '%s.prototype.%s._signal_type = %r;\n'
             signal_type = val.__class__.__name__
-            funcs_code.append(t % (cls_name, '_signal_' + name, signal_type))
+            funcs_code.append(t % (cls_name, funcname, signal_type))
         elif callable(val):
             code = js(val).jscode
             code = code.replace('super()', base_class)  # fix super

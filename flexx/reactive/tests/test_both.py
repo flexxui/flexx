@@ -23,7 +23,7 @@ from flexx.reactive.pyscript import create_js_signals_class, HasSignalsJS
 from flexx.pyscript import js, evaljs, evalpy
 
 
-def run_in_both(cls, reference):
+def run_in_both(cls, reference, extra_classes=()):
     
     if reference.lower() != reference:
         raise ValueError('Test reference should be lowercase!')
@@ -33,6 +33,8 @@ def run_in_both(cls, reference):
             # Run in JS
             code = HasSignalsJS.jscode
             code += create_js_signals_class(cls, cls.__name__)
+            for c in extra_classes:
+                code += create_js_signals_class(c, c.__name__)
             code += 'var test = ' + js(func).jscode
             code += 'test(%s);' % cls.__name__
             jsresult = evaljs(code)
@@ -51,6 +53,10 @@ def run_in_both(cls, reference):
 
 
 class Name(HasSignals):
+    
+    _foo = 3
+    _bar = 'bar'
+    spam = [1, 2, 3]
     
     def __init__(self):
         self.r = []
@@ -80,8 +86,23 @@ def test_pull(Name):
     name.r.append(name.full_name())
     return name.r
 
+@run_in_both(Name, "['', 'john doe', '', 'jane doe']")
+def test_disconnecting_signal(Name):
+    s = Name()
+    s.r.append(s.full_name())
+    
+    # Disconnect, but because its a react signal, it re-connects at once
+    s.full_name.disconnect()
+    s.first_name('almar')
+    s.first_name('jorik')
+    s.first_name('jane')
+    
+    s.r.append(s.full_name())  # connects now
+    
+    return s.r  
+
 @run_in_both(Name, "[true, true, '', true, true, true, true, '', true, true]")
-def test_attributes(Name):
+def test_signal_attributes(Name):
     s = Name()
     s.r.append(s.full_name._timestamp == 0)
     s.r.append(s.full_name._value is None)
@@ -95,6 +116,35 @@ def test_attributes(Name):
     s.r.append(s.full_name._last_timestamp > 0)
     s.r.append(s.full_name._last_value == 'john doe')
     return s.r
+
+@run_in_both(Name, "[3, 'bar', [1, 2, 3], 2, 'err', 'err']")
+def test_hassignal_attributes(Name):
+    s = Name()
+    # class attributes
+    s.r.append(s._foo)
+    s.r.append(s._bar)
+    s.r.append(s.spam)
+    # can set other attributes
+    s.eggs = 2
+    s.r.append(s.eggs)
+    # cannot overwrite signals
+    try:
+        s.first_name = 2
+        s.r.append(s.first_name)
+    except Exception:
+        s.r.append('err')
+    # cannot overwrite signal attributes
+    try:
+        s.first_name.value = 2
+        s.r.append(s.first_name.value)
+    except Exception:
+        s.r.append('err')
+    return s.r
+
+@run_in_both(Name, "['first_name', 'full_name', 'last_name']")
+def test_hassignal__signals__(Name):
+    s = Name()
+    return s.__signals__
 
 
 class Title(HasSignals):
@@ -123,56 +173,49 @@ def test_push(Title):
     foo.r.append(foo.show_title.not_connected)
     return foo.r
 
-@run_in_both(Title, "[0, 1, 2, 3]")
-def test_disconnecting(Title):
+@run_in_both(Title, "[0, 0, 2]")
+def test_disconnecting_react(Title):
     s = Title()
     
+    # Disconnect, but because its a react signal, it re-connects at once
     s.show_title.disconnect()
     s.title('xx')
-    s.title('xxxxx')
-    s.title('x')
-    s.show_title.connect()  # auto-connect
-    assert not s.show_title.not_connected
-    
-    s.title_len.disconnect()
-    s.title('xxx')
-    s.title('xxxxx')
-    s.title('xx')
-    s.show_title()  # auto-connect does not work now
-    assert s.title_len.not_connected
-    
-    s.title('xx')
-    s.title('xxxxx')
-    s.title('xxx')
-    s.title_len.connect()  # connected again
-    assert not s.title_len.not_connected
     
     return s.r
-    
+
 
 class Unconnected(HasSignals):
     
     @input
-    def s1(v=''):
+    def s0(v=''):
         return v
     
     @signal('nope')
+    def s1(v):
+        return v
+    
+    @signal('button.title')
     def s2(v):
         return v
     
     @signal('s2')
     def s3(v):
         return v
+    
+    @react('s3')
+    def s4(v):
+        return v
 
-@run_in_both(Unconnected, "[false, 'signal 'nope' does not exist.']")
+@run_in_both(Unconnected, "[false, true, 'signal 'button.title' does not exist.']")
 def test_unconnected(Cls):
     s = Cls()
     r = []
-    r.append(s.s1.not_connected)
+    r.append(bool(s.s0.not_connected))
+    r.append(bool(s.s1.not_connected))
     r.append(s.s2.not_connected)
     return r
 
-@run_in_both(Unconnected, "[true, false, 'err2', 'err3']")
+@run_in_both(Unconnected, "[true, false, 'err2', 'err3', 'err4']")
 def test_unconnected_handling(Cls):
     s = Cls()
     r = []
@@ -182,15 +225,43 @@ def test_unconnected_handling(Cls):
     try:
         s.s2()
     except Exception:
-        r.append('err2')
+        r.append('err2')  # error, because this signal is not connected
     try:
         s.s3()
     except Exception:
-        r.append('err3')
+        r.append('err3')  # error, because an upstream signal is not connected
+    try:
+        s.s4()
+    except Exception:
+        r.append('err4')  # error, because an upstream signal is not connected
     return r
+
+@run_in_both(Unconnected, "['ha', 'ho', 'err4']", extra_classes=(Title,))
+def test_unconnected_connect(Cls):
+    s = Cls()
+    r = []
+    # We add an object named 'button' with signal 'title', exactly what s2 needs
+    button = Title()
+    s.button = button
+    button.title('ha')
+    # Now by just calling s4, s2 will connect
+    r.append(s.s4())
     
-test_unconnected_handling()
-1/0
+    # Now we remove 'button'
+    del s.button
+    # This should still work, since connections are in place
+    button.title('ho')
+    r.append(s.s4())
+    
+    # And we break connections
+    s.s2.disconnect()
+    try:
+        s.s4()
+    except Exception:
+        r.append('err4')  # error, because an upstream signal is not connected
+    
+    return r
+
 
 class SignalTypes(HasSignals):
     

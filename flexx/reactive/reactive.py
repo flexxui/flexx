@@ -214,11 +214,16 @@ class Signal(object):
         If resolving the signals from the strings fails, raises an
         error. Unless ``raise_on_fail`` is False, in which case we return
         True on success.
+        
+        This function is automatically called during initialization,
+        and when the value of this signal is obtained while the signal
+        is not connected.
+        
         """
         
         # Disable connecting for signal placeholders on classes
         if self._class_desciptor:
-            self.disconnect()
+            #self.disconnect() we never connected. disconnect() would recurse 
             self._not_connected = 'Cannot connect signal descriptors on a class.'
             if raise_on_fail:
                 raise RuntimeError(self._not_connected)
@@ -236,16 +241,22 @@ class Signal(object):
             signal._subscribe(self)
         
         # If connecting complete, update (or not)
-        self._set_dirty(self)
+        self._set_dirty()
     
     def disconnect(self):
-        """ Disconnect this signal, unsubscribing it from the upstream signals.
+        """ Disconnect this signal, unsubscribing it from the upstream
+        signals. Note that if there is a react signal it will invoke a
+        re-connect at once, which will immediately undo the
+        disconnection if connecting succeeds.
         """
+        # Disconnect upstream
         while self._upstream:
             s = self._upstream.pop(0)
             s._unsubscribe(self)
         self._not_connected = 'Explicitly disconnected via disconnect()'
-        self._dirty = True
+        # Notify downstream. Note that if one is a react signal, it will
+        # try to re-connect at once.
+        self._set_dirty()
     
     def _resolve_signals(self):
         """ Get signals from their string path. Return value to store
@@ -262,11 +273,11 @@ class Signal(object):
             ob = self._frame.f_locals.get(n, self._frame.f_globals.get(n, None))
             # Walk down the object tree to obtain the full path
             for name in nameparts[1:]:
+                if ob is None:
+                    break
                 if isinstance(ob, Signal):
                     ob = ob()
                 ob = getattr(ob, name, None)
-                if ob is None:
-                    break
             # Add to list or fail
             if ob is None:
                 return 'Signal %r does not exist.' % fullname
@@ -304,6 +315,8 @@ class Signal(object):
         """
         try:
             self()
+        except SignalConnectionError:
+            pass
         except Exception:
             # Allow post-mortem debugging
             type_, value, tb = sys.exc_info()
@@ -352,10 +365,7 @@ class Signal(object):
     def _update_value(self):
         """ Get the latest value from upstream. This method can be overloaded.
         """
-        try:
-            args = [s() for s in self._upstream]
-        except SignalConnectionError:
-            return
+        args = [s() for s in self._upstream]  # can raise SignalConnectionError
         value = self._call_func(*args)
         self._set_value(value)
     
@@ -365,8 +375,6 @@ class Signal(object):
         If the signals is not connected, raises SignalConnectionError. If an upstream
         signal is not connected, errr, what should we do?
         """
-        # todo: what to do when an upstream signal (or upstream-upstream) is not connected?
-        
         if not args:
             return self._get_value()
         else:
@@ -378,11 +386,14 @@ class Signal(object):
         else:
             return self._func(*args)
     
-    def _set_dirty(self, initiator):
+    def _set_dirty(self, initiator=None):
         """ Called by upstream signals when their value changes.
         """
         if self._dirty or self is initiator:
             return
+        elif initiator is None:
+            initiator = self  # This is where it starts
+        
         # Update self
         self._dirty = True
         # Allow downstream to update
@@ -414,12 +425,9 @@ class SourceSignal(Signal):
                 self._set_value(value)
                 return  # do not get from upstream initially
         
-        # Get value from upstream
+        # Get value from upstream, can raise SignalConnectionError
         if self._upstream:
-            try:
-                args = [self._value] + [s() for s in self._upstream]
-            except SignalConnectionError:
-                return
+            args = [self._value] + [s() for s in self._upstream]
             value = self._call_func(*args)
             self._set_value(value)
     
@@ -428,9 +436,9 @@ class SourceSignal(Signal):
         """
         self._set_value(self._call_func(value))
         for signal in self._downstream:
-            signal._set_dirty(self)
+            signal._set_dirty(self)  # do not set this signal dirty!
     
-    def _set_dirty(self, initiator):
+    def _set_dirty(self, initiator=None):
         # An input signal that has upstream signals is reactive too.
         Signal._set_dirty(self, initiator)
         self._save_update()
@@ -457,7 +465,7 @@ class InputSignal(SourceSignal):
 class ReactSignal(Signal):
     """ A signal that reacts immediately to changes of upstream signals.
     """ 
-    def _set_dirty(self, initiator):
+    def _set_dirty(self, initiator=None):
         Signal._set_dirty(self, initiator)
         self._save_update()
 
@@ -589,7 +597,7 @@ def source(*input_signals):
     else:
         return _source
 
-
+# todo: rename input? decorators with this name without having imported the real name is ... weird.
 def input(*input_signals):
     """ Decorator to transform a function into a InputSignal object.
     
@@ -650,7 +658,7 @@ def prop(*input_signals):
         return _prop
 
 
-def signal(*input_signals):  # todo: rename?
+def signal(*input_signals):  # todo: rename? 
     """ Decorator to transform a function into a Signal object.
     
     A signal takes one or more signals as input (specified as arguments
