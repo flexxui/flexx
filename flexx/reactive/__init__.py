@@ -1,5 +1,6 @@
-from .reactive import source, input, signal, react, HasSignals, SignalConnectionError
-from .reactive import SourceSignal, InputSignal, Signal, ReactSignal
+from .reactive import source, input, watch, act, HasSignals, SignalConnectionError
+from .reactive import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal
+
 
 class TestDocs(HasSignals):
     
@@ -8,11 +9,11 @@ class TestDocs(HasSignals):
         """ The title of the x. """
         return str(v)
     
-    @signal('xx')
+    @watch('xx')
     def foo(v=''):
         return v
         
-    @react('title')
+    @act('title')
     def show_title(self, v):
         """ Reactor to show the title when it changes. """
         print(v)

@@ -6,8 +6,8 @@ import sys
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.reactive import input, signal, react, source, SignalConnectionError
-from flexx.reactive import SourceSignal, InputSignal, Signal, ReactSignal
+from flexx.reactive import input, watch, act, source, SignalConnectionError
+from flexx.reactive import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal
 
 # todo: garbage collecting
 # todo: HasSignals
@@ -131,29 +131,29 @@ def test_input_circular():
     assert s2() == 200
 
 
-## Signals
+## Watch
 
 
-def test_signal_no_upstream():
+def test_watch_no_upstream():
     # Signals *must* have upstream signals
     
     with raises(ValueError):
-        @signal
+        @watch
         def s1(v):
             return v + 1
     
     with raises(ValueError):
-        @signal()
+        @watch()
         def s1(v):
             return v + 1
     
     with raises(ValueError):
-        @react
+        @act
         def s1(v):
             return v + 1
     
     with raises(ValueError):
-        @react()
+        @act()
         def s1(v):
             return v + 1
 
@@ -166,11 +166,11 @@ def test_signal_pull():
     def s0(v=10):
         return v
     
-    @signal('s0')
+    @watch('s0')
     def s1(v):
         return v + 1
     
-    @signal('s1')
+    @watch('s1')
     def s2(v):
         s2_called.append(v)
         return v + 2
@@ -196,11 +196,11 @@ def test_signal_push():
     def s0(v=10):
         return v
     
-    @signal('s0')
+    @watch('s0')
     def s1(v):
         return v + 1
     
-    @react('s1')  # <<< react!
+    @act('s1')  # <<< react!
     def s2(v):
         s2_called.append(v)
         return v + 2
@@ -227,11 +227,11 @@ def test_signal_circular():
         else:
             return v3 + 1
     
-    @signal('s1')
+    @watch('s1')
     def s2(v):
         return v + 1
     
-    @signal('s2')
+    @watch('s2')
     def s3(v):
         return v + 1
     
@@ -260,7 +260,7 @@ def test_signal_last_value():
     def s0(v=10):
         return v
     
-    @signal('s0')
+    @watch('s0')
     def s1(v):
         return v + 1
     
@@ -274,13 +274,13 @@ def test_signal_last_value():
     assert s1.last_value == 11
 
 
-def test_react_last_value():
+def test_act_last_value():
     
     @input
     def s0(v=10):
         return v
     
-    @react('s0')
+    @act('s0')
     def s1(v):
         return v + 1
     
@@ -295,7 +295,7 @@ def test_react_last_value():
 
 def test_connecting_disconnected():
     
-    @signal('nonexistent1')
+    @watch('nonexistent1')
     def s1(v):
         return v + 1
     
@@ -310,7 +310,7 @@ def test_connecting_disconnected():
 
 def test_connecting_signal():
     
-    @signal('s1')
+    @watch('s1')
     def s2(v):
         return v + 1
     
@@ -335,7 +335,7 @@ def test_connecting_react():
     
     reacted = []
     
-    @react('s1')
+    @act('s1')
     def s2(v):
         reacted.append(v)
     
@@ -364,7 +364,7 @@ def test_disconnecting():
     def s1(v=10):
         return float(v)
     
-    @signal('s1')
+    @watch('s1')
     def s2(v):
         return v + 1
     
@@ -412,7 +412,7 @@ def test_errors():
         # creating a react signal connects it, invalidates it, updates it
         # -> error to stderr
         
-        @react('s1')
+        @act('s1')
         def s2(v):
             reacted.append(v)
             1/0
@@ -430,7 +430,7 @@ def test_errors():
         # creating a normal signal connects it, invalidates it. Stop
         # -> on calling, it should raise
         
-        @signal('s1')
+        @watch('s1')
         def s3(v):
             reacted.append(v)
             1/0

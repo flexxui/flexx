@@ -97,7 +97,10 @@ class HasSignals:
         
         return self._create_SourceSignal(func, upstream, selff)
     
-    def _create_ReactSignal(func, upstream):
+    def _create_WatchSignal(func, upstream, selff=None):
+        return self._create_Signal(func, upstream, selff)
+    
+    def _create_ActSignal(func, upstream):
         selff = self._create_Signal(func, upstream)
         
         original_set_dirty = selff._set_dirty
@@ -195,7 +198,7 @@ class HasSignals:
                 pass
             except Exception as err:
                 #print('Error updating signal:', err.stack)
-                print('Error updating signal:', err)
+                console.error('Error updating signal:', err)
         
         def _set_value(value):
             selff._last_value = selff._value
@@ -310,7 +313,7 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
     return '\n'.join(total_code)
 
 
-from flexx.reactive import input, signal, react, source, HasSignals, Signal
+from flexx.reactive import input, watch, act, source, HasSignals, Signal
 
 class Foo:
     
@@ -324,11 +327,11 @@ class Foo:
     def title(v=''):
         return str(v)
     
-    @signal('title')
+    @watch('title')
     def title_len(v):
         return len(v)
     
-    @react('title_len')
+    @act('title_len')
     def show_title(v):
         result.append(v)
 

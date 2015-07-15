@@ -464,7 +464,11 @@ class InputSignal(SourceSignal):
             raise ValueError('Setting an input signal requires exactly one argument')
 
 
-class ReactSignal(Signal):
+class WatchSignal(Signal):
+    pass
+
+
+class ActSignal(Signal):
     """ A signal that reacts immediately to changes of upstream signals.
     """ 
     def _set_dirty(self, initiator=None):
@@ -663,7 +667,7 @@ def prop(*input_signals):
         return _prop
 
 
-def signal(*input_signals):  # todo: rename? 
+def watch(*input_signals):  # todo: rename? 
     """ Decorator to transform a function into a Signal object.
     
     A signal takes one or more signals as input (specified as arguments
@@ -673,7 +677,7 @@ def signal(*input_signals):  # todo: rename?
     
     Example:
     
-        @signal('s1', 's2')
+        @watch('s1', 's2')
         def adder(val1, val2):
             return val1 + val2
     
@@ -686,12 +690,12 @@ def signal(*input_signals):  # todo: rename?
     
     def _signal(func):
         frame = sys._getframe(1)
-        s = Signal(func, input_signals, frame=frame)
+        s = WatchSignal(func, input_signals, frame=frame)
         return s
     return _signal    
 
 
-def react(*input_signals):
+def act(*input_signals):
     """ Decorator to transform a function into a ReactSignal object.
     
     A react signal takes one or more signals as input (specified as
@@ -703,7 +707,7 @@ def react(*input_signals):
     
     Example:
     
-        @react('s1', 's2')
+        @act('s1', 's2')
         def show_values(val1, val2):
             print(val1, val2)
     
@@ -716,6 +720,6 @@ def react(*input_signals):
     
     def _react(func):
         frame = sys._getframe(1)
-        s = ReactSignal(func, input_signals, frame=frame)
+        s = ActSignal(func, input_signals, frame=frame)
         return s
     return _react

@@ -18,7 +18,7 @@ single quotes.
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.reactive import input, signal, react, source, HasSignals
+from flexx.reactive import input, watch, act, source, HasSignals
 from flexx.reactive.pyscript import create_js_signals_class, HasSignalsJS
 from flexx.pyscript import js, evaljs, evalpy
 
@@ -74,7 +74,7 @@ class Name(HasSignals):
     def last_name(v='doe'):
         return str(v)
     
-    @signal('first_name', 'last_name')
+    @watch('first_name', 'last_name')
     def full_name(self, n1, n2):
         self.r.append('')
         return n1 + ' ' + n2
@@ -161,11 +161,11 @@ class Title(HasSignals):
     def title(v=''):
         return v
     
-    @signal('title')
+    @watch('title')
     def title_len(v):
         return len(v)
     
-    @react('title_len')
+    @act('title_len')
     def show_title(self, v):
         self.r.append(v)
 
@@ -194,19 +194,19 @@ class Unconnected(HasSignals):
     def s0(v=''):
         return v
     
-    @signal('nope')
+    @watch('nope')
     def s1(v):
         return v
     
-    @signal('button.title')
+    @watch('button.title')
     def s2(v):
         return v
     
-    @signal('s2')
+    @watch('s2')
     def s3(v):
         return v
     
-    @react('s3')
+    @act('s3')
     def s4(v):
         return v
 
@@ -277,11 +277,11 @@ class SignalTypes(HasSignals):
     def s2(v):
         return v
     
-    @signal('s2')
+    @watch('s2')
     def s3(v):
         return v
     
-    @react('s2')
+    @act('s2')
     def s4(v):
         return v
 
@@ -338,11 +338,11 @@ class Circular(HasSignals):
         else:
             return v3 + 1
     
-    @signal('s1')
+    @watch('s1')
     def s2(v):
         return v + 1
     
-    @signal('s2')
+    @watch('s2')
     def s3(v):
         return v + 1
 
@@ -361,7 +361,8 @@ def test_circular(Cls):
     return r
 
 
-class Temperature(HasSignals):  # to avoid round erros, the relation is simplified
+# todo: this is not pretty. Do we need it? Can this be done differently?
+class Temperature(HasSignals):  # to avoid round errors, the relation is simplified
     @input('f')
     def c(v=32, f=None):
         if f is None:
@@ -393,9 +394,28 @@ def test_circular_temperature(Cls):
     return r
 
 
+# todo: this does not work, but maybe it should? Although making this work would close the door to async, I think
+class Temperature2(HasSignals):  # to avoid round erros, the relation is simplified
+    @input
+    def c(v=32):
+        return int(v)
+    
+    @input
+    def f(v=0):
+        return int(v)
+    
+    @act('f')
+    def _f(self, v):
+        self.c(v+32)
+    
+    @act('c')
+    def _c(self, v):
+        self.f(v-32)
+
+
 class Name2(Name):
     
-    @signal('full_name')
+    @watch('full_name')
     def name_length(v):
         return len(v)
     
