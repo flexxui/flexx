@@ -49,16 +49,18 @@ class HasSignals:
         def _update_value():
             if selff._timestamp == 0:
                 ok = False
+                selff._dirty = False
                 try:
                     value = selff._call_func()
                     ok = value is not undefined
                 except Exception:
-                    selff._dirty = False
-                if ok:  # todo: pyscript support for else-clause
+                    pass
+                if ok:
                     selff._set_value(value)
                     return  # do not get from upstream initially
+            
             # Get value from upstream
-            if selff._upstream:
+            if len(selff._upstream):
                 #args = [s() for s in selff._upstream]
                 args = [selff._value]  # todo: pyscript support for list comprehension
                 for s in selff._upstream:
@@ -192,6 +194,7 @@ class HasSignals:
             except SignalConnectionError:
                 pass
             except Exception as err:
+                #print('Error updating signal:', err.stack)
                 print('Error updating signal:', err)
         
         def _set_value(value):
@@ -300,7 +303,7 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             raise ValueError(err % (name, val))
     
     # Insert __signals__ that we found
-    t = '%s.prototype.__signals__ = %s.__signals__.concat(%r);'
+    t = '%s.prototype.__signals__ = %s.__signals__.concat(%r).sort();'
     total_code.append(t % (cls_name, base_class, signals))
     
     total_code.extend(funcs_code)

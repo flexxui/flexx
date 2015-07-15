@@ -32,9 +32,13 @@ def run_in_both(cls, reference, extra_classes=()):
         def runner():
             # Run in JS
             code = HasSignalsJS.jscode
-            code += create_js_signals_class(cls, cls.__name__)
+            for c in cls.mro()[1:]:
+                if c is HasSignals:
+                    break
+                code += create_js_signals_class(c, c.__name__, c.__bases__[0].__name__+'.prototype')
             for c in extra_classes:
                 code += create_js_signals_class(c, c.__name__)
+            code += create_js_signals_class(cls, cls.__name__, cls.__bases__[0].__name__+'.prototype')
             code += 'var test = ' + js(func).jscode
             code += 'test(%s);' % cls.__name__
             jsresult = evaljs(code)
@@ -389,6 +393,30 @@ def test_circular_temperature(Cls):
     return r
 
 
+class Name2(Name):
+    
+    @signal('full_name')
+    def name_length(v):
+        return len(v)
+    
+    @input
+    def aa():
+        return len(v)
+
+@run_in_both(Name2, "['aa', 'first_name', 'full_name', 'last_name', 'name_length']")
+def test_hassignal__signals__(Name2):
+    s = Name2()
+    return s.__signals__
+
+@run_in_both(Name2, "[8, 3]")
+def test_inheritance(Cls):
+    s = Cls()
+    r = []
+    r.append(s.name_length())
+    s.first_name('a')
+    s.last_name('b')
+    r.append(s.name_length())
+    return r
 
 
 run_tests_if_main()

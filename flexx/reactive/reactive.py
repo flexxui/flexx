@@ -85,8 +85,10 @@ class ObjectFrame(object):
         if ob is not None:
             locals.update(ob.__dict__)
             # Handle signals. Not using __signals__; works on any class
-            # todo: this does not work with subclasses -> fix and test!
-            for key, val in ob.__class__.__dict__.items():
+            for key in dir(ob.__class__):
+                if key.startswith('__'):
+                    continue
+                val = getattr(ob.__class__, key)
                 if isinstance(val, Signal):
                     private_name = '_' + key + '_signal'
                     if private_name in locals:
@@ -502,7 +504,10 @@ class HasSignalsMeta(type):
         # Collect signals defined on this class
         signals = {}
         props = {}
-        for name, val in dct.items():
+        for name in dir(cls):
+            if name.startswith('__'):
+                continue
+            val = getattr(cls, name)
             if isinstance(val, type) and issubclass(val, Signal):
                 val = val()
                 setattr(cls, name, val)  # allow setting just class
