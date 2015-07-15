@@ -18,8 +18,8 @@ single quotes.
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.reactive import input, watch, act, source, HasSignals
-from flexx.reactive.pyscript import create_js_signals_class, HasSignalsJS
+from flexx.react import input, watch, act, source, HasSignals
+from flexx.react.pyscript import create_js_signals_class, HasSignalsJS
 from flexx.pyscript import js, evaljs, evalpy
 
 

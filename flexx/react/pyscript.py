@@ -1,4 +1,4 @@
-""" Implementation of flexx.reactive in JS via PyScript.
+""" Implementation of flexx.react in JS via PyScript.
 """
 
 from flexx.pyscript import js, evaljs, evalpy
@@ -313,7 +313,7 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
     return '\n'.join(total_code)
 
 
-from flexx.reactive import input, watch, act, source, HasSignals, Signal
+from flexx.react import input, watch, act, source, HasSignals, Signal
 
 class Foo:
     

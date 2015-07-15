@@ -4,7 +4,7 @@
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.reactive import HasSignals, input, watch, act, Signal
+from flexx.react import HasSignals, input, watch, act, Signal
 
 
 def test_signals_on_classes_are_descriptors():
@@ -193,7 +193,7 @@ def test_func_name():
 
 
 def test_props():
-    from flexx.reactive.reactive import prop
+    from flexx.react.reactive import prop
     title_lengths = []
     
     class Test(HasSignals):

@@ -6,8 +6,8 @@ import sys
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.reactive import input, watch, act, source, SignalConnectionError
-from flexx.reactive import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal
+from flexx.react import input, watch, act, source, SignalConnectionError
+from flexx.react import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal
 
 # todo: garbage collecting
 # todo: HasSignals
