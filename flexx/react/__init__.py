@@ -1,5 +1,5 @@
-from .reactive import source, input, watch, act, HasSignals, SignalConnectionError
-from .reactive import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal
+from .react import source, input, watch, act, HasSignals, SignalConnectionError
+from .react import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal
 
 
 class TestDocs(HasSignals):

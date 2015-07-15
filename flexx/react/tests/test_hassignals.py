@@ -193,7 +193,7 @@ def test_func_name():
 
 
 def test_props():
-    from flexx.react.reactive import prop
+    from flexx.react.react import prop
     title_lengths = []
     
     class Test(HasSignals):
