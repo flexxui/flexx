@@ -7,46 +7,52 @@ find the n-th prime on both Python and JS and measure the performance.
 from time import perf_counter
 from flexx import ui
 from flexx.pyscript import js
+import flexx.ui.app.paired
 
-
-class PrimeFinder(ui.mirrored.Mirrored):
+def _find_prime(self, n):
+    """ The code that is executed on both Python and JS (via PyScript)
+    """
+    primes = []
     
-    def _find_prime(self, n):
-        """ The code that is executed on both Python and JS (via PyScript)
-        """
-        primes = []
-        
-        def isprime(x):
-            if x <= 1:
-                return False
-            elif x == 2:
-                return True
-            for i in range(2, x//2+1):
-                if x % i == 0:
-                    return False
+    def isprime(x):
+        if x <= 1:
+            return False
+        elif x == 2:
             return True
-        
-        t0 = perf_counter()
-        i = 0
-        while len(primes) < n:
-            i += 1
-            if isprime(i):
-                primes.append(i)
-        t1 = perf_counter()
-        print(i, 'found in ', t1-t0, 'seconds')
+        for i in range(2, x//2+1):
+            if x % i == 0:
+                return False
+        return True
     
-    find_prime__js = js(_find_prime)  # produce version of the function
+    t0 = perf_counter()
+    i = 0
+    while len(primes) < n:
+        i += 1
+        if isprime(i):
+            primes.append(i)
+    t1 = perf_counter()
+    print(i, 'found in ', t1-t0, 'seconds')
+    
+    
+class PrimeFinder(ui.app.paired.Paired):
+    
+    _find_prime = _find_prime
     
     def find_prime_py(self, n):
         self._find_prime(n)
     
+    class JS:
+        _find_prime = _find_prime
+        
     def find_prime_js(self, n):
-        self.call_method('_find_prime(%i)' % n)
+        self.call_js('_find_prime(%i)' % n)
 
 
 # Create flexx app with a nodejs runtime (you could also use e.g. firefox here)
-app = ui.App('nodejs')
+# todo: ui.run('nodejs') ?
+# todo: why does nodejs not work?
+app = ui.app.app.Proxy('__default__', 'firefox')
 
-finder = PrimeFinder()
+finder = PrimeFinder(_proxy=app)
 finder.find_prime_py(2000)  # 0.7 s
 finder.find_prime_js(2000)  # 0.2 s

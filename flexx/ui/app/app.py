@@ -119,7 +119,7 @@ class AppManager(object):
     def add_pending_proxy_instance(self, proxy):
         """ Add an app instance as a pending app. 
         
-        This means that the app is created from Python and not yet
+        This means that the proxy is created from Python and not yet
         connected. A runtime has been launched and we're waiting for
         it to connect.
         """
@@ -380,8 +380,6 @@ def this_is_an_app(cls=None, **kwargs):
             proxy = Proxy(cls.__name__, runtime, **d)
             app = cls(_proxy=proxy)
             proxy._set_widget(app)
-            # Register the instance at the manager
-            manager.add_pending_proxy_instance(proxy)
             return app
         
         manager.register_app_class(cls)
@@ -394,6 +392,7 @@ def this_is_an_app(cls=None, **kwargs):
         return _make_app(cls)
 
 
+# todo: this does not work well with creating apps from scratch yet; see run_python_in_node.py example
 class Proxy(object):
     """ A proxy between Python and the client runtime
 
@@ -447,6 +446,10 @@ class Proxy(object):
         return '<Proxy for %r (%s) at 0x%x>' % (self.app_name, s, id(self))
     
     def _launch_runtime(self, runtime, **runtime_kwargs):
+        
+        # Register the instance at the manager
+        manager.add_pending_proxy_instance(self)
+        
         if runtime == '<export>':
             self._ws = Exporter(self)
         elif runtime == 'notebook':

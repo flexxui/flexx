@@ -1,3 +1,5 @@
+""" This tests the paired meta class.
+"""
 
 from pytest import raises
 from flexx.util.testing import run_tests_if_main

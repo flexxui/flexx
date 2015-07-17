@@ -24,7 +24,7 @@ paired_classes = []
 def get_mirrored_classes(): # todo: rename to paired
     """ Get a list of all known Mirrored subclasses.
     """
-    return [c for c in HasSignalsMeta.CLASSES if issubclass(c, Paired)]
+    return [c for c in react.HasSignalsMeta.CLASSES if issubclass(c, Paired)]
 
 
 def get_instance_by_id(id):
@@ -36,20 +36,33 @@ def get_instance_by_id(id):
 
 import json
 
+
 class JSSignal(react.SourceSignal):
     """ A signal that represents a proxy to a signal in JavaScript.
     """
     
-    def __init__(self, name_or_func, upstream=[], *args, **kwargs):
-        assert not upstream
+    def __init__(self, func_or_name, upstream=[], frame=None, ob=None):
         
         def func(v=''):
             return json.loads(v)
         
-        name = name_or_func if isinstance(name_or_func, string_types) else func.__name__
-        func.__name__ = name
+        if isinstance(func_or_name, string_types):
+            func.__name__ = func_or_name
+        else:
+            func.__name__ = func_or_name.__name__
         
-        react.SourceSignal.__init__(self, func, [], *args, **kwargs)
+        self._linked = False
+        react.SourceSignal.__init__(self, func, [], ob=ob)
+    
+    def _subscribe(self, signal):
+        react.SourceSignal._subscribe(self, signal)
+        if not self._linked:
+            self.__self__._link_js_signal(self.name)
+    
+    def _unsubscribe(self, signal):
+        react.SourceSignal._unsubscribe(self, signal)
+        if self._linked and not self._downstream:
+            self.__self__._link_js_signal(self.name, False)
 
 
 class PySignal(react.SourceSignal):
@@ -86,14 +99,14 @@ class PairedMeta(react.HasSignalsMeta):
                         print('Warning: JS signal %r not proxied, as it would hide a Py attribute.' % name)
         
         # Implicit inheritance for JS "sub"-class
-        JS = type('JS', (object, ), {})
-        for c in cls.__bases__ + (cls, ):
+        jsbases = [getattr(b, 'JS') for b in cls.__bases__ if hasattr(b, 'JS')]
+        JS = type('JS', tuple(jsbases), {})
+        for c in (cls, ): #cls.__bases__ + (cls, ):
             if 'JS' in c.__dict__:
-                JS.__init__ = c.__init__
+                if '__init__' in c.JS.__dict__:
+                    JS.__init__ = c.JS.__init__
                 for name, val in c.JS.__dict__.items():
                     if not name.startswith('__'):
-                        if hasattr(JS, name):  # todo: remove this (leaving now to prevent breaking it)
-                            print('Warning: %s.JS already has %r' % (cls, name))
                         setattr(JS, name, val)
         cls.JS = JS
         
@@ -106,7 +119,9 @@ class PairedMeta(react.HasSignalsMeta):
                     pass  # ok, overloaded signal on JS side
                 else:
                     print('Warning: Py signal %r not proxied, as it would hide a JS attribute.' % name)
-
+        
+        # Collect JS code for this class
+        
 
 class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
     """ Class for which objects exist both in Python and JS. 
@@ -168,8 +183,8 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         # for name in self.props():
         #     val = getattr(self, name)
         #     props[name] = getattr(self.__class__, name).to_json(val)
-        # cmd = 'flexx.instances.%s = new %s(%s);' % (self.id, clsname, json.dumps(props))
-        # self._proxy._exec(cmd)
+        cmd = 'flexx.instances.%s = new %s(%r);' % (self._id, clsname, self._id)
+        self._proxy._exec(cmd)
         
         # todo: get notified when a prop changes, pend a call via call_later
         # todo: collect more changed props if they come by
@@ -191,47 +206,76 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         # Note: the JS function _set_property is defined below
         txt = getattr(self.__class__, name).to_json(new)
         #print('sending json', txt)
-        cmd = 'flexx.instances.%s._set_property(%r, %r, true, true);' % (self.id, name, txt)
+        cmd = 'flexx.instances.%s._set_property(%r, %r, true, true);' % (self._id, name, txt)
+        self._proxy._exec(cmd)
+    
+    def _link_js_signal(self, name, link=True):
+        """ Make a link between a JS signal and its proxy in Python.
+        This is done when a proxy signal is "used".
+        """
+        link = 'true' if link else 'false'
+        cmd = 'flexx.instances.%s._link_js_signal(%r, %s);' % (self._id, name, link)
         self._proxy._exec(cmd)
     
     
+    def call_js(self, call):
+        cmd = 'flexx.instances.%s.%s;' % (self._id, call)
+        self._proxy._exec(cmd)
+    
     class JS:
         
-        def __init__(self, initial_signal_values):
+        def __init__(self, id):
             
             # Set id alias. In most browsers this shows up as the first element
             # of the object, which makes it easy to identify objects while
             # debugging. This attribute should *not* be used.
-            self.__id = initial_signal_values['id']
+            self._id = id
             
-            # Init events handlers
-            # todo: init all events defined at the class
-            self._event_handlers = {}
-            for event_name in self._EVENT_NAMES:
-                self._event_handlers[event_name] = []
+            self._linked_signals = {}  # use a list as a set
             
-            # Create properties
-            for name in props:
-                opts = {"enumerable": True}
-                gs = self._getter_setter(name)
-                opts['get'] = gs[0]
-                opts['set'] = gs[1]
-                Object.defineProperty(self, name, opts)
+            # # Init events handlers
+            # # todo: init all events defined at the class
+            # self._event_handlers = {}
+            # for event_name in self._EVENT_NAMES:
+            #     self._event_handlers[event_name] = []
+            # 
+            # # Create properties
+            # for name in props:
+            #     opts = {"enumerable": True}
+            #     gs = self._getter_setter(name)
+            #     opts['get'] = gs[0]
+            #     opts['set'] = gs[1]
+            #     Object.defineProperty(self, name, opts)
         
-            # First init all property values, without calling the changed-func
-            for name in props:
-                self._set_property(name, props[name], True, False)
+   #        #   # First init all property values, without calling the changed-func
+            # for name in props:
+            #     self._set_property(name, props[name], True, False)
             
             # Init (with props set to their initial value)
             self._init()
             
-            # Emit changed events
-            for name in props:
-                if self['_'+name+'_changed']:
-                    self['_'+name+'_changed'](name, None, self['_'+name])
+            # # Emit changed events
+            # for name in props:
+            #     if self['_'+name+'_changed']:
+            #         self['_'+name+'_changed'](name, None, self['_'+name])
         
         def _init(self):
             pass  # Subclasses should overload this
+        
+        def _signal_changed(self, name, value):
+            if self._linked_signals[name]:
+                if flexx.ws is not None:  # we could be exported or in an nbviewer
+                    if value['__tojson__']:  # == function
+                        txt = value['__tojson__']()
+                    else:
+                        txt = JSON.stringify(value)
+                    flexx.ws.send('SIGNAL ' + self._id + ' ' + name + ' ' + txt)
+        
+        def _link_js_signal(self, name, link):
+            if link:
+                self._linked_signals[name] = True
+            elif self._linked_signals[name]:
+                del self._linked_signals[name]
         
         @react.source
         def stub_mouse_pos(pos=(0, 0)):
@@ -268,7 +312,7 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
                 else:
                     txt = JSON.stringify(value)
                 if flexx.ws is not None:  # we could be exported or in an nbviewer
-                    flexx.ws.send('PROP ' + self.id + ' ' + name + ' ' + txt)
+                    flexx.ws.send('PROP ' + self._id + ' ' + name + ' ' + txt)
             return getter, setter
         
         ## JS event system
@@ -332,10 +376,10 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
     
     @classmethod
     def get_js(cls):
-        # todo: move this to app/clientcode
+        # todo: move this to app/clientcode, or to meta class!
         cls_name = 'flexx.classes.' + cls.__name__
         base = object if (cls is Paired) else cls.mro()[1]
-        base_class = 'Object'
+        base_class = 'flexx.classes.HasSignals.prototype'
         if cls is not Paired:
             base_class = 'flexx.classes.%s.prototype' % cls.mro()[1].__name__
         
@@ -347,7 +391,13 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         #         break
         
         js = []
-        js.extend(get_class_definition(cls_name, base_class))
+        
+        if cls is Paired:
+            code = HasSignalsJS.jscode.replace('HasSignals', 'flexx.classes.HasSignals')
+            js.append(code[4:])  # skip 'var '
+        
+        #js.extend(get_class_definition(cls_name, base_class))
+        js.append(create_js_signals_class(cls.JS, cls_name, base_class))
         
         # js.append('%s.prototype._EVENT_NAMES = %r;\n' % (cls_name, list(event_names)))
         
@@ -363,31 +413,31 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         #     for key, val in JS.__dict__.items():
         #         
         #         if isinstance(val, Signal):
-                    
+                 
         
-        
-        
-        
-        for key, func in cls.__dict__.items():
-            # Methods
-            # func = getattr(cls, key)
-            if isinstance(func, JSCode):
-                code = func.jscode.replace('super()', base_class)  # fix super
-                name = func.name
-                js.append('%s.prototype.%s = %s' % (cls_name, name, code))
-            
-            # Property json methods
-            # todo: implement property functions for validation, to_json and from_json in flexx.props
-            # todo: more similar API and prop handling in py and js
-            elif isinstance(func, Prop) and hasattr(func, 'validate'):
-                prop = func
-                propname = key
-                funcs = [getattr(prop, x, None) for x in ('to_json__js', 'from_json__js')]
-                funcs = [func for func in funcs if func is not None]
-                for func in funcs:
-                    code = func.jscode
-                    name = '_%s_%s' % (func.name, propname)
-                    js.append('%s.prototype.%s = %s' % (cls_name, name, code))
+        # create_js_signals_class
+        # 
+        # 
+        # for key, func in cls.__dict__.items():
+        #     # Methods
+        #     # func = getattr(cls, key)
+        #     if isinstance(func, JSCode):
+        #         code = func.jscode.replace('super()', base_class)  # fix super
+        #         name = func.name
+        #         js.append('%s.prototype.%s = %s' % (cls_name, name, code))
+        #     
+        #     # Property json methods
+        #     # todo: implement property functions for validation, to_json and from_json in flexx.props
+        #     # todo: more similar API and prop handling in py and js
+        #     elif isinstance(func, Prop) and hasattr(func, 'validate'):
+        #         prop = func
+        #         propname = key
+        #         funcs = [getattr(prop, x, None) for x in ('to_json__js', 'from_json__js')]
+        #         funcs = [func for func in funcs if func is not None]
+        #         for func in funcs:
+        #             code = func.jscode
+        #             name = '_%s_%s' % (func.name, propname)
+        #             js.append('%s.prototype.%s = %s' % (cls_name, name, code))
         
         # todo: give it an id
         return '\n'.join(js)

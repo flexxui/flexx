@@ -364,7 +364,8 @@ class ClientCode(object):
         #         self._files[fname] = os.path.join(HTML_DIR, fname)
         
         # Collect JS from mirrored classes
-        from .mirrored import get_mirrored_classes
+        #from .mirrored import get_mirrored_classes
+        from .paired import get_mirrored_classes
         
         self._js['flexx-ui'] = []
         self._js['index-other'] = []

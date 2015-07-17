@@ -250,6 +250,18 @@ class WSHandler(tornado.websocket.WebSocketHandler):
                 print('setting from js:', prop)
                 val = getattr(ob.__class__, prop).from_json(txt)
                 setattr(ob, prop, val)
+        elif message.startswith('SIGNAL '):
+            # todo: seems weird to deal with here. implement this by registring some handler?
+            _, id, signal_name, txt = message.split(' ', 3)
+            from .paired import Paired
+            import json
+            ob = Paired._instances.get(id, None)
+            if ob is not None:
+                # Note that this will again sync with JS, but it stops there:
+                # eventual synchronity
+                print('setting signal from js:', signal_name)
+                signal = getattr(ob, signal_name)
+                signal._set(json.loads(txt))
         else:
             print('message received %s' % message)
             self.write_message('echo ' + message, binary=True)

@@ -351,6 +351,10 @@ class Signal(object):
         self._last_timestamp = self._timestamp
         self._timestamp = time.time()
         self._dirty = False
+        if self._ob is not None:
+            ob = self._ob()
+            if hasattr(ob, '_signal_changed'):
+                ob._signal_changed(self.name, value)
     
     def _get_value(self):
         """ Get the current value. Some overhead is put here to keep
@@ -570,6 +574,13 @@ class HasSignals(with_metaclass(HasSignalsMeta, object)):
                 connected = s.connect(raise_on_fail)  # dont combine this with next line
                 success = success and connected
         return success
+    
+    
+    def _signal_changed(self, name, value):
+        """ Called when one of our signals changes.
+        Can be used to do more signal magic.
+        """
+        pass
 
 
 def _first_arg_is_func(ii):

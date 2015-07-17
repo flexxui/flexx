@@ -14,6 +14,9 @@ class HasSignals:
         self._create_signals()
         self.connect_signals(False)
     
+    def _signal_changed(self, name, value):
+        pass  # can be overloaded in subclasses
+    
     def connect_signals(self, raise_on_fail=True):
         success = True
         for name in self.__signals__:
@@ -206,6 +209,7 @@ class HasSignals:
             selff._last_timestamp = selff._timestamp
             selff._timestamp = Date().getTime() / 1000
             selff._dirty = False
+            obj._signal_changed(selff.name, value)
         
         def _get_value():
             if selff._not_connected:
@@ -264,6 +268,8 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
     or a tuple/list thereof.
     """
     
+    assert cls_name != 'HasSignals'  # we need this special class above instead
+    
     signals = []
     total_code = []
     funcs_code = []  # functions and signals go below class constants
@@ -271,7 +277,8 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
            'or a list/tuple thereof. Not %s -> %r.')
     
     total_code.extend(get_class_definition(cls_name, base_class))
-    total_code[0] = 'var ' + total_code[0]
+    prefix = '' if cls_name.count('.') else 'var '
+    total_code[0] = prefix + total_code[0]
     
     for name, val in sorted(cls.__dict__.items()):
         if isinstance(val, Signal):
@@ -306,8 +313,12 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             raise ValueError(err % (name, val))
     
     # Insert __signals__ that we found
-    t = '%s.prototype.__signals__ = %s.__signals__.concat(%r).sort();'
-    total_code.append(t % (cls_name, base_class, signals))
+    if base_class in ('Object', 'HasSignals.prototype'):
+        t = '%s.prototype.__signals__ = %r.sort();'
+        total_code.append(t % (cls_name, signals))
+    else:
+        t = '%s.prototype.__signals__ = %s.__signals__.concat(%r).sort();'
+        total_code.append(t % (cls_name, base_class, signals))
     
     total_code.extend(funcs_code)
     return '\n'.join(total_code)
