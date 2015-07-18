@@ -43,9 +43,8 @@ def with_metaclass(meta, *bases):
     return type.__new__(metaclass, 'temporary_class', (), {})
 
 
-class SignalConnectionError(Exception):
-    def __init__(self, msg='This signal is not connected.'):
-        Exception.__init__(self, msg)
+class SignalValueError(Exception):
+    pass
 
 
 class StubFrame(object):
@@ -114,6 +113,7 @@ class Signal(object):
           from the input signals.
     upstream: a list of signals that this signal depends on.
     """
+    _active = False
     
     def __init__(self, func, upstream, frame=None, ob=None):
         # Check and set func
@@ -154,7 +154,7 @@ class Signal(object):
         self._last_value = None
         self._timestamp = 0
         self._last_timestamp = 0
-        self._dirty = True
+        self._status = 3  # 0: ok, 1: out of date, 2: uninitialized, 3: unconnected
         
         # Connecting
         self._not_connected = 'No connection attempt yet.'
@@ -234,6 +234,7 @@ class Signal(object):
         # Resolve signals
         self._not_connected = self._resolve_signals()
         if self._not_connected:
+            self._set_status(3)
             if raise_on_fail:
                 raise RuntimeError('Connection error in signal %r: ' % self._name + self._not_connected)
             return False
@@ -242,8 +243,8 @@ class Signal(object):
         for signal in self._upstream:
             signal._subscribe(self)
         
-        # If connecting complete, update (or not)
-        self._set_dirty()
+        # Update status (also downstream)
+        self._set_status(1)
     
     def disconnect(self):
         """ Disconnect this signal, unsubscribing it from the upstream
@@ -256,9 +257,8 @@ class Signal(object):
             s = self._upstream.pop(0)
             s._unsubscribe(self)
         self._not_connected = 'Explicitly disconnected via disconnect()'
-        # Notify downstream. Note that if one is a react signal, it will
-        # try to re-connect at once.
-        self._set_dirty()
+        # Notify downstream.
+        self._set_status(3)
     
     def _resolve_signals(self):
         """ Get signals from their string path. Return value to store
@@ -317,7 +317,7 @@ class Signal(object):
         """
         try:
             self()
-        except SignalConnectionError:
+        except SignalValueError:
             pass
         except Exception:
             # Allow post-mortem debugging
@@ -350,7 +350,7 @@ class Signal(object):
         self._value = value
         self._last_timestamp = self._timestamp
         self._timestamp = time.time()
-        self._dirty = False
+        self._status = 0
         if self._ob is not None:
             ob = self._ob()
             if hasattr(ob, '_signal_changed'):
@@ -362,23 +362,25 @@ class Signal(object):
         """
         if self._not_connected:
             self.connect(False)
-        if self._not_connected:
-            raise SignalConnectionError()
-        if self._dirty:
+        if self._status == 1:
             self._update_value()
+        elif self._status == 2:
+            raise SignalValueError('The signal is not initialized.')
+        elif self._status == 3:
+            raise SignalValueError('The signal is not connected.')
         return self._value
     
     def _update_value(self):
         """ Get the latest value from upstream. This method can be overloaded.
         """
-        args = [s() for s in self._upstream]  # can raise SignalConnectionError
+        args = [s() for s in self._upstream]  # can raise SignalValueError
         value = self._call_func(*args)
         self._set_value(value)
     
     def __call__(self, *args):
         """ Get the signal value.
         
-        If the signals is not connected, raises SignalConnectionError. If an upstream
+        If the signals is not connected, raises SignalValueError. If an upstream
         signal is not connected, errr, what should we do?
         """
         if not args:
@@ -392,21 +394,27 @@ class Signal(object):
         else:
             return self._func(*args)
     
-    def _set_dirty(self, initiator=None):
+    def _set_status(self, status, initiator=None):
         """ Called by upstream signals when their value changes.
         """
-        if self._dirty or self is initiator:
+        if self is initiator:
+            # Circular, we may need to break the _status == 3 by looping again
+            if status == 1 and self._status == 3:
+                self._set_status(0)
             return
         elif initiator is None:
-            initiator = self  # This is where it starts
-        
+            initiator = self
+        # Calculate status from given status and upstream statuses
+        statuses = [s._status for s in self._upstream if s is not initiator]
+        statuses.extend([1, status])
+        self._status = max(statuses)
+        print('set status', self.name, self._status)
         # Update self
-        self._dirty = True
+        if self._active and self._status == 1:
+            self._save_update()  # this can change our status to 0 or 2
         # Allow downstream to update
         for signal in self._downstream:
-            signal._set_dirty(initiator)
-        # Note: we do not update our value now; lazy evaluation. See
-        # the ReactSignal for pushing changes downstream immediately.
+            signal._set_status(status, initiator)
 
 
 class SourceSignal(Signal):
@@ -418,20 +426,22 @@ class SourceSignal(Signal):
     method.
     
     """
-    
+    _active = True
+
     def _update_value(self):
-        
         # Try to initialize, func might not have a default value
         if self._timestamp == 0:
             try:
                 value = self._call_func()
             except Exception:
-                self._dirty = False
+                self._status = 2
+                self._last_timestamp = self._timestamp
+                self._timestamp = time.time()
             else:
                 self._set_value(value)
                 return  # do not get from upstream initially
         
-        # Get value from upstream, can raise SignalConnectionError
+        # Get value from upstream, can raise SignalValueError
         if self._upstream:
             args = [self._value] + [s() for s in self._upstream]
             value = self._call_func(*args)
@@ -442,12 +452,7 @@ class SourceSignal(Signal):
         """
         self._set_value(self._call_func(value))
         for signal in self._downstream:
-            signal._set_dirty(self)  # do not set this signal dirty!
-    
-    def _set_dirty(self, initiator=None):
-        # An input signal that has upstream signals is reactive too.
-        Signal._set_dirty(self, initiator)
-        self._save_update()
+            signal._set_status(1, self)  # do not set status of *this* signal!
 
 
 class InputSignal(SourceSignal):
@@ -475,9 +480,7 @@ class WatchSignal(Signal):
 class ActSignal(Signal):
     """ A signal that reacts immediately to changes of upstream signals.
     """ 
-    def _set_dirty(self, initiator=None):
-        Signal._set_dirty(self, initiator)
-        self._save_update()
+    _active = True
 
 
 class PropSignal(InputSignal):
@@ -557,7 +560,7 @@ class HasSignals(with_metaclass(HasSignalsMeta, object)):
         
         # Instantiate signals, its enough to reference them
         for name in self.__class__.__signals__:
-            val = getattr(self.__class__, name)
+            #val = getattr(self.__class__, name)
             getattr(self, name)
         
         self.connect_signals(False)

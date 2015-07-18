@@ -1,4 +1,4 @@
-from .react import source, input, watch, act, HasSignals, SignalConnectionError
+from .react import source, input, watch, act, HasSignals, SignalValueError
 from .react import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal
 
 
