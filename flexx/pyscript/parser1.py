@@ -264,6 +264,9 @@ class Parser1(Parser0):
             if fmt in ('%s', '%f', '%i', '%d'):
                 code.append(sep + left[start:m.start()] + sep)
                 code.append(' + ' + items[i] + ' + ')
+            elif fmt == '%r':
+                code.append(sep + left[start:m.start()] + sep)
+                code.append(' + JSON.stringify(%s) + ' % items[i])
             else:
                 raise JSError('Unsupported string formatting %r' % fmt)
             start = m.end()

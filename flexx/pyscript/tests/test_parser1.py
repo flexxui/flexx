@@ -75,6 +75,7 @@ class TestExpressions:
         assert evalpy('"x %i" % 6') == 'x 6'
         assert evalpy('"x %f" % 6') == 'x 6'
         assert evalpy('"%s: %f" % ("value", 6)') == 'value: 6'
+        assert evalpy('"%r: %r" % ("value", 6)') == '"value": 6'
     
     def test_comparisons(self):
         
