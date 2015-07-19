@@ -136,12 +136,15 @@ class Parser0(object):
         'IsNot' : "!==",
     }
     
-    def __init__(self, code, module=None):
+    def __init__(self, code, module=None, indent=0, docstrings=True):
         self._pycode = code  # helpfull during debugging
         self._root = ast.parse(code)
         self._stack = []
-        self._indent = 0
+        self._indent = indent
         self._dummy_counter = 0
+        
+        # Options
+        self._docstrings = bool(docstrings)  # whether to inclue docstrings
         
         # Collect function and method handlers
         self._functions, self._methods = {}, {}

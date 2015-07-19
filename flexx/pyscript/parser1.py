@@ -528,7 +528,7 @@ class Parser1(Parser0):
         
         # Get docstring, but only if in module mode (i.e. top stack has a name)
         docstring = ''
-        if self._stack[0][1]:
+        if self._docstrings and self._stack[0][1]:
             docstring = self.pop_docstring(node)
         
         code = []

@@ -597,8 +597,9 @@ class Parser2(Parser1):
                     code.append(self.lf(line))
             else:
                 # Normal function
-                for line in docstring.splitlines():
-                    code.append(self.lf('// ' + line))
+                if self._docstrings:
+                    for line in docstring.splitlines():
+                        code.append(self.lf('// ' + line))
                 for child in node.body:
                     code += self.parse(child)
         

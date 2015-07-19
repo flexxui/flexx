@@ -97,13 +97,15 @@ def script2js(filename, namespace=None, target=None):
     open(filename2, 'wt').write(jscode)
 
 
-def js(ob):
+def js(ob, **parser_options):
     """ Get the JavaScript code for a class or function. Can be used
     as a decorator.
     
     Parameters:
         func (class, function): The function or class to transtate. If
             this is already JSCode object, it is returned as-is.
+        parser_options: Additional options for the parser. See Parser class
+            for details.
     
     Returns:
         jscode (JSCode): An object that has a ``jscode``, ``pycode``
@@ -166,7 +168,7 @@ def js(ob):
     else:
         code = ''.join(lines)  # object explicitly passed to js()
     
-    return JSCode(thetype, name, code)
+    return JSCode(thetype, name, code, **parser_options)
 
 
 class JSCode(object):
@@ -174,7 +176,7 @@ class JSCode(object):
     code for a class or function.
     """
     
-    def __init__(self, thetype, name, pycode):
+    def __init__(self, thetype, name, pycode, **parser_options):
         assert thetype in ('function', 'class')
         self._type = thetype
         self._name = name
@@ -187,7 +189,7 @@ class JSCode(object):
         h.update(pycode.encode())
         self._hash = h.digest()
         
-        p = Parser(pycode)
+        p = Parser(pycode, **parser_options)
         
         if thetype == 'function':
             # Convert to JS, but strip function name,
