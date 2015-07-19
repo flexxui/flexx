@@ -43,7 +43,7 @@ class JSSignal(react.SourceSignal):
     
     def __init__(self, func_or_name, upstream=[], frame=None, ob=None):
         
-        def func(v=''):
+        def func(v):
             return json.loads(v)
         
         if isinstance(func_or_name, string_types):
@@ -72,7 +72,7 @@ class PySignal(react.SourceSignal):
     def __init__(self, name):
         
         def func(v=None):
-            return json.dumps(v)
+            return JSON.parse(v)
         
         react.SourceSignal.__init__(self, func, [])
         self._name = name
@@ -163,7 +163,6 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         print('id is', v)
     
     def __init__(self, _proxy=None, **kwargs):
-        react.HasSignals.__init__(self, **kwargs)
         
         # Associate with an app
         from .app import manager
@@ -185,6 +184,8 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         #     props[name] = getattr(self.__class__, name).to_json(val)
         cmd = 'flexx.instances.%s = new %s(%r);' % (self._id, clsname, self._id)
         self._proxy._exec(cmd)
+        
+        react.HasSignals.__init__(self, **kwargs)
         
         # todo: get notified when a prop changes, pend a call via call_later
         # todo: collect more changed props if they come by
@@ -209,6 +210,13 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         cmd = 'flexx.instances.%s._set_property(%r, %r, true, true);' % (self._id, name, txt)
         self._proxy._exec(cmd)
     
+    def _signal_changed(self, name, value):
+        if isinstance(getattr(self, '_' + name + '_signal'), JSSignal):
+            return
+        txt = json.dumps(value)
+        cmd = 'flexx.instances.%s.%s._set(%r);' % (self._id, name, txt)
+        self._proxy._exec(cmd)
+    
     def _link_js_signal(self, name, link=True):
         """ Make a link between a JS signal and its proxy in Python.
         This is done when a proxy signal is "used".
@@ -231,8 +239,9 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
             # debugging. This attribute should *not* be used.
             self._id = id
             
-            self._linked_signals = {}  # use a list as a set
+            self._linked_signals = {'first_name': True}  # use a list as a set
             
+            super().__init__()
             # # Init events handlers
             # # todo: init all events defined at the class
             # self._event_handlers = {}
@@ -274,6 +283,7 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         def _link_js_signal(self, name, link):
             if link:
                 self._linked_signals[name] = True
+                self._signal_changed(name, self[name]())
             elif self._linked_signals[name]:
                 del self._linked_signals[name]
         

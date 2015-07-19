@@ -259,9 +259,9 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             if ob is not None:
                 # Note that this will again sync with JS, but it stops there:
                 # eventual synchronity
-                print('setting signal from js:', signal_name)
+                #print('setting signal from js:', signal_name)
                 signal = getattr(ob, signal_name)
-                signal._set(json.loads(txt))
+                signal._set(txt)
         else:
             print('message received %s' % message)
             self.write_message('echo ' + message, binary=True)
