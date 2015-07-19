@@ -6,7 +6,7 @@ import sys
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.react import input, watch, act, source, SignalConnectionError
+from flexx.react import input, watch, act, source, SignalValueError
 from flexx.react import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal
 
 # todo: garbage collecting
@@ -63,11 +63,11 @@ def test_input_no_default():
             raise ValueError()
         return v + 2
     
-    assert tester() is None
+    raises(SignalValueError, tester)
     
     # Maintain None after failed set
     raises(ValueError, tester, -1)
-    assert tester() is None
+    raises(SignalValueError, tester)
     
     tester(20)
     assert tester() == 22
@@ -118,6 +118,7 @@ def test_input_circular():
             return v1 + 5
     
     s1.connect()
+    s2.connect()
     
     assert s1() == 15
     assert s2() == 20
@@ -301,7 +302,7 @@ def test_connecting_disconnected():
     
     assert isinstance(s1, Signal)
     assert s1.not_connected
-    raises(SignalConnectionError, s1)
+    raises(SignalValueError, s1)
     raises(RuntimeError, s1.connect)
     assert 'not connected' in repr(s1).lower()
     

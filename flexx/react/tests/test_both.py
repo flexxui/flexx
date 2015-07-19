@@ -151,6 +151,66 @@ def test_hassignal__signals__(Name):
     return s.__signals__
 
 
+class NoDefaults(HasSignals):
+    
+    def __init__(self):
+        self.r = []
+        super().__init__()
+        
+    @input
+    def in1(v):
+        return v
+    
+    @watch('in1')
+    def s1a(v):
+        return v
+    
+    @watch('s1a')
+    def s1b(v):
+        return v
+    
+    # ---
+    @input
+    def in2(v):
+        return v
+    
+    @watch('in2')
+    def s2a(self, v):
+        return v
+    
+    @act('s2a')
+    def s2b(self, v):
+        self.r.append(v)
+    #
+    @input
+    def in3(v):
+        return v
+    
+    @act('in3')
+    def aa_s3a(self, v):  # name mangling to make these connect first
+        self.r.append(v)
+        return v
+    
+    @act('aa_s3a')
+    def aa_s3b(self, v):
+        self.r.append(v)
+
+
+@run_in_both(NoDefaults, "['err', '', 'x', 'y', 'z', 'z']")
+def test_pull_no_defaults(Cls):
+    s = Cls()
+    try:
+        s.s1b()
+    except Exception:
+        s.r.append('err')
+    s.r.append('')
+    s.in1('x')
+    s.r.append(s.s1b())
+    s.in2('y')
+    s.in3('z')
+    return s.r
+
+
 class Title(HasSignals):
     
     def __init__(self):
@@ -177,11 +237,12 @@ def test_push(Title):
     foo.r.append(foo.show_title.not_connected)
     return foo.r
 
-@run_in_both(Title, "[0, 0, 2]")
+@run_in_both(Title, "[0]")
 def test_disconnecting_react(Title):
     s = Title()
     
     # Disconnect, but because its a react signal, it re-connects at once
+    # No, this was the case earlier. Disconnect really disconnects
     s.show_title.disconnect()
     s.title('xx')
     
@@ -240,7 +301,7 @@ def test_unconnected_handling(Cls):
         r.append('err4')  # error, because an upstream signal is not connected
     return r
 
-@run_in_both(Unconnected, "['ha', 'ho', 'err4']", extra_classes=(Title,))
+@run_in_both(Unconnected, "['err4', 'ha', 'ho', 'err4']", extra_classes=(Title,))
 def test_unconnected_connect(Cls):
     s = Cls()
     r = []
@@ -248,7 +309,14 @@ def test_unconnected_connect(Cls):
     button = Title()
     s.button = button
     button.title('ha')
-    # Now by just calling s4, s2 will connect
+    # Now calling s4 will fail
+    try:
+        s.s4()
+    except Exception:
+        r.append('err4')  # error, because an upstream signal is not connected
+    
+    # We connect it
+    s.s2.connect()
     r.append(s.s4())
     
     # Now we remove 'button'
@@ -270,11 +338,11 @@ def test_unconnected_connect(Cls):
 class SignalTypes(HasSignals):
     
     @input
-    def s1(v):
+    def s1(v=None):
         return v
     
     @source
-    def s2(v):
+    def s2(v=None):
         return v
     
     @watch('s2')
@@ -364,20 +432,20 @@ def test_circular(Cls):
 # todo: this is not pretty. Do we need it? Can this be done differently?
 class Temperature(HasSignals):  # to avoid round errors, the relation is simplified
     @input('f')
-    def c(v=32, f=None):
+    def c(v=0, f=None):
         if f is None:
             return int(v)
         else:
             return f - 32
     
     @input('c')
-    def f(v=0, c=None):
+    def f(v=32, c=None):
         if c is None:
             return int(v)
         else:
             return c + 32
 
-@run_in_both(Temperature, "[32, 0, '', 10, 42, '', -22, 10]")
+@run_in_both(Temperature, "[0, 32, '', 10, 42, '', -22, 10]")
 def test_circular_temperature(Cls):
     s = Cls()
     r = []

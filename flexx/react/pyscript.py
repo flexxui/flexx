@@ -41,50 +41,21 @@ class HasSignals:
         self.__props__ = []  # todo: get rid of this?
         for name in self.__signals__:
             func = self['_' + name + '_func']
+            func._name = name
             creator = self['_create_' + func._signal_type]
             signal = creator.call(self, func, func._upstream)
             self._create_property(self, name, '_' + name + '_signal', signal)
     
+    def _create_PySignal(func, upstream, selff):  # proxy for Paired
+        return self._create_SourceSignal(func, upstream, selff)
+        
     def _create_SourceSignal(func, upstream, selff):
         
         selff = self._create_Signal(func, upstream, selff)
+        selff._active = True
         
-        def _update_value():
-            if selff._timestamp == 0:
-                ok = False
-                selff._dirty = False
-                try:
-                    value = selff._call_func()
-                    ok = value is not undefined
-                except Exception:
-                    pass
-                if ok:
-                    selff._set_value(value)
-                    return  # do not get from upstream initially
-            
-            # Get value from upstream
-            if len(selff._upstream):
-                #args = [s() for s in selff._upstream]
-                args = [selff._value]  # todo: pyscript support for list comprehension
-                for s in selff._upstream:
-                    args.append(s())  # can raise SignalConnectionError
-                value = selff._call_func(*args)
-                selff._set_value(value)
-        
-        def _set(value):
-            selff._set_value(selff._call_func(value))
-            for s in selff._downstream:
-                s._set_dirty(selff)  # do not set this signal dirty!
-        
-        original_set_dirty = selff._set_dirty
-        def _set_dirty(initiator=None):
-            original_set_dirty(initiator)
-            selff._save_update()
-        
-        # Overload signal methods
-        selff._update_value = _update_value
-        selff._set = _set
-        selff._set_dirty = _set_dirty
+        selff._update_value = SourceSignal__update_value_from_py
+        selff._set = SourceSignal__set_from_py
         
         return selff
     
@@ -105,13 +76,7 @@ class HasSignals:
     
     def _create_ActSignal(func, upstream):
         selff = self._create_Signal(func, upstream)
-        
-        original_set_dirty = selff._set_dirty
-        def _set_dirty(initiator=None):
-            original_set_dirty(initiator)
-            selff._save_update()
-        
-        selff._set_dirty = _set_dirty
+        selff._active = True
         return selff
     
     def _create_Signal(func, upstream, selff=None):
@@ -133,35 +98,28 @@ class HasSignals:
         self._create_property(selff, 'last_timestamp', '_last_timestamp', 0)
         self._create_property(selff, 'not_connected', '_not_connected', 'No connection attempt yet.')
         #self._create_property(selff, 'name', '_name', func.name)  already is a property
+        selff._name = func._name
         
         # Create private attributes
         selff.IS_SIGNAL = True
+        selff._active = False
         selff._func = func
-        selff._dirty = True
+        selff._status = 3
         selff.__self__ = obj  # note: not a weakref...
         selff._upstream = []
         selff._upstream_given = upstream
         selff._downstream = []
         
-        def connect(raise_on_fail=True):
-            # Resolve signals
-            selff._not_connected = selff._resolve_signals()
-            if selff._not_connected:
-                if raise_on_fail:
-                    raise RuntimeError('Connection error in signal "%s": ' % selff._name + selff._not_connected)
-                return False
-            # Subscribe
-            for s in selff._upstream:
-                s._subscribe(selff)
-            # If connecting complete, update (or not)
-            selff._set_dirty()
+        # Functions that we re-use from the Python implementation of signals
+        selff.connect = BaseSignal_connect_from_py
+        selff.disconnect = BaseSignal_disconnect_from_py
+        selff._subscribe = BaseSignal__subscribe_from_py
+        selff._unsubscribe = BaseSignal__unsubscribe_from_py
+        selff._get_value = BaseSignal__get_value_from_py
+        selff._update_value = BaseSignal__update_value_from_py
+        selff._set_status = BaseSignal__set_status_from_py
         
-        def disconnect():
-            while len(selff._upstream):
-                s = selff._upstream.pop(0)
-                s._unsubscribe(selff)
-            selff._not_connected = 'Explicitly disconnected via disconnect()'
-            selff._set_dirty()
+        # Some functions need JS specifics
         
         def _resolve_signals():
             upstream = []
@@ -186,18 +144,10 @@ class HasSignals:
             selff._upstream = upstream
             return False  # no error
         
-        def _subscribe(s):
-            if s not in selff._downstream:
-                selff._downstream.append(s)
-        
-        def _unsubscribe(s):
-            while s in selff._downstream:
-                selff._downstream.remove(s)
-        
         def _save_update():
             try:
                 selff()
-            except SignalConnectionError:
+            except SignalValueError:
                 pass
             except Exception as err:
                 #print('Error updating signal:', err.stack)
@@ -208,56 +158,36 @@ class HasSignals:
             selff._value = value
             selff._last_timestamp = selff._timestamp
             selff._timestamp = Date().getTime() / 1000
-            selff._dirty = False
-            obj._signal_changed(selff.name, value)
-        
-        def _get_value():
-            if selff._not_connected:
-                selff.connect(False)
-            if selff._not_connected:
-                raise SignalConnectionError()
-            if selff._dirty:
-                selff._update_value()
-            return selff._value
-        
-        def _update_value():
-            #args = [s() for s in selff._upstream]
-            args = []  # todo: pyscript support for list comprehension
-            for s in selff._upstream:
-                args.append(s())  # can raise SignalConnectionError
-            value = selff._call_func(*args)
-            selff._set_value(value)
+            selff._status = 0
+            obj._signal_changed(selff._name, value)
         
         def _call_func(*args):
             return func.apply(obj, args)
         
-        def _set_dirty(initiator=None):
-            if selff._dirty or selff is initiator:
-                return
-            elif initiator is None:
-                initiator = selff
-            # Update self
-            selff._dirty = True
-            # Allow downstream to update
-            for s in selff._downstream:
-                s._set_dirty(initiator)
-        
-        # Put functions on the signal
-        selff.connect = connect
-        selff.disconnect = disconnect
+        # Put functions that we defined here on the signal
         selff._resolve_signals = _resolve_signals
-        selff._subscribe = _subscribe
-        selff._unsubscribe = _unsubscribe
         selff._save_update = _save_update
         selff._set_value = _set_value
-        selff._get_value = _get_value
-        selff._update_value = _update_value
         selff._call_func = _call_func
-        selff._set_dirty = _set_dirty
         
         return selff
 
 HasSignalsJS = HasSignals
+
+def patch_HasSignals():
+    """ Insert code from the Python implementation of signals.
+    """
+    from flexx.react.react import Signal, SourceSignal
+    for signal_type, cls in [('BaseSignal', Signal), ('SourceSignal', SourceSignal)]:
+        for name in ('connect', 'disconnect', '_subscribe', '_unsubscribe', 
+                    '_get_value', '_update_value', '_set_status', '_set'):
+            if name in cls.__dict__:
+                code = js(cls.__dict__[name], indent=1, docstrings=False)
+                template = '%s_%s_from_py;' % (signal_type, name)
+                HasSignalsJS._jscode = HasSignalsJS._jscode.replace(template, code.jscode)
+    assert 'from_py' not in HasSignalsJS._jscode
+patch_HasSignals()
+
 
 def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
     """ Create the JS equivalent of a subclass of the HasSignals class.
@@ -347,7 +277,8 @@ class Foo:
         result.append(v)
 
 if __name__ == '__main__':
-    print(createHasSignalsClass(Foo, 'Foo'))
+    print(HasSignalsJS.jscode)
+    #print(create_js_signals_class(Foo, 'Foo'))
 
 #code = 'var make_signal = ' + make_signal.jscode
 #code += 'function foo (x) {console.log("haha", x); return x;}; var s = make_signal(foo); s(3); s.value'

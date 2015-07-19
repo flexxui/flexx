@@ -31,6 +31,9 @@ else:
     string_types = basestring
 
 
+undefined = 'JS UNDEFINED'  # to help make some code PyScript compattible
+
+
 # From six.py
 def with_metaclass(meta, *bases):
     """Create a base class with a metaclass."""
@@ -253,7 +256,7 @@ class Signal(object):
         disconnection if connecting succeeds.
         """
         # Disconnect upstream
-        while self._upstream:
+        while len(self._upstream):  # len() for PyScript compat
             s = self._upstream.pop(0)
             s._unsubscribe(self)
         self._not_connected = 'Explicitly disconnected via disconnect()'
@@ -373,7 +376,9 @@ class Signal(object):
     def _update_value(self):
         """ Get the latest value from upstream. This method can be overloaded.
         """
-        args = [s() for s in self._upstream]  # can raise SignalValueError
+        args = []  # todo: pyscript support for list comprehension
+        for s in self._upstream:
+            args.append(s())
         value = self._call_func(*args)
         self._set_value(value)
     
@@ -397,21 +402,26 @@ class Signal(object):
     def _set_status(self, status, initiator=None):
         """ Called by upstream signals when their value changes.
         """
-        if self is initiator:
-            # Circular, we may need to break the _status == 3 by looping again
-            if status == 1 and self._status == 3:
-                self._set_status(0)
+        # Prevent circular (stage 1: exit while our status is 0)
+        initial_initiator = initiator
+        if self is initial_initiator and not self._status:
             return
-        elif initiator is None:
+        if initiator is None:
             initiator = self
         # Calculate status from given status and upstream statuses
-        statuses = [s._status for s in self._upstream if s is not initiator]
-        statuses.extend([1, status])
+        # todo: pyscript comprehensions -> statuses = [s._status for s in self._upstream if s is not initiator]
+        # statuses.extend([1, status])
+        statuses = [1, status]
+        for s in self._upstream:
+            if s is not initiator:
+                statuses.append(s._status)
         self._status = max(statuses)
-        print('set status', self.name, self._status)
         # Update self
         if self._active and self._status == 1:
             self._save_update()  # this can change our status to 0 or 2
+        # Prevent circular (stage 2: exit with non-zero status)
+        if self is initial_initiator:
+            return
         # Allow downstream to update
         for signal in self._downstream:
             signal._set_status(status, initiator)
@@ -431,19 +441,25 @@ class SourceSignal(Signal):
     def _update_value(self):
         # Try to initialize, func might not have a default value
         if self._timestamp == 0:
+            ok = False
             try:
                 value = self._call_func()
+                ok = value is not undefined
             except Exception:
-                self._status = 2
-                self._last_timestamp = self._timestamp
-                self._timestamp = time.time()
-            else:
+                pass
+            if ok:
                 self._set_value(value)
                 return  # do not get from upstream initially
-        
+            else:
+                self._status = 2
+                self._last_timestamp = self._timestamp
+                self._timestamp = 1
         # Get value from upstream, can raise SignalValueError
-        if self._upstream:
-            args = [self._value] + [s() for s in self._upstream]
+        if len(self._upstream):  # len() for PyScript compat
+            # args = [s() for s in self._upstream]
+            args = [self._value]  # todo: pyscript support for list comprehension
+            for s in self._upstream:
+                args.append(s())  # can raise SignalValueError
             value = self._call_func(*args)
             self._set_value(value)
     
