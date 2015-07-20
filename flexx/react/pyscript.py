@@ -14,7 +14,7 @@ class HasSignals:
         self._create_signals()
         self.connect_signals(False)
     
-    def _signal_changed(self, name, value):
+    def _signal_changed(self, signal):
         pass  # can be overloaded in subclasses
     
     def connect_signals(self, raise_on_fail=True):
@@ -159,7 +159,7 @@ class HasSignals:
             selff._last_timestamp = selff._timestamp
             selff._timestamp = Date().getTime() / 1000
             selff._status = 0
-            obj._signal_changed(selff._name, value)
+            obj._signal_changed(selff)
         
         def _call_func(*args):
             return func.apply(obj, args)

@@ -357,7 +357,7 @@ class Signal(object):
         if self._ob is not None:
             ob = self._ob()
             if hasattr(ob, '_signal_changed'):
-                ob._signal_changed(self.name, value)
+                ob._signal_changed(self)
     
     def _get_value(self):
         """ Get the current value. Some overhead is put here to keep
@@ -595,7 +595,7 @@ class HasSignals(with_metaclass(HasSignalsMeta, object)):
         return success
     
     
-    def _signal_changed(self, name, value):
+    def _signal_changed(self, signal):
         """ Called when one of our signals changes.
         Can be used to do more signal magic.
         """

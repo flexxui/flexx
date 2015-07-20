@@ -8,11 +8,11 @@ class Name(ui.app.paired.Paired):
     
     class JS:
         @react.input
-        def first_name(n=''):
+        def first_name(n):
             return n
         
         @react.input
-        def last_name(n=''):
+        def last_name(n='doe'):
             return n
         
         @react.act('foo')
@@ -21,7 +21,7 @@ class Name(ui.app.paired.Paired):
     
     @react.watch('first_name', 'last_name')
     def full_name(n1, n2):
-        return n1 + n2
+        return n1 + ' ' + n2
     
     @react.act('full_name')
     def show_name(n):
