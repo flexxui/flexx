@@ -44,10 +44,14 @@ class HasSignals:
             func._name = name
             creator = self['_create_' + func._signal_type]
             signal = creator.call(self, func, func._upstream)
+            signal.signal_type = func._signal_type
             self._create_property(self, name, '_' + name + '_signal', signal)
     
     def _create_PySignal(func, upstream, selff):  # proxy for Paired
         return self._create_SourceSignal(func, upstream, selff)
+    
+    def _create_PyInputSignal(func, upstream, selff):  # proxy for Paired
+        return self._create_InputSignal(func, upstream, selff)
         
     def _create_SourceSignal(func, upstream, selff):
         
@@ -151,7 +155,7 @@ class HasSignals:
                 pass
             except Exception as err:
                 #print('Error updating signal:', err.stack)
-                console.error('Error updating signal:', err)
+                console.error('Error updating signal: ' + err)
         
         def _set_value(value):
             selff._last_value = selff._value

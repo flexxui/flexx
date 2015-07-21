@@ -11,13 +11,16 @@ class Name(ui.app.paired.Paired):
         def first_name(n):
             return n
         
-        @react.input
-        def last_name(n='doe'):
-            return n
-        
         @react.act('foo')
         def bar(v):
             print('hellow from JS, foo =', v)
+            # trigger a change in name
+            if v==7:
+                self.last_name('klein')
+    
+    @react.input
+    def last_name(n='doe'):
+        return n
     
     @react.watch('first_name', 'last_name')
     def full_name(n1, n2):

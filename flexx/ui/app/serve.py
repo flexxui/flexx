@@ -261,7 +261,8 @@ class WSHandler(tornado.websocket.WebSocketHandler):
                 # eventual synchronity
                 #print('setting signal from js:', signal_name)
                 signal = getattr(ob, signal_name)
-                signal._set(txt)
+                value = json.loads(txt)
+                signal._set(value)
         else:
             print('message received %s' % message)
             self.write_message('echo ' + message, binary=True)

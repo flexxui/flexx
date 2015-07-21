@@ -163,6 +163,7 @@ class FlexxJS:
         console.ori_log = console.log
         console.ori_info = console.info or console.log
         console.ori_warn = console.warn or console.log
+        console.ori_error = console.error or console.log
         
         def log(self, msg):
             flexx.ws.send("PRINT " + msg)
@@ -173,6 +174,9 @@ class FlexxJS:
         def warn(self, msg):
             flexx.ws.send("WARN " + msg)
             console.ori_warn(msg)
+        def error(self, msg):
+            flexx.ws.send("ERROR " + msg)
+            console.ori_error(msg)
         def on_error(self, evt):
             msg = evt
             if evt.message and evt.lineno:  # message, url, linenumber (not in nodejs)
@@ -185,6 +189,7 @@ class FlexxJS:
         console.log = log
         console.info = info
         console.warn = warn
+        console.error = error
         # Create error handler, so that JS errors get into Python
         if self.nodejs:
             process.on('uncaughtException', on_error, False)
@@ -380,8 +385,8 @@ class ClientCode(object):
                 key = 'flexx-ui'
             else:
                 key = 'index-other'
-            self._js[key].append(cls.get_js())
-            self._css[key].append(cls.get_css())
+            self._js[key].append(cls.JS.CODE)
+            self._css[key].append(cls.CSS)  # the CSS is '' if not specified for that class
     
     def get_defined_mirrored_classes(self):
         """ Get a list of all mirrored classes that will be defined

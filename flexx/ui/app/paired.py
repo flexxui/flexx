@@ -44,7 +44,7 @@ class JSSignal(react.SourceSignal):
     def __init__(self, func_or_name, upstream=[], frame=None, ob=None):
         
         def func(v):
-            return json.loads(v)
+            return v
         
         if isinstance(func_or_name, string_types):
             func.__name__ = func_or_name
@@ -72,9 +72,17 @@ class PySignal(react.SourceSignal):
     def __init__(self, name):
         
         def func(v):
-            return JSON.parse(v)
+            return v
         func._name = name
         react.SourceSignal.__init__(self, func, [])
+
+
+class PyInputSignal(PySignal):
+    """ A signal in JS that represents an input signal in Python. On
+    the JS side, this can be used as an input too, although there is
+    no validation in this case.
+    """
+    pass
 
 
 class PairedMeta(react.HasSignalsMeta):
@@ -113,14 +121,33 @@ class PairedMeta(react.HasSignalsMeta):
         for name, val in cls.__dict__.items():
             if isinstance(val, react.Signal) and not isinstance(val, JSSignal):
                 if not hasattr(cls.JS, name):
-                    setattr(cls.JS, name, PySignal(name))
+                    if isinstance(val, react.InputSignal):
+                        setattr(cls.JS, name, PyInputSignal(name))
+                    else:
+                        setattr(cls.JS, name, PySignal(name))
                 elif isinstance(getattr(cls.JS, name), PySignal):
                     pass  # ok, overloaded signal on JS side
                 else:
                     print('Warning: Py signal %r not proxied, as it would hide a JS attribute.' % name)
         
-        # Collect JS code for this class
-        
+        # Set JS and CSS for this class
+        cls.JS.CODE = cls._get_js()
+        cls.CSS = cls.__dict__.get('CSS', '')
+    
+    def _get_js(cls):
+        """ Get source code for this class.
+        """
+        cls_name = 'flexx.classes.' + cls.__name__
+        base_class = 'flexx.classes.%s.prototype' % cls.mro()[1].__name__
+        js = []
+        # Add JS version of HasSignals when this is the Paired class
+        if cls.mro()[1] is react.HasSignals:
+            code = HasSignalsJS.jscode.replace('HasSignals', 'flexx.classes.HasSignals')
+            js.append(code[4:])  # skip 'var '
+        # Add this class
+        js.append(create_js_signals_class(cls.JS, cls_name, base_class))
+        return '\n'.join(js)
+
 
 class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
     """ Class for which objects exist both in Python and JS. 
@@ -152,28 +179,36 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
     
     def __init__(self, _proxy=None, **kwargs):
         
-        # Associate with an app
-        from .app import manager
-        if _proxy is None:
-            _proxy = manager.get_default_proxy()
-        self._proxy = _proxy
-            
+        # # Start without proxy. While it is None, we collect signal links
+        # # and signal values, so that we can pass that info to JS init.
+        # self._proxy = None
+        # self._initial_signal_values = {}
+        # self._initial_signal_links = set()
+        
         # Set id and register this instance
         Paired._counter += 1
         self._id = self.__class__.__name__ + str(Paired._counter)
         Paired._instances[self._id] = self
         
+        # Init proxy
+        if _proxy is None:
+            from .app import manager
+            _proxy = manager.get_default_proxy()
+        self._proxy = _proxy
+        
         # Instantiate JavaScript version of this class
         clsname = 'flexx.classes.' + self.__class__.__name__
-        
-        # props = {}
-        # for name in self.props():
-        #     val = getattr(self, name)
-        #     props[name] = getattr(self.__class__, name).to_json(val)
         cmd = 'flexx.instances.%s = new %s(%r);' % (self._id, clsname, self._id)
         self._proxy._exec(cmd)
         
+        # Call init
+        self._init()
+        
+        # Init signals
         react.HasSignals.__init__(self, **kwargs)
+    
+    def _init(self):
+        pass
     
     @property
     def id(self):
@@ -189,13 +224,19 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
     def _signal_changed(self, signal):
         if not isinstance(signal, JSSignal):
             txt = json.dumps(signal.value)
-            cmd = 'flexx.instances.%s.%s._set(%r);' % (self._id, signal.name, txt)
+            cmd = 'flexx.instances.%s._set_signal_from_py(%r, %r);' % (self._id, signal.name, txt)
             self._proxy._exec(cmd)
     
     def _link_js_signal(self, name, link=True):
         """ Make a link between a JS signal and its proxy in Python.
-        This is done when a proxy signal is "used".
+        This is done when a proxy signal is used as input for a signal
+        in Python.
         """
+        # if self._proxy is None:
+        #     self._initial_signal_links.discart(name)
+        #     if link:
+        #         self._initial_signal_links.add(name)
+        # else:
         link = 'true' if link else 'false'
         cmd = 'flexx.instances.%s._link_js_signal(%r, %s);' % (self._id, name, link)
         self._proxy._exec(cmd)
@@ -214,47 +255,32 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
             # debugging. This attribute should *not* be used.
             self.__id = self._id = self.id = id
             
-            self._linked_signals = {'first_name': True}  # use a list as a set
+            self._linked_signals = {}  # use a list as a set
             
             super().__init__()
-            # # Init events handlers
-            # # todo: init all events defined at the class
-            # self._event_handlers = {}
-            # for event_name in self._EVENT_NAMES:
-            #     self._event_handlers[event_name] = []
-            # 
-            # # Create properties
-            # for name in props:
-            #     opts = {"enumerable": True}
-            #     gs = self._getter_setter(name)
-            #     opts['get'] = gs[0]
-            #     opts['set'] = gs[1]
-            #     Object.defineProperty(self, name, opts)
-        
-   #        #   # First init all property values, without calling the changed-func
-            # for name in props:
-            #     self._set_property(name, props[name], True, False)
-            
-            # Init (with props set to their initial value)
             self._init()
-            
-            # # Emit changed events
-            # for name in props:
-            #     if self['_'+name+'_changed']:
-            #         self['_'+name+'_changed'](name, None, self['_'+name])
         
         def _init(self):
             pass  # Subclasses should overload this
         
+        def _set_signal_from_py(self, name, text):
+            self._signal_emit_lock = True  # do not send back to py
+            value = JSON.parse(text)
+            self[name]._set(value)
+        
         def _signal_changed(self, signal):
-            if self._linked_signals[signal._name]:
-                if flexx.ws is not None:  # we could be exported or in an nbviewer
-                    value = signal.value
-                    if value['__tojson__']:  # == function
-                        txt = value['__tojson__']()
-                    else:
-                        txt = JSON.stringify(value)
-                    flexx.ws.send('SIGNAL ' + self.id + ' ' + signal._name + ' ' + txt)
+            if flexx.ws is None:  # we could be exported or in an nbviewer
+                return
+            if self._signal_emit_lock:
+                self._signal_emit_lock = False
+                return
+            if signal.signal_type == 'PyInputSignal' or self._linked_signals[signal._name]:
+                value = signal.value
+                if value['__tojson__']:  # == function
+                    txt = value['__tojson__']()
+                else:
+                    txt = JSON.stringify(value)
+                flexx.ws.send('SIGNAL ' + self.id + ' ' + signal._name + ' ' + txt)
         
         def _link_js_signal(self, name, link):
             if link:
@@ -282,32 +308,3 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
             """
             that = this
             element.addEventListener(event_name, lambda ev: that[method_name](ev), False)
-    
-    ## Static methods
-    
-    @classmethod
-    def get_js(cls):
-        # todo: move this to app/clientcode, or to meta class!
-        cls_name = 'flexx.classes.' + cls.__name__
-        base = object if (cls is Paired) else cls.mro()[1]
-        base_class = 'flexx.classes.HasSignals.prototype'
-        if cls is not Paired:
-            base_class = 'flexx.classes.%s.prototype' % cls.mro()[1].__name__
-        
-        
-        js = []
-        
-        if cls is Paired:
-            code = HasSignalsJS.jscode.replace('HasSignals', 'flexx.classes.HasSignals')
-            js.append(code[4:])  # skip 'var '
-        
-        #js.extend(get_class_definition(cls_name, base_class))
-        js.append(create_js_signals_class(cls.JS, cls_name, base_class))
-        
-       
-        # todo: give it an id
-        return '\n'.join(js)
-    
-    @classmethod
-    def get_css(cls):
-        return cls.__dict__.get('CSS', '')
