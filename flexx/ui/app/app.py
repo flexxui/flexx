@@ -557,6 +557,47 @@ class Proxy(object):
         else:
             raise RuntimeError('Cannot send commands; app is closed') 
     
+    def _receive_command(self, command):
+        """ Received a command from JS.
+        """
+        if command.startswith('RET '):
+            print(command[4:])  # Return value
+        elif command.startswith('ERROR '):
+            logging.error('JS - ' + command[6:].strip())
+        elif command.startswith('WARN '):
+            logging.warn('JS - ' + command[5:].strip())
+        elif command.startswith('PRINT '):
+            print(command[5:].strip())
+        elif command.startswith('INFO '):
+            logging.info('JS - ' + command[5:].strip())
+        elif command.startswith('PROP '):
+            # todo: seems weird to deal with here. implement this by registring some handler?
+            _, id, prop, txt = command.split(' ', 3)
+            from .mirrored import Mirrored
+            import json
+            ob = Mirrored._instances.get(id, None)
+            if ob is not None:
+                # Note that this will again sync with JS, but it stops there:
+                # eventual synchronity
+                print('setting from js:', prop)
+                val = getattr(ob.__class__, prop).from_json(txt)
+                setattr(ob, prop, val)
+        elif command.startswith('SIGNAL '):
+            # todo: seems weird to deal with here. implement this by registring some handler?
+            _, id, signal_name, txt = command.split(' ', 3)
+            from .paired import Paired
+            import json
+            ob = Paired._instances.get(id, None)
+            if ob is not None:
+                # Note that this will again sync with JS, but it stops there:
+                # eventual synchronity
+                #print('setting signal from js:', signal_name)
+                signal = getattr(ob, signal_name)
+                value = json.loads(txt)
+                signal._set(value)
+        else:
+            logging.warn('Unknown command received from JS:\n%s' % command)
+    
     def _exec(self, code):
         """ Like eval, but without returning the result value.
         """

@@ -228,44 +228,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         We now have a very basic protocol for receiving messages,
         we should at some point define a real formalized protocol.
         """
-        if message.startswith('RET '):
-            print(message[4:])  # Return value
-        elif message.startswith('ERROR '):
-            logging.error('JS - ' + message[6:].strip())
-        elif message.startswith('WARN '):
-            logging.warn('JS - ' + message[5:].strip())
-        elif message.startswith('PRINT '):
-            print(message[5:].strip())
-        elif message.startswith('INFO '):
-            logging.info('JS - ' + message[5:].strip())
-        elif message.startswith('PROP '):
-            # todo: seems weird to deal with here. implement this by registring some handler?
-            _, id, prop, txt = message.split(' ', 3)
-            from .mirrored import Mirrored
-            import json
-            ob = Mirrored._instances.get(id, None)
-            if ob is not None:
-                # Note that this will again sync with JS, but it stops there:
-                # eventual synchronity
-                print('setting from js:', prop)
-                val = getattr(ob.__class__, prop).from_json(txt)
-                setattr(ob, prop, val)
-        elif message.startswith('SIGNAL '):
-            # todo: seems weird to deal with here. implement this by registring some handler?
-            _, id, signal_name, txt = message.split(' ', 3)
-            from .paired import Paired
-            import json
-            ob = Paired._instances.get(id, None)
-            if ob is not None:
-                # Note that this will again sync with JS, but it stops there:
-                # eventual synchronity
-                #print('setting signal from js:', signal_name)
-                signal = getattr(ob, signal_name)
-                value = json.loads(txt)
-                signal._set(value)
-        else:
-            print('message received %s' % message)
-            self.write_message('echo ' + message, binary=True)
+        self._proxy._receive_command(message)
  
     def on_close(self):
         """ Called when the connection is closed.
