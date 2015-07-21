@@ -269,7 +269,9 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         """
         host, port = self.application.serving_at  # set by us
         incoming_host = urllib.parse.urlparse(origin).hostname
-        if host == incoming_host:
+        if host == 'localhost' and origin.startswith('localhost:'):
+            return True  # With nodejs origin is "localhost:52452"
+        elif host == incoming_host:
             return True
         else:
             print('Connection refused from %s' % origin)

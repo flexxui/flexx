@@ -51,7 +51,7 @@ class PrimeFinder(ui.app.paired.Paired):
 # Create flexx app with a nodejs runtime (you could also use e.g. firefox here)
 # todo: ui.run('nodejs') ?
 # todo: why does nodejs not work?
-app = ui.app.app.Proxy('__default__', 'firefox')
+app = ui.app.app.Proxy('__default__', 'nodejs')
 
 finder = PrimeFinder(_proxy=app)
 finder.find_prime_py(2000)  # 0.7 s
