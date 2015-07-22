@@ -31,7 +31,7 @@ else:
     string_types = basestring
 
 
-undefined = 'JS UNDEFINED'  # to help make some code PyScript compattible
+undefined = '<<JS UNDEFINED>>'  # to help make some code PyScript compattible
 
 
 # From six.py
@@ -116,6 +116,7 @@ class Signal(object):
           from the input signals.
     upstream: a list of signals that this signal depends on.
     """
+    _IS_SIGNAL = True  # poor man's isinstance in JS (because class name mangling)
     _active = False
     
     def __init__(self, func, upstream, frame=None, ob=None):
@@ -134,6 +135,8 @@ class Signal(object):
         self._upstream_given = [s for s in upstream]
         self._upstream = []
         self._downstream = []
+        self._upstream_reconnect = []
+        self._downstream_reconnect = []
         
         # Frame and object
         self._frame = frame or sys._getframe(1)
@@ -231,6 +234,9 @@ class Signal(object):
         while len(self._upstream):  # len() for PyScript compat
             s = self._upstream.pop(0)
             s._unsubscribe(self)
+        while len(self._upstream_reconnect):  # len() for PyScript compat
+            s = self._upstream_reconnect.pop(0)
+            s._unsubscribe(self)
         
         # Disable connecting for signal placeholders on classes
         if self._class_desciptor:
@@ -251,6 +257,8 @@ class Signal(object):
         # Subscribe
         for signal in self._upstream:
             signal._subscribe(self)
+        for signal in self._upstream_reconnect:
+            signal._subscribe(self, True)
         
         # Update status (also downstream)
         self._set_status(1)
@@ -270,47 +278,75 @@ class Signal(object):
         # Notify downstream.
         self._set_status(3)
     
+    def _seek_signal(self, fullname, nameparts, ob):
+        """ Seek a signal based on the name. Used by _resolve_signals.
+        This bit is PyScript compatible (_resolve_signals is not).
+        """
+        # Done traversing name: add to list or fail
+        if ob is undefined or len(nameparts) == 0:
+            if ob is undefined:
+                return 'Signal %r does not exist (%r).' % (fullname, nameparts)
+            if not hasattr(ob, '_IS_SIGNAL'):
+                return 'Object %r is not a signal.' % fullname
+            self._upstream.append(ob)
+            return None  # ok
+        # Get value if ob is a signal
+        if hasattr(ob, '_IS_SIGNAL'):
+            self._upstream_reconnect.append(ob)
+            try:
+                ob = ob()
+            except SignalValueError:
+                return  # we'll rebind when that signal gets a value
+        # Resolve name
+        name, nameparts = nameparts[0], nameparts[1:]
+        if name == '*' and isinstance(ob, (tuple, list)):
+            for sub_ob in ob:
+                window.sub_ob = sub_ob
+                msg = self._seek_signal(fullname, nameparts, sub_ob)
+                if msg:
+                    return msg
+            return None  # ok
+        return self._seek_signal(fullname, nameparts, getattr(ob, name, undefined))
+    
     def _resolve_signals(self):
         """ Get signals from their string path. Return value to store
         in _not_connected (False means success). Should only be called from
         connect().
         """
         
-        upstream = []
+        self._upstream = []
+        self._upstream_reconnect = []
         
         for fullname in self._upstream_given:
             nameparts = fullname.split('.')
             # Obtain first part of path from the frame that we have
             n = nameparts[0]
-            ob = self._frame.f_locals.get(n, self._frame.f_globals.get(n, None))
-            # Walk down the object tree to obtain the full path
-            for name in nameparts[1:]:
-                if ob is None:
-                    break
-                if isinstance(ob, Signal):
-                    ob = ob()
-                ob = getattr(ob, name, None)
-            # Add to list or fail
-            if ob is None:
-                return 'Signal %r does not exist.' % fullname
-            elif not isinstance(ob, Signal):
-                return 'Object %r is not a signal.' % fullname
-            upstream.append(ob)
+            ob = self._frame.f_locals.get(n, self._frame.f_globals.get(n, undefined))
+            msg = self._seek_signal(fullname, nameparts[1:], ob)
+            if msg:
+                self._upstream = []
+                self._upstream_reconnect = []
+                return msg
         
-        self._upstream[:] = upstream
         return False  # no error
     
-    def _subscribe(self, signal):
+    def _subscribe(self, signal, reconnect=False):
         """ For a signal to subscribe to this signal.
         """
-        if signal not in self._downstream:
-            self._downstream.append(signal)
+        if reconnect:
+            if signal not in self._downstream_reconnect:
+                self._downstream_reconnect.append(signal)
+        else:
+            if signal not in self._downstream:
+                self._downstream.append(signal)
     
     def _unsubscribe(self, signal):
         """ For a signal to unsubscribe from this signal.
         """
         while signal in self._downstream:
             self._downstream.remove(signal)
+        while signal in self._downstream_reconnect:
+            self._downstream_reconnect.remove(signal)
     
     @property
     def not_connected(self):
@@ -431,6 +467,8 @@ class Signal(object):
         if self is initial_initiator:
             return
         # Allow downstream to update
+        for signal in self._downstream_reconnect:
+            signal.connect(False)
         for signal in self._downstream:
             signal._set_status(status, initiator)
 
@@ -475,6 +513,8 @@ class SourceSignal(Signal):
         """ Method for the developer to set the source signal.
         """
         self._set_value(self._call_func(value))
+        for signal in self._downstream_reconnect:
+            signal.connect(False)
         for signal in self._downstream:
             signal._set_status(1, self)  # do not set status of *this* signal!
 

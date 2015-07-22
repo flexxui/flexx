@@ -148,14 +148,10 @@ class Box(Layout):
         def _create_node(self):
             this.node = document.createElement('div')
         
-        def _add_child(self, widget):
-            self._applyBoxStyle(widget.node, 'flex-grow', widget.flex)
-            #if widget.flex > 0:  widget.applyBoxStyle(el, 'flex-basis', 0)
-            super()._add_child(widget)
-        
-        def _remove_child(self, widget):
-            #self._spacing_changed('spacing', self.spacing, self.spacing)
-            super()._remove_child(widget)
+        @react.act('children.*.flex')
+        def _set_flexes(_):
+            for widget in self.children():
+                self._applyBoxStyle(widget.node, 'flex-grow', widget.flex())
         
         @react.act('spacing', 'children')
         def _spacing_changed(self, spacing, children):

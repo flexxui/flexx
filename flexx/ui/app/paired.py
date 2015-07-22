@@ -56,13 +56,13 @@ class JSSignal(react.SourceSignal):
         self._linked = False
         react.SourceSignal.__init__(self, func, [], ob=ob)
     
-    def _subscribe(self, signal):
-        react.SourceSignal._subscribe(self, signal)
+    def _subscribe(self, *args):
+        react.SourceSignal._subscribe(self, *args)
         if not self._linked:
             self.__self__._link_js_signal(self.name)
     
-    def _unsubscribe(self, signal):
-        react.SourceSignal._unsubscribe(self, signal)
+    def _unsubscribe(self, *args):
+        react.SourceSignal._unsubscribe(self, *args)
         if self._linked and not self._downstream:
             self.__self__._link_js_signal(self.name, False)
 

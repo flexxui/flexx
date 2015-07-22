@@ -150,6 +150,14 @@ def test_hassignal__signals__(Name):
     s = Name()
     return s.__signals__
 
+@run_in_both(Name, "[2, 2]")
+def test_reconnect_no_doubles(Name):
+    s = Name()
+    s.r.append(len(s.full_name._upstream))
+    s.full_name.connect()
+    s.r.append(len(s.full_name._upstream))
+    return s.r
+
 
 class NoDefaults(HasSignals):
     

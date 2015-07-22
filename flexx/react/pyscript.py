@@ -106,14 +106,16 @@ class HasSignals:
         selff._name = func._name
         
         # Create private attributes
-        selff.IS_SIGNAL = True
+        selff._IS_SIGNAL = True
         selff._active = False
         selff._func = func
         selff._status = 3
         selff.__self__ = obj  # note: not a weakref...
-        selff._upstream = []
         selff._upstream_given = upstream
+        selff._upstream = []
         selff._downstream = []
+        selff._upstream_reconnect = []
+        selff._downstream_reconnect = []
         
         # Functions that we re-use from the Python implementation of signals
         selff.connect = BaseSignal_connect_from_py
@@ -123,30 +125,24 @@ class HasSignals:
         selff._get_value = BaseSignal__get_value_from_py
         selff._update_value = BaseSignal__update_value_from_py
         selff._set_status = BaseSignal__set_status_from_py
+        selff._seek_signal = BaseSignal__seek_signal_from_py
         
         # Some functions need JS specifics
         
         def _resolve_signals():
-            upstream = []
+            selff._upstream = []
+            selff._upstream_rebind = []
+            
             for fullname in selff._upstream_given:
                 nameparts = fullname.split('.')
                 # Obtain first part of path from the frame that we have
                 ob = obj[nameparts[0]]
-                # Walk down the object tree to obtain the full path
-                for name in nameparts[1:]:
-                    if ob is undefined:
-                        break
-                    if ob.IS_SIGNAL:
-                        ob = ob()
-                    ob = ob[name]
-                # Add to list or fail
-                if ob is undefined:
-                    return 'Signal "%s" does not exist.' % fullname
-                elif not ob.IS_SIGNAL:
-                    return 'Object "%s" is not a signal.' % fullname
-                upstream.append(ob)
+                msg = selff._seek_signal(fullname, nameparts[1:], ob)
+                if msg:
+                    selff._upstream = []
+                    selff._upstream_rebind = []
+                    return msg
             
-            selff._upstream = upstream
             return False  # no error
         
         def _save_update():
@@ -184,8 +180,8 @@ def patch_HasSignals():
     """
     from flexx.react.react import Signal, SourceSignal
     for signal_type, cls in [('BaseSignal', Signal), ('SourceSignal', SourceSignal)]:
-        for name in ('connect', 'disconnect', '_subscribe', '_unsubscribe', 
-                    '_get_value', '_update_value', '_set_status', '_set'):
+        for name in ('connect', 'disconnect', '_subscribe', '_unsubscribe', '_set',
+                    '_get_value', '_update_value', '_set_status', '_seek_signal'):
             if name in cls.__dict__:
                 code = js(cls.__dict__[name], indent=1, docstrings=False)
                 template = '%s_%s_from_py;' % (signal_type, name)
