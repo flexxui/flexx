@@ -33,11 +33,12 @@ class Serializer:
         def _reviver(dct, val=undefined):
             if val is not undefined:
                 dct = val
-            type = dct.get('__type__', None)
-            if type is not None:
-                func = _revivers.get(type, None)
-                if func is not None:
-                    return func(dct)
+            if isinstance(dct, dict):
+                type = dct.get('__type__', None)
+                if type is not None:
+                    func = _revivers.get(type, None)
+                    if func is not None:
+                        return func(dct)
             return dct
         
         def _replacer(obj, val=undefined):
@@ -49,7 +50,7 @@ class Serializer:
                     raise TypeError()
             else:
                 # JS
-                if val.__json__:
+                if (val is not None) and val.__json__:
                     return val.__json__()
                 return val
         

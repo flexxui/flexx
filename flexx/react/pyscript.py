@@ -157,7 +157,7 @@ class HasSignals:
                 #print('Error updating signal:', err.stack)
                 console.error('Error updating signal: ' + err)
         
-        def _set_value(value):
+        def _set_value(value=None):  # default None to prevent undefined on JS
             selff._last_value = selff._value
             selff._value = value
             selff._last_timestamp = selff._timestamp

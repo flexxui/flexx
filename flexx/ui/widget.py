@@ -388,5 +388,3 @@ class Widget(Paired):
     #         new_parent.children._set(children)
     #         new_parent._add_child(self)
     
-    
-    

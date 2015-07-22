@@ -58,6 +58,7 @@ from ...webruntime import launch
 
 from .clientcode import clientCode, Exporter # global client code
 from .mirrored import Mirrored
+from .serialize import serializer
 
 
 # Create/get the tornado event loop
@@ -593,7 +594,8 @@ class Proxy(object):
                 # eventual synchronity
                 #print('setting signal from js:', signal_name)
                 signal = getattr(ob, signal_name)
-                value = json.loads(txt)
+                #value = json.loads(txt)
+                value = serializer.loads(txt)
                 signal._set(value)
         else:
             logging.warn('Unknown command received from JS:\n%s' % command)

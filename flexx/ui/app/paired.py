@@ -14,6 +14,8 @@ from ...react.pyscript import create_js_signals_class, HasSignalsJS
 from ...pyscript import js, JSCode
 from ...pyscript.parser2 import get_class_definition
 
+from .serialize import serializer
+
 if sys.version_info[0] >= 3:
     string_types = str,
 else:
@@ -93,6 +95,8 @@ class PairedMeta(react.HasSignalsMeta):
     def __init__(cls, name, bases, dct):
         react.HasSignalsMeta.__init__(cls, name, bases, dct)
         
+        OK_MAGICS = '__init__', '__json__', '__from_json__'
+        
         # Create proxy signals on cls for each signal on JS
         if 'JS' in cls.__dict__:
             for name, val in cls.JS.__dict__.items():
@@ -114,6 +118,8 @@ class PairedMeta(react.HasSignalsMeta):
                     JS.__init__ = c.JS.__init__
                 for name, val in c.JS.__dict__.items():
                     if not name.startswith('__'):
+                        setattr(JS, name, val)
+                    elif name in OK_MAGICS:
                         setattr(JS, name, val)
         cls.JS = JS
         
@@ -139,14 +145,19 @@ class PairedMeta(react.HasSignalsMeta):
         """
         cls_name = 'flexx.classes.' + cls.__name__
         base_class = 'flexx.classes.%s.prototype' % cls.mro()[1].__name__
-        js = []
+        code = []
         # Add JS version of HasSignals when this is the Paired class
         if cls.mro()[1] is react.HasSignals:
-            code = HasSignalsJS.jscode.replace('HasSignals', 'flexx.classes.HasSignals')
-            js.append(code[4:])  # skip 'var '
+            c = js(serializer.__class__).jscode[4:]  # skip 'var '
+            code.append(c.replace('Serializer', 'flexx.Serializer'))
+            code.append('flexx.serializer = new flexx.Serializer();')
+            c = HasSignalsJS.jscode[4:]  # skip 'var '
+            code.append(c.replace('HasSignals', 'flexx.classes.HasSignals'))
         # Add this class
-        js.append(create_js_signals_class(cls.JS, cls_name, base_class))
-        return '\n'.join(js)
+        code.append(create_js_signals_class(cls.JS, cls_name, base_class))
+        if cls.mro()[1] is react.HasSignals:
+            code.append('flexx.serializer.add_reviver("Flexx-Paired", flexx.classes.Paired.__from_json__);\n')
+        return '\n'.join(code)
 
 
 class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
@@ -176,6 +187,11 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
     # CSS for this class (no css in the base class)
     CSS = ""
     
+    def __json__(self):
+        return {'__type__': 'Flexx-Paired', 'id': self.id}
+    
+    def __from_json__(dct):
+        return get_instance_by_id(dct['id'])
     
     def __init__(self, _proxy=None, **kwargs):
         
@@ -210,9 +226,6 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
     def init(self):
         pass
     
-    def __json__():
-        pass
-    
     @property
     def id(self):
         """ The unique id of this Paired instance """
@@ -226,7 +239,8 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
     
     def _signal_changed(self, signal):
         if not isinstance(signal, JSSignal):
-            txt = json.dumps(signal.value)
+            #txt = json.dumps(signal.value)
+            txt = serializer.saves(signal.value)
             cmd = 'flexx.instances.%s._set_signal_from_py(%r, %r);' % (self._id, signal.name, txt)
             self._proxy._exec(cmd)
     
@@ -251,6 +265,12 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
     
     class JS:
         
+        def __json__(self):
+            return {'__type__': 'Flexx-Paired', 'id': self.id}
+        
+        def __from_json__(dct):
+            return flexx.instances[dct.id]
+        
         def __init__(self, id):
             
             # Set id alias. In most browsers this shows up as the first element
@@ -268,7 +288,8 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         
         def _set_signal_from_py(self, name, text):
             self._signal_emit_lock = True  # do not send back to py
-            value = JSON.parse(text)
+            #value = JSON.parse(text)
+            value = flexx.serializer.loads(text)
             self[name]._set(value)
         
         def _signal_changed(self, signal):
@@ -278,11 +299,8 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
                 self._signal_emit_lock = False
                 return
             if signal.signal_type == 'PyInputSignal' or self._linked_signals[signal._name]:
-                value = signal.value
-                if value['__tojson__']:  # == function
-                    txt = value['__tojson__']()
-                else:
-                    txt = JSON.stringify(value)
+                #txt = JSON.stringify(signal.value)
+                txt = flexx.serializer.saves(signal.value)
                 flexx.ws.send('SIGNAL ' + self.id + ' ' + signal._name + ' ' + txt)
         
         def _link_js_signal(self, name, link):
@@ -311,3 +329,7 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
             """
             that = this
             element.addEventListener(event_name, lambda ev: that[method_name](ev), False)
+
+
+# Make paired objects de-serializable
+serializer.add_reviver('Flexx-Paired', Paired.__from_json__)

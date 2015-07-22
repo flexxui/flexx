@@ -17,6 +17,8 @@ class Name(ui.app.paired.Paired):
             # trigger a change in name
             if v==7:
                 self.last_name('klein')
+            if v==8:
+                return self  # to test that we get the Name instance in Py
     
     @react.input
     def last_name(n='doe'):
@@ -38,6 +40,10 @@ class Name(ui.app.paired.Paired):
         # todo: initial value received by JS is null
         return float(v)
     
+    @react.watch('bar')
+    def bar_value(v):
+        return v
+
 
 # Create flexx app with a nodejs runtime (you could also use e.g. firefox here)
 # todo: ui.run('nodejs') ?

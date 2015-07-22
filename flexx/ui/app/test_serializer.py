@@ -18,13 +18,13 @@ class Foo:
         return self.val == other.val
 
 
+foo1, foo2, foo3 = Foo(42), Foo(7), Foo(None)
+s1 = {'a': foo1, 'b': [foo2, foo3]}
+    
+    
 def test_python():
 
     serializer.add_reviver('Foo', Foo.__from_json__)
-    
-    foo1 = Foo(42)
-    foo2 = Foo(7)
-    s1 = {'a': foo1, 'b': [foo2, foo2]}
     
     text = serializer.saves(s1)
     
@@ -37,16 +37,12 @@ def test_python():
 
 def test_js():
     
-    foo1 = Foo(42)
-    foo2 = Foo(7)
-    s1 = {'a': foo1, 'b': [foo2, foo2]}
-    
     code = js(Serializer).jscode
     code += js(Foo).jscode
     
     code += 'var serializer = new Serializer();\n'
-    code += 'var foo1 = new Foo(42), foo2 = new Foo(7);\n'
-    code += 'var s1 = {"a": foo1, "b": [foo2, foo2]};\n'
+    code += 'var foo1 = new Foo(42), foo2 = new Foo(7), foo3 = new Foo(null);\n'
+    code += 'var s1 = {"a": foo1, "b": [foo2, foo3]};\n'
     code += 'var text = serializer.saves(s1);\n'
     code += 'var s2 = serializer.loads(text);\n'
     code += 'text + "|" + (s2.a.val + s2.b[0].val);\n'
