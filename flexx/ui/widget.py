@@ -267,14 +267,13 @@ class Widget(Paired):
             self._check_resize()
         
         @react.source
-        def children(v):
+        def children(v=()):
             """ The child widgets of this widget.
             """
-            v = list(v)
             for w in v:
-                if not isinstance(w, Widget):
+                if not isinstance(w, flexx.classes.Widget):
                     raise ValueError('Children should be Widget objects.')
-            return tuple(v)
+            return v
             
         @react.source
         def real_size(v=(0, 0)):
@@ -300,7 +299,7 @@ class Widget(Paired):
         
         @react.act('parent')
         def _parent_changed(self, new_parent):
-            old_parent = self.parent.previous_value
+            old_parent = self.parent.last_value
             if old_parent is not None:
                 children = old_parent.children()[:]
                 while self in children:
@@ -315,7 +314,9 @@ class Widget(Paired):
             
             # re-connect size-signal
             # todo: no need if we have dynamism
-            self._keep_size_up_to_date.connect(False)
+            #self._keep_size_up_to_date.connect(False)
+            
+            
             # # Unregister events
             # if old_parent is None:
             #     window.removeEventListener('resize', self._check_resize, False)
@@ -327,9 +328,9 @@ class Widget(Paired):
             # else:
             #     new_parent.connect_event('resize', self._check_resize)
         
-        @react.act('parent.real_size')
-        def _keep_size_up_to_date(size):
-            self._check_resize()
+        #@react.act('parent.real_size')
+        #def _keep_size_up_to_date(size):
+        #    self._check_resize()
         
         @react.act('pos')
         def _pos_changed(self, pos):

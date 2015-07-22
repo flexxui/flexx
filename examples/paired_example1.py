@@ -38,7 +38,7 @@ class Name(ui.app.paired.Paired):
     @react.input
     def foo(v=42):
         # todo: initial value received by JS is null
-        return float(v)
+        return v
     
     @react.watch('bar')
     def bar_value(v):

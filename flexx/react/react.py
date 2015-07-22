@@ -150,7 +150,8 @@ class Signal(object):
         
         # Check that for class descriptors the decorators are used
         if self._class_desciptor and frame is None:
-            raise RuntimeError('On classes, signals cannot be instantiated directly; use the decorators.')
+            raise RuntimeError('On classes, signals cannot be instantiated directly; '
+                               'use the decorators. (%r)' % self._name)
             
         # Init variables related to the signal value
         self._value = None
@@ -188,10 +189,11 @@ class Signal(object):
     ## Behavior for when attached to a class
     
     def __set__(self, obj, value):
-        raise ValueError('Cannot overwrite a signal; use some_signal(val) on InputSignal objects.')
+        raise ValueError('Cannot overwrite signal %r; use some_signal(val) on '
+                         'InputSignal objects.' % self._name)
     
     def __delete__(self, obj):
-        raise ValueError('Cannot delete a signal.')
+        raise ValueError('Cannot delete signal %r.' % self._name)
     
     def __get__(self, instance, owner):
         if instance is None:
@@ -217,8 +219,8 @@ class Signal(object):
         signals.
         
         If resolving the signals from the strings fails, raises an
-        error. Unless ``raise_on_fail`` is False, in which case we return
-        True on success.
+        error. Unless ``raise_on_fail`` is False, in which case this
+        returns True on success and False on failure.
         
         This function is automatically called during initialization,
         and when the value of this signal is obtained while the signal
@@ -252,6 +254,7 @@ class Signal(object):
         
         # Update status (also downstream)
         self._set_status(1)
+        return True
     
     def disconnect(self):
         """ Disconnect this signal, unsubscribing it from the upstream
@@ -372,9 +375,9 @@ class Signal(object):
         if self._status == 1:
             self._update_value()
         elif self._status == 2:
-            raise SignalValueError('The signal is not initialized.')
+            raise SignalValueError('The signal %r is not initialized.' % self._name)
         elif self._status == 3:
-            raise SignalValueError('The signal is not connected.')
+            raise SignalValueError('The signal %r is not connected.' % self._name)
         return self._value
     
     def _update_value(self):
@@ -395,7 +398,8 @@ class Signal(object):
         if not args:
             return self._get_value()
         else:
-            raise RuntimeError('Can only set signal values of InputSignal objects.')
+            raise RuntimeError('Can only set signal values of InputSignal objects, '
+                               'which signal %r is not.' % self._name)
     
     def _call_func(self, *args):
         if self._func_is_method and self._ob is not None:
@@ -490,7 +494,7 @@ class InputSignal(SourceSignal):
         elif len(args) == 1:
             return self._set(args[0])
         else:
-            raise ValueError('Setting an input signal requires exactly one argument')
+            raise ValueError('Setting an input signal (%r) requires exactly one argument' % self._name)
 
 
 class WatchSignal(Signal):
@@ -576,12 +580,18 @@ class HasSignals(with_metaclass(HasSignalsMeta, object)):
     have a ``self`` argument, but this is not mandatory.
     """
     
-    def __init__(self):
+    def __init__(self, **initial_signal_values):
         
         # Instantiate signals, its enough to reference them
         for name in self.__class__.__signals__:
             #val = getattr(self.__class__, name)
             getattr(self, name)
+        
+        for name, val in initial_signal_values.items():
+            if name not in self.__class__.__signals__:
+                raise ValueError('Object does not have a signal %r' % name)
+            signal = getattr(self, name)
+            signal(val)
         
         self.connect_signals(False)
     
@@ -750,7 +760,7 @@ def act(*input_signals):
     machanism differs from the ``signal`` decorator.
     """
     if (not input_signals) or _first_arg_is_func(input_signals):
-        raise ValueError('Input signal must have upstream signals.')
+        raise ValueError('Act signal must have upstream signals.')
     
     def _react(func):
         frame = sys._getframe(1)

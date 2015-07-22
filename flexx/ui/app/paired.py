@@ -156,7 +156,7 @@ class PairedMeta(react.HasSignalsMeta):
         # Add this class
         code.append(create_js_signals_class(cls.JS, cls_name, base_class))
         if cls.mro()[1] is react.HasSignals:
-            code.append('flexx.serializer.add_reviver("Flexx-Paired", flexx.classes.Paired.__from_json__);\n')
+            code.append('flexx.serializer.add_reviver("Flexx-Paired", flexx.classes.Paired.prototype.__from_json__);\n')
         return '\n'.join(code)
 
 
@@ -272,7 +272,6 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
             return flexx.instances[dct.id]
         
         def __init__(self, id):
-            
             # Set id alias. In most browsers this shows up as the first element
             # of the object, which makes it easy to identify objects while
             # debugging. This attribute should *not* be used.
@@ -282,10 +281,13 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
             
             super().__init__()
             self.init()
+            self._init()  # todo: make them use .init()
         
         def init(self):
             pass  # Subclasses should overload this
-        
+        def _init(self):
+            pass  # todo: remove this
+            
         def _set_signal_from_py(self, name, text):
             self._signal_emit_lock = True  # do not send back to py
             #value = JSON.parse(text)
@@ -298,7 +300,10 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
             if self._signal_emit_lock:
                 self._signal_emit_lock = False
                 return
-            if signal.signal_type == 'PyInputSignal' or self._linked_signals[signal._name]:
+            # todo: what signals do we sync? all but private signals? or only linked?
+            # signals like `children` should always sync, signals like a 100Hz timer not, mouse_pos maybe neither unless linked against
+            #if signal.signal_type == 'PyInputSignal' or self._linked_signals[signal._name]:
+            if signal.signal_type != 'PySignal' and not signal._name.startswith('_'):
                 #txt = JSON.stringify(signal.value)
                 txt = flexx.serializer.saves(signal.value)
                 flexx.ws.send('SIGNAL ' + self.id + ' ' + signal._name + ' ' + txt)
@@ -318,17 +323,17 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         
         ## JS event system
         
-        def _proxy_event(self, element, name):
-            """ Easily get JS events from DOM elements in our event system.
-            """
-            that = this
-            element.addEventListener(name, lambda ev: that.emit_event(name, {'cause': ev}), False)
-        
-        def _connect_js_event(self, element, event_name, method_name):
-            """ Connect methods of this object to JS events.
-            """
-            that = this
-            element.addEventListener(event_name, lambda ev: that[method_name](ev), False)
+        # def _proxy_event(self, element, name):
+        #     """ Easily get JS events from DOM elements in our event system.
+        #     """
+        #     that = this
+        #     element.addEventListener(name, lambda ev: that.emit_event(name, {'cause': ev}), False)
+        # 
+        # def _connect_js_event(self, element, event_name, method_name):
+        #     """ Connect methods of this object to JS events.
+        #     """
+        #     that = this
+        #     element.addEventListener(event_name, lambda ev: that[method_name](ev), False)
 
 
 # Make paired objects de-serializable

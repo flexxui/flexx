@@ -71,7 +71,7 @@ class HasSignals:
             elif len(args) == 1:
                 return selff._set(args[0])
             else:
-                raise ValueError('Setting an input signal requires exactly one argument')
+                raise ValueError('Setting input signal %r requires exactly one argument.' % selff._name)
         
         return self._create_SourceSignal(func, upstream, selff)
     
@@ -93,7 +93,8 @@ class HasSignals:
                 if not len(args):
                     return selff._get_value()
                 else:
-                    raise RuntimeError('Can only set signal values of InputSignal objects.')
+                    raise RuntimeError('Can only set signal values of InputSignal objects, '
+                                       'which signal %r is not.' % selff._name)
         
         # Create public attributes
         self._create_property(selff, 'value', '_value', None)
