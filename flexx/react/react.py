@@ -225,6 +225,10 @@ class Signal(object):
         is not connected.
         
         """
+        # First disconnect
+        while len(self._upstream):  # len() for PyScript compat
+            s = self._upstream.pop(0)
+            s._unsubscribe(self)
         
         # Disable connecting for signal placeholders on classes
         if self._class_desciptor:

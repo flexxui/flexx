@@ -1,3 +1,8 @@
+"""
+Implementation of a serializer with support for custom classes. The
+code is PyScript compatible; so it can also be used in JS.
+"""
+
 import json
 
 undefined = None
@@ -54,47 +59,3 @@ class Serializer:
 
 
 serializer = Serializer()
-
-
-if __name__ == '__main__':
-    
-    class Foo:
-        def __init__(self, val):
-            self.val = val
-        def __json__(self):
-            return {'__type__': 'Foo', 'val': self.val}
-        def __from_json__(obj):
-            return Foo(obj['val'])
-        def __eq__(self, other):
-            return self.val == other.val
-    
-    serializer.add_reviver('Foo', Foo.__from_json__)
-    
-    foo1 = Foo(42)
-    foo2 = Foo(7)
-    s1 = {'a': foo1, 'b': [foo2, foo2]}
-    
-    text = serializer.saves(s1)
-    
-    s2 = serializer.loads(text)
-    
-    
-    from flexx.pyscript import js, evaljs
-    
-    code = js(Serializer).jscode
-    code += js(Foo).jscode
-    
-    code += 'var serializer = new Serializer();\n'
-    code += 'var foo1 = new Foo(42), foo2 = new Foo(7);\n'
-    code += 'var s1 = {"a": foo1, "b": [foo2, foo2]};\n'
-    code += 'var text = serializer.saves(s1);\n'
-    code += 'var s2 = serializer.loads(text);\n'
-    code += 'text + "|" + (s2.a.val + s2.b[0].val);\n'
-    
-    result = evaljs(code)
-    js_text, js_int = result.split('|')
-    s3 = serializer.loads(js_text)
-    
-    assert s1 == s2
-    assert s1 == s3
-    

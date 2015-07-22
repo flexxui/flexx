@@ -202,12 +202,15 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         self._proxy._exec(cmd)
         
         # Call init
-        self._init()
+        self.init()
         
         # Init signals
         react.HasSignals.__init__(self, **kwargs)
     
-    def _init(self):
+    def init(self):
+        pass
+    
+    def __json__():
         pass
     
     @property
@@ -258,9 +261,9 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
             self._linked_signals = {}  # use a list as a set
             
             super().__init__()
-            self._init()
+            self.init()
         
-        def _init(self):
+        def init(self):
             pass  # Subclasses should overload this
         
         def _set_signal_from_py(self, name, text):

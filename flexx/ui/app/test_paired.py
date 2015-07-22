@@ -150,4 +150,14 @@ def test_overloading():
     assert Foo4.JS.red is not Foo2.JS.red
 
 
+def test_no_duplicate_code():
+    assert '_blue_func' in Foo1.JS.CODE
+    assert '_blue_func' not in Foo2.JS.CODE
+    assert '_blue_func' not in Foo4.JS.CODE
+    
+    assert '_red_func' not in Foo1.JS.CODE
+    assert '_red_func' in Foo2.JS.CODE
+    assert '_red_func' in Foo4.JS.CODE
+
+
 run_tests_if_main()
