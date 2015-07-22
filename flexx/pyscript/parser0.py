@@ -39,6 +39,10 @@ def unify(x):
         return x  # identifier, numbers, dots
     elif x.endswith('()') and re.match(r'^[.\w]*$', x[:-2]):
         return x  # function calls (e.g. super())
+    elif x.startswith('(') and x.endswith(')') and x.count(')') == 1:
+        return x
+    elif x.startswith('[') and x.endswith(']') and x.count(']') == 1:
+        return x
     else:
         return '(%s)' % x
 

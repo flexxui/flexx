@@ -162,12 +162,12 @@ class Parser3(Parser2):
         BASIC_TYPES = ('number', 'boolean', 'string', 'function', 'array',
                        'object', 'null', 'undefined')
         
-        MAP = {'(int, float)': 'number', '(float, int)': 'number', 'float': 'number',
+        MAP = {'[int, float]': 'number', '[float, int]': 'number', 'float': 'number',
                'str': 'string', 'basestring': 'string', 'string_types': 'string',
                'bool': 'boolean',
                'FunctionType': 'function', 'types.FunctionType': 'function',
                'list': 'array', 'tuple': 'array',
-               '(list, tuple)': 'array', '(tuple, list)': 'array',
+               '[list, tuple]': 'array', '[tuple, list]': 'array',
                'dict': 'object',
         }
         

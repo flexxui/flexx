@@ -27,6 +27,7 @@ class TestBuildins:
         assert evalpy('isinstance(undefined, "null")') == 'false'
         
         assert evalpy('isinstance(3, float)') == 'true'
+        assert evalpy('isinstance(3, (int, float))') == 'true'
         assert evalpy('isinstance(3, "number")') == 'true'
         #
         #assert evalpy('isinstance(3, int)') == 'false'  # int is not defined
