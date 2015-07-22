@@ -65,6 +65,19 @@ class TestBuildins:
         assert evaljs(code + py2js('isinstance(x, "MyClass")')) == 'true'
         assert evaljs(code + py2js('isinstance(x, MyClass)')) == 'true'
     
+    def test_hasattr(self):
+        code = 'a = {"foo":1, "bar":2};\n'
+        assert evalpy(code + 'hasattr(a, "foo")') == 'true'
+        assert evalpy(code + 'hasattr(a, "fooo")') == 'false'
+    
+    def test_getattr(self):
+        code = 'a = {"foo":1, "bar":2};\n'
+        assert evalpy(code + 'getattr(a, "foo")') == '1'
+        assert evalpy(code + 'getattr(a, "bar")') == '2'
+        exc_att = 'except AttributeError: print("err")'
+        assert evalpy(code + 'try:\n  getattr(a, "fooo")\n' + exc_att) == 'err'
+        assert evalpy(code + 'getattr(a, "fooo", 3)') == '3'
+    
     def test_max(self):
         assert evalpy('max([3, 4, 5, 1])') == '5'
         assert evalpy('max(3, 4, 5, 1)') == '5'

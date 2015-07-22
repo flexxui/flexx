@@ -65,6 +65,21 @@ for user-defined classes.
     isinstance(x, 'MyClass')  # equivalent
     isinstance(x, 'Object')  # also yields true (subclass of Object)
 
+hasattr and getattr
+-------------------
+
+.. pyscript_example::
+    
+    a = {'foo': 1, 'bar': 2}
+    
+    hasattr(a, 'foo')  # -> True
+    hasattr(a, 'fooo')  # -> False
+    hasattr(null, 'foo')  # -> False
+    
+    getattr(a, 'foo')  # -> 1
+    getattr(a, 'fooo')  # -> raise AttributeError
+    getattr(a, 'fooo', 3)  # -> 3
+    getattr(null, 'foo', 3)  # -> 3
 
 Additional sugar
 ----------------
@@ -175,6 +190,35 @@ class Parser3(Parser2):
                 raise JSError('isinstance() can only compare to simple types')
             return ob, " instanceof ", cmp
     
+    def function_hasattr(self, node):
+        if len(node.args) == 2:
+            ob = unify(self.parse(node.args[0]))
+            name = unify(self.parse(node.args[1]))
+            dummy1 = self.dummy()
+            t = "((%s=%s) !== undefined && %s !== null && %s[%s] !== undefined)"
+            return t % (dummy1, ob, dummy1, dummy1, name)
+        else:
+            raise JSError('hasattr expects two arguments.')
+    
+    def function_getattr(self, node):
+        is_ok = "(ob !== undefined && ob !== null && ob[name] !== undefined)"
+        
+        if len(node.args) == 2:
+            ob = unify(self.parse(node.args[0]))
+            name = unify(self.parse(node.args[1]))
+            func = "(function (ob, name) {if %s {return ob[name];} " % is_ok
+            func += "else {var e = Error(name); e.name='AttributeError'; throw e;}})"
+            return func + '(%s, %s)' % (ob, name)
+        elif len(node.args) == 3:
+            ob = unify(self.parse(node.args[0]))
+            name = unify(self.parse(node.args[1]))
+            default = unify(self.parse(node.args[2]))
+            func = "(function (ob, name, dflt) {if %s {return ob[name];} " % is_ok
+            func += "else {return dflt;}})"
+            return func + '(%s, %s, %s)' % (ob, name, default)
+        else:
+            raise JSError('hasattr expects two or three arguments.')
+    
     def function_print(self, node):
         # Process keywords
         sep, end = '" "', ''
@@ -269,7 +313,6 @@ class Parser3(Parser2):
             # Work in nodejs and browser
             dummy = self.dummy()
             return '(typeof(process) === "undefined" ? performance.now()*1e-3 : ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy)
-    
     
     ## List methods
     
