@@ -10,9 +10,9 @@ import traceback
 import tornado.web
 import tornado.websocket
 
-from ...webruntime.common import default_icon
+from ..webruntime.common import default_icon
 
-from .app import manager, call_later
+from .proxy import manager, call_later
 from .clientcode import clientCode
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))

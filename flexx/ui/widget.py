@@ -153,7 +153,7 @@ class Widget(Pair):
         # Set container id, this gets applied in the next event loop
         # iteration, so by the time it gets called in JS, the div that
         # we define below will have been created.
-        from .app import call_later
+        from ..pair import call_later
         call_later(0.1, set_cointainer_id) # todo: always do calls in next iter
         return "<div class='flx-container' id=%s />" % container_id
     

@@ -6,5 +6,5 @@ Pair classes without the ui.
 
 """
 
-from .app import run, stop, call_later, this_is_an_app
+from .proxy import run, stop, call_later, this_is_an_app
 from .pair import Pair, get_instance_by_id, get_pair_classes

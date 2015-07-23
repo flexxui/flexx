@@ -10,7 +10,7 @@ This streamlines the inclusion in Jupyter and our export mechanism.
 import os
 from collections import OrderedDict
 
-from ...pyscript import js
+from ..pyscript import js
 
 # todo: minification
 
@@ -378,7 +378,7 @@ class ClientCode(object):
         
         for cls in get_pair_classes():
             self._preloaded_pair_classes.add(cls)
-            if cls.__module__.startswith('flexx.app'):
+            if cls.__module__.startswith('flexx.pair'):
                 key = 'flexx'
             elif cls.__module__.startswith('flexx.ui'):
                 key = 'flexx-ui'

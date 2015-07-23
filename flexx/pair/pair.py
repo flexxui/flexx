@@ -8,11 +8,11 @@ import json
 import weakref
 import hashlib
 
-from ...react import react
-from ...react.pyscript import create_js_signals_class, HasSignalsJS
+from ..react import react
+from ..react.pyscript import create_js_signals_class, HasSignalsJS
 
-from ...pyscript import js, JSCode
-from ...pyscript.parser2 import get_class_definition
+from ..pyscript import js, JSCode
+from ..pyscript.parser2 import get_class_definition
 
 from .serialize import serializer
 
@@ -208,7 +208,7 @@ class Pair(react.with_metaclass(PairMeta, react.HasSignals)):
         
         # Init proxy
         if _proxy is None:
-            from .app import manager
+            from .proxy import manager
             _proxy = manager.get_default_proxy()
         self._proxy = _proxy
         

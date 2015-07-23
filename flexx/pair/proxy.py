@@ -53,8 +53,8 @@ import logging
 import tornado.ioloop
 import tornado.web
 
-from ...util.icon import Icon
-from ...webruntime import launch
+from ..util.icon import Icon
+from ..webruntime import launch
 
 from .clientcode import clientCode, Exporter # global client code
 from .serialize import serializer
@@ -71,7 +71,7 @@ _tornado_app = None
 class AppManager(object):
     """ Manage applications, or more specifically, the proxy objects.
     
-    There is one AppManager class (in flexx.ui.app.manager). It's
+    There is one AppManager class (in flexx.pair.manager). It's
     purpose is to manage the application classes and instances. Intended
     for internal use.
     """
@@ -89,7 +89,7 @@ class AppManager(object):
         After registering a class, it becomes possible to connect to 
         "http://address:port/ClassName". 
         """
-        from .. import Widget
+        from ..ui import Widget
         assert isinstance(cls, type) and issubclass(cls, Widget)
         name = cls.__name__
         pending, connected = [], []

@@ -4,7 +4,7 @@ from flexx.util.testing import run_tests_if_main
 
 from flexx.pyscript import js, evaljs
 
-from flexx.ui.app.serialize import Serializer, serializer
+from flexx.pair.serialize import Serializer, serializer
 
 
 class Foo:

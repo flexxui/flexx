@@ -6,7 +6,7 @@ but it can be used to e.g. do computing in JavaScript or PyScript.
 It also accepts a code attribute to provide the main "script". The url is
 provided to nodejs as the ``location`` variable as it is in a browser.
 
-When hooking this up with the flexx.app systen, nodejs and Python can
+When hooking this up with the flexx app systen, nodejs and Python can
 communicate via the websocket.
 """
 
