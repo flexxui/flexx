@@ -8,7 +8,7 @@ import threading
 
 from ..pyscript import js
 from .. import react
-from . import Paired, get_instance_by_id
+from . import Pair, get_instance_by_id
 
 
 def _check_two_scalars(name, v):
@@ -93,7 +93,7 @@ def _get_default_parents():
     return _default_parents_per_thread.setdefault(tid, [])
 
 
-class Widget(Paired):
+class Widget(Pair):
     """ Base widget class.
     
     In HTML-speak, this represents a plain div-element. Not very useful
@@ -136,7 +136,7 @@ class Widget(Paired):
         # Pass properties via kwargs
         kwargs['_css_class_name'] = classname
         kwargs['parent'] = parent
-        Paired.__init__(self, **kwargs)
+        Pair.__init__(self, **kwargs)
         
         with self:
             self.init()
@@ -265,7 +265,7 @@ class Widget(Paired):
             def _check_resize_now():
                 node = that.node
                 # todo: formalize our event object
-                event = {'cause': 'window'}  # owner and type set in Mirrored
+                event = {'cause': 'window'}
                 event.widthChanged = (that._stored_size[0] != node.offsetWidth)
                 event.heightChanged = (that._stored_size[1] != node.offsetHeight)
                 if event.widthChanged or event.heightChanged:

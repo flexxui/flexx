@@ -47,10 +47,10 @@ class HasSignals:
             signal.signal_type = func._signal_type
             self._create_property(self, name, '_' + name + '_signal', signal)
     
-    def _create_PySignal(func, upstream, selff):  # proxy for Paired
+    def _create_PySignal(func, upstream, selff):  # proxy for Pair
         return self._create_SourceSignal(func, upstream, selff)
     
-    def _create_PyInputSignal(func, upstream, selff):  # proxy for Paired
+    def _create_PyInputSignal(func, upstream, selff):  # proxy for Pair
         return self._create_InputSignal(func, upstream, selff)
         
     def _create_SourceSignal(func, upstream, selff):

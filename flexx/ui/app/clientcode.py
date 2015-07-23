@@ -97,7 +97,7 @@ class FlexxJS:
             self.ws = None
     
     def get(self, id):
-        """ Get instance of a Mirrored class.
+        """ Get instance of a Pair class.
         """
         if id == 'body':
             return document.body
@@ -293,11 +293,11 @@ class ClientCode(object):
     * split (default): the JS/CSS is served via different files.
     * single: everything is served via a single page. Intended for
       exporing apps as single files.
-    * dynamic: all of the Mirrored classes will be defined dynamically.
+    * dynamic: all of the Pair classes will be defined dynamically.
       Note that this makes debugging difficult. Mainly intended for
       testing purposes.
     
-    Note that any Mirrored classes defined once the first connects
+    Note that any Pair classes defined once the first connects
     will be dynamically defined, regardless of the chosen mode (after
     all, the page will already have been served).
     
@@ -317,7 +317,7 @@ class ClientCode(object):
         self._files = OrderedDict()
         self._cache = {}
         
-        self._preloaded_mirrored_classes = set()
+        self._preloaded_pair_classes = set()
         
         # Init dicts for JS and CSS code. The index represents the name
         # of the .js or .css file, or starts with "index-" in which
@@ -338,16 +338,16 @@ class ClientCode(object):
         return os.getenv('FLEXX_SERVE_MODE', 'split')
     
     def _collect(self):
-        """ The first time this is called, all existing Mirrored classes
+        """ The first time this is called, all existing Pair classes
         are collected, and their JS and CSS extracted. Any further calls
         to this method have no effect. This method is called upon app
         creation.
         
-        The collected JS and CSS will be served via HTML; any Mirrored
+        The collected JS and CSS will be served via HTML; any Pair
         classes that are used later on will be dynamically defined (i.e.
         injected) via the websocket interface.
         """
-        if self._preloaded_mirrored_classes:
+        if self._preloaded_pair_classes:
             return
         if self.mode == 'dynamic':
             return
@@ -368,17 +368,16 @@ class ClientCode(object):
         #     else:
         #         self._files[fname] = os.path.join(HTML_DIR, fname)
         
-        # Collect JS from mirrored classes
-        #from .mirrored import get_mirrored_classes
-        from .paired import get_mirrored_classes
+        # Collect JS from pair classes
+        from .pair import get_pair_classes
         
         self._js['flexx-ui'] = []
         self._js['index-other'] = []
         self._css['flexx-ui'] = []
         self._css['index-other'] = []
         
-        for cls in get_mirrored_classes():
-            self._preloaded_mirrored_classes.add(cls)
+        for cls in get_pair_classes():
+            self._preloaded_pair_classes.add(cls)
             if cls.__module__.startswith('flexx.app'):
                 key = 'flexx'
             elif cls.__module__.startswith('flexx.ui'):
@@ -388,8 +387,8 @@ class ClientCode(object):
             self._js[key].append(cls.JS.CODE)
             self._css[key].append(cls.CSS)  # the CSS is '' if not specified for that class
     
-    def get_defined_mirrored_classes(self):
-        """ Get a list of all mirrored classes that will be defined
+    def get_defined_pair_classes(self):
+        """ Get a list of all Pair classes that will be defined
         by serving the JS/CSS code. Returns an empty list when in 
         'dynamic' mode.
         """
@@ -397,7 +396,7 @@ class ClientCode(object):
         if self.mode == 'dynamic':
             return []
         else:
-            return self._preloaded_mirrored_classes
+            return self._preloaded_pair_classes
     
     def load(self, fname):
         """ Get the source of the given file as a string.

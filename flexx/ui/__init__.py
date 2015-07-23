@@ -4,7 +4,7 @@ GUI toolkit based on web technology with a Pythonic API.
 """
 
 from .app import run, stop, call_later, this_is_an_app
-from .app import Paired, get_instance_by_id
+from .app import Pair, get_instance_by_id
 
 from .widget import Widget  #, Window
 from .button import Label, Button

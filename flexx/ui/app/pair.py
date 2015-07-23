@@ -22,18 +22,18 @@ else:
     string_types = basestring,
 
 
-paired_classes = []
-def get_mirrored_classes(): # todo: rename to paired
-    """ Get a list of all known Mirrored subclasses.
+pair_classes = []
+def get_pair_classes():
+    """ Get a list of all known Pair subclasses.
     """
-    return [c for c in react.HasSignalsMeta.CLASSES if issubclass(c, Paired)]
+    return [c for c in react.HasSignalsMeta.CLASSES if issubclass(c, Pair)]
 
 
 def get_instance_by_id(id):
-    """ Get instance of Mirrored class corresponding to the given id,
+    """ Get instance of Pair class corresponding to the given id,
     or None if it does not exist.
     """
-    return Paired._instances.get(id, None)
+    return Pair._instances.get(id, None)
 
 
 import json
@@ -87,8 +87,8 @@ class PyInputSignal(PySignal):
     pass
 
 
-class PairedMeta(react.HasSignalsMeta):
-    """ Meta class for Paired
+class PairMeta(react.HasSignalsMeta):
+    """ Meta class for Pair
     Set up proxy signals in Py/JS.
     """
  
@@ -146,7 +146,7 @@ class PairedMeta(react.HasSignalsMeta):
         cls_name = 'flexx.classes.' + cls.__name__
         base_class = 'flexx.classes.%s.prototype' % cls.mro()[1].__name__
         code = []
-        # Add JS version of HasSignals when this is the Paired class
+        # Add JS version of HasSignals when this is the Pair class
         if cls.mro()[1] is react.HasSignals:
             c = js(serializer.__class__).jscode[4:]  # skip 'var '
             code.append(c.replace('Serializer', 'flexx.Serializer'))
@@ -156,14 +156,14 @@ class PairedMeta(react.HasSignalsMeta):
         # Add this class
         code.append(create_js_signals_class(cls.JS, cls_name, base_class))
         if cls.mro()[1] is react.HasSignals:
-            code.append('flexx.serializer.add_reviver("Flexx-Paired", flexx.classes.Paired.prototype.__from_json__);\n')
+            code.append('flexx.serializer.add_reviver("Flexx-Pair", flexx.classes.Pair.prototype.__from_json__);\n')
         return '\n'.join(code)
 
 
-class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
+class Pair(react.with_metaclass(PairMeta, react.HasSignals)):
     """ Class for which objects exist both in Python and JS. 
     
-    Each instance of this class has a mirror object in JavaScript, and
+    Each instance of this class has a corresponding object in JavaScript, and
     their signals are synced both ways. Methods can be defined than
     can be either executed in Python or in JavaScript (by decorating
     them with ``js``).
@@ -188,7 +188,7 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
     CSS = ""
     
     def __json__(self):
-        return {'__type__': 'Flexx-Paired', 'id': self.id}
+        return {'__type__': 'Flexx-Pair', 'id': self.id}
     
     def __from_json__(dct):
         return get_instance_by_id(dct['id'])
@@ -202,9 +202,9 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         # self._initial_signal_links = set()
         
         # Set id and register this instance
-        Paired._counter += 1
-        self._id = self.__class__.__name__ + str(Paired._counter)
-        Paired._instances[self._id] = self
+        Pair._counter += 1
+        self._id = self.__class__.__name__ + str(Pair._counter)
+        Pair._instances[self._id] = self
         
         # Init proxy
         if _proxy is None:
@@ -222,7 +222,7 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
     
     @property
     def id(self):
-        """ The unique id of this Paired instance """
+        """ The unique id of this Pair instance """
         return self._id
     
     @property
@@ -260,7 +260,7 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
     class JS:
         
         def __json__(self):
-            return {'__type__': 'Flexx-Paired', 'id': self.id}
+            return {'__type__': 'Flexx-Pair', 'id': self.id}
         
         def __from_json__(dct):
             return flexx.instances[dct.id]
@@ -323,5 +323,5 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         #     element.addEventListener(event_name, lambda ev: that[method_name](ev), False)
 
 
-# Make paired objects de-serializable
-serializer.add_reviver('Flexx-Paired', Paired.__from_json__)
+# Make pair objects de-serializable
+serializer.add_reviver('Flexx-Pair', Pair.__from_json__)

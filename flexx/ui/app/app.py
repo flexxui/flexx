@@ -57,8 +57,8 @@ from ...util.icon import Icon
 from ...webruntime import launch
 
 from .clientcode import clientCode, Exporter # global client code
-from .mirrored import Mirrored
 from .serialize import serializer
+from .pair import Pair
 
 
 # Create/get the tornado event loop
@@ -102,7 +102,7 @@ class AppManager(object):
     def get_default_proxy(self):
         """ Get the default proxy that is used for interactive use.
         
-        When a Mirrored class is created without a proxy, this method
+        When a Pair class is created without a proxy, this method
         is called to get one.
         
         The default "app" is served at "http://address:port/__default__".
@@ -419,9 +419,9 @@ class Proxy(object):
         self._widget = None
         
         # Object to manage the client code (JS/CSS/HTML)
-        self._known_mirrored_classes = set()
-        for cls in clientCode.get_defined_mirrored_classes():
-            self._known_mirrored_classes.add(cls)
+        self._known_pair_classes = set()
+        for cls in clientCode.get_defined_pair_classes():
+            self._known_pair_classes.add(cls)
         
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
@@ -515,25 +515,26 @@ class Proxy(object):
     
     ## Widget-facing code
     
-    def register_mirrored(self, cls):
+    def register_pair_class(self, cls):
+        # todo: do we use this somewhere? It should 
         """ Register the given class. If already registered, this function
         does nothing.
         """
-        if not (isinstance(cls, type) and issubclass(cls, Mirrored)):
-            raise ValueError('Not a Mirrored class')
+        if not (isinstance(cls, type) and issubclass(cls, Pair)):
+            raise ValueError('Not a Pair class')
         
-        if cls in self._known_mirrored_classes:
+        if cls in self._known_pair_classes:
             return
         
         # Make sure the base classes are defined first
         for cls2 in cls.mro()[1:]:
-            if not issubclass(cls2, Mirrored):  # True if cls2 is Mirrored
+            if not issubclass(cls2, Pair):  # True if cls2 is *the* Pair class
                 break
-            if cls2 not in self._known_mirrored_classes:
-                self.register_mirrored(cls2)
+            if cls2 not in self._known_pair_classes:
+                self.register_pair_class(cls2)
         
         # Register
-        self._known_mirrored_classes.add(cls)
+        self._known_pair_classes.add(cls)
         
         # Define class
         print('Dynamically defining class!', cls)
@@ -572,30 +573,15 @@ class Proxy(object):
             print(command[5:].strip())
         elif command.startswith('INFO '):
             logging.info('JS - ' + command[5:].strip())
-        elif command.startswith('PROP '):
-            # todo: seems weird to deal with here. implement this by registring some handler?
-            _, id, prop, txt = command.split(' ', 3)
-            from .mirrored import Mirrored
-            import json
-            ob = Mirrored._instances.get(id, None)
-            if ob is not None:
-                # Note that this will again sync with JS, but it stops there:
-                # eventual synchronity
-                print('setting from js:', prop)
-                val = getattr(ob.__class__, prop).from_json(txt)
-                setattr(ob, prop, val)
         elif command.startswith('SIGNAL '):
             # todo: seems weird to deal with here. implement this by registring some handler?
             _, id, signal_name, txt = command.split(' ', 3)
-            from .paired import Paired
-            import json
-            ob = Paired._instances.get(id, None)
+            ob = Pair._instances.get(id, None)
             if ob is not None:
                 # Note that this will again sync with JS, but it stops there:
                 # eventual synchronity
                 #print('setting signal from js:', signal_name)
                 signal = getattr(ob, signal_name)
-                #value = json.loads(txt)
                 value = serializer.loads(txt)
                 signal._set(value)
         else:

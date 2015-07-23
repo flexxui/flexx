@@ -159,15 +159,6 @@ class MainHandler(tornado.web.RequestHandler):
             # In theory this cannot happen
             self.write('This should not happen')
     
-    # def serve_index(self):
-    #     src = self.application.load('index.html')
-    #     from .mirrored import get_mirrored_classes
-    #     js = '\n'
-    #     for cls in get_mirrored_classes():
-    #         js += '\n' + cls.get_js()
-    #     src = src.replace(b'JS_INSERT_HERE', js.encode())
-    #     self.write(src)
-    
     def write_error(self, status_code, **kwargs):
         if status_code == 404:  # does not work?
             self.write('flexx.ui wants you to connect to root (404)')

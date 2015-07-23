@@ -1,14 +1,14 @@
-""" This tests the paired meta class.
+""" This tests the Pair class.
 """
 
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.ui.app.paired import Paired, JSSignal, PySignal
+from flexx.ui.app.pair import Pair, JSSignal, PySignal
 from flexx import react
 
 
-class Foo1(Paired):
+class Foo1(Pair):
     
     @react.input
     def title(v=''):
