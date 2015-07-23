@@ -8,16 +8,18 @@ import faulthandler
 faulthandler.enable()
 #logging.log
 
-class MyApp(ui.App):
+
+@ui.this_is_an_app()
+class MyApp(ui.Widget):
     
-    _config = ui.App.Config(title='Flexx test app', size=(400, 300),
-                            )#icon='https://assets-cdn.github.com/favicon.ico')
+    #_config = ui.App.Config(title='Flexx test app', size=(400, 300),
+    #                        )#icon='https://assets-cdn.github.com/favicon.ico')
                
     def init(self):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 1
+        TEST = 3
         
         if TEST == 1:
             with ui.VBox(self, flex=1) as self.hbox1:
@@ -131,12 +133,8 @@ class MyApp(ui.App):
         #self.win = ui.Window(self, 'A new window!')
 
 
-class MyApp2(ui.App):
-    def init(self):
-        self.b = ui.Button(self, 'Hello world')
 
-
-app = MyApp('xul')
+app = MyApp.launch('xul')
 ui.run()
 # app.b1.set_text('asdasd')
 

@@ -1,7 +1,7 @@
 """ High level layout.
 """
 
-from ..properties import Float, Str
+from .. import react
 
 from .widget import Widget, js
 from .layout import Layout, VBox, HBox
@@ -27,17 +27,20 @@ class Panel(Widget):
     
     """
     
-    title = Str()
+    @react.input
+    def title(v=''):
+        return str(v)
     
-    @js
-    def _js_create_node(self):
-        self.node = document.createElement('fieldset')
-        self._legend = document.createElement('legend')
-        self.node.appendChild(self._legend)
-    
-    @js
-    def _js_title_changed(self, name, old, title):
-        self._legend.innerHTML = title
+    class JS:
+        
+        def _create_node(self):
+            self.node = document.createElement('fieldset')
+            self._legend = document.createElement('legend')
+            self.node.appendChild(self._legend)
+        
+        @react.act('title')
+        def _title_changed(self, title):
+            self._legend.innerHTML = title
 
 
 
@@ -61,21 +64,21 @@ class PlotWidget(Widget):
     
     """
     
-    @js
-    def _js_create_node(self):
-        self.node = document.createElement('canvas')
-        self._context = ctx = self.node.getContext('2d')
-        
-        ctx.beginPath()
-        ctx.lineWidth= '3'
-        ctx.strokeStyle = "blue" 
-        ctx.moveTo(10, 60)
-        for i in range(40):
-            ctx.lineTo(10 + i * 10, 
-                       60 + 40 * Math.sin(0.5*i))
-        ctx.stroke()
-        
-        ctx.fillText("Imagine that this is a fancy plot ...", 10, 10)
+    class JS:
+        def _create_node(self):
+            self.node = document.createElement('canvas')
+            self._context = ctx = self.node.getContext('2d')
+            
+            ctx.beginPath()
+            ctx.lineWidth= '3'
+            ctx.strokeStyle = "blue" 
+            ctx.moveTo(10, 60)
+            for i in range(40):
+                ctx.lineTo(10 + i * 10, 
+                        60 + 40 * Math.sin(0.5*i))
+            ctx.stroke()
+            
+            ctx.fillText("Imagine that this is a fancy plot ...", 10, 10)
 
 
 class PlotLayout(Layout):

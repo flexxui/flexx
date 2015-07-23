@@ -182,8 +182,8 @@ class HBox(Box):
     """
     
     class JS:
-        def _init(self):
-            super()._init()
+        def __init__(self):
+            super().__init__()
             # align-items: flex-start, flex-end, center, baseline, stretch
             self._applyBoxStyle(self.node, 'align-items', 'center')
             #justify-content: flex-start, flex-end, center, space-between, space-around
@@ -208,8 +208,8 @@ class VBox(Box):
     """
     
     class JS:
-        def _init(self):
-            super()._init()
+        def __init__(self):
+            super().__init__()
             self._applyBoxStyle(self.node, 'align-items', 'stretch')
             self._applyBoxStyle(self.node, 'justify-content', 'space-around')
 
@@ -253,8 +253,8 @@ class BaseTableLayout(Layout):
     
     class JS:
         
-        def _init(self):
-            super()._init()
+        def __init__(self):
+            super().__init__()
             self.connect_event('resize', (self, '_adapt_to_size_change'))
         
         def _apply_table_layout(self):
@@ -858,10 +858,10 @@ class HSplitter(Splitter):
     """
     
     class JS:
-        def _init(self):
+        def __init__(self):
             self._horizontal = True
-            super()._init()
-        
+            super().__init__()
+
 
 class VSplitter(Splitter):
     """ Vertical splitter.
@@ -869,6 +869,6 @@ class VSplitter(Splitter):
     """
     
     class JS:
-        def _init(self):
+        def __init__(self):
             self._horizontal = False
-            super()._init()
+            super().__init__()

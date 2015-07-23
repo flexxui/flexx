@@ -217,14 +217,8 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
         cmd = 'flexx.instances.%s = new %s(%r);' % (self._id, clsname, self._id)
         self._proxy._exec(cmd)
         
-        # Call init
-        self.init()
-        
         # Init signals
         react.HasSignals.__init__(self, **kwargs)
-    
-    def init(self):
-        pass
     
     @property
     def id(self):
@@ -280,14 +274,7 @@ class Paired(react.with_metaclass(PairedMeta, react.HasSignals)):
             self._linked_signals = {}  # use a list as a set
             
             super().__init__()
-            self.init()
-            self._init()  # todo: make them use .init()
         
-        def init(self):
-            pass  # Subclasses should overload this
-        def _init(self):
-            pass  # todo: remove this
-            
         def _set_signal_from_py(self, name, text):
             self._signal_emit_lock = True  # do not send back to py
             #value = JSON.parse(text)

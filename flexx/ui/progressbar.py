@@ -1,4 +1,5 @@
-from ..properties import Float
+
+from .. import react
 
 from .widget import Widget, js
 
@@ -21,18 +22,28 @@ class ProgressBar(Widget):
     
     CSS = ".flx-progressbar {min-height: 10px;}"
     
-    value = Float(0)
-    max_value = Float(1)
+    @react.input
+    def value(v=0):
+        """ The progress value.
+        """
+        return float(v)
     
-    @js
-    def _js_create_node(self):
-        self.node = document.createElement('progress')
+    @react.input
+    def max_value(v=1):
+        """ The maximum progress value.
+        """
+        return float(v)
     
-    @js
-    def _js_value_changed(self, name, old, value):
-        self.node.value = value
+    class JS:
     
-    @js
-    def _js_max_value_changed(self, name, old, max_value):
-        self.node.max = max_value
-  
+        def _create_node(self):
+            self.node = document.createElement('progress')
+    
+        @react.act('value')
+        def _value_changed(self, value):
+            self.node.value = value
+        
+        @react.act('max_value')
+        def _max_value_changed(self, max_value):
+            self.node.max = max_value
+

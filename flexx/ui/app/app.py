@@ -385,6 +385,7 @@ def this_is_an_app(cls=None, **kwargs):
         
         manager.register_app_class(cls)
         cls.launch = launch
+        cls._IS_MAIN_WIDGET = True  # Mark the widget as a main widget
         return cls
     
     if cls is None:

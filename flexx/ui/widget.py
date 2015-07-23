@@ -221,8 +221,11 @@ class Widget(Paired):
     
     # todo: can we calculate this in JS somehow?
     @react.input
-    def _css_class_name(v=''):
-        return str(v)
+    def _css_class_name(self, v=''):
+        v = str(v)
+        if getattr(self, '_IS_MAIN_WIDGET', False):  # set when a widget is made into an app
+            v = 'flx-main-widget ' + v
+        return v
     
     
     CSS = """
@@ -236,15 +239,19 @@ class Widget(Paired):
         white-space: nowrap;
         overflow: hidden;
     }
+    
+    .flx-main-widget {
+       width: 100%;
+       height: 100%;
+    }
+    
     """
     
     class JS:
         
-        def init(self):
-            """ We use _init() instead of __init__; at this point the prop
-            values are initialized, and the prop changed functions are
-            called *after* this.
-            """
+        def __init__(self):
+            super().__init__()
+            
             self._create_node()
             flexx.get('body').appendChild(this.node)
             # todo: allow setting a placeholder DOM element, or any widget parent
