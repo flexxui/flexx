@@ -515,4 +515,86 @@ def test_inheritance(Cls):
     return r
 
 
+class Dynamism(HasSignals):
+    
+    def __init__(self):
+        self.r = []
+        super().__init__()
+    
+    @input
+    def current_person(v):
+        return v
+    
+    @input
+    def current_persons(v):
+        return v
+    
+    @watch('current_person.first_name')
+    def current_name1(v):
+        return v
+    
+    @act('current_person.first_name')
+    def current_name2(self, v):
+        self.r.append(v)
+    
+    @act('current_persons.*.first_name')
+    def current_name3(self, *names):
+        v = ''
+        for n in names:
+            v += n
+        self.r.append(v)
+
+
+@run_in_both(Dynamism, "[3, 'err', 'john', 'john', 0, 3, 'john', 0, 'jane', 'jane']", extra_classes=(Name,))
+def test_dynamism1(Cls):
+    d = Dynamism()
+    n = Name()
+    d.r.append(d.current_name2._status)
+    try:
+        d.r.append(d.current_name1())
+    except Exception:
+        d.r.append('err')
+    
+    d.current_person(n)
+    
+    d.r.append(d.current_name1())
+    d.r.append(d.current_name2._status)  # 0
+    
+    # Set to None, signal will not be updated
+    d.current_person(None)
+    d.r.append(d.current_name2._status)  # 3
+    
+    # Set back, but signal will update
+    d.current_person(n)
+    d.r.append(d.current_name2._status)  # 0
+    
+    # Normal update
+    n.first_name('jane')
+    d.r.append(d.current_name1())
+    return d.r
+
+@run_in_both(Dynamism, "[3, 'err', 'john', 'johnjohn', 'janejohn', 'janejane', '', 3, '']", extra_classes=(Name,))
+def test_dynamism2(Cls):
+    d = Dynamism()
+    n1, n2 = Name(), Name()
+    
+    d.r.append(d.current_name3._status)
+    try:
+        d.r.append(d.current_name3())
+    except Exception:
+        d.r.append('err')
+    
+    # Set persons
+    d.current_persons((n1, ))
+    d.current_persons((n1, n2))
+    n1.first_name('jane')
+    n2.first_name('jane')
+    d.current_persons(())
+    
+    # Now set to something that has no first_name
+    d.current_persons(None)
+    d.r.append(d.current_name3._status)  # 3
+    d.current_persons(())
+    return d.r
+
 run_tests_if_main()

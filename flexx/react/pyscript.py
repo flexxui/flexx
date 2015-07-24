@@ -131,7 +131,7 @@ class HasSignals:
         
         def _resolve_signals():
             selff._upstream = []
-            selff._upstream_rebind = []
+            selff._upstream_reconnect = []
             
             for fullname in selff._upstream_given:
                 nameparts = fullname.split('.')
@@ -140,7 +140,6 @@ class HasSignals:
                 msg = selff._seek_signal(fullname, nameparts[1:], ob)
                 if msg:
                     selff._upstream = []
-                    selff._upstream_rebind = []
                     return msg
             
             return False  # no error

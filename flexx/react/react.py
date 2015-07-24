@@ -248,17 +248,19 @@ class Signal(object):
         
         # Resolve signals
         self._not_connected = self._resolve_signals()
+        
+        # Subscribe (on a fail, the _upstream_reconnect can be non-empty
+        for signal in self._upstream:
+            signal._subscribe(self)
+        for signal in self._upstream_reconnect:
+            signal._subscribe(self, True)
+        
+        # Fail?
         if self._not_connected:
             self._set_status(3)
             if raise_on_fail:
                 raise RuntimeError('Connection error in signal %r: ' % self._name + self._not_connected)
             return False
-        
-        # Subscribe
-        for signal in self._upstream:
-            signal._subscribe(self)
-        for signal in self._upstream_reconnect:
-            signal._subscribe(self, True)
         
         # Update status (also downstream)
         self._set_status(1)
@@ -285,7 +287,7 @@ class Signal(object):
         # Done traversing name: add to list or fail
         if ob is undefined or len(nameparts) == 0:
             if ob is undefined:
-                return 'Signal %r does not exist (%r).' % (fullname, nameparts)
+                return 'Signal %r does not exist.' % fullname
             if not hasattr(ob, '_IS_SIGNAL'):
                 return 'Object %r is not a signal.' % fullname
             self._upstream.append(ob)
@@ -296,12 +298,11 @@ class Signal(object):
             try:
                 ob = ob()
             except SignalValueError:
-                return  # we'll rebind when that signal gets a value
+                return 'Signal %r does not have all parts ready' % fullname  # we'll rebind when that signal gets a value
         # Resolve name
         name, nameparts = nameparts[0], nameparts[1:]
         if name == '*' and isinstance(ob, (tuple, list)):
             for sub_ob in ob:
-                window.sub_ob = sub_ob
                 msg = self._seek_signal(fullname, nameparts, sub_ob)
                 if msg:
                     return msg
@@ -325,7 +326,6 @@ class Signal(object):
             msg = self._seek_signal(fullname, nameparts[1:], ob)
             if msg:
                 self._upstream = []
-                self._upstream_reconnect = []
                 return msg
         
         return False  # no error
@@ -467,7 +467,7 @@ class Signal(object):
         if self is initial_initiator:
             return
         # Allow downstream to update
-        for signal in self._downstream_reconnect:
+        for signal in self._downstream_reconnect[:]:  # list may be modified
             signal.connect(False)
         for signal in self._downstream:
             signal._set_status(status, initiator)
@@ -513,7 +513,7 @@ class SourceSignal(Signal):
         """ Method for the developer to set the source signal.
         """
         self._set_value(self._call_func(value))
-        for signal in self._downstream_reconnect:
+        for signal in self._downstream_reconnect[:]:  # list may be modified
             signal.connect(False)
         for signal in self._downstream:
             signal._set_status(1, self)  # do not set status of *this* signal!
