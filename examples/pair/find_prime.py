@@ -54,3 +54,5 @@ finder = PrimeFinder.launch('nodejs')
 
 finder.find_prime_py(2000)  # 0.7 s
 finder.find_prime_js(2000)  # 0.2 s
+
+pair.run()
