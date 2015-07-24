@@ -152,7 +152,7 @@ class Parser(Parser3):
     pass
 
 
-from .functions import JSCode, js, py2js, evaljs, evalpy  # noqa
+from .functions import JSCode, js, py2js, evaljs, evalpy, script2js  # noqa
 
 
 # Some names that users may want to import to fool pyflakes

@@ -81,6 +81,12 @@ def evalpy(pycode, whitespace=True):
 def script2js(filename, namespace=None, target=None):
     """ Export a .py file to a .js file.
     
+    Parameters:
+      filename (str): the filename of the .py file to transpile.
+      namespace (str): the namespace for this module. (optional)
+      target (str): the filename of the resulting .js file. If not given
+        or None, will use the ``filename``, but with a ``.js`` extension.
+    
     """
     # Import
     assert filename.endswith('.py')
