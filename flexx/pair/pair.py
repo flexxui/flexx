@@ -161,21 +161,36 @@ class PairMeta(react.HasSignalsMeta):
 
 
 class Pair(react.with_metaclass(PairMeta, react.HasSignals)):
-    """ Class for which objects exist both in Python and JS. 
+    """ Class representing Python-JavaScript object pairs
     
-    Each instance of this class has a corresponding object in JavaScript, and
-    their signals are synced both ways. Methods can be defined than
-    can be either executed in Python or in JavaScript (by decorating
-    them with ``js``).
+    Each instance of this class has a corresponding object in
+    JavaScript, and their signals are synced both ways. Signals defined
+    in Python can be connected to from JS, and vice versa.
     
-    This class provides the base object for all widget classes in
-    flexx.ui. However, one can also create subclasses that have nothing
-    to do with user interfaces or DOM elements. You could e.g. use it
-    to calculate pi on nodejs.
+    The JS version of this class is defined by the contained ``JS``
+    class. One can define methods, signals, and (to some extend)
+    constants on the JS class:
     
-    Each instance has a unique id, which is also available in JS.
-    Instances can be looked up by id via the get_instance_by_id()
-    function.
+        class MyPair(Pair):
+        
+            def a_python_method(self):
+               ...
+            
+            class JS:
+            
+                def a_js_method(this):
+                    ...
+    
+    Parameters:
+        _proxy: intended for internal use, the proxy object for this class.
+        kwargs: initial signal values (see HasSignals).
+    
+    Notes:
+        This class provides the base object for all widget classes in
+        ``flexx.ui``. However, one can also create subclasses that have
+        nothing to do with user interfaces or DOM elements. You could e.g.
+        use it to calculate pi on nodejs.
+    
     """
     
     # Keep track of all instances, so we can easily collect al JS/CSS

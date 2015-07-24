@@ -193,7 +193,7 @@ class Widget(Pair):
     @react.input
     def _css_class_name(self, v=''):
         v = str(v)
-        if getattr(self, '_IS_MAIN_WIDGET', False):  # set when a widget is made into an app
+        if getattr(self, '_IS_APP', False):  # set when a widget is made into an app
             v = 'flx-main-widget ' + v
         return v
     

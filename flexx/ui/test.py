@@ -9,7 +9,7 @@ faulthandler.enable()
 #logging.log
 
 
-@ui.this_is_an_app()
+@ui.app()
 class MyApp(ui.Widget):
     
     #_config = ui.App.Config(title='Flexx test app', size=(400, 300),

@@ -1,10 +1,11 @@
 from time import perf_counter
-from flexx import ui
 from flexx import react
 
-import flexx.ui.app.paired
+from flexx import pair
 
-class Name(ui.app.paired.Paired):
+
+@pair.app
+class Name(pair.Pair):
     
     class JS:
         @react.input
@@ -45,10 +46,5 @@ class Name(ui.app.paired.Paired):
         return v
 
 
-# Create flexx app with a nodejs runtime (you could also use e.g. firefox here)
-# todo: ui.run('nodejs') ?
-# todo: why does nodejs not work?
-app = ui.app.app.Proxy('__default__', 'nodejs')
-
-name = Name(_proxy=app)
+name = Name.launch('nodejs')
 name.set_first_name_in_js('almar')

@@ -3,7 +3,7 @@
 GUI toolkit based on web technology with a Pythonic API.
 """
 
-from ..pair import run, stop, call_later, this_is_an_app
+from ..pair import run, stop, call_later, app
 from ..pair import Pair, get_instance_by_id
 
 from .widget import Widget  #, Window

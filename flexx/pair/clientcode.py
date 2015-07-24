@@ -61,7 +61,6 @@ class FlexxJS:
         self.ws_url = ('ws://%s:%s/%s/ws' % (location.hostname, location.port, 
                                              location.pathname))
         self.is_exported = False
-        self.widgets = {}
         self.classes = {}
         self.instances = {}
         if typeof(window) is 'undefined' and typeof(module) is 'object':

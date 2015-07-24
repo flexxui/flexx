@@ -69,28 +69,27 @@ _tornado_app = None
 
 
 class AppManager(object):
-    """ Manage applications, or more specifically, the proxy objects.
+    """ Manage apps, or more specifically, the proxy objects.
     
-    There is one AppManager class (in flexx.pair.manager). It's
+    There is one AppManager class (in ``flexx.pair.manager``). It's
     purpose is to manage the application classes and instances. Intended
     for internal use.
     """
     
     def __init__(self):
-        # name -> (WidgetClass, pending, connected) - lists contain proxies
+        # name -> (PairClass, pending, connected) - lists contain proxies
         self._proxies = {'__default__': (None, [], [])}
     
     def register_app_class(self, cls):
-        """ Register a widget class as being an application.
+        """ Register a Pair class as being an application.
         
         Applications are identified by the ``__name__`` attribute of
-        the class. The given class must inherit from ``Widget``.
+        the class. The given class must inherit from ``Pair``.
         
         After registering a class, it becomes possible to connect to 
         "http://address:port/ClassName". 
         """
-        from ..ui import Widget
-        assert isinstance(cls, type) and issubclass(cls, Widget)
+        assert isinstance(cls, type) and issubclass(cls, Pair)
         name = cls.__name__
         pending, connected = [], []
         if name in self._proxies and cls is not self._proxies[name][0]:
@@ -157,7 +156,7 @@ class AppManager(object):
             # Create a fresh proxy - there already is a runtime
             proxy = Proxy(cls.__name__, runtime=None)
             app = cls(_proxy=proxy)
-            proxy._set_widget(app)
+            proxy._set_pair_instance(app)
         else:
             # Search for the app with the specific id
             for proxy in pending:
@@ -210,7 +209,7 @@ class AppManager(object):
                 return proxy
 
 
-# Create app manager object
+# Create global app manager object
 manager = AppManager()
 
 
@@ -279,26 +278,11 @@ def run():  # (runtime='xul', host='localhost', port=None):
     environments (e.g. IEP, Spyder, IPython notebook), so the caller
     should take into account that the function may return emmidiately.
     """
-    # todo: make it work in IPython (should be easy since its tornnado too
-    # todo: allow ioloop already running (e.g. integration with ipython)
-    
-    # Detect App classes in caller namespace
-    app_names = manager.get_app_names()
-    # todo: this may not work on stackless Python implementations
-    # frame = inspect.currentframe()
-    # for ob in frame.f_back.f_locals.values():
-    #     if isinstance(ob, type) and issubclass(ob, Proxy):
-    #         #_app_classes.append(ob)
-    #         if ob.__name__ not in app_names:
-    #             manager.register_app_class(ob)
-    #             print('found', ob.__name__)
-    
+    # Get server up
     init_server()
-    
     # Start event loop
     if not (hasattr(_tornado_loop, '_running') and _tornado_loop._running):
         _tornado_loop.start()
-
     return JupyterChecker()
 
 is_notebook = False
@@ -353,7 +337,7 @@ def call_later(delay, callback, *args, **kwargs):
     else:
         _tornado_loop.call_later(delay, callback, *args, **kwargs)
 
-# todo: move to ..util --- no, replace with a Prop enum
+# todo: move to ..util?
 def create_enum(*members):
     """ Create an enum type from given string arguments.
     """
@@ -363,8 +347,23 @@ def create_enum(*members):
 
 
 # todo: terminology: widget, app, application, connection, proxy, client
-def this_is_an_app(cls=None, **kwargs):
-    """ Mark a widget as an app.
+def app(cls=None, **kwargs):
+    """ Mark a Pair class as an app, to be used as a class decorator
+    
+    Does three things:
+    
+    * The class is registered as an app, so that clients (incoming
+      connections) can load the app.
+    * Adds a ``launch()`` function to the class to easily create an app
+      instance.
+    * adds ``_IS_APP`` attribute to the class with value ``True`` (used
+      internally).
+    
+    Parameters for the launch function:
+      runtime (str): the web runtime to launch the app in. Default
+      'xul'. kwargs: combined with the kwargs given to the ``app``
+        decorator, these are used to initialize signal values.
+      
     """
     kwargs1 = kwargs
     
@@ -380,12 +379,12 @@ def this_is_an_app(cls=None, **kwargs):
             # Instantiate widget with a fresh client object
             proxy = Proxy(cls.__name__, runtime, **d)
             app = cls(_proxy=proxy)
-            proxy._set_widget(app)
+            proxy._set_pair_instance(app)
             return app
         
         manager.register_app_class(cls)
         cls.launch = launch
-        cls._IS_MAIN_WIDGET = True  # Mark the widget as a main widget
+        cls._IS_APP = True  # Mark the class as an app
         return cls
     
     if cls is None:
@@ -415,8 +414,8 @@ class Proxy(object):
         # Init websocket, will be set when a connection is made
         self._ws = None
         
-        # Unless app_name is __default__, the proxy will have a widget instance
-        self._widget = None
+        # Unless app_name is __default__, the proxy will have a Pair instance
+        self._pair = None
         
         # Object to manage the client code (JS/CSS/HTML)
         self._known_pair_classes = set()
@@ -486,9 +485,9 @@ class Proxy(object):
         for command in self._pending_commands:
             self._ws.command(command)
    
-    def _set_widget(self, widget):
-        assert self._widget is None
-        self._widget = widget
+    def _set_pair_instance(self, pair):
+        assert self._pair is None
+        self._pair = pair
         # todo: connect to title change and icon change events
     
     def close(self):
@@ -497,8 +496,8 @@ class Proxy(object):
         # todo: close via JS
         if self._runtime:
             self._runtime.close()
-        if self._widget:
-            self._widget = None  # break circular reference
+        if self._pair:
+            self._pair = None  # break circular reference
     
     @property
     def status(self):
