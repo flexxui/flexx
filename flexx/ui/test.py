@@ -65,7 +65,7 @@ class MyApp(ui.Widget):
         
         if TEST == 3:
             with ui.HBox(self, spacing=20):
-                with ui.Form() as self.form:
+                with ui.FormLayout() as self.form:
                     # todo: can this be written with one line per row?
                     # e.g. self.b1 = ui.Button(label='Name', text='Hola')
                     ui.Label(text='Name:')
@@ -74,7 +74,7 @@ class MyApp(ui.Widget):
                     self.b2 = ui.Button(text='Hello world')
                     ui.Label(text='Favorite color:')
                     self.b3 = ui.Button(text='Foo bar')
-                with ui.Form() as self.form:
+                with ui.FormLayout() as self.form:
                     # e.g. self.b1 = ui.Button(label='Name', text='Hola')
                     ui.Widget(flex=1)  # Add a flexer
                     ui.Widget()
@@ -84,9 +84,9 @@ class MyApp(ui.Widget):
                     self.b2 = ui.Button(text='Hello world')
                     ui.Label(text='Pet\'s Favorite color:')
                     self.b3 = ui.Button(text='Foo bar')
-                    ui.Widget(flex=1)
+                    ui.Widget(flex=1); ui.Widget()
         if TEST == 4:
-            with ui.Grid(self) as self.grid:
+            with ui.GridLayout(self) as self.grid:
                 self.b1 = ui.Button(text='No flex', pos=(0, 0))
                 self.b2 = ui.Button(text='Hola', pos=(1, 1), flex=(1, 1))
                 self.b3 = ui.Button(text='Hello world', pos=(2, 2), flex=(2, 1))
@@ -94,16 +94,15 @@ class MyApp(ui.Widget):
                 self.b5 = ui.Button(text='no flex again', pos=(5, 5))
         
         if TEST == 5:
-            with ui.PinBoard(self) as self.grid:
+            with ui.PinboardLayout(self) as self.grid:
                 self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
                 self.b2 = ui.Button(text='Dynamic at (20%, 20%)', pos=(0.2, 0.2))
                 self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
         
         if TEST == 6:
-            #with ui.PHSplit(self):
-            with ui.PDockArea(self):
-                ui.Button(text='Right A', min_width=120)
-                ui.Button(text='Right B', min_width=70)
+            with ui.HSplitter(self):
+                ui.Button(text='Right A', min_size=(120, 0))
+                ui.Button(text='Right B', min_size=(70, 0))
                 ui.Button(text='Right C')
                 # ui.Button(text='Right D', flex=2)
                 # ui.Button(text='Right E', flex=2)

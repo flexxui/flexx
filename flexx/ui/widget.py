@@ -19,62 +19,6 @@ def _check_two_scalars(name, v):
     return float(v[0]), float(v[1])
 
 
-class WidgetProp:
-    _default = None
-    
-    def validate(self, val):
-        if val is None or isinstance(val, Widget):
-            return val
-        else:
-            raise ValueError('Prop %r must be a Widget or None, got %r' % 
-                             (self.name, val.__class__.__name__))
-    
-    def to_json(self, value):
-        # Widgets are kept track of via their id
-        if value is None:
-            return json.dumps(None)
-        return json.dumps(value.id)
-    
-    def from_json(self, txt):
-        return get_instance_by_id(json.loads(txt))
-    
-    @js
-    def to_json__js(self, value):
-        if value is None:
-            return JSON.stringify(None)
-        else:
-            return JSON.stringify(value.id)
-    
-    @js
-    def from_json__js(self, value):
-        return flexx.instances[JSON.parse(value)]
-
-
-# todo: would be nice if Tuple just worked with elements that need custom json ...
-class WidgetsProp:
-    
-    def __init__(self, *args, **kwargs):
-        Tuple.__init__(self, WidgetProp, *args, **kwargs)
-    
-    @js
-    def to_json__js(self, value):
-        res = '  '
-        for v in value:
-            if v is None or v.id is undefined:
-                res += JSON.stringify(None)
-            else:
-                res += JSON.stringify(v.id)
-            res += ', '
-        return '[' + res[:-2] + ']'
-    
-    @js
-    def from_json__js(self, value):
-        res = []
-        for v in JSON.parse(value):
-            res.append(flexx.instances[v])
-        return res
-
-
 # Keep track of stack of default parents when using widgets
 # as context managers. Have one list for each thread.
 
@@ -97,8 +41,24 @@ class Widget(Pair):
     """ Base widget class.
     
     In HTML-speak, this represents a plain div-element. Not very useful
-    on itself, except perhaps to fill up space. Subclass to create something
-    interesting.
+    on itself, except perhaps to fill up space. Subclass to create
+    something interesting.
+    
+    Notes:
+        
+        A widget class can be used as a *context manager*. Within the
+        context, the widget is the default widget; any widgets created in
+        that context that do not specify a parent, will have the widget
+        as a parent. (This is thread-safe, since there is a default widget
+        per thread.)
+        
+        When *subclassing* a Widget to create a compound widget (a widget
+        that serves as a container for other widgets), use the ``init()``
+        method to initialize child widgets. This method is called while
+        the widget is the current widget.
+        
+        When subclassing to create a custom widget use the ``_init()``
+        method both for the Python and JS version of the class.
     
     Example:
     
@@ -129,7 +89,7 @@ class Widget(Pair):
         if parent is not None and not kwargs.get('_proxy', None):
             kwargs['_proxy'] = parent.proxy
         
-        # Provide css class name to 
+        # Provide css class name to JS
         classes = ['flx-' + c.__name__.lower() for c in self.__class__.mro()]
         classname = ' '.join(classes[:1-len(Widget.mro())])
         
@@ -140,6 +100,9 @@ class Widget(Pair):
         
         with self:
             self.init()
+        
+        # Connect; signal dependencies may have been added during init()
+        self.connect_signals(False)
     
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
@@ -219,6 +182,13 @@ class Widget(Pair):
         """
         return _check_two_scalars('min_size', v)
     
+    @react.input
+    def bgcolor(v=''):
+        """ Background color of the widget. In general it is better to do
+        styling via CSS.
+        """
+        return str(v)
+    
     # todo: can we calculate this in JS somehow?
     @react.input
     def _css_class_name(self, v=''):
@@ -249,29 +219,31 @@ class Widget(Pair):
     
     class JS:
         
-        def __init__(self):
-            super().__init__()
-            
+        def _init(self):
             self._create_node()
             flexx.get('body').appendChild(this.node)
             # todo: allow setting a placeholder DOM element, or any widget parent
             
             # Create closure to check for size changes
             self._stored_size = 0, 0
+            self._checking_size = False
             that = this
             def _check_resize():
                 # Re-raise in next event loop iteration
-                setTimeout(_check_resize_now, 0)
+                if not that._checking_size:
+                    setTimeout(_check_resize_now, 0.001)
+                    that._checking_size = True
             def _check_resize_now():
+                that._checking_size = False
                 node = that.node
-                # todo: formalize our event object
-                event = {'cause': 'window'}
-                event.widthChanged = (that._stored_size[0] != node.offsetWidth)
-                event.heightChanged = (that._stored_size[1] != node.offsetHeight)
-                if event.widthChanged or event.heightChanged:
+                widthChanged = (that._stored_size[0] != node.offsetWidth)
+                heightChanged = (that._stored_size[1] != node.offsetHeight)
+                if widthChanged or heightChanged:
                     that.real_size._set([node.offsetWidth, node.offsetHeight])
             self._check_resize = _check_resize
             self._check_resize()
+            
+            super()._init()
         
         @react.source
         def children(v=()):
@@ -335,9 +307,19 @@ class Widget(Pair):
             # else:
             #     new_parent.connect_event('resize', self._check_resize)
         
-        #@react.act('parent.real_size')
-        #def _keep_size_up_to_date(size):
-        #    self._check_resize()
+        @react.act('parent.real_size')
+        def _keep_size_up_to_date1(self, size):
+            #print(self._id, 'resize 1', size)
+            self._check_resize()
+        
+        @react.act('parent', 'container_id')
+        def _keep_size_up_to_date2(self, parent, id):
+            #print(self._id, 'resize2 ', parent, id)
+            if parent is None:
+                window.addEventListener('resize', self._check_resize, False)
+            else:
+                window.removeEventListener('resize', self._check_resize, False)
+            self._check_resize()
         
         @react.act('pos')
         def _pos_changed(self, pos):
@@ -357,6 +339,10 @@ class Widget(Pair):
             self.node.style.width = size[0]
             self.node.style.height = size[1]
         
+        @react.act('bgcolor')
+        def _bgcolor_changed(self, color):
+            self.node.style['background-color'] = color
+        
         @react.act('container_id')
         def _container_id_changed(self, id):
             #if self._parent:
@@ -364,7 +350,6 @@ class Widget(Pair):
             if id:
                 el = document.getElementById(id)
                 el.appendChild(this.node)
-                self._check_resize()
     
     ## Children and parent
     

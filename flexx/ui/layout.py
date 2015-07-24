@@ -149,8 +149,9 @@ class Box(Layout):
             this.node = document.createElement('div')
         
         @react.act('children.*.flex')
-        def _set_flexes(_):
+        def _set_flexes(*flexes):
             for widget in self.children():
+                # todo: make flex 2D?
                 self._applyBoxStyle(widget.node, 'flex-grow', widget.flex())
         
         @react.act('spacing', 'children')
@@ -182,8 +183,8 @@ class HBox(Box):
     """
     
     class JS:
-        def __init__(self):
-            super().__init__()
+        def _init(self):
+            super()._init()
             # align-items: flex-start, flex-end, center, baseline, stretch
             self._applyBoxStyle(self.node, 'align-items', 'center')
             #justify-content: flex-start, flex-end, center, space-between, space-around
@@ -208,8 +209,8 @@ class VBox(Box):
     """
     
     class JS:
-        def __init__(self):
-            super().__init__()
+        def _init(self):
+            super()._init()
             self._applyBoxStyle(self.node, 'align-items', 'stretch')
             self._applyBoxStyle(self.node, 'justify-content', 'space-around')
 
@@ -252,10 +253,6 @@ class BaseTableLayout(Layout):
     """
     
     class JS:
-        
-        def __init__(self):
-            super().__init__()
-            self.connect_event('resize', (self, '_adapt_to_size_change'))
         
         def _apply_table_layout(self):
             table = self.node
@@ -306,7 +303,8 @@ class BaseTableLayout(Layout):
                         continue
                     self._apply_cell_layout(row, col, vflexes[i], hflexes[j], cum_vflex, cum_hflex)
         
-        def _adapt_to_size_change(self, event):
+        @react.act('real_size')
+        def _adapt_to_size_change(self, size):
             """ This function adapts the height (in percent) of the flexible rows
             of a layout. This is needed because the percent-height applies to the
             total height of the table. This function is called whenever the
@@ -317,7 +315,8 @@ class BaseTableLayout(Layout):
             table = self.node  # or event.target
             #print('heigh changed', event.heightChanged, event.owner.__id)
             
-            if event.heightChanged:
+            if not self.real_size.last_value or (self.real_size.value[1] !=
+                                                 self.real_size.last_value[1]):
                 
                 # Set one flex row to max, so that non-flex rows have their
                 # minimum size. The table can already have been stretched
@@ -406,10 +405,10 @@ class FormLayout(BaseTableLayout):
             """ Set hflex and vflex on node.
             """
             i = 0
-            for widget in self.children:
+            for widget in self.children():
                 i += 1
                 widget.node.hflex = 0 if (i % 2) else 1
-                widget.node.vflex = widget.flex
+                widget.node.vflex = widget.flex()
             self._apply_table_layout()
         
         def _remove_child(self, widget):
@@ -617,7 +616,7 @@ class Splitter(Layout):
             self._setup()
         
         def _add_child(self, widget):
-            self._insertWidget(widget, self.children.length - 1)
+            self._insertWidget(widget, self.children().length - 1)
         
         def _remove_child(self, widget):
             
@@ -641,8 +640,8 @@ class Splitter(Layout):
             tPrev = 0
             sizeFactor = self.node[clientWidth] / (self.node[clientWidth] - sizeToDistribute)
             
-            for i in range(len(self.children)-1):
-                divider = self.children[i]._divider
+            for i in range(len(self.children())-1):
+                divider = self.children()[i]._divider
                 curSize = divider.t - tPrev
                 if tPrev < t and divider.t > t:
                     curSize -= divider.t - t  # take missing space into account
@@ -659,6 +658,7 @@ class Splitter(Layout):
             to divide.
             """
             self._container.appendChild(widget.node)
+            children = self.children()
             
             clientWidth = 'clientWidth' if self._horizontal else 'clientHeight'
             # children.splice(index, 0, widget.node);  -- done by our parenting system
@@ -667,12 +667,12 @@ class Splitter(Layout):
             self._ensure_all_dividers()
             
             # Set new divider positions; take space from each widget
-            needSize = self.node[clientWidth] / self.children.length
+            needSize = self.node[clientWidth] / children.length
             sizeFactor= (self.node[clientWidth] - needSize) / self.node[clientWidth]
             
             newTs = []
             tPrev = 0
-            for i in range(len(self.children)-1):
+            for i in range(len(children)-1):
                 divider = self._dividers[i]
                 if i == index:
                     newTs.push(needSize)
@@ -684,7 +684,7 @@ class Splitter(Layout):
                 newTs[i] += newTs[i - 1] or 0
             
             #print(newTs + '', sizeLeft)
-            for i in range(len(self.children)-1):
+            for i in range(len(children)-1):
                 self._move_divider(i, newTs[i])
             
             self._set_own_min_size()
@@ -695,10 +695,11 @@ class Splitter(Layout):
             """
             width = 'width' if self._horizontal else 'height'
             clientWidth = 'clientWidth' if self._horizontal else 'clientHeight'
+            children = self.children()
             
             self._dividers.length = 0  # http://stackoverflow.com/questions/1232040
-            for i in range(len(self.children)-1):
-                widget = self.children[i]
+            for i in range(len(children)-1):
+                widget = children[i]
                 if widget._divider is undefined:
                     widget._divider = divider = document.createElement("div")
                     divider.classList.add('flx-splitter-divider')
@@ -706,14 +707,14 @@ class Splitter(Layout):
                     divider.style[width] = 2 * self._w2 + 'px'
                     divider.t = self.node[clientWidth]
                     self._container.appendChild(divider)
-                    self._connect_js_event(divider, 'mousedown', '_on_mouse_down')
+                    divider.addEventListener('mousedown', self._on_mouse_down, False)
                 # Index
                 widget._divider.index = i
                 self._dividers.append(widget._divider)
             
             # Remove any dividers on the last widget
-            if self.children:
-                widget = self.children[-1]
+            if len(children):
+                widget = children[-1]
                 if widget._divider:
                     self._container.removeChild(widget._divider)
                     del widget._divider
@@ -747,6 +748,7 @@ class Splitter(Layout):
             
             def move_divider(i, t):
                 # todo: make this publicly available?
+                children = that.children()
                 if t < 1:
                     t *= node[clientWidth]
                 t = clipT(i, t)
@@ -758,19 +760,20 @@ class Splitter(Layout):
                 # Set child widgets position on both sides of the divider
                 begin = 0 if (i == 0) else dividers[i-1].t + w2
                 end = node[clientWidth] if (i == len(dividers) - 1) else dividers[i+1].t - w2
-                that.children[i].node.style[left] = begin + 'px'
-                that.children[i].node.style[width] = (t - begin - w2) + 'px'
-                that.children[i + 1].node.style[left] = (t + w2) + 'px'
-                that.children[i + 1].node.style[width] = (end - t - w2) + 'px'
+                children[i].node.style[left] = begin + 'px'
+                children[i].node.style[width] = (t - begin - w2) + 'px'
+                children[i + 1].node.style[left] = (t + w2) + 'px'
+                children[i + 1].node.style[width] = (end - t - w2) + 'px'
                 # We resized our children
-                that.children[i]._check_resize()
-                that.children[i+1]._check_resize()
+                children[i]._check_resize()
+                children[i+1]._check_resize()
             
             def set_own_min_size():
                 w = h = 50
-                for i in range(len(that.children)):
-                    w += 2 * w2 + parseFloat(that.children[i].node.style[minWidth]) or minimumWidth
-                    h = max(h, parseFloat(that.children[i].node.style[minHeight]))
+                children = that.children()
+                for i in range(len(children)):
+                    w += 2 * w2 + parseFloat(children[i].node.style[minWidth]) or minimumWidth
+                    h = max(h, parseFloat(children[i].node.style[minHeight]))
                 node.style[minWidth] = w + 'px'
                 node.style[minHeight] = h + 'px'
             
@@ -784,12 +787,12 @@ class Splitter(Layout):
                 max = dividers[i + 1].t if (i < dividers.length - 1) else node[clientWidth]
                 # Take minimum width of widget into account
                 # todo: this assumes the minWidth is specified in pixels, not e.g em.
-                min += 2 * w2 + parseFloat(that.children[i].node.style[minWidth]) or minimumWidth
-                max -= 2 * w2 + parseFloat(that.children[i + 1].node.style[minWidth]) or minimumWidth
+                min += 2 * w2 + parseFloat(that.children()[i].node.style[minWidth]) or minimumWidth
+                max -= 2 * w2 + parseFloat(that.children()[i + 1].node.style[minWidth]) or minimumWidth
                 # Clip
                 return Math.min(max, Math.max(min, t))
             
-            def on_resize(event):
+            def on_resize():
                 # Keep container in its max size
                 # No need to take splitter orientation into account here
                 if window.getComputedStyle(node).position == 'absolute':
@@ -844,12 +847,18 @@ class Splitter(Layout):
             self._set_own_min_size = set_own_min_size
             self._move_divider = move_divider
             self._on_mouse_down = on_mouse_down
+            self._on_resize = on_resize
+            print('on_resize set')
             
             # Connect events
-            self.connect_event('resize', on_resize)
             container.addEventListener('mousemove', on_mouse_move, False)
             window.addEventListener('mouseup', on_mouse_up, False)
             # todo: does JS support mouse grabbing?
+        
+        @react.act('real_size')
+        def _resize_elements(self, size):
+            if self._on_resize:  # todo: WTF, is this not alwyas supposed to be there?
+                self._on_resize()
 
 
 class HSplitter(Splitter):
@@ -858,9 +867,9 @@ class HSplitter(Splitter):
     """
     
     class JS:
-        def __init__(self):
+        def _init(self):
             self._horizontal = True
-            super().__init__()
+            super()._init()
 
 
 class VSplitter(Splitter):
@@ -869,6 +878,6 @@ class VSplitter(Splitter):
     """
     
     class JS:
-        def __init__(self):
+        def _init(self):
             self._horizontal = False
-            super().__init__()
+            super()._init()

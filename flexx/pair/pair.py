@@ -217,8 +217,16 @@ class Pair(react.with_metaclass(PairMeta, react.HasSignals)):
         cmd = 'flexx.instances.%s = new %s(%r);' % (self._id, clsname, self._id)
         self._proxy._exec(cmd)
         
-        # Init signals
+        self._init()
+        
+        # Init signals - signals will be connected updated, causing updates
+        # on the JS side.
         react.HasSignals.__init__(self, **kwargs)
+    
+    def _init(self):
+        """ Can be overloaded when creating a custom class.
+        """
+        pass
     
     @property
     def id(self):
@@ -273,7 +281,17 @@ class Pair(react.with_metaclass(PairMeta, react.HasSignals)):
             
             self._linked_signals = {}  # use a list as a set
             
+            # Call _init now. This gives subclasses a chance to init at a time
+            # when the id is set, but *before* the signals are connected.
+            self._init()
+            
+            # Call HasSignals __init__, signals will be created and connected.
+            # Act signals relying on JS signals will fire. 
+            # Act signals relying on Py signals will fire later.
             super().__init__()
+        
+        def _init(self):
+            pass
         
         def _set_signal_from_py(self, name, text):
             self._signal_emit_lock = True  # do not send back to py
