@@ -288,7 +288,7 @@ class Parser2(Parser1):
     def parse_IfExp(self, node):
         # in "a if b else c"
         a = self.parse(node.body)
-        b = self.parse(node.test)
+        b = self._wrap_bool(node.test)
         c = self.parse(node.orelse)
         
         code = []
@@ -310,7 +310,7 @@ class Parser2(Parser1):
             return []
         
         code = [self.lf('if (')]  # first part (popped in elif parsing)
-        code += self.parse(node.test)
+        code.append(self._wrap_bool(node.test))
         code.append(') {')
         self._indent += 1
         for stmt in node.body:

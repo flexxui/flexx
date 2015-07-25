@@ -113,18 +113,57 @@ class TestExpressions:
         assert evalpy('"T" if ("a") else "F"') == 'T'
         assert evalpy('"T" if ("") else "F"') == 'F'
         
-        # Arrays - yuk!
-        assert evalpy('"T" if ([1, 2, 3]) else "F"') == 'T'
-        assert evalpy('"T" if ([]) else "F"') == 'T'
-        
-        # Dicts - yuk!
-        assert evalpy('"T" if ({"foo": 3}) else "F"') == 'T'
-        assert evalpy('"T" if ({}) else "F"') == 'T'
-        
         # None - undefined
         assert evalpy('None is null') == 'true'
         assert evalpy('None is undefined') == 'false'
         assert evalpy('undefined is undefined') == 'true'
+    
+    def test_truthfulness_of_array_and_dict(self):
+        
+        # Arrays
+        assert evalpy('bool([1])') == 'true'
+        assert evalpy('bool([])') == 'false'
+        #
+        assert evalpy('"T" if ([1, 2, 3]) else "F"') == 'T'
+        assert evalpy('"T" if ([]) else "F"') == 'F'
+        #
+        assert evalpy('if [1]: "T"\nelse: "F"') == 'T'
+        assert evalpy('if []: "T"\nelse: "F"') == 'F'
+        #
+        assert evalpy('if [1] and 1: "T"\nelse: "F"') == 'T'
+        assert evalpy('if [] and 1: "T"\nelse: "F"') == 'F'
+        assert evalpy('if [] or 1: "T"\nelse: "F"') == 'T'
+        #
+        assert evalpy('[2] or 42') == '[ 2 ]'
+        assert evalpy('[] or 42') == '42'
+        
+        # Dicts
+        assert evalpy('bool({1:2})') == 'true'
+        assert evalpy('bool({})') == 'false'
+        #
+        assert evalpy('"T" if ({"foo": 3}) else "F"') == 'T'
+        assert evalpy('"T" if ({}) else "F"') == 'F'
+        #
+        assert evalpy('if {1:2}: "T"\nelse: "F"') == 'T'
+        assert evalpy('if {}: "T"\nelse: "F"') == 'F'
+        #
+        assert evalpy('if {1:2} and 1: "T"\nelse: "F"') == 'T'
+        assert evalpy('if {} and 1: "T"\nelse: "F"') == 'F'
+        assert evalpy('if {} or 1: "T"\nelse: "F"') == 'T'
+        #
+        assert evalpy('{1:2} or 42') == "{ '1': 2 }"
+        assert evalpy('{} or 42') == '42'
+        
+        # Eval extra types
+        assert evalpy('null or 42') == '42'
+        assert evalpy('ArrayBuffer(4) or 42') != '42'
+        
+        # No bools
+        assert py2js('if foo: pass').count('_bool')
+        assert py2js('if foo.length: pass').count('_bool') == 0
+        assert py2js('if 3: pass').count('_bool') == 0
+        assert py2js('if True: pass').count('_bool') == 0
+        
     
     def test_indexing_and_slicing(self):
         c = 'a = [1, 2, 3, 4, 5]\n'

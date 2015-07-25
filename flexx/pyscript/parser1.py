@@ -107,10 +107,9 @@ Comparisons
 Truthy and Falsy
 ----------------
 
-The same rules for truthfulness apply as in JavaScript. This leads to
-some *unexpected behavior with respect to arrays and dicts*.
-Unfortunately, fixing these inconsistencies would lead to other problems,
-e.g. with ``value = value or ['default', 'value'].
+In JavaScript, an empty array and an empty dict are interpreted as
+truthy. PyScript fixes this, so that you can do ``if an_array:`` as
+usual.
 
 .. pyscript_example::
 
@@ -120,17 +119,12 @@ e.g. with ``value = value or ['default', 'value'].
     ""  # empty string
     None  # JS null
     undefined
+    []
+    {}
     
-    # All other values result in True, including these:
-    "0"
-    []  # empty array
-    {}  # empty dicts (dicts are objects in JS)
-    
-    # When testing an array or dict to be empty, always use this:
-    if len(arr):
-       do_stuff()
-    if len(d.keys()):
-        do_stuff()
+    # This still works
+    a = []
+    a = a or [1]  # a is now [1]
 
 
 Function calls
@@ -150,6 +144,15 @@ import ast
 import re
 
 from .parser0 import Parser0, JSError, unify  # noqa
+
+
+# Define JS function that returns false on an empty array or dict, and
+# otherwise lets the original value through.
+bool_func = '_bool = function (v) {'
+bool_func += 'if (v === null || typeof v !== "object") {return v;} '
+bool_func += 'else if (v.length !== undefined) {return v.length ? v : false;} '
+bool_func += 'else if (v.byteLength !== undefined) {return v.byteLength ? v : false;} '
+bool_func += 'else {return Object.getOwnPropertyNames(v).length ? v : false;}}'
 
 
 class Parser1(Parser0):
@@ -273,9 +276,19 @@ class Parser1(Parser0):
         code.append(sep + left[start:] + sep)
         return code
     
+    def _wrap_bool(self, node):
+        test = ''.join(self.parse(node))
+        if (test.startswith('_bool(') or test.endswith('.length') or
+            test.isnumeric() or test == 'true' or test == 'false'):
+            return test
+        else:
+            vars = self._stack[0][2]
+            vars.add(bool_func)
+            return '_bool(%s)' % test
+    
     def parse_BoolOp(self, node):
         op = ' %s ' % self.BOOL_OP[node.op.__class__.__name__]
-        values = [unify(self.parse(val)) for val in node.values]
+        values = [unify(self._wrap_bool(val)) for val in node.values]
         return op.join(values)
     
     def parse_Compare(self, node):

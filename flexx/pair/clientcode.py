@@ -229,7 +229,7 @@ class FlexxJS:
         elif msg.startswith('OPEN '):
             window.win1 = window.open(msg[5:], 'new', 'chrome')
         else:
-            console.warn('Invalid command: ' + msg)
+            console.warn('Invalid command: "' + msg + '"')
     
     def decodeUtf8(self, arrayBuffer):
         """

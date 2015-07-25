@@ -283,8 +283,7 @@ class Parser3(Parser2):
     
     def function_bool(self, node):
         if len(node.args) == 1:
-            arg = ''.join(self.parse(node.args[0]))
-            return 'Boolean(%s)' % arg
+            return 'Boolean(%s)' % self._wrap_bool(node.args[0])
         else:
             raise JSError('bool() needs one argument')
     
