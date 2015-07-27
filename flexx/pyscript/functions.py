@@ -203,7 +203,7 @@ class JSCode(object):
             p._parts[0] = ''  # remove "var xx"
             p._parts[1] = ''  # remove "xx = "
             self._jscode = p.dump()
-            assert self._jscode.startswith('function')
+            # assert self._jscode.startswith('function')
         elif thetype == 'class':
             self._jscode = p.dump()
             assert self._jscode.startswith('var %s' % name)

@@ -159,10 +159,12 @@ class TestExpressions:
         assert evalpy('ArrayBuffer(4) or 42') != '42'
         
         # No bools
-        assert py2js('if foo: pass').count('_bool')
-        assert py2js('if foo.length: pass').count('_bool') == 0
-        assert py2js('if 3: pass').count('_bool') == 0
-        assert py2js('if True: pass').count('_bool') == 0
+        assert py2js('if foo: pass').count('_truthy')
+        assert py2js('if foo.length: pass').count('_truthy') == 0
+        assert py2js('if 3: pass').count('_truthy') == 0
+        assert py2js('if True: pass').count('_truthy') == 0
+        assert py2js('if a == 3: pass').count('_truthy') == 0
+        assert py2js('if a is 3: pass').count('_truthy') == 0
         
     
     def test_indexing_and_slicing(self):

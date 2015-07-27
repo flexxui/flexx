@@ -133,7 +133,7 @@ class MyApp(ui.Widget):
 
 
 
-app = MyApp.launch('xul')
+app = MyApp.launch('firefox')
 ui.run()
 # app.b1.set_text('asdasd')
 

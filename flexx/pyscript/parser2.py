@@ -288,7 +288,7 @@ class Parser2(Parser1):
     def parse_IfExp(self, node):
         # in "a if b else c"
         a = self.parse(node.body)
-        b = self._wrap_bool(node.test)
+        b = self._wrap_truthy(node.test)
         c = self.parse(node.orelse)
         
         code = []
@@ -310,7 +310,7 @@ class Parser2(Parser1):
             return []
         
         code = [self.lf('if (')]  # first part (popped in elif parsing)
-        code.append(self._wrap_bool(node.test))
+        code.append(self._wrap_truthy(node.test))
         code.append(') {')
         self._indent += 1
         for stmt in node.body:
@@ -514,6 +514,52 @@ class Parser2(Parser1):
     
     def parse_Continue(self, node):
         return self.lf('continue;')
+    
+    ## Comprehensions
+    
+    def parse_ListComp(self, node):
+        
+        elt = ''.join(self.parse(node.elt))
+        code = ['(function list_comprehenson () {', 'var res = [];']
+        vars = []
+        
+        for iter, comprehension in enumerate(node.generators):
+            cc = []
+            # Get target
+            if isinstance(comprehension.target, ast.Name):
+                target = ''.join(self.parse(comprehension.target))
+                vars.append(target)
+            else:
+                raise JSError('Target in comprehension can only be a single name.')
+            # comprehension(target, iter, ifs)
+            cc.append('iter# = %s;' % ''.join(self.parse(comprehension.iter)))
+            cc.append('if ((typeof iter# === "object") && (!Array.isArray(iter#))) {iter# = Object.keys(iter#);}')
+            cc.append('for (i#=0; i#<iter#.length; i#++) {%s = iter#[i#];' % target)
+            # Ifs
+            if comprehension.ifs:
+                cc.append('if (!(')
+                for iff in comprehension.ifs:
+                    cc += unify(self.parse(iff))
+                    cc.append('&&')
+                cc.pop(-1); # pop '&&'
+                cc.append(')) {continue;}')
+            # Insert code for this comprehension loop
+            code.append(''.join(cc).replace('i#', 'i%i' % iter).replace('iter#', 'iter%i' % iter))
+            vars.extend(['iter%i' % iter, 'i%i' % iter])
+        # Push result
+        code.append('{res.push(%s);}' % elt)
+        for comprehension in node.generators:
+            code.append('}')  # end for
+        # Finalize
+        code.append('return res;})')  # end function
+        code.append('()')  # call function
+        code.insert(2, 'var %s;' % ', '.join(vars))
+        return code
+    
+    # SetComp
+    # GeneratorExp
+    # DictComp
+    # comprehension
     
     ## Functions and class definitions
     

@@ -140,6 +140,8 @@ Function calls
 
 """
 
+# todo: compat with Py 3.5? I heard they changed ast parsing
+
 import ast
 import re
 
@@ -148,7 +150,7 @@ from .parser0 import Parser0, JSError, unify  # noqa
 
 # Define JS function that returns false on an empty array or dict, and
 # otherwise lets the original value through.
-bool_func = '_bool = function (v) {'
+bool_func = '_truthy = function (v) {'
 bool_func += 'if (v === null || typeof v !== "object") {return v;} '
 bool_func += 'else if (v.length !== undefined) {return v.length ? v : false;} '
 bool_func += 'else if (v.byteLength !== undefined) {return v.byteLength ? v : false;} '
@@ -276,25 +278,27 @@ class Parser1(Parser0):
         code.append(sep + left[start:] + sep)
         return code
     
-    def _wrap_bool(self, node):
+    def _wrap_truthy(self, node):
         test = ''.join(self.parse(node))
-        if (test.startswith('_bool(') or test.endswith('.length') or
-            test.isnumeric() or test == 'true' or test == 'false'):
+        if (test.startswith('_truthy(') or test.endswith('.length') or
+            test.isnumeric() or test == 'true' or test == 'false' or
+            not test.count('(') and (test.count('==') or test.count('!=') or test.count('is')) ):
             return test
         else:
-            vars = self._stack[0][2]
+            if len(self._stack) > 1:
+                vars = self._stack[1][2]
+            else:
+                vars = self._stack[0][2]
             vars.add(bool_func)
-            return '_bool(%s)' % test
+            return '_truthy(%s)' % test
     
     def parse_BoolOp(self, node):
         op = ' %s ' % self.BOOL_OP[node.op.__class__.__name__]
-        values = [unify(self._wrap_bool(val)) for val in node.values]
+        values = [unify(self._wrap_truthy(val)) for val in node.values]
         return op.join(values)
     
     def parse_Compare(self, node):
         
-        # todo: when a comparison is singleton, do some tricks to
-        # allow doing "if (a)" with a an array -> in JS this is always True
         if len(node.ops) != 1:
             raise JSError('Comparisons with multiple ops is not supported.')
         if len(node.comparators) != 1:
@@ -508,15 +512,6 @@ class Parser1(Parser0):
     
     def parse_ExtSlice(self, node):
         raise JSError('Multidimensional slicing not supported in JS')
-    
-    
-    ## Comprehensions
-    
-    # ListComp
-    # SetComp
-    # GeneratorExp
-    # DictComp
-    # comprehension
     
     ## Imports - no imports
 

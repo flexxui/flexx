@@ -132,6 +132,27 @@ class TestConrolFlow:
         # Test else
         assert evalpy(for9 + 'if i==3:break\nelse: print(99)\n0') == '0'
         assert evalpy(for9 + 'if i==30:break\nelse: print(99)\n0') == '99\n0'
+    
+    
+    def test_list_comprehensions(self):
+        
+        # Simple
+        code = '[i for i in [-1, -2, 1, 2, 3]]'
+        assert str(eval(code)).strip('[] ') == evalpy(code).strip('[] ')
+        
+        # With ifs
+        code = '[i for i in [-1, -2, 1, 2, 3] if i > 0 and i < 3]'
+        assert str(eval(code)).strip('[] ') == evalpy(code).strip('[] ')
+        code = '[i for i in [-1, -2, 1, 2, 3] if i > 0 if i < 3]'
+        assert str(eval(code)).strip('[] ') == evalpy(code).strip('[] ')
+        
+        # Double
+        code = '[i*j for i in [-1, -2, 1, 2, 3] if i > 0 for j in [1, 10, 100] if j<100]'
+        assert str(eval(code)).strip('[] ') == evalpy(code).strip('[] ')
+        
+        # Triple
+        code = '[i*j*k for i in [1, 2, 3] for j in [1, 10] for k in [5, 7]]'
+        assert str(eval(code)).strip('[] ') == evalpy(code).strip('[] ')
 
 
 class TestExceptions:
