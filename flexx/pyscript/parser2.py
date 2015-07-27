@@ -535,16 +535,18 @@ class Parser2(Parser1):
         
         for iter, comprehension in enumerate(node.generators):
             cc = []
-            # Get target
-            if isinstance(comprehension.target, ast.Name):
-                target = ''.join(self.parse(comprehension.target))
-                vars.append(target)
+            # Get target (can be multiple vars)
+            if isinstance(comprehension.target, ast.Tuple):
+                target = [''.join(self.parse(t)) for t in comprehension.target.elts]
             else:
-                raise JSError('Target in comprehension can only be a single name.')
+                target = [''.join(self.parse(comprehension.target))]
+            for t in target:
+                vars.append(t)
             # comprehension(target, iter, ifs)
             cc.append('iter# = %s;' % ''.join(self.parse(comprehension.iter)))
             cc.append('if ((typeof iter# === "object") && (!Array.isArray(iter#))) {iter# = Object.keys(iter#);}')
-            cc.append('for (i#=0; i#<iter#.length; i#++) {%s = iter#[i#];' % target)
+            cc.append('for (i#=0; i#<iter#.length; i#++) {')
+            cc.append(self._iterator_assign('iter#[i#]', *target))
             # Ifs
             if comprehension.ifs:
                 cc.append('if (!(')
@@ -570,6 +572,15 @@ class Parser2(Parser1):
     # GeneratorExp
     # DictComp
     # comprehension
+    
+    def _iterator_assign(self, val, *names):
+        if len(names) == 1:
+            return '%s = %s;' % (names[0], val)
+        else:
+            code = []
+            for i, name in enumerate(names):
+                code.append('%s = %s[%i];' % (name, val, i))
+            return ' '.join(code)
     
     ## Functions and class definitions
     

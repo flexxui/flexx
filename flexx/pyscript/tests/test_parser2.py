@@ -97,6 +97,9 @@ class TestConrolFlow:
         # Nested loops correct else
         code = self.method_for.jscode
         assert evaljs('var x=%sx()' % code) == 'ok\nok'
+        
+        # Tuple iterators
+        assert evalpy('for i, j in [[1, 2], [3, 4]]: print(i+j)')
     
     @js
     def method_for(self):
@@ -160,7 +163,10 @@ class TestConrolFlow:
         # Double args
         code = '[(i, j) for i in [1, 2, 3] for j in [1, 10]]'
         assert str(eval(code)).replace('(', '[').replace(')', ']') == normallist(evalpy(code))
-
+        
+        # Double iters
+        code = '[(i, j) for i, j in [[1, 2], [3, 4], [5, 6]]]'
+        assert str(eval(code)).replace('(', '[').replace(')', ']') == normallist(evalpy(code))
 
 class TestExceptions:
     
