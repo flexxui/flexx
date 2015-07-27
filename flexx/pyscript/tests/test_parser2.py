@@ -7,6 +7,9 @@ from flexx.pyscript import js, JSError, py2js, evaljs, evalpy
 def nowhitespace(s):
     return s.replace('\n', '').replace('\t', '').replace(' ', '')
 
+def normallist(s):
+    return s.replace('[ ', '[').replace(' ]', ']')
+
 
 class TestConrolFlow:
     
@@ -138,21 +141,25 @@ class TestConrolFlow:
         
         # Simple
         code = '[i for i in [-1, -2, 1, 2, 3]]'
-        assert str(eval(code)).strip('[] ') == evalpy(code).strip('[] ')
+        assert str(eval(code)) == normallist(evalpy(code))
         
         # With ifs
         code = '[i for i in [-1, -2, 1, 2, 3] if i > 0 and i < 3]'
-        assert str(eval(code)).strip('[] ') == evalpy(code).strip('[] ')
+        assert str(eval(code)) == normallist(evalpy(code))
         code = '[i for i in [-1, -2, 1, 2, 3] if i > 0 if i < 3]'
-        assert str(eval(code)).strip('[] ') == evalpy(code).strip('[] ')
+        assert str(eval(code)) == normallist(evalpy(code))
         
         # Double
         code = '[i*j for i in [-1, -2, 1, 2, 3] if i > 0 for j in [1, 10, 100] if j<100]'
-        assert str(eval(code)).strip('[] ') == evalpy(code).strip('[] ')
+        assert str(eval(code)) == normallist(evalpy(code))
         
         # Triple
         code = '[i*j*k for i in [1, 2, 3] for j in [1, 10] for k in [5, 7]]'
-        assert str(eval(code)).strip('[] ') == evalpy(code).strip('[] ')
+        assert str(eval(code)) == normallist(evalpy(code))
+        
+        # Double args
+        code = '[(i, j) for i in [1, 2, 3] for j in [1, 10]]'
+        assert str(eval(code)).replace('(', '[').replace(')', ']') == normallist(evalpy(code))
 
 
 class TestExceptions:
