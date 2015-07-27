@@ -62,8 +62,18 @@ Both support ``continue``, ``break`` and the ``else`` clause.
     
     for key, val in d.items():
         print(key, val, sep=': ')
+
+
+Comprehensions
+--------------
+
+.. pyscript_example::
     
-    
+    # List comprehensions just work
+    x = [i*2 for i in some_array if i>0]
+    y = [i*j for i in a for j in b]
+
+
 Defining functions
 ------------------
 
