@@ -23,13 +23,18 @@ Looping
 There is support for while loops and for-loops in several forms.
 Both support ``continue``, ``break`` and the ``else`` clause.
 
+While loops map well to JS
+
 .. pyscript_example::
 
-    # While loops map well to JS
     val = 0
     while val < 10:
         val += 1
-    
+
+Explicit iterating over arrays (and strings):
+
+.. pyscript_example::
+
     # Using range() yields true for-loops
     for i in range(10):
         print(i)
@@ -44,12 +49,13 @@ Both support ``continue``, ``break`` and the ``else`` clause.
     # But this is equally valid (and fast)
     for element in arr:
         print(element)
-    
-    # Similarly, iteration over strings
-    for char in "foo bar":
-        print(c)
-    
-    # Plain iteration over a dict costs a small overhead
+
+
+Iterations over dicts:
+
+.. pyscript_example::
+
+    # Plain iteration over a dict has a minor overhead
     for key in d:
         print(key)
     
@@ -62,6 +68,19 @@ Both support ``continue``, ``break`` and the ``else`` clause.
     
     for key, val in d.items():
         print(key, val, sep=': ')
+
+
+We can iterate over anything:
+
+.. pyscript_example::
+
+    # Strings
+    for char in "foo bar":
+        print(c)
+    
+    # More complex data structes
+    for i, j in [[1, 2], [3, 4]]:
+        print(i+j)
 
 
 Comprehensions
@@ -154,7 +173,6 @@ import sys
 
 from .parser1 import Parser1, JSError, unify  # noqa
 
-# todo: tuple unpacking in for-loops (for x, y, z in xxyyzz)
 
 class Parser2(Parser1):
     """ Parser that adds control flow, functions, classes, and exceptions.
@@ -341,29 +359,41 @@ class Parser2(Parser1):
     
     def parse_For(self, node):
         
-        iter = ''.join(self.parse(node.iter))
+        METHODS = 'keys', 'values', 'items'
+        
+        iter = None  # what to iterate over
+        sure_is_dict = False  # flag to indicate that we're sure iter is a dict
+        sure_is_range = False  # dito for range
+        
+        # First see if this for-loop is something that we support directly
+        if isinstance(node.iter, ast.Call):
+            f = node.iter.func
+            if isinstance(f, ast.Attribute) and not node.iter.args and f.attr in METHODS:
+                sure_is_dict = f.attr
+                iter = f.value.id  #  '%s.%s()' % (f.value.id, f.attr)
+            elif isinstance(f, ast.Name) and f.id == 'range':
+                sure_is_range = [''.join(self.parse(arg)) for arg in node.iter.args]
+        
+        # Otherwise we parse the iter
+        if iter is None:
+            iter = ''.join(self.parse(node.iter))
         
         # Get target
-        sure_is_dict = False  # flag to indicate that we're sure iter is a dict
         if isinstance(node.target, ast.Name):
-            target = node.target.id
-            target2 = None
-            if iter.endswith('.keys()'):  # this does not get called now...
-                sure_is_dict = True
-                iter = iter.rsplit('.', 1)[0]
-            if iter.endswith('.values()'):
-                sure_is_dict = True
-                iter = iter.rsplit('.', 1)[0]
-                target2 = target
+            target = [node.target.id]
+            if sure_is_dict == 'values':
+                target.append(target[0])
+            elif sure_is_dict == 'items':
+                raise JSError('Iteration over a dict with .items() '
+                              'needs two iterators.')
         elif isinstance(node.target, ast.Tuple):
-            if len(node.target.elts) == 2 and iter.endswith('.items()'):
-                sure_is_dict = True
-                target = ''.join(self.parse(node.target.elts[0]))
-                target2 = ''.join(self.parse(node.target.elts[1]))
-                iter = iter.rsplit('.', 1)[0]  # strip ".iter()"
-            else:
-                raise JSError('Only one iterator allowed in for-loop, '
-                              'or 2 when using .items()')
+            target = [''.join(self.parse(t)) for t in node.target.elts]
+            if sure_is_dict:
+                if not (sure_is_dict == 'items' and len(target) == 2):
+                    raise JSError('Iteration over a dict needs one iterator, '
+                                  'or 2 when using .items()')
+            elif sure_is_range:
+                raise JSError('Iterarion via range() needs one iterator.')
         else:
             raise JSError('Invalid iterator in for-loop')
         
@@ -385,16 +415,14 @@ class Parser2(Parser1):
             else_dummy = self.dummy('else')
             code.append(self.lf('%s = true;' % else_dummy))
         
-        # Declare iteration variable if necessary
-        if target not in self.vars:
-            self.vars.add(target)
-        if target2 and target2 not in self.vars:
-            self.vars.add(target2)
+        # Declare iteration variables if necessary
+        for t in target:
+            if t not in self.vars:
+                self.vars.add(t)
         
-        if iter.startswith('range('):  # Explicit iteration
+        if sure_is_range:  # Explicit iteration
             # Get range args
-            args = iter.split('(', 1)[1].rsplit(')', 1)[0]
-            nums = [x.strip() for x in args.split(',')]
+            nums = sure_is_range  # The range() arguments
             assert len(nums) in (1, 2, 3)
             if len(nums) == 1:
                 start, end, step = '0', nums[0], '1'
@@ -406,7 +434,8 @@ class Parser2(Parser1):
             t = 'for ({i} = {start}; {i} < {end}; {i} += {step})'
             if step.lstrip('+-').isnumeric() and float(step) < 0:
                 t = t.replace('<', '>')
-            t = t.format(i=target, start=start, end=end, step=step) + ' {'
+            assert len(target) == 1
+            t = t.format(i=target[0], start=start, end=end, step=step) + ' {'
             code.append(self.lf(t))
             self._indent += 1
         
@@ -415,18 +444,15 @@ class Parser2(Parser1):
             d_seq = self.dummy('sequence')
             code.append(self.lf('%s = %s;' % (d_seq, iter)))
             # The loop
-            code += self.lf(), 'for (', target, ' in ', d_seq, ') {'
+            code += self.lf(), 'for (', target[0], ' in ', d_seq, ') {'
             self._indent += 1
             code.append(self.lf('if (!%s.hasOwnProperty(%s)){ continue; }' %
-                                (d_seq, target)))
+                                (d_seq, target[0])))
             # Set second/alt iteration variable
-            if target2:
-                code.append(self.lf('%s = %s[%s];' % (target2, d_seq, target)))
+            if len(target) > 1:
+                code.append(self.lf('%s = %s[%s];' % (target[1], d_seq, target[0])))
         
         else:  # Enumeration
-            
-            # todo: since we have xx.keys -> Object.keys(xx)
-            # we no longer detect the keys enumeration, is that a problem?
             
             # We cannot know whether the thing to iterate over is an
             # array or a dict. We use a for-iterarion (otherwise we
@@ -440,6 +466,8 @@ class Parser2(Parser1):
             d_seq = self.dummy('sequence')
             d_iter = self.dummy('iter')
             d_len = self.dummy('length')
+            d_target = target[0] if (len(target) == 1) else self.dummy('target')
+            
             code.append(self.lf('%s = %s;' % (d_seq, iter)))
             
             # Replace sequence with dict keys if its a dict
@@ -455,7 +483,9 @@ class Parser2(Parser1):
             code.append(self.lf('for (%s = 0; %s < %s; %s += 1) {' %
                                 (d_iter, d_iter, d_len, d_iter)))
             self._indent += 1
-            code.append(self.lf('%s = %s[%s];' % (target, d_seq, d_iter)))
+            code.append(self.lf('%s = %s[%s];' % (d_target, d_seq, d_iter)))
+            if len(target) > 1:
+                code.append(self.lf(self._iterator_assign(d_target, *target)))
         
         # The body of the loop
         code += for_body

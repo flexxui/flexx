@@ -56,12 +56,17 @@ class TestConrolFlow:
         assert evalpy('for i in range(3):\n  print(i)') == '0\n1\n2'
         assert evalpy('for i in range(1,6,2):\n  print(i)') == '1\n3\n5'
         
+        # Range with complex input
+        assert evalpy('for i in range(sum([2, 3])): print(i)') == '0\n1\n2\n3\n4'
+        
         # Test explicit for-array iteration
         code = py2js('a=[7,8]\nfor i in range(len(a)):\n  print(a[i])')
         assert ' in ' not in code and evaljs(code) == '7\n8'
         # Test enumeration over arrays - should use actual for-loop
         code = py2js('for k in [7, 8]:\n  print(k)')
         assert ' in ' not in code and evaljs(code) == '7\n8'
+        # compile time tests
+        raises(JSError, py2js, 'for i, j in range(10): pass')
         
         # Test enumeration over dicts
         # Python cannot see its a dict, and uses a for-loop
@@ -80,6 +85,11 @@ class TestConrolFlow:
         assert ' in ' in code and evaljs(code) == '3\n4'
         code = py2js('d = {3:7, 4:8}\nfor k,v in d.items():\n  print(v)')
         assert ' in ' in code and evaljs(code) == '7\n8'
+        # compile time tests
+        raises(JSError, py2js, 'for i, j in x.keys(): pass')
+        raises(JSError, py2js, 'for i, j in x.values(): pass')
+        raises(JSError, py2js, 'for i in x.items(): pass')
+        raises(JSError, py2js, 'for i, j, k in x.items(): pass')
         
         # Test iterate over strings
         code = py2js('for c in "foo":\n  print(c)')
@@ -99,7 +109,9 @@ class TestConrolFlow:
         assert evaljs('var x=%sx()' % code) == 'ok\nok'
         
         # Tuple iterators
-        assert evalpy('for i, j in [[1, 2], [3, 4]]: print(i+j)')
+        assert evalpy('for i, j in [[1, 2], [3, 4]]: print(i+j)') == '3\n7'
+        assert evalpy('for i, j, k in [[1, 2, 3], [3, 4, 5]]: print(i+j+k)') == '6\n12'
+    
     
     @js
     def method_for(self):
