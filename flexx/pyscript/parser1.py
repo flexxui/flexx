@@ -150,7 +150,7 @@ from .parser0 import Parser0, JSError, unify  # noqa
 
 # Define JS function that returns false on an empty array or dict, and
 # otherwise lets the original value through.
-bool_func = '_truthy = function (v) {'
+bool_func = 'function (v) {'
 bool_func += 'if (v === null || typeof v !== "object") {return v;} '
 bool_func += 'else if (v.length !== undefined) {return v.length ? v : false;} '
 bool_func += 'else if (v.byteLength !== undefined) {return v.byteLength ? v : false;} '
@@ -285,11 +285,7 @@ class Parser1(Parser0):
             not test.count('(') and (test.count('==') or test.count('!=') or test.count('is')) ):
             return test
         else:
-            if len(self._stack) > 1:
-                vars = self._stack[1][2]
-            else:
-                vars = self._stack[0][2]
-            vars.add(bool_func)
+            self.vars_for_functions['_truthy'] = bool_func
             return '_truthy(%s)' % test
     
     def parse_BoolOp(self, node):

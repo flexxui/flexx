@@ -9,7 +9,7 @@ def nowhitespace(s):
     return s.replace('\n', '').replace('\t', '').replace(' ', '')
 
 
-class TestBuildins:
+class TestHardcoreBuildins:
     
     def test_isinstance(self):
         # The resulting code is not particularly pretty, so we just
@@ -79,13 +79,49 @@ class TestBuildins:
         assert evalpy(code + 'try:\n  getattr(a, "fooo")\n' + exc_att) == 'err'
         assert evalpy(code + 'getattr(a, "fooo", 3)') == '3'
     
-    def test_max(self):
-        assert evalpy('max([3, 4, 5, 1])') == '5'
-        assert evalpy('max(3, 4, 5, 1)') == '5'
+    def test_print(self):
+        # Test code
+        assert py2js('print()') == 'console.log();'
+        assert py2js('print(3)') == 'console.log(3);'
+        assert py2js('foo.print()') == 'foo.print();'
+        
+        # Test single
+        assert evalpy('print(3)') == '3'
+        assert evalpy('print(3); print(3)') == '3\n3'
+        assert evalpy('print(); print(3)') == '\n3'  # Test \n
+        assert evalpy('print("hello world")') == 'hello world'
+        # Test multiple args
+        assert evalpy('print(3, "hello")') == '3 hello'
+        assert evalpy('print(3+1, "hello", 3+1)') == '4 hello 4'
+        # Test sep and end
+        assert evalpy('print(3, 4, 5)') == '3 4 5'
+        assert evalpy('print(3, 4, 5, sep="")') == '345'
+        assert evalpy('print(3, 4, 5, sep="\\n")') == '3\n4\n5'
+        assert evalpy('print(3, 4, 5, sep="--")') == '3--4--5'
+        assert evalpy('print(3, 4, 5, end="-")') == '3 4 5-'
+        assert evalpy('print(3, 4, 5, end="\\n\\n-")') == '3 4 5\n\n-'
+        
+        raises(JSError, py2js, 'print(foo, file=x)')
+        raises(JSError, py2js, 'print(foo, bar=x)')
+    
+    def test_len(self):
+        assert py2js('len(a)') == 'a.length;'
+        assert py2js('len(a, b)') == 'len(a, b);'
     
     def test_min(self):
         assert evalpy('min([3, 4, 1, 5, 2])') == '1'
         assert evalpy('min(3, 4, 1, 5, 2)') == '1'
+    
+    def test_max(self):
+        assert evalpy('max([3, 4, 5, 1])') == '5'
+        assert evalpy('max(3, 4, 5, 1)') == '5'
+
+
+class TestOtherBuildins:
+    
+    def test_allow_overload(self):
+        assert evalpy('sum([3, 4])') == '7'
+        assert evalpy('sum = lambda x:1\nsum([3, 4])') == '1'
     
     def test_sum(self):
         assert evalpy('sum([3, 4, 1, 5, 2])') == '15'
@@ -119,35 +155,11 @@ class TestBuildins:
         assert evalpy('bool("xx")') == 'true'
         assert evalpy('bool(0)') == 'false'
         assert evalpy('bool("")') == 'false'
-    
-    def test_print(self):
-        # Test code
-        assert py2js('print()') == 'console.log();'
-        assert py2js('print(3)') == 'console.log(3);'
-        assert py2js('foo.print()') == 'foo.print();'
-        
-        # Test single
-        assert evalpy('print(3)') == '3'
-        assert evalpy('print(3); print(3)') == '3\n3'
-        assert evalpy('print(); print(3)') == '\n3'  # Test \n
-        assert evalpy('print("hello world")') == 'hello world'
-        # Test multiple args
-        assert evalpy('print(3, "hello")') == '3 hello'
-        assert evalpy('print(3+1, "hello", 3+1)') == '4 hello 4'
-        # Test sep and end
-        assert evalpy('print(3, 4, 5)') == '3 4 5'
-        assert evalpy('print(3, 4, 5, sep="")') == '345'
-        assert evalpy('print(3, 4, 5, sep="\\n")') == '3\n4\n5'
-        assert evalpy('print(3, 4, 5, sep="--")') == '3--4--5'
-        assert evalpy('print(3, 4, 5, end="-")') == '3 4 5-'
-        assert evalpy('print(3, 4, 5, end="\\n\\n-")') == '3 4 5\n\n-'
-        
-        raises(JSError, py2js, 'print(foo, file=x)')
-        raises(JSError, py2js, 'print(foo, bar=x)')
-    
-    def test_len(self):
-        assert py2js('len(a)') == 'a.length;'
-        assert py2js('len(a, b)') == 'len(a, b);'
+        #
+        assert evalpy('bool([1])') == 'true'
+        assert evalpy('bool({1:2})') == 'true'
+        assert evalpy('bool([])') == 'false'
+        assert evalpy('bool({})') == 'false'
 
 
 class TestExtra:
@@ -183,7 +195,6 @@ class TestDictMethods:
         
     def test_keys(self):
         assert evalpy('a = {"foo":3}; a.keys()') == "[ 'foo' ]"
-
 
 
 class TestStrMethods:

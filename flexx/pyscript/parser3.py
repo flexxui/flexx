@@ -126,6 +126,8 @@ Str methods
 
 """
 
+import ast
+
 from .parser2 import Parser2, JSError, unify  # noqa
 
 # List of possibly relevant builtin functions:
@@ -148,7 +150,7 @@ class Parser3(Parser2):
     NAME_MAP = {'self': 'this', }
     NAME_MAP.update(Parser2.NAME_MAP)
     
-    ## Functions
+    ## Hardcore functions (hide JS functions with the same name)
     
     def function_isinstance(self, node):
         if len(node.args) != 2:
@@ -245,48 +247,6 @@ class Parser3(Parser2):
         else:
             return None  # don't apply this feature
     
-    def function_sum(self, node):
-        if len(node.args) == 1:
-            return (unify(self.parse(node.args[0])),
-                    '.reduce(function(a, b) {return a + b;})')
-        else:
-            raise JSError('sum() needs exactly one argument')
-    
-    def function_round(self, node):
-        if len(node.args) == 1:
-            arg = ''.join(self.parse(node.args[0]))
-            return 'Math.round(', arg, ')'
-        else:
-            raise JSError('round() needs at least one argument')
-    
-    def function_int(self, node):
-        # No need to turn into number first
-        if len(node.args) == 1:
-            arg = ''.join(self.parse(node.args[0]))
-            return '(%s<0? Math.ceil(%s): Math.floor(%s))' % (arg, arg, arg)
-        else:
-            raise JSError('int() needs one argument')
-    
-    def function_float(self, node):
-        if len(node.args) == 1:
-            arg = ''.join(self.parse(node.args[0]))
-            return 'Number(%s)' % arg
-        else:
-            raise JSError('float() needs one argument')
-    
-    def function_str(self, node):
-        if len(node.args) == 1:
-            arg = ''.join(self.parse(node.args[0]))
-            return 'String(%s)' % arg
-        else:
-            raise JSError('str() needs one argument')
-    
-    def function_bool(self, node):
-        if len(node.args) == 1:
-            return 'Boolean(%s)' % self._wrap_truthy(node.args[0])
-        else:
-            raise JSError('bool() needs one argument')
-    
     def function_max(self, node):
         if len(node.args) == 0:
             raise JSError('max() needs at least one argument')
@@ -307,12 +267,57 @@ class Parser3(Parser2):
             args = ', '.join([unify(self.parse(arg)) for arg in node.args])
             return 'Math.min(', args, ')'
     
+    ## Normal functions (can be overloaded)
+    
+    def function_sum(self, node):
+        if len(node.args) == 1:
+            code = 'function (x) {return x.reduce(function(a, b) {return a + b;});}'
+            self.vars_for_functions['sum'] = code
+            return None
+        else:
+            raise JSError('sum() needs exactly one argument')
+    
+    def function_round(self, node):
+        if len(node.args) == 1:
+            self.vars_for_functions['round'] = 'Math.round'
+        else:
+            raise JSError('round() needs at least one argument')
+    
+    def function_int(self, node):
+        # No need to turn into number first
+        if len(node.args) == 1:
+            code = 'function (x) {return x<0 ? Math.ceil(x): Math.floor(x);}'
+            self.vars_for_functions['int'] = code
+        else:
+            raise JSError('int() needs one argument')
+    
+    def function_float(self, node):
+        if len(node.args) == 1:
+            self.vars_for_functions['float'] = 'Number'
+        else:
+            raise JSError('float() needs one argument')
+    
+    def function_str(self, node):
+        if len(node.args) == 1:
+            self.vars_for_functions['str'] = 'String'
+        else:
+            raise JSError('str() needs one argument')
+    
+    def function_bool(self, node):
+        if len(node.args) == 1:
+            self._wrap_truthy(ast.Name('x', ''))  # trigger _truthy function declaration
+            self.vars_for_functions['bool'] = 'function (x) {return Boolean(_truthy(x));}'
+        else:
+            raise JSError('bool() needs one argument')
+    
+    ## Extra functions
+    
     def function_perf_counter(self, node):
         if len(node.args) == 0:
             # Work in nodejs and browser
             dummy = self.dummy()
             return '(typeof(process) === "undefined" ? performance.now()*1e-3 : ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy)
-    
+            
     ## List methods
     
     def method_append(self, node, base):

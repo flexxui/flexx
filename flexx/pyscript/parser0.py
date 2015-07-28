@@ -90,6 +90,18 @@ def get_module_preamble(name, deps):
     return UMD % (dep_strings, dep_requires, name, name, dep_fullnames, dep_names)
 
 
+class NameSpace(dict):
+    """ Items can be added to the namespace with the value representing
+    the initial value. Or using ``add()`` no initial value.
+    """
+    
+    def add(self, key):
+        self[key] = None
+    
+    def discard(self, key):
+        self.pop(key, None)
+
+
 class Parser0(object):
     """ The Base parser class. Implements a couple of methods that
     the actual parser classes need.
@@ -182,8 +194,7 @@ class Parser0(object):
         # Finish
         ns = self.pop_stack()  # Pop module namespace
         if ns:
-            dec = 'var ' + ', '.join(sorted(ns)) + ';'
-            self._parts.insert(0, self.lf(dec))
+            self._parts.insert(0, self.get_declarations(ns))
         
         # Post-process
         if module:
@@ -234,13 +245,29 @@ class Parser0(object):
         variables. type must be 'module', 'class' or 'function'.
         """
         assert type in ('module', 'class', 'function')
-        self._stack.append((type, name, set()))
+        self._stack.append((type, name, NameSpace()))
     
     def pop_stack(self):
         """ Pop the current stack and return the namespace.
         """
         nstype, nsname, ns = self._stack.pop(-1)
         return ns
+    
+    def get_declarations(self, ns):
+        """ Get string with variable (and buildin-function) declarations.
+        """
+        if not ns:
+            return ''
+        code = []
+        loose_vars = []
+        for name, init in sorted(ns.items()):
+            if init is None:
+                loose_vars.append(name)
+            else:
+                code.append(self.lf('var %s = %s;' % (name, init)))
+        if loose_vars:
+            code.insert(0, self.lf('var %s;' % ', '.join(loose_vars)))
+        return ''.join(code)
     
     def with_prefix(self, name, new=False):
         """ Add class prefix to a variable name if necessary.
@@ -254,6 +281,17 @@ class Parser0(object):
     @property
     def vars(self):
         return self._stack[-1][2]
+    
+    @property
+    def vars_for_functions(self):
+        """ Function declarations are added to the second stack if available.
+        """
+        # todo: can we add to the first stack if we provide functionalitty to filter
+        # out duplicate definitions when code is composed of multiple parts?
+        if len(self._stack) > 1:
+            return self._stack[1][2]
+        else:
+            return self._stack[0][2]
     
     def lf(self, code=''):
         """ Line feed - create a new line with the correct indentation.

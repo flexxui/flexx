@@ -705,16 +705,14 @@ class Parser2(Parser1):
         if lambda_:
             code.append('}')
             ns = self.pop_stack()  # Should conly consist of arg names
-            assert not ns.difference(argnames)
+            assert not set(ns).difference(argnames)
         else:
             code.append(self.lf('};\n'))
             # Pop stack, declare vars, but exclude our argnames
             ns = self.pop_stack()
             for name in argnames:
                 ns.discard(name)
-            if ns:
-                dec = 'var ' + ', '.join(sorted(ns)) + ';'
-                pre_code.append(self.lf('    ' + dec))
+            pre_code.append(self.get_declarations(ns))
         
         return pre_code + code
     
