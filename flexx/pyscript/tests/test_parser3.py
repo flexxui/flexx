@@ -165,6 +165,18 @@ class TestOtherBuildins:
         assert evalpy('abs(5)') == '5'
         assert evalpy('abs(0)') == '0'
         assert evalpy('abs(-2)') == '2'
+    
+    def test_all(self):
+        assert evalpy('all([1, 2, 3])') == 'true' 
+        assert evalpy('all([0, 2, 3])') == 'false'
+        assert evalpy('all([])') == 'true'
+    
+    def test_any(self):
+        assert evalpy('any([1, 2, 3])') == 'true' 
+        assert evalpy('any([0, 2, 0])') == 'true'
+        assert evalpy('any([0, 0, 0])') == 'false'
+        assert evalpy('any([])') == 'false' 
+
 
 class TestExtra:
     

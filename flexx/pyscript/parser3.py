@@ -29,8 +29,10 @@ JavaScript.
     max(foo)
     max(a, b, c)
     
-    # Summing elements
+    # Aggregation
     sum(foo)
+    all(foo)
+    any(foo)
     
     # Turning things into numbers, bools and strings
     str(s)
@@ -316,6 +318,22 @@ class Parser3(Parser2):
             self.vars_for_functions['abs'] = 'Math.abs'
         else:
             raise JSError('abs() needs one argument')
+    
+    def function_all(self, node):
+        if len(node.args) == 1:
+            self._wrap_truthy(ast.Name('x', ''))  # trigger _truthy function declaration
+            code = 'function (x) {for (var i=0; i<x.length; i++) {if (!_truthy(x[i])){return false}} return true;}'
+            self.vars_for_functions['all'] = code
+        else:
+            raise JSError('all() needs one argument')
+    
+    def function_any(self, node):
+        if len(node.args) == 1:
+            self._wrap_truthy(ast.Name('x', ''))  # trigger _truthy function declaration
+            code = 'function (x) {for (var i=0; i<x.length; i++) {if (_truthy(x[i])){return true}} return false;}'
+            self.vars_for_functions['any'] = code
+        else:
+            raise JSError('any() needs one argument')
     
     ## Extra functions
     
