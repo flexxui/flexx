@@ -18,9 +18,10 @@ JavaScript.
     # Getting the length of a string or array
     len(foo)
     
-    # Rounding
+    # Rounding and abs
     round(foo)  # round to nearest integer
     int(foo)  # round towards 0 as in Python
+    abs(foo)
     
     # min and max
     min(foo)
@@ -309,6 +310,12 @@ class Parser3(Parser2):
             self.vars_for_functions['bool'] = 'function (x) {return Boolean(_truthy(x));}'
         else:
             raise JSError('bool() needs one argument')
+    
+    def function_abs(self, node):
+        if len(node.args) == 1:
+            self.vars_for_functions['abs'] = 'Math.abs'
+        else:
+            raise JSError('abs() needs one argument')
     
     ## Extra functions
     

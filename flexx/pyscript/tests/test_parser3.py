@@ -160,7 +160,11 @@ class TestOtherBuildins:
         assert evalpy('bool({1:2})') == 'true'
         assert evalpy('bool([])') == 'false'
         assert evalpy('bool({})') == 'false'
-
+    
+    def test_abs(self):
+        assert evalpy('abs(5)') == '5'
+        assert evalpy('abs(0)') == '0'
+        assert evalpy('abs(-2)') == '2'
 
 class TestExtra:
     
