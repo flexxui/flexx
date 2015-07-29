@@ -51,8 +51,8 @@ JavaScript.
     dict(other_dict)  # make a copy
     list(other_list)  # make copy
 
-The isinstance function
------------------------
+The isinstance function (and friends)
+-------------------------------------
 
 The ``isinstance()`` function works for all JS primitive types, but also
 for user-defined classes.
@@ -80,13 +80,8 @@ for user-defined classes.
     
     # issubclass works too
     issubclass(Foo, Bar)
-
-
-More tests
-----------
-
-.. pyscript_example::
     
+    # As well as callable
     callable(foo)
 
 
@@ -109,6 +104,25 @@ hasattr, getattr, setattr and delattr
     setattr(a, 'foo', 2)
     
     delattr(a, 'foo')
+
+
+Creating sequences
+------------------
+
+.. pyscript_example::
+    
+    range(10)
+    range(2, 10, 2)
+    range(100, 0, -1)
+    
+    reversed(foo)
+    sorted(foo)
+    enumerate(foo)
+    zip(foo, bar)
+    
+    filter(func, foo)
+    map(func, foo)
+
 
 Additional sugar
 ----------------
@@ -371,6 +385,25 @@ class Parser3(Parser2):
         else:
             raise JSError('dict() needs at least one argument')
     
+    def function_range(self, node):
+        fun = 'function (start, end, step) {var i, res = []; for (i=start; i<end; i+=step) {res.push(i);} return res;}'
+        
+        if len(node.args) == 1:
+            end = unify(self.parse(node.args[0]))
+            return '(%s)(0, %s, 1)' % (fun, end)
+        elif len(node.args) == 2:
+            start = unify(self.parse(node.args[0]))
+            end = unify(self.parse(node.args[1]))
+            return '(%s)(%s, %s, 1)' % (fun, start, end)
+        elif len(node.args) == 3:
+            start = unify(self.parse(node.args[0]))
+            end = unify(self.parse(node.args[1]))
+            step = ''.join(self.parse(node.args[2]))
+            if step.lstrip('+-').isnumeric() and float(step) < 0:
+                fun = fun.replace('<', '>')
+            return '(%s)(%s, %s, %s)' % (fun, start, end, step)
+        else:
+            raise JSError('range() needs 1, 2 or 3 arguments')
     
     ## Normal functions (can be overloaded)
     

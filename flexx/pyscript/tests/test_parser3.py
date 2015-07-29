@@ -154,7 +154,12 @@ class TestHardcoreBuildins:
         ok = "{ foo: 1, bar: 2 }", "{ bar: 2, foo: 1 }"
         assert evalpy('dict([["foo", 1], ["bar", 2]])') in ok
         assert evalpy('dict({"foo": 1, "bar": 2})') in ok
-
+    
+    def test_range(self):
+        assert evalpy('list(range(4))') == '[ 0, 1, 2, 3 ]'
+        assert evalpy('list(range(2, 4))') == '[ 2, 3 ]'
+        assert evalpy('list(range(2, 9, 2))') == '[ 2, 4, 6, 8 ]'
+        assert evalpy('list(range(10, 3, -2))') == '[ 10, 8, 6, 4 ]'
 
 class TestOtherBuildins:
     
