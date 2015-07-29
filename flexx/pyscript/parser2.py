@@ -82,7 +82,8 @@ We can iterate over anything:
     for i, j in [[1, 2], [3, 4]]:
         print(i+j)
 
-Enumerate, reversed, sorted also work:
+Buildin functions intended for iterations are supported too: 
+enumerate, reversed, sorted, filter, map.
 
 .. pyscript_example::
 
@@ -90,6 +91,12 @@ Enumerate, reversed, sorted also work:
         pass
     
     for x in reversed(sorted(foo)):
+        pass
+    
+    for x in map(lambda x: x+1, foo):
+        pass
+    
+    for x in filter(lambda x: x>0, foo):
         pass
 
 
@@ -368,6 +375,7 @@ class Parser2(Parser1):
         return code
     
     def parse_For(self, node):
+        # Note that enumerate, reversed, sorted, filter, map are handled in parser3
         
         METHODS = 'keys', 'values', 'items'
         

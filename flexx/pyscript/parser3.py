@@ -418,11 +418,6 @@ class Parser3(Parser2):
     
     def function_enumerate(self, node):
         if len(node.args) == 1:
-            # from .functions import py2js  # Re-use a for-loop
-            # t = py2js('res=[]\nfor val in iter: res.push([XXX, val])')
-            # iter_name = t.split('for (')[1].split(' ', 1)[0]
-            # t = t.replace('XXX', iter_name).replace('\n', '').replace('dummy', 'd')
-            # code = 'function (iter) {' + t + 'return res;}'
             code = 'function (iter) { var i, res=[];'
             code += self._make_iterable('iter', 'iter', False)
             code += 'for (i=0; i<iter.length; i++) {res.push([i, iter[i]]);}'
@@ -448,6 +443,29 @@ class Parser3(Parser2):
             self.vars_for_functions['sorted'] = code
         else:
             raise JSError('sorted() needs one argument')
+    
+    def function_filter(self, node):
+        if len(node.args) == 2:
+            code = 'function (func, iter) {'
+            code += 'if (typeof func === "undefined" || func === null) {func = function(x) {return x;}}'
+            code += 'return iter.filter(func);}'
+            self.vars_for_functions['filter'] = code
+        else:
+            raise JSError('filter() needs two arguments')
+    
+    def function_map(self, node):
+        if len(node.args) == 2:
+            code = 'function (func, iter) {return iter.map(func);}'
+            self.vars_for_functions['map'] = code
+        else:
+            raise JSError('map() needs two arguments')
+    
+    # def function_reduce(self, node):
+    #     if len(node.args) == 2:
+    #         code = 'function (iter, func) {return iter.reduce(func);}'
+    #         self.vars_for_functions['filter'] = code
+    #     else:
+    #         raise JSError('reduce() needs two arguments')
     
     ## Extra functions
     

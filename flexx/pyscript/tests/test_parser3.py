@@ -218,6 +218,17 @@ class TestOtherBuildins:
     def test_sorted(self):
         assert evalpy('for x in sorted([1, 9, 3, 2, 7, 8, 4]): print(x)') == '1\n2\n3\n4\n7\n8\n9'
         assert evalpy('for x in reversed(sorted([1, 9, 3, 2, 7, 8, 4])): print(x)') == '9\n8\n7\n4\n3\n2\n1'
+    
+    def test_filter(self):
+        assert list(filter(lambda x:x>0, [-1, -2, 1, 2])) == [1, 2]
+        
+        code = 'f1 = lambda x: x>0\n'
+        assert evalpy(code + 'for x in filter(f1, [-1, -2, 0, 1, 2]): print(x)') == '1\n2'
+        assert evalpy(code + 'for x in filter(None, [-1, -2, 0, 1, 2]): print(x)') == '-1\n-2\n1\n2'
+    
+    def test_map(self):
+        code = 'f1 = lambda x: x+2\n'
+        assert evalpy(code + 'for x in map(f1, [-1, 0, 2]): print(x)') == '1\n2\n4'
 
 
 class TestExtra:
