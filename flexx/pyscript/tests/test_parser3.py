@@ -216,6 +216,9 @@ class TestOtherBuildins:
     def test_enumerate(self):
         assert evalpy('for i, x in enumerate([10, 20, 30]): print(i*x)') == '0\n20\n60'
     
+    def test_zip(self):
+        assert evalpy('for i, x in zip([1, 2, 3], [10, 20, 30]): print(i*x)') == '10\n40\n90'
+    
     def test_reversed(self):
         assert evalpy('for x in reversed([10, 20, 30]): print(x)') == '30\n20\n10'
     

@@ -83,11 +83,14 @@ We can iterate over anything:
         print(i+j)
 
 Buildin functions intended for iterations are supported too: 
-enumerate, reversed, sorted, filter, map.
+enumerate, zip, reversed, sorted, filter, map.
 
 .. pyscript_example::
 
     for i, x in enumerate(foo):
+        pass
+    
+    for a, b in zip(foo, bar):
         pass
     
     for x in reversed(sorted(foo)):

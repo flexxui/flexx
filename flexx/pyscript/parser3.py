@@ -433,6 +433,18 @@ class Parser3(Parser2):
         else:
             raise JSError('enumerate() needs one argument')
     
+    def function_zip(self, node):
+        if len(node.args) == 2:
+            code = 'function (iter1, iter2) { var i, res=[];'
+            code += self._make_iterable('iter1', 'iter1', False)
+            code += self._make_iterable('iter2', 'iter2', False)
+            code += 'var len = Math.min(iter1.length, iter2.length);'
+            code += 'for (i=0; i<len; i++) {res.push([iter1[i], iter2[i]]);}'
+            code += 'return res;}'
+            self.vars_for_functions['zip'] = code
+        else:
+            raise JSError('zip() needs two arguments')
+             
     def function_reversed(self, node):
         if len(node.args) == 1:
             code = 'function (iter) {'
