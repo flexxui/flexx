@@ -77,6 +77,10 @@ for user-defined classes.
     isinstance(x, MyClass)
     isinstance(x, 'MyClass')  # equivalent
     isinstance(x, 'Object')  # also yields true (subclass of Object)
+    
+    # issubclass works too
+    issubclass(Foo, Bar)
+
 
 More tests
 ----------
@@ -177,7 +181,7 @@ class Parser3(Parser2):
     
     def function_isinstance(self, node):
         if len(node.args) != 2:
-            raise JSError('isinstance expects two arguments.')
+            raise JSError('isinstance() expects two arguments.')
         
         ob = unify(self.parse(node.args[0]))
         cls = unify(self.parse(node.args[1]))
@@ -214,6 +218,17 @@ class Parser3(Parser2):
             if cmp[0] == '(':
                 raise JSError('isinstance() can only compare to simple types')
             return ob, " instanceof ", cmp
+    
+    def function_issubclass(self, node):
+        # issubclass only needs to work on custom classes
+        if len(node.args) != 2:
+            raise JSError('issubclass() expects two arguments.')
+        
+        cls1 = unify(self.parse(node.args[0]))
+        cls2 = unify(self.parse(node.args[1]))
+        if cls2 == 'object':
+            cls2 = 'Object'
+        return '(%s.prototype instanceof %s)' % (cls1, cls2)
     
     def function_hasattr(self, node):
         if len(node.args) == 2:

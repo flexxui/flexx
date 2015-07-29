@@ -66,6 +66,13 @@ class TestHardcoreBuildins:
         assert evaljs(code + py2js('isinstance(x, "MyClass")')) == 'true'
         assert evaljs(code + py2js('isinstance(x, MyClass)')) == 'true'
     
+    def test_issubclass(self):
+        code = 'class Foo:pass\nclass Bar(Foo): pass\n'
+        assert evalpy(code + 'issubclass(Bar, Foo)') == 'true'
+        assert evalpy(code + 'issubclass(Foo, Bar)') == 'false'
+        assert evalpy(code + 'issubclass(Bar, object)') == 'true'
+        
+        
     def test_hasattr(self):
         code = 'a = {"foo":1, "bar":2};\n'
         assert evalpy(code + 'hasattr(a, "foo")') == 'true'
