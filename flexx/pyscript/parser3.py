@@ -346,6 +346,13 @@ class Parser3(Parser2):
     
     ## Normal functions (can be overloaded)
     
+    def function_pow(self, node):
+        if len(node.args) == 2:
+            self.vars_for_functions['pow'] = 'Math.pow'
+            return None
+        else:
+            raise JSError('pow() needs exactly two argument2')
+    
     def function_sum(self, node):
         if len(node.args) == 1:
             code = 'function (x) {return x.reduce(function(a, b) {return a + b;});}'
