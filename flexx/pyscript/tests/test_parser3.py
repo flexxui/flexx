@@ -81,7 +81,7 @@ class TestHardcoreBuildins:
     
     def test_deltattr(self):
         code = 'a = {"foo":1};\n'
-        assert evalpy(code + 'delattr(a, "foo")\na') == '{ }'
+        assert evalpy(code + 'delattr(a, "foo")\na') == '{}'
     
     def test_print(self):
         # Test code
@@ -134,6 +134,15 @@ class TestHardcoreBuildins:
         assert evalpy('chr(65+32)') == 'a'
         assert evalpy('ord("A")') == '65'
         assert evalpy('ord("a")') == '97'
+    
+    def test_list(self):
+        assert evalpy('list("abc")') == "[ 'a', 'b', 'c' ]"
+        assert evalpy('list({1:2, 3:4})') == "[ '1', '3' ]"
+    
+    def test_dict(self):
+        ok = "{ foo: 1, bar: 2 }", "{ bar: 2, foo: 1 }"
+        assert evalpy('dict([["foo", 1], ["bar", 2]])') in ok
+        assert evalpy('dict({"foo": 1, "bar": 2})') in ok
 
 
 class TestOtherBuildins:

@@ -41,6 +41,12 @@ JavaScript.
     int(z)  # this rounds towards zero like in Python
     chr(65)  # -> 'A'
     ord('A')  # -> 65
+    
+    # Turning things into lists and dicts
+    dict([['foo', 1], ['bar', 2]])  # -> {'foo': 1, 'bar': 2}
+    list('abc')  # -> ['a', 'b', 'c']
+    dict(other_dict)  # make a copy
+    list(other_list)  # make copy
 
 The isinstance function
 -----------------------
@@ -309,6 +315,30 @@ class Parser3(Parser2):
             return '%s.charCodeAt(0)' % arg
         else:
             raise JSError('ord() needs at least one argument')
+    
+    def function_dict(self, node):
+        if len(node.args) == 0:
+            return '{}'
+        if len(node.args) == 1:
+            code = '(function(x) {var t, i, keys, r={};'
+            code += 'if (Array.isArray(x)) {'
+            code += 'for (i=0; i<x.length; i++) {t=x[i]; r[t[0]] = t[1];} return r;'
+            code += '} else {'
+            code += 'keys = Object.keys(x); for (i=0; i<keys.length; i++) {t=keys[i]; r[t] = x[t];} return r;}})'
+            return code + '(%s)' % ''.join(self.parse(node.args[0]))
+        else:
+            raise JSError('dict() needs at least one argument')
+    
+    def function_list(self, node):
+        if len(node.args) == 0:
+            return '[]'
+        if len(node.args) == 1:
+            code = '(function(x) {var r=[];'
+            code += 'if (typeof x==="object" && !Array.isArray(x)) {x=Object.keys(x)}'
+            code += 'for (var i=0; i<x.length; i++) {r.push(x[i]);} return r;})'
+            return code + '(%s)' % ''.join(self.parse(node.args[0]))
+        else:
+            raise JSError('dict() needs at least one argument')
     
     ## Normal functions (can be overloaded)
     
