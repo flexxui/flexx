@@ -38,8 +38,9 @@ JavaScript.
     str(s)
     float(x)
     bool(y)
-    int(z)  # this also rounds towards zero
-
+    int(z)  # this rounds towards zero like in Python
+    chr(65)  # -> 'A'
+    ord('A')  # -> 65
 
 The isinstance function
 -----------------------
@@ -280,10 +281,24 @@ class Parser3(Parser2):
     
     def function_callable(self, node):
         if len(node.args) == 1:
-            arg = ''.join(self.parse(node.args[0]))
-            return '(function (x) {return typeof x === "function";})(%s)' % arg
+            arg = unify(self.parse(node.args[0]))
+            return '(typeof %s === "function")' % arg
         else:
             raise JSError('callable() needs at least one argument')
+    
+    def function_chr(self, node):
+        if len(node.args) == 1:
+            arg = ''.join(self.parse(node.args[0]))
+            return 'String.fromCharCode(%s)' % arg
+        else:
+            raise JSError('chr() needs at least one argument')
+    
+    def function_ord(self, node):
+        if len(node.args) == 1:
+            arg = ''.join(self.parse(node.args[0]))
+            return '%s.charCodeAt(0)' % arg
+        else:
+            raise JSError('ord() needs at least one argument')
     
     ## Normal functions (can be overloaded)
     

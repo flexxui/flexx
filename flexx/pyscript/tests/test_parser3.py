@@ -125,6 +125,12 @@ class TestHardcoreBuildins:
         assert evalpy('def foo():pass\ncallable(foo)') == 'true'
         assert evalpy('foo = lambda x:1\ncallable(foo)') == 'true'
 
+    def test_chr_and_ord(self):
+        assert evalpy('chr(65)') == 'A'
+        assert evalpy('chr(65+32)') == 'a'
+        assert evalpy('ord("A")') == '65'
+        assert evalpy('ord("a")') == '97'
+
 
 class TestOtherBuildins:
     
