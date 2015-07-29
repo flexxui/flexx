@@ -29,6 +29,9 @@ JavaScript.
     max(foo)
     max(a, b, c)
     
+    # divmod
+    a, b = divmod(100, 7)  # -> 14, 2
+    
     # Aggregation
     sum(foo)
     all(foo)
@@ -340,6 +343,7 @@ class Parser3(Parser2):
         else:
             raise JSError('dict() needs at least one argument')
     
+    
     ## Normal functions (can be overloaded)
     
     def function_sum(self, node):
@@ -389,6 +393,13 @@ class Parser3(Parser2):
         else:
             raise JSError('abs() needs one argument')
     
+    def function_divmod(self, node):
+        if len(node.args) == 2:
+            code = 'function (x, y) {var m = x % y; return [(x-m)/y, m];}'
+            self.vars_for_functions['divmod'] = code
+        else:
+            raise JSError('divmod() needs two arguments')
+        
     def function_all(self, node):
         if len(node.args) == 1:
             self._wrap_truthy(ast.Name('x', ''))  # trigger _truthy function declaration

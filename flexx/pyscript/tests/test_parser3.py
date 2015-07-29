@@ -194,6 +194,10 @@ class TestOtherBuildins:
         assert evalpy('abs(0)') == '0'
         assert evalpy('abs(-2)') == '2'
     
+    def test_divod(self):
+        assert evalpy('divmod(13, 3)') == '[ 4, 1 ]'
+        assert evalpy('a, b = divmod(100, 7); print(a); print(b)') == '14\n2'
+        
     def test_all(self):
         assert evalpy('all([1, 2, 3])') == 'true' 
         assert evalpy('all([0, 2, 3])') == 'false'
