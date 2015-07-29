@@ -82,6 +82,16 @@ We can iterate over anything:
     for i, j in [[1, 2], [3, 4]]:
         print(i+j)
 
+Enumerate, reversed, sorted also work:
+
+.. pyscript_example::
+
+    for i, x in enumerate(foo):
+        pass
+    
+    for x in reversed(sorted(foo)):
+        pass
+
 
 Comprehensions
 --------------
@@ -465,23 +475,14 @@ class Parser2(Parser1):
             # Create dummy vars
             d_seq = self.dummy('sequence')
             d_iter = self.dummy('iter')
-            d_len = self.dummy('length')
             d_target = target[0] if (len(target) == 1) else self.dummy('target')
             
-            code.append(self.lf('%s = %s;' % (d_seq, iter)))
-            
-            # Replace sequence with dict keys if its a dict
-            # Note that Object.keys() only yields own enumerable properties
-            code.append(self.lf('if ((typeof %s === "object") && '
-                                '(!Array.isArray(%s))) {' % (d_seq, d_seq)))
-            
-            code.append(self.lf('    %s = Object.keys(%s);' % (d_seq, d_seq)))
-            code.append(self.lf('}'))
+            # Ensure our iterable is indeed iterable
+            code.append(self._make_iterable(iter, d_seq))
             
             # The loop
-            code.append(self.lf('%s = %s.length;' % (d_len, d_seq)))
-            code.append(self.lf('for (%s = 0; %s < %s; %s += 1) {' %
-                                (d_iter, d_iter, d_len, d_iter)))
+            code.append(self.lf('for (%s = 0; %s < %s.length; %s += 1) {' %
+                                (d_iter, d_iter, d_seq, d_iter)))
             self._indent += 1
             code.append(self.lf('%s = %s[%s];' % (d_target, d_seq, d_iter)))
             if len(target) > 1:
@@ -504,6 +505,20 @@ class Parser2(Parser1):
                 code[i] = '%s = false; break;' % else_dummy
         
         return code
+    
+    def _make_iterable(self, name1, name2, newlines=True):
+        code = []
+        lf = self.lf
+        if not newlines:
+            lf = lambda x:x
+        
+        if name1 != name2:
+            code.append(lf('%s = %s;' % (name2, name1)))
+        code.append(lf('if ((typeof %s === "object") && '
+                       '(!Array.isArray(%s))) {' % (name2, name2)))
+        code.append(lf('    %s = Object.keys(%s);' % (name2, name2)))
+        code.append(lf('}'))
+        return ''.join(code)
     
     def parse_While(self, node):
         

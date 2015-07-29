@@ -208,6 +208,16 @@ class TestOtherBuildins:
         assert evalpy('any([0, 2, 0])') == 'true'
         assert evalpy('any([0, 0, 0])') == 'false'
         assert evalpy('any([])') == 'false' 
+    
+    def test_enumerate(self):
+        assert evalpy('for i, x in enumerate([10, 20, 30]): print(i*x)') == '0\n20\n60'
+    
+    def test_reversed(self):
+        assert evalpy('for x in reversed([10, 20, 30]): print(x)') == '30\n20\n10'
+    
+    def test_sorted(self):
+        assert evalpy('for x in sorted([1, 9, 3, 2, 7, 8, 4]): print(x)') == '1\n2\n3\n4\n7\n8\n9'
+        assert evalpy('for x in reversed(sorted([1, 9, 3, 2, 7, 8, 4])): print(x)') == '9\n8\n7\n4\n3\n2\n1'
 
 
 class TestExtra:

@@ -416,6 +416,39 @@ class Parser3(Parser2):
         else:
             raise JSError('any() needs one argument')
     
+    def function_enumerate(self, node):
+        if len(node.args) == 1:
+            # from .functions import py2js  # Re-use a for-loop
+            # t = py2js('res=[]\nfor val in iter: res.push([XXX, val])')
+            # iter_name = t.split('for (')[1].split(' ', 1)[0]
+            # t = t.replace('XXX', iter_name).replace('\n', '').replace('dummy', 'd')
+            # code = 'function (iter) {' + t + 'return res;}'
+            code = 'function (iter) { var i, res=[];'
+            code += self._make_iterable('iter', 'iter', False)
+            code += 'for (i=0; i<iter.length; i++) {res.push([i, iter[i]]);}'
+            code += 'return res;}'
+            self.vars_for_functions['enumerate'] = code
+        else:
+            raise JSError('enumerate() needs one argument')
+    
+    def function_reversed(self, node):
+        if len(node.args) == 1:
+            code = 'function (iter) {'
+            code += self._make_iterable('iter', 'iter', False)
+            code += 'return iter.slice().reverse();}'
+            self.vars_for_functions['reversed'] = code
+        else:
+            raise JSError('reversed() needs one argument')
+    
+    def function_sorted(self, node):
+        if len(node.args) == 1:
+            code = 'function (iter) {'
+            code += self._make_iterable('iter', 'iter', False)
+            code += 'return iter.slice().sort();}'
+            self.vars_for_functions['sorted'] = code
+        else:
+            raise JSError('sorted() needs one argument')
+    
     ## Extra functions
     
     def function_perf_counter(self, node):
