@@ -86,6 +86,10 @@ class TestHardcoreBuildins:
         assert evalpy(code + 'try:\n  getattr(a, "fooo")\n' + exc_att) == 'err'
         assert evalpy(code + 'getattr(a, "fooo", 3)') == '3'
     
+    def test_setattr(self):
+        code = 'a = {"foo":1};\n'
+        assert evalpy(code + 'setattr(a, "foo", 2); a') == "{ foo: 2 }"
+    
     def test_deltattr(self):
         code = 'a = {"foo":1};\n'
         assert evalpy(code + 'delattr(a, "foo")\na') == '{}'

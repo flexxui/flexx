@@ -90,8 +90,8 @@ More tests
     callable(foo)
 
 
-hasattr and getattr
--------------------
+hasattr, getattr, setattr and delattr
+-------------------------------------
 
 .. pyscript_example::
     
@@ -105,6 +105,8 @@ hasattr and getattr
     getattr(a, 'fooo')  # -> raise AttributeError
     getattr(a, 'fooo', 3)  # -> 3
     getattr(null, 'foo', 3)  # -> 3
+    
+    setattr(a, 'foo', 2)
     
     delattr(a, 'foo')
 
@@ -258,6 +260,17 @@ class Parser3(Parser2):
             return func + '(%s, %s, %s)' % (ob, name, default)
         else:
             raise JSError('hasattr() expects two or three arguments.')
+    
+    def function_setattr(self, node):
+        is_ok = "(ob !== undefined && ob !== null && ob[name] !== undefined)"
+        
+        if len(node.args) == 3:
+            ob = unify(self.parse(node.args[0]))
+            name = unify(self.parse(node.args[1]))
+            value = unify(self.parse(node.args[2]))
+            return '%s[%s] = %s' % (ob, name, value)
+        else:
+            raise JSError('setattr() expects three arguments.')
     
     def function_delattr(self, node):
         if len(node.args) == 2:
