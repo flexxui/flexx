@@ -115,6 +115,15 @@ class TestHardcoreBuildins:
     def test_max(self):
         assert evalpy('max([3, 4, 5, 1])') == '5'
         assert evalpy('max(3, 4, 5, 1)') == '5'
+    
+    def test_callable(self):
+        assert evalpy('callable([])') == 'false'
+        assert evalpy('callable(3)') == 'false'
+        
+        assert evalpy('callable(Boolean)') == 'true'
+        assert evalpy('callable(eval)') == 'true'
+        assert evalpy('def foo():pass\ncallable(foo)') == 'true'
+        assert evalpy('foo = lambda x:1\ncallable(foo)') == 'true'
 
 
 class TestOtherBuildins:

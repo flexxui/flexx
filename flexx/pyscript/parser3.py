@@ -68,6 +68,14 @@ for user-defined classes.
     isinstance(x, 'MyClass')  # equivalent
     isinstance(x, 'Object')  # also yields true (subclass of Object)
 
+More tests
+----------
+
+.. pyscript_example::
+    
+    callable(foo)
+
+
 hasattr and getattr
 -------------------
 
@@ -269,6 +277,13 @@ class Parser3(Parser2):
         else:
             args = ', '.join([unify(self.parse(arg)) for arg in node.args])
             return 'Math.min(', args, ')'
+    
+    def function_callable(self, node):
+        if len(node.args) == 1:
+            arg = ''.join(self.parse(node.args[0]))
+            return '(function (x) {return typeof x === "function";})(%s)' % arg
+        else:
+            raise JSError('callable() needs at least one argument')
     
     ## Normal functions (can be overloaded)
     
