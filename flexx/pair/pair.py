@@ -339,7 +339,7 @@ class Pair(react.with_metaclass(PairMeta, react.HasSignals)):
         
         @react.source
         def stub_mouse_pos(pos=(0, 0)):
-            return tuple(float(p[0]), float(p[1]))
+            return tuple([float(p[0]), float(p[1])])
         
         ## JS event system
         

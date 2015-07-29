@@ -149,6 +149,7 @@ class TestHardcoreBuildins:
     def test_list(self):
         assert evalpy('list("abc")') == "[ 'a', 'b', 'c' ]"
         assert evalpy('list({1:2, 3:4})') == "[ '1', '3' ]"
+        assert evalpy('tuple({1:2, 3:4})') == "[ '1', '3' ]"
     
     def test_dict(self):
         ok = "{ foo: 1, bar: 2 }", "{ bar: 2, foo: 1 }"
@@ -256,8 +257,12 @@ class TestOtherBuildins:
 
 class TestExtra:
     
+    def test_time(self):
+        import time
+        assert abs(float(evalpy('time.time()')) - time.time()) < 0.5
+    
     def test_perf_counter(self):
-        evalpy('t0=perf_counter(); t1=perf_counter(); (t1-t0)').startswith('0.0')
+        assert evalpy('t0=time.perf_counter(); t1=time.perf_counter(); (t1-t0)').startswith('0.0')
 
 
 class TestListMethods:

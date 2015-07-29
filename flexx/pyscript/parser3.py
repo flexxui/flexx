@@ -3,8 +3,11 @@
 Python Builtins
 ---------------
 
-Several common buildin functions are automatically translated to
-JavaScript.
+Most buildin functions (that make sense in JS) are automatically
+translated to JavaScript: isinstance, issubclass, callable, hasattr,
+getattr, setattr, delattr, print, len, max, min, chr, ord, dict, list,
+tuple, range, pow, sum, round, int, float, str, bool, abs, divmod, all,
+any, enumerate, zip, reversed, sorted, filter, map.
 
 .. pyscript_example::
 
@@ -50,6 +53,7 @@ JavaScript.
     list('abc')  # -> ['a', 'b', 'c']
     dict(other_dict)  # make a copy
     list(other_list)  # make copy
+
 
 The isinstance function (and friends)
 -------------------------------------
@@ -124,18 +128,6 @@ Creating sequences
     map(func, foo)
 
 
-Additional sugar
-----------------
-
-.. pyscript_example::
-    
-    # High resolution timer (as in time.perf_counter on Python 3)
-    t0 = perf_counter()
-    do_something()
-    t1 = perf_counter()
-    print('this took me', t1-t0, 'seconds')
-
-
 List methods
 ------------
 
@@ -166,6 +158,21 @@ Str methods
 .. pyscript_example::
 
     "foobar".startswith('foo')
+
+
+Additional sugar
+----------------
+
+.. pyscript_example::
+    
+    # Get time (number of seconds since epoch)
+    print(time.time())
+    
+    # High resolution timer (as in time.perf_counter on Python 3)
+    t0 = time.perf_counter()
+    do_something()
+    t1 = time.perf_counter()
+    print('this took me', t1-t0, 'seconds')
 
 """
 
@@ -383,7 +390,10 @@ class Parser3(Parser2):
             code += 'for (var i=0; i<x.length; i++) {r.push(x[i]);} return r;})'
             return code + '(%s)' % ''.join(self.parse(node.args[0]))
         else:
-            raise JSError('dict() needs at least one argument')
+            raise JSError('list() needs at least one argument')
+    
+    def function_tuple(self, node):
+        return self.function_list(node)
     
     def function_range(self, node):
         fun = 'function (start, end, step) {var i, res = []; for (i=start; i<end; i+=step) {res.push(i);} return res;}'
@@ -540,21 +550,6 @@ class Parser3(Parser2):
         else:
             raise JSError('map() needs two arguments')
     
-    # def function_reduce(self, node):
-    #     if len(node.args) == 2:
-    #         code = 'function (iter, func) {return iter.reduce(func);}'
-    #         self.vars_for_functions['filter'] = code
-    #     else:
-    #         raise JSError('reduce() needs two arguments')
-    
-    ## Extra functions
-    
-    def function_perf_counter(self, node):
-        if len(node.args) == 0:
-            # Work in nodejs and browser
-            dummy = self.dummy()
-            return '(typeof(process) === "undefined" ? performance.now()*1e-3 : ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy)
-            
     ## List methods
     
     def method_append(self, node, base):
@@ -608,3 +603,23 @@ class Parser3(Parser2):
         if len(node.args) == 1:
             arg = unify(self.parse(node.args[0]))
             return unify(base), '.indexOf(', arg, ') == 0'
+    
+    ## Extra functions / methods
+    
+    def method_time(self, node, base):  # time.time()
+        if base != 'time':
+            return
+        if len(node.args) == 0:
+            return '((new Date()).getTime() / 1000)'
+        else:
+            raise JSError('time() needs no argument')
+    
+    def method_perf_counter(self, node, base):  # time.perf_counter()
+        if base != 'time':
+            return
+        if len(node.args) == 0:
+            # Work in nodejs and browser
+            dummy = self.dummy()
+            return '(typeof(process) === "undefined" ? performance.now()*1e-3 : ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy)
+        else:
+            raise JSError('perf_counter() needs no argument')

@@ -4,7 +4,8 @@ is for many things faster than CPython. We run the exact same code to
 find the n-th prime on both Python and JS and measure the performance.
 """
 
-from time import perf_counter
+import time
+
 from flexx.pyscript import js
 from flexx import pair
 
@@ -24,13 +25,13 @@ def _find_prime(self, n):
                 return False
         return True
     
-    t0 = perf_counter()
+    t0 = time.perf_counter()
     i = 0
     while len(primes) < n:
         i += 1
         if isprime(i):
             primes.append(i)
-    t1 = perf_counter()
+    t1 = time.perf_counter()
     print(i, 'found in ', t1-t0, 'seconds')
 
 
