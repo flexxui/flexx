@@ -2,7 +2,7 @@
 """
 
 import os
-from flexx import ui
+from flexx import ui, pair
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,10 +14,9 @@ created_files = []
 def main():
     
     # Get all widget classes (sorted by name)
-    classes = ui.app.mirrored.get_mirrored_classes()
+    classes = pair.pair.get_pair_classes()
     classes = [cls for cls in classes if issubclass(cls, ui.Widget)]
     classes.sort(key = lambda x: x.__name__)
-    #classes.append(Mirrored)
     
     class_names = []
     for cls in classes:
