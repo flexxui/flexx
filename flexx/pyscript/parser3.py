@@ -92,6 +92,8 @@ hasattr and getattr
     getattr(a, 'fooo')  # -> raise AttributeError
     getattr(a, 'fooo', 3)  # -> 3
     getattr(null, 'foo', 3)  # -> 3
+    
+    delattr(a, 'foo')
 
 Additional sugar
 ----------------
@@ -212,7 +214,7 @@ class Parser3(Parser2):
             t = "((%s=%s) !== undefined && %s !== null && %s[%s] !== undefined)"
             return t % (dummy1, ob, dummy1, dummy1, name)
         else:
-            raise JSError('hasattr expects two arguments.')
+            raise JSError('hasattr() expects two arguments.')
     
     def function_getattr(self, node):
         is_ok = "(ob !== undefined && ob !== null && ob[name] !== undefined)"
@@ -231,7 +233,15 @@ class Parser3(Parser2):
             func += "else {return dflt;}})"
             return func + '(%s, %s, %s)' % (ob, name, default)
         else:
-            raise JSError('hasattr expects two or three arguments.')
+            raise JSError('hasattr() expects two or three arguments.')
+    
+    def function_delattr(self, node):
+        if len(node.args) == 2:
+            ob = unify(self.parse(node.args[0]))
+            name = unify(self.parse(node.args[1]))
+            return 'delete %s[%s]' % (ob, name)
+        else:
+            raise JSError('delattr() expects two arguments.')
     
     def function_print(self, node):
         # Process keywords
