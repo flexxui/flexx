@@ -280,9 +280,8 @@ class Parser1(Parser0):
     
     def _wrap_truthy(self, node):
         test = ''.join(self.parse(node))
-        if (test.startswith('_truthy(') or test.endswith('.length') or
-            test.isnumeric() or test == 'true' or test == 'false' or
-            not test.count('(') and (test.count('==') or test.count('!=') or test.count('is')) ):
+        if (('_truthy(' in test) or test.endswith('.length') or test.isnumeric() or 
+            test == 'true' or test == 'false' or test.count('==') or test.count('!=')):
             return test
         else:
             self.vars_for_functions['_truthy'] = bool_func

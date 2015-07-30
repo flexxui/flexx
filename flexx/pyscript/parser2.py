@@ -701,7 +701,6 @@ class Parser2(Parser1):
                     code += self.parse(child)
         
         # Wrap up
-        self._indent -= 1
         if lambda_:
             code.append('}')
             ns = self.pop_stack()  # Should conly consist of arg names
@@ -714,6 +713,7 @@ class Parser2(Parser1):
                 ns.discard(name)
             pre_code.append(self.get_declarations(ns))
         
+        self._indent -= 1
         return pre_code + code
     
     def parse_Lambda(self, node):

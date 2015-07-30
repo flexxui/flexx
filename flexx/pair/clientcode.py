@@ -10,7 +10,7 @@ This streamlines the inclusion in Jupyter and our export mechanism.
 import os
 from collections import OrderedDict
 
-from ..pyscript import js
+from ..pyscript import js, clean_code
 
 # todo: minification
 
@@ -424,7 +424,7 @@ class ClientCode(object):
                 parts.extend(self._js[key])
         else:
             parts.extend(self._js[selection])
-        return '\n\n'.join(parts)
+        return clean_code('\n\n'.join(parts))
     
     def get_css(self, selection='all'):
         """ Get CSS as a single string.

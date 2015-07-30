@@ -148,11 +148,11 @@ class PairMeta(react.HasSignalsMeta):
         code = []
         # Add JS version of HasSignals when this is the Pair class
         if cls.mro()[1] is react.HasSignals:
-            c = js(serializer.__class__).jscode[4:]  # skip 'var '
-            code.append(c.replace('Serializer', 'flexx.Serializer'))
+            c = js(serializer.__class__).jscode_renamed('flexx.Serializer')
+            code.append(c)
             code.append('flexx.serializer = new flexx.Serializer();')
-            c = HasSignalsJS.jscode[4:]  # skip 'var '
-            code.append(c.replace('HasSignals', 'flexx.classes.HasSignals'))
+            c = HasSignalsJS.jscode_renamed('flexx.classes.HasSignals')
+            code.append(c)
         # Add this class
         code.append(create_js_signals_class(cls.JS, cls_name, base_class))
         if cls.mro()[1] is react.HasSignals:

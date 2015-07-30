@@ -54,6 +54,7 @@ class WebRuntime(object):
         environ = os.environ.copy()
         environ.update(env)
         try:
+            # todo: use a file os stdin, because passing big pieces of code fails on Windows.
             self._proc = subprocess.Popen(cmd, env=environ,
                                           stdout=subprocess.PIPE, 
                                           stderr=subprocess.STDOUT)

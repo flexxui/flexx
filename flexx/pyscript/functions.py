@@ -117,19 +117,20 @@ def js(ob, **parser_options):
         jscode (JSCode): An object that has a ``jscode``, ``pycode``
         and ``name`` attribute.
     
-    Note that the Python source code for a class is acquired by name.
-    Therefore one should avoid decorating classes in modules where
-    multiple classes with the same name are defined. This is a
-    consequence of classes not having a corresponding code object (in
-    contrast to functions).
-    
-    Note that function names can be mangled to avoid clashing: "_js"
-    is stripped from both ends::
-    
-        def _js_method_a():
-            pass  # becomes "_method_a"
-        def method_b_js():
-            pass  # becomes "method_b"
+    Notes:
+        The Python source code for a class is acquired by name.
+        Therefore one should avoid decorating classes in modules where
+        multiple classes with the same name are defined. This is a
+        consequence of classes not having a corresponding code object (in
+        contrast to functions).
+        
+        Function names can be mangled to avoid clashing: "_js"
+        is stripped from both ends::
+        
+            def _js_method_a():
+                pass  # becomes "_method_a"
+            def method_b_js():
+                pass  # becomes "method_b"
     
     """
     
@@ -177,6 +178,28 @@ def js(ob, **parser_options):
     return JSCode(thetype, name, code, **parser_options)
 
 
+def clean_code(code):
+    """ Remove duplicate declarations of std function definitions. Use
+    this if you build a JS source file from multiple snippets and want
+    to get rid of the function declarations like ``_truthy`` and
+    ``sum``.
+    """
+    known_funcs = {}
+    
+    lines = []
+    for line in code.splitlines():
+        line2 = line.lstrip()
+        indent = len(line) - len(line2)
+        if line2.startswith('var ') and ' = function ' in line2:
+            prev_indent = known_funcs.get(line2, 999)
+            if prev_indent == 0 :
+                continue
+            if indent == 0:
+                known_funcs[line2] = indent
+        lines.append(line)
+    return '\n'.join(lines)
+
+    
 class JSCode(object):
     """ Placeholder for storing the original Python code and the JS
     code for a class or function.
@@ -197,16 +220,8 @@ class JSCode(object):
         
         p = Parser(pycode, **parser_options)
         
-        if thetype == 'function':
-            # Convert to JS, but strip function name,
-            # so that string starts with "function ( ..."
-            p._parts[0] = ''  # remove "var xx"
-            p._parts[1] = ''  # remove "xx = "
-            self._jscode = p.dump()
-            # assert self._jscode.startswith('function')
-        elif thetype == 'class':
-            self._jscode = p.dump()
-            assert self._jscode.startswith('var %s' % name)
+        self._jscode = p.dump()
+        assert self._jscode[:99].lstrip().startswith('var %s' % name)
     
     @property
     def type(self):
@@ -240,6 +255,18 @@ class JSCode(object):
         """ The resulting JavaScript code for this function/class.
         """
         return self._jscode
+    
+    def jscode_renamed(self, new_name):
+        """ Get the JavaScript code, but with a prefix prepended to the
+        class/function name. This also removes the ``var name;``.
+        """
+        assert new_name
+        code = self.jscode
+        code = code.replace('%s = function' % self._name, '%s = function' % (new_name), 1)
+        code = code.replace('%s.prototype' % self._name, '%s.prototype' % new_name)
+        if '.' in new_name:
+            code = code.replace('var %s;\n' % self._name, '', 1)
+        return code
     
     def __call__(self, *args, **kwargs):
         action = {'function': 'call', 'class': 'instantiate'}[self._type]

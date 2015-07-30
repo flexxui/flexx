@@ -316,10 +316,16 @@ class Parser3(Parser2):
             raise JSError('float() needs one argument')
     
     def function_str(self, node):
-        if len(node.args) == 1:
+        if len(node.args) in (0, 1):
             self.vars_for_functions['str'] = 'String'
         else:
-            raise JSError('str() needs one argument')
+            raise JSError('str() needs zero or one argument')
+    
+    def function_repr(self, node):
+        if len(node.args) == 1:
+            self.vars_for_functions['repr'] = 'function (x) {return x.toSource();}'
+        else:
+            raise JSError('repr() needs one argument')
     
     def function_bool(self, node):
         if len(node.args) == 1:

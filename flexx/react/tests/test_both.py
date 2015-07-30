@@ -39,7 +39,7 @@ def run_in_both(cls, reference, extra_classes=()):
             for c in extra_classes:
                 code += create_js_signals_class(c, c.__name__)
             code += create_js_signals_class(cls, cls.__name__, cls.__bases__[0].__name__+'.prototype')
-            code += 'var test = ' + js(func).jscode
+            code += js(func).jscode_renamed('test')
             code += 'test(%s);' % cls.__name__
             jsresult = evaljs(code)
             jsresult = jsresult.replace('[ ', '[').replace(' ]', ']')

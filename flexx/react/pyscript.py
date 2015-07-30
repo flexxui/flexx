@@ -58,8 +58,8 @@ class HasSignals:
         selff = self._create_Signal(func, upstream, selff)
         selff._active = True
         
-        selff._update_value = SourceSignal__update_value_from_py
-        selff._set = SourceSignal__set_from_py
+        SourceSignal__update_value_from_py
+        SourceSignal__set_from_py
         
         return selff
     
@@ -118,14 +118,14 @@ class HasSignals:
         selff._downstream_reconnect = []
         
         # Functions that we re-use from the Python implementation of signals
-        selff.connect = BaseSignal_connect_from_py
-        selff.disconnect = BaseSignal_disconnect_from_py
-        selff._subscribe = BaseSignal__subscribe_from_py
-        selff._unsubscribe = BaseSignal__unsubscribe_from_py
-        selff._get_value = BaseSignal__get_value_from_py
-        selff._update_value = BaseSignal__update_value_from_py
-        selff._set_status = BaseSignal__set_status_from_py
-        selff._seek_signal = BaseSignal__seek_signal_from_py
+        BaseSignal_connect_from_py
+        BaseSignal_disconnect_from_py
+        BaseSignal__subscribe_from_py
+        BaseSignal__unsubscribe_from_py
+        BaseSignal__get_value_from_py
+        BaseSignal__update_value_from_py
+        BaseSignal__set_status_from_py
+        BaseSignal__seek_signal_from_py
         
         # Some functions need JS specifics
         
@@ -183,8 +183,9 @@ def patch_HasSignals():
                     '_get_value', '_update_value', '_set_status', '_seek_signal'):
             if name in cls.__dict__:
                 code = js(cls.__dict__[name], indent=1, docstrings=False)
+                code = code.jscode_renamed('selff.' + name)
                 template = '%s_%s_from_py;' % (signal_type, name)
-                HasSignalsJS._jscode = HasSignalsJS._jscode.replace(template, code.jscode)
+                HasSignalsJS._jscode = HasSignalsJS._jscode.replace(template, code.lstrip())
     assert 'from_py' not in HasSignalsJS._jscode
 patch_HasSignals()
 
@@ -212,13 +213,12 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
     
     for name, val in sorted(cls.__dict__.items()):
         if isinstance(val, Signal):
-            code = js(val._func).jscode
-            code = code.replace('super()', base_class)  # fix super
             signals.append(name)
             funcname = '_' + name + '_func'
             # Add function def
-            t = '%s.prototype.%s = %s'
-            funcs_code.append(t % (cls_name, funcname, code))
+            code = js(val._func).jscode_renamed(cls_name + '.prototype.' + funcname)
+            code = code.replace('super()', base_class)  # fix super
+            funcs_code.append(code)
             # Add upstream signal names to the function object
             t = '%s.prototype.%s._upstream = %r;\n'
             funcs_code.append(t % (cls_name, funcname, val._upstream_given))
@@ -227,9 +227,9 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             signal_type = val.__class__.__name__
             funcs_code.append(t % (cls_name, funcname, signal_type))
         elif callable(val):
-            code = js(val).jscode
+            code = js(val).jscode_renamed(cls_name + '.prototype.' + name)
             code = code.replace('super()', base_class)  # fix super
-            funcs_code.append('%s.prototype.%s = %s' % (cls_name, name, code))
+            funcs_code.append(code)
         elif name.startswith('__'):
             pass  # we create our own __signals__ list
         elif isinstance(val, (int, float, str)):

@@ -208,7 +208,7 @@ class Parser0(object):
             
         else:
             if self._parts:
-                self._parts[0] = self._parts[0].lstrip()
+                self._parts[0] = '    ' * indent + self._parts[0].lstrip()
     
     def dump(self):
         """ Get the JS code as a string.
@@ -286,12 +286,7 @@ class Parser0(object):
     def vars_for_functions(self):
         """ Function declarations are added to the second stack if available.
         """
-        # todo: can we add to the first stack if we provide functionalitty to filter
-        # out duplicate definitions when code is composed of multiple parts?
-        if len(self._stack) > 1:
-            return self._stack[1][2]
-        else:
-            return self._stack[0][2]
+        return self._stack[0][2]
     
     def lf(self, code=''):
         """ Line feed - create a new line with the correct indentation.
