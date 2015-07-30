@@ -66,6 +66,13 @@ class TestHardcoreBuildins:
         assert evaljs(code + py2js('isinstance(x, "MyClass")')) == 'true'
         assert evaljs(code + py2js('isinstance(x, MyClass)')) == 'true'
     
+    def test_issubclass(self):
+        code = 'class Foo:pass\nclass Bar(Foo): pass\n'
+        assert evalpy(code + 'issubclass(Bar, Foo)') == 'true'
+        assert evalpy(code + 'issubclass(Foo, Bar)') == 'false'
+        assert evalpy(code + 'issubclass(Bar, object)') == 'true'
+        
+        
     def test_hasattr(self):
         code = 'a = {"foo":1, "bar":2};\n'
         assert evalpy(code + 'hasattr(a, "foo")') == 'true'
@@ -78,6 +85,14 @@ class TestHardcoreBuildins:
         exc_att = 'except AttributeError: print("err")'
         assert evalpy(code + 'try:\n  getattr(a, "fooo")\n' + exc_att) == 'err'
         assert evalpy(code + 'getattr(a, "fooo", 3)') == '3'
+    
+    def test_setattr(self):
+        code = 'a = {"foo":1};\n'
+        assert evalpy(code + 'setattr(a, "foo", 2); a') == "{ foo: 2 }"
+    
+    def test_deltattr(self):
+        code = 'a = {"foo":1};\n'
+        assert evalpy(code + 'delattr(a, "foo")\na') == '{}'
     
     def test_print(self):
         # Test code
@@ -125,12 +140,37 @@ class TestHardcoreBuildins:
         assert evalpy('def foo():pass\ncallable(foo)') == 'true'
         assert evalpy('foo = lambda x:1\ncallable(foo)') == 'true'
 
+    def test_chr_and_ord(self):
+        assert evalpy('chr(65)') == 'A'
+        assert evalpy('chr(65+32)') == 'a'
+        assert evalpy('ord("A")') == '65'
+        assert evalpy('ord("a")') == '97'
+    
+    def test_list(self):
+        assert evalpy('list("abc")') == "[ 'a', 'b', 'c' ]"
+        assert evalpy('list({1:2, 3:4})') == "[ '1', '3' ]"
+        assert evalpy('tuple({1:2, 3:4})') == "[ '1', '3' ]"
+    
+    def test_dict(self):
+        ok = "{ foo: 1, bar: 2 }", "{ bar: 2, foo: 1 }"
+        assert evalpy('dict([["foo", 1], ["bar", 2]])') in ok
+        assert evalpy('dict({"foo": 1, "bar": 2})') in ok
+    
+    def test_range(self):
+        assert evalpy('list(range(4))') == '[ 0, 1, 2, 3 ]'
+        assert evalpy('list(range(2, 4))') == '[ 2, 3 ]'
+        assert evalpy('list(range(2, 9, 2))') == '[ 2, 4, 6, 8 ]'
+        assert evalpy('list(range(10, 3, -2))') == '[ 10, 8, 6, 4 ]'
 
 class TestOtherBuildins:
     
     def test_allow_overload(self):
         assert evalpy('sum([3, 4])') == '7'
         assert evalpy('sum = lambda x:1\nsum([3, 4])') == '1'
+    
+    def test_pow(self):
+        assert evalpy('pow(2, 3)') == '8'
+        assert evalpy('pow(10, 2)') == '100'
     
     def test_sum(self):
         assert evalpy('sum([3, 4, 1, 5, 2])') == '15'
@@ -175,6 +215,10 @@ class TestOtherBuildins:
         assert evalpy('abs(0)') == '0'
         assert evalpy('abs(-2)') == '2'
     
+    def test_divod(self):
+        assert evalpy('divmod(13, 3)') == '[ 4, 1 ]'
+        assert evalpy('a, b = divmod(100, 7); print(a); print(b)') == '14\n2'
+        
     def test_all(self):
         assert evalpy('all([1, 2, 3])') == 'true' 
         assert evalpy('all([0, 2, 3])') == 'false'
@@ -185,12 +229,40 @@ class TestOtherBuildins:
         assert evalpy('any([0, 2, 0])') == 'true'
         assert evalpy('any([0, 0, 0])') == 'false'
         assert evalpy('any([])') == 'false' 
+    
+    def test_enumerate(self):
+        assert evalpy('for i, x in enumerate([10, 20, 30]): print(i*x)') == '0\n20\n60'
+    
+    def test_zip(self):
+        assert evalpy('for i, x in zip([1, 2, 3], [10, 20, 30]): print(i*x)') == '10\n40\n90'
+    
+    def test_reversed(self):
+        assert evalpy('for x in reversed([10, 20, 30]): print(x)') == '30\n20\n10'
+    
+    def test_sorted(self):
+        assert evalpy('for x in sorted([1, 9, 3, 2, 7, 8, 4]): print(x)') == '1\n2\n3\n4\n7\n8\n9'
+        assert evalpy('for x in reversed(sorted([1, 9, 3, 2, 7, 8, 4])): print(x)') == '9\n8\n7\n4\n3\n2\n1'
+    
+    def test_filter(self):
+        assert list(filter(lambda x:x>0, [-1, -2, 1, 2])) == [1, 2]
+        
+        code = 'f1 = lambda x: x>0\n'
+        assert evalpy(code + 'for x in filter(f1, [-1, -2, 0, 1, 2]): print(x)') == '1\n2'
+        assert evalpy(code + 'for x in filter(None, [-1, -2, 0, 1, 2]): print(x)') == '-1\n-2\n1\n2'
+    
+    def test_map(self):
+        code = 'f1 = lambda x: x+2\n'
+        assert evalpy(code + 'for x in map(f1, [-1, 0, 2]): print(x)') == '1\n2\n4'
 
 
 class TestExtra:
     
+    def test_time(self):
+        import time
+        assert abs(float(evalpy('time.time()')) - time.time()) < 0.5
+    
     def test_perf_counter(self):
-        evalpy('t0=perf_counter(); t1=perf_counter(); (t1-t0)').startswith('0.0')
+        assert evalpy('t0=time.perf_counter(); t1=time.perf_counter(); (t1-t0)').startswith('0.0')
 
 
 class TestListMethods:

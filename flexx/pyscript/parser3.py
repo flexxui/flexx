@@ -3,8 +3,11 @@
 Python Builtins
 ---------------
 
-Several common buildin functions are automatically translated to
-JavaScript.
+Most buildin functions (that make sense in JS) are automatically
+translated to JavaScript: isinstance, issubclass, callable, hasattr,
+getattr, setattr, delattr, print, len, max, min, chr, ord, dict, list,
+tuple, range, pow, sum, round, int, float, str, bool, abs, divmod, all,
+any, enumerate, zip, reversed, sorted, filter, map.
 
 .. pyscript_example::
 
@@ -29,6 +32,9 @@ JavaScript.
     max(foo)
     max(a, b, c)
     
+    # divmod
+    a, b = divmod(100, 7)  # -> 14, 2
+    
     # Aggregation
     sum(foo)
     all(foo)
@@ -38,11 +44,19 @@ JavaScript.
     str(s)
     float(x)
     bool(y)
-    int(z)  # this also rounds towards zero
+    int(z)  # this rounds towards zero like in Python
+    chr(65)  # -> 'A'
+    ord('A')  # -> 65
+    
+    # Turning things into lists and dicts
+    dict([['foo', 1], ['bar', 2]])  # -> {'foo': 1, 'bar': 2}
+    list('abc')  # -> ['a', 'b', 'c']
+    dict(other_dict)  # make a copy
+    list(other_list)  # make copy
 
 
-The isinstance function
------------------------
+The isinstance function (and friends)
+-------------------------------------
 
 The ``isinstance()`` function works for all JS primitive types, but also
 for user-defined classes.
@@ -67,17 +81,16 @@ for user-defined classes.
     isinstance(x, MyClass)
     isinstance(x, 'MyClass')  # equivalent
     isinstance(x, 'Object')  # also yields true (subclass of Object)
-
-More tests
-----------
-
-.. pyscript_example::
     
+    # issubclass works too
+    issubclass(Foo, Bar)
+    
+    # As well as callable
     callable(foo)
 
 
-hasattr and getattr
--------------------
+hasattr, getattr, setattr and delattr
+-------------------------------------
 
 .. pyscript_example::
     
@@ -91,17 +104,28 @@ hasattr and getattr
     getattr(a, 'fooo')  # -> raise AttributeError
     getattr(a, 'fooo', 3)  # -> 3
     getattr(null, 'foo', 3)  # -> 3
+    
+    setattr(a, 'foo', 2)
+    
+    delattr(a, 'foo')
 
-Additional sugar
-----------------
+
+Creating sequences
+------------------
 
 .. pyscript_example::
     
-    # High resolution timer (as in time.perf_counter on Python 3)
-    t0 = perf_counter()
-    do_something()
-    t1 = perf_counter()
-    print('this took me', t1-t0, 'seconds')
+    range(10)
+    range(2, 10, 2)
+    range(100, 0, -1)
+    
+    reversed(foo)
+    sorted(foo)
+    enumerate(foo)
+    zip(foo, bar)
+    
+    filter(func, foo)
+    map(func, foo)
 
 
 List methods
@@ -135,6 +159,21 @@ Str methods
 
     "foobar".startswith('foo')
 
+
+Additional sugar
+----------------
+
+.. pyscript_example::
+    
+    # Get time (number of seconds since epoch)
+    print(time.time())
+    
+    # High resolution timer (as in time.perf_counter on Python 3)
+    t0 = time.perf_counter()
+    do_something()
+    t1 = time.perf_counter()
+    print('this took me', t1-t0, 'seconds')
+
 """
 
 import ast
@@ -165,7 +204,7 @@ class Parser3(Parser2):
     
     def function_isinstance(self, node):
         if len(node.args) != 2:
-            raise JSError('isinstance expects two arguments.')
+            raise JSError('isinstance() expects two arguments.')
         
         ob = unify(self.parse(node.args[0]))
         cls = unify(self.parse(node.args[1]))
@@ -203,6 +242,17 @@ class Parser3(Parser2):
                 raise JSError('isinstance() can only compare to simple types')
             return ob, " instanceof ", cmp
     
+    def function_issubclass(self, node):
+        # issubclass only needs to work on custom classes
+        if len(node.args) != 2:
+            raise JSError('issubclass() expects two arguments.')
+        
+        cls1 = unify(self.parse(node.args[0]))
+        cls2 = unify(self.parse(node.args[1]))
+        if cls2 == 'object':
+            cls2 = 'Object'
+        return '(%s.prototype instanceof %s)' % (cls1, cls2)
+    
     def function_hasattr(self, node):
         if len(node.args) == 2:
             ob = unify(self.parse(node.args[0]))
@@ -211,7 +261,7 @@ class Parser3(Parser2):
             t = "((%s=%s) !== undefined && %s !== null && %s[%s] !== undefined)"
             return t % (dummy1, ob, dummy1, dummy1, name)
         else:
-            raise JSError('hasattr expects two arguments.')
+            raise JSError('hasattr() expects two arguments.')
     
     def function_getattr(self, node):
         is_ok = "(ob !== undefined && ob !== null && ob[name] !== undefined)"
@@ -230,7 +280,26 @@ class Parser3(Parser2):
             func += "else {return dflt;}})"
             return func + '(%s, %s, %s)' % (ob, name, default)
         else:
-            raise JSError('hasattr expects two or three arguments.')
+            raise JSError('hasattr() expects two or three arguments.')
+    
+    def function_setattr(self, node):
+        is_ok = "(ob !== undefined && ob !== null && ob[name] !== undefined)"
+        
+        if len(node.args) == 3:
+            ob = unify(self.parse(node.args[0]))
+            name = unify(self.parse(node.args[1]))
+            value = unify(self.parse(node.args[2]))
+            return '%s[%s] = %s' % (ob, name, value)
+        else:
+            raise JSError('setattr() expects three arguments.')
+    
+    def function_delattr(self, node):
+        if len(node.args) == 2:
+            ob = unify(self.parse(node.args[0]))
+            name = unify(self.parse(node.args[1]))
+            return 'delete %s[%s]' % (ob, name)
+        else:
+            raise JSError('delattr() expects two arguments.')
     
     def function_print(self, node):
         # Process keywords
@@ -280,12 +349,80 @@ class Parser3(Parser2):
     
     def function_callable(self, node):
         if len(node.args) == 1:
-            arg = ''.join(self.parse(node.args[0]))
-            return '(function (x) {return typeof x === "function";})(%s)' % arg
+            arg = unify(self.parse(node.args[0]))
+            return '(typeof %s === "function")' % arg
         else:
             raise JSError('callable() needs at least one argument')
     
+    def function_chr(self, node):
+        if len(node.args) == 1:
+            arg = ''.join(self.parse(node.args[0]))
+            return 'String.fromCharCode(%s)' % arg
+        else:
+            raise JSError('chr() needs at least one argument')
+    
+    def function_ord(self, node):
+        if len(node.args) == 1:
+            arg = ''.join(self.parse(node.args[0]))
+            return '%s.charCodeAt(0)' % arg
+        else:
+            raise JSError('ord() needs at least one argument')
+    
+    def function_dict(self, node):
+        if len(node.args) == 0:
+            return '{}'
+        if len(node.args) == 1:
+            code = '(function(x) {var t, i, keys, r={};'
+            code += 'if (Array.isArray(x)) {'
+            code += 'for (i=0; i<x.length; i++) {t=x[i]; r[t[0]] = t[1];} return r;'
+            code += '} else {'
+            code += 'keys = Object.keys(x); for (i=0; i<keys.length; i++) {t=keys[i]; r[t] = x[t];} return r;}})'
+            return code + '(%s)' % ''.join(self.parse(node.args[0]))
+        else:
+            raise JSError('dict() needs at least one argument')
+    
+    def function_list(self, node):
+        if len(node.args) == 0:
+            return '[]'
+        if len(node.args) == 1:
+            code = '(function(x) {var r=[];'
+            code += 'if (typeof x==="object" && !Array.isArray(x)) {x=Object.keys(x)}'
+            code += 'for (var i=0; i<x.length; i++) {r.push(x[i]);} return r;})'
+            return code + '(%s)' % ''.join(self.parse(node.args[0]))
+        else:
+            raise JSError('list() needs at least one argument')
+    
+    def function_tuple(self, node):
+        return self.function_list(node)
+    
+    def function_range(self, node):
+        fun = 'function (start, end, step) {var i, res = []; for (i=start; i<end; i+=step) {res.push(i);} return res;}'
+        
+        if len(node.args) == 1:
+            end = unify(self.parse(node.args[0]))
+            return '(%s)(0, %s, 1)' % (fun, end)
+        elif len(node.args) == 2:
+            start = unify(self.parse(node.args[0]))
+            end = unify(self.parse(node.args[1]))
+            return '(%s)(%s, %s, 1)' % (fun, start, end)
+        elif len(node.args) == 3:
+            start = unify(self.parse(node.args[0]))
+            end = unify(self.parse(node.args[1]))
+            step = ''.join(self.parse(node.args[2]))
+            if step.lstrip('+-').isnumeric() and float(step) < 0:
+                fun = fun.replace('<', '>')
+            return '(%s)(%s, %s, %s)' % (fun, start, end, step)
+        else:
+            raise JSError('range() needs 1, 2 or 3 arguments')
+    
     ## Normal functions (can be overloaded)
+    
+    def function_pow(self, node):
+        if len(node.args) == 2:
+            self.vars_for_functions['pow'] = 'Math.pow'
+            return None
+        else:
+            raise JSError('pow() needs exactly two argument2')
     
     def function_sum(self, node):
         if len(node.args) == 1:
@@ -340,6 +477,13 @@ class Parser3(Parser2):
         else:
             raise JSError('abs() needs one argument')
     
+    def function_divmod(self, node):
+        if len(node.args) == 2:
+            code = 'function (x, y) {var m = x % y; return [(x-m)/y, m];}'
+            self.vars_for_functions['divmod'] = code
+        else:
+            raise JSError('divmod() needs two arguments')
+        
     def function_all(self, node):
         if len(node.args) == 1:
             self._wrap_truthy(ast.Name('x', ''))  # trigger _truthy function declaration
@@ -356,14 +500,62 @@ class Parser3(Parser2):
         else:
             raise JSError('any() needs one argument')
     
-    ## Extra functions
+    def function_enumerate(self, node):
+        if len(node.args) == 1:
+            code = 'function (iter) { var i, res=[];'
+            code += self._make_iterable('iter', 'iter', False)
+            code += 'for (i=0; i<iter.length; i++) {res.push([i, iter[i]]);}'
+            code += 'return res;}'
+            self.vars_for_functions['enumerate'] = code
+        else:
+            raise JSError('enumerate() needs one argument')
     
-    def function_perf_counter(self, node):
-        if len(node.args) == 0:
-            # Work in nodejs and browser
-            dummy = self.dummy()
-            return '(typeof(process) === "undefined" ? performance.now()*1e-3 : ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy)
-            
+    def function_zip(self, node):
+        if len(node.args) == 2:
+            code = 'function (iter1, iter2) { var i, res=[];'
+            code += self._make_iterable('iter1', 'iter1', False)
+            code += self._make_iterable('iter2', 'iter2', False)
+            code += 'var len = Math.min(iter1.length, iter2.length);'
+            code += 'for (i=0; i<len; i++) {res.push([iter1[i], iter2[i]]);}'
+            code += 'return res;}'
+            self.vars_for_functions['zip'] = code
+        else:
+            raise JSError('zip() needs two arguments')
+             
+    def function_reversed(self, node):
+        if len(node.args) == 1:
+            code = 'function (iter) {'
+            code += self._make_iterable('iter', 'iter', False)
+            code += 'return iter.slice().reverse();}'
+            self.vars_for_functions['reversed'] = code
+        else:
+            raise JSError('reversed() needs one argument')
+    
+    def function_sorted(self, node):
+        if len(node.args) == 1:
+            code = 'function (iter) {'
+            code += self._make_iterable('iter', 'iter', False)
+            code += 'return iter.slice().sort();}'
+            self.vars_for_functions['sorted'] = code
+        else:
+            raise JSError('sorted() needs one argument')
+    
+    def function_filter(self, node):
+        if len(node.args) == 2:
+            code = 'function (func, iter) {'
+            code += 'if (typeof func === "undefined" || func === null) {func = function(x) {return x;}}'
+            code += 'return iter.filter(func);}'
+            self.vars_for_functions['filter'] = code
+        else:
+            raise JSError('filter() needs two arguments')
+    
+    def function_map(self, node):
+        if len(node.args) == 2:
+            code = 'function (func, iter) {return iter.map(func);}'
+            self.vars_for_functions['map'] = code
+        else:
+            raise JSError('map() needs two arguments')
+    
     ## List methods
     
     def method_append(self, node, base):
@@ -417,3 +609,23 @@ class Parser3(Parser2):
         if len(node.args) == 1:
             arg = unify(self.parse(node.args[0]))
             return unify(base), '.indexOf(', arg, ') == 0'
+    
+    ## Extra functions / methods
+    
+    def method_time(self, node, base):  # time.time()
+        if base != 'time':
+            return
+        if len(node.args) == 0:
+            return '((new Date()).getTime() / 1000)'
+        else:
+            raise JSError('time() needs no argument')
+    
+    def method_perf_counter(self, node, base):  # time.perf_counter()
+        if base != 'time':
+            return
+        if len(node.args) == 0:
+            # Work in nodejs and browser
+            dummy = self.dummy()
+            return '(typeof(process) === "undefined" ? performance.now()*1e-3 : ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy)
+        else:
+            raise JSError('perf_counter() needs no argument')

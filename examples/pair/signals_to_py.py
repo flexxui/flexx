@@ -18,7 +18,7 @@ class Clock(pair.Pair):
         def _init(this):
             that = this
             def _set_time():
-                that.time._set(perf_counter())  # perf_counter() is a PyScript feature
+                that.time._set(time.perf_counter())  # perf_counter() is a PyScript feature
             
             setInterval(_set_time, 200)
         

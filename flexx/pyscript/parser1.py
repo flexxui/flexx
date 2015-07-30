@@ -12,6 +12,7 @@ equivalents.
     3 + 4 -1
     3 * 7 / 9
     5**2
+    pow(5, 2)
     7 // 2
     
     # Basic types
