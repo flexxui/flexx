@@ -23,27 +23,13 @@ class SeleniumRuntime(WebRuntime):
         # Import here; selenium is an optional dependency
         from selenium import webdriver
         
-        # If that did not work, maybe we should try harder
-        # In particular on Windows, the exes may simply not be on the path
         if type.lower() == 'firefox':
-            # from .xul import get_firefox_exe
-            # exe = get_firefox_exe()
-            # if exe:
-            #     os.environ['PATH'] += os.pathsep + os.path.dirname(exe)
             self._driver = webdriver.Firefox()
         
         elif type.lower() == 'chrome':
-            # from .chromeapp import get_chrome_exe
-            # exe = get_chrome_exe() or 'google-chrome'
-            # if exe:
-            #     os.environ['PATH'] += os.pathsep + os.path.dirname(exe)
             self._driver = webdriver.Chrome()
         
         elif type.lower() == 'ie':
-            from .mshtml import get_ie_exe
-            # exe = get_ie_exe()
-            # if exe:
-            #     os.environ['PATH'] += os.pathsep + exe
             self._driver = webdriver.Ie()
         
         elif type:

@@ -11,9 +11,11 @@ communicate via the websocket.
 """
 
 import os
+import sys
 import json
 import logging
 import subprocess
+import tempfile
 try:
     from urllib.parse import urlparse
     from urllib.request import urlopen
@@ -123,5 +125,16 @@ class NodejsRuntime(WebRuntime):
                           'pathname': p.path.strip('/')})
         code = ('var location = %s;\n' % loc) + code
         
-        cmd = [get_node_exe(), '-e', code]
+        # Fix for Windows - by default global modules are searched in wrong place
+        if sys.platform.startswith('win') and os.getenv('NODE_PATH') is None:
+            os.environ['NODE_PATH'] = os.getenv('APPDATA') + '\\npm\\node_modules'
+        
+        # Write code to tempfile
+        f = tempfile.NamedTemporaryFile('wt', prefix='flexx_nodejs_', suffix='.js')
+        f.file.write(code)
+        f.file.flush()
+        self._code_file = f  # keep a reference to prevent deletion too soon
+        
+        # Launch
+        cmd = [get_node_exe(), f.name]
         self._start_subprocess(cmd)

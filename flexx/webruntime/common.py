@@ -58,8 +58,9 @@ class WebRuntime(object):
             self._proc = subprocess.Popen(cmd, env=environ,
                                           stdout=subprocess.PIPE, 
                                           stderr=subprocess.STDOUT)
-        except OSError:
-            raise RuntimeError('Invalid command to start runtime: %r' % cmd[0])
+        except OSError as err:
+            raise RuntimeError('Could not start runtime with command %r:\n%s' %
+                               (cmd[0], str(err)))
         self._streamreader = StreamReader(self._proc)
         self._streamreader.start()
     
