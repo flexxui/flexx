@@ -114,7 +114,7 @@ class FlexxJS:
                 #WebSocket = require('websocket').client
             except Exception:
                 # Better error message
-                raise "FAIL: you need to 'npm install ws'."
+                raise "FAIL: you need to 'npm install -g ws'."
         else:
             WebSocket = window.WebSocket
             if (window.WebSocket is undefined):
