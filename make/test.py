@@ -7,24 +7,24 @@
 import os
 import sys
 
-from make import ROOT_DIR, TEST_DIR, NAME, run
+from make import ROOT_DIR, NAME, run
 
 
-def test(arg=''):
+def test(arg='', *args):
    
     if not arg:
         return run('help', 'test')
     elif arg == 'unit':
-        test_unit()
+        test_unit(*args)
     elif arg in ('style', 'flake', 'flake8'):
-        test_style()
+        test_style(*args)
     elif arg in ('cover', 'coverage'):
-        show_coverage_html()
+        show_coverage_html(*args)
     else:
         sys.exit('invalid test mode %r' % arg)
 
 
-def test_unit():
+def test_unit(rel_path=''):
     """ Peform unit tests using flake
     """
     # Test if pytest is there
@@ -34,10 +34,11 @@ def test_unit():
         sys.exit('Cannot do unit tests, pytest not installed')
     _enable_faulthandler()
     cov_report = 'term'
+    test_dir = os.path.join(ROOT_DIR, rel_path)
     try:
         return pytest.main('-v --cov %s --cov-config .coveragerc '
                             '--cov-report %s %s' % 
-                            (NAME, cov_report, repr(TEST_DIR)))
+                            (NAME, cov_report, repr(test_dir)))
     finally:
         m = __import__(NAME)
         print('Tests were performed on', str(m))
@@ -67,7 +68,7 @@ def show_coverage_html():
     webbrowser.open_new_tab(fname)
 
 
-def test_style():
+def test_style(rel_path=''):
     """ Test style using flake8
     """
     # Test if flake is there
@@ -76,8 +77,10 @@ def test_style():
     except ImportError:
         sys.exit('Cannot do flake8 test, flake8 not installed')
     
+    path = os.path.join(ROOT_DIR, rel_path)
+    
     # Reporting
-    print('Running flake8 on %s' % ROOT_DIR)
+    print('Running flake8 on %s' % path)
     sys.stdout = FileForTesting(sys.stdout)
     
     # Init
@@ -86,8 +89,8 @@ def test_style():
     count_ok, count_fail = 0, 0
     
     # Iterate over files
-    for dir, dirnames, filenames in os.walk(ROOT_DIR):
-        dir = os.path.relpath(dir, ROOT_DIR)
+    for dir, dirnames, filenames in os.walk(path):
+        dir = os.path.relpath(dir, path)
         # Skip this dir?
         exclude_dirs = set(['.git', 'docs', 'build', 'dist', '__pycache__'])
         if exclude_dirs.intersection(dir.split(os.path.sep)):
@@ -96,7 +99,7 @@ def test_style():
         for fname in filenames:
             if fname.endswith('.py'):
                 # Get test options for this file
-                filename = os.path.join(ROOT_DIR, dir, fname)
+                filename = os.path.join(path, dir, fname)
                 #skip, extra_ignores = _get_style_test_options(filename)
                 #if skip:
                 #    continue

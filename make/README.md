@@ -26,7 +26,6 @@ Names that you can `from make import ...`:
 * ROOT_DIR - the root path of the repository
 * DOC_DIR - the path to the docs
 * DOC_BUILD_DIR - the path to where the docs are build
-* TEST_DIR - root dir for tests
 * ... - more may be added in the future
 
 

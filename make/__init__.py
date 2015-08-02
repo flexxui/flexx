@@ -18,4 +18,3 @@ ROOT_DIR = op.dirname(THIS_DIR)
 NAME = 'flexx'
 DOC_DIR = op.join(ROOT_DIR, 'docs')
 DOC_BUILD_DIR = op.join(DOC_DIR, '_build')
-TEST_DIR = op.join(ROOT_DIR, NAME)
