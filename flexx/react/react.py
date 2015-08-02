@@ -1,21 +1,4 @@
-"""
-Signals and reactions, the Functional Reactive Programming approach to events.
-
-THINGS I FEEL UNCONFORTABLE ABOUT
-
-* signal name is derived from func, which might be a lambda or buildin.
-* "input signals" as a term for upstream signals
-
-QUESTIONS / TODO
-
-* serializing signal values to json, maybe support base types and others need
-  a __json__ function.
-* Predefined inputs? Str, Int, etc?
-* Dynamism
-* docs
-* asynchronous vs atomic?
-
-
+""" Reactive Programming for Python
 """
 
 import sys
@@ -27,11 +10,11 @@ import logging
 
 if sys.version_info >= (3, ):
     string_types = str
-else:
+else:  # pragma: no cover
     string_types = basestring
 
 
-undefined = '<<JS UNDEFINED>>'  # to help make some code PyScript compattible
+undefined = '<<JS UNDEFINED>>'  # to help make some code PyScript compatible
 
 
 # From six.py
