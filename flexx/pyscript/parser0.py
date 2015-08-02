@@ -37,11 +37,9 @@ def unify(x):
     #elif x.isidentifier() or x.isalnum():
     elif re.match(r'^[.\w]*$', x):
         return x  # identifier, numbers, dots
-    elif x.endswith('()') and re.match(r'^[.\w]*$', x[:-2]):
+    elif re.match(r'^[.\w]*\(.*\)', x) and x.count(')') == 1:
         return x  # function calls (e.g. super())
     elif x.startswith('(') and x.endswith(')') and x.count(')') == 1:
-        return x
-    elif x.startswith('_truthy(') and x.endswith(')') and x.count(')') == 1:
         return x
     elif x.startswith('[') and x.endswith(']') and x.count(']') == 1:
         return x

@@ -236,6 +236,7 @@ class TestExpressions:
         assert evaljs(jscode + py2js('foo(2,2)')) == '4'
         assert evaljs(jscode + py2js('foo("so ", True)')) == 'so true'
         assert evaljs(jscode + py2js('a=[1,2]; foo(*a)')) == '3'
+        assert evaljs(jscode + py2js('a=[1,2]; foo(7, *a)')) == '8'
         
         # Test super (is tested for real in test_parser3.py
         assert evalpy('d={"_base_class": console};d._base_class.log(4)') == '4'

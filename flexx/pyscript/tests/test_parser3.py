@@ -147,11 +147,13 @@ class TestHardcoreBuildins:
         assert evalpy('ord("a")') == '97'
     
     def test_list(self):
+        assert py2js('list()') == '[];'
         assert evalpy('list("abc")') == "[ 'a', 'b', 'c' ]"
         assert evalpy('list({1:2, 3:4})') == "[ '1', '3' ]"
         assert evalpy('tuple({1:2, 3:4})') == "[ '1', '3' ]"
     
     def test_dict(self):
+        assert py2js('dict()') == '{};'
         ok = "{ foo: 1, bar: 2 }", "{ bar: 2, foo: 1 }"
         assert evalpy('dict([["foo", 1], ["bar", 2]])') in ok
         assert evalpy('dict({"foo": 1, "bar": 2})') in ok
@@ -194,6 +196,13 @@ class TestOtherBuildins:
         assert evalpy('"5.2" + 2') == '5.22'
         assert evalpy('float("5") + 2') == '7'
         assert evalpy('float("5.2") + 2') == '7.2'
+    
+    def test_repr(self):
+        # The replace is to ensure the result is a string
+        assert evalpy('repr(5).replace("5", "6")') == '6'
+        assert evalpy('repr("abc")') == '"abc"'
+        assert evalpy('repr([1, 2, 3]).replace("1", "0")') == "[0,2,3]"
+        assert evalpy('repr({1:2}).replace("1", "0")') == '{"0":2}'
     
     def test_str(self):
         assert evalpy('str(5) + 2') == '52'

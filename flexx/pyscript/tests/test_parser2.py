@@ -106,7 +106,7 @@ class TestConrolFlow:
         
         # Nested loops correct else
         code = self.method_for.jscode
-        assert evaljs('var x=%sx()' % code) == 'ok\nok'
+        assert evaljs('%s method_for()' % code) == 'ok\nok'
         
         # Tuple iterators
         assert evalpy('for i, j in [[1, 2], [3, 4]]: print(i+j)') == '3\n7'
@@ -222,9 +222,9 @@ class TestExceptions:
             except Exception:
                 print('other-error')
         
-        assert evaljs('var f = ' + catchtest.jscode + 'f(1)') == 'value-error'
-        assert evaljs('var f = ' + catchtest.jscode + 'f(2)') == 'runtime-error'
-        assert evaljs('var f = ' + catchtest.jscode + 'f(3)') == 'other-error'
+        assert evaljs(catchtest.jscode_renamed('f') + 'f(1)') == 'value-error'
+        assert evaljs(catchtest.jscode_renamed('f') + 'f(2)') == 'runtime-error'
+        assert evaljs(catchtest.jscode_renamed('f') + 'f(3)') == 'other-error'
     
     def test_catching2(self):
         
@@ -235,7 +235,7 @@ class TestExceptions:
             except Exception as err:
                 print(err.message)
         
-        assert evaljs('var f = ' + catchtest.jscode + 'f(1)').endswith('foo')
+        assert evaljs(catchtest.jscode_renamed('f') + 'f(1)').endswith('foo')
 
 
 @js
@@ -272,10 +272,10 @@ class TestFunctions:
         code = func1.jscode
         lines = [line for line in code.split('\n') if line]
         
-        assert len(lines) == 3  # only three lines
-        assert lines[0] == 'function () {'  # no args
-        assert lines[1].startswith('  ')  # indented
-        assert lines[2] == '};'  # dedented
+        assert len(lines) == 4  # only three lines + definition
+        assert lines[1] == 'func1 = function () {'  # no args
+        assert lines[2].startswith('  ')  # indented
+        assert lines[3] == '};'  # dedented
     
     @js
     def method1(self):
@@ -285,10 +285,10 @@ class TestFunctions:
         code = self.method1.jscode
         lines = [line for line in code.split('\n') if line]
         
-        assert len(lines) == 3  # only three lines
-        assert lines[0] == 'function () {'  # no args, no self/this
-        assert lines[1].startswith('  ')  # indented
-        assert lines[2] == '};'  # dedented
+        assert len(lines) == 4  # only three lines + definition
+        assert lines[1] == 'method1 = function () {'  # no args, no self/this
+        assert lines[2].startswith('  ')  # indented
+        assert lines[3] == '};'  # dedented
     
     def test_default_args(self):
         
@@ -299,12 +299,12 @@ class TestFunctions:
         code = func.jscode
         lines = [line for line in code.split('\n') if line]
         
-        assert lines[0] == 'function (foo, bar) {'
+        assert lines[1] == 'func = function (foo, bar) {'
         assert '4' in code
         
-        assert evaljs('x=' + code + 'x(2)') == '6'
-        assert evaljs('x=' + code + 'x(2, 2)') == '4'
-        assert evaljs('x=' + code + 'x(0, 0)') == '0'
+        assert evaljs(code + 'func(2)') == '6'
+        assert evaljs(code + 'func(2, 2)') == '4'
+        assert evaljs(code + 'func(0, 0)') == '0'
     
     def test_var_args1(self):
         
@@ -312,16 +312,16 @@ class TestFunctions:
         def func(self, *args):
             return args
         
-        code1 = 'var x = ' + func.jscode
+        code1 = func.jscode
         # lines = [line for line in code1.split('\n') if line]
         
-        code2 = py2js('x(2, 3)')
+        code2 = py2js('func(2, 3)')
         assert evaljs(code1 + code2, False) == '[2,3]'
-        code2 = py2js('x()')
+        code2 = py2js('func()')
         assert evaljs(code1 + code2, False) == '[]'
-        code2 = py2js('a=[2,3]\nx(*a)')
+        code2 = py2js('a=[2,3]\nfunc(*a)')
         assert evaljs(code1 + code2, False) == '[2,3]'
-        code2 = py2js('a=[2,3]\nx(1,2,*a)')
+        code2 = py2js('a=[2,3]\nfunc(1,2,*a)')
         assert evaljs(code1 + code2, False) == '[1,2,2,3]'
     
     def test_var_args2(self):
@@ -330,16 +330,16 @@ class TestFunctions:
         def func(self, foo, *args):
             return args
         
-        code1 = 'var x = ' + func.jscode
+        code1 = func.jscode
         #lines = [line for line in code1.split('\n') if line]
         
-        code2 = py2js('x(0, 2, 3)')
+        code2 = py2js('func(0, 2, 3)')
         assert evaljs(code1 + code2, False) == '[2,3]'
-        code2 = py2js('x(0)')
+        code2 = py2js('func(0)')
         assert evaljs(code1 + code2, False) == '[]'
-        code2 = py2js('a=[0,2,3]\nx(*a)')
+        code2 = py2js('a=[0,2,3]\nfunc(*a)')
         assert evaljs(code1 + code2, False) == '[2,3]'
-        code2 = py2js('a=[2,3]\nx(0,1,2,*a)')
+        code2 = py2js('a=[2,3]\nfunc(0,1,2,*a)')
         assert evaljs(code1 + code2, False) == '[1,2,2,3]'
     
     def test_self_becomes_this(self):
@@ -372,16 +372,16 @@ class TestFunctions:
             stub = True  # noqa
             return res + y  # should return 1+2+3+1 == 7
         
-        code = 'var x = ' + func.jscode
-        vars1 = code.splitlines()[1]
-        vars2 = code.splitlines()[3]
+        code = func.jscode
+        vars1 = code.splitlines()[2]
+        vars2 = code.splitlines()[4]
         assert vars1.strip().startswith('var ')
         assert vars2.strip().startswith('var ')
         
         assert 'y' in vars1 and 'y' in vars2
         assert 'stub' in vars1 and 'stub' in vars2
         assert 'only_here' in vars2 and 'only_here' not in vars1
-        assert evaljs(code + 'x()') == '7'
+        assert evaljs(code + 'func()') == '7'
     
     def test_scope2(self):
         # Avoid regression for bug with lambda and scoping
@@ -411,9 +411,9 @@ class TestFunctions:
             return a + b + c;
             """
         
-        code = 'var x = ' + func.jscode
-        assert evaljs(code + 'x(100, 10)') == '113'
-        assert evaljs(code + 'x("x", 10)') == 'x103'
+        code = func.jscode
+        assert evaljs(code + 'func(100, 10)') == '113'
+        assert evaljs(code + 'func("x", 10)') == 'x103'
     
     def test_docstring(self):
         # And that its not interpreted as raw js
@@ -423,9 +423,9 @@ class TestFunctions:
             """ docstring """
             return a + b
         
-        code = 'var x = ' + func.jscode
-        assert evaljs(code + 'x(100, 10)') == '110'
-        assert evaljs(code + 'x("x", 10)') == 'x10'
+        code = func.jscode
+        assert evaljs(code + 'func(100, 10)') == '110'
+        assert evaljs(code + 'func("x", 10)') == 'x10'
         
         assert code.count('// docstring') == 1
 
@@ -527,7 +527,7 @@ class TestClasses:
             return super().foo()
         
         code = js(MyClass4).jscode + js(MyClass5).jscode
-        code += 'var foo = ' + js(foo).jscode.replace('super()', 'MyClass4.prototype')
+        code += js(foo).jscode.replace('super()', 'MyClass4.prototype')
         code += 'var m4=new MyClass4(), m5=new MyClass5();'
         
         assert evaljs(code + 'm4.foo() === m4') == 'true'

@@ -520,7 +520,7 @@ class Parser2(Parser1):
     def _make_iterable(self, name1, name2, newlines=True):
         code = []
         lf = self.lf
-        if not newlines:
+        if not newlines:  # pragma: no cover
             lf = lambda x:x
         
         if name1 != name2:
@@ -732,7 +732,6 @@ class Parser2(Parser1):
             ns = self.pop_stack()  # Should conly consist of arg names
             assert not set(ns).difference(argnames)
         else:
-            code.append(self.lf('};\n'))
             # Pop stack, declare vars, but exclude our argnames
             ns = self.pop_stack()
             for name in argnames:
@@ -740,6 +739,8 @@ class Parser2(Parser1):
             pre_code.append(self.get_declarations(ns))
         
         self._indent -= 1
+        if not lambda_:
+            code.append(self.lf('};\n'))
         return pre_code + code
     
     def parse_Lambda(self, node):

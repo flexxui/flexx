@@ -1,10 +1,12 @@
 """ Tests for PyScript functions
 """
 
+import tempfile
+
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.pyscript import js, py2js, evaljs, evalpy, JSCode
+from flexx.pyscript import js, py2js, evaljs, evalpy, JSCode, script2js, clean_code
 
 
 def test_py2js():
@@ -25,7 +27,7 @@ def test_evalpy():
 
 def test_jscode_for_function():
     py = 'def foo(): pass'
-    js = 'function () {\n};\n'
+    js = 'var foo;\nfoo = function () {\n};\n'
     f = JSCode('function', 'foo', py)
     assert f.type == 'function'
     assert f.name == 'foo'
@@ -36,6 +38,15 @@ def test_jscode_for_function():
     assert 'function' in repr(f)
     assert py in str(f)
     assert js in str(f)
+    
+    # Test hash
+    f2 = JSCode('function', 'foo', py)
+    assert f.jshash == f2.jshash
+    
+    # Test renaming
+    assert f.jscode_renamed('bar') == 'var bar;\nbar = function () {\n};\n'
+    assert f.jscode_renamed('x.y') == 'x.y = function () {\n};\n'
+    
 
 
 def test_jscode_for_class():
@@ -51,6 +62,12 @@ def test_jscode_for_class():
     assert 'class' in repr(f)
     assert py in str(f)
     assert js in str(f)
+    
+    # Test renaming
+    assert f.jscode_renamed('Bar').startswith('var Bar;\nBar = function () {\n')
+    assert 'Foo' not in f.jscode_renamed('Bar')
+    assert f.jscode_renamed('x.Bar').startswith('x.Bar = function () {\n')
+    assert 'Foo' not in f.jscode_renamed('x.Bar')
 
 
 def test_js_decorator_for_function():
@@ -111,13 +128,12 @@ def test_name_mangling():
     def foo__js():
         pass
     
-    def bar__js():
+    @js
+    def _js_bar():
         pass
     
-    bar_js = js(bar__js)
-    
     assert foo__js.name == 'foo'
-    assert bar_js.name == 'bar'
+    assert _js_bar.name == '_bar'
 
 
 def test_raw_js():
@@ -129,9 +145,70 @@ def test_raw_js():
         return a + b + c;
         """
     
-    code = 'var x = ' + func.jscode
-    assert evaljs(code + 'x(100, 10)') == '113'
-    assert evaljs(code + 'x("x", 10)') == 'x103'
+    code = func.jscode
+    assert evaljs(code + 'func(100, 10)') == '113'
+    assert evaljs(code + 'func("x", 10)') == 'x103'
+
+
+TEST_CODE = """
+
+var foo = function () {};
+
+var foo = function () {};
+
+var f1;
+f1 = function () {
+    var foo = function () {};
+    var bar = function () {};
+}
+
+var f2;
+f2 = function () {
+    var foo = function () {};
+    var bar = function () {};
+}
+"""
+
+def test_clean_code():
+    
+    code = clean_code(TEST_CODE)
+    assert code.count('var foo =') == 1
+    assert code.count('var bar =') == 2
+
+
+def test_scripts():
+    # Prepare
+    pycode = 'foo = 42; print(foo)'
+    f = tempfile.NamedTemporaryFile('wt', suffix='.py')
+    f.file.write(pycode)
+    f.file.flush()
+    jsname = f.name[:-3] + '.js'
+    
+    # Convert - plain file (no module)
+    script2js(f.name)
+    
+    # Check result
+    jscode = open(jsname, 'rt').read()
+    assert 'foo = 42;' in jscode
+    assert 'define(' not in jscode
+    
+    # Convert - module
+    script2js(f.name, 'mymodule')
+    
+    # Check result
+    jscode = open(jsname, 'rt').read()
+    assert 'foo = 42;' in jscode
+    assert 'define(' in jscode
+    assert 'module.exports' in jscode
+    assert 'root.mymodule' in jscode
+    
+    # Convert - no module, explicit file
+    script2js(f.name, None, jsname)
+    
+    # Check result
+    jscode = open(jsname, 'rt').read()
+    assert 'foo = 42;' in jscode
+    assert 'define(' not in jscode
 
 
 run_tests_if_main()

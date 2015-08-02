@@ -460,7 +460,10 @@ class Parser3(Parser2):
     
     def function_repr(self, node):
         if len(node.args) == 1:
-            self.vars_for_functions['repr'] = 'function (x) {return x.toSource();}'
+            # code = 'function (x) {if (typeof x === "object") {return JSON.stringify(x);}'
+            # code += ' else if (typeof x === "string") {return "\'" + x + "\'";}'
+            # code += ' else {return x.toString();}}'
+            self.vars_for_functions['repr'] = 'JSON.stringify'
         else:
             raise JSError('repr() needs one argument')
     
@@ -613,19 +616,17 @@ class Parser3(Parser2):
     ## Extra functions / methods
     
     def method_time(self, node, base):  # time.time()
-        if base != 'time':
-            return
-        if len(node.args) == 0:
-            return '((new Date()).getTime() / 1000)'
-        else:
-            raise JSError('time() needs no argument')
+        if base == 'time':
+            if len(node.args) == 0:
+                return '((new Date()).getTime() / 1000)'
+            else:
+                raise JSError('time() needs no argument')
     
     def method_perf_counter(self, node, base):  # time.perf_counter()
-        if base != 'time':
-            return
-        if len(node.args) == 0:
-            # Work in nodejs and browser
-            dummy = self.dummy()
-            return '(typeof(process) === "undefined" ? performance.now()*1e-3 : ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy)
-        else:
-            raise JSError('perf_counter() needs no argument')
+        if base == 'time':
+            if len(node.args) == 0:
+                # Work in nodejs and browser
+                dummy = self.dummy()
+                return '(typeof(process) === "undefined" ? performance.now()*1e-3 : ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy)
+            else:
+                raise JSError('perf_counter() needs no argument')

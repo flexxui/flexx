@@ -34,7 +34,7 @@ def get_node_exe():
         NODE_EXE = 'nodejs'
         try:
             subprocess.check_output([NODE_EXE, '-v'])
-        except Exception:
+        except Exception:  # pragma: no cover
             NODE_EXE = 'node'
     return NODE_EXE
 
@@ -215,14 +215,14 @@ class JSCode(object):
                 self._name = name = name[:-3].rstrip('_')
                 code = code.replace('var %s_js' % name, 'var %s' % name)
                 code = code.replace('%s_js = function' % name, '%s = function' % name)
-            else:
+            else:  # pragma: no cover
                 raise RuntimeError('Cannot strip "_js" from class defs.')
         if name.startswith('_js'):
             if thetype == 'function':
                 self._name = name = name[3:]
                 code = code.replace('var _js%s' % name, 'var %s' % name)
                 code = code.replace('_js%s = function' % name, '%s = function' % name)
-            else:
+            else:  # pragma: no cover
                 raise RuntimeError('Cannot strip "_js" from class defs.')
         
         self._jscode = code
@@ -271,6 +271,8 @@ class JSCode(object):
         code = code.replace('%s.prototype' % self._name, '%s.prototype' % new_name)
         if '.' in new_name:
             code = code.replace('var %s;\n' % self._name, '', 1)
+        else:
+            code = code.replace('var %s;\n' % self._name, 'var %s;\n' % new_name, 1)
         return code
     
     def __call__(self, *args, **kwargs):
