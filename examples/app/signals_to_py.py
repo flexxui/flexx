@@ -3,11 +3,11 @@ Example demonstrating how signals in Py can connect to signals in JS.
 """
 
 from flexx import react
-from flexx import pair
+from flexx import app
 
 
-@pair.app
-class Clock(pair.Pair):
+@app.make_app
+class Clock(app.Pair):
     
     @react.act('time')
     def show_time(t):
@@ -27,4 +27,4 @@ class Clock(pair.Pair):
             return float(t)
 
 clock = Clock.launch('nodejs')
-pair.run()
+app.run()

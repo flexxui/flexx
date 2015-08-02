@@ -3,11 +3,11 @@ Example demonstrating how signals in JS can connect to signals in Py.
 """
 
 from flexx import react
-from flexx import pair
+from flexx import app
 
 
-@pair.app
-class Name(pair.Pair):
+@app.make_app
+class Name(app.Pair):
     
     @react.input
     def first_name(n='john'):
@@ -32,4 +32,4 @@ class Name(pair.Pair):
 
 name = Name.launch('nodejs')
 name.first_name('jane')
-pair.run()
+app.run()

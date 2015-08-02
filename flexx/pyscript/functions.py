@@ -144,25 +144,6 @@ def js(ob, **parser_options):
         raise ValueError('The js decorator only accepts classes '
                          'and real functions.')
     
-    # Get name - strip "__js" suffix if it's present
-    # This allow mangling the function name on the Python side, to allow
-    # the same name for a function in both Py and JS. I investigated
-    # other solutions, from class-inside-class constructions to
-    # black-magic decorators that auto-mangle the function name. I settled
-    # on just allowing "func_name__js".
-    name = ob.__name__
-    # todo: only keep latter mangling approach?
-    if name.endswith('_js'):
-        if thetype == 'function':
-            name = name[:-3].rstrip('_')
-        else:
-            raise RuntimeError('Cannot strip "_js" from class defs.')
-    if name.startswith('_js'):
-        if thetype == 'function':
-            name = name[3:]
-        else:
-            raise RuntimeError('Cannot strip "_js" from class defs.')
-    
     # Get code
     try:
         lines, linenr = inspect.getsourcelines(ob)
@@ -175,6 +156,7 @@ def js(ob, **parser_options):
     else:
         code = ''.join(lines)  # object explicitly passed to js()
     
+    name = ob.__name__
     return JSCode(thetype, name, code, **parser_options)
 
 
@@ -219,8 +201,31 @@ class JSCode(object):
         self._hash = h.digest()
         
         p = Parser(pycode, **parser_options)
+        code = p.dump()
         
-        self._jscode = p.dump()
+        # Get name - strip "__js" suffix if it's present
+        # This allow mangling the function name on the Python side, to allow
+        # the same name for a function in both Py and JS. I investigated
+        # other solutions, from class-inside-class constructions to
+        # black-magic decorators that auto-mangle the function name. I settled
+        # on just allowing "func_name__js".
+        # todo: only keep latter mangling approach?
+        if name.endswith('_js'):
+            if thetype == 'function':
+                self._name = name = name[:-3].rstrip('_')
+                code = code.replace('var %s_js' % name, 'var %s' % name)
+                code = code.replace('%s_js = function' % name, '%s = function' % name)
+            else:
+                raise RuntimeError('Cannot strip "_js" from class defs.')
+        if name.startswith('_js'):
+            if thetype == 'function':
+                self._name = name = name[3:]
+                code = code.replace('var _js%s' % name, 'var %s' % name)
+                code = code.replace('_js%s = function' % name, '%s = function' % name)
+            else:
+                raise RuntimeError('Cannot strip "_js" from class defs.')
+        
+        self._jscode = code
         assert self._jscode[:99].lstrip().startswith('var %s' % name)
     
     @property

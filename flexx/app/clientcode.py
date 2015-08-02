@@ -377,7 +377,7 @@ class ClientCode(object):
         
         for cls in get_pair_classes():
             self._preloaded_pair_classes.add(cls)
-            if cls.__module__.startswith('flexx.pair'):
+            if cls.__module__.startswith('flexx.app'):
                 key = 'flexx'
             elif cls.__module__.startswith('flexx.ui'):
                 key = 'flexx-ui'

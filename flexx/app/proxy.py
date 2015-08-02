@@ -346,8 +346,7 @@ def create_enum(*members):
     return type('Enum', (), enums)
 
 
-# todo: terminology: widget, app, application, connection, proxy, client
-def app(cls=None, **kwargs):
+def make_app(cls=None, **kwargs):
     """ Mark a Pair class as an app, to be used as a class decorator
     
     Does three things:

@@ -4,7 +4,7 @@
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.pair.pair import Pair, JSSignal, PySignal
+from flexx.app.pair import Pair, JSSignal, PySignal
 from flexx import react
 
 
