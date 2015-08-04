@@ -8,7 +8,16 @@ from .react import Signal
 
 
 class HasSignalsJS:
+    """ An implementation of the HasSignals class in PyScript. It has
+    some boilerplate code to create signal objects in JavaScript, but
+    otherwise shares most of the code with the Python signal classes
+    by transpiling their methods via PyScript. This ensures that the
+    Python and JS implementation of this reactive programming system
+    have the same API and behave the same.
     
+    The Python version of this class has a JSCODE attribute that
+    contains the auto-generated JavaScript for this class.
+    """
     __signals__ = []
     
     def __init__(self):

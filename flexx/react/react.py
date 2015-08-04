@@ -90,14 +90,11 @@ class ObjectFrame(object):
 
 
 class Signal(object):
-    """ A Signal is an object that provides a value that changes in time.
+    """ A Signal is an object that provides a value that changes over time.
+    The current value can be obtained by calling the signal object or via
+    the ``.value`` attribute.
     
-    The current value can be obtained by calling the signal object.
-    
-    Parameters:
-    func: the function that determines how the output value is generated
-          from the input signals.
-    upstream: a list of signals that this signal depends on.
+    This class should not be instantiated directly; use the decorators instead.
     """
     _IS_SIGNAL = True  # poor man's isinstance in JS (because class name mangling)
     _active = False
@@ -167,8 +164,8 @@ class Signal(object):
     
     @property
     def name(self):
-        """ The name of this signal, as inferred from the function that
-        this signal wraps.
+        """ The name of this signal, usually corresponding to the name
+        of the function that this signal wraps.
         """
         return self._name
     
@@ -200,18 +197,17 @@ class Signal(object):
     def connect(self, raise_on_fail=True):
         """ Connect input signals
         
-        Signals that are provided as a string are resolved to get the
-        signal object, and this signal subscribes to the upstream
-        signals.
+        The upstream signals that were provided as a string are resolved
+        to get the signal objects, and the current signal is subscribed
+        to these signals.
         
         If resolving the signals from the strings fails, raises an
-        error. Unless ``raise_on_fail`` is False, in which case this
-        returns True on success and False on failure.
+        error. Unless ``raise_on_fail`` is ``False``, in which case this
+        returns ``True`` on success and ``False`` on failure.
         
         This function is automatically called during initialization,
         and when the value of this signal is obtained while the signal
         is not connected.
-        
         """
         # First disconnect
         while len(self._upstream):  # len() for PyScript compat
@@ -251,9 +247,7 @@ class Signal(object):
     
     def disconnect(self):
         """ Disconnect this signal, unsubscribing it from the upstream
-        signals. Note that if there is a react signal it will invoke a
-        re-connect at once, which will immediately undo the
-        disconnection if connecting succeeds.
+        signals.
         """
         # Disconnect upstream
         while len(self._upstream):  # len() for PyScript compat
@@ -366,9 +360,8 @@ class Signal(object):
     
     @property
     def last_value(self):
-        """ The previous signal value. Getting this value will *not*
-        update the signal; the returned value corresponds to the value
-        right before the last time that the signal was updated.
+        """ The previous signal value, corresponding to the value right
+        before the last time that the signal was updated.
         """
         return self._last_value
     
@@ -411,8 +404,8 @@ class Signal(object):
     def __call__(self, *args):
         """ Get the signal value.
         
-        If the signals is not connected, raises SignalValueError. If an upstream
-        signal is not connected, errr, what should we do?
+        If the signal (or any of its upstream signals) is not connected,
+        raises ``SignalValueError``.
         """
         if not args:
             return self._get_value()
@@ -457,13 +450,8 @@ class Signal(object):
 
 
 class SourceSignal(Signal):
-    """ A signal that has no upstream signals, but produces values by itself.
-    
-    From the programmer's perspective, this is similar to an
-    InputSignal, where the programmer sets the value with the ``_set()``
-    method. Users of the signal should typically *not* use this private
-    method.
-    
+    """ A signal that typically has no upstream signals, but produces
+    values by itself.
     """
     _active = True
 
@@ -503,12 +491,9 @@ class SourceSignal(Signal):
 
 
 class InputSignal(SourceSignal):
-    """ InputSignal objects are special signals for which the value can
-    be set by the user, by calling the signal with a single argument.
-    
-    The function associated with the signal is used to validate the
-    use-specified value.
-    
+    """ A signal that typically has no upstream signals, but produces
+    values from user input (by calling the signal object with the new
+    value).
     """
     
     def __call__(self, *args):
@@ -521,6 +506,9 @@ class InputSignal(SourceSignal):
 
 
 class WatchSignal(Signal):
+    """ A signal that combines and/or modifies input signals to produce
+    a new signal value.
+    """
     pass
 
 
@@ -587,10 +575,10 @@ class HasSignals(with_metaclass(HasSignalsMeta, object)):
     """ A base class for objects with signals.
     
     Creating signals on this class will provide each instance of this
-    class to have corresponding signals. During initialization the
+    class with corresponding signal objects. During initialization the
     signals are connected, and this class has a ``connect_signals()``
     method to easily allow connecting any unconnected signals at a
-    latere time.
+    later time.
     
     Upstream signal names can be attributes on the instance, as well
     as variables in the scope in which the class was defined.
@@ -599,7 +587,7 @@ class HasSignals(with_metaclass(HasSignalsMeta, object)):
     will have to be "touched" to create the signal instance, and the
     signals might not be initially connected.
     
-    Functions defined on this class that are wrapped by signals can
+    Functions defined on this class that are lifted to signals can
     have a ``self`` argument, but this is not mandatory.
     """
     
@@ -647,21 +635,24 @@ def source(*input_signals):
     """ Decorator to transform a function into a SourceSignal object.
     
     Source signals produce signal values. The developer can set the
-    value using the ``_set()`` method. The wrapper function is intended
-    can be used to modify the input, in the same way as for the input
-    signal.
+    value using the ``_set()`` method. The function being wrapped should
+    have a single argument. If that argument has a default value, that
+    value will be the signal's initial value. The wrapper function is
+    intended to do validation on the value.
+    
+    Though not common, a source signal may have upstream signals like
+    the input signal does.
     
     Example:
-    
-        @source
-        def s1(val):
-            return float(val)
         
-        # Developer sets value. Users should not use _set()!
-        s1._set(42)
-    
-    Similar to the InputSignal, the SourceSignal may have upstream signals.
-    
+        .. code-block:: py
+        
+            @source
+            def s1(val):
+                return float(val)
+            
+            # Developer sets value. Users should not use _set()!
+            s1._set(42)
     """
     frame = sys._getframe(1)
     def _source(func):
@@ -677,36 +668,39 @@ def source(*input_signals):
 def input(*input_signals):
     """ Decorator to transform a function into a InputSignal object.
     
-    An input signal commonly has 0 input signals, but allows the user
-    to set the output value, by calling the signal with the value as the
-    argument. The function being wrapped should have a single argument.
-    If that argument has a default value, that value will be the
-    signal's initial value. The wrapper function is intended to do
-    validation and cleaning/standardization on the user-specified input.
+    An input signal allows the user to set the value by calling the
+    signal with the value as the argument. The function being wrapped
+    should have a single argument. If that argument has a default value,
+    that value will be the signal's initial value. The wrapper function
+    is intended to do validation and cleaning/standardization on the
+    user-specified value.
     
     Example:
-    
-        @input
-        def s1(val):
-            return float(val)
         
-        s1(42)  # Set the value
+        .. code-block:: py
+        
+            @input
+            def s1(val):
+                return float(val)
+            
+            s1(42)  # Set the value
     
-    Though not common, an input signal may actually also have upstream
-    signals. In that case, the wrapper function should have additional
-    arguments for the signals. The function is called with no arguments to
-    initialize the value, with one argument if the user sets the value, and
-    with n+1 arguments when any of the (n) signals change.
+    Though not common, an input signal may have upstream signals. In
+    that case, the wrapper function should have additional arguments
+    for the signals. The function is called with no arguments to
+    initialize the value, with one argument if the user sets the value,
+    and with n+1 arguments when any of the (n) signals change.
     
     Example:
-    
-        @input('fahrenheit')
-        def celcius(v=32, f=None):
-            if f is None:
-                return float(v)
-            else:
-                return (f - 32) / 1.8
-    
+        
+        .. code-block:: py
+        
+            @input('fahrenheit')
+            def celcius(v=32, f=None):
+                if f is None:
+                    return float(v)
+                else:
+                    return (f - 32) / 1.8
     """
     frame = sys._getframe(1)
     def _input(func):
@@ -735,22 +729,25 @@ def prop(*input_signals):
 
 
 def watch(*input_signals):
-    """ Decorator to transform a function into a Signal object.
+    """ Decorator to transform a function into a WatchSignal object.
     
-    A signal takes one or more signals as input (specified as arguments
+    A watch signal takes one or more signals as input (specified as arguments
     to this decorator) and produces a new signal value. The function
     being wrapped should have an argument for each upstream signal, and
     its return value is used as the output signal value.
     
+    When any of the input signals change, this signal is marked
+    "invalid", but it will not retrieve the new signal value until it
+    is requested. This pull machanism allows lazy evaluation and can
+    prevent unnesesary updates.
+    
     Example:
-    
-        @watch('s1', 's2')
-        def adder(val1, val2):
-            return val1 + val2
-    
-    When any of the input signals change, this signal is marked "invalid",
-    but it will not retrieve the new signal value until it is requested.
-    This pull machanism differs from the ``react`` decorator.
+        
+        .. code-block:: py
+        
+            @watch('s1', 's2')
+            def the_sum(val1, val2):
+                return val1 + val2
     """
     if (not input_signals) or _first_arg_is_func(input_signals):
         raise ValueError('Input signal must have upstream signals.')
@@ -763,24 +760,28 @@ def watch(*input_signals):
 
 
 def act(*input_signals):
-    """ Decorator to transform a function into a ReactSignal object.
+    """ Decorator to transform a function into ActSignal object.
     
-    A react signal takes one or more signals as input (specified as
+    An act signal takes one or more signals as input (specified as
     arguments to this decorator) and may produce a new signal value.
     The function being wrapped should have an argument for each upstream
-    signal, and its return value is used as the output signal value.
-    The ReactSignal is commonly used for end-signals, which require no
-    output signal.
-    
-    Example:
-    
-        @act('s1', 's2')
-        def show_values(val1, val2):
-            print(val1, val2)
+    signal, and its return value (if any) is used as the output signal
+    value.
     
     When any of the input signals change, this signal is updated
     immediately (i.e. the wrapped function is called). This push
-    machanism differs from the ``signal`` decorator.
+    machanism differs from the ``watch`` decorator.
+    
+    The act signal is commonly used for end-signals to react to certain
+    changes in the application.
+    
+    Example:
+        
+        .. code-block:: py
+        
+            @act('s1', 's2')
+            def show_values(val1, val2):
+                print(val1, val2)
     """
     if (not input_signals) or _first_arg_is_func(input_signals):
         raise ValueError('Act signal must have upstream signals.')

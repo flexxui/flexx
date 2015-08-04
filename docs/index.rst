@@ -37,9 +37,9 @@ Contents
    tutorials/index
    ui/index
    pyscript/index
+   react/index
    webruntime
-   reactive
-   properties
+   
    util
    releasenotes
 
