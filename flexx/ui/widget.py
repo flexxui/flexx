@@ -155,6 +155,15 @@ class Widget(Pair):
         else:
             raise ValueError('parent must be a widget or None')
     
+    # Note that both the Py and JS have their own children signal
+    # todo: prevent unnecesary updates
+    @react.source
+    def children(v=()):
+        """ The child widgets of this widget.
+        """
+        assert all([isinstance(w, Widget) for w in v])
+        return tuple(v)
+    
     @react.input
     def flex(v=0):
         """ How much space this widget takes when contained in a layout.
@@ -197,6 +206,18 @@ class Widget(Pair):
             v = 'flx-main-widget ' + v
         return v
     
+    @react.act('parent')
+    def _parent_changed_py(self, new_parent):
+        old_parent = self.parent.last_value
+        if old_parent is not None:
+            children = list(old_parent.children()[:])
+            while self in children:
+                children.remove(self)
+            old_parent.children._set(children)
+        if new_parent is not None:
+            children = list(new_parent.children()[:])
+            children.append(self)
+            new_parent.children._set(children)
     
     CSS = """
     

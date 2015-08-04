@@ -102,9 +102,10 @@ class PlotLayout(Layout):
     
     """
     
-    def __init__(self, *args, **kwargs):
-        Layout.__init__(self, *args, **kwargs)
-        
+    # def __init__(self, *args, **kwargs):
+    #     Layout.__init__(self, *args, **kwargs)
+    
+    def init(self):
         self._box = HBox(parent=self)
         with self._box:
             self._left = VBox(flex=0)
@@ -121,14 +122,14 @@ class PlotLayout(Layout):
         the given name.
         """
         # Take stretch out
-        stretch = self._left.children[-1]
-        stretch.parent = None
+        stretch = self._left.children()[-1]
+        stretch.parent(None)
         
         # Add group of widgets
         panel = Panel(title=name, parent=self._left, flex=0)
         vbox = VBox(parent=panel)
         for widget in args:
-            widget.parent = vbox
+            widget.parent(vbox)
         
         # Put stretch back in
-        stretch.parent = self._left
+        stretch.parent(self._left)
