@@ -1,7 +1,7 @@
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.pyscript import js, JSError, py2js, evaljs, evalpy
+from flexx.pyscript import JSError, py2js, evaljs, evalpy
 
 
 def nowhitespace(s):
@@ -105,7 +105,7 @@ class TestConrolFlow:
         assert evalpy(for9 + 'if i==30:break\nelse: print(99)\n0') == '99\n0'
         
         # Nested loops correct else
-        code = self.method_for.jscode
+        code = py2js(self.method_for)
         assert evaljs('%s method_for()' % code) == 'ok\nok'
         
         # Tuple iterators
@@ -113,7 +113,6 @@ class TestConrolFlow:
         assert evalpy('for i, j, k in [[1, 2, 3], [3, 4, 5]]: print(i+j+k)') == '6\n12'
     
     
-    @js
     def method_for(self):
         for i in range(5):
             for j in range(5):
@@ -206,7 +205,6 @@ class TestExceptions:
     
     def test_catching(self):
         
-        @js
         def catchtest(x):
             try:
                 if x == 1:
@@ -222,23 +220,21 @@ class TestExceptions:
             except Exception:
                 print('other-error')
         
-        assert evaljs(catchtest.jscode_renamed('f') + 'f(1)') == 'value-error'
-        assert evaljs(catchtest.jscode_renamed('f') + 'f(2)') == 'runtime-error'
-        assert evaljs(catchtest.jscode_renamed('f') + 'f(3)') == 'other-error'
+        assert evaljs(py2js(catchtest, 'f') + 'f(1)') == 'value-error'
+        assert evaljs(py2js(catchtest, 'f') + 'f(2)') == 'runtime-error'
+        assert evaljs(py2js(catchtest, 'f') + 'f(3)') == 'other-error'
     
     def test_catching2(self):
         
-        @js
         def catchtest(x):
             try:
                 raise ValueError('foo')
             except Exception as err:
                 print(err.message)
         
-        assert evaljs(catchtest.jscode_renamed('f') + 'f(1)').endswith('foo')
+        assert evaljs(py2js(catchtest, 'f') + 'f(1)').endswith('foo')
 
 
-@js
 def func1():
     return 2 + 3
 
@@ -269,7 +265,7 @@ class TestFunctions:
     
     
     def test_func1(self):
-        code = func1.jscode
+        code = py2js(func1)
         lines = [line for line in code.split('\n') if line]
         
         assert len(lines) == 4  # only three lines + definition
@@ -277,12 +273,12 @@ class TestFunctions:
         assert lines[2].startswith('  ')  # indented
         assert lines[3] == '};'  # dedented
     
-    @js
+    
     def method1(self):
         return
     
     def test_method1(self):
-        code = self.method1.jscode
+        code = py2js(self.method1)
         lines = [line for line in code.split('\n') if line]
         
         assert len(lines) == 4  # only three lines + definition
@@ -292,11 +288,10 @@ class TestFunctions:
     
     def test_default_args(self):
         
-        @js
         def func(self, foo, bar=4):
             return foo + bar
         
-        code = func.jscode
+        code = py2js(func)
         lines = [line for line in code.split('\n') if line]
         
         assert lines[1] == 'func = function (foo, bar) {'
@@ -308,11 +303,10 @@ class TestFunctions:
     
     def test_var_args1(self):
         
-        @js
         def func(self, *args):
             return args
         
-        code1 = func.jscode
+        code1 = py2js(func)
         # lines = [line for line in code1.split('\n') if line]
         
         code2 = py2js('func(2, 3)')
@@ -326,11 +320,10 @@ class TestFunctions:
     
     def test_var_args2(self):
         
-        @js
         def func(self, foo, *args):
             return args
         
-        code1 = func.jscode
+        code1 = py2js(func)
         #lines = [line for line in code1.split('\n') if line]
         
         code2 = py2js('func(0, 2, 3)')
@@ -343,11 +336,11 @@ class TestFunctions:
         assert evaljs(code1 + code2, False) == '[1,2,2,3]'
     
     def test_self_becomes_this(self):
-        @js
+        
         def func(self):
             return self.foo
         
-        code = func.jscode
+        code = py2js(func)
         lines = [line.strip() for line in code.split('\n') if line]
         assert 'return this.foo;' in lines
     
@@ -357,7 +350,6 @@ class TestFunctions:
     
     def test_scope(self):
         
-        @js
         def func(self):
             def foo(z):
                 y = 2
@@ -372,7 +364,7 @@ class TestFunctions:
             stub = True  # noqa
             return res + y  # should return 1+2+3+1 == 7
         
-        code = func.jscode
+        code = py2js(func)
         vars1 = code.splitlines()[2]
         vars2 = code.splitlines()[4]
         assert vars1.strip().startswith('var ')
@@ -398,32 +390,30 @@ class TestFunctions:
             def y():
                 pass
         
-        assert 'var x' in js(func1).jscode
-        assert 'var x' in js(func2).jscode
-        assert 'var x' in js(func3).jscode
+        assert 'var x' in py2js(func1)
+        assert 'var x' in py2js(func2)
+        assert 'var x' in py2js(func3)
     
     def test_raw_js(self):
         
-        @js
         def func(a, b):
             """
             var c = 3;
             return a + b + c;
             """
         
-        code = func.jscode
+        code = py2js(func)
         assert evaljs(code + 'func(100, 10)') == '113'
         assert evaljs(code + 'func("x", 10)') == 'x103'
     
     def test_docstring(self):
         # And that its not interpreted as raw js
         
-        @js
         def func(a, b):
             """ docstring """
             return a + b
         
-        code = func.jscode
+        code = py2js(func)
         assert evaljs(code + 'func(100, 10)') == '110'
         assert evaljs(code + 'func("x", 10)') == 'x10'
         
@@ -434,7 +424,7 @@ class TestClasses:
     
     
     def test_class(self):
-        @js
+        
         class MyClass:
             """ docstring """
             foo = 7
@@ -445,7 +435,7 @@ class TestClasses:
             def addOne(self):
                 self.bar += 1
         
-        code = MyClass.jscode + 'var m = new MyClass();'
+        code = py2js(MyClass) + 'var m = new MyClass();'
         
         assert code.count('// docstring') == 1
         assert evaljs(code + 'm.bar;') == '7'
@@ -477,7 +467,7 @@ class TestClasses:
             def addFour(self):
                 super().add(4)
         
-        code = js(MyClass1).jscode + js(MyClass2).jscode + js(MyClass3).jscode
+        code = py2js(MyClass1) + py2js(MyClass2) + py2js(MyClass3)
         code += 'var m1=new MyClass1(), m2=new MyClass2(), m3=new MyClass3();'
         
         # m1
@@ -526,8 +516,8 @@ class TestClasses:
         def foo():
             return super().foo()
         
-        code = js(MyClass4).jscode + js(MyClass5).jscode
-        code += js(foo).jscode.replace('super()', 'MyClass4.prototype')
+        code = py2js(MyClass4) + py2js(MyClass5)
+        code += py2js(foo).replace('super()', 'MyClass4.prototype')
         code += 'var m4=new MyClass4(), m5=new MyClass5();'
         
         assert evaljs(code + 'm4.foo() === m4') == 'true'
@@ -553,7 +543,7 @@ class TestClasses:
             def m3(self):
                 return 2
         
-        code = js(MyClass11).jscode + js(MyClass12).jscode
+        code = py2js(MyClass11) + py2js(MyClass12)
         assert evaljs(code + 'm = new MyClass12(); m._res') == '122'
         assert evaljs(code + 'm = new MyClass12(); m.m1()') == '100'
         

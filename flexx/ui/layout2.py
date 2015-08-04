@@ -3,7 +3,7 @@
 
 from .. import react
 
-from .widget import Widget, js
+from .widget import Widget
 from .layout import Layout, VBox, HBox
 
 

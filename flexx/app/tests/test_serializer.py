@@ -2,7 +2,7 @@
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.pyscript import js, evaljs
+from flexx.pyscript import py2js, evaljs
 
 from flexx.app.serialize import Serializer, serializer
 
@@ -37,8 +37,8 @@ def test_python():
 
 def test_js():
     
-    code = js(Serializer).jscode
-    code += js(Foo).jscode
+    code = py2js(Serializer)
+    code += py2js(Foo)
     
     code += 'var serializer = new Serializer();\n'
     code += 'var foo1 = new Foo(42), foo2 = new Foo(7), foo3 = new Foo(null);\n'

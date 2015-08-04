@@ -150,8 +150,9 @@ Not currently supported:
 # demonstrating the features defined in that module. In the docs these
 # docstrings are combined into one complete guide.
 
-from .parser0 import JSError  # noqa
-from .parser3 import Parser2
+from .parser0 import Parser0, JSError  # noqa
+from .parser1 import Parser1
+from .parser2 import Parser2
 from .parser3 import Parser3
 
 
@@ -176,15 +177,15 @@ class Parser(Parser3):
     While working on ast parsing, this resource is very helpful:
     https://greentreesnakes.readthedocs.org
     
-    parameters:
-        code (str): the Python code to parse.
-        module (str, optional): if given, put the resulting JS in a
-            module with the given name.
+    Parameters:
+    
     """
     pass
 
+# Re-use docs from Parser0
+Parser.__doc__ += Parser0.__doc__.split('Parameters:', 1)[1]
 
-from .functions import JSCode, js, py2js, evaljs, evalpy, script2js, clean_code  # noqa
+from .functions import py2js, evaljs, evalpy, script2js, clean_code, js_rename  # noqa
 
 
 # Some names that users may want to import to fool pyflakes

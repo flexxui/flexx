@@ -101,8 +101,18 @@ class NameSpace(dict):
 
 
 class Parser0(object):
-    """ The Base parser class. Implements a couple of methods that
-    the actual parser classes need.
+    """ The Base parser class. Implements the basic mechanism to allow
+    parsing to work, but does not implement any parsing on its own.
+    
+    Parameters:
+        code (str): the Python source code.
+        module (str, optional): the module name. If given, produces an
+            AMD module.
+        indent (int): the base indentation level (default 0). One
+            indentation level means 4 spaces.
+        docstrings (bool): whether docstrings are included in JS
+            (default True).
+    
     """
     
     # Developer notes:

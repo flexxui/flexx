@@ -1,23 +1,110 @@
 import os
-from types import FunctionType
+import sys
+import types
 import inspect
 import subprocess
 import hashlib
 
 from . import Parser
 
+if sys.version_info[0] >= 3:
+    string_types = str,
+    text_type = str
+else:  # pragma: no cover
+    string_types = basestring,
+    text_type = unicode
 
-def py2js(pycode):
-    """ Translate Python code to JavaScript.
-    
-    parameters:
-        pycode (str): the Python code to transalate.
-    
-    returns:
-        jscode (str): the resulting JavaScript.
+
+class JSString(text_type):
+    """ A subclass of string, so we can add attributes to JS string objects.
     """
-    parser = Parser(pycode)
-    return parser.dump()
+    pass
+
+
+def py2js(ob, new_name=None, **parser_options):
+    """ Convert Python to JavaScript.
+    
+    Parameters:
+        ob (str, function, class): The code, function or class to transpile.
+        new_name (str, optional): If given, renames the function or
+            class. This argument is ignored if ob is a string.
+        parser_options: Additional options for the parser. See Parser class
+            for details.
+    
+    Returns:
+        jscode (str): The JavaScript code. Also has a ``pycode`` attribute.
+    
+    Notes:
+        The Python source code for a class is acquired by name.
+        Therefore one should avoid decorating classes in modules where
+        multiple classes with the same name are defined. This is a
+        consequence of classes not having a corresponding code object (in
+        contrast to functions).
+    
+    """
+    
+    if isinstance(ob, string_types):
+        thetype = 'str'
+        pycode = ob
+    elif isinstance(ob, type) or isinstance(ob, (types.FunctionType, types.MethodType)):
+        thetype = 'class' if isinstance(ob, type) else 'def'
+        # Get code
+        try:
+            lines, linenr = inspect.getsourcelines(ob)
+        except Exception as err:
+            raise ValueError('Could not get source code for object %r: %s' % (ob, err))
+        # Normalize indentation
+        indent = len(lines[0]) - len(lines[0].lstrip())
+        lines = [line[indent:] for line in lines]
+        # Skip any decorators
+        while not lines[0].lstrip().startswith(thetype):
+            lines.pop(0)
+        # join lines and rename
+        pycode = ''.join(lines)
+    else:
+        raise ValueError('py2js() only accepts classes and real functions.')
+    
+    # Get hash, in case we ever want to cache JS accross sessions
+    h = hashlib.sha256('pyscript version 1'.encode())
+    h.update(pycode.encode())
+    hash = h.digest()
+    
+    # Get JS code
+    p = Parser(pycode, **parser_options)
+    jscode = p.dump()
+    if new_name and thetype in ('class', 'def'):
+        jscode = js_rename(jscode, ob.__name__, new_name)
+    
+    # Wrap in JSString
+    jscode = JSString(jscode)
+    jscode.pycode = pycode
+    jscode.pyhash = hash
+    
+    return jscode
+
+
+def js_rename(jscode, cur_name, new_name):
+    """ Rename a function or class in a JavaScript code string.
+    
+    Parameters:
+        jscode (str): the JavaScript source code
+        cur_name (str): the current name
+        new_name (str): the name to replace the current name with
+    
+    Returns:
+        jscode (str): the modified JavaScript source code
+    """
+    
+    jscode = jscode.replace('%s = function' % cur_name, 
+                            '%s = function' % (new_name), 1)
+    jscode = jscode.replace('%s.prototype' % cur_name, 
+                            '%s.prototype' % new_name)
+    if '.' in new_name:
+        jscode = jscode.replace('var %s;\n' % cur_name, '', 1)
+    else:
+        jscode = jscode.replace('var %s;\n' % cur_name, 
+                                'var %s;\n' % new_name, 1)
+    return jscode
 
 
 NODE_EXE = None
@@ -103,68 +190,18 @@ def script2js(filename, namespace=None, target=None):
     open(filename2, 'wt').write(jscode)
 
 
-def js(ob, **parser_options):
-    """ Get the JavaScript code for a class or function. Can be used
-    as a decorator.
+def clean_code(code):
+    """ Remove duplicate declarations of std function definitions.
+    
+    Use this if you build a JS source file from multiple snippets and
+    want to get rid of the function declarations like ``_truthy`` and
+    ``sum``.
     
     Parameters:
-        func (class, function): The function or class to transtate. If
-            this is already JSCode object, it is returned as-is.
-        parser_options: Additional options for the parser. See Parser class
-            for details.
+        code (str): the complete source code.
     
     Returns:
-        jscode (JSCode): An object that has a ``jscode``, ``pycode``
-        and ``name`` attribute.
-    
-    Notes:
-        The Python source code for a class is acquired by name.
-        Therefore one should avoid decorating classes in modules where
-        multiple classes with the same name are defined. This is a
-        consequence of classes not having a corresponding code object (in
-        contrast to functions).
-        
-        Function names can be mangled to avoid clashing: "_js"
-        is stripped from both ends::
-        
-            def _js_method_a():
-                pass  # becomes "_method_a"
-            def method_b_js():
-                pass  # becomes "method_b"
-    
-    """
-    
-    if isinstance(ob, JSCode):
-        return ob
-    elif isinstance(ob, type):
-        thetype = 'class'
-    elif isinstance(ob, FunctionType):
-        thetype = 'function'
-    else:
-        raise ValueError('The js decorator only accepts classes '
-                         'and real functions.')
-    
-    # Get code
-    try:
-        lines, linenr = inspect.getsourcelines(ob)
-    except Exception as err:
-        raise ValueError('Could not get source code for object: %s' % err)
-    indent = len(lines[0]) - len(lines[0].lstrip())
-    lines = [line[indent:] for line in lines]
-    if lines[0].startswith('@'):
-        code = ''.join(lines[1:])  # decorated function/class
-    else:
-        code = ''.join(lines)  # object explicitly passed to js()
-    
-    name = ob.__name__
-    return JSCode(thetype, name, code, **parser_options)
-
-
-def clean_code(code):
-    """ Remove duplicate declarations of std function definitions. Use
-    this if you build a JS source file from multiple snippets and want
-    to get rid of the function declarations like ``_truthy`` and
-    ``sum``.
+        new_code (str): the code with duplicate definitions filtered out.
     """
     known_funcs = {}
     
@@ -181,111 +218,5 @@ def clean_code(code):
         lines.append(line)
     return '\n'.join(lines)
 
-    
-class JSCode(object):
-    """ Placeholder for storing the original Python code and the JS
-    code for a class or function.
-    """
-    
-    def __init__(self, thetype, name, pycode, **parser_options):
-        assert thetype in ('function', 'class')
-        self._type = thetype
-        self._name = name
-        self._pycode = pycode
-        
-        # Get hash for this code
-        # todo: if we are ever going to cahche JS code accross sessions,
-        # this string needs to be updated when the pyscript codebase changes
-        h = hashlib.sha256('pyscript version 1'.encode())
-        h.update(pycode.encode())
-        self._hash = h.digest()
-        
-        p = Parser(pycode, **parser_options)
-        code = p.dump()
-        
-        # Get name - strip "__js" suffix if it's present
-        # This allow mangling the function name on the Python side, to allow
-        # the same name for a function in both Py and JS. I investigated
-        # other solutions, from class-inside-class constructions to
-        # black-magic decorators that auto-mangle the function name. I settled
-        # on just allowing "func_name__js".
-        # todo: only keep latter mangling approach?
-        if name.endswith('_js'):
-            if thetype == 'function':
-                self._name = name = name[:-3].rstrip('_')
-                code = code.replace('var %s_js' % name, 'var %s' % name)
-                code = code.replace('%s_js = function' % name, '%s = function' % name)
-            else:  # pragma: no cover
-                raise RuntimeError('Cannot strip "_js" from class defs.')
-        if name.startswith('_js'):
-            if thetype == 'function':
-                self._name = name = name[3:]
-                code = code.replace('var _js%s' % name, 'var %s' % name)
-                code = code.replace('_js%s = function' % name, '%s = function' % name)
-            else:  # pragma: no cover
-                raise RuntimeError('Cannot strip "_js" from class defs.')
-        
-        self._jscode = code
-        assert self._jscode[:99].lstrip().startswith('var %s' % name)
-    
-    @property
-    def type(self):
-        """ "function" or "class".
-        """
-        return self._type
-    
-    @property
-    def name(self):
-        """ The name of the class or function.
-        """
-        return self._name
-    
-    @property
-    def jshash(self):
-        """ The cryptographic hash (as a 32-element bytes object) for
-        this piece of code, based on the PyScript code.
-        Two JSCode objects with the same hash are guaranteed to contain
-        the same code.
-        """
-        return self._hash
-    
-    @property
-    def pycode(self):
-        """ The Python code that defines this function/class.
-        """
-        return self._pycode
-    
-    @property
-    def jscode(self):
-        """ The resulting JavaScript code for this function/class.
-        """
-        return self._jscode
-    
-    def jscode_renamed(self, new_name):
-        """ Get the JavaScript code, but with a prefix prepended to the
-        class/function name. This also removes the ``var name;``.
-        """
-        assert new_name
-        code = self.jscode
-        code = code.replace('%s = function' % self._name, '%s = function' % (new_name), 1)
-        code = code.replace('%s.prototype' % self._name, '%s.prototype' % new_name)
-        if '.' in new_name:
-            code = code.replace('var %s;\n' % self._name, '', 1)
-        else:
-            code = code.replace('var %s;\n' % self._name, 'var %s;\n' % new_name, 1)
-        return code
-    
-    def __call__(self, *args, **kwargs):
-        action = {'function': 'call', 'class': 'instantiate'}[self._type]
-        raise RuntimeError('Cannot %s a JS %s directly from Python' %
-                           (action, self._type))
-    
-    def __repr__(self):
-        
-        return '<JSCode %s (print to see code) at 0x%x>' % (self._type,
-                                                            id(self))
-    
-    def __str__(self):
-        pytitle = '== Python code that defines this %s ==' % self._type
-        jstitle = '== JS Code that represents this %s ==' % self._type
-        return pytitle + '\n' + self.pycode + '\n' + jstitle + self.jscode
+
+

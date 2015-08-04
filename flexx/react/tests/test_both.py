@@ -20,7 +20,7 @@ from flexx.util.testing import run_tests_if_main
 
 from flexx.react import input, watch, act, source, HasSignals
 from flexx.react.pyscript import create_js_signals_class, HasSignalsJS
-from flexx.pyscript import js, evaljs, evalpy
+from flexx.pyscript.functions import py2js, evaljs, evalpy, js_rename
 
 
 def run_in_both(cls, reference, extra_classes=()):
@@ -31,7 +31,7 @@ def run_in_both(cls, reference, extra_classes=()):
     def wrapper(func):
         def runner():
             # Run in JS
-            code = HasSignalsJS.jscode
+            code = js_rename(HasSignalsJS.JSCODE, 'HasSignalsJS', 'HasSignals')
             for c in cls.mro()[1:]:
                 if c is HasSignals:
                     break
@@ -39,7 +39,7 @@ def run_in_both(cls, reference, extra_classes=()):
             for c in extra_classes:
                 code += create_js_signals_class(c, c.__name__)
             code += create_js_signals_class(cls, cls.__name__, cls.__bases__[0].__name__+'.prototype')
-            code += js(func).jscode_renamed('test')
+            code += py2js(func, 'test')
             code += 'test(%s);' % cls.__name__
             jsresult = evaljs(code)
             jsresult = jsresult.replace('[ ', '[').replace(' ]', ']')

@@ -159,6 +159,9 @@ bool_func += 'else {return Object.getOwnPropertyNames(v).length ? v : false;}}'
 
 
 class Parser1(Parser0):
+    """ Parser that add basic functionality like assignments,
+    operations, function calls, and indexing.
+    """
     
     ## Literals
     

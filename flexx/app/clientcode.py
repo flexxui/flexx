@@ -10,7 +10,7 @@ This streamlines the inclusion in Jupyter and our export mechanism.
 import os
 from collections import OrderedDict
 
-from ..pyscript import js, clean_code
+from ..pyscript import py2js, clean_code
 
 # todo: minification
 
@@ -45,8 +45,7 @@ JS-HOOK
 """
 
 
-
-@js
+@py2js
 class FlexxJS:
     """ JavaScript Flexx module. This provides the connection between
     the Python and JS (via a websocket).
@@ -327,7 +326,7 @@ class ClientCode(object):
         # Init flexx core code
         self._js['flexx'] = []
         self._css['flexx'] = []
-        self._js['flexx'].append(FlexxJS.jscode)
+        self._js['flexx'].append(FlexxJS)
         self._js['flexx'].append('var flexx = new FlexxJS();\n')
     
     @property

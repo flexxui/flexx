@@ -1,7 +1,6 @@
 """ Layout widgets
 """
 
-from ..pyscript import js
 from .. import react
 
 from .widget import Widget

@@ -1,7 +1,7 @@
 
 from .. import react
 
-from .widget import Widget, js
+from .widget import Widget
 
 
 class ProgressBar(Widget):

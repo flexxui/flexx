@@ -6,7 +6,6 @@ Implements parenting and other things common to all widgets.
 import json
 import threading
 
-from ..pyscript import js
 from .. import react
 from . import Pair, get_instance_by_id
 

@@ -11,7 +11,7 @@ import hashlib
 from ..react import react
 from ..react.pyscript import create_js_signals_class, HasSignalsJS
 
-from ..pyscript import js, JSCode
+from ..pyscript.functions import py2js, js_rename
 from ..pyscript.parser2 import get_class_definition
 
 from .serialize import serializer
@@ -148,10 +148,10 @@ class PairMeta(react.HasSignalsMeta):
         code = []
         # Add JS version of HasSignals when this is the Pair class
         if cls.mro()[1] is react.HasSignals:
-            c = js(serializer.__class__).jscode_renamed('flexx.Serializer')
+            c = py2js(serializer.__class__, 'flexx.Serializer')
             code.append(c)
             code.append('flexx.serializer = new flexx.Serializer();')
-            c = HasSignalsJS.jscode_renamed('flexx.classes.HasSignals')
+            c = js_rename(HasSignalsJS.JSCODE, 'HasSignalsJS', 'flexx.classes.HasSignals')
             code.append(c)
         # Add this class
         code.append(create_js_signals_class(cls.JS, cls_name, base_class))

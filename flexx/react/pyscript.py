@@ -1,12 +1,13 @@
 """ Implementation of flexx.react in JS via PyScript.
 """
 
-from flexx.pyscript import js, evaljs, evalpy
+from flexx.pyscript import py2js, evaljs, evalpy
 from flexx.pyscript.parser2 import get_class_definition
 
+from .react import Signal
 
-@js
-class HasSignals:
+
+class HasSignalsJS:
     
     __signals__ = []
     
@@ -172,9 +173,7 @@ class HasSignals:
         
         return selff
 
-HasSignalsJS = HasSignals
-
-def patch_HasSignals():
+def patch_HasSignals(jscode):
     """ Insert code from the Python implementation of signals.
     """
     from flexx.react.react import Signal, SourceSignal
@@ -182,12 +181,13 @@ def patch_HasSignals():
         for name in ('connect', 'disconnect', '_subscribe', '_unsubscribe', '_set',
                     '_get_value', '_update_value', '_set_status', '_seek_signal'):
             if name in cls.__dict__:
-                code = js(cls.__dict__[name], indent=1, docstrings=False)
-                code = code.jscode_renamed('selff.' + name)
+                code = py2js(cls.__dict__[name], 'selff.' + name, indent=1, docstrings=False)
                 template = '%s_%s_from_py;' % (signal_type, name)
-                HasSignalsJS._jscode = HasSignalsJS._jscode.replace(template, code.lstrip())
-    assert 'from_py' not in HasSignalsJS._jscode
-patch_HasSignals()
+                jscode = jscode.replace(template, code.lstrip())
+    assert 'from_py' not in jscode
+    return jscode
+
+HasSignalsJS.JSCODE = patch_HasSignals(py2js(HasSignalsJS))
 
 
 def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
@@ -216,7 +216,7 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             signals.append(name)
             funcname = '_' + name + '_func'
             # Add function def
-            code = js(val._func).jscode_renamed(cls_name + '.prototype.' + funcname)
+            code = py2js(val._func, cls_name + '.prototype.' + funcname)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code)
             # Add upstream signal names to the function object
@@ -227,7 +227,7 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             signal_type = val.__class__.__name__
             funcs_code.append(t % (cls_name, funcname, signal_type))
         elif callable(val):
-            code = js(val).jscode_renamed(cls_name + '.prototype.' + name)
+            code = py2js(val, cls_name + '.prototype.' + name)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code)
         elif name.startswith('__'):
@@ -252,34 +252,3 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
     
     total_code.extend(funcs_code)
     return '\n'.join(total_code)
-
-
-from flexx.react import input, watch, act, source, HasSignals, Signal
-
-class Foo:
-    
-    N = 4
-    FMT = 'XX'
-    
-    def __init__(self):
-        super().__init__()
-    
-    @input
-    def title(v=''):
-        return str(v)
-    
-    @watch('title')
-    def title_len(v):
-        return len(v)
-    
-    @act('title_len')
-    def show_title(v):
-        result.append(v)
-
-if __name__ == '__main__':
-    print(HasSignalsJS.jscode)
-    #print(create_js_signals_class(Foo, 'Foo'))
-
-#code = 'var make_signal = ' + make_signal.jscode
-#code += 'function foo (x) {console.log("haha", x); return x;}; var s = make_signal(foo); s(3); s.value'
-#print(evaljs(code))

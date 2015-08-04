@@ -56,7 +56,6 @@ m = Main.launch(runtime='firefox')
 
 # ##
 # from flexx import ui
-# from flexx.pyscript import js
 # 
 # #b1 = ui.Button(text='foo')
 # box = None
