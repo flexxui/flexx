@@ -133,7 +133,7 @@ Function calls
 
 .. pyscript_example::
     
-    # Buisiness as usual
+    # Business as usual
     foo(a, b)
     
     # Support for star args (but not **kwargs)

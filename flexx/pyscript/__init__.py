@@ -1,54 +1,81 @@
 """
-The pyscript module provides functionality for converting Python code
+The pyscript module provides functionality for transpiling Python code
 to JavaScript.
 
-Purpose
--------
+Goals
+-----
 
-The purpose of PyScript is twofold: to make writing JavaScript easier
-and less frustrating, and to allow frameworks that consist of both
-Python and JavaScript to be developed using a single language.
+There is an increase in Python projects that target web technology to
+handle visualization and user interaction.
+PyScript grew out of a desire to allow writing JavaScript callbacks in
+Python, to allow user-defined interaction to be flexible, fast, and
+stand-alone.
 
-In particular, it allows the implementation of the Python and JS part
-of widgets in ``flexx.ui`` to be in the same class definition.
+This resulted in the following two main goals: 
 
-It can also be used to develop standalone JavaScript libraries. Although
-``import`` is currently not yet supported. We'll have to see how that
-works out.
+* To make writing JavaScript easier and less frustrating, by letting
+  people write it with the Python syntax and buildins, and fixing some
+  of JavaScripts quirks.
+* To allow JavaScript snippets to be defined naturally inside a Python
+  program.
 
+Code produced by PyScript works standalone. Any (PyScript-compatible)
+Python snippet can be converted to JS; you don't need another JS library
+to run it.
 
-What PyScript fixes
--------------------
-
-The first version of JavaScript was released (in 1995) before it was
-really ready, and to avoid breaking existing websites, it still has many
-incomprehensible "features" today. JavaScript's problems can be divided in
-three categories:
-
-1. The syntax is verbose (not nearly as powerful as Python, e.g. classes).
-2. There are many odd quircks (e.g. an empty array evaluates to truethy).
-3. Binding via a global namespace and no standard packaging solution.
-
-PyScript fixes (1) by allowing coding in Python, and fixes several of
-the odd quirks in (2).
+PyScript can also be used to develop standalone JavaScript (AMD) modules.
+Although ``import`` is currently not yet supported. We'll have to see
+how that works out.
 
 
 PyScript is just JavaScript
 ---------------------------
 
-In contrast to projects like Skulpt or PyJS, the purpose is *not* to
-enable full Python support in the browser. PyScript allows you to write
-JavaScript using Python syntax, but (simular to CoffeeScript), it's
-just JavaScript.
+The purpose of projects like Skulpt or PyJS is to enable full Python
+support in the browser. This approach will always be plagued by a
+fundamental limitation: libraries that are not pure Python (like numpy)
+will not work.
+
+PyScript takes a more modest approach; it is a tool that allows one to
+write JavaScript with a Python syntax. PyScript is just JavaScript.
 
 This means that depending on what you want to achieve, you still need
-to know a thing or two about how JavaScript works.
+to know a thing or two about how JavaScript works. Further, not all Python
+code can be converted (e.g. ``**kwargs`` are not supported), and
+lists and dicts are really just JavaScript arrays and objects, respectively.
 
-Code produced by PyScript works standalone; you don't need another JS
-library to run it.
 
-PyScript is just Python
------------------------
+Pythonic
+--------
+
+PyScript makes writing JS more "Pythonic". Apart from allowing Python syntax
+for loops, classes, etc, all relevant Python buildins are supported,
+and all methods of list, dict and str as well (WIP). E.g. you can use
+``print()``, ``range()``, ``L.append()``, ``L.remove()``, etc.
+
+Also, the empty list and dict evaluate to false (whereas in JS it's
+true), and ``isinstance()`` just works (whereas JS' ``typeof`` is broken).
+
+
+Caveats
+-------
+
+PyScript fixes some of JS's quirks, but it's still just JavaScript.
+Here's a list of things to keep an eye out for. This list is likely
+incomplete. We recommend familiarizing yourself with JavaScript if you
+plan to make heavy use of PyScript.
+
+* JavasScript has a concept of ``null`` (i.e. ``None``), as well as
+  ``undefined``. Sometimes you may want to use ``if x is None or x is
+  undefined: ...``.
+* Multiplying a string with a number will yield NaN (but the reverse
+  is probably different).
+* You cannot concatenate lists with the plus operator, use ``.extend()``
+  instead.
+
+
+PyScript is valid Python
+------------------------
 
 Other than e.g. RapydScript, PyScript is valid Python. This allows
 creating modules that are a mix of real Python and PyScript. You can easily
@@ -59,20 +86,12 @@ PyScript itself (the compiler) is written in Python. Perhaps PyScript can
 at some point compile itself, so that it becomes possible to define
 PyScript inside HTML documents.
 
-Pythonic
---------
-
-Because PyScript is just JavaScript, not all Python code can be
-converted. Further, lists are really just JavaScript arrays, and dicts
-are JavaScript objects.
-
-PyScript allows writing Pythonic code for defining functions and
-classes, for loops, etc. All relevant Python buildins are supported,
-and all methods of list, dict and str as well (WIP). E.g. you can use
-``print()``, ``range()``, ``L.append()``, ``L.remove()``, etc.
 
 Support
 -------
+
+This is an overview of the language features that PyScript
+supports. Also see the quick user guide.
 
 Supported basics:
 
@@ -90,6 +109,7 @@ Supported basics:
 * function calls can have ``*args``
 * function defs can have default arguments and ``*args``
 * lambda expressions
+* list comprehensions
 * classes, with (single) inheritance, and the use of ``super()``
 * raising and catching exceptions, assertions
 * Creation of "modules"
@@ -106,6 +126,8 @@ Supported Python conveniences:
   print, len, max, min, chr, ord, dict, list, tuple, range, pow, sum,
   round, int, float, str, bool, abs, divmod, all, any, enumerate, zip,
   reversed, sorted, filter, map.
+* some methods fo list, dict and str are supported. We plan to support
+  (almost) all methods soon.
 
 Not currently supported:
 
@@ -114,24 +136,7 @@ Not currently supported:
 * slicing with steps (JS does not support this)
 * support for ``**kwargs`` (maps badly to JS call mechanism)
 * The ``with`` statement (no equivalent in JS)
-* Generators (i.e. ``yield``)?
-
-
-Caveats
--------
-
-PyScript fixes some of JS's quirks, but it's still just JavaScript.
-Here's a list of things to keep an eye out for. This list is likely
-incomplete. We recommend familiarizing yourself with JavaScript if you
-plan to make heavy use of PyScript.
-
-* JavasScript has a concept of ``null`` (i.e. ``None``), as well as
-  ``undefined``. Sometimes you may want to use ``if x is None or x is
-  undefined: ...``.
-* Multiplying a string with a number will yield NaN (but the reverse
-  is probably different).
-* You cannot concatenate lists with the plus operator, use ``extend()``
-  instead.
+* Generators, i.e. ``yield`` (not widely supported in JS)
 
 """
 

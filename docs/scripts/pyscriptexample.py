@@ -48,7 +48,8 @@ def visit_pyscript_example_html(self, node):
     pre_style = "style='margin:2px; padding: 2px; border:0px;'"
     
     
-    self.body.append("<style> div.hiddenjs {height: 1.2em; width: 2em; overflow:hidden; } div.hiddenjs:hover {height: initial; width: initial;}</style>\n")
+    #self.body.append("<style> div.hiddenjs {height: 1.2em; width: 2em; overflow:hidden; font-size: small;} div.hiddenjs:hover {height: initial; width: initial;} div.hiddenjs:hover > .ph {display:none;} </style>\n")
+    self.body.append("<style> div.hiddenjs {overflow:hidden; font-size: small; min-width:200px; min-height:30px;} div.hiddenjs > .js {display:none} div.hiddenjs:hover > .js {display:block} div.hiddenjs:hover > .ph {display:none;} </style>\n")
     
     self.body.append("<table>")
     #self.body.append("<tr><td style='text-align:right;'> <i>PyScript</i>&nbsp;&nbsp; </td><td>&nbsp;&nbsp; <i>JS</i> </td></tr>")
@@ -69,7 +70,7 @@ def visit_pyscript_example_html(self, node):
         js_html = highlight(js, javaScriptLexer, htmlFormatter)
         py_html = py_html.replace("<pre>", '<pre %s>' % pre_style)
         js_html = js_html.replace("<pre>", '<pre %s>' % pre_style)
-        js_html = "<div class='hiddenjs'>JS %s</div>" % js_html
+        js_html = "<div class='hiddenjs'><div class='ph'>JS</div> <div class='js'>%s</div> </div>" % js_html
         
         #self.body.append("%s <div class='hiddenjs'><a>&nbsp;</a> %s</div>" % (py_html, js_html))
         self.body.append("<tr><td %s>%s</td><td %s>%s</td></tr>" % 
