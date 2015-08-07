@@ -7,7 +7,7 @@ from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
 from flexx import react
-from flexx.react import input, watch, act, source, SignalValueError
+from flexx.react import input, watch, act, source, SignalValueError, undefined
 from flexx.react import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal
 
 # todo: garbage collecting
@@ -282,12 +282,12 @@ def test_signal_last_value():
     def s1(v):
         return v + 1
     
-    assert s1.last_value is None
+    assert s1.last_value is undefined
     s1()  # update
-    assert s1.last_value is None
+    assert s1.last_value is undefined
     
     s0(20)
-    assert s1.last_value is None
+    assert s1.last_value is undefined
     s1()
     assert s1.last_value == 11
 
@@ -302,7 +302,7 @@ def test_act_last_value():
     def s1(v):
         return v + 1
     
-    assert s1.last_value is None
+    assert s1.last_value is undefined
     
     s0(20)
     assert s1.last_value == 11

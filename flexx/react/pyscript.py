@@ -110,8 +110,8 @@ class HasSignalsJS:
                                        'which signal %r is not.' % selff._name)
         
         # Create public attributes
-        self._create_property(selff, 'value', '_value', None)
-        self._create_property(selff, 'last_value', '_last_value', None)
+        self._create_property(selff, 'value', '_value', undefined)
+        self._create_property(selff, 'last_value', '_last_value', undefined)
         self._create_property(selff, 'timestamp', '_timestamp', 0)
         self._create_property(selff, 'last_timestamp', '_last_timestamp', 0)
         self._create_property(selff, 'not_connected', '_not_connected', 'No connection attempt yet.')
@@ -123,6 +123,7 @@ class HasSignalsJS:
         selff._active = False
         selff._func = func
         selff._status = 3
+        selff._count = 0
         selff.__self__ = obj  # note: not a weakref...
         selff._upstream_given = upstream
         selff._upstream = []
@@ -166,10 +167,14 @@ class HasSignalsJS:
                 #print('Error updating signal:', err.stack)
                 console.error('Error updating signal: ' + err)
         
-        def _set_value(value=None):  # default None to prevent undefined on JS
+        def _set_value(value):
+            if value is undefined:
+                self._status = 0
+                return  # new tick, but no update of value
             selff._last_value = selff._value
             selff._value = value
             selff._last_timestamp = selff._timestamp
+            selff._count += 1
             selff._timestamp = Date().getTime() / 1000
             selff._status = 0
             obj._signal_changed(selff)
@@ -184,6 +189,7 @@ class HasSignalsJS:
         selff._call_func = _call_func
         
         return selff
+
 
 def patch_HasSignals(jscode):
     """ Insert code from the Python implementation of signals.

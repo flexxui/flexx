@@ -18,7 +18,7 @@ single quotes.
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.react import input, watch, act, source, HasSignals
+from flexx.react import input, watch, act, source, HasSignals, undefined
 from flexx.react.pyscript import create_js_signals_class, HasSignalsJS
 from flexx.pyscript.functions import py2js, evaljs, evalpy, js_rename
 
@@ -109,17 +109,18 @@ def test_disconnecting_signal(Name):
 def test_signal_attributes(Name):
     s = Name()
     s.r.append(s.full_name._timestamp == 0)
-    s.r.append(s.full_name._value is None)
+    s.r.append(s.full_name._value is undefined)
     s.full_name()
     s.r.append(s.full_name._timestamp > 0)
     s.r.append(s.full_name._last_timestamp == 0)
     s.r.append(s.full_name._value == 'john doe')
-    s.r.append(s.full_name._last_value is None)
+    s.r.append(s.full_name._last_value is undefined)
     s.first_name('jane')
     s.full_name()
     s.r.append(s.full_name._last_timestamp > 0)
     s.r.append(s.full_name._last_value == 'john doe')
     return s.r
+
 
 @run_in_both(Name, "[3, 'bar', [1, 2, 3], 2, 'err', 'err', 'john']")
 def test_hassignal_attributes(Name):
@@ -419,6 +420,41 @@ def test_setting_inputs2(Cls):
     r.append(s.s1())
     r.append(s.s2())
     return r
+
+
+class UndefinedSignalValues(HasSignals):
+    
+    def __init__(self):
+        self.r = []
+        super().__init__()
+    
+    @input
+    def number1(v=1):
+        if v > 0:
+            return v
+        return undefined
+    
+    @act('number1')
+    def number2(v):
+        if v > 5:
+            return v
+        return undefined
+    
+    @act('number2')
+    def reg(self, v):
+        self.r.append(v)
+
+@run_in_both(UndefinedSignalValues, "[9, 8, 7]")
+def test_undefined_values(Cls):
+    s = Cls()
+    s.number1(9)
+    s.number1(-2)
+    s.number1(-3)
+    s.number1(8)
+    s.number1(3)
+    s.number1(4)
+    s.number1(7)
+    return s.r
 
 
 class Circular(HasSignals):

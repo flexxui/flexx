@@ -295,7 +295,8 @@ something we'd need to work out ...
 
 """
 
-from .signals import SignalValueError, Signal
+from .signals import SignalValueError, Signal, undefined
 from .signals import SourceSignal, InputSignal, WatchSignal, ActSignal
 from .decorators import source, input, watch, act
 from .hassignals import HasSignals
+from .functional import map, filter, reduce, merge

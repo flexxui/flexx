@@ -152,6 +152,8 @@ Not currently supported:
 # demonstrating the features defined in that module. In the docs these
 # docstrings are combined into one complete guide.
 
+import sys
+
 from .parser0 import Parser0, JSError  # noqa
 from .parser1 import Parser1
 from .parser2 import Parser2
@@ -191,7 +193,12 @@ from .functions import py2js, evaljs, evalpy, script2js, clean_code, js_rename  
 
 
 # Some names that users may want to import to fool pyflakes
-window = 'JS-WINDOW'  # noqa
-undefined = 'JS-UNDEFINED'  # noqa
-document = 'JS-DOCUMENT'  # noqa
-Object = 'JS-OBJECT'  # noqa
+window = '<<JS-WINDOW>>'  # noqa
+document = '<<JS-DOCUMENT>>'  # noqa
+Object = '<<JS-OBJECT>>'  # noqa
+
+# We'll be using "undefined" in flexx.react as weel, and want to use
+# the same exact object, without having dependencies.
+class undefined:
+    def __repr__(self): return 'undefined'
+undefined = getattr(sys, '_undefined', undefined())  # noqa

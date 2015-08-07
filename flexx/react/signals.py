@@ -15,7 +15,10 @@ else:  # pragma: no cover
     string_types = basestring
 
 
-undefined = '<<JS UNDEFINED>>'  # to help make some code PyScript compatible
+# Get global version of "undefined", so we can use ``is`` operator.
+class undefined:
+    def __repr__(self): return 'undefined'
+undefined = getattr(sys, '_undefined', undefined())
 
 
 class SignalValueError(Exception):
@@ -84,7 +87,7 @@ class Signal(object):
         # Check and set dependencies
         upstream = [s for s in upstream]
         for s in upstream:
-            assert isinstance(s, string_types)  # or isinstance(s, Signal)
+            assert isinstance(s, string_types) or isinstance(s, Signal)
         self._upstream_given = [s for s in upstream]
         self._upstream = []
         self._downstream = []
@@ -110,8 +113,9 @@ class Signal(object):
                                'use the decorators. (%r)' % self._name)
             
         # Init variables related to the signal value
-        self._value = None
-        self._last_value = None
+        self._value = undefined
+        self._last_value = undefined
+        self._count = 0
         self._timestamp = 0
         self._last_timestamp = 0
         self._status = 3  # 0: ok, 1: out of date, 2: uninitialized, 3: unconnected
@@ -269,6 +273,9 @@ class Signal(object):
         self._upstream_reconnect = []
         
         for fullname in self._upstream_given:
+            if getattr(fullname, '_IS_SIGNAL', False):
+                self._upstream.append(fullname)
+                continue
             nameparts = fullname.split('.')
             # Obtain first part of path from the frame that we have
             n = nameparts[0]
@@ -341,8 +348,12 @@ class Signal(object):
     def _set_value(self, value):
         """ This is like ``self._value = value``, but with bookkeeping.
         """
+        if value is undefined:
+            self._status = 0
+            return  # new tick, but no update of value
         self._last_value = self._value
         self._value = value
+        self._count += 1
         self._last_timestamp = self._timestamp
         self._timestamp = time.time()
         self._status = 0
@@ -410,8 +421,15 @@ class Signal(object):
                 statuses.append(s._status)
         self._status = max(statuses)
         # Update self
+        if self._name == 'number2':
+            pass
         if self._active and self._status == 1:
+            count = self._count
             self._save_update()  # this can change our status to 0 or 2
+            if self._status == 0 and self._count == count:
+                if count == 0:
+                    self._status = 3  # value was never set
+                return  # value was not updated (undefined)
         # Prevent circular (stage 2: exit with non-zero status)
         if self is initial_initiator:
             return
@@ -456,7 +474,10 @@ class SourceSignal(Signal):
     def _set(self, value):
         """ Method for the developer to set the source signal.
         """
-        self._set_value(self._call_func(value))
+        value = self._call_func(value)
+        self._set_value(value)
+        if value is undefined:
+            return  # no need to update
         for signal in self._downstream_reconnect[:]:  # list may be modified
             signal.connect(False)
         for signal in self._downstream:
