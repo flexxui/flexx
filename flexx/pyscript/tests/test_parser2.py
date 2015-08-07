@@ -241,6 +241,10 @@ def func1():
 
 class TestFunctions:
     
+    def test_func_default_return_null(self):
+        assert evalpy('def foo():pass\nprint(foo(), 1)') == 'null 1'
+        assert evalpy('def foo():return\nprint(foo(), 1)') == 'null 1'
+    
     def test_func_calls(self):
         assert py2js('foo()') == 'foo();'
         assert py2js('foo(3, 4)') == 'foo(3, 4);'

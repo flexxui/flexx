@@ -732,6 +732,7 @@ class Parser2(Parser1):
             ns = self.pop_stack()  # Should conly consist of arg names
             assert not set(ns).difference(argnames)
         else:
+            code.append(self.lf('return null;'))
             # Pop stack, declare vars, but exclude our argnames
             ns = self.pop_stack()
             for name in argnames:
@@ -758,7 +759,7 @@ class Parser2(Parser1):
             code.append(';')
             return code
         else:
-            return self.lf("return;")
+            return self.lf("return null;")
     
     def parse_ClassDef(self, node):
         

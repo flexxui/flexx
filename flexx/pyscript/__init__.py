@@ -128,6 +128,8 @@ Supported Python conveniences:
   reversed, sorted, filter, map.
 * some methods fo list, dict and str are supported. We plan to support
   (almost) all methods soon.
+* the default return value of a function is ``None``/``null`` instead
+  of ``undefined``.
 
 Not currently supported:
 

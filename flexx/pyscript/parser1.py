@@ -131,6 +131,9 @@ usual.
 Function calls
 --------------
 
+As in Python, the default return value of a function is ``None`` (i.e.
+``null`` in JS).
+
 .. pyscript_example::
     
     # Business as usual
