@@ -4,7 +4,7 @@
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.react import HasSignals, input, watch, act, Signal
+from flexx.react import HasSignals, input, watch, act, Signal, InputSignal
 
 
 def test_signals_on_classes_are_descriptors():
@@ -31,6 +31,8 @@ def test_signals_on_classes_are_descriptors():
     assert Test.show_title1.not_connected
     assert Test.show_title2.not_connected
     
+    raises(RuntimeError, Test.show_title1.connect)
+    
     t = Test()
     assert len(shown) == 2
 
@@ -54,6 +56,8 @@ def test_hassignals_without_self():
             title_lengths.append(v)
     
     t = Test()
+    
+    assert t.title.__self__ is t
     
     assert set(t.__signals__) == set(['title', 'title_len', 'show_title'])
     
@@ -93,6 +97,31 @@ def test_hassignals_with_self():
     t.title('foo')
     assert len(title_lengths) == 2
     assert title_lengths[-1] == 3
+
+
+def test_hassignals_init():
+    
+    class Str(InputSignal):
+        def __init__(self, func=None, upstream=[], *args):
+            InputSignal.__init__(self, str, [], *args)
+    
+    class Test(HasSignals):
+        
+        name = Str
+        
+        @input
+        def title(self, v='a'):
+            return str(v)
+    
+    raises(ValueError, Test, foo=3)
+    
+    t = Test()
+    assert t.title() == 'a' 
+    assert t.name() == '' 
+    
+    t = Test(title='b', name='c')
+    assert t.title() == 'b' 
+    assert t.name() == 'c' 
 
 
 def test_anyclass():

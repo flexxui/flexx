@@ -121,7 +121,7 @@ def test_signal_attributes(Name):
     s.r.append(s.full_name._last_value == 'john doe')
     return s.r
 
-@run_in_both(Name, "[3, 'bar', [1, 2, 3], 2, 'err', 'err']")
+@run_in_both(Name, "[3, 'bar', [1, 2, 3], 2, 'err', 'err', 'john']")
 def test_hassignal_attributes(Name):
     s = Name()
     # class attributes
@@ -143,6 +143,12 @@ def test_hassignal_attributes(Name):
         s.r.append(s.first_name.value)
     except Exception:
         s.r.append('err')
+    # cannot delete signals
+    try:
+        del s.first_name
+    except Exception:
+        pass  # on Python it raises, on JS it ignores
+    s.r.append(s.first_name.value)
     return s.r
 
 @run_in_both(Name, "['first_name', 'full_name', 'last_name']")
@@ -280,12 +286,22 @@ class Unconnected(HasSignals):
         return v
 
 @run_in_both(Unconnected, "[false, true, 'signal 'button.title' does not exist.']")
-def test_unconnected(Cls):
+def test_unconnected1(Cls):
     s = Cls()
     r = []
     r.append(bool(s.s0.not_connected))
     r.append(bool(s.s1.not_connected))
     r.append(s.s2.not_connected)
+    return r
+
+@run_in_both(Unconnected, "[true, 'object 'nope' is not a signal.']")
+def test_unconnected2(Cls):
+    s = Cls()
+    r = []
+    s.nope = 4
+    s.s1.connect(False)
+    r.append(bool(s.s1.not_connected))
+    r.append(s.s1.not_connected)
     return r
 
 @run_in_both(Unconnected, "[true, false, 'err2', 'err3', 'err4']")
@@ -525,6 +541,10 @@ class Dynamism(HasSignals):
     def current_person(v):
         return v
     
+    @watch('current_person')
+    def current_person_proxy(v):  # need this to cover more code
+        return v
+    
     @input
     def current_persons(v):
         return v
@@ -533,7 +553,7 @@ class Dynamism(HasSignals):
     def current_name1(v):
         return v
     
-    @act('current_person.first_name')
+    @act('current_person_proxy.first_name')
     def current_name2(self, v):
         self.r.append(v)
     
@@ -543,6 +563,10 @@ class Dynamism(HasSignals):
         for n in names:
             v += n
         self.r.append(v)
+    
+    @act('current_persons.*.bla')
+    def current_name4(self, *names):
+        pass
 
 
 @run_in_both(Dynamism, "[3, 'err', 'john', 'john', 0, 3, 'john', 0, 'jane', 'jane']", extra_classes=(Name,))
@@ -577,6 +601,8 @@ def test_dynamism1(Cls):
 def test_dynamism2(Cls):
     d = Dynamism()
     n1, n2 = Name(), Name()
+    
+    assert d.current_name4.not_connected
     
     d.r.append(d.current_name3._status)
     try:

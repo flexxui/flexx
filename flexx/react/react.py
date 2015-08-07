@@ -33,22 +33,6 @@ class SignalValueError(Exception):
     pass
 
 
-class StubFrame(object):
-    """ Empty frame for source/input signals without upstream.
-    """
-    @property
-    def f_locals(self):
-        return {}
-    
-    @property
-    def f_globals(self):
-        return {}
-    
-    @property
-    def f_back(self):
-        return self
-
-
 class ObjectFrame(object):
     """ A proxy frame that gives access to the class instance (usually
     from HasSignals) as a frame, combined with the frame that the class
@@ -188,7 +172,7 @@ class Signal(object):
         except AttributeError:
             sys._getframe()
             frame = ObjectFrame(instance, self._frame.f_back)
-            new = self.__class__(self._func, self._upstream_given, frame, ob=instance)
+            new = self.__class__(self._func, self._upstream_given, frame, instance)
             setattr(instance, private_name, new)
             return new
     
@@ -521,11 +505,9 @@ class ActSignal(Signal):
 class PropSignal(InputSignal):
     def __set__(self, obj, value):
         
-        if obj is None:
-            raise ValueError('Cannot overwrite a signal; use some_signal(val) on InputSignal objects.')
-        
-        s = InputSignal.__get__(self, obj, None)
-        s(value)
+        if obj is not None:
+            s = InputSignal.__get__(self, obj, None)
+            s(value)
     
     def __get__(self, obj, owner):
         s = InputSignal.__get__(self, obj, None)
@@ -661,7 +643,7 @@ def source(*input_signals):
     if _first_arg_is_func(input_signals):
         func, input_signals = input_signals[0], []
         return _source(func)
-    else:
+    else:  # pragma: no cover
         return _source
 
 
@@ -724,7 +706,7 @@ def prop(*input_signals):
     if _first_arg_is_func(input_signals):
         func, input_signals = input_signals[0], []
         return _prop(func)
-    else:
+    else:  # pragma: no cover
         return _prop
 
 

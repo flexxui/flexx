@@ -6,11 +6,27 @@ import sys
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
+from flexx import react
 from flexx.react import input, watch, act, source, SignalValueError
 from flexx.react import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal
 
 # todo: garbage collecting
 # todo: HasSignals
+
+## Misc
+
+
+def test_object_frame():
+    class X:
+        def __init__(self):
+            self.foo = 42
+    ob = X()
+    frame = sys._getframe(0)
+    f = react.react.ObjectFrame(ob, frame)
+    assert f.f_locals['foo'] == 42
+    assert f.f_globals is frame.f_globals
+    assert f.f_back.f_locals['foo'] == 42
+
 
 ## Inputs
 
@@ -53,7 +69,8 @@ def test_input_simple():
     
     raises(ValueError, tester, -1)
     assert tester() == 22  # old value maintained
-
+    
+    raises(ValueError, tester, 1, 2)   # multiple args
 
 def test_input_no_default():
     

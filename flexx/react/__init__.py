@@ -51,7 +51,7 @@ function is "lifted" to a signal:
 
 The example above looks quite similar to how some event-drive applications
 allow binding callbacks to events. There are, however, a few differences:
-a) The greet function has now become a signal object, which has an output
+a) The greet function has now become a signal object, whichhas an output
 of its own (although the output is None in this case, because the
 function does not return a value, more on that below); b) The function
 (which we'd call the "callback" in an event driven system) does not
@@ -297,20 +297,3 @@ something we'd need to work out ...
 
 from .react import source, input, watch, act, HasSignals, SignalValueError
 from .react import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal
-
-
-class TestDocs(HasSignals):
-    
-    @input
-    def title(v=''):
-        """ The title of the x. """
-        return str(v)
-    
-    @watch('xx')
-    def foo(v=''):
-        return v
-        
-    @act('title')
-    def show_title(self, v):
-        """ Reactor to show the title when it changes. """
-        print(v)

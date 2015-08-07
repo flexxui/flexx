@@ -1,6 +1,8 @@
 """ Implementation of flexx.react in JS via PyScript.
 """
 
+import json
+
 from flexx.pyscript import py2js, evaljs, evalpy
 from flexx.pyscript.parser2 import get_class_definition
 
@@ -44,7 +46,7 @@ class HasSignalsJS:
         def setter():
             raise ValueError(name + ' is not settable')
         obj[private_name] = initial
-        opts = {"enumerable": True, 'get': getter, 'set': setter}
+        opts = {'enumerable': True, 'configurable': False, 'get': getter, 'set': setter}
         Object.defineProperty(obj, name, opts)
     
     def _create_signals():
@@ -241,15 +243,12 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             funcs_code.append(code)
         elif name.startswith('__'):
             pass  # we create our own __signals__ list
-        elif isinstance(val, (int, float, str)):
-            total_code.append('%s.prototype.%s = %r' % (cls_name, name, val))
-        elif isinstance(val, (tuple, list)):
-            for item in val:
-                if not isinstance(item, (float, int, str)):
-                    raise ValueError(err % (name, item))
-            total_code.append('%s.prototype.%s = %r' % (cls_name, name, list(val)))
         else:
-            raise ValueError(err % (name, val))
+            try:
+                serialized = json.dumps(val)
+            except Exception as err:  # pragma: no cover
+                raise ValueError('Attributes on JS HasSignals class must be JSON compatible.\n%s' % str(err))
+            total_code.append('%s.prototype.%s = JSON.parse(%r)' % (cls_name, name, serialized))
     
     # Insert __signals__ that we found
     if base_class in ('Object', 'HasSignals.prototype'):
