@@ -222,7 +222,7 @@ def test_func_name():
 
 
 def test_props():
-    from flexx.react.react import prop
+    from flexx.react.decorators import prop
     title_lengths = []
     
     class Test(HasSignals):

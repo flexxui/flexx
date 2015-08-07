@@ -22,7 +22,7 @@ def test_object_frame():
             self.foo = 42
     ob = X()
     frame = sys._getframe(0)
-    f = react.react.ObjectFrame(ob, frame)
+    f = react.signals.ObjectFrame(ob, frame)
     assert f.f_locals['foo'] == 42
     assert f.f_globals is frame.f_globals
     assert f.f_back.f_locals['foo'] == 42

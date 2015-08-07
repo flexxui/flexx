@@ -8,7 +8,8 @@ import json
 import weakref
 import hashlib
 
-from ..react import react
+from .. import react
+from ..react.hassignals import HasSignalsMeta, with_metaclass
 from ..react.pyscript import create_js_signals_class, HasSignalsJS
 
 from ..pyscript.functions import py2js, js_rename
@@ -26,7 +27,7 @@ pair_classes = []
 def get_pair_classes():
     """ Get a list of all known Pair subclasses.
     """
-    return [c for c in react.HasSignalsMeta.CLASSES if issubclass(c, Pair)]
+    return [c for c in HasSignalsMeta.CLASSES if issubclass(c, Pair)]
 
 
 def get_instance_by_id(id):
@@ -87,13 +88,13 @@ class PyInputSignal(PySignal):
     pass
 
 
-class PairMeta(react.HasSignalsMeta):
+class PairMeta(HasSignalsMeta):
     """ Meta class for Pair
     Set up proxy signals in Py/JS.
     """
  
     def __init__(cls, name, bases, dct):
-        react.HasSignalsMeta.__init__(cls, name, bases, dct)
+        HasSignalsMeta.__init__(cls, name, bases, dct)
         
         OK_MAGICS = '__init__', '__json__', '__from_json__'
         
@@ -160,7 +161,7 @@ class PairMeta(react.HasSignalsMeta):
         return '\n'.join(code)
 
 
-class Pair(react.with_metaclass(PairMeta, react.HasSignals)):
+class Pair(with_metaclass(PairMeta, react.HasSignals)):
     """ Class representing Python-JavaScript object pairs
     
     Each instance of this class has a corresponding object in

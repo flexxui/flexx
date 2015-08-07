@@ -295,5 +295,7 @@ something we'd need to work out ...
 
 """
 
-from .react import source, input, watch, act, HasSignals, SignalValueError
-from .react import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal
+from .signals import SignalValueError, Signal
+from .signals import SourceSignal, InputSignal, WatchSignal, ActSignal
+from .decorators import source, input, watch, act
+from .hassignals import HasSignals

@@ -1,12 +1,13 @@
-""" Implementation of flexx.react in JS via PyScript.
+"""
+Implementation of flexx.react in JS via PyScript.
 """
 
 import json
 
-from flexx.pyscript import py2js, evaljs, evalpy
-from flexx.pyscript.parser2 import get_class_definition
+from ..pyscript import py2js, evaljs, evalpy
+from ..pyscript.parser2 import get_class_definition
 
-from .react import Signal
+from .signals import Signal, SourceSignal
 
 
 class HasSignalsJS:
@@ -187,7 +188,6 @@ class HasSignalsJS:
 def patch_HasSignals(jscode):
     """ Insert code from the Python implementation of signals.
     """
-    from flexx.react.react import Signal, SourceSignal
     for signal_type, cls in [('BaseSignal', Signal), ('SourceSignal', SourceSignal)]:
         for name in ('connect', 'disconnect', '_subscribe', '_unsubscribe', '_set',
                     '_get_value', '_update_value', '_set_status', '_seek_signal'):
