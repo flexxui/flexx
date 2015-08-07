@@ -4,7 +4,7 @@
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.react import HasSignals, input, watch, act, Signal, InputSignal
+from flexx.react import HasSignals, input, connect, lazy, Signal, InputSignal
 
 
 def test_signals_on_classes_are_descriptors():
@@ -17,11 +17,11 @@ def test_signals_on_classes_are_descriptors():
         def title(v=''):
             return str(v)
         
-        @act('title')
+        @connect('title')
         def show_title1(v=''):
             shown.append(v)
         
-        @act('title')
+        @connect('title')
         def show_title2(self, v=''):
             shown.append(v)
     
@@ -47,11 +47,11 @@ def test_hassignals_without_self():
         def title(v=''):
             return str(v)
         
-        @watch('title')
+        @connect('title')
         def title_len(v):
             return len(v)
         
-        @act('title_len')
+        @connect('title_len')
         def show_title(v):
             title_lengths.append(v)
     
@@ -79,11 +79,11 @@ def test_hassignals_with_self():
         def title(self, v=''):
             return str(v)
         
-        @watch('title')
+        @connect('title')
         def title_len(self, v):
             return len(v)
         
-        @act('title_len')
+        @connect('title_len')
         def show_title(self, v):
             title_lengths.append(v)
     
@@ -134,11 +134,11 @@ def test_anyclass():
         def title(self, v=''):
             return str(v)
         
-        @watch('title')
+        @connect('title')
         def title_len(self, v):
             return len(v)
         
-        @act('title_len')
+        @connect('title_len')
         def show_title(self, v):
             title_lengths.append(v)
     
@@ -171,7 +171,7 @@ def test_connection_locals1():
     
     class Test(HasSignals):
         
-        @watch('title')
+        @connect('title')
         def title_len(self, v):
             return len(v)
     
@@ -193,7 +193,7 @@ def test_connection_locals1():
 def test_connection_locals2():
     
     class Test(HasSignals):
-        @watch('title')
+        @connect('title')
         def title_len(self, v):
             return len(v)
     
@@ -231,11 +231,11 @@ def test_props():
         def title(self, v=''):
             return str(v)
         
-        @watch('title')
+        @connect('title')
         def title_len(self, v):
             return len(v)
         
-        @act('title_len')
+        @connect('title_len')
         def show_title(self, v):
             title_lengths.append(v)
     

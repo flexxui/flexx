@@ -87,13 +87,9 @@ class HasSignalsJS:
         
         return self._create_SourceSignal(func, upstream, selff)
     
-    def _create_WatchSignal(func, upstream, selff=None):
+    def _create_LazySignal(func, upstream, selff=None):
         selff = self._create_Signal(func, upstream, selff)
         selff._active = False
-        return selff
-    
-    def _create_ActSignal(func, upstream):
-        selff = self._create_Signal(func, upstream)
         return selff
     
     def _create_Signal(func, upstream, selff=None):

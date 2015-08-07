@@ -43,15 +43,15 @@ function is "lifted" to a signal:
 
 .. code-block:: py
     
-    # The function greet is used to react to signal "name"
-    @react.act('name')
+    # The function greet() is used to react to signal "name"
+    @react.connect('name')
     def greet(n):
         print('hello %!' % n)
 
 
 The example above looks quite similar to how some event-drive applications
 allow binding callbacks to events. There are, however, a few differences:
-a) The greet function has now become a signal object, whichhas an output
+a) The greet function has now become a signal object, which has an output
 of its own (although the output is None in this case, because the
 function does not return a value, more on that below); b) The function
 (which we'd call the "callback" in an event driven system) does not
@@ -63,7 +63,7 @@ multiple upsteam signals*:
 
 .. code-block:: py
 
-    @react.act('first_name', 'last_name')
+    @react.connect('first_name', 'last_name')
     def greet(first, last):
         print('hello %s %s!' % (first, last)
 
@@ -72,14 +72,13 @@ you define, you specify *exactly* what input signals there are, and it will
 always be up to date. Doing that in an event-driven system quickly results
 in a spaghetti of callbacks and boilerplate to keep track of state.
 
-Act signals
------------
+The function of a signal gets called directly when any of the
+upstream signals (or the upstream-upstream signals) change. The return value
+of the function represents the output signal value, which can also be None.
+When the return value is ``undefined`` (from ``react.undefined`` or
+``pyscript.undefined``), the value is ignored and the signal maintains
+its current value.
 
-The two examples above show how to create an *act signal*. The function
-of this signal gets called directly when any of the upstream signals
-(or the upstream-upstream signals) change. It is most similar to
-callbacks in an event-driven system. These signals will usually not
-have an output value, but they certainly can have one.
 
 Source and input signals
 ------------------------
@@ -117,22 +116,6 @@ used to specify the initial signal value.
 Source and input signals generally do not have upstream signals, but
 they can have them.
 
-Watch signals
--------------
-
-In contrast to act signals, a *watch signal* does not update immediately
-when the upstream signals changes. It is updated automatically (lazily)
-whenever its value is queried, either because the signal is called, or
-because there is an act signal downstream.
-
-Watch signals are great for passing and modifying signal values, and
-its what you should probably use unless you need an input or act signal:
-
-.. code-block:: py
-
-    @react.watch('first_name', 'last_name')
-    def full_name(first, last):
-        return '%s %s' % (first, last)
 
 A complete example
 ------------------
@@ -147,13 +130,33 @@ A complete example
     def last_name(s='doe'):
         return str(s)
     
-    @react.watch('first_name', 'last_name')
+    @react.connect('first_name', 'last_name')
     def full_name(first, 'last'):
         return '%s %s' % (first, last)
     
-    @react.act('full_name')
+    @react.connect('full_name')
     def greet(name):
         print('hello %s!' % name)
+
+
+Lazy signals
+------------
+
+In contrast to normal signals, a *lazy signal* does not update immediately
+when the upstream signals changes. It is updated automatically (lazily)
+whenever its value is queried. Note that this has little effect when
+there is a normal signal downstream.
+
+Lazy signals can be convenient in a situation where values changes rapidly,
+while the current value is only needed sparingly. To create, use the
+``lazy()`` decorator:
+
+.. code-block:: py
+
+    @react.lazy('first_name', 'last_name')
+    def full_name(first, last):
+        return '%s %s' % (first, last)
+
 
 Caching
 -------
@@ -168,12 +171,12 @@ Caching
     def data_clean(clean):
         return bool(clean)
     
-    @react.watch('data_select')
+    @react.connect('data_select')
     def data(id):
         open_connection(id)
         return get_data_from_the_web()  # this may take a while
     
-    @react.act('data', 'data_clean')
+    @react.connect('data', 'data_clean')
     def show_data(data, clean):
         if clean:
            data = clean_func(data)
@@ -203,11 +206,11 @@ inherit from the ``HasSignals`` class:
         def first_name(s):
             return s
         
-        @react.watch('father.last_name')
+        @react.connect('father.last_name')
         def last_name(s):
             return s
         
-        @react.act('first_name', 'last_name')
+        @react.connect('first_name', 'last_name')
         de greet(first, last):
             print('hello %s %s!' % (first, last))
 
@@ -236,7 +239,7 @@ connections be made automatically. Let's modify the last example a bit:
             assert isinstance(f, Person)
             return f
         
-        @react.watch('father.last_name')
+        @react.connect('father.last_name')
         def last_name(s):
             return s
         ...
@@ -255,7 +258,7 @@ changes, or the father changes its name. Dynamism also supports star notation:
             assert all([isinstance(c, Person) for c in cc])
             return cc
         
-        @react.watch('children.*')
+        @react.connect('children.*')
         def child_names(*names):
             return ', '.join(name)
 
@@ -270,7 +273,7 @@ The most notable is the value of the signal before the last change.
     
     class Person(react.HasSignals):
         
-        @react.act('first_name'):
+        @react.connect('first_name'):
         def react_to_name_change(self, new_name):
             old_name = self.first_name.last_value
             new_name = self.first_name.value  # == new_name
@@ -283,7 +286,18 @@ convenient enough to make it public.
 Functional RP
 -------------
 
-TODO: add functional!
+The "F" in FRP stands for functional. Currently, there is limited
+support for that, for example:
+
+.. code-block:: py
+
+    filter = lambda x: x>0
+    @react.connect(react.filter(filter, 'number')
+    def show_positive_numbers(v):
+        print(v)
+
+This functionality is to be extended in the future.
+
 
 Some things just are events
 ---------------------------
@@ -296,7 +310,7 @@ something we'd need to work out ...
 """
 
 from .signals import SignalValueError, Signal, undefined
-from .signals import SourceSignal, InputSignal, WatchSignal, ActSignal
-from .decorators import source, input, watch, act
+from .signals import Signal, SourceSignal, InputSignal, LazySignal
+from .decorators import connect, source, input, lazy
 from .hassignals import HasSignals
 from .functional import map, filter, reduce, merge

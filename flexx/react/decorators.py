@@ -4,11 +4,45 @@ The decorator functions that make up the core API for flexx.react.
 
 import sys
 
-from .signals import Signal, SourceSignal, InputSignal, WatchSignal, ActSignal, PropSignal
+from .signals import Signal, SourceSignal, InputSignal, LazySignal, PropSignal
 
 
 def _first_arg_is_func(ii):
     return len(ii) == 1 and (not isinstance(ii[0], Signal)) and callable(ii[0])
+
+
+def connect(*input_signals):
+    """ Decorator to transform a function into Signal object.
+    
+    A signal takes one or more signals as input (specified as arguments
+    to this decorator) and may produce a new signal value. The function
+    being wrapped should have an argument for each upstream signal, and
+    its return value is used as the output signal value, unless that value
+    is ``react.undefined`` (or just ``undefined in JS``).
+    
+    When any of the input signals change, this signal is updated
+    immediately (i.e. the wrapped function is called). 
+    
+    Example:
+        
+        .. code-block:: py
+            
+            @react.connect('first_name', 'last_name')
+            def full_name(first, last):
+                return first + ' ' + last
+            
+            @react.connect('full_name')
+            def greet(n):
+                print('Hello %s!' % n)
+    """
+    if (not input_signals) or _first_arg_is_func(input_signals):
+        raise ValueError('Act signal must have upstream signals.')
+    
+    def _connect(func):
+        frame = sys._getframe(1)
+        s = Signal(func, input_signals, frame=frame)
+        return s
+    return _connect
 
 
 def source(*input_signals):
@@ -27,7 +61,7 @@ def source(*input_signals):
         
         .. code-block:: py
         
-            @source
+            @react.source
             def s1(val):
                 return float(val)
             
@@ -59,7 +93,7 @@ def input(*input_signals):
         
         .. code-block:: py
         
-            @input
+            @react.input
             def s1(val):
                 return float(val)
             
@@ -75,7 +109,7 @@ def input(*input_signals):
         
         .. code-block:: py
         
-            @input('fahrenheit')
+            @react.input('fahrenheit')
             def celcius(v=32, f=None):
                 if f is None:
                     return float(v)
@@ -115,66 +149,28 @@ def prop(*input_signals):
         return _prop
 
 
-def watch(*input_signals):
-    """ Decorator to transform a function into a WatchSignal object.
+def lazy(*input_signals):
+    """ Decorator to transform a function into a LazySignal object.
     
-    A watch signal takes one or more signals as input (specified as arguments
-    to this decorator) and produces a new signal value. The function
-    being wrapped should have an argument for each upstream signal, and
-    its return value is used as the output signal value.
-    
-    When any of the input signals change, this signal is marked
-    "invalid", but it will not retrieve the new signal value until it
-    is requested. This pull machanism allows lazy evaluation and can
-    prevent unnesesary updates.
+    A lazy signal does *not* immediately update when any of its upstream
+    signals changes. Instead, the signal is marked "invalid", but it
+    will not retrieve the new signal value until it is requested. This
+    pull machanism allows lazy evaluation and can prevent unnesesary
+    updates.
     
     Example:
         
         .. code-block:: py
         
-            @watch('s1', 's2')
+            @react.lazy('s1', 's2')
             def the_sum(val1, val2):
                 return val1 + val2
     """
     if (not input_signals) or _first_arg_is_func(input_signals):
-        raise ValueError('Input signal must have upstream signals.')
+        raise ValueError('Lazy signal must have upstream signals.')
     
-    def _signal(func):
+    def _lazy(func):
         frame = sys._getframe(1)
-        s = WatchSignal(func, input_signals, frame=frame)
+        s = LazySignal(func, input_signals, frame=frame)
         return s
-    return _signal    
-
-
-def act(*input_signals):
-    """ Decorator to transform a function into ActSignal object.
-    
-    An act signal takes one or more signals as input (specified as
-    arguments to this decorator) and may produce a new signal value.
-    The function being wrapped should have an argument for each upstream
-    signal, and its return value (if any) is used as the output signal
-    value.
-    
-    When any of the input signals change, this signal is updated
-    immediately (i.e. the wrapped function is called). This push
-    machanism differs from the ``watch`` decorator.
-    
-    The act signal is commonly used for end-signals to react to certain
-    changes in the application.
-    
-    Example:
-        
-        .. code-block:: py
-        
-            @act('s1', 's2')
-            def show_values(val1, val2):
-                print(val1, val2)
-    """
-    if (not input_signals) or _first_arg_is_func(input_signals):
-        raise ValueError('Act signal must have upstream signals.')
-    
-    def _react(func):
-        frame = sys._getframe(1)
-        s = ActSignal(func, input_signals, frame=frame)
-        return s
-    return _react
+    return _lazy    

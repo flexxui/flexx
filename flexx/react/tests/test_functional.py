@@ -11,7 +11,7 @@ def test_map():
         return float(n)
     
     # One way
-    @react.act(react.map(lambda x: x+1, 'number'))
+    @react.connect(react.map(lambda x: x+1, 'number'))
     def reg1(v):
         return v
     
@@ -35,7 +35,7 @@ def test_filter():
     def number(n=0):
         return float(n)
     
-    @react.act(react.filter(lambda x: x>0, 'number'))
+    @react.connect(react.filter(lambda x: x>0, 'number'))
     def reg1(v):
         registered.append(v)
     

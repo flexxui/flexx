@@ -147,20 +147,20 @@ class Box(Layout):
         def _create_node(self):
             this.node = document.createElement('div')
         
-        @react.act('children.*.flex')
+        @react.connect('children.*.flex')
         def _set_flexes(*flexes):
             for widget in self.children():
                 # todo: make flex 2D?
                 self._applyBoxStyle(widget.node, 'flex-grow', widget.flex())
         
-        @react.act('spacing', 'children')
+        @react.connect('spacing', 'children')
         def _spacing_changed(self, spacing, children):
             if children.length:
                 children[0].node.style['margin-left'] = '0px'
                 for child in children[1:]:
                     child.node.style['margin-left'] = spacing + 'px'
         
-        @react.act('margin')
+        @react.connect('margin')
         def _margin_changed(self, margin):
             self.node.style['padding'] = margin + 'px'
 
@@ -302,7 +302,7 @@ class BaseTableLayout(Layout):
                         continue
                     self._apply_cell_layout(row, col, vflexes[i], hflexes[j], cum_vflex, cum_hflex)
         
-        @react.act('real_size')
+        @react.connect('real_size')
         def _adapt_to_size_change(self, size):
             """ This function adapts the height (in percent) of the flexible rows
             of a layout. This is needed because the percent-height applies to the
@@ -854,7 +854,7 @@ class Splitter(Layout):
             window.addEventListener('mouseup', on_mouse_up, False)
             # todo: does JS support mouse grabbing?
         
-        @react.act('real_size')
+        @react.connect('real_size')
         def _resize_elements(self, size):
             if self._on_resize:  # todo: WTF, is this not alwyas supposed to be there?
                 self._on_resize()

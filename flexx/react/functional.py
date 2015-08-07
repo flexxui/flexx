@@ -5,7 +5,7 @@ functions produces a new signal.
 
 import sys
 
-from .signals import WatchSignal, ActSignal
+from .signals import Signal
 from .signals import undefined
 
 
@@ -15,7 +15,7 @@ def merge(*signals):
     frame = sys._getframe(1)
     def _merge(*values):
         return values
-    return WatchSignal(_merge, signals, frame)
+    return Signal(_merge, signals, frame)
 
 
 def filter(func, signal):
@@ -29,7 +29,7 @@ def filter(func, signal):
         if func(value):
             return value
         return undefined
-    return ActSignal(_filter, [signal], frame)
+    return Signal(_filter, [signal], frame)
 
 
 def map(func, signal):
@@ -38,7 +38,7 @@ def map(func, signal):
     frame = sys._getframe(1)
     def _map(value):
         return func(value)
-    return WatchSignal(_map, [signal], frame)
+    return Signal(_map, [signal], frame)
 
 
 def reduce(func, signal, initval=None):
@@ -54,6 +54,4 @@ def reduce(func, signal, initval=None):
         else:
             val[0] = func(value, val[0])
         return val[0]
-    return WatchSignal(_accumulate, [signal], frame)
-
-NONE = 4
+    return Signal(_accumulate, [signal], frame)

@@ -39,11 +39,11 @@ class ProgressBar(Widget):
         def _create_node(self):
             self.node = document.createElement('progress')
     
-        @react.act('value')
+        @react.connect('value')
         def _value_changed(self, value):
             self.node.value = value
         
-        @react.act('max_value')
+        @react.connect('max_value')
         def _max_value_changed(self, max_value):
             self.node.max = max_value
 

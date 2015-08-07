@@ -516,14 +516,8 @@ class PropSignal(InputSignal):
             return s
 
 
-class WatchSignal(Signal):
-    """ A signal that combines and/or modifies input signals to produce
-    a new signal value.
+class LazySignal(Signal):
+    """ A signal that does *not* immediately update, but instead queries
+    the latest upstream values at the last moment.
     """
     _active = False
-
-
-class ActSignal(Signal):
-    """ A signal that reacts immediately to changes of upstream signals.
-    """ 
-    pass

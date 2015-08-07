@@ -18,7 +18,7 @@ single quotes.
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.react import input, watch, act, source, HasSignals, undefined
+from flexx.react import source, input, connect, lazy, HasSignals, undefined
 from flexx.react.pyscript import create_js_signals_class, HasSignalsJS
 from flexx.pyscript.functions import py2js, evaljs, evalpy, js_rename
 
@@ -74,7 +74,7 @@ class Name(HasSignals):
     def last_name(v='doe'):
         return str(v)
     
-    @watch('first_name', 'last_name')
+    @lazy('first_name', 'last_name')
     def full_name(self, n1, n2):
         self.r.append('')
         return n1 + ' ' + n2
@@ -176,11 +176,11 @@ class NoDefaults(HasSignals):
     def in1(v):
         return v
     
-    @watch('in1')
+    @connect('in1')
     def s1a(v):
         return v
     
-    @watch('s1a')
+    @connect('s1a')
     def s1b(v):
         return v
     
@@ -189,11 +189,11 @@ class NoDefaults(HasSignals):
     def in2(v):
         return v
     
-    @watch('in2')
+    @connect('in2')
     def s2a(self, v):
         return v
     
-    @act('s2a')
+    @connect('s2a')
     def s2b(self, v):
         self.r.append(v)
     #
@@ -201,12 +201,12 @@ class NoDefaults(HasSignals):
     def in3(v):
         return v
     
-    @act('in3')
+    @connect('in3')
     def aa_s3a(self, v):  # name mangling to make these connect first
         self.r.append(v)
         return v
     
-    @act('aa_s3a')
+    @connect('aa_s3a')
     def aa_s3b(self, v):
         self.r.append(v)
 
@@ -236,11 +236,11 @@ class Title(HasSignals):
     def title(v=''):
         return v
     
-    @watch('title')
+    @connect('title')
     def title_len(v):
         return len(v)
     
-    @act('title_len')
+    @connect('title_len')
     def show_title(self, v):
         self.r.append(v)
 
@@ -270,19 +270,19 @@ class Unconnected(HasSignals):
     def s0(v=''):
         return v
     
-    @watch('nope')
+    @connect('nope')
     def s1(v):
         return v
     
-    @watch('button.title')
+    @connect('button.title')
     def s2(v):
         return v
     
-    @watch('s2')
+    @connect('s2')
     def s3(v):
         return v
     
-    @act('s3')
+    @connect('s3')
     def s4(v):
         return v
 
@@ -370,11 +370,11 @@ class SignalTypes(HasSignals):
     def s2(v=None):
         return v
     
-    @watch('s2')
+    @connect('s2')
     def s3(v):
         return v
     
-    @act('s2')
+    @connect('s2')
     def s4(v):
         return v
 
@@ -434,13 +434,13 @@ class UndefinedSignalValues(HasSignals):
             return v
         return undefined
     
-    @act('number1')
+    @connect('number1')
     def number2(v):
         if v > 5:
             return v
         return undefined
     
-    @act('number2')
+    @connect('number2')
     def reg(self, v):
         self.r.append(v)
 
@@ -466,11 +466,11 @@ class Circular(HasSignals):
         else:
             return v3 + 1
     
-    @watch('s1')
+    @lazy('s1')
     def s2(v):
         return v + 1
     
-    @watch('s2')
+    @lazy('s2')
     def s3(v):
         return v + 1
 
@@ -532,18 +532,18 @@ class Temperature2(HasSignals):  # to avoid round erros, the relation is simplif
     def f(v=0):
         return int(v)
     
-    @act('f')
+    @connect('f')
     def _f(self, v):
         self.c(v+32)
     
-    @act('c')
+    @connect('c')
     def _c(self, v):
         self.f(v-32)
 
 
 class Name2(Name):
     
-    @watch('full_name')
+    @connect('full_name')
     def name_length(v):
         return len(v)
     
@@ -577,7 +577,7 @@ class Dynamism(HasSignals):
     def current_person(v):
         return v
     
-    @watch('current_person')
+    @connect('current_person')
     def current_person_proxy(v):  # need this to cover more code
         return v
     
@@ -585,22 +585,22 @@ class Dynamism(HasSignals):
     def current_persons(v):
         return v
     
-    @watch('current_person.first_name')
+    @connect('current_person.first_name')
     def current_name1(v):
         return v
     
-    @act('current_person_proxy.first_name')
+    @connect('current_person_proxy.first_name')
     def current_name2(self, v):
         self.r.append(v)
     
-    @act('current_persons.*.first_name')
+    @connect('current_persons.*.first_name')
     def current_name3(self, *names):
         v = ''
         for n in names:
             v += n
         self.r.append(v)
     
-    @act('current_persons.*.bla')
+    @connect('current_persons.*.bla')
     def current_name4(self, *names):
         pass
 

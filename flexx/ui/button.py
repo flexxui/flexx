@@ -46,7 +46,7 @@ class Button(Widget):
             # testing ...
             #self.connect_event('click', (self, 'ontheclick'))
         
-        @react.act('text')
+        @react.connect('text')
         def _text_changed(self, text):
             this.node.innerHTML = text
     
@@ -91,6 +91,6 @@ class Label(Widget):
             # this.node.innerHTML = 'a label'
             # super()._init()
         
-        @react.act('text')
+        @react.connect('text')
         def _text_changed(self, text):
             this.node.innerHTML = text

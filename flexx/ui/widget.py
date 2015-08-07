@@ -205,7 +205,7 @@ class Widget(Pair):
             v = 'flx-main-widget ' + v
         return v
     
-    @react.act('parent')
+    @react.connect('parent')
     def _parent_changed_py(self, new_parent):
         old_parent = self.parent.last_value
         if old_parent is not None:
@@ -283,7 +283,7 @@ class Widget(Pair):
         def _create_node(self):
             this.node = document.createElement('div')
         
-        @react.act('_css_class_name')
+        @react.connect('_css_class_name')
         def _css_class_name_changed(self, v):
             this.node.className = v
         
@@ -296,10 +296,10 @@ class Widget(Pair):
             """ Remove the DOM element. Called right after the child widget is removed. """
             self.node.removeChild(widget.node)
         
-        @react.act('parent')
+        @react.connect('parent')
         def _parent_changed(self, new_parent):
             old_parent = self.parent.last_value
-            if old_parent is not None:
+            if old_parent is not None and old_parent is not undefined:
                 children = old_parent.children()[:]
                 while self in children:
                     children.remove(self)
@@ -327,12 +327,12 @@ class Widget(Pair):
             # else:
             #     new_parent.connect_event('resize', self._check_resize)
         
-        @react.act('parent.real_size')
+        @react.connect('parent.real_size')
         def _keep_size_up_to_date1(self, size):
             #print(self._id, 'resize 1', size)
             self._check_resize()
         
-        @react.act('parent', 'container_id')
+        @react.connect('parent', 'container_id')
         def _keep_size_up_to_date2(self, parent, id):
             #print(self._id, 'resize2 ', parent, id)
             if parent is None:
@@ -341,12 +341,12 @@ class Widget(Pair):
                 window.removeEventListener('resize', self._check_resize, False)
             self._check_resize()
         
-        @react.act('pos')
+        @react.connect('pos')
         def _pos_changed(self, pos):
             self.node.style.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
             self.node.style.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
         
-        @react.act('size')
+        @react.connect('size')
         def _size_changed(self, size):
             size = size[:]
             for i in range(2):
@@ -359,11 +359,11 @@ class Widget(Pair):
             self.node.style.width = size[0]
             self.node.style.height = size[1]
         
-        @react.act('bgcolor')
+        @react.connect('bgcolor')
         def _bgcolor_changed(self, color):
             self.node.style['background-color'] = color
         
-        @react.act('container_id')
+        @react.connect('container_id')
         def _container_id_changed(self, id):
             #if self._parent:
             #    return
@@ -384,7 +384,7 @@ class Widget(Pair):
     #     pass  # special hook to remove a child out from this widget
     # 
     # 
-    # @react.act('parent')
+    # @react.connect('parent')
     # def _parent_changed(self, new_parent):
     #     old_parent = self.parent.previous_value
     #     if old_parent is not None:

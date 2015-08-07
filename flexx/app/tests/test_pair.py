@@ -23,13 +23,13 @@ class Foo1(Pair):
 
 class Foo2(Foo1):
     
-    @react.watch('title')
+    @react.connect('title')
     def title_len(v):
         return len(v)
     
     class JS:
         
-        @react.watch('blue')
+        @react.connect('blue')
         def red(v):
             return v + 1
 
@@ -57,7 +57,7 @@ class Foo4(Foo3):
     
     class JS:
         
-        @react.watch('blue')
+        @react.connect('blue')
         def red(v):
             return v + 2
 

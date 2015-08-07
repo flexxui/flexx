@@ -38,7 +38,7 @@ class Panel(Widget):
             self._legend = document.createElement('legend')
             self.node.appendChild(self._legend)
         
-        @react.act('title')
+        @react.connect('title')
         def _title_changed(self, title):
             self._legend.innerHTML = title
 
