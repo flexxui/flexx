@@ -69,7 +69,6 @@ class HasSignalsJS:
     def _create_SourceSignal(func, upstream, selff):
         
         selff = self._create_Signal(func, upstream, selff)
-        selff._active = True
         
         SourceSignal__update_value_from_py
         SourceSignal__set_from_py
@@ -89,11 +88,12 @@ class HasSignalsJS:
         return self._create_SourceSignal(func, upstream, selff)
     
     def _create_WatchSignal(func, upstream, selff=None):
-        return self._create_Signal(func, upstream, selff)
+        selff = self._create_Signal(func, upstream, selff)
+        selff._active = False
+        return selff
     
     def _create_ActSignal(func, upstream):
         selff = self._create_Signal(func, upstream)
-        selff._active = True
         return selff
     
     def _create_Signal(func, upstream, selff=None):
@@ -120,7 +120,7 @@ class HasSignalsJS:
         
         # Create private attributes
         selff._IS_SIGNAL = True
-        selff._active = False
+        selff._active = True
         selff._func = func
         selff._status = 3
         selff._count = 0
@@ -169,7 +169,7 @@ class HasSignalsJS:
         
         def _set_value(value):
             if value is undefined:
-                self._status = 0
+                self._status = 3 if (self._count == 0) else 0
                 return  # new tick, but no update of value
             selff._last_value = selff._value
             selff._value = value

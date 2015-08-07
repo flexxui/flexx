@@ -73,7 +73,7 @@ class Signal(object):
     This class should not be instantiated directly; use the decorators instead.
     """
     _IS_SIGNAL = True  # poor man's isinstance in JS (because class name mangling)
-    _active = False
+    _active = True
     
     def __init__(self, func, upstream, frame=None, ob=None):
         # Check and set func
@@ -349,7 +349,7 @@ class Signal(object):
         """ This is like ``self._value = value``, but with bookkeeping.
         """
         if value is undefined:
-            self._status = 0
+            self._status = 3 if (self._count == 0) else 0
             return  # new tick, but no update of value
         self._last_value = self._value
         self._value = value
@@ -425,10 +425,8 @@ class Signal(object):
             pass
         if self._active and self._status == 1:
             count = self._count
-            self._save_update()  # this can change our status to 0 or 2
-            if self._status == 0 and self._count == count:
-                if count == 0:
-                    self._status = 3  # value was never set
+            self._save_update()  # this can change our status to 0 or 2 or 3
+            if self._count == count:
                 return  # value was not updated (undefined)
         # Prevent circular (stage 2: exit with non-zero status)
         if self is initial_initiator:
@@ -444,7 +442,6 @@ class SourceSignal(Signal):
     """ A signal that typically has no upstream signals, but produces
     values by itself.
     """
-    _active = True
 
     def _update_value(self):
         # Try to initialize, func might not have a default value
@@ -523,10 +520,10 @@ class WatchSignal(Signal):
     """ A signal that combines and/or modifies input signals to produce
     a new signal value.
     """
-    pass
+    _active = False
 
 
 class ActSignal(Signal):
     """ A signal that reacts immediately to changes of upstream signals.
     """ 
-    _active = True
+    pass
