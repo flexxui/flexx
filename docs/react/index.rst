@@ -1,6 +1,6 @@
-------------------------------
-Reference for the REACT module
-------------------------------
+-------------------------
+Reference for flexx.react
+-------------------------
 
 The react module provides functionality for Functional Reactive Programming.
 

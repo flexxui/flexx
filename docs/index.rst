@@ -16,9 +16,19 @@ that's already installed on the system.
 Current status
 --------------
 
-Flexx is in development. Many parts of the API may
-change. Some things are working (like creation of several widgets and
-layouts), other things not (like events).
+Flexx is in development and is in alpha status. Any part of the public
+API may change without notice. Status of subpackages:
+   
+* The ``flexx.pyscript`` module is in a good state and has 100% test
+  coverage. Needs methods for list/dict/str, but is otherwise very
+  complete.
+* The ``flexx.react`` module is in a good state, with good test
+  coverage, but needs some work for functionals. 
+* The ``flexx.webruntime`` module works well, but needs
+  tests and should support more runtimes. 
+* The ``flexx.app`` module is in a flux.
+* The ``flexx.ui`` module is in a flux.
+
 
 Links
 -----
@@ -34,13 +44,13 @@ Contents
    :maxdepth: 2
    
    start
-   tutorials/index
+   
    ui/index
    pyscript/index
    react/index
    webruntime
-   
    util
+   
    releasenotes
 
 

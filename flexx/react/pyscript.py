@@ -18,7 +18,7 @@ class HasSignalsJS:
     Python and JS implementation of this reactive programming system
     have the same API and behave the same.
     
-    The Python version of this class has a JSCODE attribute that
+    The Python version of this class has a ``JSCODE`` attribute that
     contains the auto-generated JavaScript for this class.
     """
     __signals__ = []

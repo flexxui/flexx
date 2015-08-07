@@ -13,8 +13,8 @@ through some of the FRP aspects using code examples.
 What is FRP
 -----------
 
-Don't worry if what's in this section sounds weird or complicated;
-things should start to make sense when we explain thing using code.
+(Don't worry if the next two paragraphs sound complicated;
+things should start to make sense when we explain thing using code.)
 
 *Where event-driven programming is about reacting to things that happen,
 RP is about staying up to date with changing signals.*

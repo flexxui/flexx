@@ -1,6 +1,6 @@
----------------------------
-Reference for the UI module
----------------------------
+----------------------
+Reference for flexx.ui
+----------------------
 
 .. automodule:: flexx.ui
 

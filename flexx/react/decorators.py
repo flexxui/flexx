@@ -18,7 +18,7 @@ def connect(*input_signals):
     to this decorator) and may produce a new signal value. The function
     being wrapped should have an argument for each upstream signal, and
     its return value is used as the output signal value, unless that value
-    is ``react.undefined`` (or just ``undefined in JS``).
+    is ``react.undefined`` (or just ``undefined`` in JS).
     
     When any of the input signals change, this signal is updated
     immediately (i.e. the wrapped function is called). 
@@ -62,11 +62,11 @@ def source(*input_signals):
         .. code-block:: py
         
             @react.source
-            def s1(val):
-                return float(val)
+            def last_name(val):
+                return str(val)
             
             # Developer sets value. Users should not use _set()!
-            s1._set(42)
+            s1._set('Doe')
     """
     frame = sys._getframe(1)
     def _source(func):
@@ -94,10 +94,10 @@ def input(*input_signals):
         .. code-block:: py
         
             @react.input
-            def s1(val):
-                return float(val)
+            def first_name(val):
+                return str(val)
             
-            s1(42)  # Set the value
+            s1('John')  # Set the value
     
     Though not common, an input signal may have upstream signals. In
     that case, the wrapper function should have additional arguments

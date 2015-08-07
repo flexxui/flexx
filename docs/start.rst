@@ -89,3 +89,12 @@ connection between Python and JS is required.
 In this documentation, we include a separate reference for each
 subpackage. We recommend starting with the *ui* module, and not to worry
 about the other modules until its needed.
+
+
+Tutorials
+---------
+
+*outdated*
+
+* `Apps <tutorials/apps.html>`_
+* `Layout <tutorials/layout.html>`_
