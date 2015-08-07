@@ -33,12 +33,11 @@ def test_unit(rel_path=''):
     except ImportError:
         sys.exit('Cannot do unit tests, pytest not installed')
     _enable_faulthandler()
-    cov_report = 'term'
-    test_dir = os.path.join(ROOT_DIR, rel_path)
+    cov_report = '--cov-report=term --cov-report=html'
+    os.chdir(ROOT_DIR)
     try:
-        return pytest.main('-v --cov %s --cov-config .coveragerc '
-                            '--cov-report %s %s' % 
-                            (NAME, cov_report, repr(test_dir)))
+        return pytest.main('-v --cov %s --cov-config=.coveragerc %s %r' % 
+                            (NAME, cov_report, rel_path))
     finally:
         m = __import__(NAME)
         print('Tests were performed on', str(m))

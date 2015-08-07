@@ -2,6 +2,7 @@
 
 omit = 
     setup.py
+    # Do not cover test files themselves
     */test_*.py
 
 exclude_lines =
@@ -13,6 +14,10 @@ exclude_lines =
     raise AssertionError
     raise NotImplementedError
     raise JSError
+    
+    # Code that will not run on Py
+    class HasSignalsJS: 
+    class JS:
     
     # Don't complain if non-runnable code isn't run:
     if 0:
