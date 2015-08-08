@@ -31,7 +31,7 @@ class Serializer:
             _revivers[type_name] = func
         
         def _reviver(dct, val=undefined):
-            if val is not undefined:
+            if val is not undefined:  # pragma: no cover
                 dct = val
             if isinstance(dct, dict):
                 type = dct.get('__type__', None)
@@ -42,14 +42,13 @@ class Serializer:
             return dct
         
         def _replacer(obj, val=undefined):
-            if val is undefined:
-                # Py
+            if val is undefined:  # Py
+                
                 try:
                     return obj.__json__()  # same as in Pyramid
                 except AttributeError:
-                    raise TypeError()
-            else:
-                # JS
+                    raise TypeError('Cannot serialize object to JSON: %r' % obj)
+            else:  # JS - pragma: no cover
                 if (val is not None) and val.__json__:
                     return val.__json__()
                 return val

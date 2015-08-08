@@ -1,5 +1,5 @@
-""" Base class for objects that live in both Python and JS
-
+"""
+Base class for objects that live in both Python and JS.
 This basically implements the syncing of signals.
 """
 
@@ -19,7 +19,7 @@ from .serialize import serializer
 
 if sys.version_info[0] >= 3:
     string_types = str,
-else:
+else:  # pragma: no cover
     string_types = basestring,
 
 
@@ -162,28 +162,19 @@ class PairMeta(HasSignalsMeta):
 
 
 class Pair(with_metaclass(PairMeta, react.HasSignals)):
-    """ Class representing Python-JavaScript object pairs
+    """ Subclass of HasSignals representing Python-JavaScript object pairs
     
     Each instance of this class has a corresponding object in
     JavaScript, and their signals are synced both ways. Signals defined
     in Python can be connected to from JS, and vice versa.
     
     The JS version of this class is defined by the contained ``JS``
-    class. One can define methods, signals, and (to some extend)
-    constants on the JS class:
+    class. One can define methods, signals, and (json serializable)
+    constants on the JS class.
     
-        class MyPair(Pair):
-        
-            def a_python_method(self):
-               ...
-            
-            class JS:
-            
-                def a_js_method(this):
-                    ...
     
     Parameters:
-        _proxy: intended for internal use, the proxy object for this class.
+        proxy: the proxy object that connects this instance to a JS client.
         kwargs: initial signal values (see HasSignals).
     
     Notes:
@@ -192,6 +183,21 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         nothing to do with user interfaces or DOM elements. You could e.g.
         use it to calculate pi on nodejs.
     
+    Example:
+    
+        .. code-block:: py
+        
+            class MyPair(Pair):
+                
+                def a_python_method(self):
+                ...
+                
+                class JS:
+                    
+                    FOO = [1, 2, 3]
+                    
+                    def a_js_method(this):
+                        ...
     """
     
     # Keep track of all instances, so we can easily collect al JS/CSS
@@ -209,13 +215,7 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
     def __from_json__(dct):
         return get_instance_by_id(dct['id'])
     
-    def __init__(self, _proxy=None, **kwargs):
-        
-        # # Start without proxy. While it is None, we collect signal links
-        # # and signal values, so that we can pass that info to JS init.
-        # self._proxy = None
-        # self._initial_signal_values = {}
-        # self._initial_signal_links = set()
+    def __init__(self, proxy=None, **kwargs):
         
         # Set id and register this instance
         Pair._counter += 1
@@ -223,10 +223,10 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         Pair._instances[self._id] = self
         
         # Init proxy
-        if _proxy is None:
+        if proxy is None:
             from .proxy import manager
-            _proxy = manager.get_default_proxy()
-        self._proxy = _proxy
+            proxy = manager.get_default_proxy()
+        self._proxy = proxy
         
         # Instantiate JavaScript version of this class
         clsname = 'flexx.classes.' + self.__class__.__name__
@@ -246,7 +246,7 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
     
     @property
     def id(self):
-        """ The unique id of this Pair instance """
+        """ The unique id of this Pair instance. """
         return self._id
     
     @property
@@ -338,9 +338,6 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
             elif self._linked_signals[name]:
                 del self._linked_signals[name]
         
-        @react.source
-        def stub_mouse_pos(pos=(0, 0)):
-            return tuple([float(p[0]), float(p[1])])
         
         ## JS event system
         

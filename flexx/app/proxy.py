@@ -1,48 +1,5 @@
-""" Definition of App class and the app manager.
-
-What one process does
----------------------
-
-In flexx.ui, each server process hosts on a single URL (domain+port),
-but can serve multiple applications via different paths.
-
-Each process uses one tornado IOLoop (the default one), and exactly one
-Tornado Application object.
-
-Applications
-------------
-
-Developers create application by implementing an App class. One instance
-of this class is instantiated per connection. Multiple apps can be
-hosted from the same process simply be specifying more App classes.
-To connect to the application `MyApp`, you should connect to 
-"http://domain:port/MyApp".
-
-Each connection features a bidirectional websocket through which most
-of the communication will go. There is thus one websocket per
-application instance. Per application instance, multiple windows
-can be opened (via JS ``window.open()``). These windows shall be
-controlled via the websocket of the main window.
-
-Making things simple
---------------------
-
-To allow easy access to an app instance during an interactive session,
-developers can instantiate a class in their main script. This instance
-will be used by the first connection that is made. If two instances
-are created, these would be used by the first two connections.
-
-We may allow not specifying an App class at all, in which case a default
-App is used (not yet implemented/decided).
-
-How it works in the notebook
-----------------------------
-
-In the IPython/Jupyter notebook, the user needs to run ``run()`` (or
-something else?) which will inject JS and CSS into the browser. Then,
-for each widget that gets repr-ed via ``_repr_html_`` first a container
-DOM element is created, in which the widget is displayed.
-
+"""
+Definition of App class and the app manager.
 """
 
 import os
@@ -155,7 +112,7 @@ class AppManager(object):
         elif not app_id:
             # Create a fresh proxy - there already is a runtime
             proxy = Proxy(cls.__name__, runtime=None)
-            app = cls(_proxy=proxy)
+            app = cls(proxy=proxy)
             proxy._set_pair_instance(app)
         else:
             # Search for the app with the specific id
@@ -234,6 +191,8 @@ def port_hash(name):
 
 
 def init_server(host='localhost', port=None):
+    """ Initialize the server if it is not already running.
+    """
     global _tornado_app 
     
     # Check that its not already running
@@ -266,17 +225,12 @@ def init_server(host='localhost', port=None):
 
 # todo: ui.run looks weird in IPython. Maybe ui.load() or start()
 def run():  # (runtime='xul', host='localhost', port=None):
-    """ Start the event loop. This will do a couple of things:
-    
-    * All subclasses of App in the caller namespace are registered as apps.
-    * The server is started for UI runtimes to connect to.
-    * If specified, a runtime is launched for each application class.
-    * The even-loop is started.
+    """ Start the server and event loop if not already running.
     
     This function generally does not return until the application is
     stopped, although it will try to behave nicely in interactive
-    environments (e.g. IEP, Spyder, IPython notebook), so the caller
-    should take into account that the function may return emmidiately.
+    environments (e.g. Spyder, IEP, Jupyter notebook), so the caller
+    should take into account that the function may return immediately.
     """
     # Get server up
     init_server()
@@ -346,38 +300,39 @@ def create_enum(*members):
     return type('Enum', (), enums)
 
 
-def make_app(cls=None, **kwargs):
-    """ Mark a Pair class as an app, to be used as a class decorator
-    
+def make_app(cls=None, **signal_values):
+    """ Mark a Pair class as an app, to be used as a class decorator.
     Does three things:
     
-    * The class is registered as an app, so that clients (incoming
-      connections) can load the app.
+    * The class is registered as an app with the server, so that clients
+      (incoming connections) can load the app.
     * Adds a ``launch()`` function to the class to easily create an app
       instance.
     * adds ``_IS_APP`` attribute to the class with value ``True`` (used
       internally).
     
     Parameters for the launch function:
-      runtime (str): the web runtime to launch the app in. Default
-      'xul'. kwargs: combined with the kwargs given to the ``app``
-        decorator, these are used to initialize signal values.
+      ``runtime`` (str): the web runtime to launch the app in. Default
+      'xul'. ``**signal_values``: combined with the signal_values given
+      to the ``make_app()`` decorator, these are used to initialize signal
+      values for the app instance.
       
     """
-    kwargs1 = kwargs
+    signal_values1 = signal_values
     
     def _make_app(cls):
         
-        def launch(runtime='xul', **kwargs):
+        def launch(runtime='xul', **signal_values):
             """ Launch an instance of this app in the specified runtime.
             """
+            signal_values2 = signal_values
             # Get final kwargs list
             d = {}
-            d.update(kwargs1)
-            d.update(kwargs)
+            d.update(signal_values1)
+            d.update(signal_values2)
             # Instantiate widget with a fresh client object
             proxy = Proxy(cls.__name__, runtime, **d)
-            app = cls(_proxy=proxy)
+            app = cls(proxy=proxy)
             proxy._set_pair_instance(app)
             return app
         

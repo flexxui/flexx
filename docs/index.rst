@@ -46,8 +46,9 @@ Contents
    start
    
    ui/index
-   pyscript/index
+   app/index
    react/index
+   pyscript/index
    webruntime
    util
    

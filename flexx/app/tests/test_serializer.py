@@ -17,6 +17,9 @@ class Foo:
     def __eq__(self, other):
         return self.val == other.val
 
+class Bar:
+    pass
+
 
 foo1, foo2, foo3 = Foo(42), Foo(7), Foo(None)
 s1 = {'a': foo1, 'b': [foo2, foo3]}
@@ -34,6 +37,11 @@ def test_python():
     assert res == 49
     assert s1 == s2
 
+
+def test_python_wrong():
+    b = Bar()
+    raises(TypeError, serializer.saves, b)
+    
 
 def test_js():
     
