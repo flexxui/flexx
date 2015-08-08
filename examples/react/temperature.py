@@ -1,21 +1,21 @@
-""" Example of object that allows the user to get/set temperature in
-both Celcius and Fahrenheit. Inspired by an example from the Trellis
-project.
+"""
+Example of object that allows the user to get/set temperature in both
+Celcius and Fahrenheit. Inspired by an example from the Trellis project.
 """
 
-from flexx.reactive import HasSignals, input, react
+from flexx import react
 
 
-class Temperature(HasSignals):
+class Temperature(react.HasSignals):
     
-    @input('F')
+    @react.input('F')
     def C(v=32, f=None):
         if f is None:
             return float(v)
         else:
             return (f - 32)/1.8
     
-    @input('C')
+    @react.input('C')
     def F(v=0, c=None):
         if c is None:
             return float(v)
@@ -23,7 +23,7 @@ class Temperature(HasSignals):
             return c * 1.8 + 32
             
     
-    @react('C')
+    @react.connect('C')
     def show(self, c):
         print('  degrees Celcius: %1.2f' % self.C())
         print('  degrees Fahrenheit: %1.2f' % self.F())

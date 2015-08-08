@@ -292,7 +292,7 @@ support for that, for example:
 .. code-block:: py
 
     filter = lambda x: x>0
-    @react.connect(react.filter(filter, 'number')
+    @react.connect(react.filter(filter, 'number'))
     def show_positive_numbers(v):
         print(v)
 
