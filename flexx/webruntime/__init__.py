@@ -39,7 +39,7 @@ Memory considerations
 import os
 
 from .common import BaseRuntime, DesktopRuntime
-from .xul import XulRuntime
+from .xul import XulRuntime, has_firefox
 from .nodewebkit import NodeWebkitRuntime
 from .browser import BrowserRuntime
 from .qtwebkit import PyQtRuntime
@@ -47,14 +47,14 @@ from .chromeapp import ChromeAppRuntime
 from .nodejs import NodejsRuntime
 from .selenium import SeleniumRuntime
 
-# todo: auto-select a runtime that is available
+# todo: make a 'desktop' runtime option that will try xul, nwjs, chromeapp, trident
 
 # Definition of runtime names and their order
 _runtimes = [
     ('xul', XulRuntime),
     ('nwjs', NodeWebkitRuntime),
     ('pyqt', PyQtRuntime),
-    ('chomeapp', ChromeAppRuntime),
+    ('chromeapp', ChromeAppRuntime),
     ('browser', BrowserRuntime),
     ('browser-X', BrowserRuntime),
     ('selenium-X', SeleniumRuntime),
@@ -67,8 +67,9 @@ def launch(url, runtime=None, **kwargs):
     
     Parameters:
         url (str): The url to open. To open a local file prefix with ``file://``.
-        runtime (str) : The runtime to use (default 'xul').
+        runtime (str) : The runtime to use.
             Can be SUPPORTED_RUNTIMES.
+            By default uses 'xul' if available, and 'browser' otherwise.
         kwargs: addition arguments specific to the runtime. See the
             docs of the runtime classes.
     
@@ -77,10 +78,12 @@ def launch(url, runtime=None, **kwargs):
         the runtime to some extend.
     """
     
-    runtime = runtime or 'xul'
-    runtime = runtime.lower()
+    # Select default runtime if not given
+    if not runtime:
+        runtime = 'xul' if has_firefox() else 'browser'
     
-    # Aliases / shorthands
+    # Normalize runtime, apply aliases
+    runtime = runtime.lower()
     aliases= {'firefox': 'browser-firefox', 'chrome': 'browser-chrome'}
     runtime = aliases.get(runtime, runtime)
     
@@ -88,7 +91,10 @@ def launch(url, runtime=None, **kwargs):
     type = None
     for name, Cls in _runtimes:
         if name.endswith('-X'):
-            if runtime.startswith(name[:-1]):
+            if runtime == name[:-2]:
+                Runtime = Cls
+                break
+            elif runtime.startswith(name[:-1]):
                 Runtime = Cls
                 type = runtime.split('-', 1)[1]
                 break
@@ -110,7 +116,7 @@ launch.__doc__ = launch.__doc__.replace('SUPPORTED_RUNTIMES',
                                         ', '.join([repr(n) for n, c in _runtimes]))
 
 
-def _print_autoclasses():
+def _print_autoclasses():  # pragma: no cover
     """ Call this to get ``.. autoclass::`` definitions to put in the docs.
     """
     lines = []

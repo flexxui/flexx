@@ -77,15 +77,20 @@ def get_nodewebkit_exe():
     """
     
     # Get possible locations of nw exe
-    paths = []
-    paths.append('/home/almar/tools/node-webkit-v0.11.5-linux-x64/nw')
+    dirs = ['/opt', '~/tools', '~/apps', '~/dev']
     
-    # Test each location
-    for path in paths:
-        if os.path.isfile(path):
-            return path
-    else:
-        return None
+    for dir in dirs:
+        dir = os.path.expanduser(dir)
+        subs = os.listdir(dir)
+        exes = []
+        for sub in subs:
+            if sub.startswith('node-webkit'):
+                exes.append(os.path.join(dir, sub, 'nw'))
+        if exes:
+            exes.sort()
+            return exes[-1]
+    
+    return None
 
 
 class NodeWebkitRuntime(DesktopRuntime):

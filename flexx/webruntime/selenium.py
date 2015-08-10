@@ -45,7 +45,10 @@ class SeleniumRuntime(BaseRuntime):
                 raise ValueError('Unknown Selenium browser type %r' % type)
             
         else:
-            raise ValueError('Selenium runtime needs to know "browsertype".')
+            raise ValueError('To use selenium runtime specify a browser type".')
+    
+    def close(self):
+        self.driver.close()
     
     @property
     def driver(self):

@@ -108,12 +108,17 @@ def read_png(f):
     asint = lambda x: struct.unpack(asint_map[len(x)], x)[0]
     
     # Try filename
-    if isinstance(f, str):
-        if b'\x00' not in f:
+    if sys.version_info < (3, ):
+        if isinstance(f, bytes) and b'\x00' not in f:
             if os.path.isfile(f):
                 f = open(f, 'rb').read()
             else:
                 raise IOError("File does not exist %r" % f)
+    elif isinstance(f, str):
+        if os.path.isfile(f):
+            f = open(f, 'rb').read()
+        else:
+            raise IOError("File does not exist %r" % f)
     
     # Get bytes
     if isinstance(f, bytes):

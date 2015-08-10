@@ -40,15 +40,15 @@ class BaseRuntime(object):
         # Terminate, wait for a bit, kill
         self._proc.we_closed_it = True
         if self._proc.poll() is None:
-            if self._proc.stdin:
+            if self._proc.stdin:  # pragma: no cover
                 self._proc.stdin.close()
             self._proc.terminate()
             timeout = time.time() + 0.25
-            while time.time() > timeout:
+            while time.time() < timeout:
                 time.sleep(0.02)
                 if self._proc.poll() is not None:
                     break
-            else:
+            else:  # pragma: no cover
                 self._proc.kill()
         # Discart process
         self._proc = None
@@ -62,28 +62,14 @@ class BaseRuntime(object):
             self._proc = subprocess.Popen(cmd, env=environ,
                                           stdout=subprocess.PIPE, 
                                           stderr=subprocess.STDOUT)
-        except OSError as err:
+        except OSError as err:  # pragma: no cover
             raise RuntimeError('Could not start runtime with command %r:\n%s' %
                                (cmd[0], str(err)))
         self._streamreader = StreamReader(self._proc)
         self._streamreader.start()
     
-    # def launch(self):
-    #     """ Launch the runtime.
-    #     """
-    #     if self._proc is None: 
-    #         logging.info('launching %s' % self.__class__.__name__)
-    #         self._launch()
-    #     else:
-    #         raise RuntimeError('WebRuntime already running')
-    
     def _launch(self):
         raise NotImplementedError()
-    
-    #def set_title
-    #def set_size
-    #def set_icon
-    #def set_pos
 
 
 class DesktopRuntime(BaseRuntime):
@@ -102,19 +88,7 @@ class DesktopRuntime(BaseRuntime):
     def __init__(self, **kwargs):
         
         icon = kwargs.get('icon', None)
-        
-        # Check/create icon
-        if icon is None:
-            icon = default_icon()
-        elif isinstance(icon, Icon):
-            pass
-        elif isinstance(icon, str):
-            icon = Icon(icon)
-        else:
-            raise ValueError('Icon must be an Icon, a filename or None, not %r' % 
-                                type(icon))
-        
-        kwargs['icon'] = icon
+        kwargs['icon'] = iconize(icon)
         BaseRuntime.__init__(self, **kwargs)
 
 
@@ -132,12 +106,12 @@ class StreamReader(threading.Thread):
         self.setDaemon(True)
         atexit.register(self.stop)
     
-    def stop(self, wait=None):
+    def stop(self, wait=None):  # pragma: no cover
         self._exit = True
         if wait is not None:
             self.join(wait)
     
-    def run(self):
+    def run(self):  # pragma: no cover
         msgs = []
         while not self._exit:
             time.sleep(0.001)
@@ -184,7 +158,7 @@ def create_temp_app_dir(prefix, suffix='', cleanup=60):
     
     # Select main dir
     maindir = os.path.join(appdata_dir('flexx'), 'temp_apps')
-    if not os.path.isdir(maindir):
+    if not os.path.isdir(maindir):  # pragma: no cover
         os.mkdir(maindir)
     
     prefix = prefix.strip(' _-') + '_'
@@ -197,9 +171,9 @@ def create_temp_app_dir(prefix, suffix='', cleanup=60):
             if os.path.isdir(dirname):
                 try:
                     dirtime = int(dname.split('_')[1])
-                except Exception:
+                except Exception:  # pragma: no cover
                     pass
-                if (time.time() - dirtime) > cleanup:
+                if (time.time() - dirtime) > cleanup:  # pragma: no cover
                     try:
                         shutil.rmtree(dirname)
                     except (OSError, IOError):
@@ -244,7 +218,7 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
         prefix = os.path.abspath(os.path.dirname(sys.path[0]))
     for reldir in ('settings', '../settings'):
         localpath = os.path.abspath(os.path.join(prefix, reldir))
-        if os.path.isdir(localpath):
+        if os.path.isdir(localpath):  # pragma: no cover
             try:
                 open(os.path.join(localpath, 'test.write'), 'wb').close()
                 os.remove(os.path.join(localpath, 'test.write'))
@@ -259,7 +233,7 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
         if path == userDir:
             appname = '.' + appname.lstrip('.') # Make it a hidden directory
         path = os.path.join(path, appname)
-        if not os.path.isdir(path):
+        if not os.path.isdir(path):  # pragma: no cover
             os.mkdir(path)
     
     # Done
@@ -294,4 +268,19 @@ def default_icon():
         
     icon = Icon()
     icon.add(im)
+    return icon
+
+
+def iconize(icon):
+    """ Given a filename Icon object or None, return Icon object.
+    """
+    if icon is None:
+        icon = default_icon()
+    elif isinstance(icon, Icon):
+        pass
+    elif isinstance(icon, str):
+        icon = Icon(icon)
+    else:
+        raise ValueError('Icon must be an Icon, a filename or None, not %r' % 
+                         type(icon))
     return icon

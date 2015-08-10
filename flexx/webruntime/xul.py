@@ -181,6 +181,19 @@ def get_firefox_exe():
         return None
 
 
+def has_firefox():
+    """ Get whether firefox is installed.
+    """
+    if get_firefox_exe() is not None:
+        return True
+    
+    try:
+        version = subprocess.check_output(['firefox', '--version'])
+        return True
+    except Exception:
+        return False
+
+
 def copy_xul_runtime(dir1, dir2):
     """ Copy the firefox/xulrunner runtime to a new folder, in which
     we rename the firefox exe to xulrunner. This thus creates a xul
