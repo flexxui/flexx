@@ -1,36 +1,29 @@
 """
-This module provides a runtime to run applications based on HTML5 and
-associated technologies. There are several runtimes available.
+The webruntime module can be used to launch a runtime for applications
+based on HTML/JS/CSS. This can be a browser or something that looks like
+a desktop app.
 
 
-The runtimes
-------------
+Supported runtimes
+------------------
 
-App runtimes:
+Here's a quick overview of the supported runtimes. For details, see the
+docs of the runtime classes below.
 
-* xul - Mozilla's app framework. Make use of the same engine as Firefox.
-  Available where Firefox is installed.
-* nwjs (previously node-webkit) - An app runtime based on Chromium and
-  node.js.
-* pyqt - Use QWebkit as a runtime. No WebGL here though.
-* chromeapp - Native-ish looking apps via chrome/chromium.
-
-Browsers:
-
-* browser - launch the default browser
-* browser-firefox - launch firefox browser
-* browser-chrome - launch chrome/chromium browser
-* browser-x = launch browser x (if supported by webbrowser module)
-
-Other:
-
-* nodejs - Not for user interfaces, but for computations and testing.
+* xul - Mozilla's app framework. Available wherever Firefox is
+  installed. Recommended.
+* nwjs - An app runtime based on Chromium and node.js.
+* pyqt - Use QWebkit as a runtime. Need PyQt4 or PySide with QWebkit installed. 
+* chromeapp - Native-ish looking apps via Chrome/Chromium.
+* browser - The default browser.
+* browser-X - Where X should be supported by Python's webbrowser module.
+* selenium-X - Where X should be supported by Selenium.
+* nodejs - A runtime based on Chrome's V8 JavaScript engine. No UI.
 
 Runtimes currently not supported:
 
-* MSHTML - uses the trident engine (like IE does), I think we want this one
+* mshtml - uses the trident engine (like IE does), I think we want this one.
 * electron - by github (electron.atom.io, based on Chromium)
-* pywebkitgtk - not really cross-platform
 
 
 Memory considerations
@@ -45,7 +38,7 @@ Memory considerations
 
 import os
 
-from .common import WebRuntime, default_icon
+from .common import BaseRuntime, DesktopRuntime
 from .xul import XulRuntime
 from .nodewebkit import NodeWebkitRuntime
 from .browser import BrowserRuntime
@@ -56,30 +49,32 @@ from .selenium import SeleniumRuntime
 
 # todo: auto-select a runtime that is available
 
+# Definition of runtime names and their order
+_runtimes = [
+    ('xul', XulRuntime),
+    ('nwjs', NodeWebkitRuntime),
+    ('pyqt', PyQtRuntime),
+    ('chomeapp', ChromeAppRuntime),
+    ('browser', BrowserRuntime),
+    ('browser-X', BrowserRuntime),
+    ('selenium-X', SeleniumRuntime),
+    ('nodejs', NodejsRuntime),
+    ]
 
-def launch(url, runtime=None, 
-           title='', size=(640, 480), pos=None, icon=None, **kwargs):
-    """ Launch a web runtime in a new process
+
+def launch(url, runtime=None, **kwargs):
+    """ Launch a web runtime in a new process.
     
     Parameters:
-        url (str): The url to open. Can be a local file (prefix with "file://").
-        runtime (str) : The runtime to use. Can be 'xul', 'pyqt', 'nwjs', 
-            'chromeapp', 'browser', 'firefox', and more.
-        title (str): Window title. Some runtimes may override the window
-            title with the value specified in the HTML head section.
-        size (tuple of ints): The size in pixels of the window. Some
-            runtimes may ignore this.
-        pos (tuple of ints): The position of the window. Some runtimes may
-            ignore this.
-        icon (str | Icon): Icon instance or path to an icon file (png or
-            ico). Some runtimes may ignore this. The icon will be
-            automatically converted to png/ico/icns, depending on what's
-            needed by the platform.
-        kwargs: addition arguments specific to the runtime.
+        url (str): The url to open. To open a local file prefix with ``file://``.
+        runtime (str) : The runtime to use (default 'xul').
+            Can be SUPPORTED_RUNTIMES.
+        kwargs: addition arguments specific to the runtime. See the
+            docs of the runtime classes.
     
     Returns:
-        webruntime (WebRuntime): An object that can be used to control the
-        runtime to some extend.
+        runtime (BaseRuntime): An object that can be used to control
+        the runtime to some extend.
     """
     
     runtime = runtime or 'xul'
@@ -89,42 +84,43 @@ def launch(url, runtime=None,
     aliases= {'firefox': 'browser-firefox', 'chrome': 'browser-chrome'}
     runtime = aliases.get(runtime, runtime)
     
-    # Check/create icon
-    if icon is None:
-        icon = default_icon()
-    elif isinstance(icon, Icon):
-        pass
-    elif isinstance(icon, str):
-        icon = Icon(icon)
-    else:
-        raise ValueError('Icon must be an Icon, a filename or None, not %r' % 
-                         type(icon))
-    
     # Select Runtime class
-    browsertype = None
-    if runtime == 'xul':
-        Runtime = XulRuntime
-    elif runtime == 'pyqt':
-        Runtime = PyQtRuntime
-    elif runtime == 'nwjs':
-        Runtime = NodeWebkitRuntime
-    elif runtime == 'chromeapp':
-        Runtime = ChromeAppRuntime
-    elif runtime == 'browser':
-        Runtime = BrowserRuntime
-    elif runtime.startswith('browser-'):
-        Runtime = BrowserRuntime
-        browsertype = runtime.split('-', 1)[1]
-    elif runtime.startswith('selenium'):
-        browsertype = runtime.split('-', 1)[-1]
-        Runtime = SeleniumRuntime
-    elif runtime =='nodejs':
-        Runtime = NodejsRuntime
+    type = None
+    for name, Cls in _runtimes:
+        if name.endswith('-X'):
+            if runtime.startswith(name[:-1]):
+                Runtime = Cls
+                type = runtime.split('-', 1)[1]
+                break
+        elif runtime == name:
+            Runtime = Cls
+            break
     else:
         raise ValueError('Unknown web runtime %r.' % runtime)
     
     # Create runtime, launch, and return 
-    rt = Runtime(url=url, title=title, size=size, pos=pos, icon=icon, 
-                 browsertype=browsertype, **kwargs)
-    rt.launch()
+    if type is not None:
+        kwargs['type'] = type
+    kwargs['url'] = url
+    rt = Runtime(**kwargs)
     return rt
+
+
+launch.__doc__ = launch.__doc__.replace('SUPPORTED_RUNTIMES', 
+                                        ', '.join([repr(n) for n, c in _runtimes]))
+
+
+def _print_autoclasses():
+    """ Call this to get ``.. autoclass::`` definitions to put in the docs.
+    """
+    lines = []
+    seen = set()
+    for name in ('BaseRuntime', 'DesktopRuntime'):
+        lines.append('.. autoclass:: flexx.webruntime.%s\n  :members:' % name)
+    for name, Cls in _runtimes:
+        if Cls in seen:
+            continue
+        seen.add(Cls)
+        lines.append('.. autoclass:: flexx.webruntime.%s\n  :members:' % Cls.__name__)
+    print('\n\n'.join(lines))
+    

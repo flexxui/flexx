@@ -35,7 +35,7 @@ import logging
 import subprocess
 import os.path as op
 
-from .common import WebRuntime, create_temp_app_dir, appdata_dir, default_icon
+from .common import DesktopRuntime, create_temp_app_dir, appdata_dir, default_icon
 from ..util.icon import Icon
 
 # todo: title should change with title of web page?
@@ -218,8 +218,14 @@ def copy_xul_runtime(dir1, dir2):
         raise
 
 
-class XulRuntime(WebRuntime):
-    """ Web runtime based on Mozilla's XUL framework.
+class XulRuntime(DesktopRuntime):
+    """ Desktop runtime based on Mozilla's XUL framework. Xul is
+    available wherever Firefox is installed, and uses same engine (Gecko).
+    Requires Firefox or the Xul binaries to be installed.
+    
+    This runtime is currently the best supported way to create a desktop
+    app, with full support for title, window position, icon and custom
+    process name.
     """
     
     _app_count = 0
@@ -240,7 +246,7 @@ class XulRuntime(WebRuntime):
             windowfeatures += ', top=%i, left=%i' % (pos[0], pos[1])
         
         # More preparing
-        self._kwargs['title'] = self._kwargs['title'] or 'XUL runtime'
+        self._kwargs['title'] = self._kwargs.get('title', 'XUL runtime')
         
         # Create files for app
         self._create_xul_app(app_path, id, windowfeatures=windowfeatures, 

@@ -6,7 +6,7 @@ Opens browser via webbrowser module.
 import webbrowser
 import logging
 
-from .common import WebRuntime
+from .common import BaseRuntime
 
 
 BROWSER_MAP = {'chrome': ['google-chrome', 'chrome', 
@@ -16,15 +16,17 @@ BROWSER_MAP = {'chrome': ['google-chrome', 'chrome',
                }
 
 
-class BrowserRuntime(WebRuntime):
-    """ Web runtime bases on the Python webbrowser module.
+class BrowserRuntime(BaseRuntime):
+    """ Runtime based on the Python webbrowser module. For Firefox,
+    Chrome and Chromium the runtime can often be loaded even if Python's
+    webbrowser module cannot.
     """
     
     def _launch(self):
         
         # Get url and browser type
         url = self._kwargs['url']
-        type = self._kwargs.get('browsertype', '')
+        type = self._kwargs.get('type', '')
         
         # Get alternative types
         types = BROWSER_MAP.get(type, [type])
@@ -43,19 +45,19 @@ class BrowserRuntime(WebRuntime):
         
         # If that did not work, maybe we should try harder
         # In particular on Windows, the exes may simply not be on the path
-        if type == 'firefox':
+        if type == 'firefox':  # pragma: no cover
             from .xul import get_firefox_exe
             exe = get_firefox_exe() or 'firefox'
             self._start_subprocess([exe, url])
             self._proc = None  # Prevent closing
             return
-        elif type == 'chrome':
+        elif type == 'chrome':  # pragma: no cover
             from .chromeapp import get_chrome_exe
             exe = get_chrome_exe() or 'google-chrome'
             self._start_subprocess([exe, url])
             self._proc = None  # Prevent closing
             return
-        elif type == 'chromium':
+        elif type == 'chromium':  # pragma: no cover
             from .chromeapp import get_chromium_exe
             exe = get_chromium_exe() or 'chromium-browser'
             self._start_subprocess([exe, url])

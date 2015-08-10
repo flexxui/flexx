@@ -86,7 +86,7 @@ class Widget(Pair):
         
         # Use parent proxy unless proxy was given
         if parent is not None and not kwargs.get('_proxy', None):
-            kwargs['_proxy'] = parent.proxy
+            kwargs['proxy'] = parent.proxy
         
         # Provide css class name to JS
         classes = ['flx-' + c.__name__.lower() for c in self.__class__.mro()]

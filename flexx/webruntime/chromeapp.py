@@ -7,7 +7,7 @@ more the look and feel of a desktop app.
 import os
 import sys
 
-from .common import WebRuntime
+from .common import DesktopRuntime
 
 # todo: icon, sizing, etc.
 
@@ -64,8 +64,11 @@ def get_chromium_exe():
         return None
 
 
-class ChromeAppRuntime(WebRuntime):
-    """ Web runtime based on chrome app.
+class ChromeAppRuntime(DesktopRuntime):
+    """ Desktop runtime based on chrome app. Requires the Chrome or
+    Chromium browser to be installed.
+    
+    Note: icon, sizing and title is not yet supported.
     """
     
     def _launch(self):

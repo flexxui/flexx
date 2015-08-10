@@ -11,7 +11,7 @@ import sys
 import json
 import shutil
 
-from .common import WebRuntime, create_temp_app_dir
+from .common import DesktopRuntime, create_temp_app_dir
 
 
 def get_template():
@@ -78,7 +78,7 @@ def get_nodewebkit_exe():
     
     # Get possible locations of nw exe
     paths = []
-    paths.append('/home/almar/projects/node-webkit-v0.11.5-linux-x64/nw')
+    paths.append('/home/almar/tools/node-webkit-v0.11.5-linux-x64/nw')
     
     # Test each location
     for path in paths:
@@ -88,8 +88,10 @@ def get_nodewebkit_exe():
         return None
 
 
-class NodeWebkitRuntime(WebRuntime):
-    """ Web runtime based on node-webkit.
+class NodeWebkitRuntime(DesktopRuntime):
+    """ Desktop runtime for nw.js (http://nwjs.io/, formerly
+    node-webkit), which is based on Chromium and nodejs. Requires nw.js
+    to be installed.
     """
     
     _app_count = 0
@@ -105,7 +107,7 @@ class NodeWebkitRuntime(WebRuntime):
         D = get_template()
         D['name'] = 'app' + id
         D['main'] = self._kwargs['url']
-        D['window']['title'] = self._kwargs['title'] or 'node-webkit runtime'
+        D['window']['title'] = self._kwargs.get('title', 'nw.js runtime')
         
         # Set size (position can be null, center, mouse)
         size = self._kwargs.get('size', (640, 480))

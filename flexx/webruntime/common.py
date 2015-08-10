@@ -16,7 +16,7 @@ import subprocess
 from ..util.icon import Icon
 
 
-class WebRuntime(object):
+class BaseRuntime(object):
     """ Base class for all runtimes.
     """
     
@@ -26,11 +26,14 @@ class WebRuntime(object):
         self._proc = None
         self._streamreader = None
         atexit.register(self.close)
+        
+        logging.info('launching %s' % self.__class__.__name__)
+        self._launch()
     
     def close(self):
-        """ Close the runtime
-        
-        If it won't close in a nice way, it is killed.
+        """ Close the runtime, or kill it if the process does not
+        respond. Note that closing does not work when the runtime is a
+        browser, because we need a process handle.
         """
         if self._proc is None:
             return
@@ -51,10 +54,11 @@ class WebRuntime(object):
         self._proc = None
     
     def _start_subprocess(self, cmd, **env):
+        """ For subclasses to easily launch the subprocess.
+        """
         environ = os.environ.copy()
         environ.update(env)
         try:
-            # todo: use a file os stdin, because passing big pieces of code fails on Windows.
             self._proc = subprocess.Popen(cmd, env=environ,
                                           stdout=subprocess.PIPE, 
                                           stderr=subprocess.STDOUT)
@@ -64,14 +68,14 @@ class WebRuntime(object):
         self._streamreader = StreamReader(self._proc)
         self._streamreader.start()
     
-    def launch(self):
-        """ Launch the runtime.
-        """
-        if self._proc is None: 
-            logging.info('launching %s' % self.__class__.__name__)
-            self._launch()
-        else:
-            raise RuntimeError('WebRuntime already running')
+    # def launch(self):
+    #     """ Launch the runtime.
+    #     """
+    #     if self._proc is None: 
+    #         logging.info('launching %s' % self.__class__.__name__)
+    #         self._launch()
+    #     else:
+    #         raise RuntimeError('WebRuntime already running')
     
     def _launch(self):
         raise NotImplementedError()
@@ -80,6 +84,38 @@ class WebRuntime(object):
     #def set_size
     #def set_icon
     #def set_pos
+
+
+class DesktopRuntime(BaseRuntime):
+    """ A base class for runtimes that launch a desktop-like app.
+    
+    Arguments:
+        title (str): Text shown in title bar.
+        size (tuple of ints): The size in pixels of the window.
+        pos (tuple of ints): The position of the window.
+        icon (str | Icon): Icon instance or path to an icon file (png or
+            ico). The icon will be automatically converted to
+            png/ico/icns, depending on what's needed by the runtime and
+            platform.
+    """
+    
+    def __init__(self, **kwargs):
+        
+        icon = kwargs.get('icon', None)
+        
+        # Check/create icon
+        if icon is None:
+            icon = default_icon()
+        elif isinstance(icon, Icon):
+            pass
+        elif isinstance(icon, str):
+            icon = Icon(icon)
+        else:
+            raise ValueError('Icon must be an Icon, a filename or None, not %r' % 
+                                type(icon))
+        
+        kwargs['icon'] = icon
+        BaseRuntime.__init__(self, **kwargs)
 
 
 class StreamReader(threading.Thread):
@@ -231,10 +267,11 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
 
 
 _icon_template = """
-xxxx  x   x  xxx
-  x  x x x x x
- x   x x x x xxx
-xxxx  x   x  x
+xx x  xx x x x x
+x  x  x  x x x x
+xx x  xx  x   x
+x  x  x  x x x x
+x  xx xx x x x x
 
  xx   xxx   xxx
 x  x  x  x  x  x

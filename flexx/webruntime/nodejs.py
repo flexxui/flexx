@@ -23,7 +23,7 @@ except ImportError:  # Py2k
     from urlparse import urlparse
     from urllib2 import urlopen
 
-from .common import WebRuntime
+from .common import BaseRuntime
 
 
 NODE_EXE = None
@@ -106,8 +106,18 @@ def get_js_from_html(html, root):
     return '\n'.join(parts)
 
 
-class NodejsRuntime(WebRuntime):
-    """ Web runtime based on nodejs.
+class NodejsRuntime(BaseRuntime):
+    """ Runtime for nodejs ((http://nodejs.org), which is based on
+    Chrome's V8 JavaScript engine. No UI, for computations and testing
+    only. Requires nodejs to be installed .
+    
+    The uri argument is not used in the same way as in the other
+    runtimes, because nodejs does not deal with HTML. The uri is only
+    used to create a ``location`` object for compatibility with
+    browsers.
+    
+    Arguments:
+      code (str): The code to run.
     """
     
     def _launch(self):
