@@ -3,8 +3,8 @@
 
 from .. import react
 
-from .widget import Widget
-from .layout import Layout, VBox, HBox
+from . import Widget
+from . import Layout, VBox, HBox
 
 
 class Panel(Widget):
