@@ -1,23 +1,42 @@
+"""
+
+Simple example:
+
+.. UIExample:: 50
+
+    p = ui.ProgressBar(value=0.7)
+
+
+Interactive example:
+
+.. UIExample:: 100
+
+    from flexx import app, ui, react
+    
+    class Example(ui.Widget):
+    
+        def init(self):
+            with ui.HBox():
+                self.b1 = ui.Button(flex=0, text='Less')
+                self.b2 = ui.Button(flex=0, text='More')
+                self.p = ui.ProgressBar(flex=1, value=0.1)
+        
+        class JS:
+            
+            @react.connect('b1.mouse_down', 'b2.mouse_down')
+            def _change_progress(self, b1, b2):
+                if b1:
+                    self.p.value(self.p.value()-0.1)
+                if b2:
+                    self.p.value(self.p.value()+0.1)
+"""
 
 from .. import react
-
 from . import Widget
 
 
 class ProgressBar(Widget):
     """ A widget to show progress.
-    
-    Example:
-    
-    .. UIExample:: 100
-    
-        from flexx import ui
-        
-        class App(ui.App):
-            def init(self):
-                with ui.HBox():  # show our widget full-window
-                    ui.ProgressBar(flex=1, value=0.7)
-    
     """
     
     CSS = ".flx-progressbar {min-height: 10px;}"

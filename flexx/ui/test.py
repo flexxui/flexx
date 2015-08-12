@@ -2,14 +2,14 @@ import time
 import logging
 
 import flexx
-from flexx import ui
+from flexx import app, ui
 
 import faulthandler
 faulthandler.enable()
 #logging.log
 
 
-@ui.make_app()
+@app.make_app()
 class MyApp(ui.Widget):
     
     #_config = ui.App.Config(title='Flexx test app', size=(400, 300),
@@ -133,8 +133,8 @@ class MyApp(ui.Widget):
 
 
 
-app = MyApp.launch('firefox')
-ui.run()
+a = MyApp.launch('firefox')
+app.run()
 # app.b1.set_text('asdasd')
 
 # MyApp.export('/home/almar/test.html')

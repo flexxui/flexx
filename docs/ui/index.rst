@@ -7,7 +7,4 @@ Reference for flexx.ui
 .. toctree::
     :maxdepth: 1
     
-    app
-    mirrored
-    events
     classlist

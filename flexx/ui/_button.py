@@ -1,4 +1,33 @@
-""" Button widgets.
+"""
+
+Simple example:
+
+.. UIExample:: 50
+    
+    b = ui.Button(text="Push me")
+
+
+Example with interaction:
+
+.. UIExample:: 50
+    
+    from flexx import app, ui, react
+    
+    @app.make_app
+    class App(ui.Widget):
+    
+        def init(self):
+            self.b1 = ui.Button(text="I've been clicked 0 times")
+        
+        class JS:
+        
+            @react.connect('b1.mouse_down')
+            def _on_mouse_down(down):
+                self._click_count = self._click_count or 0
+                if down:
+                    self._click_count += 1
+                    self.b1.text("I've been clicked %i times" % self._click_count)
+
 """
 
 from .. import react
@@ -8,17 +37,6 @@ from . import Widget
 
 class Button(Widget):
     """ A simple push button.
-    
-    Example:
-    
-    .. UIExample:: 100
-        
-        from flexx import ui
-        
-        class App(ui.App):
-            def init(self):
-                self.b1 = ui.Button(text='Push me!')
-    
     """
     
     CSS = """
@@ -44,11 +62,14 @@ class Button(Widget):
             
             # testing ...
             #self.connect_event('click', (self, 'ontheclick'))
+            that = this
+            this.node.addEventListener('mousedown', lambda ev: that.mouse_down._set(True), False)
+            this.node.addEventListener('mouseup', lambda ev: that.mouse_down._set(False), False)
         
         @react.connect('text')
         def _text_changed(self, text):
             this.node.innerHTML = text
     
         @react.source
-        def mouse_down(v=False):
+        def mouse_down(v):
             return bool(v)

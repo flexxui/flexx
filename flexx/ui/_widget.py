@@ -1,13 +1,83 @@
-""" The base widget class.
+"""
+The Widget class is the base component of all other ui classes. On
+itself it does not do or show much, though we can make it visible:
 
-Implements parenting and other things common to all widgets.
+.. UIExample:: 100
+    
+    from flexx import app, ui
+    
+    # A red widget
+    class Example(ui.Widget):
+        CSS = ".flx-example {background:#f00; min-width: 20px; min-height:20px}"
+
+Widgets are also uses as a container class. As you can see in the
+examples that come with the widget docs:
+
+.. UIExample:: 100
+    
+    from flexx import app, ui
+    
+    class Example(ui.Widget):
+        
+        def init(self):
+            ui.Button(text='hello')
+            ui.Button(text='world')
+
+Such "compound widgets" can be used anywhere in your app. They are
+constructed by implementing the ``init()`` method. Inside this method
+the widget is the *default parent*.
+
+Any widget class can also be used as a *context manager*. Within the context,
+the widget is the default parent; any widgets created in that context
+that do not specify a parent, will have the widget as a parent. (The
+default-parent-mechanism is thread-safe, since there is a default widget
+per thread.)
+
+.. UIExample:: 100
+    
+    from flexx import app, ui
+    
+    class Example(ui.Widget):
+        
+        def init(self):
+            with ui.HBox():
+                ui.Button(flex=1, text='hello')
+                ui.Button(flex=1, text='world')
+
+To create an actual app, you need to mark a widget as an app:
+
+.. code-block:: py
+    
+    from flexx import app, ui
+    
+    @app.make_app
+    class Example(ui.Widget):
+        def init(self):
+            ui.Label(text='hello world')
+
+Such an app can then be loaded by a client connecting to the server.
+Or, for desktop use, you can launch an instance:
+
+.. code-block:: py
+
+    example = Example.launch('xul')  # specify runtime to run app in
+
+
+Similarly, apps can be exported. If all user ineraction is implemented
+in JS, the app can be served from a standalone HTML document:
+
+.. code-block:: py
+    
+    Example.export('example.html')
+
 """
 
 import json
 import threading
 
 from .. import react
-from . import Pair, get_instance_by_id
+from ..app import Pair, get_instance_by_id
+from ..app.serialize import serializer
 
 
 def _check_two_scalars(name, v):
@@ -42,36 +112,14 @@ class Widget(Pair):
     In HTML-speak, this represents a plain div-element. Not very useful
     on itself, except perhaps to fill up space. Subclass to create
     something interesting.
+
+    When *subclassing* a Widget to create a compound widget (a widget
+    that serves as a container for other widgets), use the ``init()``
+    method to initialize child widgets. This method is called while
+    the widget is the current widget.
     
-    Notes:
-        
-        A widget class can be used as a *context manager*. Within the
-        context, the widget is the default widget; any widgets created in
-        that context that do not specify a parent, will have the widget
-        as a parent. (This is thread-safe, since there is a default widget
-        per thread.)
-        
-        When *subclassing* a Widget to create a compound widget (a widget
-        that serves as a container for other widgets), use the ``init()``
-        method to initialize child widgets. This method is called while
-        the widget is the current widget.
-        
-        When subclassing to create a custom widget use the ``_init()``
-        method both for the Python and JS version of the class.
-    
-    Example:
-    
-    .. UIExample:: 100
-    
-        from flexx import ui
-        
-        class MyWidget(ui.Widget):
-            CSS = ".flx-mywidget {background:#f00;}"
-        
-        class App(ui.App):
-            def init(self):
-                with ui.HBox():  # show our widget full-window
-                    MyWidget(flex=1)
+    When subclassing to create a custom widget use the ``_init()``
+    method both for the Python and JS version of the class.
     
     """
     
@@ -100,8 +148,10 @@ class Widget(Pair):
         with self:
             self.init()
         
-        # Connect; signal dependencies may have been added during init()
+        # Signal dependencies may have been added during init(), also in JS
         self.connect_signals(False)
+        cmd = 'flexx.instances.%s.connect_signals(false);' % self._id
+        self._proxy._exec(cmd)
     
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
@@ -118,6 +168,14 @@ class Widget(Pair):
         from ..pair import call_later
         call_later(0.1, set_cointainer_id) # todo: always do calls in next iter
         return "<div class='flx-container' id=%s />" % container_id
+    
+    def __setattr__(self, name, value):
+        # Sync attributes that are Pair instances
+        Pair.__setattr__(self, name, value)
+        if isinstance(value, Pair):
+            txt = serializer.saves(value)
+            cmd = 'flexx.instances.%s.%s = flexx.serializer.loads(%r);' % (self._id, name, txt)
+            self._proxy._exec(cmd)
     
     def init(self):
         """ Overload this to initialize a cusom widget. Inside, this
@@ -179,7 +237,7 @@ class Widget(Pair):
     
     @react.input
     def size(v=(0, 0)):
-        """ The size of the widget when it in a ayout that allows
+        """ The size of the widget when it in a layout that allows
         positioning.
         """
         return _check_two_scalars('size', v)

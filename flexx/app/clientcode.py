@@ -516,14 +516,14 @@ class Exporter(object):
     by the app, so that these can be re-played in the exported document.
     """
     
-    def __init__(self, app):
+    def __init__(self, proxy):
         self._commands = []
         self.close_code = None  # simulate web socket
         
         # todo: how to export icons
-        self.command('ICON %s.ico' % app.id)
-        self.command('TITLE %s' % app._config.title)
-        
+        self.command('ICON %s.ico' % proxy.id)
+        self.command('TITLE %s' % proxy._runtime_kwargs.get('title', 'Exported flexx app'))
+    
     def command(self, cmd):
         self._commands.append(cmd)
     

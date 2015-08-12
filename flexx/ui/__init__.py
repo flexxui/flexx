@@ -3,12 +3,9 @@
 GUI toolkit based on web technology with a Pythonic API.
 """
 
-from ..app import run, stop, call_later, make_app
-from ..app import Pair, get_instance_by_id
-
-# We follow the convention of having one module per widget class. In
-# order not to pollute this namespace, we prefix the module names with
-# an underscrore.
+# We follow the convention of having one module per widget class (or a
+# small set of closely related classes). In order not to pollute this
+# namespace, we prefix the module names with an underscrore.
 
 from ._widget import Widget
 from ._label import Label

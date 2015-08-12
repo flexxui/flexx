@@ -3,13 +3,16 @@ Small sphinx extension to show a UI example + result
 """
 
 import os
+import sys
 import hashlib
 import warnings
+import subprocess
 
 from sphinx.util.compat import Directive
 from docutils import nodes
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
+ROOT_DIR = os.path.dirname(os.path.dirname(THIS_DIR))
 HTML_DIR = os.path.abspath(os.path.join(THIS_DIR, '..', '_build', 'html'))
 
 if not os.path.isdir(HTML_DIR + '/ui'):
@@ -17,6 +20,15 @@ if not os.path.isdir(HTML_DIR + '/ui'):
     
 if not os.path.isdir(HTML_DIR + '/ui/examples'):
     os.mkdir(HTML_DIR + '/ui/examples')
+
+SIMPLE_CODE_T = """
+from flexx import app, ui
+
+@app.make_app
+class App(ui.Widget):
+
+    def init(self):
+        """  # mind the indentation
 
 
 class uiexample(nodes.raw): pass
@@ -26,26 +38,41 @@ def visit_uiexample_html(self, node):
     # Get code
     code = node.code.strip() + '\n'
     
+    # Is this a simple example?
+    if 'import' not in code:
+        code = SIMPLE_CODE_T + '\n        '.join([line for line in code.splitlines()])
+    
     # Get id and filename
     this_id = hashlib.md5(code.encode('utf-8')).hexdigest()
     fname = 'example%s.html' % this_id
+    filename_html = os.path.join(HTML_DIR, 'ui', 'examples', fname)
     
-    # Execute code to create App class
-    NS = {}
+    code += '\n\n'
+    if 'class MyApp' in code:
+        code += 'App = MyApp\n'
+    elif 'class Example' in code:
+        code += 'App = Example\n'
+    if not '@app.make_app' in code:
+        code += 'from flexx import app\nApp = app.make_app(App)\n'
+    code += 'App.export(%r)\n' % fname
+    
+    # Write filename so Python can find the source
+    filename_py = os.path.join(HTML_DIR, 'ui', 'examples', 'example%s.py' % this_id)
+    open(filename_py, 'wt').write(code)
+    
+    # Call a fresh process to run the app
+    env = os.environ.copy()
+    env['PYTHONPATH'] = ROOT_DIR
     try:
-        exec(node.code, NS, NS)
+        subprocess.check_output([sys.executable, filename_py], 
+                                 stderr=subprocess.STDOUT, env=env, 
+                                 cwd=os.path.join(HTML_DIR, 'ui', 'examples'))
     except Exception as err:
-        warnings.warn('ERROR:' + str(err))
-    # todo: raise once we've got it fixed...
+        msg = 'Example not generated. ' + str(err.output)
+        open(filename_html, 'wt').write(msg)
+        warnings.warn('ERROR:' + str(err.output))
+        # todo: raise once we've got all examples fixed...
     
-    # Export app to html file
-    for appname in ('App', 'MyApp'):
-        if appname in NS:
-            try:
-                NS[appname].export(os.path.join(HTML_DIR, 'ui', 'examples', fname))
-            except Exception as err:
-                warnings.warn('ERROR:' + str(err))
-            break
     rel_path = '../ui/examples/' + fname
     
     # Styles

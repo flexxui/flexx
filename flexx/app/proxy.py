@@ -302,12 +302,14 @@ def create_enum(*members):
 
 def make_app(cls=None, **signal_values):
     """ Mark a Pair class as an app, to be used as a class decorator.
-    Does three things:
+    Does the following things:
     
     * The class is registered as an app with the server, so that clients
       (incoming connections) can load the app.
     * Adds a ``launch()`` function to the class to easily create an app
       instance.
+    * Adds an ``export()`` function to the class to allow exporting to
+      static HTML.
     * adds ``_IS_APP`` attribute to the class with value ``True`` (used
       internally).
     
@@ -336,8 +338,20 @@ def make_app(cls=None, **signal_values):
             proxy._set_pair_instance(app)
             return app
         
+        def export(filename=None):
+            """ Export the app to HTML
+            """
+            proxy = Proxy(cls.__name__, '<export>')
+            app = cls(proxy=proxy)
+            proxy._set_pair_instance(app)
+            if filename is None:
+                return proxy._ws.to_html()
+            else:
+                return proxy._ws.write_html(filename)
+                
         manager.register_app_class(cls)
         cls.launch = launch
+        cls.export = export
         cls._IS_APP = True  # Mark the class as an app
         return cls
     
@@ -361,6 +375,7 @@ class Proxy(object):
         # Note: to avoid circular references, do not store the app instance!
         
         self._app_name = app_name
+        self._runtime_kwargs = runtime_kwargs
         
         # Init runtime object (the runtime argument is a string)
         self._runtime = None
@@ -554,17 +569,3 @@ class Proxy(object):
         if self._ws is None:
             raise RuntimeError('App not connected')
         self._send_command('EVAL ' + code)
-    
-    @classmethod
-    def export(cls, filename=None):
-        """ Classmethod to export the app to HTML
-        
-        This will instantiate an app object, capture all commands that
-        it produces in init(), and stores this in a standalone HTML
-        document specified by filename.
-        """
-        app = cls(runtime='<export>')
-        if filename is None:
-            return app._ws.to_html()
-        else:
-            return app._ws.write_html(filename)
