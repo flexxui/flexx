@@ -112,8 +112,8 @@ class MyApp(ui.Widget):
             with ui.HBox(self):
                 ui.Button(text='Button in hbox', flex=0)
                 with ui.HSplit(flex=1):
-                    ui.Button(text='Button in splitter', min_width=100)
-                    with ui.HBox(min_width=100):
+                    ui.Button(text='Button in splitter', min_size=(100, 0))
+                    with ui.HBox(min_size=(100, 0)):
                         ui.Button(text='Right A', flex=0, css='background:#f00; padding:2em;')
                         ui.Button(text='Right B', flex=1)
                         ui.Button(text='Right C', flex=2)

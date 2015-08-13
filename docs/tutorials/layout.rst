@@ -26,7 +26,7 @@ create an app with three buttons.
     
     from flexx import ui
     
-    class MyApp(ui.Widget):
+    class Example(ui.Widget):
         def init(self):
             self.b1 = ui.Button(text='Hello world')
             self.b2 = ui.Button(text='Foo')
@@ -51,7 +51,7 @@ whichever is largest.
 .. UIExample:: 100
     from flexx import ui
     
-    class MyApp(ui.Widget):
+    class Example(ui.Widget):
         def init(self):
             with ui.HBox():
                 self.b1 = ui.Button(text='Hola', flex=0)
@@ -72,7 +72,7 @@ giving the buttons a (vertical) flex of 0.
 .. UIExample:: 100
     from flexx import ui
     
-    class MyApp(ui.Widget):
+    class Example(ui.Widget):
         def init(self):
             with ui.VBox():
                 self.b1 = ui.Button(text='Hola')
@@ -88,7 +88,7 @@ to fill up the whole space.
 .. UIExample:: 120
     from flexx import ui
     
-    class MyApp(ui.Widget):
+    class Example(ui.Widget):
         def init(self):
             with ui.VBox():
                 self.b1 = ui.Button(text='Hola')
@@ -111,7 +111,7 @@ widgets are organized.
     
     from flexx import ui
     
-    class MyApp(ui.Widget):
+    class Example(ui.Widget):
         def init(self):
             with ui.VBox():
                 
@@ -163,7 +163,7 @@ the vertical direction.
     
     from flexx import ui
     
-    class MyApp(ui.Widget):
+    class Example(ui.Widget):
         def init(self):
             with ui.FormLayout():
                 ui.Label(text='Pet name:')
@@ -198,7 +198,7 @@ a percentage of the parent size).
     
     from flexx import ui
     
-    class MyApp(ui.Widget):
+    class Example(ui.Widget):
         def init(self):
             with ui.PinboardLayout():
                 self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
@@ -220,27 +220,27 @@ extra).
     
     from flexx import ui
     
-    class MyApp(ui.Widget):
+    class Example(ui.Widget):
         def init(self):
             with ui.VSplitter():
-                ui.Button(text='Right A', min_width=120)
-                ui.Button(text='Right B', min_width=70)
+                ui.Button(text='Right A', min_size=(120, 0))
+                ui.Button(text='Right B', min_size=(70, 0))
                 ui.Button(text='Right C')
 
 Let's make it more interesting, a splitter inside a HBox, where the splitter has
-a button on the left and a hbox on the right (min_width is currently not implemented):
+a button on the left and a hbox on the right (min_size is currently not implemented):
 
 
 .. UIExample:: 200
     
     from flexx import ui
     
-    class MyApp(ui.Widget):
+    class Example(ui.Widget):
         def init(self):
             with ui.HBox():
-                ui.Button(text='Button in hbox', flex=0, min_width=110)
+                ui.Button(text='Button in hbox', flex=0, min_size=(110, 0))
                 with ui.HSplitter(flex=2):
-                    ui.Button(text='Button in hsplit', min_width=110)
+                    ui.Button(text='Button in hsplit', min_size=(110, 0))
                     with ui.HBox():
                         ui.Button(text='Right A', flex=0)
                         ui.Button(text='Right B', flex=1)
@@ -248,5 +248,6 @@ a button on the left and a hbox on the right (min_width is currently not impleme
 
 
 .. raw:: html
+
     <!-- Some exta space to allow easy resizing of the last example -->
     <br /><br /><br /><br /><br />

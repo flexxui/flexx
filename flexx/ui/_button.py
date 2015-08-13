@@ -13,8 +13,7 @@ Example with interaction:
     
     from flexx import app, ui, react
     
-    @app.make_app
-    class App(ui.Widget):
+    class Example(ui.Widget):
     
         def init(self):
             self.b1 = ui.Button(text="I've been clicked 0 times")
