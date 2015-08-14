@@ -18,6 +18,7 @@ from ._pinboardlayout import PinboardLayout
 from ._label import Label
 from ._button import Button
 from ._panel import Panel
+from ._slider import Slider
 from ._progressbar import ProgressBar
 
 from ._plotwidget import PlotWidget

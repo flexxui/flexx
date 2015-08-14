@@ -69,7 +69,7 @@ def visit_uiexample_html(self, node):
                                  cwd=os.path.join(HTML_DIR, 'ui', 'examples'))
     except Exception as err:
         msg = 'Example not generated. ' + str(err.output)
-        open(filename_html, 'wt').write(msg)
+        open(filename_html, 'wt').write(msg.replace('\\n', '<br />'))
         warnings.warn('ERROR:' + str(err.output))
         # todo: raise once we've got all examples fixed...
     

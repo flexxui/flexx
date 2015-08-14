@@ -48,7 +48,7 @@ class ProgressBar(Widget):
         return float(v)
     
     @react.input
-    def max_value(v=1):
+    def max(v=1):
         """ The maximum progress value.
         """
         return float(v)
@@ -62,7 +62,7 @@ class ProgressBar(Widget):
         def _value_changed(self, value):
             self.node.value = value
         
-        @react.connect('max_value')
-        def _max_value_changed(self, max_value):
+        @react.connect('max')
+        def _max_changed(self, max_value):
             self.node.max = max_value
 
