@@ -358,7 +358,7 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
             if signal.signal_type != 'PySignal' and not signal._name.startswith('_'):
                 #txt = JSON.stringify(signal.value)
                 txt = flexx.serializer.saves(signal.value)
-                flexx.ws.send('SIGNAL ' + self.id + ' ' + signal._name + ' ' + txt + ' ' + signal._esid)
+                flexx.ws.send('SIGNAL ' + [self.id, signal._esid, signal._name, txt].join(' '))
         
         def _link_js_signal(self, name, link):
             if link:

@@ -31,7 +31,8 @@ from . import Widget
 
 
 class Slider(Widget):
-    """ An input widget to select a value in a certain range.
+    """ An input widget to select a value in a certain range (aka HTML
+    range input).
     """
     
     CSS = ".flx-slider {min-height: 30px;}"

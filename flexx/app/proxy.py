@@ -542,7 +542,7 @@ class Proxy(object):
             logging.info('JS - ' + command[5:].strip())
         elif command.startswith('SIGNAL '):
             # todo: seems weird to deal with here. implement this by registring some handler?
-            _, id, signal_name, txt, esid = command.split(' ', 4)
+            _, id, esid, signal_name, txt = command.split(' ', 4)
             ob = Pair._instances.get(id, None)
             if ob is not None:
                 ob._set_signal_from_js(signal_name, txt, esid)
