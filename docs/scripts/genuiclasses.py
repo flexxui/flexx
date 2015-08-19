@@ -59,8 +59,11 @@ def main():
         open(filename, 'wt').write(docs)
     
     # Create overview doc page
-    docs = 'List of the widget classes'
+    docs = 'Ui API'
     docs += '\n' + '=' * len(docs) + '\n\n'
+    docs += 'This is a list of all widget classes provided by ``flexx.ui``. '
+    docs += 'There is one document per widget type. Each document contains '
+    docs += 'examples with the widget(s) defined within.\n\n'
     for name in sorted(class_names):
         docs += '* :class:`%s <flexx.ui.%s>`\n' % (name, name)
     docs += '\n.. toctree::\n  :maxdepth: 1\n  :hidden:\n\n'
@@ -68,7 +71,7 @@ def main():
         docs += '  %s\n' % module_name.split('.')[-1].strip('_').lower()
     
     # Write overview doc page
-    filename = os.path.join(OUTPUT_DIR, 'classlist.rst')
+    filename = os.path.join(OUTPUT_DIR, 'api.rst')
     created_files.append(filename)
     open(filename, 'wt').write(docs)
     
