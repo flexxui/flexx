@@ -38,7 +38,7 @@ class Slider(Widget):
     
     @react.input
     def value(v=0):
-        """ The slider value. """
+        """ The current slider value (settable)."""
         return float(v)
     
     @react.input
@@ -68,23 +68,23 @@ class Slider(Widget):
             
         @react.source
         def user_value(v):
-            """ The slider value set by the user. """
+            """ The slider value set by the user (updates on user interaction). """
             if v is not undefined:
                 v = float(v)
                 self.value(v)
             return v
         
-        @react.connect('step')
-        def _step_changed(self, step):
-            self.node.step= step
-        
         @react.connect('value')
         def _value_changed(self, value):
             self.node.value = value
         
+        @react.connect('step')
+        def _step_changed(self, step):
+            self.node.step= step
+        
         @react.connect('min')
-        def _max_changed(self, min_value):
-            self.node.min = max_value
+        def _min_changed(self, min_value):
+            self.node.min = min_value
         
         @react.connect('max')
         def _max_changed(self, max_value):

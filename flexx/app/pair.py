@@ -44,10 +44,12 @@ class JSSignal(react.SourceSignal):
     """ A signal that represents a proxy to a signal in JavaScript.
     """
     
-    def __init__(self, func_or_name, upstream=[], frame=None, ob=None):
+    def __init__(self, func_or_name, upstream=[], frame=None, ob=None, doc=None):
         
         def func(v):
             return v
+        if doc is not None:
+            func.__doc__ = doc
         
         if isinstance(func_or_name, string_types):
             func.__name__ = func_or_name
@@ -104,7 +106,7 @@ class PairMeta(HasSignalsMeta):
                 if isinstance(val, react.Signal) and not isinstance(val, PySignal):
                     if not hasattr(cls, name):
                         cls.__signals__.append(name)
-                        setattr(cls, name, JSSignal(name))
+                        setattr(cls, name, JSSignal(name, doc=val._func.__doc__))
                     elif isinstance(getattr(cls, name), JSSignal):
                         pass  # ok, overloaded signal on JS side
                     else:

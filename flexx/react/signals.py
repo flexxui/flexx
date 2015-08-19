@@ -82,7 +82,7 @@ class Signal(object):
         self._name = func.__name__
         
         # Set docstring this appears correct in sphinx docs
-        self.__doc__ = 'Signal -> ' + (func.__doc__ or self._name)
+        self.__doc__ = '*%s*: %s' % (self.__class__.__name__, func.__doc__ or self._name)
         
         # Check and set dependencies
         upstream = [s for s in upstream]
