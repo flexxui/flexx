@@ -9,11 +9,11 @@ Example:
         def init(self):
             with ui.FormLayout():
                 ui.Label(text='Pet name:')
-                self.b1 = ui.Button(text='...')
+                self.b1 = ui.LineEdit()
                 ui.Label(text='Pet Age:')
-                self.b2 = ui.Button(text='...')
+                self.b2 = ui.LineEdit()
                 ui.Label(text="Pet's Favorite color:")
-                self.b3 = ui.Button(text='...')
+                self.b3 = ui.LineEdit()
                 ui.Widget(flex=1)
 """
 
