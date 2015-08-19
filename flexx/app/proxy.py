@@ -14,7 +14,6 @@ from ..util.icon import Icon
 from ..webruntime import launch
 
 from .clientcode import clientCode, Exporter # global client code
-from .serialize import serializer
 from .pair import Pair
 
 
@@ -543,15 +542,10 @@ class Proxy(object):
             logging.info('JS - ' + command[5:].strip())
         elif command.startswith('SIGNAL '):
             # todo: seems weird to deal with here. implement this by registring some handler?
-            _, id, signal_name, txt = command.split(' ', 3)
+            _, id, signal_name, txt, esid = command.split(' ', 4)
             ob = Pair._instances.get(id, None)
             if ob is not None:
-                # Note that this will again sync with JS, but it stops there:
-                # eventual synchronity
-                #print('setting signal from js:', signal_name)
-                signal = getattr(ob, signal_name)
-                value = serializer.loads(txt)
-                signal._set(value)
+                ob._set_signal_from_js(signal_name, txt, esid)
         else:
             logging.warn('Unknown command received from JS:\n%s' % command)
     

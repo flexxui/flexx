@@ -222,6 +222,9 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         self._id = self.__class__.__name__ + str(Pair._counter)
         Pair._instances[self._id] = self
         
+        # Flag to implement eventual synchronicity
+        self._seid_from_js = 0
+        
         # Init proxy
         if proxy is None:
             from .proxy import manager
@@ -255,11 +258,34 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         """
         return self._proxy
     
+    def _set_signal_from_js(self, name, text, esid):
+        """ Notes on synchronizing:
+        - Py and JS both send updates when a signal changes.
+        - JS does not send an update for signal updates received from Py.
+        - Py does, to allow eventual synchronicity. Read on.
+        - JS sends updates with a nonzero esid (eventual synchronicity
+          id) and marks the corresponding signal with the same id.
+        - Py sends an update with the esid that it got from JS, or 0
+          if the signal originates from Py.
+        - When JS receives an update from Py, it checks whether the
+          seid is 0 (the signal originates from Py) or if the signal
+          seid is 0 (the signal was updated from py since we last
+          updated it from JS). If either is 0, it updates the signal
+          value, and sets the signal esid to 0.
+        """
+        signal = getattr(self, name)
+        value = serializer.loads(text)
+        self._seid_from_js = esid  # to send back to js
+        signal._set(value)
+    
     def _signal_changed(self, signal):
+        # Set esid to 0 if it originates from Py, or to what we got from JS
+        esid = self._seid_from_js
+        self._seid_from_js = 0
         if not isinstance(signal, JSSignal):
             #txt = json.dumps(signal.value)
             txt = serializer.saves(signal.value)
-            cmd = 'flexx.instances.%s._set_signal_from_py(%r, %r);' % (self._id, signal.name, txt)
+            cmd = 'flexx.instances.%s._set_signal_from_py(%r, %r, %r);' % (self._id, signal.name, txt, esid)
             self._proxy._exec(cmd)
     
     def _link_js_signal(self, name, link=True):
@@ -309,11 +335,13 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         def _init(self):
             pass
         
-        def _set_signal_from_py(self, name, text):
+        def _set_signal_from_py(self, name, text, esid):
             self._signal_emit_lock = True  # do not send back to py
-            #value = JSON.parse(text)
             value = flexx.serializer.loads(text)
-            self[name]._set(value)
+            signal = self[name]
+            if esid == 0 or signal._esid == 0:
+                signal._set(value)
+                signal._esid = 0  # mark signal as updated from py
         
         def _signal_changed(self, signal):
             if flexx.ws is None:  # we could be exported or in an nbviewer
@@ -321,13 +349,14 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
             if self._signal_emit_lock:
                 self._signal_emit_lock = False
                 return
+            signal._esid = signal._count  # mark signal as just updated by us
             # todo: what signals do we sync? all but private signals? or only linked?
             # signals like `children` should always sync, signals like a 100Hz timer not, mouse_pos maybe neither unless linked against
             #if signal.signal_type == 'PyInputSignal' or self._linked_signals[signal._name]:
             if signal.signal_type != 'PySignal' and not signal._name.startswith('_'):
                 #txt = JSON.stringify(signal.value)
                 txt = flexx.serializer.saves(signal.value)
-                flexx.ws.send('SIGNAL ' + self.id + ' ' + signal._name + ' ' + txt)
+                flexx.ws.send('SIGNAL ' + self.id + ' ' + signal._name + ' ' + txt + ' ' + signal._esid)
         
         def _link_js_signal(self, name, link):
             if link:
