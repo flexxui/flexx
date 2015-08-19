@@ -732,7 +732,8 @@ class Parser2(Parser1):
             ns = self.pop_stack()  # Should conly consist of arg names
             assert not set(ns).difference(argnames)
         else:
-            code.append(self.lf('return null;'))
+            if not (code and code[-1].strip().startswith('return ')):
+                code.append(self.lf('return null;'))
             # Pop stack, declare vars, but exclude our argnames
             ns = self.pop_stack()
             for name in argnames:
@@ -754,10 +755,7 @@ class Parser2(Parser1):
     
     def parse_Return(self, node):
         if node.value is not None:
-            code = [self.lf('return ')]
-            code += self.parse(node.value)
-            code.append(';')
-            return code
+            return self.lf('return %s;' % ''.join(self.parse(node.value)))
         else:
             return self.lf("return null;")
     
