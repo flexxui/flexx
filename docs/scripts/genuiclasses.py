@@ -62,6 +62,7 @@ def main():
     docs = 'Ui API'
     docs += '\n' + '=' * len(docs) + '\n\n'
     docs += 'This is a list of all widget classes provided by ``flexx.ui``. '
+    docs += ':class:`Widget <flexx.ui.Widget>` is the base class of all widgets. '
     docs += 'There is one document per widget type. Each document contains '
     docs += 'examples with the widget(s) defined within.\n\n'
     for name in sorted(class_names):
