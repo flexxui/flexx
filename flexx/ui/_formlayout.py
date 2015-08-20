@@ -109,7 +109,7 @@ class BaseTableLayout(Layout):
                         continue
                     self._apply_cell_layout(row, col, vflexes[i], hflexes[j], cum_vflex, cum_hflex)
         
-        @react.connect('real_size')
+        @react.connect('actual_size')
         def _adapt_to_size_change(self, size):
             """ This function adapts the height (in percent) of the flexible rows
             of a layout. This is needed because the percent-height applies to the
@@ -121,8 +121,8 @@ class BaseTableLayout(Layout):
             table = self.node  # or event.target
             #print('heigh changed', event.heightChanged, event.owner.__id)
             
-            if not self.real_size.last_value or (self.real_size.value[1] !=
-                                                 self.real_size.last_value[1]):
+            if not self.actual_size.last_value or (self.actual_size.value[1] !=
+                                                   self.actual_size.last_value[1]):
                 
                 # Set one flex row to max, so that non-flex rows have their
                 # minimum size. The table can already have been stretched

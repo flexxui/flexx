@@ -385,7 +385,7 @@ class Splitter(Layout):
             window.addEventListener('mouseup', on_mouse_up, False)
             # todo: does JS support mouse grabbing?
         
-        @react.connect('real_size')
+        @react.connect('actual_size')
         def _resize_elements(self, size):
             if self._on_resize:  # todo: WTF, is this not alwyas supposed to be there?
                 self._on_resize()

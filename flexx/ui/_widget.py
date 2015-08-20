@@ -254,7 +254,7 @@ class Widget(Pair):
                 widthChanged = (that._stored_size[0] != node.offsetWidth)
                 heightChanged = (that._stored_size[1] != node.offsetHeight)
                 if widthChanged or heightChanged:
-                    that.real_size._set([node.offsetWidth, node.offsetHeight])
+                    that.actual_size._set([node.offsetWidth, node.offsetHeight])
             self._check_resize = _check_resize
             self._check_resize()
             
@@ -270,7 +270,7 @@ class Widget(Pair):
             return v
             
         @react.source
-        def real_size(v=(0, 0)):
+        def actual_size(v=(0, 0)):
             """ The real (actual) size of the widget.
             """
             return v[0], v[1]
@@ -322,7 +322,7 @@ class Widget(Pair):
             # else:
             #     new_parent.connect_event('resize', self._check_resize)
         
-        @react.connect('parent.real_size')
+        @react.connect('parent.actual_size')
         def _keep_size_up_to_date1(self, size):
             #print(self._id, 'resize 1', size)
             self._check_resize()

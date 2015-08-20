@@ -1,42 +1,273 @@
 """
-.. UIExample:: 100
 
-    from flexx import ui
+The plot widget provides rudimentary plotting functionality, mostly to
+demonstrate how plots can be embedded in a Flexx GUI. It may be
+sufficient for simple cases, but don't expect it to ever support
+log-plotting, legends, and other fancy stuff. For real plotting, we
+should probably have a ``BokehWidget`` and a ``VispyWidget``. Or maybe
+it makes sense to have a visualization library based on Flexx.
+
+
+Simple example:
+
+.. UIExample:: 200
+    
+    p = ui.PlotWidget(xdata=range(5), ydata=[1,3,4,2,5], 
+                      line_width=4, line_color='red', marker_color='')
+
+Interactive example:
+
+.. UIExample:: 300
+    
+    from flexx import app, ui, react
     
     class Example(ui.Widget):
         def init(self):
-            with ui.HBox():
-                ui.PlotWidget(flex=1)
-
+            time = [i/10 for i in range(100)]
+            with ui.VBox():
+                with ui.HBox():
+                    ui.Label(text='Amplitude:')
+                    self.slider1 = ui.Slider(min=1, max=10, value=5, flex=1)
+                    ui.Label(text='Phase:')
+                    self.slider2 = ui.Slider(min=0, max=6, value=0, flex=1)
+                self.plot = ui.PlotWidget(flex=1, xdata=time, xlabel='time',
+                                          ylabel='amp', title='A sinusoid')
+        
+        class JS:
+            
+            @react.connect('slider1.value', 'slider2.value')
+            def __update_amplitude(self, amp, phase):
+                ydata = []
+                for x in self.plot.xdata():
+                    ydata.append(amp*Math.sin(x+phase))
+                self.plot.ydata(ydata)
 """
 
 
-from .. import react
-from . import Widget
+# from .. import react
+# from . import Widget
+from flexx import react
+from flexx.ui import Widget
 
 
 class PlotWidget(Widget):
-    """ Widget to show a plot.
-    
-    This should provide very basic plot functionality, mostly to easily
-    demonstrate how plots could be embedded in a Flexx GUI. For real
-    plotting, we should have a ``BokehWidget`` and a ``VispyWidget``.
-    
-    For now, this is mostly a stub...
+    """ Widget to show a plot of x vs y values. Enough for simple
+    plotting tasks.
     """
     
+    CSS = "flx-plotwidget {min-width: 300px; min-height: 200px;}"
+    
+    @react.input
+    def xdata(self, v=()):
+        """ A list of values for the x-axis. """
+        return [float(f) for f in v]
+    
+    @react.input
+    def ydata(self, v=()):
+        """ A list of values for the y-axis. """
+        return [float(f) for f in v]
+    
+    @react.input
+    def line_color(self, v='blue'):
+        """ The color of the line. If this is the empty string, the
+        line is not shown. """
+        return str(v)
+    
+    # todo: allow setting alpha as #rrggbbaa and #rgba
+    @react.input
+    def marker_color(self, v='blue'):
+        """ The color of the marker. If this is the empty string, the
+        line is not shown. """
+        return str(v)
+    
+    @react.input
+    def line_width(self, v=2):
+        """ The width of the line, in pixels. """
+        return float(v)
+    
+    @react.input
+    def marker_size(self, v=6):
+        """ The size of the marker, in pixels. """
+        return float(v)
+    
+    #todo: label should perhaps be on Widhet
+    @react.input
+    def title(self, v=''):
+        """ The label to show above the plot. """
+        return str(v)
+    
+    @react.input
+    def xlabel(self, v=''):
+        """ The label to show on the x-axis. """
+        return str(v)
+    
+    @react.input
+    def ylabel(self, v=''):
+        """ The label to show on the y-axis. """
+        return str(v)
+    
     class JS:
+        
         def _create_node(self):
             self.node = document.createElement('canvas')
             self._context = ctx = self.node.getContext('2d')
             
+            # create tick units
+            self._tick_units = []
+            for e in range(-10, 10):
+                for i in [10, 20, 25, 50]:
+                    self._tick_units.append(i*10**e)
+        
+        @react.connect('actual_size')
+        def _update_canvas_size(self, size):
+            if size[0] and size[1]:
+                self.node.width = size[0]
+                self.node.height = size[1]
+        
+        @react.connect('xdata', 'ydata', 'line_color', 'line_width',
+                       'marker_color', 'marker_size',
+                       'title', 'xlabel', 'ylabel',
+                       '_update_canvas_size')
+        def _update_plot(self, xx, yy, lc, lw, mc, ms, title, xlabel, ylabel):
+            
+            # Prepare
+            ctx = self._context
+            w, h = self.node.width, self.node.height
+            
+            # Get range
+            x1, x2 = min(xx), max(xx)
+            y1, y2 = min(yy), max(yy)
+            if not xx or not yy:
+                x1, x2 = 0, 1
+                y1, y2 = 0, 1
+            else:
+                x1 -= (x2-x1) * 0.02
+                x2 += (x2-x1) * 0.02
+                y1 -= (y2-y1) * 0.02
+                y2 += (y2-y1) * 0.02
+            
+            # Convert to screen coordinates
+            # 0.5 offset so we land on whole pixels with axis
+            lpad = rpad = bpad = tpad = 25.5
+            lpad += 30
+            if title: tpad += 10
+            if xlabel: bpad += 20
+            if ylabel: lpad += 20
+            scale_x = (w-lpad-rpad) / (x2-x1)
+            scale_y = (h-bpad-tpad) / (y2-y1)
+            sxx = [lpad + (x-x1)*scale_x for x in xx]
+            syy = [bpad + (y-y1)*scale_y for y in yy]
+            
+            # Define ticks
+            x_ticks = self._get_ticks(scale_x, x1, x2)
+            y_ticks = self._get_ticks(scale_y, y1, y2)
+            sx_ticks = [lpad + (x-x1)*scale_x for x in x_ticks]
+            sy_ticks = [bpad + (y-y1)*scale_y for y in y_ticks]
+            
+            ctx.clearRect(0, 0, w, h)
+            
+            # Draw axis
             ctx.beginPath()
-            ctx.lineWidth= '3'
-            ctx.strokeStyle = "blue" 
-            ctx.moveTo(10, 60)
-            for i in range(40):
-                ctx.lineTo(10 + i * 10, 
-                        60 + 40 * Math.sin(0.5*i))
+            ctx.lineWidth= 1
+            ctx.strokeStyle = "#444"
+            ctx.moveTo(lpad, tpad-5)
+            ctx.lineTo(lpad, h-bpad)
+            ctx.lineTo(w-rpad+5, h-bpad)
             ctx.stroke()
             
-            ctx.fillText("Imagine that this is a fancy plot ...", 10, 10)
+            # Draw ticks
+            ctx.beginPath()
+            ctx.lineWidth= 1
+            ctx.strokeStyle = "#444"
+            for sx in sx_ticks:
+                ctx.moveTo(sx, h-bpad)
+                ctx.lineTo(sx, h-bpad+5)
+            for sy in sy_ticks:
+                ctx.moveTo(lpad, h-sy)
+                ctx.lineTo(lpad-5, h-sy)
+            ctx.stroke()
+            
+            # Draw gridlines
+            ctx.beginPath()
+            ctx.lineWidth= 1
+            ctx.setLineDash([2, 2])
+            ctx.strokeStyle = "#ccc"
+            for sx in sx_ticks:
+                ctx.moveTo(sx, h-bpad)
+                ctx.lineTo(sx, tpad)
+            for sy in sy_ticks:
+                ctx.moveTo(lpad, h-sy)
+                ctx.lineTo(w-rpad, h-sy)
+            ctx.stroke()
+            ctx.setLineDash([])
+            
+            # Draw tick labels
+            ctx.font = '11px verdana'
+            ctx.fillStyle = 'black'
+            ctx.textAlign = "center"
+            ctx.textBaseline = 'top'
+            for x, sx in zip(x_ticks, sx_ticks):
+                ctx.fillText(x, sx, h-bpad+8)
+            ctx.textAlign = "end"
+            ctx.textBaseline = 'middle'
+            for y, sy in zip(y_ticks, sy_ticks):
+                ctx.fillText(y, lpad-8, h-sy)
+            
+            # Draw labels
+            ctx.textAlign = "center"
+            if title:
+                ctx.font = '20px verdana'
+                ctx.textBaseline = 'top'
+                ctx.fillText(title, w/2, 5)
+            if xlabel:
+                ctx.font = '16px verdana'
+                ctx.textBaseline = 'bottom'
+                ctx.fillText(xlabel, w/2, h-5)
+            if ylabel:
+                ctx.save()
+                ctx.translate(0, h/2)
+                ctx.rotate(-Math.PI/2)
+                ctx.textBaseline = 'top'
+                ctx.fillText(ylabel, 0, 5)
+                ctx.restore()
+            
+            # Draw line
+            if lc and lw:
+                ctx.beginPath()
+                ctx.lineWidth= lw
+                ctx.strokeStyle = lc
+                ctx.moveTo(sxx[0], h-syy[0])
+                for x, y in zip(sxx, syy):
+                    ctx.lineTo(x, h-y)
+                ctx.stroke()
+            
+            # Draw markers
+            if mc and ms:
+                ctx.fillStyle = mc
+                for x, y in zip(sxx, syy):
+                    ctx.beginPath()
+                    ctx.arc(x, h-y, ms/2, 0, 2*Math.PI)
+                    ctx.fill()
+        
+        def _get_ticks(self, scale, t1, t2, min_tick_dist=40):
+            # Get tick unit
+            for tick_unit in self._tick_units:
+                if tick_unit * scale >= min_tick_dist:
+                    break
+            else:
+                return []
+            # Calculate tick values
+            first_tick = Math.ceil(t1 / tick_unit) * tick_unit
+            last_tick = Math.floor(t2 / tick_unit) * tick_unit
+            ticks = []
+            t = first_tick
+            while t <= last_tick:
+                ticks.append(t)
+                t += tick_unit
+            for i in range(len(ticks)):
+                t = ticks[i].toPrecision(4)
+                t = t.replace(RegExp("[0]+$"), "")
+                if t[-1] == '.': t += '0'
+                ticks[i] = t
+                
+            return ticks
