@@ -234,9 +234,12 @@ class Parser1(Parser0):
         return code
     
     def parse_UnaryOp(self, node):
-        op = self.UNARY_OP[node.op.__class__.__name__]
-        right = unify(self.parse(node.operand))
-        return op, right
+        if isinstance(node.op, ast.Not):
+            return '!', self._wrap_truthy(node.operand)
+        else:
+            op = self.UNARY_OP[node.op.__class__.__name__]
+            right = unify(self.parse(node.operand))
+            return op, right
     
     def parse_BinOp(self, node):
         if isinstance(node.op, ast.Mod) and isinstance(node.left, ast.Str):
@@ -252,7 +255,7 @@ class Parser1(Parser0):
             return ["Math.floor(", left, "/", right, ")"]
         else:
             op = ' %s ' % self.BINARY_OP[node.op.__class__.__name__]
-            return [left, op, right]
+            return unify([left, op, right])
     
     def _format_string(self, node):
         # Get left end, stripped from the separator

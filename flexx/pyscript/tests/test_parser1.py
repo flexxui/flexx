@@ -41,19 +41,19 @@ class TestExpressions:
     
     def test_ops(self):
         # Test code
-        assert py2js('2+3') == '2 + 3;'  # Binary
-        assert py2js('2/3') == '2 / 3;'
+        assert py2js('2+3') == '(2 + 3);'  # Binary
+        assert py2js('2/3') == '(2 / 3);'
         assert py2js('not 2') == '!2;'  # Unary
         assert py2js('-(2+3)') == '-(2 + 3);'
         assert py2js('True and False') == 'true && false;'  # Boolean
         
         # No parentices around names, numbers and strings
-        assert py2js('foo + bar') == "foo + bar;"
-        assert py2js('_foo3 + _bar4') == "_foo3 + _bar4;"
-        assert py2js('3 + 4') == "3 + 4;"
-        assert py2js('"abc" + "def"') == "'abc' + 'def';"
-        assert py2js("'abc' + 'def'") == "'abc' + 'def';"
-        assert py2js("'abc' + \"'def\"") == "'abc' + \"'def\";"
+        assert py2js('foo + bar') == "(foo + bar);"
+        assert py2js('_foo3 + _bar4') == "(_foo3 + _bar4);"
+        assert py2js('3 + 4') == "(3 + 4);"
+        assert py2js('"abc" + "def"') == "('abc' + 'def');"
+        assert py2js("'abc' + 'def'") == "('abc' + 'def');"
+        assert py2js("'abc' + \"'def\"") == "('abc' + \"'def\");"
         
         # But they should be if it gets more complex
         assert py2js('foo + bar == 3') == "(foo + bar) == 3;"
@@ -67,6 +67,8 @@ class TestExpressions:
         assert evalpy('- 3') == '-3'
         assert evalpy('True and False') == 'false'  # Boolean
         assert evalpy('True or False') == 'true'
+        # Bug
+        assert evalpy('(9-3-3)/3') == '1'
         
         # string formatting
         assert evalpy('"%s" % "bar"') == 'bar'
