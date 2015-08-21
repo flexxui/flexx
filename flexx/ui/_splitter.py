@@ -349,7 +349,7 @@ class Splitter(Layout):
                 ev.preventDefault()
                 handle.isdragging = ev.target.index + 1
                 handle.mouseStartPos = ev[clientX]
-                #x = ev[clientX] - node.getBoundingClientRect().x - w2
+                #x = ev[clientX] - node.getBoundingClientRect().[left] - w2
                 #move_divider(ev.target.index, x)
                 #handle.style.visibility = 'visible'
                 handle.style.opacity = '1'
@@ -359,7 +359,7 @@ class Splitter(Layout):
                     ev.stopPropagation()
                     ev.preventDefault()
                     i = handle.isdragging - 1
-                    x = ev[clientX] - node.getBoundingClientRect().x - w2
+                    x = ev[clientX] - node.getBoundingClientRect()[left] - w2
                     handle.style[left] = clipT(i, x) + 'px'
             
             def on_mouse_up(ev):
@@ -370,7 +370,7 @@ class Splitter(Layout):
                     handle.isdragging = 0;
                     #handle.style.visibility = 'hidden'
                     handle.style.opacity = '0'
-                    x = ev[clientX] - node.getBoundingClientRect().x
+                    x = ev[clientX] - node.getBoundingClientRect()[left]
                     move_divider(i, clipT(i, x))
             
             # Make available as method
