@@ -134,7 +134,7 @@ class MyApp(ui.Widget):
 
 
 a = MyApp.launch('firefox')
-app.run()
+app.start()
 # app.b1.set_text('asdasd')
 
 # MyApp.export('/home/almar/test.html')

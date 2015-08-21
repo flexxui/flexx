@@ -205,10 +205,10 @@ def init_server(host='localhost', port=None):
     
     # Start server (find free port number if port not given)
     if port is not None:
-        _tornado_app.listen(port, host)
+        _tornado_app.listen(int(port), host)
     else:
         for i in range(100):
-            port = port_hash('flexx+%i' % i)
+            port = port_hash('flexx%i' % i)
             try:
                 _tornado_app.listen(port, host)
                 break
@@ -222,30 +222,42 @@ def init_server(host='localhost', port=None):
     print('Serving apps at http://%s:%i/' % (host, port))
 
 
-# todo: ui.run looks weird in IPython. Maybe ui.load() or start()
-def run():  # (runtime='xul', host='localhost', port=None):
+def start(host='localhost', port=None):
     """ Start the server and event loop if not already running.
+    
+    This should be called near the bottom of your script, unless you're
+    using the Jupyter notebook: then it should be called at the top.
     
     This function generally does not return until the application is
     stopped, although it will try to behave nicely in interactive
     environments (e.g. Spyder, IEP, Jupyter notebook), so the caller
     should take into account that the function may return immediately.
+    
+    Arguments:
+        host (str): The hostname to serve on. Default 'localhost'. This
+            parameter is ignored if the server was already running.
+        port (int, str): The port number. If a string is given, it is
+            hashed to an ephemeral port number. If not given or None,
+            will try a series of ports until one is found that is free.
     """
     # Get server up
-    init_server()
+    init_server(host, port)
     # Start event loop
     if not (hasattr(_tornado_loop, '_running') and _tornado_loop._running):
         _tornado_loop.start()
-    return JupyterChecker()
+    return Application()
 
 is_notebook = False
 
-class JupyterChecker(object):
-    """ This gets returned by run(), so that in the IPython notebook
-    _repr_html_() gets called. When this happens, we know we are in the
-    Jupyter notebook, or at least in something that can display html.
-    In the HTML that we then produce, we put the whole flexx library.
+class Application(object):
+    """ Stub application object returned by ``start()``. In the Jupyter
+    notebook, ``_repr_html_()`` gets called, so we know we are in the
+    notebook. We then produce HTML to kickstart flexx.
     """
+    
+    def __repr__(self):
+        return '<Flexx application object>'
+    
     def _repr_html_(self):
         global is_notebook
         from IPython.display import display, Javascript, HTML

@@ -5,7 +5,7 @@ Functions related to the event loop
 -----------------------------------
 
 
-.. autofunction:: flexx.app.run
+.. autofunction:: flexx.app.start
 
 .. autofunction:: flexx.app.stop
 
