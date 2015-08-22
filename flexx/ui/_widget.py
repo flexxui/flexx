@@ -93,16 +93,16 @@ class Widget(Pair):
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
         """
-        if self.container_id:
+        if self.container_id():
             return "<i>This widget is already shown in this notebook</i>"
         
         container_id = self.id + '_container'
         def set_cointainer_id():
-            self.container_id = container_id
+            self.container_id._set(container_id)
         # Set container id, this gets applied in the next event loop
         # iteration, so by the time it gets called in JS, the div that
         # we define below will have been created.
-        from ..pair import call_later
+        from ..app import call_later
         call_later(0.1, set_cointainer_id) # todo: always do calls in next iter
         return "<div class='flx-container' id=%s />" % container_id
     

@@ -14,7 +14,7 @@ except ImportError:
 from distutils.core import setup
 
 name = 'flexx'
-description = 'Tookit for creating user interfaces based on web technology'
+description = 'Framework for creating user interfaces based on web technology'
 
 
 # Get version and docstring
@@ -51,7 +51,7 @@ setup(
     license='(new) BSD',
     url='http://flexx.readthedocs.org',
     download_url='https://pypi.python.org/pypi/flexx',
-    keywords="ui design, web runtime, pyscript",
+    keywords="ui design, web runtime, pyscript, reactive programming, FRP",
     description=description,
     long_description=__doc__,
     platforms='any',

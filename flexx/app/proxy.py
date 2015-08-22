@@ -225,9 +225,6 @@ def init_server(host='localhost', port=None):
 def start(host='localhost', port=None):
     """ Start the server and event loop if not already running.
     
-    This should be called near the bottom of your script, unless you're
-    using the Jupyter notebook: then it should be called at the top.
-    
     This function generally does not return until the application is
     stopped, although it will try to behave nicely in interactive
     environments (e.g. Spyder, IEP, Jupyter notebook), so the caller
@@ -245,38 +242,33 @@ def start(host='localhost', port=None):
     # Start event loop
     if not (hasattr(_tornado_loop, '_running') and _tornado_loop._running):
         _tornado_loop.start()
-    return Application()
 
 is_notebook = False
 
-class Application(object):
-    """ Stub application object returned by ``start()``. In the Jupyter
-    notebook, ``_repr_html_()`` gets called, so we know we are in the
-    notebook. We then produce HTML to kickstart flexx.
+
+def init_notebook():
+    """ Initialize the Jupyter notebook by injecting the necessary CSS
+    and JS into the browser.
     """
     
-    def __repr__(self):
-        return '<Flexx application object>'
+    global is_notebook
+    from IPython.display import display, Javascript, HTML
+    if is_notebook:
+        display(HTML("<i>Flexx already loaded</i>"))
+        return  # Don't inject twice
+    is_notebook = True
     
-    def _repr_html_(self):
-        global is_notebook
-        from IPython.display import display, Javascript, HTML
-        if is_notebook:
-            return "<i>Flexx already loaded</i>"  # Don't inject twice
-        is_notebook = True
-        
-        host, port = _tornado_app.serving_at
-        #name = app.app_name + '-' + app.id
-        name = '__default__'
-        url = 'ws://%s:%i/%s/ws' % (host, port, name)
-        t = "Injecting JS/CSS"
-        t += "<style>\n%s\n</style>\n" % clientCode.get_css()
-        t += "<script>\n%s\n</script>" % clientCode.get_js()
-        t += "<script>flexx.ws_url=%r; flexx.is_notebook=true; flexx.init();</script>" % url
-        
-        #return t + '<i>Flexx is ready to go</i>'
-        display(HTML(t))
-        return '<i>Flexx is ready to go</i>'
+    init_server()
+    host, port = _tornado_app.serving_at
+    #name = app.app_name + '-' + app.id
+    name = '__default__'
+    url = 'ws://%s:%i/%s/ws' % (host, port, name)
+    t = "<i>Injecting Flexx JS and CSS</i>"
+    t += "<style>\n%s\n</style>\n" % clientCode.get_css()
+    t += "<script>\n%s\n</script>" % clientCode.get_js()
+    t += "<script>flexx.ws_url=%r; flexx.is_notebook=true; flexx.init();</script>" % url
+    
+    display(HTML(t))
 
 
 def stop():
