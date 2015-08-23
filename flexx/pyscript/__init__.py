@@ -68,10 +68,12 @@ plan to make heavy use of PyScript.
 * JavasScript has a concept of ``null`` (i.e. ``None``), as well as
   ``undefined``. Sometimes you may want to use ``if x is None or x is
   undefined: ...``.
+* Accessing an attribute that does not exist will not raise an
+  AttributeError but yield ``undefined``.
 * Multiplying a string with a number will yield NaN (but the reverse
-  is probably different).
+  is probably different). (may fix this)
 * You cannot concatenate lists with the plus operator, use ``.extend()``
-  instead.
+  instead. (may fix this)
 
 
 PyScript is valid Python
