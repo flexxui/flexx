@@ -1,7 +1,8 @@
-from flexx import ui
+from flexx import app, ui
 
-class MyApp(ui.App):
+class MyApp(ui.Widget):
     def init(self):
-        self.b = ui.Button(self, 'Hello world!')
+        self.b = ui.Button(text='Hello world!')
 
-ui.run()
+app.launch(MyApp)
+app.start()

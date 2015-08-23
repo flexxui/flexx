@@ -252,14 +252,14 @@ class Widget(Pair):
             
             super()._init()
         
-        @react.source
-        def children(v=()):
-            """ The child widgets of this widget.
-            """
-            for w in v:
-                if not isinstance(w, flexx.classes.Widget):
-                    raise ValueError('Children should be Widget objects.')
-            return v
+        # @react.source
+        # def children(v=()):
+        #     """ The child widgets of this widget.
+        #     """
+        #     for w in v:
+        #         if not isinstance(w, flexx.classes.Widget):
+        #             raise ValueError('Children should be Widget objects.')
+        #     return v
             
         @react.source
         def actual_size(v=(0, 0)):
@@ -290,29 +290,13 @@ class Widget(Pair):
                 children = old_parent.children()[:]
                 while self in children:
                     children.remove(self)
-                old_parent.children._set(children)
+                old_parent.children._set(children)  # we set it directly
                 old_parent._remove_child(self)
             if new_parent is not None:
                 children = new_parent.children()[:]
                 children.append(self)
                 new_parent.children._set(children)
                 new_parent._add_child(self)
-            
-            # re-connect size-signal
-            # todo: no need if we have dynamism
-            #self._keep_size_up_to_date.connect(False)
-            
-            
-            # # Unregister events
-            # if old_parent is None:
-            #     window.removeEventListener('resize', self._check_resize, False)
-            # else:
-            #     old_parent.disconnect_event('resize', self._check_resize)
-            # # Register events
-            # if new_parent is None:
-            #     window.addEventListener('resize', self._check_resize, False)
-            # else:
-            #     new_parent.connect_event('resize', self._check_resize)
         
         @react.connect('parent.actual_size')
         def _keep_size_up_to_date1(self, size):

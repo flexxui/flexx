@@ -1,6 +1,6 @@
 import math
 
-from flexx import ui
+from flexx import app, ui
 
 
 class Circle(ui.Label):
@@ -13,7 +13,7 @@ class Circle(ui.Label):
     }
     """
 
-class App(ui.App):
+class App(ui.Widget):
     def init(self):
         self._circles = []
         
@@ -32,5 +32,5 @@ class App(ui.App):
         print('tick!')
         
 
-app = App()
-ui.run()
+m = app.launch(App)
+app.start()

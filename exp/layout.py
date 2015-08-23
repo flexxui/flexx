@@ -22,14 +22,12 @@ class MyApp(ui.App):
         with ui.VBoxLayout():
             with ui.FormLayout(spacing=1):
                 ui.Label(self, 'Name')
-                self._name = ui.TextInput(self)
+                self._name = ui.LineEdit(self)
                 ui.Label(self, 'Age')
-                self._age = ui.IntInput(self)
+                self._age = ui.LineEdit(self)
             with ui.HBoxLayout():
-                ui.Widget(self, flex=1)  # spacer
-                ui.Button(self, 'Cancel', 
-                          on_click=self.close, 
-                          flex=0)
+                ui.Widget(flex=1)  # spacer
+                ui.Button(tex'Cancel', flex=0)
                 ui.Button(self, 'Ok', 
                           on_click=self.process, 
                           flex=0)
