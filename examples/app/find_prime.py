@@ -6,7 +6,6 @@ find the n-th prime on both Python and JS and measure the performance.
 
 import time
 
-from flexx.pyscript import js
 from flexx import app
 
 
@@ -35,7 +34,6 @@ def _find_prime(self, n):
     print(i, 'found in ', t1-t0, 'seconds')
 
 
-@app.make_app
 class PrimeFinder(app.Pair):
     
     _find_prime = _find_prime
@@ -51,9 +49,9 @@ class PrimeFinder(app.Pair):
 
 
 # Create app instance
-finder = PrimeFinder.launch('nodejs')
+finder = app.launch(PrimeFinder, 'nodejs')
 
 finder.find_prime_py(2000)  # 0.7 s
 finder.find_prime_js(2000)  # 0.2 s
 
-app.run()
+app.start()

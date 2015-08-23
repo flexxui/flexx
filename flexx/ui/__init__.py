@@ -45,31 +45,21 @@ per thread.)
                 ui.Button(flex=1, text='hello')
                 ui.Button(flex=1, text='world')
 
-To create an actual app, you need to mark a widget as an app:
+To create an actual app from a widget, there are three possibilities:
+``serve()`` it as a web app, ``launch()`` it as a desktop app or
+``export()`` it as a standalone HTML document:
 
 .. code-block:: py
     
     from flexx import app, ui
     
-    @app.make_app
+    @app.serve
     class Example(ui.Widget):
         def init(self):
             ui.Label(text='hello world')
-
-Such an app can then be loaded by a client connecting to the server.
-Or, for desktop use, you can launch an instance:
-
-.. code-block:: py
-
-    example = Example.launch('xul')  # specify runtime to run app in
-
-
-Similarly, apps can be exported. If all user ineraction is implemented
-in JS, the app can be served from a standalone HTML document:
-
-.. code-block:: py
     
-    Example.export('example.html')
+    example = app.launch(Example)
+    app.export(Example, 'example.html')
 
 To lean about the individual widgets, check the 
 :doc:`list of widget classes <api>`.

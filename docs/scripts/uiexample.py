@@ -24,7 +24,6 @@ if not os.path.isdir(HTML_DIR + '/ui/examples'):
 SIMPLE_CODE_T = """
 from flexx import app, ui
 
-@app.make_app
 class App(ui.Widget):
 
     def init(self):
@@ -52,9 +51,9 @@ def visit_uiexample_html(self, node):
         code += 'App = MyApp\n'
     elif 'class Example' in code:
         code += 'App = Example\n'
-    if not '@app.make_app' in code:
-        code += 'from flexx import app\nApp = app.make_app(App)\n'
-    code += 'App.export(%r)\n' % fname
+    if not 'app' in code:
+        code += 'from flexx import app\n'
+    code += 'app.export(App, %r)\n' % fname
     
     # Write filename so Python can find the source
     filename_py = os.path.join(HTML_DIR, 'ui', 'examples', 'example%s.py' % this_id)

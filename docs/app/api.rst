@@ -20,7 +20,11 @@ The Pair class
 .. autoclass:: flexx.app.Pair
   :members:
 
-.. autofunction:: flexx.app.make_app
+.. autofunction:: flexx.app.serve
+
+.. autofunction:: flexx.app.launch
+
+.. autofunction:: flexx.app.export
 
 .. autofunction:: flexx.app.get_instance_by_id
 

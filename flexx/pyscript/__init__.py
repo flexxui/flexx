@@ -174,7 +174,9 @@ class BasicParser(Parser2):
 
 
 class Parser(Parser3):
-    """ Parser to convert Python to JavaScript.
+    # Re-use docs from Parser0
+    Parser0.__doc__.split('Parameters:', 1)[1] + """
+    Parser to convert Python to JavaScript.
     
     Instantiate this class with the Python code. Retrieve the JS code
     using the dump() method.
@@ -192,8 +194,6 @@ class Parser(Parser3):
     """
     pass
 
-# Re-use docs from Parser0
-Parser.__doc__ += Parser0.__doc__.split('Parameters:', 1)[1]
 
 from .functions import py2js, evaljs, evalpy, script2js, clean_code, js_rename  # noqa
 

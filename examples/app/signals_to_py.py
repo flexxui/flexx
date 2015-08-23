@@ -6,10 +6,9 @@ from flexx import react
 from flexx import app
 
 
-@app.make_app
 class Clock(app.Pair):
     
-    @react.act('time')
+    @react.connect('time')
     def show_time(t):
         print(t)
     
@@ -26,5 +25,5 @@ class Clock(app.Pair):
         def time(t):
             return float(t)
 
-clock = Clock.launch('nodejs')
-app.run()
+clock = app.launch(Clock, 'nodejs')
+app.start()

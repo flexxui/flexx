@@ -100,7 +100,7 @@ class NameSpace(dict):
         self.pop(key, None)
 
 
-class Parser0:
+class Parser0(object):
     """ The Base parser class. Implements the basic mechanism to allow
     parsing to work, but does not implement any parsing on its own.
     

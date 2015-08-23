@@ -6,7 +6,6 @@ from flexx import react
 from flexx import app
 
 
-@app.make_app
 class Name(app.Pair):
     
     @react.input
@@ -21,15 +20,16 @@ class Name(app.Pair):
         
         def _init(this):
             print('Hello from JS (here is some proof:', '2'*3, ')')
-        @react.watch('first_name', 'last_name')
+        
+        @react.connect('first_name', 'last_name')
         def full_name(first, last):
             return first + ' ' + last
         
-        @react.act('full_name')
+        @react.connect('full_name')
         def _show_name(n):
             print('Name:', n)
 
 
-name = Name.launch('nodejs')
+name = app.launch(Name, 'nodejs')
 name.first_name('jane')
-app.run()
+app.start()

@@ -9,7 +9,6 @@ faulthandler.enable()
 #logging.log
 
 
-@app.make_app()
 class MyApp(ui.Widget):
     
     #_config = ui.App.Config(title='Flexx test app', size=(400, 300),
@@ -133,7 +132,7 @@ class MyApp(ui.Widget):
 
 
 
-a = MyApp.launch('firefox')
+a = app.launch(MyApp, 'firefox')
 app.start()
 # app.b1.set_text('asdasd')
 

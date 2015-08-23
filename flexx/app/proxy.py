@@ -11,7 +11,7 @@ import tornado.ioloop
 import tornado.web
 
 from ..util.icon import Icon
-from ..webruntime import launch
+from .. import webruntime
 
 from .clientcode import clientCode, Exporter # global client code
 from .pair import Pair
@@ -303,65 +303,67 @@ def create_enum(*members):
     return type('Enum', (), enums)
 
 
-def make_app(cls=None, **signal_values):
-    """ Mark a Pair class as an app, to be used as a class decorator.
-    Does the following things:
+def serve(cls):
+    """ Serve the given Pair class as a web app. Can be used as a decorator.
     
-    * The class is registered as an app with the server, so that clients
-      (incoming connections) can load the app.
-    * Adds a ``launch()`` function to the class to easily create an app
-      instance.
-    * Adds an ``export()`` function to the class to allow exporting to
-      static HTML.
-    * adds ``_IS_APP`` attribute to the class with value ``True`` (used
-      internally).
+    This registers the given class with the internal app manager. The
+    app can be loaded via 'http://hostname:port/classname'.
     
-    Parameters for the launch function:
-      ``runtime`` (str): the web runtime to launch the app in. Default
-      'xul'. ``**signal_values``: combined with the signal_values given
-      to the ``make_app()`` decorator, these are used to initialize signal
-      values for the app instance.
-      
+    Arguments:
+        cls (Pair): a subclass of ``app.Pair`` (or ``ui.Widget``).
+    
+    Returns:
+        cls: The given class.
     """
-    signal_values1 = signal_values
+    assert isinstance(cls, type) and issubclass(cls, Pair)
+    manager.register_app_class(cls)
+    cls._IS_APP = True  # Mark the class as an app
+    return cls
+
+
+def launch(cls, runtime='xul', **runtime_kwargs):
+    """ Launch the given Pair class as a desktop app in the given runtime.
     
-    def _make_app(cls):
-        
-        def launch(runtime='xul', **signal_values):
-            """ Launch an instance of this app in the specified runtime.
-            """
-            signal_values2 = signal_values
-            # Get final kwargs list
-            d = {}
-            d.update(signal_values1)
-            d.update(signal_values2)
-            # Instantiate widget with a fresh client object
-            proxy = Proxy(cls.__name__, runtime, **d)
-            app = cls(proxy=proxy)
-            proxy._set_pair_instance(app)
-            return app
-        
-        def export(filename=None):
-            """ Export the app to HTML
-            """
-            proxy = Proxy(cls.__name__, '<export>')
-            app = cls(proxy=proxy)
-            proxy._set_pair_instance(app)
-            if filename is None:
-                return proxy._ws.to_html()
-            else:
-                return proxy._ws.write_html(filename)
-                
-        manager.register_app_class(cls)
-        cls.launch = launch
-        cls.export = export
-        cls._IS_APP = True  # Mark the class as an app
-        return cls
+    Arguments:
+        cls (type, str): a subclass of ``app.Pair`` (or ``ui.Widget`). If this 
+            is a string, it simply calls ``webruntime.launch()``.
+        runtime (str): the runtime to launch the application in. Default 'xul'.
+        runtime_kwargs: kwargs to pass to the ``webruntime.launch`` function.
     
-    if cls is None:
-        return _make_app
+    Returns:
+        app (Pair): an instance of the given class.
+    """
+    if isinstance(cls, str):
+        return webruntime.launch(cls, runtime, **runtime_kwargs)
+    assert isinstance(cls, type) and issubclass(cls, Pair)
+    serve(cls)
+    proxy = Proxy(cls.__name__, runtime, **runtime_kwargs)
+    app = cls(proxy=proxy)
+    proxy._set_pair_instance(app)
+    return app
+
+
+def export(cls, filename=None):
+    """ Export the given Pair class to an HTML document.
+    
+    Arguments:
+        cls (Pair): a subclass of ``app.Pair`` (or ``ui.Widget``).
+        filename (str, optional): Path to write the HTML document to.
+            If not given or None, will return the html as a string.
+    
+    Returns:
+        html (str): The resulting html. If a filename was specified
+        this returns None.
+    """
+    assert isinstance(cls, type) and issubclass(cls, Pair)
+    serve(cls)
+    proxy = Proxy(cls.__name__, '<export>')
+    app = cls(proxy=proxy)
+    proxy._set_pair_instance(app)
+    if filename is None:
+        return proxy._ws.to_html()
     else:
-        return _make_app(cls)
+        proxy._ws.write_html(filename)
 
 
 # todo: this does not work well with creating apps from scratch yet; see run_python_in_node.py example
