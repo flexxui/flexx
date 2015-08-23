@@ -106,14 +106,6 @@ class Widget(Pair):
         call_later(0.1, set_cointainer_id) # todo: always do calls in next iter
         return "<div class='flx-container' id=%s />" % container_id
     
-    def __setattr__(self, name, value):
-        # Sync attributes that are Pair instances
-        Pair.__setattr__(self, name, value)
-        if isinstance(value, Pair):
-            txt = serializer.saves(value)
-            cmd = 'flexx.instances.%s.%s = flexx.serializer.loads(%r);' % (self._id, name, txt)
-            self._proxy._exec(cmd)
-    
     def init(self):
         """ Overload this to initialize a cusom widget. Inside, this
         widget is the current parent.

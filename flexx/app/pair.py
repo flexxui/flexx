@@ -174,6 +174,9 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
     class. One can define methods, signals, and (json serializable)
     constants on the JS class.
     
+    Note:
+        This class may be renamed. Maybe Object, PairObject, ModelView
+        or something, suggestion welcome.
     
     Parameters:
         proxy: the proxy object that connects this instance to a JS client.
@@ -259,6 +262,14 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         """ The proxy object that connects us to the runtime.
         """
         return self._proxy
+    
+    def __setattr__(self, name, value):
+        # Sync attributes that are Pair instances
+        react.HasSignals.__setattr__(self, name, value)
+        if isinstance(value, Pair):
+            txt = serializer.saves(value)
+            cmd = 'flexx.instances.%s.%s = flexx.serializer.loads(%r);' % (self._id, name, txt)
+            self._proxy._exec(cmd)
     
     def _set_signal_from_js(self, name, text, esid):
         """ Notes on synchronizing:

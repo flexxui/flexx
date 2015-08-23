@@ -4,17 +4,33 @@ Example:
 
 .. UIExample:: 300
 
-    from flexx import ui
+    from flexx import app, ui, react
     
     class Example(ui.Widget):
         def init(self):
-            layout = ui.PlotLayout()
-            layout.add_tools('Edit plot', 
-                                ui.Button(text='do this'),
-                                ui.Button(text='do that'))
-            layout.add_tools('Plot info', 
-                                ui.ProgressBar(value='0.3'),
-                                ui.Label(text='The plot aint pretty'))
+            self.layout = ui.PlotLayout()
+            self.slider1 = ui.Slider(min=1, max=2, value=1)
+            self.slider2 = ui.Slider(min=3, max=10, value=3)
+            self.progress = ui.ProgressBar(max=100, value=0)
+            self.layout.add_tools('Edit plot', 
+                                ui.Label(text='exponent'), self.slider1,
+                                ui.Label(text='numel'), self.slider2,
+                                )
+            self.layout.add_tools('Plot info', ui.Label(text='Maximum'), self.progress)
+        
+        class JS:
+            
+            @react.connect('slider1.value', 'slider2.value')
+            def __update_plot(e, n):
+                xx = range(n+1)
+                self.layout._plot.xdata(xx)
+                self.layout._plot.ydata([x**e for x in xx])
+            
+            @react.connect('layout._plot.ydata')
+            def __update_max(yy):
+                if yy:
+                    self.progress.value(max(yy))
+
 """
 
 from .. import react
@@ -34,7 +50,7 @@ class PlotLayout(Layout):
         with self._box:
             self._left = VBox(flex=0)
             with VBox(flex=0):
-                self._plot = PlotWidget(flex=0)
+                self._plot = PlotWidget(flex=0, size=(640, 480))
                 Widget(flex=1)
             Widget(flex=1)
         
