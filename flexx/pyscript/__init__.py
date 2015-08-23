@@ -161,6 +161,10 @@ from .parser1 import Parser1
 from .parser2 import Parser2
 from .parser3 import Parser3
 
+# Assert py3k
+if sys.version_info < (3, ):
+    raise RuntimeError('flexx.pyscript needs Python 3')
+
 
 class BasicParser(Parser2):
     """ A parser without the Pythonic features for converting builtin

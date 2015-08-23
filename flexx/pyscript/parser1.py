@@ -255,7 +255,7 @@ class Parser1(Parser0):
             return ["Math.floor(", left, "/", right, ")"]
         else:
             op = ' %s ' % self.BINARY_OP[node.op.__class__.__name__]
-            return unify([left, op, right])
+            return [left, op, right]
     
     def _format_string(self, node):
         # Get left end, stripped from the separator

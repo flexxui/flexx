@@ -250,7 +250,7 @@ class TestFunctions:
     def test_func_calls(self):
         assert py2js('foo()') == 'foo();'
         assert py2js('foo(3, 4)') == 'foo(3, 4);'
-        assert py2js('foo(3, 4+1)') == 'foo(3, (4 + 1));'
+        assert py2js('foo(3, 4+1)') == 'foo(3, 4 + 1);'
         assert py2js('foo(3, *args)')  # JS is complex, just test it compiles
         assert py2js('a.foo(3, *args)')  # JS is complex, just test it compiles
         
