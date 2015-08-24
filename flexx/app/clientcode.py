@@ -130,6 +130,7 @@ class FlexxJS:
             msg = flexx.decodeUtf8(flexx.last_msg)
             flexx.command(msg)
         def on_ws_close(evt):
+            self.ws = None
             msg = 'Lost connection with server'
             if evt and evt.reason:  # nodejs-ws does not have it?
                 msg += ': %s (%i)' % (evt.reason, evt.code)
@@ -138,7 +139,11 @@ class FlexxJS:
             else:
                 console.info(msg)
         def on_ws_error(self, evt):
-            console.error('Socket error')
+            self.ws = None
+            if flexx.is_notebook:
+                console.error('Socket error: re-run flexx.app.init_socket() to connect.')
+            else:
+                console.error('Socket error')
         
         # Connect
         if self.nodejs:
@@ -164,24 +169,24 @@ class FlexxJS:
         console.ori_error = console.error or console.log
         
         def log(self, msg):
-            flexx.ws.send("PRINT " + msg)
             console.ori_log(msg)
+            if flexx.ws: flexx.ws.send("PRINT " + msg)
         def info(self, msg):
-            flexx.ws.send("INFO " + msg)
             console.ori_info(msg)
+            if flexx.ws: flexx.ws.send("INFO " + msg)
         def warn(self, msg):
-            flexx.ws.send("WARN " + msg)
             console.ori_warn(msg)
+            if flexx.ws: flexx.ws.send("WARN " + msg)
         def error(self, msg):
-            flexx.ws.send("ERROR " + msg)
             console.ori_error(msg)
+            if flexx.ws: flexx.ws.send("ERROR " + msg)
         def on_error(self, evt):
             msg = evt
             if evt.message and evt.lineno:  # message, url, linenumber (not in nodejs)
                 msg = "On line %i in %s:\n%s" % (evt.lineno, evt.filename, evt.message)
             elif evt.stack:
                 msg = evt.stack
-            flexx.ws.send("ERROR " + msg)
+            if flexx.ws: flexx.ws.send("ERROR " + msg)
         
         # Set new versions
         console.log = log
