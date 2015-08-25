@@ -55,5 +55,5 @@ element is created, in which the widget is displayed.
 """
 
 from .proxy import start, stop, init_notebook, call_later
-from .proxy import serve, launch, export
+from .proxy import serve, launch, export, manager
 from .pair import Pair, get_instance_by_id, get_pair_classes

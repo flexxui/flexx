@@ -12,6 +12,7 @@ import tornado.web
 
 from ..util.icon import Icon
 from .. import webruntime
+from .. import react
 
 from .clientcode import clientCode, Exporter # global client code
 from .pair import Pair
@@ -98,7 +99,7 @@ class AppManager(object):
         a pending app, or for a fresh app (external connection).
         """
         
-        print('connecting', name, app_id)
+        logging.debug('connecting %s %s' %(name, app_id))
         
         cls, pending, connected = self._proxies[name]
         
@@ -121,12 +122,13 @@ class AppManager(object):
                     break
             else:
                 raise RuntimeError('Asked for app id %r, '
-                                'but could not find it' % app_id)
+                                   'but could not find it' % app_id)
         
         # Add app to connected, set ws
         assert proxy.status == Proxy.STATUS.PENDING
         proxy._connect_client(ws)
         connected.append(proxy)
+        self.connections_changed._set(proxy.app_name)
         return proxy  # For the ws
     
     def disconnect_client(self, proxy):
@@ -142,6 +144,7 @@ class AppManager(object):
         except ValueError:
             pass
         proxy.close()
+        self.connections_changed._set(proxy.app_name)
     
     def has_app_name(self, name):
         """ Returns True if name is a registered appliciation name
@@ -163,6 +166,19 @@ class AppManager(object):
         for proxy in connected:
             if proxy.id == id:
                 return proxy
+    
+    def get_connections(self, name):
+        """ Given an app name, return the proxy connected objects.
+        """
+        cls, pending, connected = self._proxies[name]
+        return list(connected)
+    
+    @react.source
+    def connections_changed(self, name):
+        """ Emits the name of the app for which a connection is added
+        or removed.
+        """
+        return str(name)
 
 
 # Create global app manager object
@@ -292,7 +308,8 @@ def call_later(delay, callback, *args, **kwargs):
     if delay <= 0:
         _tornado_loop.add_callback(callback, *args, **kwargs)
     else:
-        _tornado_loop.call_later(delay, callback, *args, **kwargs)
+        _tornado_loop.add_timeout(_tornado_loop.time() + delay, callback, *args, **kwargs)
+        #_tornado_loop.call_later(delay, callback, *args, **kwargs)  # v4.0+
 
 # todo: move to ..util?
 def create_enum(*members):
@@ -445,7 +462,7 @@ class Proxy(object):
                 self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
                                        runtime=runtime, **runtime_kwargs)
         
-        print('Instantiate app client %s' % self.app_name)
+        logging.debug('Instantiate app client %s' % self.app_name)
     
     def _connect_client(self, ws):
         assert self._ws is None
@@ -510,7 +527,7 @@ class Proxy(object):
         self._known_pair_classes.add(cls)
         
         # Define class
-        print('Dynamically defining class!', cls)
+        logging.debug('Dynamically defining class %r' % cls)
         js = cls.get_js()
         css = cls.get_css()
         self._send_command('DEFINE-JS ' + js)

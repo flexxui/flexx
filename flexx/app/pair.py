@@ -349,10 +349,10 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
             pass
         
         def _set_signal_from_py(self, name, text, esid):
-            self._signal_emit_lock = True  # do not send back to py
             value = flexx.serializer.loads(text)
             signal = self[name]
             if esid == 0 or signal._esid == 0:
+                self._signal_emit_lock = True  # do not send back to py
                 signal._set(value)
                 signal._esid = 0  # mark signal as updated from py
         

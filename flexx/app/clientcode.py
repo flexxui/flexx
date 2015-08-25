@@ -170,23 +170,23 @@ class FlexxJS:
         
         def log(self, msg):
             console.ori_log(msg)
-            if flexx.ws: flexx.ws.send("PRINT " + msg)
+            if flexx.ws is not None: flexx.ws.send("PRINT " + msg)
         def info(self, msg):
             console.ori_info(msg)
-            if flexx.ws: flexx.ws.send("INFO " + msg)
+            if flexx.ws is not None: flexx.ws.send("INFO " + msg)
         def warn(self, msg):
             console.ori_warn(msg)
-            if flexx.ws: flexx.ws.send("WARN " + msg)
+            if flexx.ws is not None: flexx.ws.send("WARN " + msg)
         def error(self, msg):
             console.ori_error(msg)
-            if flexx.ws: flexx.ws.send("ERROR " + msg)
+            if flexx.ws is not None: flexx.ws.send("ERROR " + msg)
         def on_error(self, evt):
             msg = evt
             if evt.message and evt.lineno:  # message, url, linenumber (not in nodejs)
                 msg = "On line %i in %s:\n%s" % (evt.lineno, evt.filename, evt.message)
             elif evt.stack:
                 msg = evt.stack
-            if flexx.ws: flexx.ws.send("ERROR " + msg)
+            if flexx.ws is not None: flexx.ws.send("ERROR " + msg)
         
         # Set new versions
         console.log = log
