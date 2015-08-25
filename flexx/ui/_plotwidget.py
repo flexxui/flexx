@@ -65,6 +65,15 @@ class PlotWidget(Widget):
         return [float(f) for f in v]
     
     @react.input
+    def yrange(self, v=None):
+        """ The range for the y-axis. If None (default) it is determined
+        from the data. """
+        if v is not None:
+            v = tuple([float(f) for f in v])
+            assert len(v) == 2
+        return v
+    
+    @react.input
     def line_color(self, v='blue'):
         """ The color of the line. If this is the empty string, the
         line is not shown. """
@@ -121,11 +130,12 @@ class PlotWidget(Widget):
                 self.node.width = size[0]
                 self.node.height = size[1]
         
-        @react.connect('xdata', 'ydata', 'line_color', 'line_width',
+        @react.connect('xdata', 'ydata', 'yrange',
+                       'line_color', 'line_width',
                        'marker_color', 'marker_size',
                        'title', 'xlabel', 'ylabel',
                        '_update_canvas_size')
-        def _update_plot(self, xx, yy, lc, lw, mc, ms, title, xlabel, ylabel):
+        def _update_plot(self, xx, yy, yrange, lc, lw, mc, ms, title, xlabel, ylabel):
             
             # Prepare
             ctx = self._context
@@ -134,14 +144,20 @@ class PlotWidget(Widget):
             # Get range
             x1, x2 = min(xx), max(xx)
             y1, y2 = min(yy), max(yy)
-            if not xx or not yy:
-                x1, x2 = 0, 1
-                y1, y2 = 0, 1
-            else:
+            #
+            if xx:
                 x1 -= (x2-x1) * 0.02
                 x2 += (x2-x1) * 0.02
+            else:
+                x1, x2 = 0, 1
+            #
+            if yrange:
+                y1, y2 = yrange
+            elif yy:
                 y1 -= (y2-y1) * 0.02
                 y2 += (y2-y1) * 0.02
+            else:
+                y1, y2 = 0, 1
             
             # Convert to screen coordinates
             # 0.5 offset so we land on whole pixels with axis
@@ -160,17 +176,8 @@ class PlotWidget(Widget):
             y_ticks = self._get_ticks(scale_y, y1, y2)
             sx_ticks = [lpad + (x-x1)*scale_x for x in x_ticks]
             sy_ticks = [bpad + (y-y1)*scale_y for y in y_ticks]
-            
+            print(x1, x2, '==', x_ticks)
             ctx.clearRect(0, 0, w, h)
-            
-            # Draw axis
-            ctx.beginPath()
-            ctx.lineWidth= 1
-            ctx.strokeStyle = "#444"
-            ctx.moveTo(lpad, tpad-5)
-            ctx.lineTo(lpad, h-bpad)
-            ctx.lineTo(w-rpad+5, h-bpad)
-            ctx.stroke()
             
             # Draw ticks
             ctx.beginPath()
@@ -228,6 +235,15 @@ class PlotWidget(Widget):
                 ctx.fillText(ylabel, 0, 5)
                 ctx.restore()
             
+            # Draw axis
+            ctx.beginPath()
+            ctx.lineWidth= 1
+            ctx.strokeStyle = "#444"
+            ctx.moveTo(lpad, tpad-5)
+            ctx.lineTo(lpad, h-bpad)
+            ctx.lineTo(w-rpad+5, h-bpad)
+            ctx.stroke()
+            
             # Draw line
             if lc and lw:
                 ctx.beginPath()
@@ -263,7 +279,7 @@ class PlotWidget(Widget):
                 t += tick_unit
             for i in range(len(ticks)):
                 t = ticks[i].toPrecision(4)
-                t = t.replace(RegExp("[0]+$"), "")
+                t = t.replace(RegExp("\\.[0]+$"), "")
                 if t[-1] == '.': t += '0'
                 ticks[i] = t
                 

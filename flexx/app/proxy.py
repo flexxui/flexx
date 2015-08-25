@@ -433,6 +433,13 @@ class Proxy(object):
         """
         return self._app_name
     
+    @property
+    def app(self):
+        """ The Pair instance that represents the app. Can be None if this
+        is the ``__default__`` app.
+        """
+        return self._pair
+    
     def __repr__(self):
         s = self.status.lower()
         return '<Proxy for %r (%s) at 0x%x>' % (self.app_name, s, id(self))

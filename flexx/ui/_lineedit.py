@@ -65,6 +65,7 @@ class LineEdit(Widget):
             
             that = self
             this.node.addEventListener('input', lambda ev: that.user_text._set(that.node.value), False)
+            this.node.addEventListener('keydown', lambda ev: that.submit._set(ev.which), False)
             #if IE10:
             #    this.node.addEventListener('change', lambda ev: that.user_value._set(that.node.value), False)
             
@@ -75,6 +76,13 @@ class LineEdit(Widget):
                 v = str(v)
                 self.text(v)
             return v
+        
+        @react.source
+        def submit(key):
+            """ The user strikes the enter or return key. """
+            if key == 13:
+                return True
+            return undefined
         
         @react.connect('text')
         def _text_changed(self, text):

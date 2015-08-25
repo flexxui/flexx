@@ -22,7 +22,6 @@ def refresh():
 refresh()
 
 
-
 @app.serve
 class CPUMonitor(ui.Widget):
     
@@ -49,11 +48,12 @@ class CPUMonitor(ui.Widget):
     
     @react.connect('app.manager.connections_changed')
     def number_of_connections(name):
-        if name == 'CPUMonitor':
+        n = 0
+        for name in app.manager.get_app_names():
             proxies = app.manager.get_connections(name)
-            return len(proxies)
-        return react.undefined
-        
+            n += len(proxies)
+        return n
+    
     class JS:
         cpu_count = psutil.cpu_count()
         nsamples = nsamples
@@ -75,5 +75,5 @@ class CPUMonitor(ui.Widget):
             self.plot.ydata(usage)
 
 
-m = app.launch(CPUMonitor)  # for use during development
+# m = app.launch(CPUMonitor)  # for use during development
 app.start()
