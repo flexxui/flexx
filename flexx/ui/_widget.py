@@ -60,9 +60,10 @@ class Widget(Pair):
     
     """
     
-    def __init__(self, parent=None, **kwargs):
+    def __init__(self, **kwargs):
         # todo: -> parent is widget or ref to div element
         
+        parent = kwargs.pop('parent', None)
         # Apply default parent?
         if parent is None:
             default_parents = _get_default_parents()

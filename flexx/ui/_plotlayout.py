@@ -1,4 +1,4 @@
-""" High level layout.
+""" Experimental high level layout for dashboards. Do not rely on this.
 
 Example:
 
