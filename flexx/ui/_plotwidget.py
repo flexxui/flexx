@@ -283,7 +283,8 @@ class PlotWidget(Widget):
                 t += tick_unit
             for i in range(len(ticks)):
                 t = ticks[i].toPrecision(4)
-                t = t.replace(RegExp("\\.[0]+$"), "")
+                if '.' in t:
+                    t = t.replace(RegExp("[0]+$"), "")
                 if t[-1] == '.': t += '0'
                 ticks[i] = t
                 

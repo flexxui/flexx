@@ -33,7 +33,8 @@ class CPUMonitor(ui.Widget):
                 self.info = ui.Label(text='...')
                 self.button = ui.Button(text='Do some work')
                 
-                self.plot = ui.PlotWidget(size=(640, 480), xdata=[0], ylabel='CPU usage (%)')
+                self.plot = ui.PlotWidget(size=(640, 480), xdata=[0], 
+                                          yrange=(0, 100), ylabel='CPU usage (%)')
                 ui.Widget(flex=1)
     
     @react.connect('global_cpu_usage')
@@ -77,5 +78,5 @@ class CPUMonitor(ui.Widget):
 
 
 if __name__ == '__main__':
-    #m = app.launch(CPUMonitor)  # for use during development
+    # m = app.launch(CPUMonitor)  # for use during development
     app.start()
