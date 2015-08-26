@@ -11,3 +11,4 @@ JavaScript. We call Python code aimed to translated this way "PyScript".
    intro
    api
    guide
+   examples

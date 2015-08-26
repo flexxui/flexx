@@ -9,3 +9,4 @@ The react module provides functionality for Functional Reactive Programming.
    
    intro
    api
+   examples

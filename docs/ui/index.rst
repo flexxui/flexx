@@ -14,3 +14,4 @@ This module builds on the app module, implementing the
     
     intro
     api
+    examples
