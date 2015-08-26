@@ -1,7 +1,8 @@
 """
-This example demonstrates how Python code can be run in NodeJS, which
-is for many things faster than CPython. We run the exact same code to
-find the n-th prime on both Python and JS and measure the performance.
+This example demonstrates how Python code can be run in NodeJS (or
+Firefox), which is for many things faster than CPython. We run the exact
+same code to find the n-th prime on both Python and JS and measure the
+performance.
 """
 
 import time
@@ -49,9 +50,9 @@ class PrimeFinder(app.Pair):
 
 
 # Create app instance
-finder = app.launch(PrimeFinder, 'nodejs')
+finder = app.launch(PrimeFinder, 'nodejs')  # can also use Firefox or Chrome
 
 finder.find_prime_py(2000)  # 0.7 s
 finder.find_prime_js(2000)  # 0.2 s
 
-app.start()
+app.run()

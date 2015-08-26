@@ -32,4 +32,4 @@ class Name(app.Pair):
 
 name = app.launch(Name, 'nodejs')
 name.first_name('jane')
-app.start()
+app.run()

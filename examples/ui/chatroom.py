@@ -1,10 +1,6 @@
-""" Simple web app to monitor the CPU usage of the server process.
-
-Requires psutil
 """
-
-import time
-import psutil
+Simple chat web app in less than 80 lines.
+"""
 
 from flexx import app, ui, react
 

@@ -26,4 +26,4 @@ class Clock(app.Pair):
             return float(t)
 
 clock = app.launch(Clock, 'nodejs')
-app.start()
+app.run()

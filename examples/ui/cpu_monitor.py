@@ -1,4 +1,5 @@
-""" Simple web app to monitor the CPU usage of the server process.
+"""
+Simple web app to monitor the CPU usage of the server process.
 
 Requires psutil
 """

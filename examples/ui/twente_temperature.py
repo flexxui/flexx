@@ -1,3 +1,11 @@
+"""
+Examample data-viz app. It shows real temperature data from the region
+where I live. The data are monthly average temperatures for the pas 65
+years. The month can be selected with a slider. Via another slider, the
+data can be smoothed so the upward trend can be made more apparent.
+This app can be exported to a standalone HTML document.
+"""
+
 from flexx import app, ui, react
 
 # Raw data obtained from 
@@ -98,6 +106,7 @@ def parse_data(raw_data):
 years, data = parse_data(raw_data)
 
 
+@app.serve
 class Twente(ui.Widget):
     
     def init(self):

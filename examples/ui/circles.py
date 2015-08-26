@@ -1,3 +1,9 @@
+"""
+Example that shows animated circles. The animation is run from Python.
+Doing that in JS would be more efficient, but we have not implemented timers
+yet.
+"""
+
 import math
 import time
 
