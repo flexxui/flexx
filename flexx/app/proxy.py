@@ -205,7 +205,7 @@ def port_hash(name):
     return 49152 + (val % 2**14)
 
 
-def init_server(host='localhost', port=None):
+def init_server(host=None, port=None):
     """ Initialize the server if it is not already running.
     """
     global _tornado_app 
@@ -218,6 +218,10 @@ def init_server(host='localhost', port=None):
     # Create server
     from .serve import FlexxTornadoApplication
     _tornado_app = FlexxTornadoApplication()
+    
+    # Get default host
+    if host is None:
+        host = os.getenv('FLEXX_HOSTNAME', 'localhost')
     
     # Start server (find free port number if port not given)
     if port is not None:
@@ -238,7 +242,7 @@ def init_server(host='localhost', port=None):
     print('Serving apps at http://%s:%i/' % (host, port))
 
 
-def start(host='localhost', port=None):
+def start(host=None, port=None):
     """ Start the server and event loop if not already running.
     
     This function generally does not return until the application is
