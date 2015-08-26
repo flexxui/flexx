@@ -148,5 +148,5 @@ class Twente(ui.Widget):
             
         
 
-m = app.launch(Twente, 'firefox')
+m = app.launch(Twente)
 app.start()

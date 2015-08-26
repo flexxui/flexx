@@ -1,4 +1,5 @@
 import math
+import time
 
 from flexx import app, ui
 
@@ -18,19 +19,22 @@ class App(ui.Widget):
         self._circles = []
         
         with ui.PinboardLayout():
-            for i in range(64):
-                x = math.sin(i*0.1)*0.3 + 0.5 
-                y = math.cos(i*0.1)*0.3 + 0.5
+            for i in range(32):
+                x = math.sin(i*0.2)*0.3 + 0.5
+                y = math.cos(i*0.2)*0.3 + 0.5
                 w = Circle(pos=(x,y))
                 self._circles.append(w)
         
-        #ui.call_later(0.2, self.tick)
-        # todo: animate in Python!
+        self.tick()
         # todo: animate in JS!
     
     def tick(self):
-        print('tick!')
-        
+        t = time.time()
+        for i, circle in enumerate(self._circles):
+            x = math.sin(i*0.2 + t)*0.3 + 0.5
+            y = math.cos(i*0.2 + t)*0.3 + 0.5
+            circle.pos((x, y))
+        app.call_later(0.03, self.tick)
 
 m = app.launch(App)
 app.start()
