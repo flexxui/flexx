@@ -219,9 +219,11 @@ def init_server(host=None, port=None):
     from .serve import FlexxTornadoApplication
     _tornado_app = FlexxTornadoApplication()
     
-    # Get default host
+    # Get default host and port
     if host is None:
         host = os.getenv('FLEXX_HOSTNAME', 'localhost')
+    if port is None:
+        port = os.getenv('FLEXX_PORT', None)
     
     # Start server (find free port number if port not given)
     if port is not None:
