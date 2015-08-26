@@ -36,5 +36,6 @@ class App(ui.Widget):
             circle.pos((x, y))
         app.call_later(0.03, self.tick)
 
-m = app.launch(App)
-app.start()
+if __name__ == '__main__':
+    m = app.launch(App)
+    app.run()

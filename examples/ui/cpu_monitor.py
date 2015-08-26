@@ -75,5 +75,6 @@ class CPUMonitor(ui.Widget):
             self.plot.ydata(usage)
 
 
-# m = app.launch(CPUMonitor)  # for use during development
-app.start()
+if __name__ == '__main__':
+    #m = app.launch(CPUMonitor)  # for use during development
+    app.start()

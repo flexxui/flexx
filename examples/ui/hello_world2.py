@@ -10,4 +10,4 @@ class MyApp(ui.Widget):
         self.b = ui.Button(text='Hello world!')
 
 main = app.launch(MyApp)
-app.start()
+app.run()

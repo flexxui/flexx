@@ -145,8 +145,8 @@ class Twente(ui.Widget):
                     yy2.append(val / n)
             
             self.plot.ydata(yy2)
-            
-        
 
-m = app.launch(Twente)
-app.start()
+if __name__ == '__main__':
+    m = app.launch(Twente, title='Temperature 1951 - 2014', size=(900, 400))
+    m.bgcolor('#eee')  # more desktop-like
+    app.run()

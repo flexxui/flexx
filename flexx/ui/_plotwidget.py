@@ -179,6 +179,10 @@ class PlotWidget(Widget):
             
             ctx.clearRect(0, 0, w, h)
             
+            # Draw inner background
+            ctx.fillStyle = 'white'
+            ctx.fillRect(lpad, tpad, w-lpad-rpad, h-bpad-tpad)
+            
             # Draw ticks
             ctx.beginPath()
             ctx.lineWidth= 1
@@ -239,9 +243,9 @@ class PlotWidget(Widget):
             ctx.beginPath()
             ctx.lineWidth= 1
             ctx.strokeStyle = "#444"
-            ctx.moveTo(lpad, tpad-5)
+            ctx.moveTo(lpad, tpad)
             ctx.lineTo(lpad, h-bpad)
-            ctx.lineTo(w-rpad+5, h-bpad)
+            ctx.lineTo(w-rpad, h-bpad)
             ctx.stroke()
             
             # Draw line

@@ -7,4 +7,4 @@ from flexx import app, ui
 
 b = ui.Button(text='Hello world!')
 
-app.start()
+app.run()

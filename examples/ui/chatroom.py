@@ -76,5 +76,6 @@ class ChatRoom(ui.Widget):
             self.messages.text(self.messages.text() + text)
 
 
-m = app.launch(ChatRoom)  # for use during development
-app.start()
+if __name__ == '__main__':
+    #m = app.launch(ChatRoom)  # for use during development
+    app.start()
