@@ -253,15 +253,14 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         self.close(1000, 'closed by server')
     
     def check_origin(self, origin):
-        """ Handle cross-domain access; override default same origin
-        policy. By default the hostname and port must be equal. We only
-        requirde de portname to be equal. This allows us to embed in
-        the IPython notebook.
+        """ Handle cross-domain access; override default same origin policy.
         """
         host, port = self.application.serving_at  # set by us
         incoming_host = urllib.parse.urlparse(origin).hostname
-        if host == 'localhost' and origin.startswith('localhost:'):
-            return True  # With nodejs origin is "localhost:52452"
+        if host == 'localhost':
+            return True  # Safe
+        elif host == '0.0.0.0':
+            return True  # we cannot know if the origin matches
         elif host == incoming_host:
             return True
         else:
