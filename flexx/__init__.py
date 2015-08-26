@@ -1,24 +1,22 @@
 """
-Flexx is a Python tookit for creating user interfaces (UI's), that uses
-web technology for its rendering. You can use Flexx to create desktop
-applications as well as web applications. Flexx can also be used from
-within the Jupyter notebook.
+Flexx is a pure Python toolkit for creating
+graphical user interfaces (GUI's), that uses web technology for its
+rendering. You can use Flexx to create desktop applications, web
+applications, and (if designed well) export an app to a standalone HTML
+document. It also works in the Jupyter notebook.
 
-Flexx is pure Python, and has no dependencies other than the browser
-that's already installed on the system. To run apps in desktop-mode,
-we recommend having Firefox installed.
+Being pure Python and cross platform, it should work anywhere where
+there's Python and a browser. To run apps in desktop-mode, we recommend having Firefox
+installed.
 
-Flexx consists of several modules which can be individually used; none
-of the modules are imported by default.
+Flexx has a modular design, consisting of a few subpackages, which can
+also be used by themselves:
 
-* ui - the ui toolkit, most people will use just this
-* webruntime - launch a web runtime (xul application, browser etc.)
-* pyscript - Python to JavaScript compiler
-* properties - or util.properties? - A property system similar to IPython's 
-  traitlets or bokeh's properties.
-* util - various utilities related to application development
-* lui - a lightweight UI toolkit based on OpenGL designed to work
-  everywhere that can be used as a fallback
+* ui - the widgets
+* app - the event loop and server
+* react - reactive programming (how information flows through your program)
+* pyscript - Python to JavaScript transpiler
+* webruntime - to launch a runtime
 
 For more information, see http://flexx.readthedocs.org.
 """

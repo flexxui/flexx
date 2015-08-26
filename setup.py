@@ -14,7 +14,7 @@ except ImportError:
 from distutils.core import setup
 
 name = 'flexx'
-description = 'Framework for creating user interfaces based on web technology'
+description = "Pure Python toolkit for creating GUI's using web technology."
 
 
 # Get version and docstring

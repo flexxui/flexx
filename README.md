@@ -1,7 +1,7 @@
 Flexx
 =====
 
-`Flexx <flexx.readthedocs.org>`_ is a pure Python toolkit for creating
+[Flexx](flexx.readthedocs.org) is a pure Python toolkit for creating
 graphical user interfaces (GUI's), that uses web technology for its
 rendering. You can use Flexx to create desktop applications, web
 applications, and (if designed well) export an app to a standalone HTML

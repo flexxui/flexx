@@ -33,7 +33,7 @@ class CPUMonitor(ui.Widget):
                 self.info = ui.Label(text='...')
                 self.button = ui.Button(text='Do some work')
                 
-                self.plot = ui.PlotWidget(size=(640, 480), xdata=[0], 
+                self.plot = ui.PlotWidget(size=(640, 480), xdata=[], 
                                           yrange=(0, 100), ylabel='CPU usage (%)')
                 ui.Widget(flex=1)
     
