@@ -96,7 +96,7 @@ def test_disconnecting_signal(Name):
     s.r.append(s.full_name())
     
     # Disconnect, but because its a react signal, it re-connects at once
-    s.full_name.disconnect()
+    s.full_name.disconnect(False)  # no destroy
     s.first_name('almar')
     s.first_name('jorik')
     s.first_name('jane')

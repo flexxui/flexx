@@ -389,7 +389,7 @@ def test_disconnecting():
     assert not s2.not_connected
     assert len(s2._upstream) == 1
     
-    s2.disconnect()
+    s2.disconnect(False)
     
     assert s2.not_connected
     assert len(s2._upstream) == 0

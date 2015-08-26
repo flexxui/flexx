@@ -8,7 +8,6 @@ import time
 import atexit
 import shutil
 import logging
-import atexit
 import threading
 import subprocess
 

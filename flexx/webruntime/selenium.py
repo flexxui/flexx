@@ -25,6 +25,7 @@ class SeleniumRuntime(BaseRuntime):
         # Import here; selenium is an optional dependency
         from selenium import webdriver
         
+        self._driver = None
         if type.lower() == 'firefox':
             self._driver = webdriver.Firefox()
         elif type.lower() == 'chrome':
@@ -48,7 +49,9 @@ class SeleniumRuntime(BaseRuntime):
             raise ValueError('To use selenium runtime specify a browser type".')
     
     def close(self):
-        self.driver.close()
+        if self._driver:
+            self._driver.close()
+            self._driver = None
     
     @property
     def driver(self):
