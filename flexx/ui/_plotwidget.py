@@ -176,7 +176,7 @@ class PlotWidget(Widget):
             y_ticks = self._get_ticks(scale_y, y1, y2)
             sx_ticks = [lpad + (x-x1)*scale_x for x in x_ticks]
             sy_ticks = [bpad + (y-y1)*scale_y for y in y_ticks]
-            print(x1, x2, '==', x_ticks)
+            
             ctx.clearRect(0, 0, w, h)
             
             # Draw ticks

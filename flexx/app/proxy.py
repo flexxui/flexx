@@ -259,8 +259,30 @@ def start(host='localhost', port=None):
     if not (hasattr(_tornado_loop, '_running') and _tornado_loop._running):
         _tornado_loop.start()
 
-is_notebook = False
 
+def run():
+    """ Start the event loop if not already running, for desktop apps.
+    
+    In contrast to ``start()``, when the server is started this way,
+    it will close down when there are no more connections.
+    """
+    manager._auto_stop = True
+    return start()
+
+
+manager._auto_stop = False
+@react.connect('manager.connections_changed')
+def _auto_closer(name):
+    if not manager._auto_stop:
+        return
+    for name in manager.get_app_names():
+        proxies = manager.get_connections(name)
+        if proxies:
+            return
+    else:
+        stop()
+
+is_notebook = False
 
 def init_notebook():
     """ Initialize the Jupyter notebook by injecting the necessary CSS
@@ -542,7 +564,7 @@ class Proxy(object):
             self._send_command('DEFINE-CSS ' + css)
     
     def _send_command(self, command):
-        """ Send the command, add to pending queue, or error when closed.
+        """ Send the command, add to pending queue.
         """
         if self.status == self.STATUS.CONNECTED:
             if is_notebook:
@@ -555,7 +577,8 @@ class Proxy(object):
         elif self.status == self.STATUS.PENDING:
             self._pending_commands.append(command)
         else:
-            raise RuntimeError('Cannot send commands; app is closed') 
+            #raise RuntimeError('Cannot send commands; app is closed')
+            logging.warn('Cannot send commands; app is closed')
     
     def _receive_command(self, command):
         """ Received a command from JS.
