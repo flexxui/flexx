@@ -6,28 +6,32 @@
 Welcome to Flexx's documentation!
 =================================
 
-Flexx is a Python tookit for designing user interfaces (UI's), that
-uses web technology for its rendering. You can use Flexx to create
-desktop applications as well as web applications.
+Flexx is a pure Python toolkit for creating graphical user interfaces
+(GUI's), that uses web technology for its rendering. You can use Flexx
+to create desktop applications, web applications, and (if designed well)
+export an app to a standalone HTML document. It also works in the
+Jupyter notebook.
 
-Flexx is pure Python, and has no dependencies other than the browser
-that's already installed on the system.
+Being pure Python and cross platform, it should work anywhere where
+there's Python and a browser.
 
-Current status
---------------
+Flexx has a modular design, consisting of a few subpackages, which can
+also be used by themselves:
 
-Flexx is in development and is in alpha status. Any part of the public
-API may change without notice. Status of subpackages:
-   
-* The ``flexx.pyscript`` module is in a good state and has 100% test
-  coverage. Needs methods for list/dict/str, but is otherwise very
-  complete.
-* The ``flexx.react`` module is in a good state, with good test
-  coverage, but needs some work for functionals. 
-* The ``flexx.webruntime`` module works well, but needs
-  tests and should support more runtimes. 
-* The ``flexx.app`` module is in a flux.
-* The ``flexx.ui`` module is in a flux.
+* :doc:`ui <ui/index>` - the widgets
+* :doc:`app <app/index>` - the event loop and server
+* :doc:`react <react/index>` - reactive programming (how information flows through your program)
+* :doc:`pyscript <pyscript/index>` - Python to JavaScript transpiler
+* :doc:`webruntime <webruntime/index>` - to launch a runtime
+
+
+Status
+------
+
+* Alpha status, any part of the public API may change. Looking for feedback though!
+* Currently, only Firefox and Chrome are supported.
+* Flexx is CPython 3.x only for now. Support for Pypy very likely. Support
+  for 2.x maybe.
 
 
 Links
@@ -49,7 +53,7 @@ Contents
    app/index
    react/index
    pyscript/index
-   webruntime
+   webruntime/index
    util
    
    releasenotes

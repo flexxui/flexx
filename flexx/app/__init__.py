@@ -44,6 +44,10 @@ Use ``start()`` to enter the mainloop for the server. Optionally, the
 hostname and port can be specified. Avoid ``sys.exit(app.start())``,
 because ``start()`` may return immediately in interactive environments.
 
+For desktop applications you can use ``run()``, which does what
+``start()`` does, except the main loop exits when there are no more
+connections (i.e. the server stops when the window is closed).
+
 In the notebook
 ---------------
 

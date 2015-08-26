@@ -7,6 +7,8 @@ Functions related to the event loop
 
 .. autofunction:: flexx.app.start
 
+.. autofunction:: flexx.app.run
+
 .. autofunction:: flexx.app.init_notebook
 
 .. autofunction:: flexx.app.stop

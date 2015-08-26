@@ -6,6 +6,9 @@ Getting started
 Dependencies
 ------------
 
+Flexx is CPython 3.x only for now. Support for Pypy very likely. Support
+for 2.x maybe.
+
 The only dependency of Flexx is Tornado (a pure Python package). To use
 ``flexx.ui`` you need a browser. To run apps that look like desktop
 apps, we recommend having Firefox installed.
@@ -18,11 +21,28 @@ Developers that want to run the tests need:
 * Firefox
 
 
+Current status
+--------------
+
+Flexx is in development and is in alpha status. Any part of the public
+API may change without notice. Status of subpackages:
+   
+* The ``flexx.pyscript`` module is in a good state and has 100% test
+  coverage. Needs methods for list/dict/str, but is otherwise very
+  complete.
+* The ``flexx.react`` module is in a good state, with good test
+  coverage, but needs some work for functionals. 
+* The ``flexx.webruntime`` module works well, but needs
+  tests and should support more runtimes. 
+* The ``flexx.app`` module is in a flux.
+* The ``flexx.ui`` module is in a flux.
+
+
 Installation
 ------------
 
-* Install a release via ``pip install flexx`` (there are no releases yet)
-* This should work: ``python setup.py install``
+* Install a release via ``pip install flexx``
+* Old school: ``python setup.py install``
 * Clone the repo and add the root dir to your PYTHONPATH (developer mode)
 
 
@@ -70,22 +90,25 @@ the *webruntime* module is to launch a runtime to execute the app in.
 This can be a browser, or a XUL application that looks like a desktop
 app, or e.g. nodejs.
 
-The *properties* module provides functionality to easily add properties
-to a class (similar to traits/traitlets).
+The *react* module provides functionality for reactive programming;
+handling events via signals to let information flow through your
+application.
 
 The *pyscript* module provides a system for translating Python code to
 JavaScript.
 
-In the *ui* module the app mainloop is defined, running the server to
+In the *app* module the app mainloop is defined, running the server to
 which the web runtime connects (via a websocket). Further, it combines
-the properties and pyscript functionalities into the ``Mirrored`` class;
-a class for which its instances have a mirrored representation in
-JavaScript. Properties are synced both ways, and it allows subclasses
+the *react* and *pyscript* functionalities into the ``Pair`` class;
+a class for which its instances have a corresponding representation in
+JavaScript. Signals are synced both ways, and it allows subclasses
 to define methods for the JS version of the object in Python code (or
 PyScript, to be precise). This is the base class for all widgets, but
 could in principle also be useful in other situations where a tight
 connection between Python and JS is required.
 
+In the *ui* module all widgets are implemented.
+
 In this documentation, we include a separate reference for each
 subpackage. We recommend starting with the *ui* module, and not to worry
-about the other modules until its needed.
+about the other modules until they're needed.
