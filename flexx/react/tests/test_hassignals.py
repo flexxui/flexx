@@ -1,6 +1,9 @@
 """ Test how signals behave on classes.
 """
 
+import sys
+import weakref
+
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
@@ -249,6 +252,36 @@ def test_props():
     t.title = 'foo'
     assert len(title_lengths) == 2
     assert title_lengths[-1] == 3
+
+
+def test_no_memory_leak():
+    def stub(v=''): pass
+    
+    class Foo(HasSignals):
+        @input
+        def parent(self, v):
+            return v
+    
+    class Test(HasSignals):
+        
+        def __init__(self):
+            self.foo = Foo(parent=self)  # Test no holding on _value and _last_value
+            self.bar = Signal(stub, [])  # Test no holding via frame
+            HasSignals.__init__(self)
+        
+        @connect('foo.title')
+        def title_len(self, v):
+            return len(v)
+    
+    t = Test()
+    wt = weakref.ref(t)
+    assert sys.getrefcount(t) >= 3
+    
+    t.disconnect_signals()
+    t.foo.disconnect_signals()
+    t.bar.disconnect()
+    del t
+    assert wt() is None
 
 
 run_tests_if_main()

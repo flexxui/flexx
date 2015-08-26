@@ -280,6 +280,7 @@ def _auto_closer(name):
         if proxies:
             return
     else:
+        logging.info('Stopping Flexx event loop.')
         stop()
 
 is_notebook = False
@@ -517,6 +518,7 @@ class Proxy(object):
         if self._runtime:
             self._runtime.close()
         if self._pair:
+            self._pair.disconnect_signals()
             self._pair = None  # break circular reference
     
     @property

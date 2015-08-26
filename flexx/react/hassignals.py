@@ -101,6 +101,15 @@ class HasSignals(with_metaclass(HasSignalsMeta, object)):
                 success = success and connected
         return success
     
+    def disconnect_signals(self, destroy=True):
+        """ Disconnect all signals. This can be used to clean up any
+        references when the object is no longer used.
+        """
+        for name in self.__signals__:
+            if name in self.__props__:
+                continue
+            s = getattr(self, name)
+            s.disconnect(destroy)
     
     def _signal_changed(self, signal):
         """ Called when one of our signals changes.

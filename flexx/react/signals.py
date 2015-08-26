@@ -104,7 +104,7 @@ class Signal(object):
         except (TypeError, IndexError):
             self._func_is_method = False
         
-        # Check whether this signals is on a class object: a descriptor
+        # Check whether this signal is on a class object: a descriptor
         self._class_desciptor = (ob is None) and ('__module__' in self._frame.f_locals)
         
         # Check that for class descriptors the decorators are used
@@ -222,15 +222,20 @@ class Signal(object):
         self._set_status(1)
         return True
     
-    def disconnect(self):
+    def disconnect(self, destroy=True):
         """ Disconnect this signal, unsubscribing it from the upstream
-        signals.
+        signals. If destroy is True (default), will also clear the
+        internal frame object, allowing unused objects to be deleted.
         """
         # Disconnect upstream
         while len(self._upstream):  # len() for PyScript compat
             s = self._upstream.pop(0)
             s._unsubscribe(self)
         self._not_connected = 'Explicitly disconnected via disconnect()'
+        self._value = undefined
+        self._last_value = undefined
+        if destroy:
+            self._frame = None
         # Notify downstream.
         self._set_status(3)
     

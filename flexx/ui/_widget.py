@@ -113,6 +113,15 @@ class Widget(Pair):
         """
         pass
     
+    def disconnect_signals(self, *args):
+        """ Overloaded version of disconnect_signals() that will also
+        disconnect the signals of any child widgets.
+        """
+        children = self.children()
+        Pair.disconnect_signals(self, *args)
+        for child in children:
+            child.disconnect_signals(*args)
+    
     def __enter__(self):
         # Note that __exit__ is guaranteed to be called, so there is
         # no need to use weak refs for items stored in default_parents
