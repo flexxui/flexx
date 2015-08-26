@@ -66,8 +66,6 @@ setup(
         'Intended Audience :: Science/Research',
         'Intended Audience :: Education',
         'Intended Audience :: Developers',
-        'Topic :: Software Development :: User Interfaces'
-        'Topic :: Software Development :: Code Generators',
         'License :: OSI Approved :: BSD License',
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: Microsoft :: Windows',
