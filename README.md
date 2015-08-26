@@ -62,3 +62,9 @@ Getting started
 * ``python setup.py install``
 * run the examples
 
+
+Demo server
+-----------
+
+There is an Amazon instance running some demos on http://52.21.93.28:8000/ 
+(unless I turned it off for testing, etc.).
