@@ -227,7 +227,8 @@ def init_server(host=None, port=None):
     
     # Start server (find free port number if port not given)
     if port is not None:
-        _tornado_app.listen(int(port), host)
+        port = int(port)
+        _tornado_app.listen(port, host)
     else:
         for i in range(100):
             port = port_hash('flexx%i' % i)
