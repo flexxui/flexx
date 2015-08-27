@@ -236,6 +236,8 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
             proxy = manager.get_default_proxy()
         self._proxy = proxy
         
+        self._proxy.register_pair_class(self.__class__)
+        
         # Instantiate JavaScript version of this class
         clsname = 'flexx.classes.' + self.__class__.__name__
         cmd = 'flexx.instances.%s = new %s(%r);' % (self._id, clsname, self._id)

@@ -511,7 +511,7 @@ class ClientCode(object):
 
 
 # Create the one instance of this class. We cannot have one object
-# per app, since serve.py needs get_page() before there is an app.
+# per app, since server.py needs get_page() before there is an app.
 clientCode = ClientCode()
 
 

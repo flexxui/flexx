@@ -216,7 +216,7 @@ def init_server(host=None, port=None):
         #raise RuntimeError('flexx.ui server already created')
     
     # Create server
-    from .serve import FlexxTornadoApplication
+    from .server import FlexxTornadoApplication
     _tornado_app = FlexxTornadoApplication()
     
     # Get default host and port
@@ -544,7 +544,6 @@ class Proxy(object):
     ## Widget-facing code
     
     def register_pair_class(self, cls):
-        # todo: do we use this somewhere? It should 
         """ Register the given class. If already registered, this function
         does nothing.
         """
@@ -566,8 +565,8 @@ class Proxy(object):
         
         # Define class
         logging.debug('Dynamically defining class %r' % cls)
-        js = cls.get_js()
-        css = cls.get_css()
+        js = cls.JS.CODE
+        css = cls.CSS
         self._send_command('DEFINE-JS ' + js)
         if css.strip():
             self._send_command('DEFINE-CSS ' + css)
