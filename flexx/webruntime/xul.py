@@ -35,7 +35,7 @@ import logging
 import subprocess
 import os.path as op
 
-from .common import DesktopRuntime, create_temp_app_dir, appdata_dir, default_icon
+from .common import DesktopRuntime, create_temp_app_dir, appdata_dir
 from ..util.icon import Icon
 
 # todo: title should change with title of web page?
@@ -514,9 +514,7 @@ class XulRuntime(DesktopRuntime):
         # Make info.plist
         info = INFO_PLIST.format(name=title)
         open(op.join(path, 'Contents', 'info.plist'), 'wt').write(info)
-        # Make icon
-        if self._kwargs.get('icon', None):
-            icon = Icon(self._kwargs['icon'])  # accepts ico/png/bmp
-        else:
-            icon = default_icon()
-        icon.write(op.join(path, 'Contents', 'Resources', 'app.icns'))
+        # Make icon - ensured by launch function
+        if kwargs.get('icon'):
+            icon = kwargs.get('icon')
+            icon.write(op.join(path, 'Contents', 'Resources', 'app.icns'))
