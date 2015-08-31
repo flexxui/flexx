@@ -138,6 +138,10 @@ class NodejsRuntime(BaseRuntime):
         # Fix for Windows - by default global modules are searched in wrong place
         if sys.platform.startswith('win') and os.getenv('NODE_PATH') is None:
             os.environ['NODE_PATH'] = os.getenv('APPDATA') + '\\npm\\node_modules'
+        elif sys.platform.startswith('linux') and not os.getenv('NODE_PATH'):
+            path = os.path.expanduser('/usr/local/lib/node_modules')
+            if os.path.isdir(path):
+                os.environ['NODE_PATH'] = path
         
         # Write code to tempfile
         f = tempfile.NamedTemporaryFile('wt', prefix='flexx_nodejs_', suffix='.js')

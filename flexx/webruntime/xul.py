@@ -246,6 +246,8 @@ class XulRuntime(DesktopRuntime):
     def _launch(self):
         XulRuntime._app_count += 1
         
+        self._check_compat()
+        
         # Temp folder to store app files
         app_path = create_temp_app_dir('xul', str(XulRuntime._app_count))
         id = op.basename(app_path).split('_', 1)[1]
@@ -291,6 +293,10 @@ class XulRuntime(DesktopRuntime):
         #cmd.append('-jsconsole')  # for debugging
         self._start_subprocess(cmd)
     
+    def _check_compat(self):
+        if 'PySide.QtCore' in sys.modules or 'PyQt4.QtCore' in sys.modules:
+            logging.warn("Using Flexx' Xul runtime and PySide/PyQt4 together "
+                         "may cause problems.")
     
     def _create_xul_app(self, path, id, **kwargs):
         """ Create the files that determine the XUL app to launch.
