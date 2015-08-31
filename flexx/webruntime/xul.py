@@ -515,6 +515,6 @@ class XulRuntime(DesktopRuntime):
         info = INFO_PLIST.format(name=title)
         open(op.join(path, 'Contents', 'info.plist'), 'wt').write(info)
         # Make icon - ensured by launch function
-        if kwargs.get('icon'):
-            icon = kwargs.get('icon')
+        if self._kwargs.get('icon'):
+            icon = self._kwargs.get('icon')
             icon.write(op.join(path, 'Contents', 'Resources', 'app.icns'))
