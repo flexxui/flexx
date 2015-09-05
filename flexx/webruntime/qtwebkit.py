@@ -39,7 +39,7 @@ icon = "{icon}"
 size = {size}
 pos = {pos}
 
-if not qt == 'pyqt5':
+if qt != 'pyqt5':
     app = QtGui.QApplication([])
     m = QtWebKit.QWebView(None)
     
