@@ -25,7 +25,9 @@ def get_chrome_exe():
         paths.append(os.path.expanduser("~\\AppData\\Local\\Google\\Chrome\\chrome.exe"))
         paths.append(os.path.expanduser("~\\Local Settings\\Application Data\\Google\\Chrome\\chrome.exe"))  # xp
     elif sys.platform.startswith('linux'):
-        paths.append('/usr/lib/google-chrome/google-chrome')
+        paths.append('/usr/bin/google-chrome-stable')
+        paths.append('/usr/bin/google-chrome-beta')
+        paths.append('/usr/bin/google-chrome-dev')
     elif sys.platform.startswith('darwin'):
         paths.append('/Applications/Chrome.app')
     
@@ -52,7 +54,7 @@ def get_chromium_exe():
         paths.append(os.path.expanduser("~\\Local Settings\\Application Data\\Chromium\\chrome.exe"))  # xp
        
     elif sys.platform.startswith('linux'):
-        paths.append('/usr/lib/chromium-browser/chromium-browser')
+        paths.append('/usr/bin/chromium')
     elif sys.platform.startswith('darwin'):
         paths.append('/Applications/Chromium.app')
     
