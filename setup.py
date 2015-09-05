@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """ Flexx setup script.
+
+Release:
+
+* python setup.py register
+* python setup.py sdist bdist_wheel --universal upload
+* build conda packages?
+
 """
 
 import os
