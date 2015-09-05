@@ -294,9 +294,9 @@ class XulRuntime(DesktopRuntime):
         self._start_subprocess(cmd)
     
     def _check_compat(self):
-        if 'PySide.QtCore' in sys.modules or 'PyQt4.QtCore' in sys.modules:
-            logging.warn("Using Flexx' Xul runtime and PySide/PyQt4 together "
-                         "may cause problems.")
+        if any([name+'.QtCore' in sys.modules for name in ('PySide', 'PyQt4', 'PyQt5')]):
+            logging.warn("Using Flexx' Xul runtime and Qt (PySide/PyQt4/PyQt5) "
+                         "together may cause problems.")
     
     def _create_xul_app(self, path, id, **kwargs):
         """ Create the files that determine the XUL app to launch.
