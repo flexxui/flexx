@@ -24,11 +24,11 @@ except ImportError:
         from PySide import QtCore, QtGui, QtWebKit
         qt = 'pyside'
     except ImportError:
-      try:
-          from PyQt5 import QtCore, QtGui, QtWebKit, QtWidgets, QtWebKitWidgets
-          qt = 'pyqt5'
-      except ImportError:
-          pass
+        try:
+            from PyQt5 import QtCore, QtGui, QtWebKit, QtWidgets, QtWebKitWidgets
+            qt = 'pyqt5'
+        except ImportError:
+            pass
 
 if not qt:
     sys.exit('Cannot import Qt')
