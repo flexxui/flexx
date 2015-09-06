@@ -63,7 +63,7 @@ setup(
     long_description=__doc__,
     platforms='any',
     provides=[name],
-    install_requires=[],
+    install_requires=['tornado'],
     packages=package_tree(name),
     package_dir={name: name},
     package_data={},
