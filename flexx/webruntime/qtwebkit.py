@@ -24,7 +24,11 @@ except ImportError:
         from PySide import QtCore, QtGui, QtWebKit
         qt = 'pyside'
     except ImportError:
-        pass
+        try:
+            from PyQt5 import QtCore, QtGui, QtWebKit, QtWidgets, QtWebKitWidgets
+            qt = 'pyqt5'
+        except ImportError:
+            pass
 
 if not qt:
     sys.exit('Cannot import Qt')
@@ -35,8 +39,13 @@ icon = "{icon}"
 size = {size}
 pos = {pos}
 
-app = QtGui.QApplication([])
-m = QtWebKit.QWebView(None)
+if qt != 'pyqt5':
+    app = QtGui.QApplication([])
+    m = QtWebKit.QWebView(None)
+    
+else:
+    app = QtWidgets.QApplication([])
+    m = QtWebKitWidgets.QWebView(None)
 
 m.setUrl(QtCore.QUrl(url))
 m.setWindowTitle(title)
