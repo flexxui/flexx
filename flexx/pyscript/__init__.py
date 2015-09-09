@@ -70,6 +70,10 @@ plan to make heavy use of PyScript.
   undefined: ...``.
 * Accessing an attribute that does not exist will not raise an
   AttributeError but yield ``undefined``.
+* When storing a method in a new variable and then calling it 
+  (``foo = x.foo; foo()``), self/this is null.
+* Cannot compare lists and dicts: ``[1, 2] == [1, 2]`` yields ``False``.
+  (may fix this)
 * Multiplying a string with a number will yield NaN (but the reverse
   is probably different). (may fix this)
 * You cannot concatenate lists with the plus operator, use ``.extend()``

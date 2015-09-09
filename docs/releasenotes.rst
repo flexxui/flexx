@@ -5,14 +5,14 @@ Release notes and roadmap
 Roadmap
 -------
 
-* Clean up the code after refactoring
-* Implement a few basic widgets and layouts
-* Event system
-* Tests!
-* ...
+* More tests
+* CI
+* More widgets
 
 
 Release notes
 -------------
 
-No releases yet.
+**v0.1**
+
+First release.

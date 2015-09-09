@@ -89,14 +89,11 @@ The image above outlines the structure of Flexx. The sole purpose of
 the *webruntime* module is to launch a runtime to execute the app in.
 This can be a browser, or a XUL application that looks like a desktop
 app, or e.g. nodejs.
-
 The *react* module provides functionality for reactive programming;
 handling events via signals to let information flow through your
 application.
-
 The *pyscript* module provides a system for translating Python code to
 JavaScript.
-
 In the *app* module the app mainloop is defined, running the server to
 which the web runtime connects (via a websocket). Further, it combines
 the *react* and *pyscript* functionalities into the ``Pair`` class;
@@ -106,9 +103,20 @@ to define methods for the JS version of the object in Python code (or
 PyScript, to be precise). This is the base class for all widgets, but
 could in principle also be useful in other situations where a tight
 connection between Python and JS is required.
-
 In the *ui* module all widgets are implemented.
 
 In this documentation, we include a separate reference for each
 subpackage. We recommend starting with the *ui* module, and not to worry
 about the other modules until they're needed.
+
+Notebooks
+---------
+
+There is a collection of 
+`notebooks in our Github repo <https://github.com/zoofIO/flexx/tree/master/examples/notebooks>`_.
+The tutorial notebooks are also listed in the examples section of each
+subpackage in the reference docs.
+
+The notebooks containing widgets are best viewed live. Using the
+nbviewer *should* also render them correctly, but this is somewhat
+broken at this stage.

@@ -69,6 +69,12 @@ def main():
         if os.path.isdir(dirname):
             docs = better_names.get(sub, sub.capitalize()) + ' examples'
             docs += '\n%s\n\n' % (len(docs) * '=')
+            # Include notebooks?
+            for fname in os.listdir(os.path.join(EXAMPLES_DIR, 'notebooks')):
+                if fname.endswith('.ipynb') and ('_%s.' % sub) in fname:
+                    url = 'http://github.com/zoofIO/flexx/blob/master/examples/notebooks/' + fname
+                    docs += '* `%s <%s>`_ (external notebook)\n' % (fname, url)
+            # List examples
             for name in sorted(examples[sub]):
                 docs += '* :ref:`%s`\n' % name
             # Write

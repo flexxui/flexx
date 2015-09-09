@@ -13,11 +13,11 @@ through some of the FRP aspects using code examples.
 What is FRP
 -----------
 
-(Don't worry if the next two paragraphs sound complicated;
+(Don't worry if the next two paragraphs sound confusing;
 things should start to make sense when we explain thing using code.)
 
 *Where event-driven programming is about reacting to things that happen,
-RP is about staying up to date with changing signals.*
+RP is about staying up to date with changing signal values.*
 
 In RP the different components in an application communicate via streams
 of data. In other words, components keep track of (and react to) the
@@ -31,8 +31,7 @@ everything stays up-to-date.
 
 In ``flexx.react`` signals are addressed using a string. This may seem
 unusual at first, but it allows easy binding for signals on classes,
-allow signal loops, and has other advantages that we'll discuss when
-we talk about dynamism.
+allow signal loops, and has other advantages such as dynamism.
 
 
 Signals
@@ -46,7 +45,7 @@ function is "lifted" to a signal:
     # The function greet() is used to react to signal "name"
     @react.connect('name')
     def greet(n):
-        print('hello %!' % n)
+        print('hello %s!' % n)
 
 
 The example above looks quite similar to how some event-drive applications
