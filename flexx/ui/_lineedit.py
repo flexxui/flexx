@@ -92,6 +92,7 @@ class LineEdit(Widget):
         def _placeholder_text_changed(self, text):
             self.node.placeholder = text
         
+        # todo: this works in Firefox but not in Xul
         @react.connect('autocomp')
         def _autocomp_changed(self, autocomp):
             # Clear

@@ -87,3 +87,4 @@ from ._progressbar import ProgressBar
 
 from ._plotwidget import PlotWidget
 from ._plotlayout import PlotLayout
+from ._iframe import IFrame

@@ -45,6 +45,12 @@ class Label(Widget):
             raise ValueError('Text input must be a string.')
         return v
     
+    @react.input
+    def wrap(v=False):
+        """ Whether the content is allowed to be wrapped on multiple lines.
+        """
+        return {0: 0, 1:1, 2:2}.get(v, int(bool(v)))
+    
     class JS:
         
         def _js_create_node(self):
@@ -58,3 +64,9 @@ class Label(Widget):
         @react.connect('text')
         def _text_changed(self, text):
             this.node.innerHTML = text
+        
+        @react.connect('wrap')
+        def _wrap_changed(self, wrap):
+            print('setting wrap!')
+            this.node.style['word-wrap'] = ['initial', 'normal', 'break-word'][wrap]
+            this.node.style['white-space'] = ['no-wrap', 'normal', 'normal'][wrap]
