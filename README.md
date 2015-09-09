@@ -58,10 +58,10 @@ it!
 Getting started
 ---------------
 
-* clone the repo
-* put the repo dir in your PYTHONPATH
-* ``python setup.py install``
-* run the examples
+* Clone the repo and add it to your PYTHONPATH, 
+  or ``python setup.py install``, or ``pip install flexx``.
+* Run the examples.
+* Read the [docs](http://flexx.readthedocs.org).
 
 
 Demo server

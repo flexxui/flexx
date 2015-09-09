@@ -50,6 +50,12 @@ def package_tree(pkgroot):
     return subdirs
 
 
+# Define dependencies per subpackage
+extras_require = {'app': ['tornado']}
+extras_require['ui'] = extras_require['app']
+extras_require['all'] = [i for ii in extras_require.values() for i in ii]
+
+
 setup(
     name=name,
     version=__version__,
@@ -63,7 +69,8 @@ setup(
     long_description=__doc__,
     platforms='any',
     provides=[name],
-    install_requires=[],
+    install_requires=[],  # react, pyscript and webruntime require nothing
+    extras_require = extras_require,
     packages=package_tree(name),
     package_dir={name: name},
     package_data={},

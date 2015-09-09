@@ -9,8 +9,9 @@ Dependencies
 Flexx is CPython 3.x only for now. Support for Pypy very likely. Support
 for 2.x maybe.
 
-The only dependency of Flexx is Tornado (a pure Python package). To use
-``flexx.ui`` you need a browser. To run apps that look like desktop
+The ``react``, ``webruntime`` and ``pyscrip`` subpackages require no
+dependencies. The ``app`` and ``ui`` subpackages require Tornado (a
+pure Python package) and a browser. To run apps that look like desktop
 apps, we recommend having Firefox installed.
 
 Developers that want to run the tests need:
@@ -41,7 +42,8 @@ API may change without notice. Status of subpackages:
 Installation
 ------------
 
-* Install a release via ``pip install flexx``
+* ``pip install flexx``
+* ``pip install flexx[all]``  (will also install Tornado)
 * Old school: ``python setup.py install``
 * Clone the repo and add the root dir to your PYTHONPATH (developer mode)
 
