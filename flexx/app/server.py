@@ -1,14 +1,17 @@
 """ flexx.ui client serving a web page using Tornado.
 """
 
-import sys
 import os
+import sys
+import time
 import logging
 import urllib
 import traceback
 
 import tornado.web
 import tornado.websocket
+from concurrent.futures import ThreadPoolExecutor
+from tornado import gen
 
 from ..webruntime.common import default_icon
 
@@ -17,6 +20,9 @@ from .clientcode import clientCode
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 HTML_DIR = os.path.join(os.path.dirname(THIS_DIR), 'html')
+
+# todo: threading, or even multi-process
+#executor = ThreadPoolExecutor(4)
 
 
 def _flexx_run_callback(self, callback, *args, **kwargs):
@@ -81,6 +87,7 @@ class MainHandler(tornado.web.RequestHandler):
         # print('init request')
         pass
     
+    @gen.coroutine
     def get(self, path=None):
         print('get', path)
         
@@ -210,9 +217,11 @@ class WSHandler(tornado.websocket.WebSocketHandler):
                 self.close(1003, "Could not launch app: %r" % err)
                 raise
             self.write_message("PRINT Hello World from server", binary=True)
+            tornado.ioloop.IOLoop.current().spawn_callback(self.pinger)
         else:
             self.close(1003, "Could not associate socket with an app.")
     
+    # todo: @gen.coroutine?
     def on_message(self, message):
         """ Called when a new message is received from JS.
         
@@ -231,10 +240,24 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             manager.disconnect_client(self._proxy)
             self._proxy = None  # Allow cleaning up
     
+    @gen.coroutine
+    def pinger(self):
+        """ Check for timeouts. Hopefully this fixes there being
+        seemingly many connections when runnung the server for a while.
+        """
+        self._pongtime = time.time()
+        while True:
+            self.ping(b'')
+            yield gen.sleep(2)
+            if time.time() - self._pongtime > 3:
+                self.close(1000, 'Conection timed out (no pong).')
+                return
+    
     def on_pong(self, data):
         """ Called when our ping is returned.
         """
-        print('PONG', data)
+        logging.debug('pong')
+        self._pongtime = time.time()
     
     # --- methdos
     

@@ -4,6 +4,7 @@ Simple web app to monitor the CPU usage of the server process.
 Requires psutil
 """
 
+import os
 import time
 import psutil
 
@@ -31,7 +32,8 @@ class CPUMonitor(ui.Widget):
             with ui.VBox():
                 ui.Label(text='<h3>Server monitor</h3>')
                 self.info = ui.Label(text='...')
-                self.button = ui.Button(text='Do some work')
+                if os.getenv('FLEXX_HOSTNAME', 'localhost') == 'localhost':
+                    self.button = ui.Button(text='Do some work')
                 
                 self.plot = ui.PlotWidget(size=(640, 480), xdata=[], 
                                           yrange=(0, 100), ylabel='CPU usage (%)')
