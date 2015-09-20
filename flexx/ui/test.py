@@ -18,10 +18,10 @@ class MyApp(ui.Widget):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 3
+        TEST = 1
         
         if TEST == 1:
-            with ui.VBox(self, flex=1) as self.hbox1:
+            with ui.VBox(flex=1) as self.hbox1:
                 self.b1 = ui.Button(text='Hola', flex=1)
                 self.b2 = ui.Button(text='Hello world', flex=0)
                 self.b2 = ui.Button(text='Hello world', flex=0)
@@ -99,7 +99,7 @@ class MyApp(ui.Widget):
                 self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
         
         if TEST == 6:
-            with ui.HSplitter(self):
+            with ui.HSplitter():
                 ui.Button(text='Right A', min_size=(120, 0))
                 ui.Button(text='Right B', min_size=(70, 0))
                 ui.Button(text='Right C')
@@ -127,7 +127,14 @@ class MyApp(ui.Widget):
                     ui.MenuItem(text='Cut')
                     ui.MenuItem(text='Copy')
                     ui.MenuItem(text='Paste')
-                
+        
+        if TEST == 9:
+            with ui._splitter.DockLayout():
+                ui.Button(text='AAA')
+                ui.Button(text='BBB')
+                ui.Button(text='CCC')
+                ui.Button(text='DDD')
+                ui.Button(text='EEE')
         #self.win = ui.Window(self, 'A new window!')
 
 

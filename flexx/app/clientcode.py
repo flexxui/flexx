@@ -389,6 +389,10 @@ class ClientCode(object):
                 key = 'index-other'
             self._js[key].append(cls.JS.CODE)
             self._css[key].append(cls.CSS)  # the CSS is '' if not specified for that class
+        
+        # todo: hack: include phosphorjs
+        fname = '/home/almar/dev/build/phosphor-all/phosphor.js'
+        self._js['flexx-ui'].insert(0, open(fname, 'rt').read())
     
     def get_defined_pair_classes(self):
         """ Get a list of all Pair classes that will be defined

@@ -385,7 +385,7 @@ def launch(cls, runtime='xul', **runtime_kwargs):
     assert isinstance(cls, type) and issubclass(cls, Pair)
     serve(cls)
     proxy = Proxy(cls.__name__, runtime, **runtime_kwargs)
-    app = cls(proxy=proxy)
+    app = cls(proxy=proxy, container_id='body')
     proxy._set_pair_instance(app)
     return app
 

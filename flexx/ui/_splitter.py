@@ -23,7 +23,7 @@ from .. import react
 from . import Widget, Layout
 
 
-class Splitter(Layout):
+class _Splitter(Layout):
     """ Abstract splitter class.
     
     The HSplitter  and VSplitter layouts divide the available space
@@ -391,6 +391,42 @@ class Splitter(Layout):
                 self._on_resize()
 
 
+class Splitter(Layout):
+    
+    CSS = """
+        .flx-splitter > .p-Widget {
+            height: 100%;
+        }
+        
+        .p-Widget > .flx-widget {
+            width: 100%;
+            height: 100%;
+        }
+    
+    """
+    
+    class JS:
+        
+        def _create_node(self):
+            self._p = phosphor.splitpanel.SplitPanel()
+            this.node = document.createElement('div')
+            #self.node.appendChild(self._p.node)
+            body.appendChild(this.node)
+            phosphor.widget.attachWidget(self._p, this.node)
+            body.removeChild(this.node)
+            
+            # todo: connect on-resize
+        
+        def _add_child(self, widget):
+            # Wrap our widget in a phosphor widget
+            pwidget = phosphor.widget.Widget()
+            pwidget.node.appendChild(widget.node)
+            widget._pindex = self._p.childCount
+            self._p.addChild(pwidget)
+        
+        def _remove_child(self, widget):
+            self._p.removeChildAt(widget._pindex)
+    
 class HSplitter(Splitter):
     """ Horizontal splitter.
     See Splitter for more information.
@@ -411,3 +447,164 @@ class VSplitter(Splitter):
         def _init(self):
             self._horizontal = False
             super()._init()
+
+
+
+class DockLayout(Layout):
+    CSS = """
+        .flx-docklayout > .ppppp-Widget {
+            height: 100%;
+        }
+        
+        .p-Widget > .flx-widget {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .p-DockTabPanel {
+        padding-right: 2px;
+        padding-bottom: 2px;
+        }
+        
+        
+        .p-DockTabPanel > .p-StackedPanel {
+        padding: 10px;
+        background: white;
+        border: 1px solid #C0C0C0;
+        border-top: none;
+        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        
+        
+        .p-DockTabPanel-overlay {
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(0, 0, 0, 0.6);
+        }
+        
+        
+        .p-TabBar {
+        min-height: 24px;
+        }
+        
+        
+        .p-TabBar-content {
+        bottom: 1px;
+        align-items: flex-end;
+        }
+        
+        
+        .p-TabBar-content > .p-Tab {
+        flex-basis: 125px;
+        max-height: 21px;
+        min-width: 35px;
+        margin-left: -1px;
+        border: 1px solid #C0C0C0;
+        border-bottom: none;
+        padding: 0px 10px;
+        background: #E5E5E5;
+        font: 12px Helvetica, Arial, sans-serif;
+        }
+        
+        
+        .p-TabBar-content > .p-Tab.p-mod-first {
+        margin-left: 0;
+        }
+        
+        
+        .p-TabBar-content > .p-Tab.p-mod-selected {
+        min-height: 24px;
+        background: white;
+        transform: translateY(1px);
+        }
+        
+        
+        .p-TabBar-content > .p-Tab:hover:not(.p-mod-selected) {
+        background: #F0F0F0;
+        }
+        
+        
+        .p-TabBar-content > .p-Tab > span {
+        line-height: 21px;
+        }
+        
+        
+        .p-TabBar-footer {
+        display: block;
+        height: 1px;
+        background: #C0C0C0;
+        }
+        
+        
+        .p-Tab.p-mod-closable > .p-Tab-close-icon {
+        margin-left: 4px;
+        }
+        
+        
+        .p-Tab.p-mod-closable > .p-Tab-close-icon:before {
+        content: '\f00d';
+        font-family: FontAwesome;
+        }
+        
+        
+        .p-Tab.p-mod-docking {
+        font: 12px Helvetica, Arial, sans-serif;
+        height: 24px;
+        width: 125px;
+        padding: 0px 10px;
+        background: white;
+        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        transform: translateX(-50px) translateY(-14px);
+        }
+        
+        
+        .p-Tab.p-mod-docking > span {
+        line-height: 21px;
+        }
+    
+    """
+    
+    class JS:
+        
+        def _create_node(self):
+            self._p = phosphor.dockpanel.DockPanel()
+            if False:
+                self.node = self._p.node
+                phosphor.messaging.sendMessage(self._p, phosphor.widget.MSG_AFTER_ATTACH)  # simulate attachWidget()
+                that = this
+                window.onresize = lambda x=None: that._p.update()
+            else:
+                # Need placeholder that scales along with parent
+                # todo: when we stack phosphor elements, I don't want empty divs in between
+                this.node = document.createElement('div')
+                self.node.appendChild(self._p.node)
+                phosphor.messaging.sendMessage(self._p, phosphor.widget.MSG_AFTER_ATTACH)
+                # body.appendChild(this.node)
+                # phosphor.widget.attachWidget(self._p, this.node)
+                # body.removeChild(this.node)
+            #self._css_class_name(self._css_class_name() + ' ' + self._p.node.className)
+            
+        def _add_child(self, widget):
+            # Wrap our widget in a phosphor widget
+            pwidget = phosphor.widget.Widget()
+            pwidget.node.appendChild(widget.node)
+            widget._pindex = self._p.childCount
+            
+            if 0:#widget.text:
+                tab = phosphor.tabs.Tab(widget.text())
+            else:
+                tab = phosphor.tabs.Tab('xxxx')
+            tab.closable = True
+            phosphor.dockpanel.DockPanel.setTab(pwidget, tab)
+            #self._p.tabProperty.set(pwidget, tab)
+            
+            self._p.addWidget(pwidget)
+        
+        @react.connect('actual_size')
+        def __size_changed(self, size):
+            #phosphor.messaging.sendMessage(self._p, phosphor.widget.ResizeMessage(size[0], size[1]))
+            self._p.setOffsetGeometry(0, 0, *size)
+            #print('setting size', size)
+            #self._p.update()
+            
+        def _remove_child(self, widget):
+            self._p.removeChildAt(widget._pindex)

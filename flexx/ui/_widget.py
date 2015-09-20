@@ -74,12 +74,7 @@ class Widget(Pair):
         if parent is not None and not kwargs.get('_proxy', None):
             kwargs['proxy'] = parent.proxy
         
-        # Provide css class name to JS
-        classes = ['flx-' + c.__name__.lower() for c in self.__class__.mro()]
-        classname = ' '.join(classes[:1-len(Widget.mro())])
-        
         # Pass properties via kwargs
-        kwargs['_css_class_name'] = classname
         kwargs['parent'] = parent
         Pair.__init__(self, **kwargs)
         
@@ -135,7 +130,7 @@ class Widget(Pair):
         #if value is None:
         #    self.update()
     
-    @react.source
+    @react.input
     def container_id(v=''):
         """ The id of the DOM element that contains this widget if
         parent is None.
@@ -194,14 +189,6 @@ class Widget(Pair):
         """
         return str(v)
     
-    # todo: can we calculate this in JS somehow?
-    @react.input
-    def _css_class_name(self, v=''):
-        v = str(v)
-        if getattr(self, '_IS_APP', False):  # set when a widget is made into an app
-            v = 'flx-main-widget ' + v
-        return v
-    
     @react.connect('parent')
     def _parent_changed_py(self, new_parent):
         old_parent = self.parent.last_value
@@ -241,6 +228,18 @@ class Widget(Pair):
             flexx.get('body').appendChild(this.node)
             # todo: allow setting a placeholder DOM element, or any widget parent
             
+            cls_name = self._class_name
+            for i in range(32):  # i.e. a safe while-loop
+                self.node.classList.add('flx-' + cls_name.toLowerCase())  # todo: remove lowercase
+                cls = flexx.classes[cls_name]
+                if not cls:
+                    break
+                cls_name = cls.prototype._base_class._class_name
+                if not cls_name or cls_name == 'Pair':
+                    break
+            else:
+                raise RuntimeError('Error while determining class names')
+            
             # Create closure to check for size changes
             self._stored_size = 0, 0
             self._checking_size = False
@@ -270,7 +269,7 @@ class Widget(Pair):
         #         if not isinstance(w, flexx.classes.Widget):
         #             raise ValueError('Children should be Widget objects.')
         #     return v
-            
+        
         @react.source
         def actual_size(v=(0, 0)):
             """ The real (actual) size of the widget.
@@ -279,10 +278,6 @@ class Widget(Pair):
         
         def _create_node(self):
             this.node = document.createElement('div')
-        
-        @react.connect('_css_class_name')
-        def _css_class_name_changed(self, v):
-            this.node.className = v
         
         def _add_child(self, widget):
             """ Add the DOM element. Called right after the child widget is added. """
@@ -351,6 +346,8 @@ class Widget(Pair):
             if id:
                 el = document.getElementById(id)
                 el.appendChild(this.node)
+            if id == 'body':
+                self.node.classList.add('flx-main-widget')
     
     ## Children and parent
     

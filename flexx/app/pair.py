@@ -158,6 +158,7 @@ class PairMeta(HasSignalsMeta):
             code.append(c)
         # Add this class
         code.append(create_js_signals_class(cls.JS, cls_name, base_class))
+        code[-1] += '%s.prototype._class_name = "%s";\n' % (cls_name, cls.__name__)
         if cls.mro()[1] is react.HasSignals:
             code.append('flexx.serializer.add_reviver("Flexx-Pair", flexx.classes.Pair.prototype.__from_json__);\n')
         return '\n'.join(code)
