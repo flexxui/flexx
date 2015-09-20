@@ -9,6 +9,7 @@ from flexx.util import icon
 import pytest
 from flexx.util.testing import run_tests_if_main
 
+from flexx.webruntime.common import BaseRuntime
 from flexx.webruntime import launch
 from flexx import webruntime
 
@@ -50,21 +51,21 @@ def has_qt():
 ## Misc
 
 def test_iconize():
-    
+
     # Default icon
     icn = webruntime.common.iconize(None)
     assert isinstance(icn, icon.Icon)
-    
+
     fname = os.path.join(tempfile.gettempdir(), 'flexx_testicon.ico')
     icn.write(fname)
-    
+
     # Load from file
     icn = webruntime.common.iconize(fname)
     assert isinstance(icn, icon.Icon)
-    
+
     # Load from icon (noop)
     assert webruntime.common.iconize(icn) is icn
-    
+
     # Error
     pytest.raises(ValueError, webruntime.common.iconize, [])
 
@@ -82,10 +83,10 @@ def test_qtwebkit():
 def test_xul():
     p = launch(URL, 'xul')
     assert p._proc
-    
+
     p.close()
     p.close()  # should do no harm
-    
+
 
 def test_nwjs():
     p = launch(URL, 'nwjs')
@@ -109,7 +110,7 @@ def test_nodejs():
 def test_browser():
     p = launch(URL, 'browser')
     assert p._proc is None
-    
+
 
 def test_browser_ff():
     p = launch(URL, 'browser-firefox')
@@ -126,18 +127,25 @@ def test_selenium():
     assert p._proc is None
     assert p.driver
     p.close()
-    
-    pytest.raises(ValueError, launch, URL, 'selenium') 
+
+    pytest.raises(ValueError, launch, URL, 'selenium')
 
 
 def test_unknown():
     pytest.raises(ValueError, launch, URL, 'foo')
-    
+
 
 def test_default():
     p = launch(URL)
     assert p.__class__.__name__ == 'XulRuntime'
     p.close()
+
+
+def test_base_runtime_must_have_url_in_kwargs():
+    with pytest.raises(KeyError) as excinfo:
+        BaseRuntime()
+
+    assert 'url' in str(excinfo.value)
 
 
 run_tests_if_main()
