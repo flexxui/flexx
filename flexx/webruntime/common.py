@@ -23,7 +23,6 @@ class BaseRuntime(object):
         if not 'url' in kwargs:
             raise KeyError('No url provided for runtime.')
 
-        assert 'url' in kwargs
         self._kwargs = kwargs
         self._proc = None
         self._streamreader = None
