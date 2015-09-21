@@ -394,38 +394,32 @@ class _Splitter(Layout):
 class Splitter(Layout):
     
     CSS = """
-        .flx-splitter > .p-Widget {
-            height: 100%;
-        }
         
-        .p-Widget > .flx-widget {
-            width: 100%;
-            height: 100%;
-        }
     
     """
     
     class JS:
         
         def _create_node(self):
-            self._p = phosphor.splitpanel.SplitPanel()
-            this.node = document.createElement('div')
-            #self.node.appendChild(self._p.node)
-            body.appendChild(this.node)
-            phosphor.widget.attachWidget(self._p, this.node)
-            body.removeChild(this.node)
+            self.p = phosphor.splitpanel.SplitPanel()
+            
+            # this.node = document.createElement('div')
+            # #self.node.appendChild(self.p.node)
+            # body.appendChild(this.node)
+            # phosphor.widget.attachWidget(self.p, this.node)
+            # body.removeChild(this.node)
             
             # todo: connect on-resize
         
-        def _add_child(self, widget):
-            # Wrap our widget in a phosphor widget
-            pwidget = phosphor.widget.Widget()
-            pwidget.node.appendChild(widget.node)
-            widget._pindex = self._p.childCount
-            self._p.addChild(pwidget)
-        
-        def _remove_child(self, widget):
-            self._p.removeChildAt(widget._pindex)
+        # def _add_child(self, widget):
+        #     # Wrap our widget in a phosphor widget
+        #     pwidget = phosphor.widget.Widget()
+        #     pwidget.node.appendChild(widget.node)
+        #     widget._pindex = self.p.childCount
+        #     self.p.addChild(pwidget)
+        # 
+        # def _remove_child(self, widget):
+        #     self.p.removeChildAt(widget._pindex)
     
 class HSplitter(Splitter):
     """ Horizontal splitter.
@@ -434,8 +428,8 @@ class HSplitter(Splitter):
     
     class JS:
         def _init(self):
-            self._horizontal = True
             super()._init()
+            self.p.orientation = phosphor.splitpanel.Orientation.Horizontal
 
 
 class VSplitter(Splitter):
@@ -445,8 +439,8 @@ class VSplitter(Splitter):
     
     class JS:
         def _init(self):
-            self._horizontal = False
             super()._init()
+            self.p.orientation = phosphor.splitpanel.Orientation.Vertical
 
 
 
@@ -456,10 +450,6 @@ class DockLayout(Layout):
             height: 100%;
         }
         
-        .p-Widget > .flx-widget {
-            width: 100%;
-            height: 100%;
-        }
         
         .p-DockTabPanel {
         padding-right: 2px;
@@ -566,45 +556,44 @@ class DockLayout(Layout):
     class JS:
         
         def _create_node(self):
-            self._p = phosphor.dockpanel.DockPanel()
-            if False:
-                self.node = self._p.node
-                phosphor.messaging.sendMessage(self._p, phosphor.widget.MSG_AFTER_ATTACH)  # simulate attachWidget()
-                that = this
-                window.onresize = lambda x=None: that._p.update()
-            else:
-                # Need placeholder that scales along with parent
-                # todo: when we stack phosphor elements, I don't want empty divs in between
-                this.node = document.createElement('div')
-                self.node.appendChild(self._p.node)
-                phosphor.messaging.sendMessage(self._p, phosphor.widget.MSG_AFTER_ATTACH)
-                # body.appendChild(this.node)
-                # phosphor.widget.attachWidget(self._p, this.node)
-                # body.removeChild(this.node)
-            #self._css_class_name(self._css_class_name() + ' ' + self._p.node.className)
+            self.p = phosphor.dockpanel.DockPanel()
+            # if False:
+            #     self.node = self._p.node
+            #     phosphor.messaging.sendMessage(self._p, phosphor.widget.MSG_AFTER_ATTACH)  # simulate attachWidget()
+            #     that = this
+            #     window.onresize = lambda x=None: that._p.update()
+            # else:
+            #     # Need placeholder that scales along with parent
+            #     # todo: when we stack phosphor elements, I don't want empty divs in between
+            #     this.node = document.createElement('div')
+            #     self.node.appendChild(self._p.node)
+            #     phosphor.messaging.sendMessage(self._p, phosphor.widget.MSG_AFTER_ATTACH)
+            #     # body.appendChild(this.node)
+            #     # phosphor.widget.attachWidget(self._p, this.node)
+            #     # body.removeChild(this.node)
+            # #self._css_class_name(self._css_class_name() + ' ' + self._p.node.className)
             
         def _add_child(self, widget):
-            # Wrap our widget in a phosphor widget
-            pwidget = phosphor.widget.Widget()
-            pwidget.node.appendChild(widget.node)
-            widget._pindex = self._p.childCount
             
-            if 0:#widget.text:
-                tab = phosphor.tabs.Tab(widget.text())
+            if not widget.p:
+                pwidget = phosphor.widget.Widget()
+                pwidget.node.appendChild(widget.node)
+                widget._pindex = self.p.childCount
             else:
-                tab = phosphor.tabs.Tab('xxxx')
-            tab.closable = True
+                pwidget = widget.p
+            
+            tab = phosphor.tabs.Tab('xxxx')
             phosphor.dockpanel.DockPanel.setTab(pwidget, tab)
-            #self._p.tabProperty.set(pwidget, tab)
+            #self.p.tabProperty.set(pwidget, tab)
             
-            self._p.addWidget(pwidget)
+            self.p.addWidget(pwidget)
         
-        @react.connect('actual_size')
-        def __size_changed(self, size):
-            #phosphor.messaging.sendMessage(self._p, phosphor.widget.ResizeMessage(size[0], size[1]))
-            self._p.setOffsetGeometry(0, 0, *size)
-            #print('setting size', size)
-            #self._p.update()
-            
-        def _remove_child(self, widget):
-            self._p.removeChildAt(widget._pindex)
+        # @react.connect('actual_size')
+        # def __size_changed(self, size):
+        #     #phosphor.messaging.sendMessage(self._p, phosphor.widget.ResizeMessage(size[0], size[1]))
+        #     self._p.setOffsetGeometry(0, 0, *size)
+        #     #print('setting size', size)
+        #     #self._p.update()
+        #     
+        # def _remove_child(self, widget):
+        #     self._p.removeChildAt(widget._pindex)

@@ -18,8 +18,11 @@ class MyApp(ui.Widget):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 1
+        TEST = 6
         
+        if TEST == 0:
+            self.w = ui.Button(text='Hola', flex=1)
+            
         if TEST == 1:
             with ui.VBox(flex=1) as self.hbox1:
                 self.b1 = ui.Button(text='Hola', flex=1)
@@ -102,10 +105,13 @@ class MyApp(ui.Widget):
             with ui.HSplitter():
                 ui.Button(text='Right A', min_size=(120, 0))
                 ui.Button(text='Right B', min_size=(70, 0))
-                ui.Button(text='Right C')
-                # ui.Button(text='Right D', flex=2)
-                # ui.Button(text='Right E', flex=2)
-                # ui.Button(text='Right F', flex=2)
+                with ui.VSplitter():
+                    ui.Button(text='Right C')
+                    ui.Button(text='Right D')
+                    with ui._splitter.DockLayout():
+                        ui.LineEdit(text='AAA')
+                        ui.Slider()
+                        ui.ProgressBar(value=0.4)
     
         if TEST == 7:
             with ui.HBox(self):

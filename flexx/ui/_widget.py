@@ -43,6 +43,12 @@ def _get_default_parents():
     return _default_parents_per_thread.setdefault(tid, [])
 
 
+class Element(Pair):
+    """ Object that represents an HTML element.
+    """
+    pass  # todo: to e.g. have <b> and <p> objects
+
+
 class Widget(Pair):
     """ Base widget class.
     
@@ -219,18 +225,35 @@ class Widget(Pair):
        height: 100%;
     }
     
+    .p-Widget > .flx-widget, .p-Widget > .flx-widget-filler {
+        top: 0px;
+        bottom: 0px;
+        width: 100%;
+        height: 100%;
+    }
+    
     """
     
     class JS:
         
         def _init(self):
             self._create_node()
-            flexx.get('body').appendChild(this.node)
+            
+            # Allow subclass to just create a node object; 
+            # we'll wrap it in a p-Widget here.
+            if self.p and not self.node:
+                self.node = self.p.node
+            elif not self.p:
+                self.p = phosphor.widget.Widget()
+                self.p.node.appendChild(self.node)
+                self.node.classList.add('flx-widget-filler')
+            
+            #flexx.get('body').appendChild(this.node)
             # todo: allow setting a placeholder DOM element, or any widget parent
             
             cls_name = self._class_name
             for i in range(32):  # i.e. a safe while-loop
-                self.node.classList.add('flx-' + cls_name.toLowerCase())  # todo: remove lowercase
+                self.p.node.classList.add('flx-' + cls_name.toLowerCase())  # todo: remove lowercase
                 cls = flexx.classes[cls_name]
                 if not cls:
                     break
@@ -277,16 +300,42 @@ class Widget(Pair):
             return v[0], v[1]
         
         def _create_node(self):
-            this.node = document.createElement('div')
+            if False:
+                this.node = document.createElement('div')
+            else:
+                self.p = phosphor.widget.Widget()
+                # todo: maybe I should also allow having non-Phosphor widgets; pure HTML, for doc-like stuff.
+                self.node = self.p.node  # todo: quick hack to help transition
+            
         
         def _add_child(self, widget):
             """ Add the DOM element. Called right after the child widget is added. """
+            self.p.addChild(widget.p)
             # May be overloaded in layout widgets
-            self.node.appendChild(widget.node)
+            # if self.p and widget.p:
+            #     self.p.addChild(widget.p)
+            # elif self.p:
+            #     widget.proxy_p = phosphor.widget.Widget()
+            #     widget.proxy_p.node.appendChild(widget.node)
+            #     self.p.addChild(widget.proxy_p)
+            # elif widget.p:
+            #     raise RuntimeError('A Phosphor widget cannot be a child of a common widget.')
+            # else:
+            #     self.node.appendChild(widget.node)
         
         def _remove_child(self, widget):
             """ Remove the DOM element. Called right after the child widget is removed. """
-            self.node.removeChild(widget.node)
+            self.p.removeChild(widget.p)
+            # if self.p and widget.p:
+            #     self.p.removeChild(widget.p)
+            # elif self.p:
+            #     self.p.removeChild(w.proxy_p)
+            #     widget.proxy_p.dispose()
+            #     del widget.proxy_p
+            # elif widget.p:
+            #     raise RuntimeError('What? A Phosphor widget cannot be a child of a common widget.')
+            # else:
+            #     self.node.removeChild(widget.node)
         
         @react.connect('parent')
         def _parent_changed(self, new_parent):
@@ -322,18 +371,18 @@ class Widget(Pair):
             self.node.style.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
             self.node.style.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
         
-        @react.connect('size')
-        def _size_changed(self, size):
-            size = size[:]
-            for i in range(2):
-                if size[i] == 0 or size is None or size is undefined:
-                    size[i] = ''  # Use size defined by CSS
-                elif size[i] > 1:
-                    size[i] = size[i] + 'px'
-                else:
-                    size[i] = size[i] * 100 + 'px'
-            self.node.style.width = size[0]
-            self.node.style.height = size[1]
+        # @react.connect('size')
+        # def _size_changed(self, size):
+        #     size = size[:]
+        #     for i in range(2):
+        #         if size[i] == 0 or size is None or size is undefined:
+        #             size[i] = ''  # Use size defined by CSS
+        #         elif size[i] > 1:
+        #             size[i] = size[i] + 'px'
+        #         else:
+        #             size[i] = size[i] * 100 + 'px'
+        #     self.node.style.width = size[0]
+        #     self.node.style.height = size[1]
         
         @react.connect('bgcolor')
         def _bgcolor_changed(self, color):
@@ -345,9 +394,16 @@ class Widget(Pair):
             #    return
             if id:
                 el = document.getElementById(id)
-                el.appendChild(this.node)
+                if self.p:
+                    if self.p.isAttached:
+                        phosphor.widget.detachWidget(self.p)
+                    phosphor.widget.attachWidget(self.p, el)
+                    p = self.p
+                    window.addEventListener('resize', lambda:p.update())
+                else:
+                    el.appendChild(this.p.node)
             if id == 'body':
-                self.node.classList.add('flx-main-widget')
+                self.p.node.classList.add('flx-main-widget')
     
     ## Children and parent
     

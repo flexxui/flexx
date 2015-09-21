@@ -42,6 +42,8 @@ class Button(Widget):
     .flx-button-xxx {
         background: #fee;
     }
+    
+    
     """
     
     @react.input
@@ -56,8 +58,15 @@ class Button(Widget):
     class JS:
         
         def _create_node(self):
-            this.node = document.createElement('button')
-            #this._proxy_event(this.node, 'click')
+            if True:
+                this.node = document.createElement('button')
+                #this._proxy_event(this.node, 'click')
+            else:
+                self.p = phosphor.widget.Widget()
+                self._node = document.createElement('button')
+                self.p.node.appendChild(self._node)
+                self._node.classList.add('flx-widget-filler')
+                this.node = self.p.node
             
             # testing ...
             #self.connect_event('click', (self, 'ontheclick'))
