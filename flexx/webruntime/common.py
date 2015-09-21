@@ -18,17 +18,19 @@ from ..util.icon import Icon
 class BaseRuntime(object):
     """ Base class for all runtimes.
     """
-    
+
     def __init__(self, **kwargs):
-        assert 'url' in kwargs
+        if not 'url' in kwargs:
+            raise KeyError('No url provided for runtime.')
+
         self._kwargs = kwargs
         self._proc = None
         self._streamreader = None
         atexit.register(self.close)
-        
+
         logging.info('launching %s' % self.__class__.__name__)
         self._launch()
-    
+
     def close(self):
         """ Close the runtime, or kill it if the process does not
         respond. Note that closing does not work when the runtime is a
@@ -51,7 +53,7 @@ class BaseRuntime(object):
                 self._proc.kill()
         # Discart process
         self._proc = None
-    
+
     def _start_subprocess(self, cmd, **env):
         """ For subclasses to easily launch the subprocess.
         """
@@ -59,21 +61,21 @@ class BaseRuntime(object):
         environ.update(env)
         try:
             self._proc = subprocess.Popen(cmd, env=environ,
-                                          stdout=subprocess.PIPE, 
+                                          stdout=subprocess.PIPE,
                                           stderr=subprocess.STDOUT)
         except OSError as err:  # pragma: no cover
             raise RuntimeError('Could not start runtime with command %r:\n%s' %
                                (cmd[0], str(err)))
         self._streamreader = StreamReader(self._proc)
         self._streamreader.start()
-    
+
     def _launch(self):
         raise NotImplementedError()
 
 
 class DesktopRuntime(BaseRuntime):
     """ A base class for runtimes that launch a desktop-like app.
-    
+
     Arguments:
         title (str): Text shown in title bar.
         size (tuple of ints): The size in pixels of the window.
@@ -83,9 +85,9 @@ class DesktopRuntime(BaseRuntime):
             png/ico/icns, depending on what's needed by the runtime and
             platform.
     """
-    
+
     def __init__(self, **kwargs):
-        
+
         icon = kwargs.get('icon', None)
         kwargs['icon'] = iconize(icon)
         BaseRuntime.__init__(self, **kwargs)
@@ -93,23 +95,23 @@ class DesktopRuntime(BaseRuntime):
 
 class StreamReader(threading.Thread):
     """ Reads stdout of process and log
-    
+
     This needs to be done in a separate thread because reading from a
     PYPE blocks.
     """
     def __init__(self, process):
         threading.Thread.__init__(self)
-        
+
         self._process = process
         self._exit = False
         self.setDaemon(True)
         atexit.register(self.stop)
-    
+
     def stop(self, wait=None):  # pragma: no cover
         self._exit = True
         if wait is not None:
             self.join(wait)
-    
+
     def run(self):  # pragma: no cover
         msgs = []
         while not self._exit:
@@ -127,15 +129,15 @@ class StreamReader(threading.Thread):
             msgs.append(msg)
             msgs[:-32] = []
             logging.debug('webruntime: ' + msg)
-        
+
         if self._exit:
             return  # might be interpreter shutdown, don't print
-        
+
         # Poll to get return code. Polling also helps to really
         # clean the process up
         while self._process.poll() is None:
             time.sleep(0.05)
-        
+
         # Notify
         code = self._process.poll()
         if hasattr(self._process, 'we_closed_it') and self._process.we_closed_it:
@@ -143,26 +145,26 @@ class StreamReader(threading.Thread):
         elif not code:
             logging.info('runtime process stopped')
         else:
-            logging.error('runtime process stopped (%i), stdout:\n%s' % 
+            logging.error('runtime process stopped (%i), stdout:\n%s' %
                         (code, '\n'.join(msgs)))
 
 
 def create_temp_app_dir(prefix, suffix='', cleanup=60):
     """ Create a temporary direrctory and return path
-    
+
     The directory will be named "<prefix>_<timestamp>_<pid>_<suffix>".
     Will clean up directories with the same prefix which are older than
     cleanup seconds.
     """
-    
+
     # Select main dir
     maindir = os.path.join(appdata_dir('flexx'), 'temp_apps')
     if not os.path.isdir(maindir):  # pragma: no cover
         os.mkdir(maindir)
-    
+
     prefix = prefix.strip(' _-') + '_'
     suffix = '' if not suffix else '_' + suffix.strip(' _-')
-    
+
     # Clear any old files
     for dname in os.listdir(maindir):
         if dname.startswith(prefix):
@@ -177,7 +179,7 @@ def create_temp_app_dir(prefix, suffix='', cleanup=60):
                         shutil.rmtree(dirname)
                     except (OSError, IOError):
                         pass
-    
+
     # Return new dir
     id = '%i_%i' % (time.time(), os.getpid())
     path = os.path.join(maindir, prefix + id + suffix)
@@ -191,14 +193,14 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
     Get the path to the application directory, where applications are allowed
     to write user specific files (e.g. configurations). For non-user specific
     data, consider using common_appdata_dir().
-    If appname is given, a subdir is appended (and created if necessary). 
+    If appname is given, a subdir is appended (and created if necessary).
     If roaming is True, will prefer a roaming directory (Windows Vista/7).
     If macAsLinux is True, will return the Linux-like location on Mac.
     """
-    
+
     # Define default user directory
     userDir = os.path.expanduser('~')
-    
+
     # Get system app data dir
     path = None
     if sys.platform.startswith('win'):
@@ -209,8 +211,8 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
     # On Linux and as fallback
     if not (path and os.path.isdir(path)):
         path = userDir
-    
-    # Maybe we should store things local to the executable (in case of a 
+
+    # Maybe we should store things local to the executable (in case of a
     # portable distro or a frozen application that wants to be portable)
     prefix = sys.prefix
     if getattr(sys, 'frozen', None): # See application_dir() function
@@ -226,7 +228,7 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
             else:
                 path = localpath
                 break
-    
+
     # Get path specific for this app
     if appname:
         if path == userDir:
@@ -234,7 +236,7 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
         path = os.path.join(path, appname)
         if not os.path.isdir(path):  # pragma: no cover
             os.mkdir(path)
-    
+
     # Done
     return path
 
@@ -248,7 +250,7 @@ x  xx xx x x x x
 
  xx   xxx   xxx
 x  x  x  x  x  x
-xxxx  xxx   xxx 
+xxxx  xxx   xxx
 x  x  x     x
 """
 
@@ -264,7 +266,7 @@ def default_icon():
                 if c == 'x':
                     i = (y * 16 + x) * 4
                     im[i:i+4] = [0, 0, 150, 255]
-        
+
     icon = Icon()
     icon.add(im)
     return icon
@@ -280,6 +282,6 @@ def iconize(icon):
     elif isinstance(icon, str):
         icon = Icon(icon)
     else:
-        raise ValueError('Icon must be an Icon, a filename or None, not %r' % 
+        raise ValueError('Icon must be an Icon, a filename or None, not %r' %
                          type(icon))
     return icon
