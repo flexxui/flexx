@@ -235,6 +235,22 @@ class TestExceptions:
             return undefined
         
         assert evaljs(py2js(catchtest, 'f') + 'f(1)').endswith('foo')
+    
+    def test_finally(self):
+        
+        def catchtest(x):
+            try:
+                
+                try:
+                    raise ValueError('foo')
+                finally:
+                    print('xx')
+                    
+            except Exception as err:
+                print('yy')
+            return undefined
+        
+        assert evaljs(py2js(catchtest, 'f') + 'f(1)').endswith('xx\nyy')
 
 
 def func1():
