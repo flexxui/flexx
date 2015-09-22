@@ -490,7 +490,7 @@ def test_circular(Cls):
 
 
 # todo: this is not pretty. Do we need it? Can this be done differently?
-class Temperature(HasSignals):  # to avoid round errors, the relation is simplified
+class Temperature1(HasSignals):  # to avoid round errors, the relation is simplified
     @input('f')
     def c(v=0, f=None):
         if f is None:
@@ -505,8 +505,8 @@ class Temperature(HasSignals):  # to avoid round errors, the relation is simplif
         else:
             return c + 32
 
-@run_in_both(Temperature, "[0, 32, '', 10, 42, '', -22, 10]")
-def test_circular_temperature(Cls):
+@run_in_both(Temperature1, "[0, 32, '', 10, 42, '', -22, 10]")
+def test_circular_temperature1(Cls):
     s = Cls()
     r = []
     r.append(s.c())
@@ -539,6 +539,35 @@ class Temperature2(HasSignals):  # to avoid round erros, the relation is simplif
     @connect('c')
     def _c(self, v):
         self.f(v-32)
+
+
+class Temperature3(HasSignals):
+    
+    @input
+    def c(self, v=0):
+        self.f(v+32)
+        return v
+    
+    @input
+    def f(self, v):
+        self.c(v-32)
+        return v
+
+@run_in_both(Temperature3, "[0, 32, '', 10, 42, '', -22, 10]")
+def test_circular_temperature3(Cls):
+    s = Cls()
+    r = []
+    r.append(s.c())
+    r.append(s.f())
+    r.append('')
+    s.c(10)
+    r.append(s.c())
+    r.append(s.f())
+    r.append('')
+    s.f(10)
+    r.append(s.c())
+    r.append(s.f())
+    return r
 
 
 class Name2(Name):

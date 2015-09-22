@@ -120,9 +120,10 @@ class Signal(object):
         self._last_timestamp = 0
         self._status = 3  # 0: ok, 1: out of date, 2: uninitialized, 3: unconnected
         
-        # Connecting
+        # Connecting - when on a class, we let the instance connect later
         self._not_connected = 'No connection attempt yet.'
-        self.connect(False)
+        if ob is None:
+            self.connect(False)
 
     def __repr__(self):
         des = '-descriptor' if self._class_desciptor else ''
@@ -426,8 +427,8 @@ class Signal(object):
                 statuses.append(s._status)
         self._status = max(statuses)
         # Update self
-        if self._name == 'number2':
-            pass
+        # if self._name == 'number2': WHAT? LEFTOVER DEBUG CODE?
+        #     pass
         if self._active and self._status == 1:
             count = self._count
             self._save_update()  # this can change our status to 0 or 2 or 3
@@ -447,7 +448,9 @@ class SourceSignal(Signal):
     """ A signal that typically has no upstream signals, but produces
     values by itself.
     """
-
+    
+    _is_being_set = False
+    
     def _update_value(self):
         # Try to initialize, func might not have a default value
         if self._timestamp == 0:
@@ -476,14 +479,20 @@ class SourceSignal(Signal):
     def _set(self, value):
         """ Method for the developer to set the source signal.
         """
-        value = self._call_func(value)
-        self._set_value(value)
-        if value is undefined:
-            return  # no need to update
-        for signal in self._downstream_reconnect[:]:  # list may be modified
-            signal.connect(False)
-        for signal in self._downstream:
-            signal._set_status(1, self)  # do not set status of *this* signal!
+        if self._is_being_set:
+            return
+        self._is_being_set = True
+        try:
+            value = self._call_func(value)
+            self._set_value(value)
+            if value is undefined:
+                return  # no need to update
+            for signal in self._downstream_reconnect[:]:  # list may be modified
+                signal.connect(False)
+            for signal in self._downstream:
+                signal._set_status(1, self)  # do not set status of *this* signal!
+        finally:
+            self._is_being_set = False
 
 
 class InputSignal(SourceSignal):
