@@ -13,8 +13,9 @@ import json
 import threading
 
 from .. import react
-from ..app import Pair, get_instance_by_id
+from ..app import Pair, get_instance_by_id, no_sync
 from ..app.serialize import serializer
+from ..react import undefined
 
 
 def _check_two_scalars(name, v):
@@ -144,22 +145,63 @@ class Widget(Pair):
         return str(v)
     
     @react.input
-    def parent(v=None):
+    def parent(self, new_parent=None):
         """ The parent widget, or None if it has no parent.
         """
-        if v is None or isinstance(v, Widget):
-            return v
-        else:
+        # A note on how we do parenting: The parent and children signals
+        # are mutually dependent; changing either will also change the
+        # other (though on another widget). To prevent an infinite loop
+        # we use the feature that we can set other signals directly
+        # from the input function: while we are inside this function,
+        # the signal is "locked". In JS we perform the exact same trick.
+        # To sync Python and JS, we only sync the parent signal,
+        # otherwise we'd create a loop. We use the ``no_sync``
+        # decorator. In the end, we can set the parent and children
+        # signal, and the other signal is updated immediately. This
+        # works in JS and Py.
+        
+        old_parent = self.parent._value  # has not been set yet
+        
+        if new_parent is old_parent:
+            return undefined
+        if not (new_parent is None or isinstance(new_parent, Widget)):
             raise ValueError('parent must be a widget or None')
+        
+        if old_parent is undefined:
+            return new_parent
+        
+        if old_parent is not None:
+            children = list(old_parent.children())
+            while self in children:
+                children.remove(self)
+            old_parent.children._set(children)
+        if new_parent is not None:
+            children = list(new_parent.children())
+            children.append(self)
+            new_parent.children._set(children)
+        
+        return new_parent
     
-    # Note that both the Py and JS have their own children signal
-    # todo: prevent unnecesary updates
-    @react.source
-    def children(v=()):
+    @no_sync
+    @react.input
+    def children(self, new_children=()):
         """ The child widgets of this widget.
         """
-        assert all([isinstance(w, Widget) for w in v])
-        return tuple(v)
+        old_children = self.children._value
+        
+        if new_children == old_children:
+            return undefined
+        if not all([isinstance(w, Widget) for w in new_children]):
+            raise ValueError('All children must be widget objects.')
+        
+        if old_children is not undefined:
+            for child in old_children:
+                if child not in new_children:
+                    child.parent(None)
+        for child in new_children:
+            child.parent(self)
+        
+        return tuple(new_children)
     
     @react.input
     def flex(v=0):
@@ -195,19 +237,6 @@ class Widget(Pair):
         """
         return str(v)
     
-    @react.connect('parent')
-    def _parent_changed_py(self, new_parent):
-        old_parent = self.parent.last_value
-        if old_parent is not None:
-            children = list(old_parent.children()[:])
-            while self in children:
-                children.remove(self)
-            old_parent.children._set(children)
-        if new_parent is not None:
-            children = list(new_parent.children()[:])
-            children.append(self)
-            new_parent.children._set(children)
-    
     CSS = """
     
     .flx-container {
@@ -225,7 +254,8 @@ class Widget(Pair):
        height: 100%;
     }
     
-    .p-Widget > .flx-widget, .p-Widget > .flx-widget-filler {
+    /*.p-Widget > .flx-widget, */
+    .p-Widget > .flx-widget-filler {
         top: 0px;
         bottom: 0px;
         width: 100%;
@@ -248,6 +278,16 @@ class Widget(Pair):
                 self.p.node.appendChild(self.node)
                 self.node.classList.add('flx-widget-filler')
             
+            that = this
+            class SizeNotifier:
+                def filterMessage(handler, msg):
+                    if 'child-added' == msg._type:
+                        print(msg)
+                    elif msg._type == 'resize':
+                        that.actual_size._set([msg.width, msg.height])
+                    return False
+            phosphor.messaging.installMessageFilter(self.p, SizeNotifier())
+            
             #flexx.get('body').appendChild(this.node)
             # todo: allow setting a placeholder DOM element, or any widget parent
             
@@ -263,35 +303,7 @@ class Widget(Pair):
             else:
                 raise RuntimeError('Error while determining class names')
             
-            # Create closure to check for size changes
-            self._stored_size = 0, 0
-            self._checking_size = False
-            that = this
-            def _check_resize():
-                # Re-raise in next event loop iteration
-                if not that._checking_size:
-                    setTimeout(_check_resize_now, 0.001)
-                    that._checking_size = True
-            def _check_resize_now():
-                that._checking_size = False
-                node = that.node
-                widthChanged = (that._stored_size[0] != node.offsetWidth)
-                heightChanged = (that._stored_size[1] != node.offsetHeight)
-                if widthChanged or heightChanged:
-                    that.actual_size._set([node.offsetWidth, node.offsetHeight])
-            self._check_resize = _check_resize
-            self._check_resize()
-            
             super()._init()
-        
-        # @react.source
-        # def children(v=()):
-        #     """ The child widgets of this widget.
-        #     """
-        #     for w in v:
-        #         if not isinstance(w, flexx.classes.Widget):
-        #             raise ValueError('Children should be Widget objects.')
-        #     return v
         
         @react.source
         def actual_size(v=(0, 0)):
@@ -306,7 +318,74 @@ class Widget(Pair):
                 self.p = phosphor.widget.Widget()
                 # todo: maybe I should also allow having non-Phosphor widgets; pure HTML, for doc-like stuff.
                 self.node = self.p.node  # todo: quick hack to help transition
+        
+        @react.input
+        def parent(self, new_parent):  # note: no default value
+            old_parent = self.parent._value
             
+            if new_parent is old_parent:
+                return undefined
+            if not (new_parent is None or new_parent.__signals__):
+               raise ValueError('parent must be a widget or None')
+            
+            if old_parent is undefined:
+                return new_parent
+            
+            if old_parent is not None:
+                children = list(old_parent.children())
+                while self in children:
+                    children.remove(self)
+                old_parent.children._set(children)
+            if new_parent is not None:
+                children = list(new_parent.children())
+                children.append(self)
+                new_parent.children._set(children)
+            
+            return new_parent
+        
+        @no_sync
+        @react.input
+        def children(self, new_children=()):
+            old_children = self.children._value
+            
+            # todo: PyScript support deep comparisons
+            #if new_children == old_children:
+            #    return undefined
+            if old_children is not undefined and len(new_children) == len(old_children):
+                for i in range(len(new_children)):
+                    if new_children[i] != old_children[i]:
+                        break
+                else:
+                    return undefined
+            
+            if not all([bool(w.__signals__) for w in new_children]):
+                raise ValueError('All children must be widget objects.')
+            
+            if old_children is not undefined:
+                for child in old_children:
+                    if child not in new_children:
+                        child.parent(None)
+            for child in new_children:
+                child.parent(self)
+            
+            return tuple(new_children)
+        
+        @react.connect('children')
+        def _children_changed(self, new_children):
+            old_children = self.children.last_value
+            if not old_children:
+                old_children = []
+            
+            i_ok = 0
+            for i in range(min(len(new_children), len(old_children))):
+                if new_children[i] is not old_children[i]:
+                    break
+                i_ok = i
+            
+            for child in old_children[i_ok:]:
+                self._remove_child(child)
+            for child in new_children[i_ok:]:
+                self._add_child(child)
         
         def _add_child(self, widget):
             """ Add the DOM element. Called right after the child widget is added. """
@@ -337,53 +416,11 @@ class Widget(Pair):
             # else:
             #     self.node.removeChild(widget.node)
         
-        @react.connect('parent')
-        def _parent_changed(self, new_parent):
-            old_parent = self.parent.last_value
-            if old_parent is not None and old_parent is not undefined:
-                children = old_parent.children()[:]
-                while self in children:
-                    children.remove(self)
-                old_parent.children._set(children)  # we set it directly
-                old_parent._remove_child(self)
-            if new_parent is not None:
-                children = new_parent.children()[:]
-                children.append(self)
-                new_parent.children._set(children)
-                new_parent._add_child(self)
-        
-        @react.connect('parent.actual_size')
-        def _keep_size_up_to_date1(self, size):
-            #print(self._id, 'resize 1', size)
-            self._check_resize()
-        
-        @react.connect('parent', 'container_id')
-        def _keep_size_up_to_date2(self, parent, id):
-            #print(self._id, 'resize2 ', parent, id)
-            if parent is None:
-                window.addEventListener('resize', self._check_resize, False)
-            else:
-                window.removeEventListener('resize', self._check_resize, False)
-            self._check_resize()
-        
         @react.connect('pos')
         def _pos_changed(self, pos):
             self.node.style.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
             self.node.style.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
-        
-        # @react.connect('size')
-        # def _size_changed(self, size):
-        #     size = size[:]
-        #     for i in range(2):
-        #         if size[i] == 0 or size is None or size is undefined:
-        #             size[i] = ''  # Use size defined by CSS
-        #         elif size[i] > 1:
-        #             size[i] = size[i] + 'px'
-        #         else:
-        #             size[i] = size[i] * 100 + 'px'
-        #     self.node.style.width = size[0]
-        #     self.node.style.height = size[1]
-        
+       
         @react.connect('bgcolor')
         def _bgcolor_changed(self, color):
             self.node.style['background-color'] = color
@@ -404,34 +441,3 @@ class Widget(Pair):
                     el.appendChild(this.p.node)
             if id == 'body':
                 self.p.node.classList.add('flx-main-widget')
-    
-    ## Children and parent
-    
-    # @property
-    # def children(self):
-    #     return self._children
-    # 
-    # def _add_child(self, widget):
-    #     pass  # special hook to introduce a child inside this widget
-    # 
-    # def _remove_child(self, widget):
-    #     pass  # special hook to remove a child out from this widget
-    # 
-    # 
-    # @react.connect('parent')
-    # def _parent_changed(self, new_parent):
-    #     old_parent = self.parent.previous_value
-    #     if old_parent is not None:
-    #         children = list(old_parent.children())
-    #         while self in children:
-    #             children.remove(self)
-    #         #old_parent._set_prop('children', children)  # bypass readonly
-    #         old_parent.children._set(children)
-    #         old_parent._remove_child(self)
-    #     if new_parent is not None:
-    #         children = list(new_parent.children())
-    #         children.append(self)
-    #         #new_parent._set_prop('children', children)
-    #         new_parent.children._set(children)
-    #         new_parent._add_child(self)
-    

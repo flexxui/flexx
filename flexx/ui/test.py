@@ -21,7 +21,7 @@ class MyApp(ui.Widget):
         TEST = 6
         
         if TEST == 0:
-            self.w = ui.Button(text='Hola', flex=1)
+            ui.Button(text='Hola', flex=1)
             
         if TEST == 1:
             with ui.VBox(flex=1) as self.hbox1:
@@ -103,15 +103,15 @@ class MyApp(ui.Widget):
         
         if TEST == 6:
             with ui.HSplitter():
-                ui.Button(text='Right A', min_size=(120, 0))
-                ui.Button(text='Right B', min_size=(70, 0))
+                self.a = ui.Button(text='Right A', min_size=(120, 0))
+                self.b = ui.Button(text='Right B', min_size=(70, 0))
                 with ui.VSplitter():
-                    ui.Button(text='Right C')
-                    ui.Button(text='Right D')
+                    self.c = ui.Button(text='Right C')
+                    self.d = ui.Button(text='Right D')
                     with ui._splitter.DockLayout():
-                        ui.LineEdit(text='AAA')
                         ui.Slider()
-                        ui.ProgressBar(value=0.4)
+                        ui.LineEdit(text='AAA')
+                        self.g = ui.ProgressBar(value=0.4)
     
         if TEST == 7:
             with ui.HBox(self):

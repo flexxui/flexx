@@ -572,7 +572,7 @@ class DockLayout(Layout):
             #     # phosphor.widget.attachWidget(self._p, this.node)
             #     # body.removeChild(this.node)
             # #self._css_class_name(self._css_class_name() + ' ' + self._p.node.className)
-            
+        
         def _add_child(self, widget):
             
             if not widget.p:
