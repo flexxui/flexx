@@ -105,6 +105,9 @@ class TestExpressions:
         
         assert evalpy('"bar" in {"foo": 3}') == 'false'
         assert evalpy('"foo" in {"foo": 3}') == 'true'
+        
+        # was a bug
+        assert evalpy('not (1 is null and 1 is null)') == 'true'
     
     def test_truthfulness_of_basic_types(self):
         # Numbers
