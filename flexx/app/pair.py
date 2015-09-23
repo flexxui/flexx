@@ -37,7 +37,11 @@ def get_instance_by_id(id):
     return Pair._instances.get(id, None)
 
 
-import json
+def no_sync(signal):
+    """ Decorator for signals that should not be synced between Py and JS.
+    """
+    signal.flags['no_sync'] = True
+    return signal
 
 
 class JSSignal(react.SourceSignal):
@@ -292,13 +296,17 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         signal = getattr(self, name)
         value = serializer.loads(text)
         self._seid_from_js = esid  # to send back to js
+        # if isinstance(signal, react.InputSignal) and signal.value == value:
+        # #if name in ('parent', 'children') and signal.value == value:
+        #     pass  # input signal already has this value
+        # else:
         signal._set(value)
     
     def _signal_changed(self, signal):
         # Set esid to 0 if it originates from Py, or to what we got from JS
         esid = self._seid_from_js
         self._seid_from_js = 0
-        if not isinstance(signal, JSSignal):
+        if not isinstance(signal, JSSignal) and not signal.flags.get('no_sync', False):
             #txt = json.dumps(signal.value)
             txt = serializer.saves(signal.value)
             cmd = 'flexx.instances.%s._set_signal_from_py(%r, %r, %r);' % (self._id, signal.name, txt, esid)
@@ -367,8 +375,10 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
                 return
             signal._esid = signal._count  # mark signal as just updated by us
             # todo: what signals do we sync? all but private signals? or only linked?
-            # signals like `children` should always sync, signals like a 100Hz timer not, mouse_pos maybe neither unless linked against
+            # signals like `text` should always sync, signals like a 100Hz timer not, mouse_pos maybe neither unless linked against
             #if signal.signal_type == 'PyInputSignal' or self._linked_signals[signal._name]:
+            if signal.flags.no_sync:
+                return
             if signal.signal_type != 'PySignal' and not signal._name.startswith('_'):
                 #txt = JSON.stringify(signal.value)
                 txt = flexx.serializer.saves(signal.value)
