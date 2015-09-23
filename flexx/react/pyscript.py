@@ -57,6 +57,7 @@ class HasSignalsJS:
             func._name = name
             creator = self['_create_' + func._signal_type]
             signal = creator.call(self, func, func._upstream)
+            signal.flags = func.flags
             signal.signal_type = func._signal_type
             self._create_property(self, name, '_' + name + '_signal', signal)
     
@@ -239,6 +240,9 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             t = '%s.prototype.%s._signal_type = %r;\n'
             signal_type = val.__class__.__name__
             funcs_code.append(t % (cls_name, funcname, signal_type))
+            # Add flags
+            t = '%s.prototype.%s.flags = JSON.parse(%r);\n'
+            funcs_code.append(t % (cls_name, funcname, json.dumps(val.flags)))
         elif callable(val):
             code = py2js(val, cls_name + '.prototype.' + name)
             code = code.replace('super()', base_class)  # fix super

@@ -75,11 +75,12 @@ class Signal(object):
     _IS_SIGNAL = True  # poor man's isinstance in JS (because class name mangling)
     _active = True
     
-    def __init__(self, func, upstream, frame=None, ob=None):
+    def __init__(self, func, upstream, frame=None, ob=None, flags=None):
         # Check and set func
         assert callable(func)
         self._func = func
         self._name = func.__name__
+        self._flags = {} if flags is None else dict(flags)
         
         # Set docstring this appears correct in sphinx docs
         self.__doc__ = '*%s*: %s' % (self.__class__.__name__, func.__doc__ or self._name)
@@ -127,7 +128,7 @@ class Signal(object):
 
     def __repr__(self):
         des = '-descriptor' if self._class_desciptor else ''
-        conn = '(not connected)' if self.not_connected else 'with value %r' % self._value
+        conn = '(not connected)' if self.not_connected else 'with value %s' % repr(self._value)
         conn = '' if des else conn 
         return '<%s%s %r %s at 0x%x>' % (self.__class__.__name__, des, self._name, 
                                          conn, id(self))
@@ -146,6 +147,13 @@ class Signal(object):
         of the function that this signal wraps.
         """
         return self._name
+    
+    @property
+    def flags(self):
+        """ A dictionary of flags. Flexx.react does not use these directly,
+        but systems based on Flexx.react may.
+        """
+        return self._flags
     
     ## Behavior for when attached to a class
     
@@ -166,7 +174,7 @@ class Signal(object):
         except AttributeError:
             sys._getframe()
             frame = ObjectFrame(instance, self._frame.f_back)
-            new = self.__class__(self._func, self._upstream_given, frame, instance)
+            new = self.__class__(self._func, self._upstream_given, frame, instance, self.flags)
             setattr(instance, private_name, new)
             return new
     
