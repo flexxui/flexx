@@ -60,10 +60,10 @@ class Slider(Widget):
     class JS:
     
         def _create_node(self):
-            self.node = document.createElement('input')
-            self.node.type = 'range'
+            self.p = phosphor.createWidget('input')
+            self.p.node.type = 'range'
             that = self
-            this.node.addEventListener('input', lambda ev: that.user_value._set(that.node.value), False)
+            this.p.node.addEventListener('input', lambda ev: that.user_value._set(that.node.value), False)
             #if IE10:
             #    this.node.addEventListener('change', lambda ev: that.user_value._set(that.node.value), False)
             

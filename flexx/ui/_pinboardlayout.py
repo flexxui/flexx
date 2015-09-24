@@ -34,4 +34,4 @@ class PinboardLayout(Layout):
     
     class JS:
         def _create_node(self):
-            this.node = document.createElement('div')
+            self.p = phosphor.createWidget('div')

@@ -36,31 +36,31 @@ class MyApp(ui.Widget):
                 with ui.HBox():
                     ui.Widget(flex=1)
                     
-                    with ui.VBox(flex=0) as self.vbox:
+                    with ui.VBox(flex=1) as self.vbox:
                         
                         ui.Label(text='Flex 0 0 0', flex=0)
-                        with ui.HBox(flex=0) as self.hbox2:
+                        with ui.HBox(flex=0) as self.hbox1:
                             self.b1 = ui.Button(text='Hola', flex=0)
                             self.b2 = ui.Button(text='Hello world', flex=0)
                             self.b3 = ui.Button(text='Foo bar', flex=0)
                         
                         ui.Label(text='Flex 1 0 3', flex=0)
-                        with ui.HBox(flex=0) as self.hbox1:
+                        with ui.HBox(flex=0) as self.hbox2:
                             self.b1 = ui.Button(text='Hola', flex=1)
                             self.b2 = ui.Button(text='Hello world', flex=0)
                             self.b3 = ui.Button(text='Foo bar', flex=3)
                         
                         ui.Label(text='margin 10 (around layout)', flex=0)
-                        with ui.HBox(flex=0, margin=10) as self.hbox2:
-                            self.b1 = ui.Button(text='Hola', flex=0)
-                            self.b2 = ui.Button(text='Hello world', flex=0)
-                            self.b3 = ui.Button(text='Foo bar', flex=0)
+                        with ui.HBox(flex=0, margin=10) as self.hbox3:
+                            self.b1 = ui.Button(text='Hola', flex=1)
+                            self.b2 = ui.Button(text='Hello world', flex=1)
+                            self.b3 = ui.Button(text='Foo bar', flex=1)
                         
                         ui.Label(text='spacing 10 (inter-widget)', flex=0)
-                        with ui.HBox(flex=0, spacing=10) as self.hbox2:
-                            self.b1 = ui.Button(text='Hola', flex=0)
-                            self.b2 = ui.Button(text='Hello world', flex=0)
-                            self.b3 = ui.Button(text='Foo bar', flex=0)
+                        with ui.HBox(flex=0, spacing=10) as self.hbox3:
+                            self.b1 = ui.Button(text='Hola', flex=1)
+                            self.b2 = ui.Button(text='Hello world', flex=1)
+                            self.b3 = ui.Button(text='Foo bar', flex=1)
                         
                         ui.Widget(flex=1)
                         ui.Label(text='Note the spacer Widget above', flex=0)
@@ -135,12 +135,14 @@ class MyApp(ui.Widget):
                     ui.MenuItem(text='Paste')
         
         if TEST == 9:
-            with ui._splitter.DockLayout():
-                ui.Button(text='AAA')
-                ui.Button(text='BBB')
-                ui.Button(text='CCC')
-                ui.Button(text='DDD')
-                ui.Button(text='EEE')
+            with ui.VBox():
+                ui.Button(text='AAA', flex=0)
+                with ui.HSplitter(flex=1):
+                    ui.Button(text='CCC')
+                    ui.Button(text='DDD')
+                    self.e = ui.Button(text='EEE')
+                ui.Button(text='BBB', flex=1)
+                         
         #self.win = ui.Window(self, 'A new window!')
 
 

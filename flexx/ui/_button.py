@@ -39,8 +39,8 @@ class Button(Widget):
     """
     
     CSS = """
-    .flx-button-xxx {
-        background: #fee;
+    .flx-buttonn {
+        background: #f00;
     }
     
     
@@ -58,21 +58,11 @@ class Button(Widget):
     class JS:
         
         def _create_node(self):
-            if True:
-                this.node = document.createElement('button')
-                #this._proxy_event(this.node, 'click')
-            else:
-                self.p = phosphor.widget.Widget()
-                self._node = document.createElement('button')
-                self.p.node.appendChild(self._node)
-                self._node.classList.add('flx-widget-filler')
-                this.node = self.p.node
-            
-            # testing ...
-            #self.connect_event('click', (self, 'ontheclick'))
+            this.p = phosphor.createWidget('button')
+            node = this.p.node
             that = this
-            this.node.addEventListener('mousedown', lambda ev: that.mouse_down._set(True), False)
-            this.node.addEventListener('mouseup', lambda ev: that.mouse_down._set(False), False)
+            node.addEventListener('mousedown', lambda ev: that.mouse_down._set(True), False)
+            node.addEventListener('mouseup', lambda ev: that.mouse_down._set(False), False)
         
         @react.connect('text')
         def _text_changed(self, text):

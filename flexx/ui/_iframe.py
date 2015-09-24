@@ -23,7 +23,7 @@ class IFrame(Widget):
     class JS:
         
         def _create_node(self):
-            self.node = document.createElement('iframe')
+            self.p = phosphor.createWidget('iframe')
         
         @react.connect('url')
         def _update_url(self, url):

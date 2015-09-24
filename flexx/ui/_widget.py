@@ -254,46 +254,29 @@ class Widget(Pair):
        height: 100%;
     }
     
-    /*.p-Widget > .flx-widget, */
-    .p-Widget > .flx-widget-filler {
-        top: 0px;
-        bottom: 0px;
-        width: 100%;
-        height: 100%;
-    }
-    
     """
     
     class JS:
         
         def _init(self):
             self._create_node()
-            
-            # Allow subclass to just create a node object; 
-            # we'll wrap it in a p-Widget here.
-            if self.p and not self.node:
-                self.node = self.p.node
-            elif not self.p:
-                self.p = phosphor.widget.Widget()
-                self.p.node.appendChild(self.node)
-                self.node.classList.add('flx-widget-filler')
+            self.node = self.p.node
             
             that = this
             class SizeNotifier:
                 def filterMessage(handler, msg):
-                    if 'child-added' == msg._type:
-                        print(msg)
-                    elif msg._type == 'resize':
-                        that.actual_size._set([msg.width, msg.height])
+                    if msg._type == 'resize':
+                        that._update_actual_size()
                     return False
-            phosphor.messaging.installMessageFilter(self.p, SizeNotifier())
+            if self.p:
+                phosphor.messaging.installMessageFilter(self.p, SizeNotifier())
             
             #flexx.get('body').appendChild(this.node)
             # todo: allow setting a placeholder DOM element, or any widget parent
             
             cls_name = self._class_name
             for i in range(32):  # i.e. a safe while-loop
-                self.p.node.classList.add('flx-' + cls_name.toLowerCase())  # todo: remove lowercase
+                self.node.classList.add('flx-' + cls_name.toLowerCase())  # todo: remove lowercase
                 cls = flexx.classes[cls_name]
                 if not cls:
                     break
@@ -305,19 +288,27 @@ class Widget(Pair):
             
             super()._init()
         
+        # todo: rename to current_size
+        # todo: its hard to keep track of this reliably. a Button in an hbox can change size when the text of another button changes.
+        # todo: maybe actual_size should be something for layouts only? though they suffer from same limitations
         @react.source
         def actual_size(v=(0, 0)):
             """ The real (actual) size of the widget.
             """
             return v[0], v[1]
         
+        @react.connect('parent', 'container_id')
+        def __update_actual_size(self, p, c):
+            self._update_actual_size()
+        
+        def _update_actual_size(self):
+            n = self.node
+            cursize = self.actual_size()
+            if cursize[0] != n.offsetWidth or cursize[1] !=n.offsetHeight:
+                self.actual_size._set([n.offsetWidth, n.offsetHeight])
+        
         def _create_node(self):
-            if False:
-                this.node = document.createElement('div')
-            else:
-                self.p = phosphor.widget.Widget()
-                # todo: maybe I should also allow having non-Phosphor widgets; pure HTML, for doc-like stuff.
-                self.node = self.p.node  # todo: quick hack to help transition
+            self.p = phosphor.createWidget('div')
         
         @react.input
         def parent(self, new_parent):  # note: no default value
@@ -390,10 +381,11 @@ class Widget(Pair):
         def _add_child(self, widget):
             """ Add the DOM element. Called right after the child widget is added. """
             self.p.addChild(widget.p)
-            # May be overloaded in layout widgets
+            
+            # # May be overloaded in layout widgets
             # if self.p and widget.p:
             #     self.p.addChild(widget.p)
-            # elif self.p:
+            # elif 1:# self.p:  # need_phosphor_children
             #     widget.proxy_p = phosphor.widget.Widget()
             #     widget.proxy_p.node.appendChild(widget.node)
             #     self.p.addChild(widget.proxy_p)
@@ -405,10 +397,11 @@ class Widget(Pair):
         def _remove_child(self, widget):
             """ Remove the DOM element. Called right after the child widget is removed. """
             self.p.removeChild(widget.p)
+            
             # if self.p and widget.p:
             #     self.p.removeChild(widget.p)
-            # elif self.p:
-            #     self.p.removeChild(w.proxy_p)
+            # elif 1:# self.p:
+            #     self.p.removeChild(widget.proxy_p)
             #     widget.proxy_p.dispose()
             #     del widget.proxy_p
             # elif widget.p:
@@ -416,10 +409,11 @@ class Widget(Pair):
             # else:
             #     self.node.removeChild(widget.node)
         
-        @react.connect('pos')
-        def _pos_changed(self, pos):
-            self.node.style.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
-            self.node.style.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
+        # @react.connect('pos')
+        # def _pos_changed(self, pos):
+        #     # todo: a layout that uses this can connect to the signal and set the style. we should not. same for size
+        #     self.p.node.style.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
+        #     self.p.node.style.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
        
         @react.connect('bgcolor')
         def _bgcolor_changed(self, color):

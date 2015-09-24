@@ -391,7 +391,7 @@ class ClientCode(object):
             self._css[key].append(cls.CSS)  # the CSS is '' if not specified for that class
         
         # todo: hack: include phosphorjs
-        fname = '/home/almar/dev/build/phosphor-all/phosphor.js'
+        fname = '/home/almar/dev/build/phosphor-all/phosphor.min2.js'
         self._js['flexx-ui'].insert(0, open(fname, 'rt').read())
     
     def get_defined_pair_classes(self):

@@ -47,9 +47,9 @@ class Panel(Widget):
     class JS:
         
         def _create_node(self):
-            self.node = document.createElement('fieldset')
+            self.p = phosphor.createWidget('fieldset')
             self._legend = document.createElement('legend')
-            self.node.appendChild(self._legend)
+            self.p.node.appendChild(self._legend)
         
         @react.connect('title')
         def _title_changed(self, title):

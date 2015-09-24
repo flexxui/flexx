@@ -55,7 +55,8 @@ class LineEdit(Widget):
     class JS:
     
         def _create_node(self):
-            self.node = document.createElement('div')
+            self.p = phosphor.createWidget('div')
+            self.node = self.p.node
             self.node.innerHTML = '<input type="text", list="%s" />' % self.id
             self.node = self.node.childNodes[0]
             

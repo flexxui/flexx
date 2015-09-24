@@ -85,23 +85,25 @@ class Box(Layout):
     @react.input
     def margin(v=0):
         """ The empty space around the layout. """
-        return float(0)
+        return float(v)
     
     @react.input
     def spacing(v=0):
         """ The space between two child elements. """
-        return float(0)
+        return float(v)
     
     class JS:
     
         def _create_node(self):
-            this.node = document.createElement('div')
+            self.p = phosphor.widget.Widget()
         
         @react.connect('children.*.flex')
         def _set_flexes(*flexes):
             for widget in self.children():
                 # todo: make flex 2D?
                 self._applyBoxStyle(widget.node, 'flex-grow', widget.flex())
+            for widget in self.children():
+                widget._update_actual_size()
         
         @react.connect('spacing', 'children')
         def _spacing_changed(self, spacing, children):
@@ -109,11 +111,14 @@ class Box(Layout):
                 children[0].node.style['margin-left'] = '0px'
                 for child in children[1:]:
                     child.node.style['margin-left'] = spacing + 'px'
-        
+                for widget in self.children():
+                    widget._update_actual_size()
         @react.connect('margin')
         def _margin_changed(self, margin):
             self.node.style['padding'] = margin + 'px'
-
+            for widget in self.children():
+                widget._update_actual_size()
+                
 
 class HBox(Box):
     """ Layout widget to distribute elements horizontally.

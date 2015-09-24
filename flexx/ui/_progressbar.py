@@ -56,7 +56,7 @@ class ProgressBar(Widget):
     class JS:
     
         def _create_node(self):
-            self.node = document.createElement('progress')
+            self.p = phosphor.createWidget('progress')
     
         @react.connect('value')
         def _value_changed(self, value):

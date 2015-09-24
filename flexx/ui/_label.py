@@ -55,9 +55,9 @@ class Label(Widget):
         
         def _js_create_node(self):
             # todo: allow setting a placeholder DOM element, or any widget parent
-            this.node = document.createElement('div')
+            self.p = phosphor.createWidget('div')
             #this.node.className = this.cssClassName
-            flexx.get('body').appendChild(this.node);
+            # flexx.get('body').appendChild(this.node);
             # this.node.innerHTML = 'a label'
             # super()._init()
         
