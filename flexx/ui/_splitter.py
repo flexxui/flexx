@@ -219,11 +219,22 @@ class DockLayout(Layout):
             else:
                 pwidget = widget.p
             
-            tab = phosphor.tabs.Tab('xxxx')
+            tab = phosphor.tabs.Tab(widget.title())
+            widget._tab = tab
             phosphor.dockpanel.DockPanel.setTab(pwidget, tab)
             #self.p.tabProperty.set(pwidget, tab)
             
             self.p.addWidget(pwidget)
+        
+        def _remove_child(self, widget):
+            if widget._tab:
+                del widget._tab
+            
+        @react.connect('children.*.title')
+        def __update_titles(self, *titles):
+            for widget in self.children():
+                if hasattr(widget, '_tab'):
+                    widget._tab.text = widget.title()
         
         # @react.connect('actual_size')
         # def __size_changed(self, size):

@@ -163,46 +163,16 @@ class FormLayout(BaseTableLayout):
     """
     
     CSS = """
-    .flx-formlayout > tr > td > .flx-label {
+    .flx-formlayout .title {
         text-align: right;
+        padding-right: 5px;
     }
     """
     
     class JS:
         
         def _create_node(self):
-            this.node = document.createElement('table')
-            this.node.appendChild(document.createElement('tr'))
-        
-        def _add_child(self, widget):
-            # Get row, create if necessary
-            row = this.node.children[-1]
-            itemsInRow = row.children.length
-            if itemsInRow >= 2:
-                row = document.createElement('tr')
-                self.node.appendChild(row)
-            # Create td and add widget to it
-            td = document.createElement("td")
-            row.appendChild(td)
-            td.appendChild(widget.node)
-            #
-            self._update_layout()
-            self._apply_table_layout()
-            # do not call super!
-        
-        def _update_layout(self):
-            """ Set hflex and vflex on node.
-            """
-            i = 0
-            for widget in self.children():
-                i += 1
-                widget.node.hflex = 0 if (i % 2) else 1
-                widget.node.vflex = widget.flex()
-            self._apply_table_layout()
-        
-        def _remove_child(self, widget):
-            pass
-            # do not call super!
+            this.p = phosphor.createWidget('table')
         
         def _apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):
             AUTOFLEX = 729
@@ -221,6 +191,43 @@ class FormLayout(BaseTableLayout):
                 col.style.width = '100%'
                 className += 'hflex'
             col.className = className
+        
+        def _add_child(self, widget):
+            # Create row
+            row = document.createElement('tr')
+            this.node.appendChild(row)
+            # Create element for label
+            td = document.createElement("td")
+            td.classList.add('title')
+            row.appendChild(td)
+            widget._title_elem = td
+            td.innerHTML = widget.title()
+            # Create element for widget
+            td = document.createElement("td")
+            row.appendChild(td)
+            td.appendChild(widget.node)
+            #
+            widget.node.hflex = 1
+            widget.node.vflex = widget.flex()[1]
+            self._apply_table_layout()
+        
+        def _remove_child(self, widget):
+            row = widget.node.parentNode.parentNode
+            self.node.removeChild(row)
+            if widget._title_elem:
+                del widget._title_elem
+        
+        @react.connect('children.*.flex')
+        def __update_flexes(self, *flexes):
+            for widget in self.children():
+                widget.node.vflex = widget.flex()[1]
+            self._apply_table_layout()
+        
+        @react.connect('children.*.title')
+        def __update_titles(self, *titles):
+            for widget in self.children():
+                if hasattr(widget, '_title_elem'):
+                    widget._title_elem.innerHTML = widget.title()
 
 
 class GridLayout(BaseTableLayout):

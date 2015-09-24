@@ -18,7 +18,7 @@ class MyApp(ui.Widget):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 5
+        TEST = 6
         
         if TEST == 0:
             ui.Button(text='Hola', flex=1)
@@ -65,27 +65,20 @@ class MyApp(ui.Widget):
                         ui.Label(text='Note the spacer Widget above', flex=0)
         
         if TEST == 3:
-            with ui.HBox(self, spacing=20):
+            with ui.HBox(spacing=20):
                 with ui.FormLayout() as self.form:
                     # todo: can this be written with one line per row?
                     # e.g. self.b1 = ui.Button(label='Name', text='Hola')
-                    ui.Label(text='Name:')
-                    self.b1 = ui.Button(text='Hola')
-                    ui.Label(text='Age:')
-                    self.b2 = ui.Button(text='Hello world')
-                    ui.Label(text='Favorite color:')
-                    self.b3 = ui.Button(text='Foo bar')
+                    self.b1 = ui.Button(title='Name:', text='Hola')
+                    self.b2 = ui.Button(title='Age:', text='Hello world')
+                    self.b3 = ui.Button(title='Favorite color:', text='Foo bar')
                 with ui.FormLayout() as self.form:
                     # e.g. self.b1 = ui.Button(label='Name', text='Hola')
                     ui.Widget(flex=1)  # Add a flexer
-                    ui.Widget()
-                    ui.Label(text='Pet name:')
-                    self.b1 = ui.Button(text='Hola')
-                    ui.Label(text='Pet Age:')
-                    self.b2 = ui.Button(text='Hello world')
-                    ui.Label(text='Pet\'s Favorite color:')
-                    self.b3 = ui.Button(text='Foo bar')
-                    ui.Widget(flex=1); ui.Widget()
+                    self.b1 = ui.Button(title='Name:', text='Hola')
+                    self.b2 = ui.Button(title='Age:', text='Hello world')
+                    self.b3 = ui.Button(title='Favorite color:', text='Foo bar')
+                    ui.Widget(flex=1)
         if TEST == 4:
             with ui.GridLayout(self) as self.grid:
                 self.b1 = ui.Button(text='No flex', pos=(0, 0))
@@ -114,9 +107,9 @@ class MyApp(ui.Widget):
                     self.c = ui.Button(text='Right C')
                     self.d = ui.Button(text='Right D')
                     with ui._splitter.DockLayout():
-                        ui.Slider()
-                        ui.LineEdit(text='AAA')
-                        self.g = ui.ProgressBar(value=0.4)
+                        ui.Slider(title='slider')
+                        ui.LineEdit(title='edit', text='AAA')
+                        self.g = ui.ProgressBar(title='progress', value=0.4)
     
         if TEST == 7:
             with ui.HBox(self):

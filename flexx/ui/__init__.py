@@ -73,7 +73,7 @@ from ._widget import Widget
 
 from ._layout import Layout
 from ._box import Box, HBox, VBox, BoxPanel
-from ._splitter import Splitter
+from ._splitter import Splitter, HSplitter, VSplitter
 from ._formlayout import BaseTableLayout, FormLayout, GridLayout
 from ._pinboardlayout import PinboardLayout
 

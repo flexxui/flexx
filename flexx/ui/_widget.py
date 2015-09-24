@@ -202,6 +202,13 @@ class Widget(Pair):
         return tuple(new_children)
     
     @react.input
+    def title(v=''):
+        """ The title of this widget. This can be used to mark the
+        widget in e.g. a tab layout or form layout.
+        """
+        return str(v)
+    
+    @react.input
     def flex(v=0):
         """ How much space this widget takes when contained in a
         flexible layout such as Box or FormLayout. A flex of 0 means
