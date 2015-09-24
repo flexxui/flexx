@@ -18,13 +18,13 @@ class MyApp(ui.Widget):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 6
+        TEST = 1
         
         if TEST == 0:
             ui.Button(text='Hola', flex=1)
             
         if TEST == 1:
-            with ui.VBox(flex=1) as self.hbox1:
+            with ui.Box(flex=1) as self.hbox1:
                 self.b1 = ui.Button(text='Hola', flex=1)
                 self.b2 = ui.Button(text='Hello world', flex=0)
                 self.b2 = ui.Button(text='Hello world', flex=0)
