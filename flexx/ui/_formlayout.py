@@ -24,9 +24,9 @@ from . import Widget, Layout
 class BaseTableLayout(Layout):
     """ Abstract base class for layouts that use an HTML table.
     
-    Layouts that use this approach are rather bad in performance when
-    resizing. This is not so much a problem when it is a leaf layout,
-    but we don't recommend embedding such layouts in each-other.
+    Layouts that use this approach don't have good performance when
+    resizing. This is not so much a problem when it is used as a leaf
+    layout, but we don't recommend embedding such layouts in each-other.
     """
     
     CSS = """

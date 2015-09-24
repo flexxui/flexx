@@ -18,18 +18,17 @@ class MyApp(ui.Widget):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 1
+        TEST = 5
         
         if TEST == 0:
             ui.Button(text='Hola', flex=1)
             
         if TEST == 1:
-            with ui.Box(flex=1) as self.hbox1:
-                self.b1 = ui.Button(text='Hola', flex=1)
-                self.b2 = ui.Button(text='Hello world', flex=0)
-                self.b2 = ui.Button(text='Hello world', flex=0)
-                self.b2 = ui.Button(text='Hello world', flex=0)
-                self.b3 = ui.Button(text='Foo bar', flex=1)
+            with ui.HBox(flex=1) as self.hbox1:
+                self.b1 = ui.Widget(flex=1, style='background: #a22; min-width:100px; max-width:500px')
+                self.b2 = ui.Widget(flex=0, style='background: #2a2; min-width:100px; max-width:500px')
+                self.b3 = ui.Widget(flex=0, style='background: #22a; min-width:100px; max-width:500px')
+                self.b4 = ui.Widget(flex=1, style='background: #aaa; min-width:100px; max-width:500px')
         
         if TEST == 2:
             with self:
@@ -96,10 +95,16 @@ class MyApp(ui.Widget):
                 self.b5 = ui.Button(text='no flex again', pos=(5, 5))
         
         if TEST == 5:
-            with ui.PinboardLayout(self) as self.grid:
-                self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
-                self.b2 = ui.Button(text='Dynamic at (20%, 20%)', pos=(0.2, 0.2))
-                self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
+            with ui.Splitter():
+                ui.Widget(style='background:#aaa;')
+                with ui.PinboardLayout() as self.grid:
+                    self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
+                    self.b2 = ui.Button(text='Dynamic at (20%, 20%)', pos=(0.2, 0.2))
+                    self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
+                    with ui._splitter.DockLayout(pos=(0.5, 0.5), size=(0.3, 0.3)) as self.d:
+                        self.a = ui.Widget(style='background:#a00;')
+                        self.b = ui.Widget(style='background:#0a0;')
+                        self.c = ui.Widget(style='background:#00a;')
         
         if TEST == 6:
             with ui.HSplitter():

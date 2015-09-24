@@ -78,13 +78,15 @@ from . import Widget, Layout
 
 
 class Box(Layout):
-    """ Layout to organize child widgets horizontally or vertically. 
+    """ Layout to distribute space for widgets horizontally or vertically. 
     
     This layout implements CSS flexbox. The space that each widget takes
     is determined by its minimal required size and the flex value of
     each widget. Also see ``VBox`` and ``HBox`` for shorthands.
     
     """
+    
+    _DEFAULT_ORIENTATION = 'h'
     
     CSS = """
     .flx-hbox, .flx-vbox, .flx-hboxr, .flx-vboxr {
@@ -135,15 +137,13 @@ class Box(Layout):
     }
     """
     
-    _DEFAULT_ORIENTATION = 'h'
-    
     @react.input
     def margin(v=0):
         """ The empty space around the layout. """
         return float(v)
     
     @react.input
-    def spacing(v=0):
+    def spacing(v=5):
         """ The space between two child elements. """
         return float(v)
     
@@ -166,11 +166,11 @@ class Box(Layout):
         def _create_node(self):
             self.p = phosphor.widget.Widget()
         
-        @react.connect('children.*.flex')
-        def __set_flexes(*flexes):
+        @react.connect('orientation', 'children.*.flex')
+        def __set_flexes(ori, *flexes):
+            i = 0 if ori in (0, 'h', 'hr') else 1
             for widget in self.children():
-                # todo: make flex 2D?
-                self._applyBoxStyle(widget.node, 'flex-grow', widget.flex())
+                self._applyBoxStyle(widget.node, 'flex-grow', widget.flex()[i])
             for widget in self.children():
                 widget._update_actual_size()
         
@@ -212,6 +212,66 @@ class HBox(Box):
 
 
 class VBox(Box):
-    """ LBox layout with default vertical layout.
+    """ Box layout with default vertical layout.
     """
     _DEFAULT_ORIENTATION = 'v'
+
+
+class BoxPanel(Layout):
+    """ Layout to distribute space for widgets horizontally or vertically.
+    
+    The BoxPanel differs from the Box layout in that the natural size
+    of widgets is *not* taken into account. Only the minimum, maximum
+    and base size are used to do the layout. It is therefore more
+    suited for high-level layout.
+    """
+    
+    _DEFAULT_ORIENTATION = 'h'
+    
+    @react.input
+    def spacing(v=5):
+        """ The space between two child elements. """
+        return float(v)
+    
+    @react.input
+    def orientation(self, v=None):
+        """ The orientation of the child widgets. 'h' or 'v'. Default
+        horizontal. The items can also be reversed using 'hr' and 'vr'.
+        """
+        if v is None:
+            v = self._DEFAULT_ORIENTATION
+        if isinstance(v, str):
+            v = v.lower()
+        v = {'horizontal': 'h', 'vertical': 'v', 0: 'h', 1: 'v'}.get(v, v)
+        if v not in ('h', 'v', 'hr', 'vr'):
+            raise ValueError('Unknown value for boxpanel orientation %r' % v)
+        return v
+    
+    class JS:
+        
+        def _create_node(self):
+            self.p = phosphor.boxpanel.BoxPanel()
+        
+        @react.connect('orientation', 'children.*.flex')
+        def __set_flexes(ori, *flexes):
+            i = 0 if ori in (0, 'h', 'hr') else 1
+            for widget in self.children():
+                phosphor.boxpanel.BoxPanel.setStretch(widget.p, widget.flex()[i])
+                phosphor.boxpanel.BoxPanel.setSizeBasis(widget.p, 100)
+        
+        @react.connect('spacing')
+        def __spacing_changed(self, spacing):
+            self.p.spacing = spacing
+        
+        @react.connect('orientation')
+        def __orientation_changed(self, orientation):
+            if orientation == 0 or orientation == 'h':
+                self.p.direction = phosphor.boxpanel.BoxPanel.LeftToRight
+            elif orientation == 1 or orientation == 'v':
+                self.p.direction = phosphor.boxpanel.BoxPanel.TopToBottom
+            elif orientation == 'hr':
+                self.p.direction = phosphor.boxpanel.BoxPanel.RightToLeft
+            elif orientation == 'vr':
+                self.p.direction = phosphor.boxpanel.BoxPanel.BottomToTop
+            else:
+                raise ValueError('Invalid boxpanel orientation: ' + orientation)

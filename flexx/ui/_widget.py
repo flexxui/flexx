@@ -53,9 +53,7 @@ class Element(Pair):
 class Widget(Pair):
     """ Base widget class.
     
-    In HTML-speak, this represents a plain div-element. Not very useful
-    on itself, except perhaps to fill up space. Subclass to create
-    something interesting.
+    In HTML this represents a plain div-element.
 
     When *subclassing* a Widget to create a compound widget (a widget
     that serves as a container for other widgets), use the ``init()``
@@ -70,8 +68,8 @@ class Widget(Pair):
     def __init__(self, **kwargs):
         # todo: -> parent is widget or ref to div element
         
-        parent = kwargs.pop('parent', None)
         # Apply default parent?
+        parent = kwargs.pop('parent', None)
         if parent is None:
             default_parents = _get_default_parents()
             if default_parents:
@@ -205,10 +203,13 @@ class Widget(Pair):
     
     @react.input
     def flex(v=0):
-        """ How much space this widget takes when contained in a layout.
-        A flex of 0 means to take the minimum size.
+        """ How much space this widget takes when contained in a
+        flexible layout such as Box or FormLayout. A flex of 0 means
+        to take the minimum size.
         """
-        return float(v)
+        if isinstance(v, (int, float)):
+            v = v, v
+        return _check_two_scalars('flex', v)
     
     @react.input
     def pos(v=(0, 0)):
@@ -231,10 +232,15 @@ class Widget(Pair):
         return _check_two_scalars('min_size', v)
     
     @react.input
-    def bgcolor(v=''):
-        """ Background color of the widget. In general it is better to do
-        styling via CSS.
+    def style(v=''):
+        """ CSS style options for this widget object. e.g. 
+        ``"background: #f00; color: #0f0;"``. If the given value is a
+        dict, its key-value pairs are converted to a CSS style string.
+        Note that the CSS class attribute can be used to style all
+        instances of a class.
         """
+        if isinstance(v, dict):
+            v = '; '.join('%s: s%' % (k, v) for k, v in v.items())
         return str(v)
     
     CSS = """
@@ -362,7 +368,7 @@ class Widget(Pair):
             return tuple(new_children)
         
         @react.connect('children')
-        def _children_changed(self, new_children):
+        def __children_changed(self, new_children):
             old_children = self.children.last_value
             if not old_children:
                 old_children = []
@@ -415,9 +421,9 @@ class Widget(Pair):
         #     self.p.node.style.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
         #     self.p.node.style.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
        
-        @react.connect('bgcolor')
-        def _bgcolor_changed(self, color):
-            self.node.style['background-color'] = color
+        @react.connect('style')
+        def __stye_changed(self, style):
+            self.node.style = style  # todo: works, but is forbidden in strict mode
         
         @react.connect('container_id')
         def _container_id_changed(self, id):

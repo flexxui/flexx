@@ -72,7 +72,7 @@ To lean about the individual widgets, check the
 from ._widget import Widget
 
 from ._layout import Layout
-from ._box import Box, HBox, VBox
+from ._box import Box, HBox, VBox, BoxPanel
 from ._splitter import Splitter
 from ._formlayout import BaseTableLayout, FormLayout, GridLayout
 from ._pinboardlayout import PinboardLayout
