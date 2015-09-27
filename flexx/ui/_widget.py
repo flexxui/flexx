@@ -430,7 +430,12 @@ class Widget(Pair):
        
         @react.connect('style')
         def __stye_changed(self, style):
-            self.node.style = style  # todo: works, but is forbidden in strict mode
+            #self.node.style = style  # forbidden in strict mode, plus it clears all previously set style
+            for part in style.split(';'):
+                if ':' in part:
+                    key, val = part.split(':')
+                    key, val = key.trim(), val.trim()
+                    self.node.style[key] = val
         
         @react.connect('container_id')
         def _container_id_changed(self, id):
