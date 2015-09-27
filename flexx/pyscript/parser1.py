@@ -464,7 +464,7 @@ class Parser1(Parser0):
             return [nl, target, " = Math.floor(", target, "/", value, ")"]
         else:
             op = ' %s= ' % self.BINARY_OP[node.op.__class__.__name__]
-            return [nl, target, op, value]
+            return [nl, target, op, value, ';']
     
     def parse_Delete(self, node):
         code = []
