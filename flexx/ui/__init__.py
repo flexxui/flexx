@@ -76,7 +76,8 @@ from ._box import Box, HBox, VBox, BoxPanel
 from ._splitter import Splitter, HSplitter, VSplitter
 from ._dock import DockLayout
 from ._tabs import TabLayout
-from ._formlayout import BaseTableLayout, FormLayout, GridLayout
+from ._grid import GridLayout
+from ._formlayout import BaseTableLayout, FormLayout
 from ._pinboardlayout import PinboardLayout
 
 from ._button import Button

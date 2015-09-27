@@ -18,7 +18,7 @@ class MyApp(ui.Widget):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 6
+        TEST = 11
         
         if TEST == 0:
             ui.Button(text='Hola', flex=1)
@@ -146,6 +146,18 @@ class MyApp(ui.Widget):
                 self.a = ui.Widget(title='red', style='background:#a00;')
                 self.b = ui.Widget(title='green', style='background:#0a0;')
                 self.c = ui.Widget(title='blue', style='background:#00a;')
+        
+        if TEST == 11:
+            with ui.BoxPanel(spacing=10):
+                with ui.GridLayout():
+                    self.a = ui.Widget(style='background:#a00;', pos=(0, 0))
+                    self.b = ui.Widget(style='background:#0a0;', pos=(1, 0))
+                    self.c = ui.Widget(style='background:#00a;', pos=(1, 1))
+                with ui.GridLayout():
+                    self.a = ui.Widget(style='background:#a00;', pos=(0, 0), flex=2)
+                    self.b = ui.Widget(style='background:#0a0;', pos=(1, 0), flex=1)
+                    self.c = ui.Widget(style='background:#00a;', pos=(1, 1), flex=1)
+                    
         #self.win = ui.Window(self, 'A new window!')
 
 
