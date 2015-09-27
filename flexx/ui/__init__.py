@@ -77,6 +77,7 @@ from ._splitter import Splitter, HSplitter, VSplitter
 from ._dock import DockLayout
 from ._tabs import TabLayout
 from ._grid import GridLayout
+from ._stack import StackedLayout
 from ._formlayout import BaseTableLayout, FormLayout
 from ._pinboardlayout import PinboardLayout
 

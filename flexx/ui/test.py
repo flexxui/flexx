@@ -2,7 +2,7 @@ import time
 import logging
 
 import flexx
-from flexx import app, ui
+from flexx import app, ui, react
 
 import faulthandler
 faulthandler.enable()
@@ -18,7 +18,7 @@ class MyApp(ui.Widget):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 11
+        TEST = 12
         
         if TEST == 0:
             ui.Button(text='Hola', flex=1)
@@ -157,10 +157,31 @@ class MyApp(ui.Widget):
                     self.a = ui.Widget(style='background:#a00;', pos=(0, 0), flex=2)
                     self.b = ui.Widget(style='background:#0a0;', pos=(1, 0), flex=1)
                     self.c = ui.Widget(style='background:#00a;', pos=(1, 1), flex=1)
-                    
+        
+        if TEST == 12:
+            with ui.HBox():
+                with ui.VBox():
+                    self.buta = ui.Button(text='red')
+                    self.butb = ui.Button(text='green')
+                    self.butc = ui.Button(text='blue')
+                with ui.StackedLayout(flex=1) as self.stack:
+                        self.a = ui.Widget(style='background:#a00;')
+                        self.b = ui.Widget(style='background:#0a0;')
+                        self.c = ui.Widget(style='background:#00a;')
         #self.win = ui.Window(self, 'A new window!')
 
-
+    
+    class JS:
+        
+        @react.connect('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')
+        def _stacked_current(a, b, c):
+            if a:
+                self.stack.current(self.a)
+            if b:
+                self.stack.current(self.b)
+            if c:
+                self.stack.current(self.c)
+                
 
 a = app.launch(MyApp, 'firefox')
 app.start()
