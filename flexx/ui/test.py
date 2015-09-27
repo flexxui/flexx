@@ -94,7 +94,7 @@ class MyApp(ui.Widget):
                     self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
                     self.b2 = ui.Button(text='Dynamic at (20%, 20%)', pos=(0.2, 0.2))
                     self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
-                    with ui._splitter.DockLayout(pos=(0.5, 0.5), size=(0.3, 0.3)) as self.d:
+                    with ui.DockLayout(pos=(0.5, 0.5), size=(0.3, 0.3)) as self.d:
                         self.a = ui.Widget(style='background:#a00;')
                         self.b = ui.Widget(style='background:#0a0;')
                         self.c = ui.Widget(style='background:#00a;')
@@ -106,7 +106,7 @@ class MyApp(ui.Widget):
                 with ui.VSplitter():
                     self.c = ui.Button(text='Right C')
                     self.d = ui.Button(text='Right D')
-                    with ui._splitter.DockLayout():
+                    with ui.DockLayout():
                         ui.Slider(title='slider')
                         ui.LineEdit(title='edit', text='AAA')
                         self.g = ui.ProgressBar(title='progress', value=0.4)
