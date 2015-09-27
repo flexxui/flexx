@@ -141,6 +141,11 @@ class MyApp(ui.Widget):
                     self.e = ui.Button(text='EEE')
                 ui.Button(text='BBB', flex=1)
                          
+        if TEST == 10:
+            with ui.TabLayout():
+                self.a = ui.Widget(title='red', style='background:#a00;')
+                self.b = ui.Widget(title='green', style='background:#0a0;')
+                self.c = ui.Widget(title='blue', style='background:#00a;')
         #self.win = ui.Window(self, 'A new window!')
 
 

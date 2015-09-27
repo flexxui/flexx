@@ -111,8 +111,8 @@ class PairMeta(HasSignalsMeta):
                     if not hasattr(cls, name):
                         cls.__signals__.append(name)
                         setattr(cls, name, JSSignal(name, doc=val._func.__doc__))
-                    elif isinstance(getattr(cls, name), JSSignal):
-                        pass  # ok, overloaded signal on JS side
+                    elif isinstance(getattr(cls, name), (JSSignal, react.InputSignal)):
+                        pass  # ok, overloading on JS side, or an input signal
                     else:
                         print('Warning: JS signal %r not proxied, as it would hide a Py attribute.' % name)
         
@@ -138,7 +138,7 @@ class PairMeta(HasSignalsMeta):
                         setattr(cls.JS, name, PyInputSignal(name))
                     else:
                         setattr(cls.JS, name, PySignal(name))
-                elif isinstance(getattr(cls.JS, name), PySignal):
+                elif isinstance(getattr(cls.JS, name), (PySignal, react.InputSignal)):
                     pass  # ok, overloaded signal on JS side
                 else:
                     print('Warning: Py signal %r not proxied, as it would hide a JS attribute.' % name)
