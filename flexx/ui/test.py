@@ -49,14 +49,14 @@ class MyApp(ui.Widget):
                             self.b2 = ui.Button(text='Hello world', flex=0)
                             self.b3 = ui.Button(text='Foo bar', flex=3)
                         
-                        ui.Label(text='margin 10 (around layout)', flex=0)
-                        with ui.HBox(flex=0, margin=10) as self.hbox3:
+                        ui.Label(text='margin 20 (around layout)', flex=0)
+                        with ui.HBox(flex=0, margin=20) as self.hbox3:
                             self.b1 = ui.Button(text='Hola', flex=1)
                             self.b2 = ui.Button(text='Hello world', flex=1)
                             self.b3 = ui.Button(text='Foo bar', flex=1)
                         
-                        ui.Label(text='spacing 10 (inter-widget)', flex=0)
-                        with ui.HBox(flex=0, spacing=10) as self.hbox3:
+                        ui.Label(text='spacing 20 (inter-widget)', flex=0)
+                        with ui.HBox(flex=0, spacing=20) as self.hbox3:
                             self.b1 = ui.Button(text='Hola', flex=1)
                             self.b2 = ui.Button(text='Hello world', flex=1)
                             self.b3 = ui.Button(text='Foo bar', flex=1)
@@ -88,7 +88,7 @@ class MyApp(ui.Widget):
                 self.b5 = ui.Button(text='no flex again', pos=(5, 5))
         
         if TEST == 5:
-            with ui.Splitter():
+            with ui.SplitPanel():
                 ui.Widget(style='background:#aaa;')
                 with ui.PinboardLayout() as self.grid:
                     self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
@@ -100,21 +100,21 @@ class MyApp(ui.Widget):
                         self.c = ui.Widget(style='background:#00a;')
         
         if TEST == 6:
-            with ui.HSplitter():
+            with ui.SplitPanel():
                 self.a = ui.Button(text='Right A', min_size=(120, 0))
                 self.b = ui.Button(text='Right B', min_size=(70, 0))
-                with ui.VSplitter():
+                with ui.SplitPanel(orientation='v'):
                     self.c = ui.Button(text='Right C')
                     self.d = ui.Button(text='Right D')
-                    with ui.DockLayout():
+                    with ui.DockPanel():
                         ui.Slider(title='slider')
                         ui.LineEdit(title='edit', text='AAA')
                         self.g = ui.ProgressBar(title='progress', value=0.4)
     
         if TEST == 7:
-            with ui.HBox(self):
+            with ui.HBox():
                 ui.Button(text='Button in hbox', flex=0)
-                with ui.HSplit(flex=1):
+                with ui.SplitPanel(flex=1, orientation='v'):
                     ui.Button(text='Button in splitter', min_size=(100, 0))
                     with ui.HBox(min_size=(100, 0)):
                         ui.Button(text='Right A', flex=0, css='background:#f00; padding:2em;')
@@ -135,25 +135,25 @@ class MyApp(ui.Widget):
         if TEST == 9:
             with ui.VBox():
                 ui.Button(text='AAA', flex=0)
-                with ui.HSplitter(flex=1):
+                with ui.SplitPanel(flex=1, orientation='v'):
                     ui.Button(text='CCC')
                     ui.Button(text='DDD')
                     self.e = ui.Button(text='EEE')
                 ui.Button(text='BBB', flex=1)
                          
         if TEST == 10:
-            with ui.TabLayout():
+            with ui.TabPanel():
                 self.a = ui.Widget(title='red', style='background:#a00;')
                 self.b = ui.Widget(title='green', style='background:#0a0;')
                 self.c = ui.Widget(title='blue', style='background:#00a;')
         
         if TEST == 11:
             with ui.BoxPanel(spacing=10):
-                with ui.GridLayout():
+                with ui.GridPanel():
                     self.a = ui.Widget(style='background:#a00;', pos=(0, 0))
                     self.b = ui.Widget(style='background:#0a0;', pos=(1, 0))
                     self.c = ui.Widget(style='background:#00a;', pos=(1, 1))
-                with ui.GridLayout():
+                with ui.GridPanel():
                     self.a = ui.Widget(style='background:#a00;', pos=(0, 0), flex=2)
                     self.b = ui.Widget(style='background:#0a0;', pos=(1, 0), flex=1)
                     self.c = ui.Widget(style='background:#00a;', pos=(1, 1), flex=1)
@@ -164,7 +164,7 @@ class MyApp(ui.Widget):
                     self.buta = ui.Button(text='red')
                     self.butb = ui.Button(text='green')
                     self.butc = ui.Button(text='blue')
-                with ui.StackedLayout(flex=1) as self.stack:
+                with ui.StackedPanel(flex=1) as self.stack:
                         self.a = ui.Widget(style='background:#a00;')
                         self.b = ui.Widget(style='background:#0a0;')
                         self.c = ui.Widget(style='background:#00a;')

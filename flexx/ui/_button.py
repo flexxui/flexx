@@ -39,8 +39,8 @@ class Button(Widget):
     """
     
     CSS = """
-    .flx-buttonn {
-        background: #f00;
+    .flx-button {
+        margin: 2px;
     }
     
     

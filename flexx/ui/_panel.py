@@ -3,7 +3,7 @@ Simple example:
 
 .. UIExample:: 100
     
-    with ui.Panel(title='This is a panel'):
+    with ui.GroupWidget(title='This is a panel'):
         with ui.VBox():
             ui.ProgressBar(value=0.2)
             ui.Button(text='click me')
@@ -15,7 +15,7 @@ Interactive example:
 
     from flexx import app, ui, react
     
-    class Example(ui.Panel):
+    class Example(ui.GroupWidget):
         def init(self):
             self.title('A silly panel')
             with ui.VBox():
@@ -34,10 +34,11 @@ from .. import react
 from . import Widget
 
 
-class Panel(Widget):
+class GroupWidget(Widget):
     """ Widget to collect widgets in a named group. 
     
-    It does not provide a layout. In HTML speak, this represents a fieldset.
+    It does not provide a layout. This is similar to a QGroupBox or an
+    HTML fieldset.
     """
     
     @react.input

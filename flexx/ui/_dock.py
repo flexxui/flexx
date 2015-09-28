@@ -6,7 +6,7 @@ from .. import react
 from . import Widget, Layout
 
 
-class DockLayout(Layout):
+class DockPanel(Layout):
     """
     """
     

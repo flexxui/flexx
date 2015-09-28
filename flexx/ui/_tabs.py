@@ -17,7 +17,7 @@ class TabBar(Widget):
         raise ValueError('A TabBar cannot have children.')
 
 
-class TabLayout(Layout):
+class TabPanel(Layout):
     """ A panel which provides a tabbed layout for child widgets.
     """
     

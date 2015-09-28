@@ -72,23 +72,22 @@ To lean about the individual widgets, check the
 from ._widget import Widget
 
 from ._layout import Layout
-from ._box import Box, HBox, VBox, BoxPanel
-from ._splitter import Splitter, HSplitter, VSplitter
-from ._dock import DockLayout
-from ._tabs import TabLayout
-from ._grid import GridLayout
-from ._stack import StackedLayout
+from ._box import BoxLayout, HBox, VBox, BoxPanel
+from ._splitter import SplitPanel
+from ._dock import DockPanel
+from ._tabs import TabPanel
+from ._grid import GridPanel
+from ._stack import StackedPanel
 from ._formlayout import BaseTableLayout, FormLayout
 from ._pinboardlayout import PinboardLayout
 
 from ._button import Button
 from ._slider import Slider
 from ._lineedit import LineEdit
-
 from ._label import Label
-from ._panel import Panel
+from ._panel import GroupWidget
 from ._progressbar import ProgressBar
-
 from ._plotwidget import PlotWidget
-from ._plotlayout import PlotLayout
 from ._iframe import IFrame
+
+from ._plotlayout import PlotLayout

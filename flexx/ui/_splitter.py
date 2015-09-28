@@ -11,9 +11,9 @@ Example:
     
     class Example(ui.Widget):
         def init(self):
-            with ui.Splitter(orientation='h'):
+            with ui.SplitPanel(orientation='h'):
                 ui.Button(text='Left A')
-                with ui.Splitter(orientation='v'):
+                with ui.SplitPanel(orientation='v'):
                     ui.Button(text='Right B')
                     ui.Button(text='Right C')
                     ui.Button(text='Right D')
@@ -23,7 +23,7 @@ from .. import react
 from . import Widget, Layout
 
 
-class Splitter(Layout):
+class SplitPanel(Layout):
     """ Layout to split space for widgets horizontally or vertically.
     
     The Splitter layout divides the available space among its child
@@ -61,18 +61,3 @@ class Splitter(Layout):
                 self.p.orientation = phosphor.splitpanel.SplitPanel.Vertical
             else:
                 raise ValueError('Invalid splitter orientation: ' + orientation)
-
-
-# note: I don' think we need to expose these ...
-class HSplitter(Splitter):
-    """ Horizontal splitter.
-    """
-    
-    _DEFAULT_ORIENTATION = 'h'
-
-
-class VSplitter(Splitter):
-    """ Vertical splitter.
-    """
-    
-    _DEFAULT_ORIENTATION = 'v'

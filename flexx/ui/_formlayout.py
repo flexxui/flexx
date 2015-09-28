@@ -230,9 +230,9 @@ class FormLayout(BaseTableLayout):
                     widget._title_elem.innerHTML = widget.title()
 
 
-# class GridLayout(BaseTableLayout):  # note the othe GridLayout!
-#     """ Not implemented.
-#     
-#     Do we even need it? If we do implement it, we need a way to specify
-#     the vertical flex value.
-#     """
+class GridLayout(BaseTableLayout):  # note the othe GridLayout!
+    """ Not implemented.
+    
+    Do we even need it? If we do implement it, we need a way to specify
+    the vertical flex value.
+    """

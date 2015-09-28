@@ -11,28 +11,28 @@ Example:
     
     class Example(ui.Widget):
         def init(self):
-            with ui.Box(orientation='v'):
+            with ui.BoxLayout(orientation='v'):
                 
                 ui.Label(text='Flex 0 0 0')
-                with ui.Box(flex=0):
+                with ui.HBox(flex=0):
                     self.b1 = ui.Button(text='Hola', flex=0)
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=0)
                 
                 ui.Label(text='Flex 1 0 3')
-                with ui.Box(flex=0):
+                with ui.HBox(flex=0):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=3)
                 
                 ui.Label(text='margin 10 (around layout)')
-                with ui.Box(flex=0, margin=10):
+                with ui.HBox(flex=0, margin=10):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=1)
                     self.b3 = ui.Button(text='Foo bar', flex=1)
                 
                 ui.Label(text='spacing 10 (inter-widget)')
-                with ui.Box(flex=0, spacing=10):
+                with ui.HBox(flex=0, spacing=10):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=1)
                     self.b3 = ui.Button(text='Foo bar', flex=1)
@@ -77,7 +77,7 @@ from .. import react
 from . import Widget, Layout
 
 
-class Box(Layout):
+class BoxLayout(Layout):
     """ Layout to distribute space for widgets horizontally or vertically. 
     
     This layout implements CSS flexbox. The space that each widget takes
@@ -138,7 +138,7 @@ class Box(Layout):
     """
     
     @react.input
-    def margin(v=0):
+    def margin(v=1):
         """ The empty space around the layout. """
         return float(v)
     
@@ -174,12 +174,13 @@ class Box(Layout):
             for widget in self.children():
                 widget._update_actual_size()
         
-        @react.connect('spacing', 'children')
-        def __spacing_changed(self, spacing, children):
+        @react.connect('spacing', 'orientation', 'children')
+        def __spacing_changed(self, spacing, ori, children):
+            margin = 'margin-top' if ori in (1, 'v') else 'margin-left'
             if children.length:
-                children[0].node.style['margin-left'] = '0px'
+                children[0].node.style[margin] = '0px'
                 for child in children[1:]:
-                    child.node.style['margin-left'] = spacing + 'px'
+                    child.node.style[margin] = spacing + 'px'
                 for widget in self.children():
                     widget._update_actual_size()
         
@@ -203,16 +204,20 @@ class Box(Layout):
                 self.node.classList.add('flx-vboxr')
             else:
                 raise ValueError('Invalid box orientation: ' + orientation)
+        
+        def _applyBoxStyle(self, e, sty, value):
+            for prefix in ['-webkit-', '-ms-', '-moz-', '']:
+                e.style[prefix + sty] = value
 
 
-class HBox(Box):
-    """ Box layout with default horizontal layout.
+class HBox(BoxLayout):
+    """ BoxLayout with default horizontal layout.
     """
     _DEFAULT_ORIENTATION = 'h'
 
 
-class VBox(Box):
-    """ Box layout with default vertical layout.
+class VBox(BoxLayout):
+    """ BoxLayout with default vertical layout.
     """
     _DEFAULT_ORIENTATION = 'v'
 

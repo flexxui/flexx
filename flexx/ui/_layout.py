@@ -7,7 +7,12 @@ from . import Widget
 
 
 class Layout(Widget):
-    """ Abstract class for all layout classes.
+    """ Abstract class for widgets that organize their child widgets.
+    
+    Panel widgets are layouts that do not take the natural size of their
+    content into account, making them more efficient and suited for
+    high-level layout. Other layouts, like HBox, are more suited for
+    laying out content where the natural size is important.
     """
     
     CSS = """
@@ -35,31 +40,3 @@ class Layout(Widget):
     
     """
     
-    class JS:
-        def _applyBoxStyle(self, e, sty, value):
-            for prefix in ['-webkit-', '-ms-', '-moz-', '']:
-                e.style[prefix + sty] = value
-    
-    def swap(self, layout):
-        """ Swap this layout with another layout.
-        
-        Returns the given layout, so that you can do: 
-        ``mylayout = mylayout.swap(HBox())``.
-        """
-        if not isinstance(layout, Layout):
-            raise ValueError('Can only swap a layout with another layout.')
-        for child in self.children():
-            child.parent(layout)
-        parent = self.parent()
-        self.parent(None)
-        layout.parent(parent)
-        return layout
-        # todo: if parent = None, they are attached to root ...
-
-
-
-
-
-
-
-

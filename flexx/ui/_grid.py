@@ -6,7 +6,7 @@ from .. import react
 from . import Widget, Layout
 
 
-class GridLayout(Layout):
+class GridPanel(Layout):
     """ A panel which lays out its children in a grid. 
     
     For each column and each row, the flex factor is determined by

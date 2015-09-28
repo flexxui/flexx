@@ -35,7 +35,7 @@ Example:
 
 from .. import react
 from . import Widget
-from . import Layout, VBox, HBox, Panel, PlotWidget
+from . import Layout, VBox, HBox, GroupWidget, PlotWidget
 
 
 class PlotLayout(Layout):
@@ -58,7 +58,7 @@ class PlotLayout(Layout):
         Widget(flex=1, parent=self._left)
     
     def add_tools(self, name, *args):
-        """ Add a set of widgets and collect them in a "tool" panel by
+        """ Add a set of widgets and collect them in a "tool" GroupWidget by
         the given name.
         """
         # Take stretch out
@@ -66,7 +66,7 @@ class PlotLayout(Layout):
         stretch.parent(None)
         
         # Add group of widgets
-        panel = Panel(title=name, parent=self._left, flex=0)
+        panel = GroupWidget(title=name, parent=self._left, flex=0)
         vbox = VBox(parent=panel)
         for widget in args:
             widget.parent(vbox)
