@@ -26,7 +26,7 @@ Interactive example:
 
 """
 
-from .. import react
+from ... import react
 from . import Widget
 
 

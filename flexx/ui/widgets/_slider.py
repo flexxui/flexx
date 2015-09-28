@@ -26,7 +26,7 @@ Interactive example:
                 self.label.text('x'.repeat(value))
 """
 
-from .. import react
+from ... import react
 from . import Widget
 
 

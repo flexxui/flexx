@@ -31,7 +31,7 @@ Interactive example:
                     self.p.value(self.p.value()+0.1)
 """
 
-from .. import react
+from ... import react
 from . import Widget
 
 

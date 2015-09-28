@@ -19,7 +19,7 @@ Example:
                     ui.Button(text='Right D')
 """
 
-from .. import react
+from ... import react
 from . import Widget, Layout
 
 

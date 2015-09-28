@@ -29,7 +29,7 @@ Interactive example:
                 self.label.text(value)
 """
 
-from .. import react
+from ... import react
 from . import Widget
 
 

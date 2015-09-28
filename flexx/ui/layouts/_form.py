@@ -17,7 +17,7 @@ Example:
                 ui.Widget(flex=1)
 """
 
-from .. import react
+from ... import react
 from . import Widget, Layout
 
 
