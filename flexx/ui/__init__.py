@@ -70,24 +70,7 @@ To lean about the individual widgets, check the
 # namespace, we prefix the module names with an underscrore.
 
 from ._widget import Widget
-
-from ._layout import Layout
-from ._box import BoxLayout, HBox, VBox, BoxPanel
-from ._splitter import SplitPanel
-from ._dock import DockPanel
-from ._tabs import TabPanel
-from ._grid import GridPanel
-from ._stack import StackedPanel
-from ._formlayout import BaseTableLayout, FormLayout
-from ._pinboardlayout import PinboardLayout
-
-from ._button import Button
-from ._slider import Slider
-from ._lineedit import LineEdit
-from ._label import Label
-from ._panel import GroupWidget
-from ._progressbar import ProgressBar
-from ._plotwidget import PlotWidget
-from ._iframe import IFrame
+from .layouts import *
+from .widgets import *
 
 from ._plotlayout import PlotLayout
