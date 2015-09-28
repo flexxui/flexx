@@ -5,7 +5,7 @@
     
     # A red widget
     class Example(ui.Widget):
-        CSS = ".flx-example {background:#f00; min-width: 20px; min-height:20px}"
+        CSS = ".flx-Example {background:#f00; min-width: 20px; min-height:20px}"
 
 """
 
@@ -44,17 +44,9 @@ def _get_default_parents():
     return _default_parents_per_thread.setdefault(tid, [])
 
 
-class Element(Pair):
-    """ Object that represents an HTML element.
-    """
-    pass  # todo: to e.g. have <b> and <p> objects
-
-
 class Widget(Pair):
     """ Base widget class.
     
-    In HTML this represents a plain div-element.
-
     When *subclassing* a Widget to create a compound widget (a widget
     that serves as a container for other widgets), use the ``init()``
     method to initialize child widgets. This method is called while
@@ -256,7 +248,7 @@ class Widget(Pair):
         min-height: 10px; /* splitter sets its own minsize if contained */
     }
     
-    .flx-widget {
+    .flx-Widget {
         box-sizing: border-box;
         white-space: nowrap;
         overflow: hidden;
@@ -289,7 +281,7 @@ class Widget(Pair):
             
             cls_name = self._class_name
             for i in range(32):  # i.e. a safe while-loop
-                self.node.classList.add('flx-' + cls_name.toLowerCase())  # todo: remove lowercase
+                self.node.classList.add('flx-' + cls_name)
                 cls = flexx.classes[cls_name]
                 if not cls:
                     break

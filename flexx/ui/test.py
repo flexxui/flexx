@@ -80,7 +80,7 @@ class MyApp(ui.Widget):
                     self.b3 = ui.Button(title='Favorite color:', text='Foo bar')
                     ui.Widget(flex=1)
         if TEST == 4:
-            with ui.GridLayout(self) as self.grid:
+            with ui.GridPanel() as self.grid:
                 self.b1 = ui.Button(text='No flex', pos=(0, 0))
                 self.b2 = ui.Button(text='Hola', pos=(1, 1), flex=(1, 1))
                 self.b3 = ui.Button(text='Hello world', pos=(2, 2), flex=(2, 1))

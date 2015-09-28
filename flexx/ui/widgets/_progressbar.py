@@ -39,7 +39,7 @@ class ProgressBar(Widget):
     """ A widget to show progress.
     """
     
-    CSS = ".flx-progressbar {min-height: 10px;}"
+    CSS = ".flx-ProgressBar {min-height: 10px;}"
     
     @react.input
     def value(v=0):

@@ -25,7 +25,7 @@ class PinboardLayout(Layout):
     """
     
     CSS = """
-    .flx-pinboardlayout > .flx-widget {
+    .flx-PinboardLayout > .flx-Widget {
         position: absolute;
     }
     """

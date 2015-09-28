@@ -35,7 +35,7 @@ class Slider(Widget):
     range input).
     """
     
-    CSS = ".flx-slider {min-height: 30px;}"
+    CSS = ".flx-Slider {min-height: 30px;}"
     
     @react.input
     def value(v=0):

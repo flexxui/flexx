@@ -10,7 +10,7 @@ itself it does not do or show much, though we can make it visible:
     
     # A red widget
     class Example(ui.Widget):
-        CSS = ".flx-example {background:#f00; min-width: 20px; min-height:20px}"
+        CSS = ".flx-Example {background:#f00; min-width: 20px; min-height:20px}"
 
 Widgets are also used as a container class:
 

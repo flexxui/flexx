@@ -39,10 +39,6 @@ class Button(Widget):
     """
     
     CSS = """
-    .flx-button {
-        margin: 2px;
-    }
-    
     
     """
     

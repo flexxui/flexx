@@ -32,8 +32,8 @@ class BaseTableLayout(Layout):
     CSS = """
     
     /* Clear any styling on this table (rendered_html is an IPython thing) */
-    .flx-basetablelayout, .flx-basetablelayout td, .flx-basetablelayout tr,
-    .rendered_html .flx-basetablelayout {
+    .flx-BaseTableLayout, .flx-BaseTableLayout td, .flx-BaseTableLayout tr,
+    .rendered_html .flx-BaseTableLayout {
         border: 0px;
         padding: initial;
         margin: initial;
@@ -42,18 +42,18 @@ class BaseTableLayout(Layout):
     
     /* Behave well inside hbox/vbox, 
        we assume no layouts to be nested inside a table layout */
-    .flx-hbox > .flx-basetablelayout {
+    .flx-hbox > .flx-BaseTableLayout {
         width: auto;
     }
-    .flx-vbox > .flx-basetablelayout {
+    .flx-vbox > .flx-BaseTableLayout {
         height: auto;
     }
 
     /* In flexed cells, occupy the full space */
-    td.vflex > .flx-widget {
+    td.vflex > .flx-Widget {
         height: 100%;
     }
-    td.hflex > .flx-widget {
+    td.hflex > .flx-Widget {
         width: 100%;
     }
     """
@@ -163,7 +163,7 @@ class FormLayout(BaseTableLayout):
     """
     
     CSS = """
-    .flx-formlayout .title {
+    .flx-FormLayout .title {
         text-align: right;
         padding-right: 5px;
     }

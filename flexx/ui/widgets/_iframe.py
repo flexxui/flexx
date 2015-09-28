@@ -8,7 +8,7 @@ class IFrame(Widget):
     cross-source iframe.
     """
     
-    CSS = '.flx-iframe {border: none;}'
+    CSS = '.flx-IFrame {border: none;}'
     
     @react.input
     def url(v=''):

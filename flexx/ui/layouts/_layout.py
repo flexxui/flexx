@@ -26,7 +26,7 @@ class Layout(Widget):
         margin: 0px;
     }
     
-    .flx-layout {
+    .flx-Layout {
         /* sizing of widgets/layouts inside layout is defined per layout */
         width: 100%;
         height: 100%;

@@ -52,7 +52,7 @@ class PlotWidget(Widget):
     plotting tasks.
     """
     
-    CSS = "flx-plotwidget {min-width: 300px; min-height: 200px;}"
+    CSS = "flx-PlotWidget {min-width: 300px; min-height: 200px;}"
     
     @react.input
     def xdata(self, v=()):

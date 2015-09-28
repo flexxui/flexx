@@ -34,7 +34,7 @@ class Label(Widget):
     """ Widget to show text/html.
     """
     
-    CSS = ".flx-label { border: 0px solid #454; }"
+    CSS = ".flx-Label { border: 0px solid #454; }"
 
     @react.input
     def text(v=''):
