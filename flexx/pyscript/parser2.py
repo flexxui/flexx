@@ -628,10 +628,11 @@ class Parser2(Parser1):
             code.append('}')  # end for
         # Finalize
         code.append('return res;})')  # end function
-        code.append('()')  # call function
+        code.append('.apply(this)')  # call function
         code.insert(2, 'var %s;' % ', '.join(vars))
         return code
-    
+        
+        # todo: apply the apply(this) trick everywhere where we use a function
     # SetComp
     # GeneratorExp
     # DictComp
