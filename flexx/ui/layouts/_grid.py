@@ -74,8 +74,6 @@ class GridPanel(Layout):
         def __update_positions(self):
             self._child_limits_changed()
         
-        # todo: the fact that we need this special hook method might be an indication that min/max size should be signals
-        # todo: on the other hand, min/max size ARE style things, and are rarely set other than on the constructor.
         def _child_limits_changed(self):
             
             # Set position of all children and get how large our grid is

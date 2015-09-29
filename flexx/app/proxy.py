@@ -112,7 +112,7 @@ class AppManager(object):
         elif not app_id:
             # Create a fresh proxy - there already is a runtime
             proxy = Proxy(cls.__name__, runtime=None)
-            app = cls(proxy=proxy)
+            app = cls(proxy=proxy, container='body')
             proxy._set_pair_instance(app)
         else:
             # Search for the app with the specific id
@@ -385,7 +385,7 @@ def launch(cls, runtime='xul', **runtime_kwargs):
     assert isinstance(cls, type) and issubclass(cls, Pair)
     serve(cls)
     proxy = Proxy(cls.__name__, runtime, **runtime_kwargs)
-    app = cls(proxy=proxy, container_id='body')
+    app = cls(proxy=proxy, container='body')
     proxy._set_pair_instance(app)
     return app
 
@@ -405,7 +405,7 @@ def export(cls, filename=None):
     assert isinstance(cls, type) and issubclass(cls, Pair)
     serve(cls)
     proxy = Proxy(cls.__name__, '<export>')
-    app = cls(proxy=proxy)
+    app = cls(proxy=proxy, container='body')
     proxy._set_pair_instance(app)
     if filename is None:
         return proxy._ws.to_html()

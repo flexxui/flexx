@@ -24,7 +24,7 @@ Interactive example:
         
         class JS:
             @react.connect('but.mouse_down')
-            def _change_panel_title(self, down):
+            def _change_group_title(self, down):
                 if down:
                     self.title(self.title() + '-')
 

@@ -30,6 +30,8 @@ from ... import react
 from . import Widget
 
 
+#todo: implement this in a way so it looks/behaves the same everywhere.
+
 class Slider(Widget):
     """ An input widget to select a value in a certain range (aka HTML
     range input).

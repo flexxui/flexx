@@ -49,7 +49,9 @@ class LineEdit(Widget):
     
     @react.input
     def autocomp(v=()):
-        """ A tuple/list of strings for autocompletion. """
+        """ A tuple/list of strings for autocompletion. Might not work
+        in all browsers.
+        """
         return tuple([str(i) for i in v])
     
     class JS:

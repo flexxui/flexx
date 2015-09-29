@@ -539,6 +539,8 @@ class Exporter(object):
     def write_html(self, filename):
         """ Write html document to the given file.
         """
+        if filename.startswith('~'):
+            filename = os.path.expanduser(filename)
         # todo: allow writing in split mode
         html = self.to_html()
         open(filename, 'wt').write(html)

@@ -3,9 +3,9 @@
     
     from flexx import app, ui
     
-    # A red widget
     class Example(ui.Widget):
-        CSS = ".flx-Example {background:#f00; min-width: 20px; min-height:20px}"
+        ''' A red widget '''
+        CSS = ".flx-Example {background:#f00; min-width:20px; min-height:20px;}"
 
 """
 
@@ -70,7 +70,7 @@ class Widget(Pair):
         # Use parent proxy unless proxy was given
         if parent is not None and not kwargs.get('_proxy', None):
             kwargs['proxy'] = parent.proxy
-        
+         
         # Pass properties via kwargs
         kwargs['parent'] = parent
         Pair.__init__(self, **kwargs)
@@ -86,12 +86,12 @@ class Widget(Pair):
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
         """
-        if self.container_id():
+        if self.container():
             return "<i>This widget is already shown in this notebook</i>"
         
         container_id = self.id + '_container'
         def set_cointainer_id():
-            self.container_id._set(container_id)
+            self.container._set(container_id)
         # Set container id, this gets applied in the next event loop
         # iteration, so by the time it gets called in JS, the div that
         # we define below will have been created.
@@ -195,9 +195,9 @@ class Widget(Pair):
     ## Parenting
     
     @react.input
-    def container_id(v=''):
+    def container(v=''):
         """ The id of the DOM element that contains this widget if
-        parent is None.
+        parent is None. Use 'body' to make this widget the root.
         """
         return str(v)
     
@@ -341,6 +341,8 @@ class Widget(Pair):
                 if parent:
                     parent.p.processMessage(phosphor.widget.MSG_LAYOUT_REQUEST)
                     parent._child_limits_changed()  # For e.g. GridPanel
+                    # todo: the fact that we need this special hook method might be an indication that min/max size should be signals
+                    # todo: on the other hand, min/max size ARE style things, and are rarely set other than on the constructor.
         
         def _child_limits_changed():
             pass
@@ -356,7 +358,7 @@ class Widget(Pair):
             """
             return v[0], v[1]
         
-        @react.connect('parent', 'container_id')
+        @react.connect('parent', 'container')
         def __update_real_size(self, p, c):
             self._check_real_size()
         
@@ -393,22 +395,22 @@ class Widget(Pair):
         
         ## Parenting
         
-        @react.connect('container_id')
-        def _container_id_changed(self, id):
-            #if self._parent:
-            #    return
+        @react.connect('container')
+        def __container_changed(self, id):
+            self.node.classList.remove('flx-main-widget')
+            if self.parent():
+               return 
             if id:
                 el = document.getElementById(id)
-                if self.p:
-                    if self.p.isAttached:
-                        phosphor.widget.detachWidget(self.p)
-                    phosphor.widget.attachWidget(self.p, el)
-                    p = self.p
-                    window.addEventListener('resize', lambda:p.update())
-                else:
-                    el.appendChild(this.p.node)
+                if self.p.isAttached:
+                    phosphor.widget.detachWidget(self.p)
+                if self.node.parentNode is not None:  # detachWidget not enough
+                    self.node.parentNode.removeChild(self.node)
+                phosphor.widget.attachWidget(self.p, el)
+                p = self.p
+                window.addEventListener('resize', lambda:p.update())
             if id == 'body':
-                self.p.node.classList.add('flx-main-widget')
+                self.node.classList.add('flx-main-widget')
         
         @no_sync
         @react.input

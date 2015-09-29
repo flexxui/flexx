@@ -67,6 +67,5 @@ class Label(Widget):
         
         @react.connect('wrap')
         def _wrap_changed(self, wrap):
-            print('setting wrap!')
             this.node.style['word-wrap'] = ['initial', 'normal', 'break-word'][wrap]
             this.node.style['white-space'] = ['no-wrap', 'normal', 'normal'][wrap]
