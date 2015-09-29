@@ -73,10 +73,10 @@ def main():
     if True:
         docs += '* :class:`%s <flexx.ui.%s>`\n' % ('Widget', 'Widget')
     docs += '\nLayouts:\n\n'
-    for name in [n for n in sorted(class_names) if n in layouts and if getattr(ui, n, None)]:
+    for name in [n for n in sorted(class_names) if n in layouts if getattr(ui, n, None)]:
         docs += '* :class:`%s <flexx.ui.%s>`\n' % (name, name)
     docs += '\nWidgets:\n\n'
-    for name in [n for n in sorted(class_names) if n not in layouts and if getattr(ui, n, None)]:
+    for name in [n for n in sorted(class_names) if n not in layouts if getattr(ui, n, None)]:
         docs += '* :class:`%s <flexx.ui.%s>`\n' % (name, name)
     docs += '\n.. toctree::\n  :maxdepth: 1\n  :hidden:\n\n'
     for module_name in sorted(pages.keys()):
