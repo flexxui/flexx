@@ -26,10 +26,11 @@ def main():
             for w in mod.__dict__.values():
                 if isinstance(w, type) and issubclass(w, ui.Widget):
                     if w.__module__ == mod.__name__:
+                        classes.append(w)
                         if issubclass(w, ui.Layout):
                             layouts.add(w.__name__)
-                        classes.append(w)
             if classes:
+                classes.sort(key=lambda x: x.__name__)
                 classes.sort(key=lambda x: len(x.mro()))
                 class_names.extend([w.__name__ for w in classes])
                 pages[mod.__name__] = classes
@@ -48,13 +49,20 @@ def main():
             
             # Insert info on base clases
             if 'Inherits from' not in cls.__doc__:
-                bases = [':class:`%s <flexx.ui.%s>`' % (bcls.__name__, bcls.__name__) 
-                         for bcls in cls.__bases__]
+                bases = []
+                for bcls in cls.__bases__:
+                    if getattr(ui, bcls.__name__, None):
+                        bases.append(':class:`%s <flexx.ui.%s>`' % (bcls.__name__, bcls.__name__))
+                    else:
+                        bases.append(':class:`%s <%s.%s>`' % (bcls.__name__, bcls.__module__, bcls.__name__))
                 line = 'Inherits from: ' + ', '.join(bases) 
                 cls.__doc__ = line + '\n\n' + (cls.__doc__ or '')
             
             # Create doc for class
-            docs += '.. autoclass:: flexx.ui.%s\n' % name
+            if getattr(ui, name, None):
+                docs += '.. autoclass:: flexx.ui.%s\n' % name
+            else:
+                docs += '.. autoclass:: %s.%s\n' % (module_name, name)
             docs += ' :members:\n\n' 
         
         # Write doc page

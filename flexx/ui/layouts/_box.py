@@ -1,9 +1,11 @@
 """
 The box layout classes provide a simple mechanism to horizontally
-or vertically stack child widgets.
+or vertically stack child widgets. There is a BoxLayout for laying out
+leaf content taking into account natural size, and a BoxPanel for
+higher-level layout.
 
 
-Example:
+Example for BoxLayout:
 
 .. UIExample:: 250
     
@@ -39,6 +41,38 @@ Example:
                 
                 ui.Widget(flex=1)
                 ui.Label(text='Note the spacer Widget above')
+
+
+A similar example using a BoxPanel:
+
+.. UIExample:: 250
+    
+    from flexx import ui
+    
+    class Example(ui.Widget):
+        def init(self):
+            with ui.BoxPanel(orientation='v'):
+                
+                ui.Label(text='Flex 0 0 0', style='')
+                with ui.BoxPanel(flex=0):
+                    self.b1 = ui.Button(text='Hola', flex=0)
+                    self.b2 = ui.Button(text='Hello world', flex=0)
+                    self.b3 = ui.Button(text='Foo bar', flex=0)
+                
+                ui.Label(text='Flex 1 0 3')
+                with ui.BoxPanel(flex=0):
+                    self.b1 = ui.Button(text='Hola', flex=1)
+                    self.b2 = ui.Button(text='Hello world', flex=0)
+                    self.b3 = ui.Button(text='Foo bar', flex=3)
+                
+                ui.Label(text='spacing 10 (inter-widget)')
+                with ui.BoxPanel(flex=0, spacing=20):
+                    self.b1 = ui.Button(text='Hola', flex=1)
+                    self.b2 = ui.Button(text='Hello world', flex=1)
+                    self.b3 = ui.Button(text='Foo bar', flex=1)
+                
+                ui.Widget(flex=1)
+
 
 Interactive example:
 
@@ -78,17 +112,36 @@ from . import Widget, Layout
 
 
 class BaseBoxLayout(Layout):
-    """ EEEK """
-    pass
+    """ Base class for BoxLayout and BoxPanel.
+    """
     
+    @react.input
+    def spacing(v=5):
+        """ The space between two child elements (in pixels)"""
+        return float(v)
     
+    @react.input
+    def orientation(self, v=None):
+        """ The orientation of the child widgets. 'h' or 'v'. Default
+        horizontal. The items can also be reversed using 'hr' and 'vr'.
+        """
+        if v is None:
+            v = self._DEFAULT_ORIENTATION
+        if isinstance(v, str):
+            v = v.lower()
+        v = {'horizontal': 'h', 'vertical': 'v', 0: 'h', 1: 'v'}.get(v, v)
+        if v not in ('h', 'v', 'hr', 'vr'):
+            raise ValueError('Unknown value for box orientation %r' % v)
+        return v
+
+
 class BoxLayout(BaseBoxLayout):
-    """ Layout to distribute space for widgets horizontally or vertically. 
+    """ 
+    Layout to distribute space for widgets horizontally or vertically. 
     
     This layout implements CSS flexbox. The space that each widget takes
     is determined by its minimal required size and the flex value of
     each widget. Also see ``VBox`` and ``HBox`` for shorthands.
-    
     """
     
     _DEFAULT_ORIENTATION = 'h'
@@ -144,27 +197,8 @@ class BoxLayout(BaseBoxLayout):
     
     @react.input
     def margin(v=1):
-        """ The empty space around the layout. """
+        """ The empty space around the layout (in pixels). """
         return float(v)
-    
-    @react.input
-    def spacing(v=5):
-        """ The space between two child elements. """
-        return float(v)
-    
-    @react.input
-    def orientation(self, v=None):
-        """ The orientation of the child widgets. 'h' or 'v'. Default
-        horizontal. The items can also be reversed using 'hr' and 'vr'.
-        """
-        if v is None:
-            v = self._DEFAULT_ORIENTATION
-        if isinstance(v, str):
-            v = v.lower()
-        v = {'horizontal': 'h', 'vertical': 'v', 0: 'h', 1: 'v'}.get(v, v)
-        if v not in ('h', 'v', 'hr', 'vr'):
-            raise ValueError('Unknown value for box orientation %r' % v)
-        return v
     
     class JS:
     
@@ -229,7 +263,7 @@ class VBox(BoxLayout):
     _DEFAULT_ORIENTATION = 'v'
 
 
-class BoxPanel(Layout):
+class BoxPanel(BaseBoxLayout):
     """ Layout to distribute space for widgets horizontally or vertically.
     
     The BoxPanel differs from the Box layout in that the natural size
@@ -239,25 +273,6 @@ class BoxPanel(Layout):
     """
     
     _DEFAULT_ORIENTATION = 'h'
-    
-    @react.input
-    def spacing(v=5):
-        """ The space between two child elements. """
-        return float(v)
-    
-    @react.input
-    def orientation(self, v=None):
-        """ The orientation of the child widgets. 'h' or 'v'. Default
-        horizontal. The items can also be reversed using 'hr' and 'vr'.
-        """
-        if v is None:
-            v = self._DEFAULT_ORIENTATION
-        if isinstance(v, str):
-            v = v.lower()
-        v = {'horizontal': 'h', 'vertical': 'v', 0: 'h', 1: 'v'}.get(v, v)
-        if v not in ('h', 'v', 'hr', 'vr'):
-            raise ValueError('Unknown value for boxpanel orientation %r' % v)
-        return v
     
     class JS:
         
