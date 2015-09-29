@@ -41,16 +41,8 @@ class PinboardLayout(Layout):
                 child.p.node.style.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
                 child.p.node.style.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
         
-        @react.connect('children.*.size')
+        @react.connect('children.*.base_size')
         def __size_changed(self, *sizes):
             for child in self.children():
-                size = child.size()[:]
-                for i in range(2):
-                    if size[i] <= 0 or size is None or size is undefined:
-                        size[i] = ''  # Use size defined by CSS
-                    elif size[i] > 1:
-                        size[i] = size[i] + 'px'
-                    else:
-                        size[i] = size[i] * 100 + '%'
-                child.p.node.style.width = size[0]
-                child.p.node.style.height = size[1]
+                size = child.base_size()
+                child._set_size('', size[0], size[1])

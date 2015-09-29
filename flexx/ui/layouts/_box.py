@@ -172,7 +172,7 @@ class BoxLayout(Layout):
             for widget in self.children():
                 self._applyBoxStyle(widget.node, 'flex-grow', widget.flex()[i])
             for widget in self.children():
-                widget._update_actual_size()
+                widget._check_real_size()
         
         @react.connect('spacing', 'orientation', 'children')
         def __spacing_changed(self, spacing, ori, children):
@@ -181,14 +181,14 @@ class BoxLayout(Layout):
                 children[0].node.style[margin] = '0px'
                 for child in children[1:]:
                     child.node.style[margin] = spacing + 'px'
-                for widget in self.children():
-                    widget._update_actual_size()
+            for widget in self.children():
+                widget._check_real_size()
         
         @react.connect('margin')
         def __margin_changed(self, margin):
             self.node.style['padding'] = margin + 'px'
             for widget in self.children():
-                widget._update_actual_size()
+                widget._check_real_size()
         
         @react.connect('orientation')
         def __orientation_changed(self, orientation):
@@ -204,6 +204,8 @@ class BoxLayout(Layout):
                 self.node.classList.add('flx-vboxr')
             else:
                 raise ValueError('Invalid box orientation: ' + orientation)
+            for widget in self.children():
+                widget._check_real_size()
         
         def _applyBoxStyle(self, e, sty, value):
             for prefix in ['-webkit-', '-ms-', '-moz-', '']:

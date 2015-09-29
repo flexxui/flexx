@@ -18,13 +18,17 @@ class MyApp(ui.Widget):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 12
+        TEST = 11
         
         if TEST == 0:
             ui.Button(text='Hola', flex=1)
             
         if TEST == 1:
-            with ui.HBox(flex=1) as self.hbox1:
+            with ui.BoxPanel(flex=1) as self.hbox1:
+                # self.b1 = ui.Widget(flex=1, style='background: #a22;', min_size=(100, 100), max_size=(500,0))
+                # self.b2 = ui.Widget(flex=0, style='background: #2a2;', min_size=(100, 0), max_size=(500,0))
+                # self.b3 = ui.Widget(flex=0, style='background: #22a;', min_size=(100, 0), max_size=(500,0))
+                # self.b4 = ui.Widget(flex=1, style='background: #aaa;', min_size=(100, 0), max_size=(500,0))
                 self.b1 = ui.Widget(flex=1, style='background: #a22; min-width:100px; max-width:500px')
                 self.b2 = ui.Widget(flex=0, style='background: #2a2; min-width:100px; max-width:500px')
                 self.b3 = ui.Widget(flex=0, style='background: #22a; min-width:100px; max-width:500px')
@@ -94,15 +98,15 @@ class MyApp(ui.Widget):
                     self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
                     self.b2 = ui.Button(text='Dynamic at (20%, 20%)', pos=(0.2, 0.2))
                     self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
-                    with ui.DockLayout(pos=(0.5, 0.5), size=(0.3, 0.3)) as self.d:
+                    with ui.DockPanel(pos=(0.5, 0.5), base_size=(0.3, 0.3)) as self.d:
                         self.a = ui.Widget(style='background:#a00;')
                         self.b = ui.Widget(style='background:#0a0;')
                         self.c = ui.Widget(style='background:#00a;')
         
         if TEST == 6:
             with ui.SplitPanel():
-                self.a = ui.Button(text='Right A', min_size=(120, 0))
-                self.b = ui.Button(text='Right B', min_size=(70, 0))
+                self.a = ui.Button(text='Right A', style='min-width:120px')
+                self.b = ui.Button(text='Right B', style='min-width:70px')
                 with ui.SplitPanel(orientation='v'):
                     self.c = ui.Button(text='Right C')
                     self.d = ui.Button(text='Right D')
@@ -115,9 +119,9 @@ class MyApp(ui.Widget):
             with ui.HBox():
                 ui.Button(text='Button in hbox', flex=0)
                 with ui.SplitPanel(flex=1, orientation='v'):
-                    ui.Button(text='Button in splitter', min_size=(100, 0))
-                    with ui.HBox(min_size=(100, 0)):
-                        ui.Button(text='Right A', flex=0, css='background:#f00; padding:2em;')
+                    ui.Button(text='Button in splitter', style='min-width:100px')
+                    with ui.HBox(style='min-width:100px'):
+                        ui.Button(text='Right A', flex=0, style='background:#f00; padding:2em;')
                         ui.Button(text='Right B', flex=1)
                         ui.Button(text='Right C', flex=2)
         
@@ -150,12 +154,12 @@ class MyApp(ui.Widget):
         if TEST == 11:
             with ui.BoxPanel(spacing=10):
                 with ui.GridPanel():
-                    self.a = ui.Widget(style='background:#a00;', pos=(0, 0))
+                    self.a = ui.Widget(style='background:#a00;', pos=(0, 0), flex=1)
                     self.b = ui.Widget(style='background:#0a0;', pos=(1, 0))
-                    self.c = ui.Widget(style='background:#00a;', pos=(1, 1))
+                    self.c = ui.Widget(style='background:#00a; min-width:200px; min-height:200px', pos=(1, 1))
                 with ui.GridPanel():
                     self.a = ui.Widget(style='background:#a00;', pos=(0, 0), flex=2)
-                    self.b = ui.Widget(style='background:#0a0;', pos=(1, 0), flex=1)
+                    self.b = ui.Widget(style='background:#0a0; max-width:100px;', pos=(1, 0), flex=1)
                     self.c = ui.Widget(style='background:#00a;', pos=(1, 1), flex=1)
         
         if TEST == 12:

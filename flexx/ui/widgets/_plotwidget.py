@@ -124,7 +124,7 @@ class PlotWidget(Widget):
                 for i in [10, 20, 25, 50]:
                     self._tick_units.append(i*10**e)
         
-        @react.connect('actual_size')
+        @react.connect('real_size')
         def _update_canvas_size(self, size):
             if size[0] and size[1]:
                 self.node.width = size[0]

@@ -128,6 +128,73 @@ class Widget(Pair):
         #    self.update()
     
     @react.input
+    def title(v=''):
+        """ The title of this widget. This is used to mark the widget
+        in e.g. a tab layout or form layout.
+        """
+        return str(v)
+    
+    @react.input
+    def style(v=''):
+        """ CSS style options for this widget object. e.g. 
+        ``"background: #f00; color: #0f0;"``. If the given value is a
+        dict, its key-value pairs are converted to a CSS style string.
+        Note that the CSS class attribute can be used to style all
+        instances of a class.
+        """
+        if isinstance(v, dict):
+            v = '; '.join('%s: s%' % (k, v) for k, v in v.items())
+        return str(v)
+    
+    ## Size, and positioning
+    
+    @react.input
+    def flex(v=0):
+        """ How much space this widget takes (relative to the other
+        widgets) when contained in a flexible layout such as BoxLayout,
+        BoxPanel, FormLayout or GridPanel. A flex of 0 means to take
+        the minimum size. Flex is a two-element tuple, but both values
+        can be specified at once by specifying a scalar.
+        """
+        if isinstance(v, (int, float)):
+            v = v, v
+        return _check_two_scalars('flex', v)
+    
+    @react.input
+    def pos(v=(0, 0)):
+        """ The position of the widget when it in a layout that allows
+        positioning, this can be an arbitrary position (e.g. in
+        PinBoardLayout) or the selection of column and row in a
+        GridPanel.
+        """
+        return _check_two_scalars('pos', v)
+    
+    # todo: if we stick to doing min/max size via style signal, rename this to size
+    @react.input
+    def base_size(v=(0, 0)):
+        """ The size of the widget when it is in a layout that allows
+        sizing, or the base-size in a BoxPanel or GridPanel. 
+        A value <= 0 is ignored.
+        """
+        return _check_two_scalars('size', v)
+    
+    # @react.input
+    # def min_size(v=(0, 0)):
+    #     """ The minimum size of the widget.
+    #     """
+    #     return _check_two_scalars('min_size', v)
+    # 
+    # @react.input
+    # def max_size(v=(0, 0)):
+    #     """ The maximum size of the widget. A value <= 0 is ignored.
+    #     """
+    #     return _check_two_scalars('max_size', v)
+    
+    # Also see real_size defined in JS
+    
+    ## Parenting
+    
+    @react.input
     def container_id(v=''):
         """ The id of the DOM element that contains this widget if
         parent is None.
@@ -138,6 +205,7 @@ class Widget(Pair):
     def parent(self, new_parent=None):
         """ The parent widget, or None if it has no parent.
         """
+        #todo: pass children instead -> they have order
         # A note on how we do parenting: The parent and children signals
         # are mutually dependent; changing either will also change the
         # other (though on another widget). To prevent an infinite loop
@@ -193,55 +261,6 @@ class Widget(Pair):
         
         return tuple(new_children)
     
-    @react.input
-    def title(v=''):
-        """ The title of this widget. This can be used to mark the
-        widget in e.g. a tab layout or form layout.
-        """
-        return str(v)
-    
-    @react.input
-    def flex(v=0):
-        """ How much space this widget takes when contained in a
-        flexible layout such as Box or FormLayout. A flex of 0 means
-        to take the minimum size.
-        """
-        if isinstance(v, (int, float)):
-            v = v, v
-        return _check_two_scalars('flex', v)
-    
-    @react.input
-    def pos(v=(0, 0)):
-        """ The position of the widget when it in a ayout that allows
-        positioning.
-        """
-        return _check_two_scalars('pos', v)
-    
-    @react.input
-    def size(v=(0, 0)):
-        """ The size of the widget when it in a layout that allows
-        positioning.
-        """
-        return _check_two_scalars('size', v)
-    
-    @react.input
-    def min_size(v=(0, 0)):
-        """ The minimum size of the widget.
-        """
-        return _check_two_scalars('min_size', v)
-    
-    @react.input
-    def style(v=''):
-        """ CSS style options for this widget object. e.g. 
-        ``"background: #f00; color: #0f0;"``. If the given value is a
-        dict, its key-value pairs are converted to a CSS style string.
-        Note that the CSS class attribute can be used to style all
-        instances of a class.
-        """
-        if isinstance(v, dict):
-            v = '; '.join('%s: s%' % (k, v) for k, v in v.items())
-        return str(v)
-    
     CSS = """
     
     .flx-container {
@@ -271,7 +290,7 @@ class Widget(Pair):
             class SizeNotifier:
                 def filterMessage(handler, msg):
                     if msg._type == 'resize':
-                        that._update_actual_size()
+                        that._check_real_size()
                     return False
             if self.p:
                 phosphor.messaging.installMessageFilter(self.p, SizeNotifier())
@@ -293,27 +312,103 @@ class Widget(Pair):
             
             super()._init()
         
-        # todo: rename to current_size
-        # todo: its hard to keep track of this reliably. a Button in an hbox can change size when the text of another button changes.
-        # todo: maybe actual_size should be something for layouts only? though they suffer from same limitations
+        def _create_node(self):
+            self.p = phosphor.createWidget('div')
+        
+        @react.connect('style')
+        def __stye_changed(self, style):
+            #self.node.style = style  # forbidden in strict mode, plus it clears all previously set style
+            size_limits_changed = False
+            size_limits_keys = 'min-width', 'min-height', 'max-width', 'max-height'
+            for part in style.split(';'):
+                if ':' in part:
+                    key, val = part.split(':')
+                    key, val = key.trim(), val.trim()
+                    self.node.style[key] = val
+                    # Tweak/hack to allow Phosphor to see our update
+                    if key in size_limits_keys:
+                        size_limits_changed = True
+            
+            if size_limits_changed:
+                # Clear phosphor's limit cache
+                values = [self.node.style[k] for k in size_limits_keys]
+                self.p.clearSizeLimits()
+                for k, v in zip(size_limits_keys, values):
+                    self.node.style[k] = v
+                # Allow self and parent to re-layout
+                self.p.processMessage(phosphor.widget.MSG_LAYOUT_REQUEST)
+                parent = self.parent()
+                if parent:
+                    parent.p.processMessage(phosphor.widget.MSG_LAYOUT_REQUEST)
+                    parent._child_limits_changed()  # For e.g. GridPanel
+        
+        def _child_limits_changed():
+            pass
+        
+        ## Size 
+        
         @react.source
-        def actual_size(v=(0, 0)):
-            """ The real (actual) size of the widget.
+        def real_size(v=(0, 0)):
+            """ The actual current size of the widget. Flexx tries to
+            keep this value up-to-date, but when in a layout like
+            BoxLayout, a change in a Button's text can change the size
+            of sibling widgets.
             """
             return v[0], v[1]
         
         @react.connect('parent', 'container_id')
-        def __update_actual_size(self, p, c):
-            self._update_actual_size()
+        def __update_real_size(self, p, c):
+            self._check_real_size()
         
-        def _update_actual_size(self):
+        def _check_real_size(self):
+            """ Check whether the current size has changed.
+            """
             n = self.node
-            cursize = self.actual_size()
+            cursize = self.real_size()
             if cursize[0] != n.offsetWidth or cursize[1] !=n.offsetHeight:
-                self.actual_size._set([n.offsetWidth, n.offsetHeight])
+                self.real_size._set([n.offsetWidth, n.offsetHeight])
         
-        def _create_node(self):
-            self.p = phosphor.createWidget('div')
+        # NOTE: this is how we would handle signals for min_size and max_size
+        
+        # @react.connect('min_size', 'max_size')
+        # def __set_size_limits(self, min_size, max_size):
+        #     self.p.clearSizeLimits()
+        #     self._set_size('min-', min_size[0], min_size[1])
+        #     self._set_size('max-', max_size[0], max_size[1])
+        #     parent = self.parent()
+        #     if parent:
+        #         parent.p.processMessage(phosphor.widget.MSG_LAYOUT_REQUEST)
+        
+        def _set_size(self, prefix, w, h):
+            size = w, h
+            for i in range(2):
+                if size[i] <= 0 or size is None or size is undefined:
+                    size[i] = ''  # Use size defined by CSS
+                elif size[i] > 1:
+                    size[i] = size[i] + 'px'
+                else:
+                    size[i] = size[i] * 100 + '%'
+            self.node.style[prefix + 'width'] = size[0]
+            self.node.style[prefix + 'height'] = size[1]
+        
+        ## Parenting
+        
+        @react.connect('container_id')
+        def _container_id_changed(self, id):
+            #if self._parent:
+            #    return
+            if id:
+                el = document.getElementById(id)
+                if self.p:
+                    if self.p.isAttached:
+                        phosphor.widget.detachWidget(self.p)
+                    phosphor.widget.attachWidget(self.p, el)
+                    p = self.p
+                    window.addEventListener('resize', lambda:p.update())
+                else:
+                    el.appendChild(this.p.node)
+            if id == 'body':
+                self.p.node.classList.add('flx-main-widget')
         
         @react.input
         def parent(self, new_parent):  # note: no default value
@@ -387,61 +482,6 @@ class Widget(Pair):
             """ Add the DOM element. Called right after the child widget is added. """
             self.p.addChild(widget.p)
             
-            # # May be overloaded in layout widgets
-            # if self.p and widget.p:
-            #     self.p.addChild(widget.p)
-            # elif 1:# self.p:  # need_phosphor_children
-            #     widget.proxy_p = phosphor.widget.Widget()
-            #     widget.proxy_p.node.appendChild(widget.node)
-            #     self.p.addChild(widget.proxy_p)
-            # elif widget.p:
-            #     raise RuntimeError('A Phosphor widget cannot be a child of a common widget.')
-            # else:
-            #     self.node.appendChild(widget.node)
-        
         def _remove_child(self, widget):
             """ Remove the DOM element. Called right after the child widget is removed. """
             self.p.removeChild(widget.p)
-            
-            # if self.p and widget.p:
-            #     self.p.removeChild(widget.p)
-            # elif 1:# self.p:
-            #     self.p.removeChild(widget.proxy_p)
-            #     widget.proxy_p.dispose()
-            #     del widget.proxy_p
-            # elif widget.p:
-            #     raise RuntimeError('What? A Phosphor widget cannot be a child of a common widget.')
-            # else:
-            #     self.node.removeChild(widget.node)
-        
-        # @react.connect('pos')
-        # def _pos_changed(self, pos):
-        #     # todo: a layout that uses this can connect to the signal and set the style. we should not. same for size
-        #     self.p.node.style.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
-        #     self.p.node.style.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
-       
-        @react.connect('style')
-        def __stye_changed(self, style):
-            #self.node.style = style  # forbidden in strict mode, plus it clears all previously set style
-            for part in style.split(';'):
-                if ':' in part:
-                    key, val = part.split(':')
-                    key, val = key.trim(), val.trim()
-                    self.node.style[key] = val
-        
-        @react.connect('container_id')
-        def _container_id_changed(self, id):
-            #if self._parent:
-            #    return
-            if id:
-                el = document.getElementById(id)
-                if self.p:
-                    if self.p.isAttached:
-                        phosphor.widget.detachWidget(self.p)
-                    phosphor.widget.attachWidget(self.p, el)
-                    p = self.p
-                    window.addEventListener('resize', lambda:p.update())
-                else:
-                    el.appendChild(this.p.node)
-            if id == 'body':
-                self.p.node.classList.add('flx-main-widget')
