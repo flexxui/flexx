@@ -4,6 +4,7 @@
 
 from ... import react
 from . import Widget, Layout
+from ._form import BaseTableLayout
 
 
 class GridPanel(Layout):
@@ -116,3 +117,11 @@ class GridPanel(Layout):
         def __spacing_changed(self, spacing):
             self.p.rowSpacing = spacing
             self.p.columnSpacing = spacing
+
+
+class GridLayout(BaseTableLayout):  # note the othe GridLayout!
+    """ Not implemented.
+    
+    Do we even need it? If we do implement it, we need a way to specify
+    the vertical flex value.
+    """

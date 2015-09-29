@@ -6,15 +6,15 @@ from ... import react
 from . import Widget, Layout
 
 
-class TabBar(Widget):
-    """ A widget containing tabs.
-    """
-    
-    def _create_node(self):
-        self.p = phosphor.tabs.TabBar()
-
-    def _add_child(self, widget):
-        raise ValueError('A TabBar cannot have children.')
+# class TabBar(Widget):
+#     """ A widget containing tabs.
+#     """
+#     
+#     def _create_node(self):
+#         self.p = phosphor.tabs.TabBar()
+# 
+#     def _add_child(self, widget):
+#         raise ValueError('A TabBar cannot have children.')
 
 
 class TabPanel(Layout):

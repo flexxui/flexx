@@ -5,7 +5,7 @@ or vertically stack child widgets.
 
 Example:
 
-.. UIExample:: 200
+.. UIExample:: 250
     
     from flexx import ui
     
@@ -46,7 +46,7 @@ Interactive example:
     
     from flexx import ui, react
     
-    class Example(ui.Box):
+    class Example(ui.HBox):
         def init(self):
             self.b1 = ui.Button(text='Horizontal', flex=0)
             self.b2 = ui.Button(text='Vertical', flex=1)
@@ -77,7 +77,12 @@ from ... import react
 from . import Widget, Layout
 
 
-class BoxLayout(Layout):
+class BaseBoxLayout(Layout):
+    """ EEEK """
+    pass
+    
+    
+class BoxLayout(BaseBoxLayout):
     """ Layout to distribute space for widgets horizontally or vertically. 
     
     This layout implements CSS flexbox. The space that each widget takes
