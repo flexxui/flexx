@@ -218,9 +218,10 @@ class BoxLayout(BaseBoxLayout):
             for child in self.children.value:
                 child.node.style['margin-top'] = ''
                 child.node.style['margin-left'] = ''
-            for child in self.children.last_value:
-                child.node.style['margin-top'] = ''
-                child.node.style['margin-left'] = ''
+            if self.children.last_value:
+                for child in self.children.last_value:
+                    child.node.style['margin-top'] = ''
+                    child.node.style['margin-left'] = ''
             # Set
             margin = 'margin-top' if ori in (1, 'v', 'vr') else 'margin-left'
             if children.length:
