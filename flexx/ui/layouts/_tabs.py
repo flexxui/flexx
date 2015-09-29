@@ -104,4 +104,4 @@ class TabPanel(Layout):
         def __update_titles(self, *titles):
             for widget in self.children():
                 if hasattr(widget, '_tab'):
-                    widget._tab.text = widget.title()
+                    widget._tab.text = widget.title() or '-'

@@ -10,10 +10,10 @@ class GridPanel(Layout):
     """ A panel which lays out its children in a grid. 
     
     For each column and each row, it looks at its children and selects
-    the maximum flex, min_size and base_size, and the minimum max_size.
+    the maximum flex, min-size and base_size, and the minimum max-size.
     
     If all flex factors are zero, all columns/rows become of equal size
-    (subject to min_size and max_size).
+    (subject to size limits).
     """
     
     @react.input

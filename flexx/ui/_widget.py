@@ -201,6 +201,7 @@ class Widget(Pair):
         """
         return str(v)
     
+    @no_sync
     @react.input
     def parent(self, new_parent=None):
         """ The parent widget, or None if it has no parent.
@@ -240,7 +241,6 @@ class Widget(Pair):
         
         return new_parent
     
-    @no_sync
     @react.input
     def children(self, new_children=()):
         """ The child widgets of this widget.
@@ -410,8 +410,9 @@ class Widget(Pair):
             if id == 'body':
                 self.p.node.classList.add('flx-main-widget')
         
+        @no_sync
         @react.input
-        def parent(self, new_parent):  # note: no default value
+        def parent(self, new_parent=None):
             old_parent = self.parent._value
             
             if new_parent is old_parent:
@@ -434,9 +435,8 @@ class Widget(Pair):
             
             return new_parent
         
-        @no_sync
         @react.input
-        def children(self, new_children=()):
+        def children(self, new_children):  # note: no default value
             old_children = self.children._value
             
             # todo: PyScript support deep comparisons

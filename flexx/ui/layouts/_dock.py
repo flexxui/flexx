@@ -50,7 +50,7 @@ class DockPanel(Layout):
             self.p = phosphor.dockpanel.DockPanel()
         
         def _add_child(self, widget):
-            widget._tab = phosphor.tabs.Tab(widget.title())
+            widget._tab = phosphor.tabs.Tab(widget.title() or '-')
             phosphor.dockpanel.DockPanel.setTab(widget.p, widget._tab)
             self.p.addWidget(widget.p)
             
@@ -62,4 +62,4 @@ class DockPanel(Layout):
         def __update_titles(self, *titles):
             for widget in self.children():
                 if hasattr(widget, '_tab'):
-                    widget._tab.text = widget.title()
+                    widget._tab.text = widget.title() or '-'
