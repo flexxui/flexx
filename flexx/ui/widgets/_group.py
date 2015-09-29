@@ -41,10 +41,6 @@ class GroupWidget(Widget):
     HTML fieldset.
     """
     
-    @react.input
-    def title(v=''):
-        return str(v)
-    
     class JS:
         
         def _create_node(self):

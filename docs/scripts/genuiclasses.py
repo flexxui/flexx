@@ -55,8 +55,8 @@ def main():
                         bases.append(':class:`%s <flexx.ui.%s>`' % (bcls.__name__, bcls.__name__))
                     else:
                         bases.append(':class:`%s <%s.%s>`' % (bcls.__name__, bcls.__module__, bcls.__name__))
-                line = 'Inherits from: ' + ', '.join(bases) 
-                cls.__doc__ = line + '\n\n' + (cls.__doc__ or '')
+                line = '    *Inherits from:* ' + ', '.join(bases)
+                cls.__doc__ = line + '\n\n    ' + (cls.__doc__ or '').lstrip()
             
             # Create doc for class
             if getattr(ui, name, None):

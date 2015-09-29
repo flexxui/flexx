@@ -116,7 +116,7 @@ class PlotWidget(Widget):
         
         def _create_node(self):
             self.p = phosphor.createWidget('canvas')
-            self._context = ctx = self.node.getContext('2d')
+            self._context = ctx = self.p.node.getContext('2d')
             
             # create tick units
             self._tick_units = []

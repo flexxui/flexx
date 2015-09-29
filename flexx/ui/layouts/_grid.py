@@ -1,5 +1,33 @@
 """
+Example:
 
+.. UIExample:: 250
+    
+    from flexx import ui
+    
+    class Example(ui.Widget):
+        def init(self):
+            with ui.GridPanel(spacing=12):
+                with ui.GridPanel(pos=(0, 0)):
+                    # Show min-width in action
+                    self.a = ui.Widget(style='background:#a00;', pos=(0, 0), flex=1)
+                    self.b = ui.Widget(style='background:#0a0;', pos=(1, 0))
+                    self.c = ui.Widget(style='background:#00a; min-width:50px; min-height:50px;', pos=(1, 1))
+                with ui.GridPanel(pos=(1, 0)):
+                    # Show max-width in action
+                    self.a = ui.Widget(style='background:#a00;', pos=(0, 0))
+                    self.b = ui.Widget(style='background:#0a0;', pos=(1, 0))
+                    self.c = ui.Widget(style='background:#00a; max-width:50px; max-height:50px', pos=(1, 1))
+                with ui.GridPanel(pos=(0, 1)):
+                    # Flex
+                    self.a = ui.Widget(style='background:#a00;', pos=(0, 0), flex=1)
+                    self.b = ui.Widget(style='background:#0a0;', pos=(1, 0), flex=1)
+                    self.c = ui.Widget(style='background:#00a;', pos=(1, 1), flex=2)
+                with ui.GridPanel(pos=(1, 1)):
+                    # Base size
+                    self.a = ui.Widget(style='background:#a00;', pos=(0, 0))
+                    self.b = ui.Widget(style='background:#0a0;', pos=(1, 0))
+                    self.c = ui.Widget(style='background:#00a;', pos=(1, 1), base_size=(100, 100))
 """
 
 from ... import react
@@ -10,9 +38,11 @@ from ._form import BaseTableLayout
 class GridPanel(Layout):
     """ A panel which lays out its children in a grid. 
     
+    The "pos" signal of each child represents its integer position/index
+    in the grid.
+    
     For each column and each row, it looks at its children and selects
     the maximum flex, min-size and base_size, and the minimum max-size.
-    
     If all flex factors are zero, all columns/rows become of equal size
     (subject to size limits).
     """
@@ -120,8 +150,7 @@ class GridPanel(Layout):
 
 
 class GridLayout(BaseTableLayout):  # note the othe GridLayout!
-    """ Not implemented.
-    
-    Do we even need it? If we do implement it, we need a way to specify
-    the vertical flex value.
+    """ Not implemented yet. 
     """
+    def init(self):
+        raise NotImplementedError()

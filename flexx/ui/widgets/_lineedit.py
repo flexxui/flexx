@@ -37,6 +37,12 @@ class LineEdit(Widget):
     """ An input widget to edit a line of text (aka HTML text input).
     """
     
+    CSS = """
+    .flx-LineEdit > input-ttt { /* gets to be too wide */
+        width: 100%;
+    }
+    """
+    
     @react.input
     def text(v=''):
         """ The current text."""
@@ -58,17 +64,21 @@ class LineEdit(Widget):
     
         def _create_node(self):
             self.p = phosphor.createWidget('div')
-            self.node = self.p.node
-            self.node.innerHTML = '<input type="text", list="%s" />' % self.id
-            self.node = self.node.childNodes[0]
+            self.p.node.innerHTML = '<input type="text", list="%s" />' % self.id
+            self._node = self.p.node.childNodes[0]
+            
+            # self.p = phosphor.createWidget('input')
+            # self.node = self.p.node
+            # self.node.type = 'text'
+            # self.node.list = self.id
             
             self._autocomp = document.createElement('datalist')
             self._autocomp.id = self.id
-            self.node.appendChild(self._autocomp)
+            self._node.appendChild(self._autocomp)
             
             that = self
-            this.node.addEventListener('input', lambda ev: that.user_text._set(that.node.value), False)
-            this.node.addEventListener('keydown', lambda ev: that.submit._set(ev.which), False)
+            this._node.addEventListener('input', lambda ev: that.user_text._set(that._node.value), False)
+            this._node.addEventListener('keydown', lambda ev: that.submit._set(ev.which), False)
             #if IE10:
             #    this.node.addEventListener('change', lambda ev: that.user_value._set(that.node.value), False)
             
@@ -89,11 +99,11 @@ class LineEdit(Widget):
         
         @react.connect('text')
         def _text_changed(self, text):
-            self.node.value = text
+            self._node.value = text
         
         @react.connect('placeholder_text')
         def _placeholder_text_changed(self, text):
-            self.node.placeholder = text
+            self._node.placeholder = text
         
         # todo: this works in Firefox but not in Xul
         @react.connect('autocomp')

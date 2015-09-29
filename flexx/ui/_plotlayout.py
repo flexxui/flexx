@@ -50,7 +50,7 @@ class PlotLayout(Layout):
         with self._box:
             self._left = VBox(flex=0)
             with VBox(flex=0):
-                self._plot = PlotWidget(flex=0, size=(640, 480))
+                self._plot = PlotWidget(flex=0, base_size=(640, 480))
                 Widget(flex=1)
             Widget(flex=1)
         

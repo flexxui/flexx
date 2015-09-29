@@ -12,11 +12,11 @@ Example:
     class Example(ui.Widget):
         def init(self):
             with ui.SplitPanel(orientation='h'):
-                ui.Button(text='Left A')
+                ui.Label(text='red', style='background:#f77;')
                 with ui.SplitPanel(orientation='v'):
-                    ui.Button(text='Right B')
-                    ui.Button(text='Right C')
-                    ui.Button(text='Right D')
+                    ui.Label(text='green', style='background:#7f7;')
+                    ui.Label(text='blue', style='background:#77f')
+                    ui.Label(text='purple', style='background:#f7f;')
 """
 
 from ... import react

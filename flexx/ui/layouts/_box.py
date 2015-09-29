@@ -136,8 +136,7 @@ class BaseBoxLayout(Layout):
 
 
 class BoxLayout(BaseBoxLayout):
-    """ 
-    Layout to distribute space for widgets horizontally or vertically. 
+    """ Layout to distribute space for widgets horizontally or vertically. 
     
     This layout implements CSS flexbox. The space that each widget takes
     is determined by its minimal required size and the flex value of
@@ -215,11 +214,24 @@ class BoxLayout(BaseBoxLayout):
         
         @react.connect('spacing', 'orientation', 'children')
         def __spacing_changed(self, spacing, ori, children):
-            margin = 'margin-top' if ori in (1, 'v') else 'margin-left'
+            # Reset
+            for child in self.children.value:
+                child.node.style['margin-top'] = ''
+                child.node.style['margin-left'] = ''
+            for child in self.children.last_value:
+                child.node.style['margin-top'] = ''
+                child.node.style['margin-left'] = ''
+            # Set
+            margin = 'margin-top' if ori in (1, 'v', 'vr') else 'margin-left'
             if children.length:
-                children[0].node.style[margin] = '0px'
-                for child in children[1:]:
-                    child.node.style[margin] = spacing + 'px'
+                if ori in ('vr', 'hr'):
+                    children[-1].node.style[margin] = '0px'
+                    for child in children[:-1]:
+                        child.node.style[margin] = spacing + 'px'
+                else:
+                    children[0].node.style[margin] = '0px'
+                    for child in children[1:]:
+                        child.node.style[margin] = spacing + 'px'
             for widget in self.children():
                 widget._check_real_size()
         

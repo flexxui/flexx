@@ -16,7 +16,7 @@ Interactive example:
         def init(self):
             with ui.HBox():
                 self.but = ui.Button(text='Push me')
-                self.label = ui.Label(flex=1, text='This is a label. ')
+                self.label = ui.Label(flex=1, wrap=True, text='This is a label. ')
         
         class JS:
             @react.connect('but.mouse_down')
@@ -54,12 +54,7 @@ class Label(Widget):
     class JS:
         
         def _js_create_node(self):
-            # todo: allow setting a placeholder DOM element, or any widget parent
             self.p = phosphor.createWidget('div')
-            #this.node.className = this.cssClassName
-            # flexx.get('body').appendChild(this.node);
-            # this.node.innerHTML = 'a label'
-            # super()._init()
         
         @react.connect('text')
         def _text_changed(self, text):

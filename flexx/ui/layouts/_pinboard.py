@@ -8,7 +8,7 @@ Example:
     class Example(ui.Widget):
         def init(self):
             with ui.PinboardLayout():
-                self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30), size=(100, 100))
+                self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30), base_size=(100, 100))
                 self.b2 = ui.Button(text='Dynamic at (30%, 30%)', pos=(0.3, 0.3))
                 self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
 
@@ -19,9 +19,13 @@ from . import Widget, Layout
 
 
 class PinboardLayout(Layout):
-    """ A layout that allows positiong child widgets at absolute and
-    relative positions without constraining the widgets with respect to
-    each-other.
+    """ Unconstrained absolute and relative positiong of child widgets.
+    
+    The "pos" signal of each child is used to position it. Values
+    smaller than 1 are considered relative positions, otherwise the
+    position is in pixels. The "base_size" signal is similarly used to
+    determine the size of each child. If omitted (i.e. ``(0, 0)``), the
+    child widget will have its natural size.
     """
     
     CSS = """

@@ -8,12 +8,9 @@ Example:
     class Example(ui.Widget):
         def init(self):
             with ui.FormLayout():
-                ui.Label(text='Pet name:')
-                self.b1 = ui.LineEdit()
-                ui.Label(text='Pet Age:')
-                self.b2 = ui.LineEdit()
-                ui.Label(text="Pet's Favorite color:")
-                self.b3 = ui.LineEdit()
+                self.b1 = ui.LineEdit(title='Name:')
+                self.b2 = ui.LineEdit(title="Age:")
+                self.b3 = ui.LineEdit(title="Favorite color:")
                 ui.Widget(flex=1)
 """
 
@@ -156,10 +153,10 @@ class BaseTableLayout(Layout):
 
 
 class FormLayout(BaseTableLayout):
-    """ A form layout organizes pairs of widgets vertically.
+    """ A form layout vertically alligns its child widgets.
     
-    Note: the API may change. maybe the label can be derived from the
-    widgets' ``title`` property?
+    A label is placed to the left of each widget (based on the widget's
+    title).
     """
     
     CSS = """

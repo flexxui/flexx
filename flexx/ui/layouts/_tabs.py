@@ -1,5 +1,16 @@
 """
-The tabbar widget.
+Example:
+
+.. UIExample:: 100
+    
+    from flexx import app, ui
+    
+    class Example(ui.Widget):
+        def init(self):
+            with ui.TabPanel():
+                self.a = ui.Widget(title='red', style='background:#a00;')
+                self.b = ui.Widget(title='green', style='background:#0a0;')
+                self.c = ui.Widget(title='blue', style='background:#00a;')
 """
 
 from ... import react
@@ -19,6 +30,10 @@ from . import Widget, Layout
 
 class TabPanel(Layout):
     """ A panel which provides a tabbed layout for child widgets.
+    
+    The title of each child widget is used for the tab label.
+    
+    todo: this needs a way to get/set the current order of the widgets.
     """
     
     CSS = """

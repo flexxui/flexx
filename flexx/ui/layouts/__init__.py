@@ -10,5 +10,5 @@ from ._dock import DockPanel
 from ._tabs import TabPanel
 from ._grid import GridPanel, GridLayout
 from ._stack import StackedPanel
-from ._form import BaseTableLayout, FormLayout
+from ._form import FormLayout
 from ._pinboard import PinboardLayout
