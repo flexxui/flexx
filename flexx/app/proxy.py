@@ -310,8 +310,8 @@ def init_notebook():
     name = '__default__'
     url = 'ws://%s:%i/%s/ws' % (host, port, name)
     t = "<i>Injecting Flexx JS and CSS</i>"
-    t += "<style>\n%s\n</style>\n" % clientCode.get_css()
-    t += "<script>\n%s\n</script>" % clientCode.get_js()
+    t += "<style>\n%s\n</style>\n" % clientCode.get_all_css()
+    t += "<script>\n%s\n</script>" % clientCode.get_all_js()
     t += "<script>flexx.ws_url=%r; flexx.is_notebook=true; flexx.init();</script>" % url
     
     display(HTML(t))
@@ -494,7 +494,7 @@ class Proxy(object):
                 name += '-' + self.id
             if runtime == 'nodejs':
                 self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
-                                       runtime=runtime, code=clientCode.get_js())
+                                       runtime=runtime, code=clientCode.get_all_js())
             else:
                 self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
                                        runtime=runtime, **runtime_kwargs)
