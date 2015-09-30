@@ -74,8 +74,8 @@ def visit_uiexample_html(self, node):
     except Exception as err:
         msg = 'Example not generated. <pre>%s</pre>' % err.output.decode()
         open(filename_html, 'wt').write(msg.replace('\\n', '<br />'))
-        warnings.warn('ERROR:' + err.output.decode())
-        # todo: raise once we've got all examples fixed...
+        #warnings.warn('ERROR:' + err.output.decode())
+        raise RuntimeError('Could not create ui example:' + err.output.decode())
     
     rel_path = '../ui/examples/' + fname
     

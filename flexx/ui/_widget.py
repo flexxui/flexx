@@ -58,7 +58,6 @@ class Widget(Pair):
     """
     
     def __init__(self, **kwargs):
-        # todo: -> parent is widget or ref to div element
         
         # Apply default parent?
         parent = kwargs.pop('parent', None)
@@ -96,7 +95,7 @@ class Widget(Pair):
         # iteration, so by the time it gets called in JS, the div that
         # we define below will have been created.
         from ..app import call_later
-        call_later(0.1, set_cointainer_id) # todo: always do calls in next iter
+        call_later(0.1, set_cointainer_id)  # todo: always do calls in next iter
         return "<div class='flx-container' id=%s />" % container_id
     
     def init(self):
@@ -206,7 +205,6 @@ class Widget(Pair):
     def parent(self, new_parent=None):
         """ The parent widget, or None if it has no parent.
         """
-        #todo: pass children instead -> they have order
         # A note on how we do parenting: The parent and children signals
         # are mutually dependent; changing either will also change the
         # other (though on another widget). To prevent an infinite loop

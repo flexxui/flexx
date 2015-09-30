@@ -71,7 +71,6 @@ class MyApp(ui.Widget):
         if TEST == 3:
             with ui.HBox(spacing=20):
                 with ui.FormLayout() as self.form:
-                    # todo: can this be written with one line per row?
                     # e.g. self.b1 = ui.Button(label='Name', text='Hola')
                     self.b1 = ui.Button(title='Name:', text='Hola')
                     self.b2 = ui.Button(title='Age:', text='Hello world')
