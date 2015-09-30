@@ -2,6 +2,14 @@
 Example that shows how two signals that are mutually dependent can 
 be kept in sync, and to have this syncing work both in JS and Py. One
 examplary use-case is the parent and children signal in flexx.ui.Widget.
+
+Notes:
+* The logic to define the relation is implemented both in Python and JS.
+* The ``@app.no_sync`` decorator is used to only sync one of the signals
+  to avoid a loop.
+* In the signal that is synced, we should check whether the value is
+  actually changed.
+
 """
 
 from flexx import react, app
@@ -18,10 +26,9 @@ class Foo(app.Pair):
         self.eggs._set(v+1)
         return v
     
+    @app.no_sync
     @react.input
     def eggs(self, v):
-        if v == self.eggs._value:
-            return undefined
         print('set eggs', self, v)
         self.spam._set(v-1)
         return v
@@ -41,29 +48,12 @@ class Foo(app.Pair):
             self.eggs._set(v+1)
             return v
         
+        @app.no_sync
         @react.input
         def eggs(self, v):
             assert v is not undefined
-            if v == self.eggs._value:
-                return undefined
             print('set eggs', self, v)
             self.spam._set(v-1)
             return v
 
 foo = Foo()
-
-##
-class Temperature3(react.HasSignals):
-    
-    @react.input
-    def c(self, v=0):
-        self.f(v+32)
-        return v
-    
-    @react.input
-    def f(self, v):
-        self.c(v-32)
-        return v
-
-t = Temperature3()
-

@@ -213,7 +213,7 @@ class Widget(Pair):
         # we use the feature that we can set other signals directly
         # from the input function: while we are inside this function,
         # the signal is "locked". In JS we perform the exact same trick.
-        # To sync Python and JS, we only sync the parent signal,
+        # To sync Python and JS, we only sync the children signal,
         # otherwise we'd create a loop. We use the ``no_sync``
         # decorator. In the end, we can set the parent and children
         # signal, and the other signal is updated immediately. This
