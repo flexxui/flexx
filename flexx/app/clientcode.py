@@ -369,10 +369,6 @@ class ClientCode(object):
         for key in css:
             self.add_asset(key+'.css', '\n\n'.join(css[key]))
         
-        # todo: hack: include phosphorjs
-        fname = '/home/almar/dev/build/phosphor-all/phosphor.min2.js'
-        self.add_asset('phosphor-all.js', open(fname, 'rt').read())
-        
         self._preloaded_pair_classes.update(preloaded_pair_classes)
     
     def get_defined_pair_classes(self):
@@ -554,61 +550,3 @@ class Exporter(object):
         """ Get the HTML string.
         """
         return clientCode.get_page_for_export(self._commands, single)
-
-
-def minify(code):
-    """ Very minimal JS minification algorithm. Can probably be better.
-    May contain bugs. Only operates well on JS without syntax errors.
-    """
-    # todo: in phosphor-all/run.py I have an improved minifier -> put in flexx.utils!
-    space_safe = ' =+-/*&|(){},.><:;'
-    chars = ['\n']
-    class non_local: pass
-    non_local._i = -1
-    
-    def read():
-        non_local._i += 1
-        if non_local._i < len(code):
-            return code[non_local._i]
-    def to_end_of_string(c0):
-        chars.append(c0)
-        while True:
-            c = read()
-            chars.append(c)
-            if c == c0 and chars[-1] != '\\':
-                return
-    def to_end_of_line_comment():
-        while True:
-            c = read()
-            if c == '\n':
-                return
-    def to_end_of_mutiline_comment():
-        lastchar = ''
-        while True:
-            c = read()
-            if c == '/' and lastchar == '*':
-                return
-            lastchar = c
-    while True:
-        c = read()
-        if not c:
-            break  # end of code
-        elif c == "'" or c == '"':
-            to_end_of_string(c)
-        elif c == '/' and chars[-1] == '/':
-            chars.pop(-1)
-            to_end_of_line_comment()
-        elif c == '*' and chars[-1] == '/':
-            chars.pop(-1)
-            to_end_of_mutiline_comment()
-        elif c in '\t\r\n':
-            pass
-        elif c in ' ':
-            if chars[-1] not in space_safe:
-                chars.append(c)
-        elif c in space_safe and chars[-1] == ' ':
-            chars[-1] = c  # replace last char
-        else:
-            chars.append(c)
-    chars.pop(0)
-    return ''.join(chars)
