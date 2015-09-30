@@ -390,13 +390,17 @@ def launch(cls, runtime='xul', **runtime_kwargs):
     return app
 
 
-def export(cls, filename=None):
+def export(cls, filename=None, single=True, deps=True):
     """ Export the given Pair class to an HTML document.
     
     Arguments:
         cls (Pair): a subclass of ``app.Pair`` (or ``ui.Widget``).
         filename (str, optional): Path to write the HTML document to.
             If not given or None, will return the html as a string.
+        single (bool): If True, will include all JS and CSS dependencies
+            in the HTML page.
+        deps (bool): If deps is True, will also export the dependent
+            JS and CSS files (in case single is False).
     
     Returns:
         html (str): The resulting html. If a filename was specified
@@ -410,7 +414,9 @@ def export(cls, filename=None):
     if filename is None:
         return proxy._ws.to_html()
     else:
-        proxy._ws.write_html(filename)
+        proxy._ws.write_html(filename, single)
+        if deps and not single:
+            proxy._ws.write_dependencies(filename)
 
 
 # todo: this does not work well with creating apps from scratch yet; see run_python_in_node.py example

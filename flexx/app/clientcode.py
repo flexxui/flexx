@@ -300,15 +300,10 @@ class ClientCode(object):
     * split (default): the JS/CSS is served via different files.
     * single: everything is served via a single page. Intended for
       exporing apps as single files.
-    * dynamic: all of the Pair classes will be defined dynamically.
-      Note that this makes debugging difficult. Mainly intended for
-      testing purposes.
     
     Note that any Pair classes defined once the first connects
     will be dynamically defined, regardless of the chosen mode (after
     all, the page will already have been served).
-    
-    Note that not all delivery methods support all modes.
     
     """
     
@@ -329,12 +324,6 @@ class ClientCode(object):
         
         self._preloaded_pair_classes = set()
     
-    @property
-    def mode(self):
-        """ Get the mode to serve JS/CSS code: 'split', 'single', or 'dynamic'.
-        """
-        return os.getenv('FLEXX_SERVE_MODE', 'split')
-    
     def _collect(self):
         """ The first time this is called, all existing Pair classes
         are collected, and their JS and CSS extracted. Any further calls
@@ -346,8 +335,6 @@ class ClientCode(object):
         injected) via the websocket interface.
         """
         if self._preloaded_pair_classes:
-            return
-        if self.mode == 'dynamic':
             return
         
         # Collect JS from pair classes
@@ -390,14 +377,10 @@ class ClientCode(object):
     
     def get_defined_pair_classes(self):
         """ Get a list of all Pair classes that will be defined
-        by serving the JS/CSS code. Returns an empty list when in 
-        'dynamic' mode.
+        by serving the JS/CSS code.
         """
         self._collect()
-        if self.mode == 'dynamic':
-            return []
-        else:
-            return self._preloaded_pair_classes
+        return self._preloaded_pair_classes
     
     def add_asset(self, fname, content):
         """ Add an asset. Can be JavaScript, CSS, images, etc. If this
@@ -449,12 +432,24 @@ class ClientCode(object):
                 parts.append(self._assets[fname])
         return '\n\n'.join(parts)
     
-    def get_page(self):
+    def get_js_and_css_assets(self):
+        """ Get a dictionary with the JS and CSS assets needed by a
+        page acquired in non-single mode.
+        """
+        d = {}
+        for fname in self._assets:
+            if fname.startswith('index-'):
+                continue
+            if fname.endswith('.js') or fname.endswith('.css'):
+                d[fname] = self.load(fname)
+        return d
+    
+    def get_page(self, single=False):
         """ Get the string for an HTML page that can show a Flexx app.
         """
-        return self._get_page(self.mode)
+        return self._get_page(single)
     
-    def get_page_for_export(self, commands):
+    def get_page_for_export(self, commands, single=False):
         """ Get the string for a single exported HTML page.
         """
         # Create lines to init app
@@ -468,15 +463,14 @@ class ClientCode(object):
         fname = 'index-export.js'
         self._assets[fname] = '\n'.join(lines)
         try:
-            return self._get_page('single')  # todo: or split, depending on export mode
+            return self._get_page(single)
         finally:
             self._assets.pop(fname)
     
-    def _get_page(self, mode):
+    def _get_page(self, single):
         """ This code takes the template, the collected JS and CSS, and
         composes an index page to serve/export.
         """
-        assert mode in ('split', 'single', 'dynamic')
         
         # Init source code from template
         js_elements = []  # links to external JS docs
@@ -489,16 +483,14 @@ class ClientCode(object):
                 code = self.load(fname)
                 if not code.strip():
                     continue
-                if ((mode == 'single') or 
-                    (mode == 'split' and fname.startswith('index-')) or 
-                    (mode == 'dynamic' and fname.startswith('flexx-core.'))):
+                if single or fname.startswith('index-'):
                     if fname.endswith('.css'):
                         css = "<style>\n/* CSS for %s */\n%s\n</style>" % (fname, code)
                         index_elements.append(css)
                     else:
                         js = "<script>\n/* JS for %s */\n%s\n</script>" % (fname, code)
                         index_elements.append(js)
-                elif mode == 'split':
+                else:
                     if fname.endswith('.css'):
                         css = "    <link rel='stylesheet' type='text/css' href='%s' />" % fname
                         css_elements.append(css)
@@ -537,21 +529,32 @@ class Exporter(object):
     def command(self, cmd):
         self._commands.append(cmd)
     
-    def write_html(self, filename):
+    def write_html(self, filename, single=True):
         """ Write html document to the given file.
         """
         if filename.startswith('~'):
             filename = os.path.expanduser(filename)
-        # todo: allow writing in split mode
-        html = self.to_html()
+        html = self.to_html(single)
         open(filename, 'wt').write(html)
         print('Exported app to %r' % filename)
     
-    def to_html(self):
+    def write_dependencies(self, dirname):
+        """ Write dependencies to the given dir (if a path to a file
+        is given, will write to the same directory as that file). Use
+        this if you export using ``single == False``.
+        """
+        if dirname.startswith('~'):
+            dirname = os.path.expanduser(dirname)
+        if os.path.isfile(dirname):
+            dirname = os.path.dirname(dirname)
+        for fname, content in clientCode.get_js_and_css_assets().items():
+            open(os.path.join(dirname, fname), 'wt').write(content)
+    
+    def to_html(self, single=True):
         """ Get the HTML string.
         """
-        return clientCode.get_page_for_export(self._commands)
-    
+        return clientCode.get_page_for_export(self._commands, single)
+
 
 def minify(code):
     """ Very minimal JS minification algorithm. Can probably be better.
