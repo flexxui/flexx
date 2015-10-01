@@ -226,6 +226,7 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
     total_code[0] = prefix + total_code[0]
     
     for name, val in sorted(cls.__dict__.items()):
+        name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix name mangling
         if isinstance(val, Signal):
             signals.append(name)
             funcname = '_' + name + '_func'
