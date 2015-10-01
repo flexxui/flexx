@@ -9,8 +9,7 @@ def minify(code, remove_whitespace=True):
     non-functional whitespace. Otherwise remove all trailing whitespace
     and indents using tabs to preserve space.
     """
-    code = remove_singleline_comments(code)
-    code = remove_multiline_comments(code)
+    code = remove_comments(code)
     if remove_whitespace:
         code = remove_all_whitespace(code)
     else:
@@ -18,16 +17,7 @@ def minify(code, remove_whitespace=True):
         code = tabbify(code)
     return code
 
-def remove_singleline_comments(code):
-    lines = []
-    for line in code.splitlines():
-        pre, _, post = line.partition('//')
-        pre = pre.rstrip()
-        if pre:
-            lines.append(pre)
-    return '\n'.join(lines)
-
-def remove_multiline_comments(code):
+def remove_comments(code):
     chars = ['\n']
     class non_local: pass
     non_local._i = -1
@@ -44,6 +34,14 @@ def remove_multiline_comments(code):
             chars.append(c)
             if c == c0 and chars[-1] != '\\':
                 return
+    def to_end_of_line():
+        lastchar = ''
+        while True:
+            c = read()
+            if not c: break
+            if c == '\n':
+                non_local._i -= 1
+                break
     def to_end_of_mutiline_comment():
         lastchar = ''
         while True:
@@ -57,6 +55,10 @@ def remove_multiline_comments(code):
         if not c: break  # end of code
         elif c == "'" or c == '"':
             to_end_of_string(c)
+        elif c == '/' and chars[-1] == '/':
+            chars.pop(-1)
+            to_end_of_line()
+            chars.append('\n')
         elif c == '*' and chars[-1] == '/':
             chars.pop(-1)
             to_end_of_mutiline_comment()
@@ -66,6 +68,8 @@ def remove_multiline_comments(code):
     return ''.join(chars)
 
 def remove_all_whitespace(code):
+    raise RuntimeError('full whitespace removal for minification is currently broken')
+    # todo: this is broken
     code = code.replace('\t', ' ').replace('\r', ' ').replace('\n', ' ')
     space_safe = ' =+-/*&|(){},.><:;'
     chars = ['\n']
@@ -95,7 +99,7 @@ def remove_trailing_whitespace(code):
 def tabbify(code):
     lines = []
     for line in code.splitlines():
-        line2 = line.lstrip()
+        line2 = line.lstrip(' ')
         indent = (len(line)-len(line2)) // 4
         lines.append('\t'*indent + line2)
     return '\n'.join(lines)
