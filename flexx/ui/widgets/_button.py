@@ -29,7 +29,7 @@ Example with interaction:
 
 """
 
-from .. import react
+from ... import react
 from . import Widget
 
 
@@ -39,9 +39,7 @@ class Button(Widget):
     """
     
     CSS = """
-    .flx-button-xxx {
-        background: #fee;
-    }
+    
     """
     
     @react.input
@@ -56,14 +54,11 @@ class Button(Widget):
     class JS:
         
         def _create_node(self):
-            this.node = document.createElement('button')
-            #this._proxy_event(this.node, 'click')
-            
-            # testing ...
-            #self.connect_event('click', (self, 'ontheclick'))
+            this.p = phosphor.createWidget('button')
+            node = this.p.node
             that = this
-            this.node.addEventListener('mousedown', lambda ev: that.mouse_down._set(True), False)
-            this.node.addEventListener('mouseup', lambda ev: that.mouse_down._set(False), False)
+            node.addEventListener('mousedown', lambda ev: that.mouse_down._set(True), False)
+            node.addEventListener('mouseup', lambda ev: that.mouse_down._set(False), False)
         
         @react.connect('text')
         def _text_changed(self, text):
@@ -71,4 +66,6 @@ class Button(Widget):
     
         @react.source
         def mouse_down(v):
+            """ True when the mouse is currently pressed down.
+            """
             return bool(v)

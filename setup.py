@@ -73,7 +73,7 @@ setup(
     extras_require = extras_require,
     packages=package_tree(name),
     package_dir={name: name},
-    package_data={},
+    package_data={'flexx': ['resources/*']},
     zip_safe=False,
     classifiers=[
         'Development Status :: 3 - Alpha',

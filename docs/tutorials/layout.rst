@@ -143,8 +143,6 @@ widgets are organized.
                 ui.Label(text='Note the spacer Widget above')
 
 
-
-
     
 FormLayout
 ----------
@@ -206,8 +204,8 @@ a percentage of the parent size).
                 self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
 
 
-HSplitter and VSplitter
------------------------
+Splitters
+---------
 
 The splitters split the available space in regions, which size can be
 set by the user by dragging the divider. Unlike an HBox or VBox, a
@@ -222,9 +220,9 @@ extra).
     
     class Example(ui.Widget):
         def init(self):
-            with ui.VSplitter():
-                ui.Button(text='Right A', min_size=(120, 0))
-                ui.Button(text='Right B', min_size=(70, 0))
+            with ui.SplitPanel(orientation='v'):
+                ui.Button(text='Right A')
+                ui.Button(text='Right B')
                 ui.Button(text='Right C')
 
 Let's make it more interesting, a splitter inside a HBox, where the splitter has
@@ -238,9 +236,9 @@ a button on the left and a hbox on the right (min_size is currently not implemen
     class Example(ui.Widget):
         def init(self):
             with ui.HBox():
-                ui.Button(text='Button in hbox', flex=0, min_size=(110, 0))
-                with ui.HSplitter(flex=2):
-                    ui.Button(text='Button in hsplit', min_size=(110, 0))
+                ui.Button(text='Button in hbox', flex=0, style='min-width:110px;')
+                with ui.SplitPanel(flex=2):
+                    ui.Button(text='Button in hsplit', style='min-width:110px;')
                     with ui.HBox():
                         ui.Button(text='Right A', flex=0)
                         ui.Button(text='Right B', flex=1)

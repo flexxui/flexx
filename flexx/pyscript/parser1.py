@@ -292,7 +292,7 @@ class Parser1(Parser0):
         test = ''.join(self.parse(node))
         if (('_truthy(' in test) or test.endswith('.length') or test.isnumeric() or 
             test == 'true' or test == 'false' or test.count('==') or test.count('!=')):
-            return test
+            return unify(test)
         else:
             self.vars_for_functions['_truthy'] = bool_func
             return '_truthy(%s)' % test
@@ -464,7 +464,7 @@ class Parser1(Parser0):
             return [nl, target, " = Math.floor(", target, "/", value, ")"]
         else:
             op = ' %s= ' % self.BINARY_OP[node.op.__class__.__name__]
-            return [nl, target, op, value]
+            return [nl, target, op, value, ';']
     
     def parse_Delete(self, node):
         code = []

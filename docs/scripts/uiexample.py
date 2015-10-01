@@ -29,10 +29,13 @@ class App(ui.Widget):
     def init(self):
         """  # mind the indentation
 
+should_export_flexx_deps = True
+
 
 class uiexample(nodes.raw): pass
 
 def visit_uiexample_html(self, node):
+    global should_export_flexx_deps
     
     # Get code
     code = node.code.strip() + '\n'
@@ -53,7 +56,9 @@ def visit_uiexample_html(self, node):
         code += 'App = Example\n'
     if not 'app' in code:
         code += 'from flexx import app\n'
-    code += 'app.export(App, %r)\n' % fname
+    code += 'app.export(App, %r, False, %i)\n' % (fname, should_export_flexx_deps)
+    
+    should_export_flexx_deps = False  # Export deps only once
     
     # Write filename so Python can find the source
     filename_py = os.path.join(HTML_DIR, 'ui', 'examples', 'example%s.py' % this_id)
@@ -67,10 +72,10 @@ def visit_uiexample_html(self, node):
                                  stderr=subprocess.STDOUT, env=env, 
                                  cwd=os.path.join(HTML_DIR, 'ui', 'examples'))
     except Exception as err:
-        msg = 'Example not generated. ' + str(err.output)
+        msg = 'Example not generated. <pre>%s</pre>' % err.output.decode()
         open(filename_html, 'wt').write(msg.replace('\\n', '<br />'))
-        warnings.warn('ERROR:' + str(err.output))
-        # todo: raise once we've got all examples fixed...
+        #warnings.warn('ERROR:' + err.output.decode())
+        raise RuntimeError('Could not create ui example:' + err.output.decode())
     
     rel_path = '../ui/examples/' + fname
     

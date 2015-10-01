@@ -10,7 +10,7 @@ itself it does not do or show much, though we can make it visible:
     
     # A red widget
     class Example(ui.Widget):
-        CSS = ".flx-example {background:#f00; min-width: 20px; min-height:20px}"
+        CSS = ".flx-Example {background:#f00; min-width: 20px; min-height:20px}"
 
 Widgets are also used as a container class:
 
@@ -70,21 +70,15 @@ To lean about the individual widgets, check the
 # namespace, we prefix the module names with an underscrore.
 
 from ._widget import Widget
+from .layouts import *
+from .widgets import *
 
-from ._layout import Layout
-from ._box import Box, HBox, VBox
-from ._splitter import Splitter, HSplitter, VSplitter
-from ._formlayout import BaseTableLayout, FormLayout, GridLayout
-from ._pinboardlayout import PinboardLayout
-
-from ._button import Button
-from ._slider import Slider
-from ._lineedit import LineEdit
-
-from ._label import Label
-from ._panel import Panel
-from ._progressbar import ProgressBar
-
-from ._plotwidget import PlotWidget
 from ._plotlayout import PlotLayout
-from ._iframe import IFrame
+
+# flexx.ui needs phosphor
+def _install_phosphor():
+    COMMIT = '07578ac'  # <-- update this to sync with specific version
+    from ..app.clientcode import clientCode
+    from ..util.getphosphor import get_phosphor
+    clientCode.add_asset('phosphor-all.js', get_phosphor(COMMIT))
+_install_phosphor()

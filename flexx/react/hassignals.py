@@ -80,20 +80,20 @@ class HasSignals(with_metaclass(HasSignalsMeta, object)):
             #val = getattr(self.__class__, name)
             getattr(self, name)
         
+        self.connect_signals(False)
+        
         for name, val in initial_signal_values.items():
             if name not in self.__class__.__signals__:
                 raise ValueError('Object does not have a signal %r' % name)
             signal = getattr(self, name)
             signal(val)
-        
-        self.connect_signals(False)
     
     def connect_signals(self, raise_on_fail=True):
         """ Connect any disconnected signals associated with this object.
         """
         success = True
-        for name in self.__signals__:
-            if name in self.__props__:
+        for name in self.__class__.__signals__:
+            if name in self.__class__.__props__:
                 continue
             s = getattr(self, name)
             if s.not_connected:

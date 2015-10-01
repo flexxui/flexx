@@ -217,7 +217,10 @@ class WSHandler(tornado.websocket.WebSocketHandler):
                 self.close(1003, "Could not launch app: %r" % err)
                 raise
             self.write_message("PRINT Hello World from server", binary=True)
-            tornado.ioloop.IOLoop.current().spawn_callback(self.pinger)
+            if tornado.version_info < (4, ):
+                tornado.ioloop.IOLoop.current().add_callback(self.pinger)
+            else:
+                tornado.ioloop.IOLoop.current().spawn_callback(self.pinger)
         else:
             self.close(1003, "Could not associate socket with an app.")
     

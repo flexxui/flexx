@@ -26,16 +26,18 @@ Interactive example:
                 self.label.text('x'.repeat(value))
 """
 
-from .. import react
+from ... import react
 from . import Widget
 
+
+#todo: implement this in a way so it looks/behaves the same everywhere.
 
 class Slider(Widget):
     """ An input widget to select a value in a certain range (aka HTML
     range input).
     """
     
-    CSS = ".flx-slider {min-height: 30px;}"
+    CSS = ".flx-Slider {min-height: 30px;}"
     
     @react.input
     def value(v=0):
@@ -60,10 +62,10 @@ class Slider(Widget):
     class JS:
     
         def _create_node(self):
-            self.node = document.createElement('input')
-            self.node.type = 'range'
+            self.p = phosphor.createWidget('input')
+            self.p.node.type = 'range'
             that = self
-            this.node.addEventListener('input', lambda ev: that.user_value._set(that.node.value), False)
+            this.p.node.addEventListener('input', lambda ev: that.user_value._set(that.node.value), False)
             #if IE10:
             #    this.node.addEventListener('change', lambda ev: that.user_value._set(that.node.value), False)
             

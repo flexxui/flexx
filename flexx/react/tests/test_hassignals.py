@@ -158,7 +158,7 @@ def test_anyclass():
     assert len(title_lengths) == 0
     
     # Initialize the signals for real
-    t.title
+    t.title.connect()
     t.title_len.connect()
     t.show_title.connect()
     

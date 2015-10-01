@@ -267,14 +267,11 @@ class Parser2(Parser1):
     
     def parse_Try(self, node):
         # Python >= 3.3
-        if node.finalbody:
-            raise JSError('No support for try-finally clause.')
-        
         return self.parse_TryExcept(node)
     
     def parse_TryFinally(self, node):
         # Python < 3.3
-        raise JSError('No support for try-finally clause.')
+        return self.parse_TryExcept(node)
     
     def parse_TryExcept(self, node):
         # Python < 3.3
@@ -284,26 +281,37 @@ class Parser2(Parser1):
         code = []
         
         # Try
-        code.append(self.lf('try {'))
-        self._indent += 1
-        for n in node.body:
-            code += self.parse(n)
-        self._indent -= 1
-        code.append(self.lf('}'))
+        if True:
+            code.append(self.lf('try {'))
+            self._indent += 1
+            for n in node.body:
+                code += self.parse(n)
+            self._indent -= 1
+            code.append(self.lf('}'))
         
         # Except
-        self._indent += 1
-        err_name = 'err_%i' % self._indent
-        code.append(' catch(%s) {' % err_name)
-        for i, handler in enumerate(node.handlers):
-            if i == 0:
-                code.append(self.lf(''))
-            else:
-                code.append(' else ')
-            code += self.parse(handler)
+        if node.handlers:
+            self._indent += 1
+            err_name = 'err_%i' % self._indent
+            code.append(' catch(%s) {' % err_name)
+            for i, handler in enumerate(node.handlers):
+                if i == 0:
+                    code.append(self.lf(''))
+                else:
+                    code.append(' else ')
+                code += self.parse(handler)
+            
+            self._indent -= 1
+            code.append(self.lf('}'))  # end catch
         
-        self._indent -= 1
-        code.append(self.lf('}'))  # end catch
+        # Finally
+        if node.finalbody:
+            code.append(' finally {')
+            self._indent += 1
+            for n in node.finalbody:
+                code += self.parse(n)
+            self._indent -= 1
+            code.append(self.lf('}'))  # end finally
         
         return code
         
@@ -620,10 +628,11 @@ class Parser2(Parser1):
             code.append('}')  # end for
         # Finalize
         code.append('return res;})')  # end function
-        code.append('()')  # call function
+        code.append('.apply(this)')  # call function
         code.insert(2, 'var %s;' % ', '.join(vars))
         return code
-    
+        
+        # todo: apply the apply(this) trick everywhere where we use a function
     # SetComp
     # GeneratorExp
     # DictComp

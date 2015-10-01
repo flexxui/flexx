@@ -31,7 +31,7 @@ Interactive example:
                     self.p.value(self.p.value()+0.1)
 """
 
-from .. import react
+from ... import react
 from . import Widget
 
 
@@ -39,7 +39,7 @@ class ProgressBar(Widget):
     """ A widget to show progress.
     """
     
-    CSS = ".flx-progressbar {min-height: 10px;}"
+    CSS = ".flx-ProgressBar {min-height: 10px;}"
     
     @react.input
     def value(v=0):
@@ -56,7 +56,7 @@ class ProgressBar(Widget):
     class JS:
     
         def _create_node(self):
-            self.node = document.createElement('progress')
+            self.p = phosphor.createWidget('progress')
     
         @react.connect('value')
         def _value_changed(self, value):

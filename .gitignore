@@ -4,6 +4,7 @@ __pycache__/
 
 # Specific to here
 exp/html_examples.txt
+flexx/resources/phosphor-all.*.js
 
 # C extensions
 *.so

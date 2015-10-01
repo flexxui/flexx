@@ -8,32 +8,29 @@ Example:
     class Example(ui.Widget):
         def init(self):
             with ui.FormLayout():
-                ui.Label(text='Pet name:')
-                self.b1 = ui.LineEdit()
-                ui.Label(text='Pet Age:')
-                self.b2 = ui.LineEdit()
-                ui.Label(text="Pet's Favorite color:")
-                self.b3 = ui.LineEdit()
+                self.b1 = ui.LineEdit(title='Name:')
+                self.b2 = ui.LineEdit(title="Age:")
+                self.b3 = ui.LineEdit(title="Favorite color:")
                 ui.Widget(flex=1)
 """
 
-from .. import react
+from ... import react
 from . import Widget, Layout
 
 
 class BaseTableLayout(Layout):
     """ Abstract base class for layouts that use an HTML table.
     
-    Layouts that use this approach are rather bad in performance when
-    resizing. This is not so much a problem when it is a leaf layout,
-    but we don't recommend embedding such layouts in each-other.
+    Layouts that use this approach don't have good performance when
+    resizing. This is not so much a problem when it is used as a leaf
+    layout, but we don't recommend embedding such layouts in each-other.
     """
     
     CSS = """
     
     /* Clear any styling on this table (rendered_html is an IPython thing) */
-    .flx-basetablelayout, .flx-basetablelayout td, .flx-basetablelayout tr,
-    .rendered_html .flx-basetablelayout {
+    .flx-BaseTableLayout, .flx-BaseTableLayout td, .flx-BaseTableLayout tr,
+    .rendered_html .flx-BaseTableLayout {
         border: 0px;
         padding: initial;
         margin: initial;
@@ -42,18 +39,18 @@ class BaseTableLayout(Layout):
     
     /* Behave well inside hbox/vbox, 
        we assume no layouts to be nested inside a table layout */
-    .flx-hbox > .flx-basetablelayout {
+    .flx-hbox > .flx-BaseTableLayout {
         width: auto;
     }
-    .flx-vbox > .flx-basetablelayout {
+    .flx-vbox > .flx-BaseTableLayout {
         height: auto;
     }
 
     /* In flexed cells, occupy the full space */
-    td.vflex > .flx-widget {
+    td.vflex > .flx-Widget {
         height: 100%;
     }
-    td.hflex > .flx-widget {
+    td.hflex > .flx-Widget {
         width: 100%;
     }
     """
@@ -109,7 +106,7 @@ class BaseTableLayout(Layout):
                         continue
                     self._apply_cell_layout(row, col, vflexes[i], hflexes[j], cum_vflex, cum_hflex)
         
-        @react.connect('actual_size')
+        @react.connect('real_size')
         def _adapt_to_size_change(self, size):
             """ This function adapts the height (in percent) of the flexible rows
             of a layout. This is needed because the percent-height applies to the
@@ -121,8 +118,8 @@ class BaseTableLayout(Layout):
             table = self.node  # or event.target
             #print('heigh changed', event.heightChanged, event.owner.__id)
             
-            if not self.actual_size.last_value or (self.actual_size.value[1] !=
-                                                   self.actual_size.last_value[1]):
+            if not self.real_size.last_value or (self.real_size.value[1] !=
+                                                 self.real_size.last_value[1]):
                 
                 # Set one flex row to max, so that non-flex rows have their
                 # minimum size. The table can already have been stretched
@@ -156,53 +153,23 @@ class BaseTableLayout(Layout):
 
 
 class FormLayout(BaseTableLayout):
-    """ A form layout organizes pairs of widgets vertically.
+    """ A form layout vertically alligns its child widgets.
     
-    Note: the API may change. maybe the label can be derived from the
-    widgets' ``title`` property?
+    A label is placed to the left of each widget (based on the widget's
+    title).
     """
     
     CSS = """
-    .flx-formlayout > tr > td > .flx-label {
+    .flx-FormLayout .title {
         text-align: right;
+        padding-right: 5px;
     }
     """
     
     class JS:
         
         def _create_node(self):
-            this.node = document.createElement('table')
-            this.node.appendChild(document.createElement('tr'))
-        
-        def _add_child(self, widget):
-            # Get row, create if necessary
-            row = this.node.children[-1]
-            itemsInRow = row.children.length
-            if itemsInRow >= 2:
-                row = document.createElement('tr')
-                self.node.appendChild(row)
-            # Create td and add widget to it
-            td = document.createElement("td")
-            row.appendChild(td)
-            td.appendChild(widget.node)
-            #
-            self._update_layout()
-            self._apply_table_layout()
-            # do not call super!
-        
-        def _update_layout(self):
-            """ Set hflex and vflex on node.
-            """
-            i = 0
-            for widget in self.children():
-                i += 1
-                widget.node.hflex = 0 if (i % 2) else 1
-                widget.node.vflex = widget.flex()
-            self._apply_table_layout()
-        
-        def _remove_child(self, widget):
-            pass
-            # do not call super!
+            this.p = phosphor.createWidget('table')
         
         def _apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):
             AUTOFLEX = 729
@@ -221,11 +188,40 @@ class FormLayout(BaseTableLayout):
                 col.style.width = '100%'
                 className += 'hflex'
             col.className = className
-
-
-class GridLayout(BaseTableLayout):
-    """ Not implemented.
-    
-    Do we even need it? If we do implement it, we need a way to specify
-    the vertical flex value.
-    """
+        
+        def _add_child(self, widget):
+            # Create row
+            row = document.createElement('tr')
+            this.node.appendChild(row)
+            # Create element for label
+            td = document.createElement("td")
+            td.classList.add('title')
+            row.appendChild(td)
+            widget._title_elem = td
+            td.innerHTML = widget.title()
+            # Create element for widget
+            td = document.createElement("td")
+            row.appendChild(td)
+            td.appendChild(widget.node)
+            #
+            widget.node.hflex = 1
+            widget.node.vflex = widget.flex()[1]
+            self._apply_table_layout()
+        
+        def _remove_child(self, widget):
+            row = widget.node.parentNode.parentNode
+            self.node.removeChild(row)
+            if widget._title_elem:
+                del widget._title_elem
+        
+        @react.connect('children.*.flex')
+        def __update_flexes(self, *flexes):
+            for widget in self.children():
+                widget.node.vflex = widget.flex()[1]
+            self._apply_table_layout()
+        
+        @react.connect('children.*.title')
+        def __update_titles(self, *titles):
+            for widget in self.children():
+                if hasattr(widget, '_title_elem'):
+                    widget._title_elem.innerHTML = widget.title()

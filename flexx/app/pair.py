@@ -37,7 +37,11 @@ def get_instance_by_id(id):
     return Pair._instances.get(id, None)
 
 
-import json
+def no_sync(signal):
+    """ Decorator for signals that should not be synced between Py and JS.
+    """
+    signal.flags['no_sync'] = True
+    return signal
 
 
 class JSSignal(react.SourceSignal):
@@ -107,8 +111,8 @@ class PairMeta(HasSignalsMeta):
                     if not hasattr(cls, name):
                         cls.__signals__.append(name)
                         setattr(cls, name, JSSignal(name, doc=val._func.__doc__))
-                    elif isinstance(getattr(cls, name), JSSignal):
-                        pass  # ok, overloaded signal on JS side
+                    elif isinstance(getattr(cls, name), (JSSignal, react.InputSignal)):
+                        pass  # ok, overloading on JS side, or an input signal
                     else:
                         print('Warning: JS signal %r not proxied, as it would hide a Py attribute.' % name)
         
@@ -134,7 +138,7 @@ class PairMeta(HasSignalsMeta):
                         setattr(cls.JS, name, PyInputSignal(name))
                     else:
                         setattr(cls.JS, name, PySignal(name))
-                elif isinstance(getattr(cls.JS, name), PySignal):
+                elif isinstance(getattr(cls.JS, name), (PySignal, react.InputSignal)):
                     pass  # ok, overloaded signal on JS side
                 else:
                     print('Warning: Py signal %r not proxied, as it would hide a JS attribute.' % name)
@@ -158,6 +162,7 @@ class PairMeta(HasSignalsMeta):
             code.append(c)
         # Add this class
         code.append(create_js_signals_class(cls.JS, cls_name, base_class))
+        code[-1] += '%s.prototype._class_name = "%s";\n' % (cls_name, cls.__name__)
         if cls.mro()[1] is react.HasSignals:
             code.append('flexx.serializer.add_reviver("Flexx-Pair", flexx.classes.Pair.prototype.__from_json__);\n')
         return '\n'.join(code)
@@ -291,13 +296,17 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         signal = getattr(self, name)
         value = serializer.loads(text)
         self._seid_from_js = esid  # to send back to js
+        # if isinstance(signal, react.InputSignal) and signal.value == value:
+        # #if name in ('parent', 'children') and signal.value == value:
+        #     pass  # input signal already has this value
+        # else:
         signal._set(value)
     
     def _signal_changed(self, signal):
         # Set esid to 0 if it originates from Py, or to what we got from JS
         esid = self._seid_from_js
         self._seid_from_js = 0
-        if not isinstance(signal, JSSignal):
+        if not isinstance(signal, JSSignal) and not signal.flags.get('no_sync', False):
             #txt = json.dumps(signal.value)
             txt = serializer.saves(signal.value)
             cmd = 'flexx.instances.%s._set_signal_from_py(%r, %r, %r);' % (self._id, signal.name, txt, esid)
@@ -366,8 +375,10 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
                 return
             signal._esid = signal._count  # mark signal as just updated by us
             # todo: what signals do we sync? all but private signals? or only linked?
-            # signals like `children` should always sync, signals like a 100Hz timer not, mouse_pos maybe neither unless linked against
+            # signals like `text` should always sync, signals like a 100Hz timer not, mouse_pos maybe neither unless linked against
             #if signal.signal_type == 'PyInputSignal' or self._linked_signals[signal._name]:
+            if signal.flags.no_sync:
+                return
             if signal.signal_type != 'PySignal' and not signal._name.startswith('_'):
                 #txt = JSON.stringify(signal.value)
                 txt = flexx.serializer.saves(signal.value)

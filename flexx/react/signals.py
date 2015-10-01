@@ -75,11 +75,12 @@ class Signal(object):
     _IS_SIGNAL = True  # poor man's isinstance in JS (because class name mangling)
     _active = True
     
-    def __init__(self, func, upstream, frame=None, ob=None):
+    def __init__(self, func, upstream, frame=None, ob=None, flags=None):
         # Check and set func
         assert callable(func)
         self._func = func
         self._name = func.__name__
+        self._flags = {} if flags is None else dict(flags)
         
         # Set docstring this appears correct in sphinx docs
         self.__doc__ = '*%s*: %s' % (self.__class__.__name__, func.__doc__ or self._name)
@@ -120,13 +121,14 @@ class Signal(object):
         self._last_timestamp = 0
         self._status = 3  # 0: ok, 1: out of date, 2: uninitialized, 3: unconnected
         
-        # Connecting
+        # Connecting - when on a class, we let the instance connect later
         self._not_connected = 'No connection attempt yet.'
-        self.connect(False)
+        if ob is None:
+            self.connect(False)
 
     def __repr__(self):
         des = '-descriptor' if self._class_desciptor else ''
-        conn = '(not connected)' if self.not_connected else 'with value %r' % self._value
+        conn = '(not connected)' if self.not_connected else 'with value %s' % repr(self._value)
         conn = '' if des else conn 
         return '<%s%s %r %s at 0x%x>' % (self.__class__.__name__, des, self._name, 
                                          conn, id(self))
@@ -145,6 +147,13 @@ class Signal(object):
         of the function that this signal wraps.
         """
         return self._name
+    
+    @property
+    def flags(self):
+        """ A dictionary of flags. Flexx.react does not use these directly,
+        but systems based on Flexx.react may.
+        """
+        return self._flags
     
     ## Behavior for when attached to a class
     
@@ -165,7 +174,7 @@ class Signal(object):
         except AttributeError:
             sys._getframe()
             frame = ObjectFrame(instance, self._frame.f_back)
-            new = self.__class__(self._func, self._upstream_given, frame, instance)
+            new = self.__class__(self._func, self._upstream_given, frame, instance, self.flags)
             setattr(instance, private_name, new)
             return new
     
@@ -426,8 +435,8 @@ class Signal(object):
                 statuses.append(s._status)
         self._status = max(statuses)
         # Update self
-        if self._name == 'number2':
-            pass
+        # if self._name == 'number2': WHAT? LEFTOVER DEBUG CODE?
+        #     pass
         if self._active and self._status == 1:
             count = self._count
             self._save_update()  # this can change our status to 0 or 2 or 3
@@ -447,7 +456,9 @@ class SourceSignal(Signal):
     """ A signal that typically has no upstream signals, but produces
     values by itself.
     """
-
+    
+    _is_being_set = False
+    
     def _update_value(self):
         # Try to initialize, func might not have a default value
         if self._timestamp == 0:
@@ -476,14 +487,20 @@ class SourceSignal(Signal):
     def _set(self, value):
         """ Method for the developer to set the source signal.
         """
-        value = self._call_func(value)
-        self._set_value(value)
-        if value is undefined:
-            return  # no need to update
-        for signal in self._downstream_reconnect[:]:  # list may be modified
-            signal.connect(False)
-        for signal in self._downstream:
-            signal._set_status(1, self)  # do not set status of *this* signal!
+        if self._is_being_set:
+            return
+        self._is_being_set = True
+        try:
+            value = self._call_func(value)
+            self._set_value(value)
+            if value is undefined:
+                return  # no need to update
+            for signal in self._downstream_reconnect[:]:  # list may be modified
+                signal.connect(False)
+            for signal in self._downstream:
+                signal._set_status(1, self)  # do not set status of *this* signal!
+        finally:
+            self._is_being_set = False
 
 
 class InputSignal(SourceSignal):

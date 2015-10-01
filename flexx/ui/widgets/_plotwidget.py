@@ -43,7 +43,7 @@ Interactive example:
                 self.plot.ydata(ydata)
 """
 
-from .. import react
+from ... import react
 from . import Widget
 
 
@@ -52,7 +52,7 @@ class PlotWidget(Widget):
     plotting tasks.
     """
     
-    CSS = "flx-plotwidget {min-width: 300px; min-height: 200px;}"
+    CSS = "flx-PlotWidget {min-width: 300px; min-height: 200px;}"
     
     @react.input
     def xdata(self, v=()):
@@ -115,8 +115,8 @@ class PlotWidget(Widget):
     class JS:
         
         def _create_node(self):
-            self.node = document.createElement('canvas')
-            self._context = ctx = self.node.getContext('2d')
+            self.p = phosphor.createWidget('canvas')
+            self._context = ctx = self.p.node.getContext('2d')
             
             # create tick units
             self._tick_units = []
@@ -124,7 +124,7 @@ class PlotWidget(Widget):
                 for i in [10, 20, 25, 50]:
                     self._tick_units.append(i*10**e)
         
-        @react.connect('actual_size')
+        @react.connect('real_size')
         def _update_canvas_size(self, size):
             if size[0] and size[1]:
                 self.node.width = size[0]

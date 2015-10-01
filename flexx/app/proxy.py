@@ -112,7 +112,7 @@ class AppManager(object):
         elif not app_id:
             # Create a fresh proxy - there already is a runtime
             proxy = Proxy(cls.__name__, runtime=None)
-            app = cls(proxy=proxy)
+            app = cls(proxy=proxy, container='body')
             proxy._set_pair_instance(app)
         else:
             # Search for the app with the specific id
@@ -310,8 +310,8 @@ def init_notebook():
     name = '__default__'
     url = 'ws://%s:%i/%s/ws' % (host, port, name)
     t = "<i>Injecting Flexx JS and CSS</i>"
-    t += "<style>\n%s\n</style>\n" % clientCode.get_css()
-    t += "<script>\n%s\n</script>" % clientCode.get_js()
+    t += "<style>\n%s\n</style>\n" % clientCode.get_all_css()
+    t += "<script>\n%s\n</script>" % clientCode.get_all_js()
     t += "<script>flexx.ws_url=%r; flexx.is_notebook=true; flexx.init();</script>" % url
     
     display(HTML(t))
@@ -385,18 +385,22 @@ def launch(cls, runtime='xul', **runtime_kwargs):
     assert isinstance(cls, type) and issubclass(cls, Pair)
     serve(cls)
     proxy = Proxy(cls.__name__, runtime, **runtime_kwargs)
-    app = cls(proxy=proxy)
+    app = cls(proxy=proxy, container='body')
     proxy._set_pair_instance(app)
     return app
 
 
-def export(cls, filename=None):
+def export(cls, filename=None, single=True, deps=True):
     """ Export the given Pair class to an HTML document.
     
     Arguments:
         cls (Pair): a subclass of ``app.Pair`` (or ``ui.Widget``).
         filename (str, optional): Path to write the HTML document to.
             If not given or None, will return the html as a string.
+        single (bool): If True, will include all JS and CSS dependencies
+            in the HTML page.
+        deps (bool): If deps is True, will also export the dependent
+            JS and CSS files (in case single is False).
     
     Returns:
         html (str): The resulting html. If a filename was specified
@@ -405,12 +409,14 @@ def export(cls, filename=None):
     assert isinstance(cls, type) and issubclass(cls, Pair)
     serve(cls)
     proxy = Proxy(cls.__name__, '<export>')
-    app = cls(proxy=proxy)
+    app = cls(proxy=proxy, container='body')
     proxy._set_pair_instance(app)
     if filename is None:
         return proxy._ws.to_html()
     else:
-        proxy._ws.write_html(filename)
+        proxy._ws.write_html(filename, single)
+        if deps and not single:
+            proxy._ws.write_dependencies(filename)
 
 
 # todo: this does not work well with creating apps from scratch yet; see run_python_in_node.py example
@@ -494,7 +500,7 @@ class Proxy(object):
                 name += '-' + self.id
             if runtime == 'nodejs':
                 self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
-                                       runtime=runtime, code=clientCode.get_js())
+                                       runtime=runtime, code=clientCode.get_all_js())
             else:
                 self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
                                        runtime=runtime, **runtime_kwargs)

@@ -8,9 +8,11 @@ This streamlines the inclusion in Jupyter and our export mechanism.
 """
 
 import os
+import logging
 from collections import OrderedDict
 
 from ..pyscript import py2js, clean_code
+from ..util.minify import minify
 
 # todo: minification
 
@@ -30,17 +32,20 @@ HTML_DIR = os.path.join(os.path.dirname(THIS_DIR), 'html')
 INDEX = """<!doctype html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>Flexx UI</title>
-
+    <meta charset="utf-8">
+    <title>Flexx UI</title>
+    
 CSS-HOOK
 
 JS-HOOK
 
 </head>
 
-<body id='body'></body>
+<body id='body'>
 
+INDEX-HOOK
+
+</body>
 </html>
 """
 
@@ -276,7 +281,7 @@ class FlexxJS:
         return result;
         """
 
-
+# todo: rename to asset store?
 class ClientCode(object):
     """
     This class provides means to deliver client code (HTML/JS/CSS) to
@@ -296,15 +301,10 @@ class ClientCode(object):
     * split (default): the JS/CSS is served via different files.
     * single: everything is served via a single page. Intended for
       exporing apps as single files.
-    * dynamic: all of the Pair classes will be defined dynamically.
-      Note that this makes debugging difficult. Mainly intended for
-      testing purposes.
     
     Note that any Pair classes defined once the first connects
     will be dynamically defined, regardless of the chosen mode (after
     all, the page will already have been served).
-    
-    Note that not all delivery methods support all modes.
     
     """
     
@@ -317,28 +317,13 @@ class ClientCode(object):
             raise RuntimeError('ClientCode must be singleton')
         ClientCode._instance = self
         
-        self._files = OrderedDict()
-        self._cache = {}
+        # Assets - a JS or CSS asset named 'index-X' will appear in the index
+        self._assets = OrderedDict()
+        # self._files = OrderedDict()  # files are assets to load dynamically
+        # self._cache = {}  # content in files can be cached
+        # self._remote_assets = OrderedDict()
         
         self._preloaded_pair_classes = set()
-        
-        # Init dicts for JS and CSS code. The index represents the name
-        # of the .js or .css file, or starts with "index-" in which
-        # case the code should be in the main page.
-        self._js = OrderedDict()
-        self._css = OrderedDict()
-        
-        # Init flexx core code
-        self._js['flexx'] = []
-        self._css['flexx'] = []
-        self._js['flexx'].append(FlexxJS)
-        self._js['flexx'].append('var flexx = new FlexxJS();\n')
-    
-    @property
-    def mode(self):
-        """ Get the mode to serve JS/CSS code: 'split', 'single', or 'dynamic'.
-        """
-        return os.getenv('FLEXX_SERVE_MODE', 'split')
     
     def _collect(self):
         """ The first time this is called, all existing Pair classes
@@ -352,102 +337,116 @@ class ClientCode(object):
         """
         if self._preloaded_pair_classes:
             return
-        if self.mode == 'dynamic':
-            return
-        
-        # todo: Maybe at some point we may want to include external js files?
-        # # Determine JS files
-        # for fname in ['serialize.js', #'main.js', #'layouts.js',
-        #              ]:# 'phosphor-core.min.js', 'phosphor-ui.min.js']:
-        #     if fname.startswith('phosphor'):
-        #         self._files[fname] = os.path.join(HTML_DIR, 'phosphor', fname)
-        #     else:
-        #         self._files[fname] = os.path.join(HTML_DIR, fname)
-        # 
-        # # Determine CSS files
-        # for fname in []:#['main.css', 'layouts.css', ]:#'phosphor-ui.min.css']:
-        #     if fname.startswith('phosphor'):
-        #         self._files[fname] = os.path.join(HTML_DIR, 'phosphor', fname)
-        #     else:
-        #         self._files[fname] = os.path.join(HTML_DIR, fname)
         
         # Collect JS from pair classes
         from .pair import get_pair_classes
+        preloaded_pair_classes = set()
         
-        self._js['flexx-ui'] = []
-        self._js['index-other'] = []
-        self._css['flexx-ui'] = []
-        self._css['index-other'] = []
+        js, css  = OrderedDict(), OrderedDict()
+        for key in ('flexx-core', 'flexx-ui', 'index-flexx'):
+            js[key], css[key] = ['"use strict;"'], []
         
+        # Include Flexx object (that does communication, etc.)
+        js['flexx-core'].append(FlexxJS)
+        js['flexx-core'].append('var flexx = new FlexxJS();\n')
+        
+        # Include all pair classes, separate core, ui and other
         for cls in get_pair_classes():
-            self._preloaded_pair_classes.add(cls)
+            preloaded_pair_classes.add(cls)
             if cls.__module__.startswith('flexx.app'):
-                key = 'flexx'
+                key = 'flexx-core'
             elif cls.__module__.startswith('flexx.ui'):
                 key = 'flexx-ui'
             else:
-                key = 'index-other'
-            self._js[key].append(cls.JS.CODE)
-            self._css[key].append(cls.CSS)  # the CSS is '' if not specified for that class
+                key = 'index-flexx'
+            js[key].append(cls.JS.CODE)
+            css[key].append(cls.CSS)  # the CSS is '' if not specified for that class
+        
+        # Add what we collected
+        for key in js:
+            code = '\n\n'.join(js[key])
+            code = clean_code(code)  # clear duplicate pyscript helper functions
+            self.add_asset(key+'.js', code)
+        for key in css:
+            self.add_asset(key+'.css', '\n\n'.join(css[key]))
+        
+        self._preloaded_pair_classes.update(preloaded_pair_classes)
     
     def get_defined_pair_classes(self):
         """ Get a list of all Pair classes that will be defined
-        by serving the JS/CSS code. Returns an empty list when in 
-        'dynamic' mode.
+        by serving the JS/CSS code.
         """
         self._collect()
-        if self.mode == 'dynamic':
-            return []
-        else:
-            return self._preloaded_pair_classes
+        return self._preloaded_pair_classes
+    
+    def add_asset(self, fname, content):
+        """ Add an asset. Can be JavaScript, CSS, images, etc. If this
+        is a JS or CSS asset, it is loaded automatically (if added
+        before the first app instance is created).
+        """
+        if fname in self._assets:
+            raise ValueError('Asset %r is already set.' % fname)
+        if self._preloaded_pair_classes and (fname.endswith('.js') or fname.endswith('.css')):
+            logging.warn('Adding asset %r but the page has already been "served".' % fname)
+        self._assets[fname] = content
     
     def load(self, fname):
-        """ Get the source of the given file as a string.
+        """ Get the source of the given file as a string. Can be str
+        or bytes.
         """
-        if fname.endswith('.js') and fname[:-3] in self._js:
-            return self.get_js(fname[:-3])
-        elif fname.endswith('.css') and fname[:-4] in self._css:
-            return self.get_css(fname[:-4])
-        elif fname not in self._files:
-            raise IOError('Invalid source file')
-        elif fname in self._cache:
-            return self._cache[fname]
-        else:
-            filename = self._files[fname]
-            src = open(filename, 'rt').read()
-            #self._cache[fname] = src  # caching disabled for easer dev
-            return src
+        try:
+            content = self._assets[fname]
+        except IndexError:
+            raise ValueError('Asset %r not known.' % fname)
+        
+        if isinstance(content, str):
+            if content.startswith('file://'):
+                content_fname = content[7:]
+                content = open(content_fname, 'rb').read()
+                # self._assets[fname] = content  # cache
+            elif content.startswith('http://') or content.startswith('https://'):
+                raise NotImplementedError('HTTP assets not supported yet')
+        
+        return content
     
-    def get_js(self, selection='all'):
-        """ Get JavaScript as a single string.
-        """
-        self._collect()
-        parts = ['"use strict";']
-        if selection == 'all':
-            for key in self._js:
-                parts.extend(self._js[key])
-        else:
-            parts.extend(self._js[selection])
-        return clean_code('\n\n'.join(parts))
-    
-    def get_css(self, selection='all'):
-        """ Get CSS as a single string.
+    def get_all_js(self):
+        """ Get all JavaScript as a single string.
         """
         self._collect()
         parts = []
-        if selection == 'all':
-            for key in self._css:
-                parts.extend(self._css[key])
-        else:
-            parts.extend(self._css[selection])
+        for fname in self._assets:
+            if fname.endswith('.js'):
+                parts.append(self.load(fname))
         return '\n\n'.join(parts)
     
-    def get_page(self):
+    def get_all_css(self):
+        """ Get all CSS as a single string.
+        """
+        self._collect()
+        parts = []
+        for fname in self._assets:
+            if fname.endswith('.css'):
+                parts.append(self._assets[fname])
+        return '\n\n'.join(parts)
+    
+    def get_js_and_css_assets(self):
+        """ Get a dictionary with the JS and CSS assets needed by a
+        page acquired in non-single mode.
+        """
+        d = {}
+        for fname in self._assets:
+            if fname.startswith('index-'):
+                continue
+            if fname.endswith('.js') or fname.endswith('.css'):
+                d[fname] = self.load(fname)
+        return d
+    
+    def get_page(self, single=False):
         """ Get the string for an HTML page that can show a Flexx app.
         """
-        return self._get_page(self.mode)
+        return self._get_page(single)
     
-    def get_page_for_export(self, commands):
+    def get_page_for_export(self, commands, single=False):
         """ Get the string for a single exported HTML page.
         """
         # Create lines to init app
@@ -458,54 +457,49 @@ class ClientCode(object):
         lines.append('};\n')
         
         # Create a temporary extra element
-        self._js['index-export'] = ['\n'.join(lines)]
+        fname = 'index-export.js'
+        self._assets[fname] = '\n'.join(lines)
         try:
-            return self._get_page('single')  # todo: or split, depending on export mode
+            return self._get_page(single)
         finally:
-            self._js.pop('index-export')
+            self._assets.pop(fname)
     
-    def _get_page(self, mode):
-        """ This code takes the template, the collected JS and CSS and
+    def _get_page(self, single):
+        """ This code takes the template, the collected JS and CSS, and
         composes an index page to serve/export.
         """
-        assert mode in ('split', 'single', 'dynamic')
         
         # Init source code from template
-        js_elements = []
-        css_elements = []
+        js_elements = []  # links to external JS docs
+        css_elements = []  # links to external CSS docs
+        index_elements = []  # code to put in the index
         
-        # Get JS DOM elements
-        for key in self._js:
-            code = self.get_js(key)
-            if not code.strip():
-                continue
-            js = ''
-            if ((mode == 'single') or 
-                (mode == 'split' and key.startswith('index')) or 
-                (mode == 'dynamic' and key == 'flexx')):
-                js = "<script>\n/* JS for %s */\n%s\n</script>" % (key, code)
-            elif mode == 'split':
-                js = "<script src='%s.js'></script>" % key
-            js_elements.append(js)
-        
-        # Get CSS DOM elements
-        for key in self._css:
-            code = self.get_css(key)
-            if not code.strip():
-                continue
-            css = ''
-            if ((mode == 'single') or 
-                (mode == 'split' and key.startswith('index')) or 
-                (mode == 'dynamic' and key == 'flexx')):
-                css = "<style>\n/* CSS for %s */\n%s\n</style>" % (key, code)
-            elif mode == 'split':
-                css = "<link rel='stylesheet' type='text/css' href='%s.css' />" % key
-            css_elements.append(css)
+        # Collect JS and CSS
+        for fname in self._assets:
+            if fname.endswith('.js') or fname.endswith('.css'):
+                code = self.load(fname)
+                if not code.strip():
+                    continue
+                if single or fname.startswith('index-'):
+                    if fname.endswith('.css'):
+                        css = "<style>\n/* CSS for %s */\n%s\n</style>" % (fname, code)
+                        index_elements.append(css)
+                    else:
+                        js = "<script>\n/* JS for %s */\n%s\n</script>" % (fname, code)
+                        index_elements.append(js)
+                else:
+                    if fname.endswith('.css'):
+                        css = "    <link rel='stylesheet' type='text/css' href='%s' />" % fname
+                        css_elements.append(css)
+                    else:
+                        js = "    <script src='%s'></script>" % fname
+                        js_elements.append(js)
         
         # Compose index page
         src = INDEX
-        src = src.replace('JS-HOOK', '\n\n'.join(js_elements))
-        src = src.replace('CSS-HOOK', '\n\n'.join(css_elements))
+        src = src.replace('JS-HOOK', '\n'.join(js_elements))
+        src = src.replace('CSS-HOOK', '\n'.join(css_elements))
+        src = src.replace('INDEX-HOOK', '\n'.join(index_elements))
         
         return src
 
@@ -532,72 +526,29 @@ class Exporter(object):
     def command(self, cmd):
         self._commands.append(cmd)
     
-    def write_html(self, filename):
+    def write_html(self, filename, single=True):
         """ Write html document to the given file.
         """
-        # todo: allow writing in split mode
-        html = self.to_html()
+        if filename.startswith('~'):
+            filename = os.path.expanduser(filename)
+        html = self.to_html(single)
         open(filename, 'wt').write(html)
         print('Exported app to %r' % filename)
     
-    def to_html(self):
+    def write_dependencies(self, dirname):
+        """ Write dependencies to the given dir (if a path to a file
+        is given, will write to the same directory as that file). Use
+        this if you export using ``single == False``.
+        """
+        if dirname.startswith('~'):
+            dirname = os.path.expanduser(dirname)
+        if os.path.isfile(dirname):
+            dirname = os.path.dirname(dirname)
+        for fname, content in clientCode.get_js_and_css_assets().items():
+            open(os.path.join(dirname, fname), 'wt').write(content)
+    
+    def to_html(self, single=True):
         """ Get the HTML string.
         """
-        return clientCode.get_page_for_export(self._commands)
-    
-
-def minify(code):
-    """ Very minimal JS minification algorithm. Can probably be better.
-    May contain bugs. Only operates well on JS without syntax errors.
-    """
-    space_safe = ' =+-/*&|(){},.><:;'
-    chars = ['\n']
-    class non_local: pass
-    non_local._i = -1
-    
-    def read():
-        non_local._i += 1
-        if non_local._i < len(code):
-            return code[non_local._i]
-    def to_end_of_string(c0):
-        chars.append(c0)
-        while True:
-            c = read()
-            chars.append(c)
-            if c == c0 and chars[-1] != '\\':
-                return
-    def to_end_of_line_comment():
-        while True:
-            c = read()
-            if c == '\n':
-                return
-    def to_end_of_mutiline_comment():
-        lastchar = ''
-        while True:
-            c = read()
-            if c == '/' and lastchar == '*':
-                return
-            lastchar = c
-    while True:
-        c = read()
-        if not c:
-            break  # end of code
-        elif c == "'" or c == '"':
-            to_end_of_string(c)
-        elif c == '/' and chars[-1] == '/':
-            chars.pop(-1)
-            to_end_of_line_comment()
-        elif c == '*' and chars[-1] == '/':
-            chars.pop(-1)
-            to_end_of_mutiline_comment()
-        elif c in '\t\r\n':
-            pass
-        elif c in ' ':
-            if chars[-1] not in space_safe:
-                chars.append(c)
-        elif c in space_safe and chars[-1] == ' ':
-            chars[-1] = c  # replace last char
-        else:
-            chars.append(c)
-    chars.pop(0)
-    return ''.join(chars)
+        html = clientCode.get_page_for_export(self._commands, single)
+        return minify(html, False)

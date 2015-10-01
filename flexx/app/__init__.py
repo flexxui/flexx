@@ -60,4 +60,4 @@ element is created, in which the widget is displayed.
 
 from .proxy import run, start, stop, init_notebook, call_later
 from .proxy import serve, launch, export, manager
-from .pair import Pair, get_instance_by_id, get_pair_classes
+from .pair import Pair, get_instance_by_id, get_pair_classes, no_sync
