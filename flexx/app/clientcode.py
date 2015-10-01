@@ -12,6 +12,7 @@ import logging
 from collections import OrderedDict
 
 from ..pyscript import py2js, clean_code
+from ..util.minify import minify
 
 # todo: minification
 
@@ -549,4 +550,5 @@ class Exporter(object):
     def to_html(self, single=True):
         """ Get the HTML string.
         """
-        return clientCode.get_page_for_export(self._commands, single)
+        html = clientCode.get_page_for_export(self._commands, single)
+        return minify(html, False)
