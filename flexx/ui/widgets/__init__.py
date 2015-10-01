@@ -12,3 +12,4 @@ from ._group import GroupWidget
 from ._progressbar import ProgressBar
 from ._plotwidget import PlotWidget
 from ._iframe import IFrame
+from ._bokeh import BokehWidget

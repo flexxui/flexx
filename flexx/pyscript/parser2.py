@@ -399,7 +399,7 @@ class Parser2(Parser1):
             f = node.iter.func
             if isinstance(f, ast.Attribute) and not node.iter.args and f.attr in METHODS:
                 sure_is_dict = f.attr
-                iter = f.value.id  #  '%s.%s()' % (f.value.id, f.attr)
+                iter = ''.join(self.parse(f.value))  #  '%s.%s()' % (f.value.id, f.attr)
             elif isinstance(f, ast.Name) and f.id == 'range':
                 sure_is_range = [''.join(self.parse(arg)) for arg in node.iter.args]
         

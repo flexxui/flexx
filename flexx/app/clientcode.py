@@ -317,6 +317,8 @@ class ClientCode(object):
             raise RuntimeError('ClientCode must be singleton')
         ClientCode._instance = self
         
+        self._served = False
+        
         # Assets - a JS or CSS asset named 'index-X' will appear in the index
         self._assets = OrderedDict()
         # self._files = OrderedDict()  # files are assets to load dynamically
@@ -325,7 +327,7 @@ class ClientCode(object):
         
         self._preloaded_pair_classes = set()
     
-    def _collect(self):
+    def _collect(self, serve=True):
         """ The first time this is called, all existing Pair classes
         are collected, and their JS and CSS extracted. Any further calls
         to this method have no effect. This method is called upon app
@@ -370,13 +372,16 @@ class ClientCode(object):
         for key in css:
             self.add_asset(key+'.css', '\n\n'.join(css[key]))
         
+        # Wrap up
         self._preloaded_pair_classes.update(preloaded_pair_classes)
+        if serve:
+            self._served = True
     
     def get_defined_pair_classes(self):
         """ Get a list of all Pair classes that will be defined
         by serving the JS/CSS code.
         """
-        self._collect()
+        self._collect(False)
         return self._preloaded_pair_classes
     
     def add_asset(self, fname, content):
@@ -386,7 +391,7 @@ class ClientCode(object):
         """
         if fname in self._assets:
             raise ValueError('Asset %r is already set.' % fname)
-        if self._preloaded_pair_classes and (fname.endswith('.js') or fname.endswith('.css')):
+        if self._served and (fname.endswith('.js') or fname.endswith('.css')):
             logging.warn('Adding asset %r but the page has already been "served".' % fname)
         self._assets[fname] = content
     
@@ -433,6 +438,7 @@ class ClientCode(object):
         """ Get a dictionary with the JS and CSS assets needed by a
         page acquired in non-single mode.
         """
+        self._collect()
         d = {}
         for fname in self._assets:
             if fname.startswith('index-'):
@@ -444,11 +450,13 @@ class ClientCode(object):
     def get_page(self, single=False):
         """ Get the string for an HTML page that can show a Flexx app.
         """
+        self._collect()
         return self._get_page(single)
     
     def get_page_for_export(self, commands, single=False):
         """ Get the string for a single exported HTML page.
         """
+        self._collect()
         # Create lines to init app
         lines = []
         lines.append('flexx.is_exported = true;\n')
@@ -551,4 +559,4 @@ class Exporter(object):
         """ Get the HTML string.
         """
         html = clientCode.get_page_for_export(self._commands, single)
-        return minify(html, False)
+        return html  # todo: minify somewhere ...

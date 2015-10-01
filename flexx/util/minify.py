@@ -2,13 +2,14 @@
 JavaScript minification tools.
 """
 
-def minify(code, remove_whitespace=True):
+def minify(code, remove_whitespace=False):
     """ Main minification function.
     
     Removes comments. If remove_whitespace is True, removes all
     non-functional whitespace. Otherwise remove all trailing whitespace
     and indents using tabs to preserve space.
     """
+    # return jsmin(code)
     code = remove_comments(code)
     if remove_whitespace:
         code = remove_all_whitespace(code)
@@ -35,12 +36,9 @@ def remove_comments(code):
             if c == c0 and chars[-1] != '\\':
                 return
     def to_end_of_line():
-        lastchar = ''
         while True:
             c = read()
-            if not c: break
-            if c == '\n':
-                non_local._i -= 1
+            if c == '\n' or not c:
                 break
     def to_end_of_mutiline_comment():
         lastchar = ''
@@ -55,7 +53,7 @@ def remove_comments(code):
         if not c: break  # end of code
         elif c == "'" or c == '"':
             to_end_of_string(c)
-        elif c == '/' and chars[-1] == '/':
+        elif c == '/' and chars[-1] == '/' and chars[-2] != '\\':
             chars.pop(-1)
             to_end_of_line()
             chars.append('\n')
@@ -103,4 +101,3 @@ def tabbify(code):
         indent = (len(line)-len(line2)) // 4
         lines.append('\t'*indent + line2)
     return '\n'.join(lines)
-    
