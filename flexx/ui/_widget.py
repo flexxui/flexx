@@ -168,26 +168,13 @@ class Widget(Pair):
         """
         return _check_two_scalars('pos', v)
     
-    # todo: if we stick to doing min/max size via style signal, rename this to size
     @react.input
-    def base_size(v=(0, 0)):
+    def size(v=(0, 0)):
         """ The size of the widget when it is in a layout that allows
-        sizing, or the base-size in a BoxPanel or GridPanel. 
-        A value <= 0 is ignored.
+        explicit sizing, or the base-size in a BoxPanel or GridPanel.
+        A value <= 0 is interpreted as auto-size.
         """
         return _check_two_scalars('size', v)
-    
-    # @react.input
-    # def min_size(v=(0, 0)):
-    #     """ The minimum size of the widget.
-    #     """
-    #     return _check_two_scalars('min_size', v)
-    # 
-    # @react.input
-    # def max_size(v=(0, 0)):
-    #     """ The maximum size of the widget. A value <= 0 is ignored.
-    #     """
-    #     return _check_two_scalars('max_size', v)
     
     # Also see real_size defined in JS
     
@@ -314,36 +301,39 @@ class Widget(Pair):
             self.p = phosphor.createWidget('div')
         
         @react.connect('style')
-        def __stye_changed(self, style):
+        def style_changed(self, style):
+            """ Emits when the style signal changes, and provides a dict with
+            the changed style atributes.
+            """
             #self.node.style = style  # forbidden in strict mode, plus it clears all previously set style
-            size_limits_changed = False
-            size_limits_keys = 'min-width', 'min-height', 'max-width', 'max-height'
+            d = {}
             for part in style.split(';'):
                 if ':' in part:
                     key, val = part.split(':')
                     key, val = key.trim(), val.trim()
                     self.node.style[key] = val
-                    # Tweak/hack to allow Phosphor to see our update
-                    if key in size_limits_keys:
-                        size_limits_changed = True
+                    d[key] = val
+            return d
+        
+        @react.connect('style_changed')
+        def __check_size_limits_changed(style):
+            size_limits_keys = 'min-width', 'min-height', 'max-width', 'max-height'
+            
+            size_limits_changed = False
+            for key in size_limits_keys:
+                if key in style:
+                    size_limits_changed = True
             
             if size_limits_changed:
-                # Clear phosphor's limit cache
+                # Clear phosphor's limit cache (no need for getComputedStyle())
                 values = [self.node.style[k] for k in size_limits_keys]
                 self.p.clearSizeLimits()
                 for k, v in zip(size_limits_keys, values):
                     self.node.style[k] = v
-                # Allow self and parent to re-layout
-                self.p.processMessage(phosphor.widget.MSG_LAYOUT_REQUEST)
+                # Allow parent to re-layout
                 parent = self.parent()
                 if parent:
                     parent.p.processMessage(phosphor.widget.MSG_LAYOUT_REQUEST)
-                    parent._child_limits_changed()  # For e.g. GridPanel
-                    # todo: the fact that we need this special hook method might be an indication that min/max size should be signals
-                    # todo: on the other hand, min/max size ARE style things, and are rarely set other than on the constructor.
-        
-        def _child_limits_changed():
-            pass
         
         ## Size 
         
@@ -369,15 +359,6 @@ class Widget(Pair):
                 self.real_size._set([n.offsetWidth, n.offsetHeight])
         
         # NOTE: this is how we would handle signals for min_size and max_size
-        
-        # @react.connect('min_size', 'max_size')
-        # def __set_size_limits(self, min_size, max_size):
-        #     self.p.clearSizeLimits()
-        #     self._set_size('min-', min_size[0], min_size[1])
-        #     self._set_size('max-', max_size[0], max_size[1])
-        #     parent = self.parent()
-        #     if parent:
-        #         parent.p.processMessage(phosphor.widget.MSG_LAYOUT_REQUEST)
         
         def _set_size(self, prefix, w, h):
             size = w, h

@@ -27,7 +27,7 @@ Example:
                     # Base size
                     self.a = ui.Widget(style='background:#a00;', pos=(0, 0))
                     self.b = ui.Widget(style='background:#0a0;', pos=(1, 0))
-                    self.c = ui.Widget(style='background:#00a;', pos=(1, 1), base_size=(100, 100))
+                    self.c = ui.Widget(style='background:#00a;', pos=(1, 1), size=(100, 100))
 """
 
 from ... import react
@@ -42,7 +42,7 @@ class GridPanel(Layout):
     in the grid.
     
     For each column and each row, it looks at its children and selects
-    the maximum flex, min-size and base_size, and the minimum max-size.
+    the maximum flex, min-size and base-size, and the minimum max-size.
     If all flex factors are zero, all columns/rows become of equal size
     (subject to size limits).
     """
@@ -61,52 +61,25 @@ class GridPanel(Layout):
     
     class JS:
         
+        def _init(self):
+            super()._init()
+            
+            that = this
+            class LayoutNotifier:
+                def filterMessage(handler, msg):
+                    if msg._type == 'layout-request':
+                        that._child_limits_changed()
+                    return False
+            phosphor.messaging.installMessageFilter(self.p, LayoutNotifier())
+        
         def _create_node(self):
             self.p = phosphor.gridpanel.GridPanel()
         
-        # NOTE: if min/max size were signals
-        # @react.connect('children.*.pos', 'children.*.flex', 'children.*.min_size', 'children.*.max_size', 'children.*.base_size')
-        # def __update_positions(self):
-        #     # Set position of all children and get how large our grid is
-        #     max_row, max_col = 0, 0
-        #     for child in self.children():
-        #         x, y = child.pos()
-        #         phosphor.gridpanel.GridPanel.setColumn(child.p, x)
-        #         phosphor.gridpanel.GridPanel.setRow(child.p, y)
-        #         max_col = max(max_col, x)
-        #         max_row = max(max_row, y)
-        #     
-        #     # Collect specs from all children
-        #     colSpecs = [{'stretch': 0, 'minSize': 0, 'maxSize': Infinity, 'sizeBasis': 0} for i in range(max_col+1)]
-        #     rowSpecs = [{'stretch': 0, 'minSize': 0, 'maxSize': Infinity, 'sizeBasis': 0} for i in range(max_row+1)]
-        #     for child in self.children():
-        #         x, y = child.pos()
-        #         minx, miny = child.min_size()
-        #         maxx, maxy = child.max_size()
-        #         maxx, maxy = maxx if maxx > 0 else Infinity, maxy if maxy > 0 else Infinity
-        #         colSpecs[x].minSize = max(colSpecs[x].minSize, minx)
-        #         colSpecs[x].maxSize = min(colSpecs[x].maxSize, maxx)
-        #         colSpecs[x].sizeBasis = max(colSpecs[x].sizeBasis, child.base_size()[0])
-        #         colSpecs[x].stretch = max(colSpecs[x].stretch, child.flex()[0])
-        #         
-        #         rowSpecs[y].minSize = max(rowSpecs[y].minSize, miny)
-        #         rowSpecs[y].maxSize = min(rowSpecs[y].maxSize, maxy)
-        #         rowSpecs[y].sizeBasis = max(rowSpecs[y].sizeBasis, child.base_size()[1])
-        #         rowSpecs[y].stretch = max(rowSpecs[y].stretch, child.flex()[1])
-        #     
-        #     # Assign
-        #     self.p._columnSpecs = colSpecs
-        #     self.p._rowSpecs = rowSpecs
-        #     Spec = phosphor.gridpanel.Spec
-        #     self.p.columnSpecs = [Spec(i) for i in colSpecs]
-        #     self.p.rowSpecs = [Spec(i) for i in rowSpecs]
-        
-        @react.connect('children.*.pos', 'children.*.flex', 'children.*.base_size')
+        @react.connect('children.*.pos', 'children.*.flex', 'children.*.size')
         def __update_positions(self):
             self._child_limits_changed()
         
         def _child_limits_changed(self):
-            
             # Set position of all children and get how large our grid is
             max_row, max_col = 0, 0
             for child in self.children():
@@ -124,12 +97,12 @@ class GridPanel(Layout):
                 limits = child.p.sizeLimits
                 colSpecs[x].minSize = max(colSpecs[x].minSize, limits.minWidth)
                 colSpecs[x].maxSize = min(colSpecs[x].maxSize, limits.maxWidth)
-                colSpecs[x].sizeBasis = max(colSpecs[x].sizeBasis, child.base_size()[0])
+                colSpecs[x].sizeBasis = max(colSpecs[x].sizeBasis, child.size()[0])
                 colSpecs[x].stretch = max(colSpecs[x].stretch, child.flex()[0])
                 
                 rowSpecs[y].minSize = max(rowSpecs[y].minSize, limits.minHeight)
                 rowSpecs[y].maxSize = min(rowSpecs[y].maxSize, limits.maxHeight)
-                rowSpecs[y].sizeBasis = max(rowSpecs[y].sizeBasis, child.base_size()[1])
+                rowSpecs[y].sizeBasis = max(rowSpecs[y].sizeBasis, child.size()[1])
                 rowSpecs[y].stretch = max(rowSpecs[y].stretch, child.flex()[1])
             
             # Assign
@@ -138,10 +111,6 @@ class GridPanel(Layout):
             Spec = phosphor.gridpanel.Spec
             self.p.columnSpecs = [Spec(i) for i in colSpecs]
             self.p.rowSpecs = [Spec(i) for i in rowSpecs]
-        
-        def _remove_child(self, widget):
-            pass
-
         
         @react.connect('spacing')
         def __spacing_changed(self, spacing):

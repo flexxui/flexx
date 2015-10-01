@@ -97,7 +97,7 @@ class MyApp(ui.Widget):
                     self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
                     self.b2 = ui.Button(text='Dynamic at (20%, 20%)', pos=(0.2, 0.2))
                     self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
-                    with ui.DockPanel(pos=(0.5, 0.5), base_size=(0.3, 0.3)) as self.d:
+                    with ui.DockPanel(pos=(0.5, 0.5), size=(0.3, 0.3)) as self.d:
                         self.a = ui.Widget(style='background:#a00;')
                         self.b = ui.Widget(style='background:#0a0;')
                         self.c = ui.Widget(style='background:#00a;')
@@ -152,11 +152,11 @@ class MyApp(ui.Widget):
         
         if TEST == 11:
             with ui.BoxPanel(spacing=10):
-                with ui.GridPanel():
+                with ui.GridPanel() as self.g1:
                     self.a = ui.Widget(style='background:#a00;', pos=(0, 0), flex=1)
                     self.b = ui.Widget(style='background:#0a0;', pos=(1, 0))
                     self.c = ui.Widget(style='background:#00a; min-width:200px; min-height:200px', pos=(1, 1))
-                with ui.GridPanel():
+                with ui.GridPanel() as self.g2:
                     self.a = ui.Widget(style='background:#a00;', pos=(0, 0), flex=2)
                     self.b = ui.Widget(style='background:#0a0; max-width:100px;', pos=(1, 0), flex=1)
                     self.c = ui.Widget(style='background:#00a;', pos=(1, 1), flex=1)
