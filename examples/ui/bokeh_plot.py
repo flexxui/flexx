@@ -35,7 +35,7 @@ class Example(ui.Widget):
             with ui.VBox(title='Sine'):
                 with ui.FormLayout():
                     self.amp = ui.Slider(title='Amplitude', max=2, value=1)
-                    self.freq = ui.Slider(title='Frequeny', max=10, value=5)
+                    self.freq = ui.Slider(title='Frequency', max=10, value=5)
                     self.phase = ui.Slider(title='Phase',max=3, value=1)
                 self.plot2 = ui.BokehWidget(plot=p2)
                 ui.Widget(flex=1)  # Spacer
