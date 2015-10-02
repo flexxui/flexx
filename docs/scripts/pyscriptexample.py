@@ -35,6 +35,10 @@ class pyscript_example(nodes.raw): pass
 
 def visit_pyscript_example_html(self, node):
     
+    # Fix for rtd
+    if not hasattr(node, 'code'):
+        return
+    
     # Get code
     code = node.code.strip() + '\n'
     
