@@ -37,6 +37,10 @@ class uiexample(nodes.raw): pass
 def visit_uiexample_html(self, node):
     global should_export_flexx_deps
     
+    # Fix for rtd
+    if not hasattr(node, 'code'):
+        return
+    
     # Get code
     code = node.code.strip() + '\n'
     
