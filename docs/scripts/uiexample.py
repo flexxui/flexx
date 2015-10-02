@@ -81,6 +81,7 @@ def visit_uiexample_html(self, node):
         if 'ImportError' in err_text:
             msg = 'Example not generated. <pre>%s</pre>' % err_short
             if os.environ.get('READTHEDOCS', False):
+                node.height = 60
                 msg = 'This example is not build on read-the-docs. <pre>%s</pre>' % err_short
             open(filename_html, 'wt', encoding='utf-8').write(msg)
             warnings.warn('Ui example dependency not met: %s' % err_short)
