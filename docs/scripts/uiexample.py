@@ -37,10 +37,6 @@ class uiexample(nodes.raw): pass
 def visit_uiexample_html(self, node):
     global should_export_flexx_deps
     
-    # Fix for rtd
-    if not hasattr(node, 'code'):
-        return
-    
     # Get code
     code = node.code.strip() + '\n'
     
@@ -80,6 +76,8 @@ def visit_uiexample_html(self, node):
         err_short = err_text.strip().split('\n')[-1]
         if 'ImportError' in err_text:
             msg = 'Example not generated. <pre>%s</pre>' % err_short
+            if os.environ.get('READTHEDOCS', False):
+                msg = 'This example is not build on read-the-docs. <pre>%s</pre>' % err_short
             open(filename_html, 'wt', encoding='utf-8').write(msg)
             warnings.warn('Ui example dependency not met: %s' % err_short)
         else:
