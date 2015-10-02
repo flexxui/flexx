@@ -378,7 +378,7 @@ class XulRuntime(DesktopRuntime):
                                   '../Resources/application.ini')
             else:
                 inifile = op.join(op.dirname(ff_exe), 'application.ini')
-            for line in open(inifile, 'rt').read().splitlines():
+            for line in open(inifile, 'rt', encoding='utf-8').read().splitlines():
                 if line.lower().startswith('version'):
                     ff_version = 'xul_' + line.split('=')[1].strip()
                     break
@@ -520,7 +520,7 @@ class XulRuntime(DesktopRuntime):
                    op.join(path, 'Contents', 'MacOS', 'xulrunner'))
         # Make info.plist
         info = INFO_PLIST.format(name=title)
-        open(op.join(path, 'Contents', 'info.plist'), 'wt').write(info)
+        open(op.join(path, 'Contents', 'info.plist'), 'wt', encoding='utf-8').write(info)
         # Make icon - ensured by launch function
         if self._kwargs.get('icon'):
             icon = self._kwargs.get('icon')

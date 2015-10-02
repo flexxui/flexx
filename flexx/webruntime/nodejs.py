@@ -91,7 +91,7 @@ def get_js_from_html(html, root):
                     code = urlopen(filename, timeout=5.0).read().decode()
                     break
                 elif os.path.isfile(filename):
-                    code = open(filename, 'rt').read()
+                    code = open(filename, 'rt', encoding='utf-8').read()
                     break
             else:
                 raise IOError('Could not get JS for file %r' % fname)

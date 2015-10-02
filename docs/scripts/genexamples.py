@@ -25,7 +25,7 @@ def main():
                 filename = os.path.join(dirname, fname)
                 if os.path.isfile(filename) and fname.endswith('.py'):
                     # Create example content
-                    code = open(filename, 'rt').read()
+                    code = open(filename, 'rt', encoding='utf-8').read()
                     text = ':orphan:\n\n'  # avoid toctree warning
                     text += '.. _%s:\n\n' % fname
                     text += '%s\n%s\n\n' % (fname, '=' * len(fname))
@@ -47,7 +47,7 @@ def main():
         for name in examples[sub]:
             filename = os.path.join(dirname, name + '.rst')
             created_files.append(filename)
-            open(filename, 'wt').write(examples[sub][name])
+            open(filename, 'wt', encoding='utf-8').write(examples[sub][name])
     
     # # Create example index page
     # docs = 'Examples'
@@ -59,7 +59,7 @@ def main():
     # # Write
     # filename = os.path.join(DOC_DIR, 'examples.rst')
     # created_files.append(filename)
-    # open(filename, 'wt').write(docs)
+    # open(filename, 'wt', encoding='utf-8').write(docs)
     
     better_names = {'pyscript': 'PyScript'}
     
@@ -80,7 +80,7 @@ def main():
             # Write
             filename = os.path.join(DOC_DIR, sub, 'examples.rst')
             created_files.append(filename)
-            open(filename, 'wt').write(docs)
+            open(filename, 'wt', encoding='utf-8').write(docs)
     
     print('  generated %i examples' % sum([len(x) for x in examples.values()]))
 

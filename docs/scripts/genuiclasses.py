@@ -68,7 +68,7 @@ def main():
         # Write doc page
         filename = os.path.join(OUTPUT_DIR, page_name.lower() + '.rst')
         created_files.append(filename)
-        open(filename, 'wt').write(docs)
+        open(filename, 'wt', encoding='utf-8').write(docs)
     
     # Create overview doc page
     docs = 'Ui API'
@@ -93,7 +93,7 @@ def main():
     # Write overview doc page
     filename = os.path.join(OUTPUT_DIR, 'api.rst')
     created_files.append(filename)
-    open(filename, 'wt').write(docs)
+    open(filename, 'wt', encoding='utf-8').write(docs)
     
     print('  generated widget docs with %i pages and %i widgets' % (len(pages), len(class_names)))
 

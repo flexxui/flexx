@@ -42,12 +42,12 @@ def copyright(name=''):
                 continue
             # Open and check
             filename = os.path.join(dirpath, fname)
-            text = open(filename, 'rt').read()
+            text = open(filename, 'rt', encoding='utf-8').read()
             if NEWTEXT in text:
                 count_ok += 1
             elif OLDTEXT in text:
                 text = text.replace(OLDTEXT, NEWTEXT)
-                open(filename, 'wt').write(text)
+                open(filename, 'wt', encoding='utf-8').write(text)
                 print(
                     '  Update copyright year in %s/%s' %
                     (reldirpath, fname))

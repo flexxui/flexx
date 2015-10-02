@@ -540,7 +540,7 @@ class Exporter(object):
         if filename.startswith('~'):
             filename = os.path.expanduser(filename)
         html = self.to_html(single)
-        open(filename, 'wt').write(html)
+        open(filename, 'wt', encoding='utf-8').write(html)
         print('Exported app to %r' % filename)
     
     def write_dependencies(self, dirname):
@@ -553,7 +553,7 @@ class Exporter(object):
         if os.path.isfile(dirname):
             dirname = os.path.dirname(dirname)
         for fname, content in clientCode.get_js_and_css_assets().items():
-            open(os.path.join(dirname, fname), 'wt').write(content)
+            open(os.path.join(dirname, fname), 'wt', encoding='utf-8').write(content)
     
     def to_html(self, single=True):
         """ Get the HTML string.

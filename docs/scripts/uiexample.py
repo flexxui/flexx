@@ -62,7 +62,7 @@ def visit_uiexample_html(self, node):
     
     # Write filename so Python can find the source
     filename_py = os.path.join(HTML_DIR, 'ui', 'examples', 'example%s.py' % this_id)
-    open(filename_py, 'wt').write(code)
+    open(filename_py, 'wt', encoding='utf-8').write(code)
     
     # Call a fresh process to run the app
     env = os.environ.copy()
@@ -73,7 +73,7 @@ def visit_uiexample_html(self, node):
                                  cwd=os.path.join(HTML_DIR, 'ui', 'examples'))
     except Exception as err:
         msg = 'Example not generated. <pre>%s</pre>' % err.output.decode()
-        open(filename_html, 'wt').write(msg.replace('\\n', '<br />'))
+        open(filename_html, 'wt', encoding='utf-8').write(msg.replace('\\n', '<br />'))
         #warnings.warn('ERROR:' + err.output.decode())
         raise RuntimeError('Could not create ui example:' + err.output.decode())
     

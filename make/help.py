@@ -44,7 +44,7 @@ def get_doc_for_file(fname):
     """
     # Read code
     try:
-        code = open(os.path.join(THIS_DIR, fname), 'rt').read()
+        code = open(os.path.join(THIS_DIR, fname), 'rt', encoding='utf-8').read()
     except Exception as err:
         return 'Error: could not read %r: %s' % (fname, str(err))
     

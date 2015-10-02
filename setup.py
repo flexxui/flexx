@@ -29,7 +29,7 @@ __version__ = None
 __doc__ = ''
 docStatus = 0  # Not started, in progress, done
 initFile = os.path.join(os.path.dirname(__file__), name, '__init__.py')
-for line in open(initFile).readlines():
+for line in open(initFile, 'rt', encoding='utf-8').readlines():
     if (line.startswith('version_info') or line.startswith('__version__')):
         exec(line.strip())
     elif line.startswith('"""'):

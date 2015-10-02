@@ -31,7 +31,7 @@ def get_phosphor(commit):
         data = urlopen(url, timeout=5.0).read()
         open(filename, 'wb').write(data)
     
-    return open(filename, 'rt').read()
+    return open(filename, 'rt', encoding='utf-8').read()
 
 
 if __name__ == '__main__':

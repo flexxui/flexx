@@ -37,7 +37,8 @@ def add_bokehjs_asset_to_flexx():
     from ...app.clientcode import clientCode
     res = os.path.abspath(os.path.join(bokeh.__file__, '..', 'server', 'static'))
     fname_js = os.path.join(res, 'css', 'bokeh.min.css')
-    css, js = [open(os.path.join(res, x, 'bokeh.min.' + x), 'rt').read() for x in ('css', 'js')]
+    css, js = [open(os.path.join(res, x, 'bokeh.min.' + x), 'rt', encoding='utf-8').read()
+               for x in ('css', 'js')]
     clientCode.add_asset('bokehjs.min.css', css)
     clientCode.add_asset('bokehjs.min.js', js)
 
