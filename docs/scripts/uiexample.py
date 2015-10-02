@@ -72,10 +72,16 @@ def visit_uiexample_html(self, node):
                                  stderr=subprocess.STDOUT, env=env, 
                                  cwd=os.path.join(HTML_DIR, 'ui', 'examples'))
     except Exception as err:
-        msg = 'Example not generated. <pre>%s</pre>' % err.output.decode()
-        open(filename_html, 'wt', encoding='utf-8').write(msg.replace('\\n', '<br />'))
-        #warnings.warn('ERROR:' + err.output.decode())
-        raise RuntimeError('Could not create ui example:' + err.output.decode())
+        err_text = err.output.decode()
+        err_short = err_text.strip().split('\n')[-1]
+        if 'ImportError' in err_text:
+            msg = 'Example not generated. <pre>%s</pre>' % err_short
+            open(filename_html, 'wt', encoding='utf-8').write(msg)
+            warnings.warn('Ui example dependency not met: %s' % err_short)
+        else:
+            msg = 'Example not generated. <pre>%s</pre>' % err_text
+            open(filename_html, 'wt', encoding='utf-8').write(msg.replace('\\n', '<br />'))
+            raise RuntimeError('Could not create ui example:' + err_text)
     
     rel_path = '../ui/examples/' + fname
     
