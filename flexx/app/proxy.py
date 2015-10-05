@@ -14,17 +14,11 @@ from ..util.icon import Icon
 from .. import webruntime
 from .. import react
 
-from .clientcode import clientCode, Exporter # global client code
 from .pair import Pair
+from .assetstore import SessionAssets
 
 
-# Create/get the tornado event loop
-_tornado_loop = tornado.ioloop.IOLoop.instance()
-
-# The tornado server, started on start()
-_tornado_app = None
-
-
+# todo: rename to SessionManager
 class AppManager(object):
     """ Manage apps, or more specifically, the proxy objects.
     
@@ -68,12 +62,72 @@ class AppManager(object):
         if proxies:
             return proxies[-1]
         else:
-            runtime = 'notebook' if is_notebook else 'browser'  # todo: what runtime?
+            runtime = 'notebook' if funcs.is_notebook else 'browser'  # todo: what runtime?
             proxy = Proxy('__default__', runtime, title='Flexx app')
             pending.append(proxy)
             return proxy
     
-    def add_pending_proxy_instance(self, proxy):
+    def instantiate_proxy(self, name, runtime=None):
+        
+        # Create proxy. The runtime will be served a page that has the
+        # proxy id in it. Upon connecting, the id will be communicated,
+        # so we can connect to the correct proxy.
+        if name not in self._proxies:
+            raise ValueError('Can only instantiate a proxy with a valid app name.')
+        
+        cls, pending, connected = self._proxies[name]
+        
+        if name == '__default__':
+            xxxx
+        
+        proxy = Proxy(cls.__name__)
+        app = cls(proxy=proxy, container='body')
+        proxy._set_pair_instance(app)
+        
+        pending.append(proxy)
+        
+        # todo: move this to funcs.export and funcs.launch
+        # if runtime is None:
+        #     pass
+        # elif runtime == 'notebook':
+        #     pass
+        # elif runtime == '<export>':
+        #     proxy._connect_client(Exporter(proxy))
+        # elif runtime:
+        #     funcs.init_server()
+        #     
+        #     host, port = funcs._tornado_app.serving_at  # todo: yuk
+        #     if runtime == 'nodejs':
+        #         all_js = assets.get_all_css_and_js()[1]
+        #         self._runtime = funcs.launch('http://%s:%i/%s/' % (host, port, name), 
+        #                                      runtime=runtime, code=all_js)
+        #     else:
+        #         self._runtime = funcs.launch('http://%s:%i/%s/' % (host, port, name), 
+        #                                      runtime=runtime, **runtime_kwargs)
+        
+        logging.debug('Instantiate app client %s' % proxy.app_name)
+        return proxy
+    
+    def connect_client(self, ws, name, app_id):
+        logging.debug('connecting %s %s' %(name, app_id))
+        cls, pending, connected = self._proxies[name]
+        
+        # Search for the proxy with the specific id
+        for proxy in pending:
+            if proxy.id == app_id:
+                pending.remove(proxy)
+                break
+        else:
+            raise RuntimeError('Asked for app id %r, but could not find it' % app_id)
+    
+        # Add app to connected, set ws
+        assert proxy.status == Proxy.STATUS.PENDING
+        proxy._connect_client(ws)
+        connected.append(proxy)
+        self.connections_changed._set(proxy.app_name)
+        return proxy  # For the ws
+    
+    def XXXadd_pending_proxy_instance(self, proxy):
         """ Add an app instance as a pending app. 
         
         This means that the proxy is created from Python and not yet
@@ -91,7 +145,7 @@ class AppManager(object):
             raise RuntimeError('Cannot add proxy instances that are/were '
                                'already connected')
     
-    def connect_client(self, ws, name, app_id=None):
+    def XXXconnect_client(self, ws, name, app_id=None):
         """ Connect an incoming client connection to a proxy object
         
         Called by the websocket object upon connecting, thus initiating
@@ -185,242 +239,17 @@ class AppManager(object):
 manager = AppManager()
 
 
-# todo: move to ..utils
-def port_hash(name):
-    """ port_hash(name)
-    
-    Given a string, returns a port number between 49152 and 65535. 
-    (2**14 (16384) different posibilities)
-    This range is the range for dynamic and/or private ports 
-    (ephemeral ports) specified by iana.org.
-    The algorithm is deterministic, thus providing a way to map names
-    to port numbers.
-    
-    """
-    fac = 0xd2d84a61
-    val = 0
-    for c in name:
-        val += ( val>>3 ) + ( ord(c)*fac )
-    val += (val>>3) + (len(name)*fac)
-    return 49152 + (val % 2**14)
-
-
-def init_server(host=None, port=None):
-    """ Initialize the server if it is not already running.
-    """
-    global _tornado_app 
-    
-    # Check that its not already running
-    if _tornado_app is not None:
-        return
-        #raise RuntimeError('flexx.ui server already created')
-    
-    # Create server
-    from .server import FlexxTornadoApplication
-    _tornado_app = FlexxTornadoApplication()
-    
-    # Get default host and port
-    if host is None:
-        host = os.getenv('FLEXX_HOSTNAME', 'localhost')
-    if port is None:
-        port = os.getenv('FLEXX_PORT', None)
-    
-    # Start server (find free port number if port not given)
-    if port is not None:
-        port = int(port)
-        _tornado_app.listen(port, host)
-    else:
-        for i in range(100):
-            port = port_hash('flexx%i' % i)
-            try:
-                _tornado_app.listen(port, host)
-                break
-            except OSError:
-                pass  # address already in use
-        else:
-            raise RuntimeError('Could not bind to free address')    
-    
-    # Notify address, so its easy to e.g. copy and paste in the browser
-    _tornado_app.serving_at = host, port
-    print('Serving apps at http://%s:%i/' % (host, port))
-
-
-def start(host=None, port=None):
-    """ Start the server and event loop if not already running.
-    
-    This function generally does not return until the application is
-    stopped, although it will try to behave nicely in interactive
-    environments (e.g. Spyder, IEP, Jupyter notebook), so the caller
-    should take into account that the function may return immediately.
-    
-    Arguments:
-        host (str): The hostname to serve on. Default 'localhost'. This
-            parameter is ignored if the server was already running.
-        port (int, str): The port number. If a string is given, it is
-            hashed to an ephemeral port number. If not given or None,
-            will try a series of ports until one is found that is free.
-    """
-    # Get server up
-    init_server(host, port)
-    # Start event loop
-    if not (hasattr(_tornado_loop, '_running') and _tornado_loop._running):
-        _tornado_loop.start()
-
-
-def run():
-    """ Start the event loop if not already running, for desktop apps.
-    
-    In contrast to ``start()``, when the server is started this way,
-    it will close down when there are no more connections.
-    """
-    manager._auto_stop = True
-    return start()
-
-
-manager._auto_stop = False
-@react.connect('manager.connections_changed')
-def _auto_closer(name):
-    if not manager._auto_stop:
-        return
-    for name in manager.get_app_names():
-        proxies = manager.get_connections(name)
-        if proxies:
-            return
-    else:
-        logging.info('Stopping Flexx event loop.')
-        stop()
-
-is_notebook = False
-
-def init_notebook():
-    """ Initialize the Jupyter notebook by injecting the necessary CSS
-    and JS into the browser.
-    """
-    
-    global is_notebook
-    from IPython.display import display, Javascript, HTML
-    if is_notebook:
-        display(HTML("<i>Flexx already loaded</i>"))
-        return  # Don't inject twice
-    is_notebook = True
-    
-    init_server()
-    host, port = _tornado_app.serving_at
-    #name = app.app_name + '-' + app.id
-    name = '__default__'
-    url = 'ws://%s:%i/%s/ws' % (host, port, name)
-    t = "<i>Injecting Flexx JS and CSS</i>"
-    t += "<style>\n%s\n</style>\n" % clientCode.get_all_css()
-    t += "<script>\n%s\n</script>" % clientCode.get_all_js()
-    t += "<script>flexx.ws_url=%r; flexx.is_notebook=true; flexx.init();</script>" % url
-    
-    display(HTML(t))
-
-
-def stop():
-    """ Stop the event loop
-    """
-    _tornado_loop.stop()
-
-# # todo: this does not work if the event loop is running!
-# def process_events():
-#     """ Process events
-#     
-#     Call this to keep the application working while running in a loop.
-#     """
-#     _tornado_loop.run_sync(lambda x=None: None)
-
-
-def call_later(delay, callback, *args, **kwargs):
-    """ Call the given callback after delay seconds. If delay is zero, 
-    call in the next event loop iteration.
-    """
-    if delay <= 0:
-        _tornado_loop.add_callback(callback, *args, **kwargs)
-    else:
-        _tornado_loop.add_timeout(_tornado_loop.time() + delay, callback, *args, **kwargs)
-        #_tornado_loop.call_later(delay, callback, *args, **kwargs)  # v4.0+
-
-# todo: move to ..util?
+# todo: find other solution?
 def create_enum(*members):
     """ Create an enum type from given string arguments.
     """
     assert all([isinstance(m, str) for m in members])
     enums = dict([(s, s) for s in members])
     return type('Enum', (), enums)
-
-
-def serve(cls):
-    """ Serve the given Pair class as a web app. Can be used as a decorator.
     
-    This registers the given class with the internal app manager. The
-    app can be loaded via 'http://hostname:port/classname'.
-    
-    Arguments:
-        cls (Pair): a subclass of ``app.Pair`` (or ``ui.Widget``).
-    
-    Returns:
-        cls: The given class.
-    """
-    assert isinstance(cls, type) and issubclass(cls, Pair)
-    manager.register_app_class(cls)
-    cls._IS_APP = True  # Mark the class as an app
-    return cls
 
-
-def launch(cls, runtime='xul', **runtime_kwargs):
-    """ Launch the given Pair class as a desktop app in the given runtime.
-    
-    Arguments:
-        cls (type, str): a subclass of ``app.Pair`` (or ``ui.Widget`). If this 
-            is a string, it simply calls ``webruntime.launch()``.
-        runtime (str): the runtime to launch the application in. Default 'xul'.
-        runtime_kwargs: kwargs to pass to the ``webruntime.launch`` function.
-    
-    Returns:
-        app (Pair): an instance of the given class.
-    """
-    if isinstance(cls, str):
-        return webruntime.launch(cls, runtime, **runtime_kwargs)
-    assert isinstance(cls, type) and issubclass(cls, Pair)
-    serve(cls)
-    proxy = Proxy(cls.__name__, runtime, **runtime_kwargs)
-    app = cls(proxy=proxy, container='body')
-    proxy._set_pair_instance(app)
-    return app
-
-
-def export(cls, filename=None, single=True, deps=True):
-    """ Export the given Pair class to an HTML document.
-    
-    Arguments:
-        cls (Pair): a subclass of ``app.Pair`` (or ``ui.Widget``).
-        filename (str, optional): Path to write the HTML document to.
-            If not given or None, will return the html as a string.
-        single (bool): If True, will include all JS and CSS dependencies
-            in the HTML page.
-        deps (bool): If deps is True, will also export the dependent
-            JS and CSS files (in case single is False).
-    
-    Returns:
-        html (str): The resulting html. If a filename was specified
-        this returns None.
-    """
-    assert isinstance(cls, type) and issubclass(cls, Pair)
-    serve(cls)
-    proxy = Proxy(cls.__name__, '<export>')
-    app = cls(proxy=proxy, container='body')
-    proxy._set_pair_instance(app)
-    if filename is None:
-        return proxy._ws.to_html()
-    else:
-        proxy._ws.write_html(filename, single)
-        if deps and not single:
-            proxy._ws.write_dependencies(filename)
-
-
-# todo: this does not work well with creating apps from scratch yet; see run_python_in_node.py example
-class Proxy(object):
+# todo: rename to Session
+class Proxy(SessionAssets):
     """ A proxy between Python and the client runtime
 
     This class is basically a wrapper for the app widget, the web runtime,
@@ -429,11 +258,15 @@ class Proxy(object):
     
     STATUS = create_enum('PENDING', 'CONNECTED', 'CLOSED')
     
-    def __init__(self, app_name, runtime=None, **runtime_kwargs):
+    def __init__(self, app_name):
+        super().__init__()
         # Note: to avoid circular references, do not store the app instance!
         
+        self.add_asset('index-flexx-id.js', ('window.flexx_session_id = %r;\n' % self.id).encode())
+        self.use_asset('flexx-app.js')
+        
         self._app_name = app_name
-        self._runtime_kwargs = runtime_kwargs
+        # self._runtime_kwargs = runtime_kwargs
         
         # Init runtime object (the runtime argument is a string)
         self._runtime = None
@@ -444,24 +277,12 @@ class Proxy(object):
         # Unless app_name is __default__, the proxy will have a Pair instance
         self._pair = None
         
-        # Object to manage the client code (JS/CSS/HTML)
-        self._known_pair_classes = set()
-        for cls in clientCode.get_defined_pair_classes():
-            self._known_pair_classes.add(cls)
-        
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
         self._pending_commands = []
         
-        if runtime:
-            self._launch_runtime(runtime, **runtime_kwargs)
-    
-    @property
-    def id(self):
-        """ The unique identifier of this app as a string. Used to
-        connect a runtime to a specific client.
-        """
-        return '%x' % id(self)
+        # if runtime:
+        #     self._launch_runtime(runtime, **runtime_kwargs)
     
     @property
     def app_name(self):
@@ -476,36 +297,45 @@ class Proxy(object):
         """
         return self._pair
     
+    @property
+    def runtime(self):
+        """ The runtime that is rendering this app instance. Can be
+        None if the client is a browser.
+        """
+        return self._runtime
+    
     def __repr__(self):
         s = self.status.lower()
         return '<Proxy for %r (%s) at 0x%x>' % (self.app_name, s, id(self))
     
-    def _launch_runtime(self, runtime, **runtime_kwargs):
-        
-        # Register the instance at the manager
-        manager.add_pending_proxy_instance(self)
-        
-        if runtime == '<export>':
-            self._ws = Exporter(self)
-        elif runtime == 'notebook':
-            pass
-        elif runtime:
-            init_server()
-            host, port = _tornado_app.serving_at
-            # We associate the runtime with this specific app instance by
-            # including the app id to the url. In this way, it is pretty
-            # much guaranteed that the runtime will connect to *this* app.
-            name = self.app_name
-            if name != '__default__':
-                name += '-' + self.id
-            if runtime == 'nodejs':
-                self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
-                                       runtime=runtime, code=clientCode.get_all_js())
-            else:
-                self._runtime = launch('http://%s:%i/%s/' % (host, port, name), 
-                                       runtime=runtime, **runtime_kwargs)
-        
-        logging.debug('Instantiate app client %s' % self.app_name)
+    # def _launch_runtime(self, runtime, **runtime_kwargs):
+    #     
+    #     # Register the instance at the manager
+    #     manager.add_pending_proxy_instance(self)
+    #     
+    #     if runtime == '<export>':
+    #         self._ws = Exporter(self)
+    #     elif runtime == 'notebook':
+    #         pass
+    #     elif runtime:
+    #         funcs.init_server()
+    #         
+    #         host, port = funcs._tornado_app.serving_at  # todo: yuk
+    #         # We associate the runtime with this specific app instance by
+    #         # including the app id to the url. In this way, it is pretty
+    #         # much guaranteed that the runtime will connect to *this* app.
+    #         name = self.app_name
+    #         if name != '__default__':
+    #             name += '-' + self.id
+    #         if runtime == 'nodejs':
+    #             all_js = assets.get_all_css_and_js()[1]
+    #             self._runtime = funcs.launch('http://%s:%i/%s/' % (host, port, name), 
+    #                                          runtime=runtime, code=all_js)
+    #         else:
+    #             self._runtime = funcs.launch('http://%s:%i/%s/' % (host, port, name), 
+    #                                          runtime=runtime, **runtime_kwargs)
+    #     
+    #     logging.debug('Instantiate app client %s' % self.app_name)
     
     def _connect_client(self, ws):
         assert self._ws is None
@@ -523,6 +353,9 @@ class Proxy(object):
         assert self._pair is None
         self._pair = pair
         # todo: connect to title change and icon change events
+    
+    def _set_runtime(self, runtime):
+        self._runtime = runtime
     
     def close(self):
         """ Close the runtime, if possible
@@ -550,38 +383,13 @@ class Proxy(object):
     ## Widget-facing code
     
     def register_pair_class(self, cls):
-        """ Register the given class. If already registered, this function
-        does nothing.
-        """
-        if not (isinstance(cls, type) and issubclass(cls, Pair)):
-            raise ValueError('Not a Pair class')
-        
-        if cls in self._known_pair_classes:
-            return
-        
-        # Make sure the base classes are defined first
-        for cls2 in cls.mro()[1:]:
-            if not issubclass(cls2, Pair):  # True if cls2 is *the* Pair class
-                break
-            if cls2 not in self._known_pair_classes:
-                self.register_pair_class(cls2)
-        
-        # Register
-        self._known_pair_classes.add(cls)
-        
-        # Define class
-        logging.debug('Dynamically defining class %r' % cls)
-        js = cls.JS.CODE
-        css = cls.CSS
-        self._send_command('DEFINE-JS ' + js)
-        if css.strip():
-            self._send_command('DEFINE-CSS ' + css)
+        self._register_pair_class(cls)  # todo: make this the public
     
     def _send_command(self, command):
         """ Send the command, add to pending queue.
         """
         if self.status == self.STATUS.CONNECTED:
-            if is_notebook:
+            if funcs.is_notebook:  # todo: yuk
                 # In the notebook, we send commands via a JS display, so that
                 # they are also executed when the notebook is exported
                 from IPython.display import display, Javascript
@@ -630,3 +438,52 @@ class Proxy(object):
         if self._ws is None:
             raise RuntimeError('App not connected')
         self._send_command('EVAL ' + code)
+
+
+class Exporter(object):
+    """ Object that can be used by an app inplace of the websocket to
+    export apps to standalone HTML. The object tracks the commands send
+    by the app, so that these can be re-played in the exported document.
+    """
+    
+    def __init__(self, proxy):
+        self._commands = []
+        self.close_code = None  # simulate web socket
+        
+        # todo: how to export icons
+        self.command('ICON %s.ico' % proxy.id)
+        self.command('TITLE %s' % proxy._runtime_kwargs.get('title', 'Exported flexx app'))
+    
+    def command(self, cmd):
+        self._commands.append(cmd)
+    
+    def write_html(self, filename, single=True):
+        """ Write html document to the given file.
+        """
+        if filename.startswith('~'):
+            filename = os.path.expanduser(filename)
+        html = self.to_html(single)
+        open(filename, 'wt', encoding='utf-8').write(html)
+        print('Exported app to %r' % filename)
+    
+    def write_dependencies(self, dirname):
+        """ Write dependencies to the given dir (if a path to a file
+        is given, will write to the same directory as that file). Use
+        this if you export using ``single == False``.
+        """
+        if dirname.startswith('~'):
+            dirname = os.path.expanduser(dirname)
+        if os.path.isfile(dirname):
+            dirname = os.path.dirname(dirname)
+        raise NotImplementedError()
+        #for fname, content in xxx.get_js_and_css_assets().items():
+        #    open(os.path.join(dirname, fname), 'wt', encoding='utf-8').write(content)
+    
+    def to_html(self, single=True):
+        """ Get the HTML string.
+        """
+        html = assets.get_page_for_export(self._commands, single)
+        return html  # todo: minify somewhere ...
+
+
+from . import funcs  # todo: arg circular import

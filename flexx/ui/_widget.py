@@ -74,6 +74,9 @@ class Widget(Pair):
         kwargs['parent'] = parent
         Pair.__init__(self, **kwargs)
         
+        # All widgets need phosphor
+        self._proxy.use_asset('phosphor-all.js')
+        
         with self:
             self.init()
         

@@ -15,8 +15,9 @@ from tornado import gen
 
 from ..webruntime.common import default_icon
 
-from .proxy import manager, call_later
-from .clientcode import clientCode
+from .proxy import manager, Proxy
+from .funcs import call_later
+from .assetstore import assets
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 HTML_DIR = os.path.join(os.path.dirname(THIS_DIR), 'html')
@@ -89,26 +90,24 @@ class MainHandler(tornado.web.RequestHandler):
     
     @gen.coroutine
     def get(self, path=None):
-        print('get', path)
         
         # Analyze path to derive components
         # app_name - class name of the app, must be a valid identifier
-        # app_id - optional id to associate connection to a specific instance
         # file_name - path (can have slashes) to a file
         parts = [p for p in path.split('/') if p]
-        if parts and parts[0].split('-')[0].isidentifier():
-            app_name, _, app_id = parts[0].partition('-')
+        if parts and parts[0].isidentifier():
+            app_name = parts[0]
             file_name = '/'.join(parts[1:])
         else:
-            app_name, app_id = None, None
+            app_name, None
             file_name = '/'.join(parts)
         
-        # todo: maybe when app_id is given, redirect to normal name, but
-        # modify flexx.app_id in index.html, so that the websocket can connect
-        # with id ... (mmm also not very nice)
+        # Session id (if any) is provided via "?session_id=X"
+        session_id = self.get_argument('session_id', None)
         
         if not path:
             # Not a path, index / home page
+            # todo: allow Index app
             all_apps = ['<a href="%s">%s</a>' % (name, name) for name in 
                         manager.get_app_names()]
             all_apps = ', '.join(all_apps)
@@ -121,17 +120,18 @@ class MainHandler(tornado.web.RequestHandler):
                 # This looks like an app, redirect, serve app, or error
                 if not '/' in path:
                     self.redirect('/%s/' % app_name)
-                elif app_id:
-                    proxy = manager.get_proxy_by_id(app_name, app_id)
-                    if proxy:
-                        self.write(clientCode.get_page().encode())
+                elif session_id:
+                    proxy = manager.get_proxy_by_id(app_name, session_id)
+                    if proxy and proxy.status == proxy.STATUS.PENDING:
+                        self.write(proxy.get_page().encode())
                     else:
-                        self.write('App %r with id %r is not available' % 
-                                   (app_name, app_id))
+                        self.redirect('/%s/' % app_name)  # redirect for normal serve
+                        #self.write('App %r with id %r is not available' % (app_name, session_id))
                 elif manager.has_app_name(app_name):
+                    proxy = manager.instantiate_proxy(app_name, runtime=None)
                     #self.write(self.application.load('index.html'))
                     #self.serve_index()
-                    self.write(clientCode.get_page().encode())
+                    self.write(proxy.get_page().encode())
                 else:
                     self.write('No app %r is hosted right now' % app_name)
             elif file_name.endswith('.ico'):
@@ -151,7 +151,7 @@ class MainHandler(tornado.web.RequestHandler):
                 try:
                     #raise RuntimeError('This is for page_light, but we might never implement that')
                     #res = self.application.load(file_name)
-                    res = clientCode.load(file_name).encode()
+                    res = assets.load_asset(file_name)
                 except IOError:
                     #self.write('invalid resource')
                     super().write_error(404)
@@ -204,19 +204,16 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         if not hasattr(self, 'close_code'):  # old version of Tornado?
             self.close_code, self.close_reason = None, None
         
+        self._proxy = None
+        
         # Don't collect messages to send them more efficiently, just send asap
         self.set_nodelay(True)
+        
         if isinstance(path, bytes):
             path = path.decode()
+        self.app_name = path.strip('/')
         print('new ws connection', path)
-        app_name, _, app_id = path.strip('/').partition('-')
-        if manager.has_app_name(app_name):
-            try:
-                self._proxy = manager.connect_client(self, app_name, app_id)
-            except Exception as err:
-                self.close(1003, "Could not launch app: %r" % err)
-                raise
-            self.write_message("PRINT Hello World from server", binary=True)
+        if manager.has_app_name(self.app_name):
             if tornado.version_info < (4, ):
                 tornado.ioloop.IOLoop.current().add_callback(self.pinger)
             else:
@@ -231,7 +228,17 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         We now have a very basic protocol for receiving messages,
         we should at some point define a real formalized protocol.
         """
-        self._proxy._receive_command(message)
+        if self._proxy is None:
+            if message.startswith('hiflexx '):
+                session_id = message.split(' ', 1)[1].strip()
+                try:
+                    self._proxy = manager.connect_client(self, self.app_name, session_id)
+                except Exception as err:
+                    self.close(1003, "Could not launch app: %r" % err)
+                    raise
+                self.write_message("PRINT Hello World from server", binary=True)
+        else:
+            self._proxy._receive_command(message)
  
     def on_close(self):
         """ Called when the connection is closed.
@@ -239,7 +246,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         self.close_code = code = self.close_code or 0
         reason = self.close_reason or self.known_reasons.get(code, '')
         print('detected close: %s (%i)' % (reason, code))
-        if hasattr(self, '_proxy'):
+        if self._proxy is not None:
             manager.disconnect_client(self._proxy)
             self._proxy = None  # Allow cleaning up
     

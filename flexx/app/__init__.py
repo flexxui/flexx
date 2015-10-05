@@ -58,6 +58,11 @@ For each widget that gets used as a cell output, a container DOM
 element is created, in which the widget is displayed.
 """
 
-from .proxy import run, start, stop, init_notebook, call_later
-from .proxy import serve, launch, export, manager
+from .proxy import manager
 from .pair import Pair, get_instance_by_id, get_pair_classes, no_sync
+from .funcs import run, start, stop, call_later
+from .funcs import init_notebook, serve, launch
+from .assetstore import assets
+from .jsproxy import FlexxJS
+
+assets.create_module_assets('flexx.app', js=FlexxJS + 'var flexx = new FlexxJS();\n')
