@@ -1,10 +1,11 @@
+"""
+Functional API for flexx.app
+"""
+
 import os
 import time
 import inspect
 import logging
-
-import tornado.ioloop
-import tornado.web
 
 from ..util.icon import Icon
 from .. import webruntime
@@ -13,75 +14,29 @@ from .. import react
 from .pair import Pair
 from .proxy import Proxy, manager
 from .assetstore import assets
-
-# Create/get the tornado event loop
-_tornado_loop = tornado.ioloop.IOLoop.instance()
-
-# The tornado server, started on start()
-_tornado_app = None
+from .tornadoserver import server
 
 
+## Main loop functions
 
-
-
-# todo: move to ..utils
-def port_hash(name):
-    """ port_hash(name)
-    
-    Given a string, returns a port number between 49152 and 65535. 
-    (2**14 (16384) different posibilities)
-    This range is the range for dynamic and/or private ports 
-    (ephemeral ports) specified by iana.org.
-    The algorithm is deterministic, thus providing a way to map names
-    to port numbers.
-    
+def _server_open(host=None, port=None):
+    """ Server.open() but with handling of defaults, and checking if
+    already serving.
     """
-    fac = 0xd2d84a61
-    val = 0
-    for c in name:
-        val += ( val>>3 ) + ( ord(c)*fac )
-    val += (val>>3) + (len(name)*fac)
-    return 49152 + (val % 2**14)
-
-
-def init_server(host=None, port=None):
-    """ Initialize the server if it is not already running.
-    """
-    global _tornado_app 
-    
-    # Check that its not already running
-    if _tornado_app is not None:
-        return
-        #raise RuntimeError('flexx.ui server already created')
-    
-    # Create server
-    from .server import FlexxTornadoApplication
-    _tornado_app = FlexxTornadoApplication()
-    
-    # Get default host and port
+    # If already hosting, return or error
+    if getattr(server, '_is_hosting', False):
+        if host is None and port is None:
+            return
+        else:
+            raise RuntimeError('Already hosting')
+    # Handle defaults
     if host is None:
         host = os.getenv('FLEXX_HOSTNAME', 'localhost')
     if port is None:
         port = os.getenv('FLEXX_PORT', None)
-    
-    # Start server (find free port number if port not given)
-    if port is not None:
-        port = int(port)
-        _tornado_app.listen(port, host)
-    else:
-        for i in range(100):
-            port = port_hash('flexx%i' % i)
-            try:
-                _tornado_app.listen(port, host)
-                break
-            except OSError:
-                pass  # address already in use
-        else:
-            raise RuntimeError('Could not bind to free address')    
-    
-    # Notify address, so its easy to e.g. copy and paste in the browser
-    _tornado_app.serving_at = host, port
-    print('Serving apps at http://%s:%i/' % (host, port))
+    # Start hosting
+    server.open(host, port)
+    server._is_hosting = True
 
 
 def start(host=None, port=None):
@@ -92,6 +47,9 @@ def start(host=None, port=None):
     environments (e.g. Spyder, IEP, Jupyter notebook), so the caller
     should take into account that the function may return immediately.
     
+    The host and port can also be specified using environment variables
+    FLEXX_HOSTNAME and FLEXX_PORT.
+    
     Arguments:
         host (str): The hostname to serve on. Default 'localhost'. This
             parameter is ignored if the server was already running.
@@ -100,10 +58,9 @@ def start(host=None, port=None):
             will try a series of ports until one is found that is free.
     """
     # Get server up
-    init_server(host, port)
+    _server_open(host, port)
     # Start event loop
-    if not (hasattr(_tornado_loop, '_running') and _tornado_loop._running):
-        _tornado_loop.start()
+    server.start()
 
 
 def run():
@@ -112,14 +69,27 @@ def run():
     In contrast to ``start()``, when the server is started this way,
     it will close down when there are no more connections.
     """
-    manager._auto_stop = True
+    server._auto_stop = True
     return start()
 
 
-manager._auto_stop = False
+def stop():
+    """ Stop the event loop
+    """
+    server.stop()
+
+
+def call_later(delay, callback, *args, **kwargs):
+    """ Call the given callback after delay seconds. If delay is zero, 
+    call in the next event loop iteration.
+    """
+    server.call_later(delay, callback, *args, **kwargs)
+
+
+server._auto_stop = False
 @react.connect('manager.connections_changed')
 def _auto_closer(name):
-    if not manager._auto_stop:
+    if not server._auto_stop:
         return
     for name in manager.get_app_names():
         proxies = manager.get_connections(name)
@@ -127,28 +97,46 @@ def _auto_closer(name):
             return
     else:
         logging.info('Stopping Flexx event loop.')
-        stop()
+        server.stop()
 
-is_notebook = False
+
+## App functions
+
 
 def init_notebook():
     """ Initialize the Jupyter notebook by injecting the necessary CSS
     and JS into the browser.
     """
     
-    global is_notebook
     from IPython.display import display, Javascript, HTML
-    if is_notebook:
+    
+    # todo: in exported notebooks, the code display divs take up space?
+    def my_send_command(command):
+        display(Javascript('flexx.command(%r);' % command))
+    
+    # Create default session and monkey-patch it
+    # Not very pretty, but this keeps notebook logic confined to this module/function.
+    proxy = manager.get_default_proxy()
+    if hasattr(proxy, '_original_send_command'):
         display(HTML("<i>Flexx already loaded</i>"))
         return  # Don't inject twice
-    is_notebook = True
+    else:
+        proxy._original_send_command = proxy._send_command
+        proxy._send_command = my_send_command
+        try:
+            proxy.use_asset('phosphor-all.js')
+            proxy.use_asset('flexx-ui.css')
+            proxy.use_asset('flexx-ui.js')
+        except IndexError:
+            pass  # Ok if it fails; assets can be loaded dynamically.
     
-    init_server()
-    host, port = _tornado_app.serving_at
-    all_css, all_js = assets.get_all_css_and_js()
-    #name = app.app_name + '-' + app.id
-    name = '__default__'
-    url = 'ws://%s:%i/%s/ws' % (host, port, name)
+    # Open server - we only use websocket for JS-to-Py communication
+    _server_open()
+    host, port = server.serving_at
+    all_css, all_js = proxy.get_all_css_and_js()
+    
+    # Compose HTML to inject
+    url = 'ws://%s:%i/%s/ws' % (host, port, proxy.app_name)
     t = "<i>Injecting Flexx JS and CSS</i>"
     t += "<style>\n%s\n</style>\n" % all_css
     t += "<script>\n%s\n</script>" % all_js
@@ -157,32 +145,6 @@ def init_notebook():
     display(HTML(t))
 
 
-def stop():
-    """ Stop the event loop
-    """
-    _tornado_loop.stop()
-
-# # todo: this does not work if the event loop is running!
-# def process_events():
-#     """ Process events
-#     
-#     Call this to keep the application working while running in a loop.
-#     """
-#     _tornado_loop.run_sync(lambda x=None: None)
-
-
-def call_later(delay, callback, *args, **kwargs):
-    """ Call the given callback after delay seconds. If delay is zero, 
-    call in the next event loop iteration.
-    """
-    if delay <= 0:
-        _tornado_loop.add_callback(callback, *args, **kwargs)
-    else:
-        _tornado_loop.add_timeout(_tornado_loop.time() + delay, callback, *args, **kwargs)
-        #_tornado_loop.call_later(delay, callback, *args, **kwargs)  # v4.0+
-
-
-# todo: move init_notebook, serve, launch, export to proxy/session?
 def serve(cls):
     """ Serve the given Pair class as a web app. Can be used as a decorator.
     
@@ -195,6 +157,7 @@ def serve(cls):
     Returns:
         cls: The given class.
     """
+    # Note: this talks to the manager; it has nothing to do with the server
     assert isinstance(cls, type) and issubclass(cls, Pair)
     manager.register_app_class(cls)
     return cls
@@ -214,12 +177,16 @@ def launch(cls, runtime='xul', **runtime_kwargs):
     """
     if isinstance(cls, str):
         return webruntime.launch(cls, runtime, **runtime_kwargs)
-    assert isinstance(cls, type) and issubclass(cls, Pair)
-    serve(cls)
-    proxy = manager.instantiate_proxy(cls.__name__)
+    if not (isinstance(cls, type) and issubclass(cls, Pair)):
+        raise ValueError('runtime must be a string or Pair subclass.')
     
-    init_server()
-    host, port = _tornado_app.serving_at  # todo: yuk
+    # Create session
+    serve(cls)
+    proxy = manager.create_session(cls.__name__)
+    
+    # Launch web runtime, the server will wait for the connection
+    _server_open()
+    host, port = server.serving_at
     if runtime == 'nodejs':
         all_js = proxy.get_all_css_and_js()[1]
         proxy._runtime = launch('http://%s:%i/%s/' % (host, port, proxy.app_name), 
@@ -227,14 +194,11 @@ def launch(cls, runtime='xul', **runtime_kwargs):
     else:
         proxy._runtime = launch('http://%s:%i/%s/?session_id=%s' % (host, port, proxy.app_name, proxy.id), 
                                 runtime=runtime, **runtime_kwargs)
-
-    # proxy = Proxy(cls.__name__, runtime, **runtime_kwargs)
-    # app = cls(proxy=proxy, container='body')
-    # proxy._set_pair_instance(app)
+    
     return proxy.app
 
 
-def export(cls, filename=None, single=True, deps=True):
+def export(cls, filename=None, single=True):
     """ Export the given Pair class to an HTML document.
     
     Arguments:
@@ -242,22 +206,51 @@ def export(cls, filename=None, single=True, deps=True):
         filename (str, optional): Path to write the HTML document to.
             If not given or None, will return the html as a string.
         single (bool): If True, will include all JS and CSS dependencies
-            in the HTML page.
-        deps (bool): If deps is True, will also export the dependent
-            JS and CSS files (in case single is False).
+            in the HTML page. If False, you want to export all assets
+            using ``app.assets.export(dirname)``.
     
     Returns:
         html (str): The resulting html. If a filename was specified
         this returns None.
     """
-    assert isinstance(cls, type) and issubclass(cls, Pair)
+    if not (isinstance(cls, type) and issubclass(cls, Pair)):
+        raise ValueError('runtime must be a string or Pair subclass.')
+    
+    # Create session
     serve(cls)
-    proxy = Proxy(cls.__name__, '<export>')
-    app = cls(proxy=proxy, container='body')
-    proxy._set_pair_instance(app)
+    proxy = manager.create_session(cls.__name__)
+    
+    # Make fake connection using exporter object
+    exporter = ExporterWebSocketDummy()
+    manager.connect_client(exporter, proxy.app_name, proxy.id)
+    
+    # Clean up again
+    manager.disconnect_client(proxy)
+    
+    # Get HTML - this may be good enough
+    html = proxy.get_page_for_export(exporter._commands, single)
     if filename is None:
-        return proxy._ws.to_html()
-    else:
-        proxy._ws.write_html(filename, single)
-        if deps and not single:
-            proxy._ws.write_dependencies(filename)
+        return html
+    
+    # Save to file
+    if filename.startswith('~'):
+        filename = os.path.expanduser(filename)
+    open(filename, 'wt', encoding='utf-8').write(html)
+    print('Exported app to %r' % filename)
+
+
+class ExporterWebSocketDummy(object):
+    """ Object that can be used by an app inplace of the websocket to
+    export apps to standalone HTML. The object tracks the commands send
+    by the app, so that these can be re-played in the exported document.
+    """
+    close_code = None
+    
+    def __init__(self):
+        self._commands = []
+        # todo: make icon and title work
+        #self.command('ICON %s.ico' % proxy.id)
+        #self.command('TITLE %s' % proxy._runtime_kwargs.get('title', 'Exported flexx app'))
+    
+    def command(self, cmd):
+        self._commands.append(cmd)

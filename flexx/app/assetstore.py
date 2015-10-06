@@ -179,7 +179,19 @@ class AssetStore:
         fname = module_name.replace('.', '-')
         self._assets[fname + '.css'] = css_.encode()
         self._assets[fname + '.js'] = js_.encode()
-
+    
+    def export(self, dirname):
+        """ Write all assets to the given directory.
+        """
+        # Normalize and check
+        if dirname.startswith('~'):
+            dirname = os.path.expanduser(dirname)
+        if not os.path.isdir(dirname):
+            raise ValueError('dirname %r for export is not a directory.' % dirname)
+        # Export all assets
+        for fname in self.get_asset_names():
+            if not fname.startswith('index-'):
+                open(os.path.join(dirname, fname), 'wb').write(self.load_asset(fname))
 
 # Our singleton asset store
 assets = AssetStore()
@@ -219,14 +231,18 @@ class SessionAssets:
         Parameters:
             fname (str): the (relative) filename for the asset.
         """
+        if fname in self._asset_names:
+            return  # ok
+        
         if fname not in self._store.get_asset_names():
             raise IndexError('Asset %r is not present in the store.' % fname)
         
         if self._served and (fname.endswith('.js') or fname.endswith('.css')):
-            logging.warn('Adding asset %r but the page has already been "served".' % fname)
+            suffix = fname.split('.')[-1].upper()
+            self._send_command('DEFINE-%s %s' % (suffix, self._store.load_asset(fname).decode()))
+            #logging.warn('Adding asset %r but the page has already been "served".' % fname)
         
-        if fname not in self._asset_names:
-            self._asset_names.append(fname)
+        self._asset_names.append(fname)
     
     def add_asset(self, fname, content):
         """ Add an asset specific for this session.
@@ -259,7 +275,7 @@ class SessionAssets:
         self._store.add_asset(fname, content)
         self.use_asset(fname)
     
-    def _register_pair_class(self, cls):
+    def register_pair_class(self, cls):
         """ Ensure that the client knows the given class. A class can
         already be defined via a module asset, or we can add it to a
         pending list if the page has not been served yet. Otherwise it
@@ -277,7 +293,7 @@ class SessionAssets:
             if not issubclass(cls2, Pair):  # True if cls2 is *the* Pair class
                 break
             if cls2 not in self._known_classes:
-                self._register_pair_class(cls2)
+                self.register_pair_class(cls2)
         
         self._known_classes.add(cls)
         

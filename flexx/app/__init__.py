@@ -58,10 +58,30 @@ For each widget that gets used as a cell output, a container DOM
 element is created, in which the widget is displayed.
 """
 
+_DEV_NOTES = """
+Overview of classes:
+
+* Pair: the base class for creating Python-JS objects.
+* AssetStore: one instance of this class is used to provide all client
+  assets in this process (JS, CSS, images, etc.).
+* SessionAssets: base class for Session that implements the assets part.
+  Assets specific to the session are name-mangled.
+* Session: object that handles connection between Python and JS. Has a
+  websocket, and optionally a reference to the runtime.
+* WebSocket: tornado WS handler.
+* AppManager: keeps track of what apps are registered. Has functionality
+  to instantiate apps and connect the websocket to them.
+* Server: handles http requests. Uses manager to create new app
+  instances or get the page for a pending session. Hosts assets by using
+  the global asset store.
+* FlexxJS (in jsproxy.py): more or less the JS side of a session.
+
+"""
+
 from .proxy import manager
 from .pair import Pair, get_instance_by_id, get_pair_classes, no_sync
 from .funcs import run, start, stop, call_later
-from .funcs import init_notebook, serve, launch
+from .funcs import init_notebook, serve, launch, export
 from .assetstore import assets
 from .jsproxy import FlexxJS
 

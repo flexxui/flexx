@@ -39,7 +39,7 @@ class FlexxJS:
         elif flexx.is_notebook and not (window.IPython and 
                                         window.IPython.notebook and 
                                         window.IPython.notebook.session):
-            print('Hey, I am in an exported notebook!')
+            print('Flexx: hey, I am in an exported notebook!')
         else:
             flexx.initSocket()
             flexx.initLogging()
@@ -97,10 +97,7 @@ class FlexxJS:
                 console.info(msg)
         def on_ws_error(self, evt):
             self.ws = None
-            if flexx.is_notebook:
-                console.error('Socket error: re-run flexx.app.init_socket() to connect.')
-            else:
-                console.error('Socket error')
+            console.error('Socket error')
         
         # Connect
         if self.nodejs:

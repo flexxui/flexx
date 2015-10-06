@@ -77,6 +77,8 @@ class Widget(Pair):
         # All widgets need phosphor
         self._proxy.use_asset('phosphor-all.js')
         
+        # todo: can I make widgets not need the proxy immediately? The fact that proxy and app need each-other is a bit awkward?
+        
         with self:
             self.init()
         

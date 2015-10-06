@@ -68,6 +68,7 @@ def test_session_assets():
     
     store = AssetStore()
     s = SessionAssets(store)
+    s._send_command = lambda x: None
     
     assert not s.get_used_asset_names()
     
@@ -106,18 +107,19 @@ def test_session_registering_pair_classes():
     
     store = AssetStore()
     s = SessionAssets(store)
+    s._send_command = lambda x: None
     
     store.create_module_assets('flexx.ui.layouts')
     
-    raises(ValueError, s._register_pair_class, 4)  # must be a Pair class
+    raises(ValueError, s.register_pair_class, 4)  # must be a Pair class
     
-    s._register_pair_class(ui.Slider)
+    s.register_pair_class(ui.Slider)
     assert len(s._known_classes) == 3  # Slider, Widget, and Pair
-    s._register_pair_class(ui.Slider)  # no duplicates!
+    s.register_pair_class(ui.Slider)  # no duplicates!
     assert len(s._known_classes) == 3
     
-    s._register_pair_class(ui.BoxLayout)
-    s._register_pair_class(ui.Button)
+    s.register_pair_class(ui.BoxLayout)
+    s.register_pair_class(ui.Button)
     
     # Get result
     css, js = s.get_all_css_and_js()
@@ -149,16 +151,14 @@ def test_session_registering_pair_classes():
     s._send_command = lambda x: commands.append(x)
     
     # Dynamic
-    s._register_pair_class(ui.BoxLayout)
+    s.register_pair_class(ui.BoxLayout)
     assert len(commands) == 0  # already known
-    s._register_pair_class(ui.FormLayout)
+    s.register_pair_class(ui.FormLayout)
     assert len(commands) == 0  # already in module asset
     #
-    s._register_pair_class(ui.Label)
+    s.register_pair_class(ui.Label)
     assert '.Label = function' in commands[0]  # JS
     assert 'flx-' in commands[1]  # CSS
 
-
-test_session_registering_pair_classes()
 
 run_tests_if_main()
