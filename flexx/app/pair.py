@@ -184,7 +184,7 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         or something, suggestion welcome.
     
     Parameters:
-        proxy: the proxy object that connects this instance to a JS client.
+        session: the session object that connects this instance to a JS client.
         kwargs: initial signal values (see HasSignals).
     
     Notes:
@@ -225,7 +225,7 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
     def __from_json__(dct):
         return get_instance_by_id(dct['id'])
     
-    def __init__(self, proxy=None, **kwargs):
+    def __init__(self, session=None, **kwargs):
         
         # Set id and register this instance
         Pair._counter += 1
@@ -235,18 +235,18 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         # Flag to implement eventual synchronicity
         self._seid_from_js = 0
         
-        # Init proxy
-        if proxy is None:
-            from .proxy import manager
-            proxy = manager.get_default_proxy()
-        self._proxy = proxy
+        # Init session
+        if session is None:
+            from .session import manager
+            session = manager.get_default_session()
+        self._session = session
         
-        self._proxy.register_pair_class(self.__class__)
+        self._session.register_pair_class(self.__class__)
         
         # Instantiate JavaScript version of this class
         clsname = 'flexx.classes.' + self.__class__.__name__
         cmd = 'flexx.instances.%s = new %s(%r);' % (self._id, clsname, self._id)
-        self._proxy._exec(cmd)
+        self._session._exec(cmd)
         
         self._init()
         
@@ -265,10 +265,10 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         return self._id
     
     @property
-    def proxy(self):
-        """ The proxy object that connects us to the runtime.
+    def session(self):
+        """ The session object that connects us to the runtime.
         """
-        return self._proxy
+        return self._session
     
     def __setattr__(self, name, value):
         # Sync attributes that are Pair instances
@@ -276,7 +276,7 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         if isinstance(value, Pair):
             txt = serializer.saves(value)
             cmd = 'flexx.instances.%s.%s = flexx.serializer.loads(%r);' % (self._id, name, txt)
-            self._proxy._exec(cmd)
+            self._session._exec(cmd)
     
     def _set_signal_from_js(self, name, text, esid):
         """ Notes on synchronizing:
@@ -310,25 +310,25 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
             #txt = json.dumps(signal.value)
             txt = serializer.saves(signal.value)
             cmd = 'flexx.instances.%s._set_signal_from_py(%r, %r, %r);' % (self._id, signal.name, txt, esid)
-            self._proxy._exec(cmd)
+            self._session._exec(cmd)
     
     def _link_js_signal(self, name, link=True):
         """ Make a link between a JS signal and its proxy in Python.
         This is done when a proxy signal is used as input for a signal
         in Python.
         """
-        # if self._proxy is None:
+        # if self._session is None:
         #     self._initial_signal_links.discart(name)
         #     if link:
         #         self._initial_signal_links.add(name)
         # else:
         link = 'true' if link else 'false'
         cmd = 'flexx.instances.%s._link_js_signal(%r, %s);' % (self._id, name, link)
-        self._proxy._exec(cmd)
+        self._session._exec(cmd)
     
     def call_js(self, call):
         cmd = 'flexx.instances.%s.%s;' % (self._id, call)
-        self._proxy._exec(cmd)
+        self._session._exec(cmd)
     
     
     class JS:

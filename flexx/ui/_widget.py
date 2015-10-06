@@ -66,18 +66,18 @@ class Widget(Pair):
             if default_parents:
                 parent = default_parents[-1]
         
-        # Use parent proxy unless proxy was given
-        if parent is not None and not kwargs.get('_proxy', None):
-            kwargs['proxy'] = parent.proxy
+        # Use parent session unless session was given
+        if parent is not None and not kwargs.get('session', None):
+            kwargs['session'] = parent.session
          
         # Pass properties via kwargs
         kwargs['parent'] = parent
         Pair.__init__(self, **kwargs)
         
         # All widgets need phosphor
-        self._proxy.use_asset('phosphor-all.js')
+        self._session.use_asset('phosphor-all.js')
         
-        # todo: can I make widgets not need the proxy immediately? The fact that proxy and app need each-other is a bit awkward?
+        # todo: can I make widgets not need the session immediately? The fact that session and app need each-other is a bit awkward?
         
         with self:
             self.init()
@@ -85,7 +85,7 @@ class Widget(Pair):
         # Signal dependencies may have been added during init(), also in JS
         self.connect_signals(False)
         cmd = 'flexx.instances.%s.connect_signals(false);' % self._id
-        self._proxy._exec(cmd)
+        self._session._exec(cmd)
     
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.

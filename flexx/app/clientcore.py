@@ -1,3 +1,7 @@
+"""
+The client's core Flexx engine, implemented in PyScript.
+"""
+
 from ..pyscript import py2js
 
 

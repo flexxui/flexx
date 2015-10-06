@@ -15,9 +15,11 @@ from .pair import Pair
 from .assetstore import SessionAssets
 
 
-# todo: rename to SessionManager
+# todo: periodically clean old sessions in the pending list
+
+
 class AppManager(object):
-    """ Manage apps, or more specifically, the proxy objects.
+    """ Manage apps, or more specifically, the session objects.
     
     There is one AppManager class (in ``flexx.pair.manager``). It's
     purpose is to manage the application classes and instances. Intended
@@ -46,10 +48,10 @@ class AppManager(object):
             #raise ValueError('App with name %r already registered' % name)
         self._proxies[name] = cls, pending, connected
     
-    def get_default_proxy(self):
-        """ Get the default proxy that is used for interactive use.
+    def get_default_session(self):
+        """ Get the default session that is used for interactive use.
         
-        When a Pair class is created without a proxy, this method
+        When a Pair class is created without a session, this method
         is called to get one. The default "app" is served at
         "http://address:port/__default__".
         """
@@ -58,9 +60,9 @@ class AppManager(object):
         if proxies:
             return proxies[-1]
         else:
-            proxy = Proxy('__default__')
-            pending.append(proxy)
-            return proxy
+            session = Session('__default__')
+            pending.append(session)
+            return session
     
     def create_session(self, name):
         """ Create a session for the app with the given name.
@@ -71,25 +73,25 @@ class AppManager(object):
         """
         
         if name not in self._proxies:
-            raise ValueError('Can only instantiate a proxy with a valid app name.')
+            raise ValueError('Can only instantiate a session with a valid app name.')
         
         cls, pending, connected = self._proxies[name]
         
         if name == '__default__':
             xxxx
         
-        # Proxy and app class need each-other, thus the _set_app()
-        proxy = Proxy(cls.__name__)
-        app = cls(proxy=proxy, container='body')
-        proxy._set_app(app)
+        # Session and app class need each-other, thus the _set_app()
+        session = Session(cls.__name__)
+        app = cls(session=session, container='body')
+        session._set_app(app)
         
         # Now wait for the client to connect. The client will be served
         # a page that contains the session_id. Upon connecting, the id
-        # will be communicated, so it connects to the correct proxy.
-        pending.append(proxy)
+        # will be communicated, so it connects to the correct session.
+        pending.append(session)
         
-        logging.debug('Instantiate app client %s' % proxy.app_name)
-        return proxy
+        logging.debug('Instantiate app client %s' % session.app_name)
+        return session
     
     def connect_client(self, ws, name, app_id):
         """ Connect a client to a session that was previously created.
@@ -97,35 +99,35 @@ class AppManager(object):
         logging.debug('connecting %s %s' %(name, app_id))
         cls, pending, connected = self._proxies[name]
         
-        # Search for the proxy with the specific id
-        for proxy in pending:
-            if proxy.id == app_id:
-                pending.remove(proxy)
+        # Search for the session with the specific id
+        for session in pending:
+            if session.id == app_id:
+                pending.remove(session)
                 break
         else:
             raise RuntimeError('Asked for app id %r, but could not find it' % app_id)
     
         # Add app to connected, set ws
-        assert proxy.status == Proxy.STATUS.PENDING
-        proxy._set_ws(ws)
-        connected.append(proxy)
-        self.connections_changed._set(proxy.app_name)
-        return proxy  # For the ws
+        assert session.status == Session.STATUS.PENDING
+        session._set_ws(ws)
+        connected.append(session)
+        self.connections_changed._set(session.app_name)
+        return session  # For the ws
     
-    def disconnect_client(self, proxy):
+    def disconnect_client(self, session):
         """ Close a connection to a client.
         
         This is called by the websocket when the connection is closed.
-        The manager will remove the proxy from the list of connected
+        The manager will remove the session from the list of connected
         instances.
         """
-        cls, pending, connected = self._proxies[proxy.app_name]
+        cls, pending, connected = self._proxies[session.app_name]
         try:
-            connected.remove(proxy)
+            connected.remove(session)
         except ValueError:
             pass
-        proxy.close()
-        self.connections_changed._set(proxy.app_name)
+        session.close()
+        self.connections_changed._set(session.app_name)
     
     def has_app_name(self, name):
         """ Returns True if name is a registered appliciation name
@@ -138,19 +140,19 @@ class AppManager(object):
         """
         return [name for name in self._proxies.keys() if not name.startswith('_')]
     
-    def get_proxy_by_id(self, name, id):
-        """ Get proxy object by name and id
+    def get_session_by_id(self, name, id):
+        """ Get session object by name and id
         """
         cls, pending, connected = self._proxies[name]
-        for proxy in pending:
-            if proxy.id == id:
-                return proxy
-        for proxy in connected:
-            if proxy.id == id:
-                return proxy
+        for session in pending:
+            if session.id == id:
+                return session
+        for session in connected:
+            if session.id == id:
+                return session
     
     def get_connections(self, name):
-        """ Given an app name, return the proxy connected objects.
+        """ Given an app name, return the session connected objects.
         """
         cls, pending, connected = self._proxies[name]
         return list(connected)
@@ -167,7 +169,8 @@ class AppManager(object):
 manager = AppManager()
 
 
-# todo: find other solution?
+# Note: This enum mechanism stands a bit by itself. But it works well
+# and is not very much exposed to the user, so I guess its ok for now.
 def create_enum(*members):
     """ Create an enum type from given string arguments.
     """
@@ -177,8 +180,8 @@ def create_enum(*members):
     
 
 # todo: rename to Session
-class Proxy(SessionAssets):
-    """ A proxy between Python and the client runtime
+class Session(SessionAssets):
+    """ A session between Python and the client runtime
 
     This class is basically a wrapper for the app widget, the web runtime,
     and the websocket instance that connects to it.
@@ -196,7 +199,7 @@ class Proxy(SessionAssets):
         self._app_name = app_name  # name of the app, available before the app itself
         self._runtime = None  # init web runtime, will be set when used
         self._ws = None  # init websocket, will be set when a connection is made
-        self._pair = None  # unless app_name is __default__, the proxy will have a Pair instance
+        self._pair = None  # unless app_name is __default__, the session will have a Pair instance
         
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
@@ -204,11 +207,11 @@ class Proxy(SessionAssets):
     
     def __repr__(self):
         s = self.status.lower()
-        return '<Proxy for %r (%s) at 0x%x>' % (self.app_name, s, id(self))
+        return '<Session for %r (%s) at 0x%x>' % (self.app_name, s, id(self))
     
     @property
     def app_name(self):
-        """ The name of the application that this proxy represents.
+        """ The name of the application that this session represents.
         """
         return self._app_name
     
@@ -227,7 +230,7 @@ class Proxy(SessionAssets):
         return self._runtime
     
     def _set_ws(self, ws):
-        """ A proxy is always first created, so we know what page to
+        """ A session is always first created, so we know what page to
         serve. The client will connect the websocket, and communicate
         the session_id so it can be connected to the correct Session
         via this method
@@ -267,8 +270,8 @@ class Proxy(SessionAssets):
     
     @property
     def status(self):
-        """ The status of this proxy. Can be PENDING, CONNECTED or
-        CLOSED. See Proxy.STATUS enum.
+        """ The status of this session. Can be PENDING, CONNECTED or
+        CLOSED. See Session.STATUS enum.
         """
         # todo: is this how we want to do enums throughout?
         if self._ws is None:

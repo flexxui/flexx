@@ -35,7 +35,7 @@ exported to HTML via ``app.export()``.
 
 Further, there is a notion of a default app, intended for interactive use
 and use inside the Jupyter notebook; any ``Pair`` instance created
-without a ``proxy`` argument will connect to this default app.
+without a ``session`` argument will connect to this default app.
 
 Starting the server
 -------------------
@@ -74,15 +74,15 @@ Overview of classes:
 * Server: handles http requests. Uses manager to create new app
   instances or get the page for a pending session. Hosts assets by using
   the global asset store.
-* FlexxJS (in jsproxy.py): more or less the JS side of a session.
+* FlexxJS (in clientcore.py): more or less the JS side of a session.
 
 """
 
-from .proxy import manager
+from .session import manager
 from .pair import Pair, get_instance_by_id, get_pair_classes, no_sync
 from .funcs import run, start, stop, call_later
 from .funcs import init_notebook, serve, launch, export
 from .assetstore import assets
-from .jsproxy import FlexxJS
+from .clientcore import FlexxJS
 
 assets.create_module_assets('flexx.app', js=FlexxJS + 'var flexx = new FlexxJS();\n')

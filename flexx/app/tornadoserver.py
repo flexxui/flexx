@@ -18,7 +18,7 @@ from tornado import gen
 
 from ..webruntime.common import default_icon
 
-from .proxy import manager
+from .session import manager
 from .assetstore import assets
 
 # todo: threading, or even multi-process
@@ -195,16 +195,16 @@ class MainHandler(tornado.web.RequestHandler):
                     self.redirect('/%s/' % app_name)
                 elif session_id:
                     # If session_id matches a pending app, use that session
-                    proxy = manager.get_proxy_by_id(app_name, session_id)
-                    if proxy and proxy.status == proxy.STATUS.PENDING:
-                        self.write(proxy.get_page().encode())
+                    session = manager.get_session_by_id(app_name, session_id)
+                    if session and session.status == session.STATUS.PENDING:
+                        self.write(session.get_page().encode())
                     else:
                         self.redirect('/%s/' % app_name)  # redirect for normal serve
                         #self.write('App %r with id %r is not available' % (app_name, session_id))
                 elif manager.has_app_name(app_name):
-                    # Create proxy - client will connect to it via session_id
-                    proxy = manager.create_session(app_name)
-                    self.write(proxy.get_page().encode())
+                    # Create session - client will connect to it via session_id
+                    session = manager.create_session(app_name)
+                    self.write(session.get_page().encode())
                 else:
                     self.write('No app %r is currently hosted.' % app_name)
             elif file_name:
@@ -266,7 +266,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         if not hasattr(self, 'close_code'):  # old version of Tornado?
             self.close_code, self.close_reason = None, None
         
-        self._proxy = None
+        self._session = None
         
         # Don't collect messages to send them more efficiently, just send asap
         self.set_nodelay(True)
@@ -291,17 +291,17 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         We now have a very basic protocol for receiving messages,
         we should at some point define a real formalized protocol.
         """
-        if self._proxy is None:
+        if self._session is None:
             if message.startswith('hiflexx '):
                 session_id = message.split(' ', 1)[1].strip()
                 try:
-                    self._proxy = manager.connect_client(self, self.app_name, session_id)
+                    self._session = manager.connect_client(self, self.app_name, session_id)
                 except Exception as err:
                     self.close(1003, "Could not launch app: %r" % err)
                     raise
                 self.write_message("PRINT Flexx server says hi", binary=True)
         else:
-            self._proxy._receive_command(message)
+            self._session._receive_command(message)
     
     def on_close(self):
         """ Called when the connection is closed.
@@ -309,9 +309,9 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         self.close_code = code = self.close_code or 0
         reason = self.close_reason or self.known_reasons.get(code, '')
         print('detected close: %s (%i)' % (reason, code))
-        if self._proxy is not None:
-            manager.disconnect_client(self._proxy)
-            self._proxy = None  # Allow cleaning up
+        if self._session is not None:
+            manager.disconnect_client(self._session)
+            self._session = None  # Allow cleaning up
     
     @gen.coroutine
     def pinger(self):

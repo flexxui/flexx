@@ -12,7 +12,7 @@ from .. import webruntime
 from .. import react
 
 from .pair import Pair
-from .proxy import Proxy, manager
+from .session import Session, manager
 from .assetstore import assets
 from .tornadoserver import server
 
@@ -116,27 +116,27 @@ def init_notebook():
     
     # Create default session and monkey-patch it
     # Not very pretty, but this keeps notebook logic confined to this module/function.
-    proxy = manager.get_default_proxy()
-    if hasattr(proxy, '_original_send_command'):
+    session = manager.get_default_session()
+    if hasattr(session, '_original_send_command'):
         display(HTML("<i>Flexx already loaded</i>"))
         return  # Don't inject twice
     else:
-        proxy._original_send_command = proxy._send_command
-        proxy._send_command = my_send_command
+        session._original_send_command = session._send_command
+        session._send_command = my_send_command
         try:
-            proxy.use_asset('phosphor-all.js')
-            proxy.use_asset('flexx-ui.css')
-            proxy.use_asset('flexx-ui.js')
+            session.use_asset('phosphor-all.js')
+            session.use_asset('flexx-ui.css')
+            session.use_asset('flexx-ui.js')
         except IndexError:
             pass  # Ok if it fails; assets can be loaded dynamically.
     
     # Open server - we only use websocket for JS-to-Py communication
     _server_open()
     host, port = server.serving_at
-    all_css, all_js = proxy.get_all_css_and_js()
+    all_css, all_js = session.get_all_css_and_js()
     
     # Compose HTML to inject
-    url = 'ws://%s:%i/%s/ws' % (host, port, proxy.app_name)
+    url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)
     t = "<i>Injecting Flexx JS and CSS</i>"
     t += "<style>\n%s\n</style>\n" % all_css
     t += "<script>\n%s\n</script>" % all_js
@@ -182,20 +182,20 @@ def launch(cls, runtime='xul', **runtime_kwargs):
     
     # Create session
     serve(cls)
-    proxy = manager.create_session(cls.__name__)
+    session = manager.create_session(cls.__name__)
     
     # Launch web runtime, the server will wait for the connection
     _server_open()
     host, port = server.serving_at
     if runtime == 'nodejs':
-        all_js = proxy.get_all_css_and_js()[1]
-        proxy._runtime = launch('http://%s:%i/%s/' % (host, port, proxy.app_name), 
+        all_js = session.get_all_css_and_js()[1]
+        session._runtime = launch('http://%s:%i/%s/' % (host, port, session.app_name), 
                                 runtime=runtime, code=all_js)
     else:
-        proxy._runtime = launch('http://%s:%i/%s/?session_id=%s' % (host, port, proxy.app_name, proxy.id), 
+        session._runtime = launch('http://%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id), 
                                 runtime=runtime, **runtime_kwargs)
     
-    return proxy.app
+    return session.app
 
 
 def export(cls, filename=None, single=True):
@@ -218,17 +218,17 @@ def export(cls, filename=None, single=True):
     
     # Create session
     serve(cls)
-    proxy = manager.create_session(cls.__name__)
+    session = manager.create_session(cls.__name__)
     
     # Make fake connection using exporter object
     exporter = ExporterWebSocketDummy()
-    manager.connect_client(exporter, proxy.app_name, proxy.id)
+    manager.connect_client(exporter, session.app_name, session.id)
     
     # Clean up again
-    manager.disconnect_client(proxy)
+    manager.disconnect_client(session)
     
     # Get HTML - this may be good enough
-    html = proxy.get_page_for_export(exporter._commands, single)
+    html = session.get_page_for_export(exporter._commands, single)
     if filename is None:
         return html
     
@@ -249,8 +249,8 @@ class ExporterWebSocketDummy(object):
     def __init__(self):
         self._commands = []
         # todo: make icon and title work
-        #self.command('ICON %s.ico' % proxy.id)
-        #self.command('TITLE %s' % proxy._runtime_kwargs.get('title', 'Exported flexx app'))
+        #self.command('ICON %s.ico' % session.id)
+        #self.command('TITLE %s' % session._runtime_kwargs.get('title', 'Exported flexx app'))
     
     def command(self, cmd):
         self._commands.append(cmd)
