@@ -6,7 +6,7 @@ from flexx import react
 from flexx import app
 
 
-class Name(app.Pair):
+class Name(app.Model):
     
     @react.input
     def first_name(n='john'):

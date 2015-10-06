@@ -16,7 +16,7 @@ from flexx import react, app
 from flexx.react import undefined
 
 
-class Foo(app.Pair):
+class Foo(app.Model):
     
     @react.input
     def spam(self, v=0):
@@ -26,7 +26,7 @@ class Foo(app.Pair):
         self.eggs._set(v+1)
         return v
     
-    @app.no_sync
+    @react.nosync
     @react.input
     def eggs(self, v):
         print('set eggs', self, v)
@@ -48,7 +48,7 @@ class Foo(app.Pair):
             self.eggs._set(v+1)
             return v
         
-        @app.no_sync
+        @react.nosync
         @react.input
         def eggs(self, v):
             assert v is not undefined

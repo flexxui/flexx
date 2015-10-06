@@ -310,6 +310,6 @@ something we'd need to work out ...
 
 from .signals import SignalValueError, Signal, undefined
 from .signals import Signal, SourceSignal, InputSignal, LazySignal
-from .decorators import connect, source, input, lazy
+from .decorators import connect, source, input, lazy, nosync
 from .hassignals import HasSignals
 from .functional import map, filter, reduce, merge

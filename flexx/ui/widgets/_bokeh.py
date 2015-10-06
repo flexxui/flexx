@@ -27,7 +27,6 @@ Simple example:
 
 import os
 
-from ...app import no_sync
 from ... import react
 from . import Widget
 
@@ -56,7 +55,7 @@ class BokehWidget(Widget):
             add_bokehjs_asset_to_flexx()  # todo: this raises a warning, can I fix that?
             BokehWidget._added = True
     
-    @no_sync
+    @react.nosync
     @react.input
     def plot(plot):
         """ The Bokeh plot object to display. In JS, this signal
@@ -77,8 +76,8 @@ class BokehWidget(Widget):
     
     class JS:
         
-        @no_sync
-        @react.source
+        @react.nosync
+        @react.input
         def plot(plot=None):
             return plot
         

@@ -79,7 +79,7 @@ Overview of classes:
 """
 
 from .session import manager
-from .model import Model, get_instance_by_id, get_model_classes, no_sync
+from .model import Model, get_instance_by_id, get_model_classes
 from .funcs import run, start, stop, call_later
 from .funcs import init_notebook, serve, launch, export
 from .assetstore import assets

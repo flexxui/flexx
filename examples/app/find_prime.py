@@ -35,7 +35,7 @@ def _find_prime(self, n):
     print(i, 'found in ', t1-t0, 'seconds')
 
 
-class PrimeFinder(app.Pair):
+class PrimeFinder(app.Model):
     
     _find_prime = _find_prime
     

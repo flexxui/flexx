@@ -37,13 +37,6 @@ def get_instance_by_id(id):
     return Model._instances.get(id, None)
 
 
-def no_sync(signal):
-    """ Decorator for signals that should not be synced between Py and JS.
-    """
-    signal.flags['no_sync'] = True
-    return signal
-
-
 class JSSignal(react.SourceSignal):
     """ A signal that represents a proxy to a signal in JavaScript.
     """
@@ -302,7 +295,7 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
         # Set esid to 0 if it originates from Py, or to what we got from JS
         esid = self._seid_from_js
         self._seid_from_js = 0
-        if not isinstance(signal, JSSignal) and not signal.flags.get('no_sync', False):
+        if not isinstance(signal, JSSignal) and not signal.flags.get('nosync', False):
             #txt = json.dumps(signal.value)
             txt = serializer.saves(signal.value)
             cmd = 'flexx.instances.%s._set_signal_from_py(%r, %r, %r);' % (self._id, signal.name, txt, esid)
@@ -373,7 +366,7 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
             # todo: what signals do we sync? all but private signals? or only linked?
             # signals like `text` should always sync, signals like a 100Hz timer not, mouse_pos maybe neither unless linked against
             #if signal.signal_type == 'PyInputSignal' or self._linked_signals[signal._name]:
-            if signal.flags.no_sync:
+            if signal.flags.nosync:
                 return
             if signal.signal_type != 'PySignal' and not signal._name.startswith('_'):
                 #txt = JSON.stringify(signal.value)

@@ -13,7 +13,7 @@ import json
 import threading
 
 from .. import react
-from ..app import Model, get_instance_by_id, no_sync
+from ..app import Model, get_instance_by_id
 from ..app.serialize import serializer
 from ..react import undefined
 
@@ -192,7 +192,7 @@ class Widget(Model):
         """
         return str(v)
     
-    @no_sync
+    @react.nosync
     @react.input
     def parent(self, new_parent=None):
         """ The parent widget, or None if it has no parent.
@@ -204,7 +204,7 @@ class Widget(Model):
         # from the input function: while we are inside this function,
         # the signal is "locked". In JS we perform the exact same trick.
         # To sync Python and JS, we only sync the children signal,
-        # otherwise we'd create a loop. We use the ``no_sync``
+        # otherwise we'd create a loop. We use the ``nosync``
         # decorator. In the end, we can set the parent and children
         # signal, and the other signal is updated immediately. This
         # works in JS and Py.
@@ -396,7 +396,7 @@ class Widget(Model):
             if id == 'body':
                 self.node.classList.add('flx-main-widget')
         
-        @no_sync
+        @react.nosync
         @react.input
         def parent(self, new_parent=None):
             old_parent = self.parent._value
