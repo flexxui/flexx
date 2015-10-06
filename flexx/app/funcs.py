@@ -11,7 +11,7 @@ from ..util.icon import Icon
 from .. import webruntime
 from .. import react
 
-from .pair import Pair
+from .model import Model
 from .session import Session, manager
 from .assetstore import assets
 from .tornadoserver import server
@@ -146,39 +146,39 @@ def init_notebook():
 
 
 def serve(cls):
-    """ Serve the given Pair class as a web app. Can be used as a decorator.
+    """ Serve the given Model class as a web app. Can be used as a decorator.
     
     This registers the given class with the internal app manager. The
     app can be loaded via 'http://hostname:port/classname'.
     
     Arguments:
-        cls (Pair): a subclass of ``app.Pair`` (or ``ui.Widget``).
+        cls (Model): a subclass of ``app.Model`` (or ``ui.Widget``).
     
     Returns:
         cls: The given class.
     """
     # Note: this talks to the manager; it has nothing to do with the server
-    assert isinstance(cls, type) and issubclass(cls, Pair)
+    assert isinstance(cls, type) and issubclass(cls, Model)
     manager.register_app_class(cls)
     return cls
 
 
 def launch(cls, runtime='xul', **runtime_kwargs):
-    """ Launch the given Pair class as a desktop app in the given runtime.
+    """ Launch the given Model class as a desktop app in the given runtime.
     
     Arguments:
-        cls (type, str): a subclass of ``app.Pair`` (or ``ui.Widget`). If this 
+        cls (type, str): a subclass of ``app.Model`` (or ``ui.Widget`). If this 
             is a string, it simply calls ``webruntime.launch()``.
         runtime (str): the runtime to launch the application in. Default 'xul'.
         runtime_kwargs: kwargs to pass to the ``webruntime.launch`` function.
     
     Returns:
-        app (Pair): an instance of the given class.
+        app (Model): an instance of the given class.
     """
     if isinstance(cls, str):
         return webruntime.launch(cls, runtime, **runtime_kwargs)
-    if not (isinstance(cls, type) and issubclass(cls, Pair)):
-        raise ValueError('runtime must be a string or Pair subclass.')
+    if not (isinstance(cls, type) and issubclass(cls, Model)):
+        raise ValueError('runtime must be a string or Model subclass.')
     
     # Create session
     serve(cls)
@@ -199,10 +199,10 @@ def launch(cls, runtime='xul', **runtime_kwargs):
 
 
 def export(cls, filename=None, single=True):
-    """ Export the given Pair class to an HTML document.
+    """ Export the given Model class to an HTML document.
     
     Arguments:
-        cls (Pair): a subclass of ``app.Pair`` (or ``ui.Widget``).
+        cls (Model): a subclass of ``app.Model`` (or ``ui.Widget``).
         filename (str, optional): Path to write the HTML document to.
             If not given or None, will return the html as a string.
         single (bool): If True, will include all JS and CSS dependencies
@@ -213,8 +213,8 @@ def export(cls, filename=None, single=True):
         html (str): The resulting html. If a filename was specified
         this returns None.
     """
-    if not (isinstance(cls, type) and issubclass(cls, Pair)):
-        raise ValueError('runtime must be a string or Pair subclass.')
+    if not (isinstance(cls, type) and issubclass(cls, Model)):
+        raise ValueError('runtime must be a string or Model subclass.')
     
     # Create session
     serve(cls)

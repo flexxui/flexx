@@ -59,9 +59,9 @@ def test_cache_submodules():
     s.create_module_assets('flexx.ui.widgets._button')
     s.create_module_assets('flexx.ui')
     
-    s.get_module_name_for_pair_class(ui.Slider) == 'flexx.ui.widgets'
-    s.get_module_name_for_pair_class(ui.Button) == 'flexx.ui.widgets._button'
-    s.get_module_name_for_pair_class(ui.BoxLayout) == 'flexx.ui'
+    s.get_module_name_for_model_class(ui.Slider) == 'flexx.ui.widgets'
+    s.get_module_name_for_model_class(ui.Button) == 'flexx.ui.widgets._button'
+    s.get_module_name_for_model_class(ui.BoxLayout) == 'flexx.ui'
 
 
 def test_session_assets():
@@ -103,7 +103,7 @@ def test_session_assets():
     assert store.load_asset('eggs.js') == b'12345'
 
 
-def test_session_registering_pair_classes():
+def test_session_registering_model_classes():
     
     store = AssetStore()
     s = SessionAssets(store)
@@ -111,15 +111,15 @@ def test_session_registering_pair_classes():
     
     store.create_module_assets('flexx.ui.layouts')
     
-    raises(ValueError, s.register_pair_class, 4)  # must be a Pair class
+    raises(ValueError, s.register_model_class, 4)  # must be a Model class
     
-    s.register_pair_class(ui.Slider)
-    assert len(s._known_classes) == 3  # Slider, Widget, and Pair
-    s.register_pair_class(ui.Slider)  # no duplicates!
+    s.register_model_class(ui.Slider)
+    assert len(s._known_classes) == 3  # Slider, Widget, and Model
+    s.register_model_class(ui.Slider)  # no duplicates!
     assert len(s._known_classes) == 3
     
-    s.register_pair_class(ui.BoxLayout)
-    s.register_pair_class(ui.Button)
+    s.register_model_class(ui.BoxLayout)
+    s.register_model_class(ui.Button)
     
     # Get result
     css, js = s.get_all_css_and_js()
@@ -151,12 +151,12 @@ def test_session_registering_pair_classes():
     s._send_command = lambda x: commands.append(x)
     
     # Dynamic
-    s.register_pair_class(ui.BoxLayout)
+    s.register_model_class(ui.BoxLayout)
     assert len(commands) == 0  # already known
-    s.register_pair_class(ui.FormLayout)
+    s.register_model_class(ui.FormLayout)
     assert len(commands) == 0  # already in module asset
     #
-    s.register_pair_class(ui.Label)
+    s.register_model_class(ui.Label)
     assert '.Label = function' in commands[0]  # JS
     assert 'flx-' in commands[1]  # CSS
 

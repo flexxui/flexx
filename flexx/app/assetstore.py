@@ -11,8 +11,8 @@ Naturally, different sessions may need different assets with the same
 name. Therefore the SessionAssets class provides a way to manage assets
 with name mangling.
     
-Groups of Pair classes can be added as a CSS and JS asset using
-``assets.create_module_assets()``, which will select all Pair classes
+Groups of Model classes can be added as a CSS and JS asset using
+``assets.create_module_assets()``, which will select all Model classes
 present in the given Python module. Classes used by the session that
 are not provided via such a module asset will be added to the index.
 """
@@ -23,7 +23,7 @@ import logging
 from collections import OrderedDict
 
 from ..pyscript import py2js, clean_code
-from .pair import Pair, get_pair_classes
+from .model import Model, get_model_classes
 
 INDEX = """<!doctype html>
 <html>
@@ -50,7 +50,7 @@ def modname_startswith(x, y):
     return (x + '.').startswith(y + '.')
 
 
-def create_css_and_js_from_pair_classes(classes, css='', js=''):
+def create_css_and_js_from_model_classes(classes, css='', js=''):
     # Collect CSS and JS, and filter out empty ones
     css, js = [css], ['"use strict";', js]
     for cls in classes:
@@ -138,8 +138,8 @@ class AssetStore:
         else:
             return content
     
-    def get_module_name_for_pair_class(self, cls):
-        """ Given a Pair class, get the module name for which we have
+    def get_module_name_for_model_class(self, cls):
+        """ Given a Model class, get the module name for which we have
         a corresponding asset, or None if we don't.
         """
         modname = cls.__module__
@@ -148,9 +148,9 @@ class AssetStore:
                 return name
     
     def create_module_assets(self, module_name, css='', js=''):
-        """ Create an asset with Pair classes from a Python module.
+        """ Create an asset with Model classes from a Python module.
         
-        Create a JS and CSS asset containing the definitions of all Pair classes
+        Create a JS and CSS asset containing the definitions of all Model classes
         defined in the given module.
         
         Parameters:
@@ -160,7 +160,7 @@ class AssetStore:
         """
         # Collect classes and remember which ones we have covered
         classes = list()
-        for cls in get_pair_classes():
+        for cls in get_model_classes():
             if modname_startswith(cls.__module__, module_name):
                 # This cls is in our module, check if we dont already have it
                 for name in self._module_names:
@@ -169,7 +169,7 @@ class AssetStore:
                 else:
                     classes.append(cls)
         
-        css_, js_ = create_css_and_js_from_pair_classes(classes, css, js)
+        css_, js_ = create_css_and_js_from_model_classes(classes, css, js)
         
         # Store module name and sort
         self._module_names.append(module_name)
@@ -207,7 +207,7 @@ class SessionAssets:
         self._asset_names = list()
         self._served = False
         self._known_classes = set()  # Cache what classes we know (for performance)
-        self._extra_pair_classes = []  # Pair classes that are not in an asset/module
+        self._extra_model_classes = []  # Model classes that are not in an asset/module
     
     @property
     def id(self):
@@ -275,14 +275,14 @@ class SessionAssets:
         self._store.add_asset(fname, content)
         self.use_asset(fname)
     
-    def register_pair_class(self, cls):
+    def register_model_class(self, cls):
         """ Ensure that the client knows the given class. A class can
         already be defined via a module asset, or we can add it to a
         pending list if the page has not been served yet. Otherwise it
         needs to be defined dynamically.
         """
-        if not (isinstance(cls, type) and issubclass(cls, Pair)):
-            raise ValueError('Not a Pair class')
+        if not (isinstance(cls, type) and issubclass(cls, Model)):
+            raise ValueError('Not a Model class')
         
         # Early exit if we know the class already
         if cls in self._known_classes:
@@ -290,15 +290,15 @@ class SessionAssets:
         
         # Make sure the base classes are registered first
         for cls2 in cls.mro()[1:]:
-            if not issubclass(cls2, Pair):  # True if cls2 is *the* Pair class
+            if not issubclass(cls2, Model):  # True if cls2 is *the* Model class
                 break
             if cls2 not in self._known_classes:
-                self.register_pair_class(cls2)
+                self.register_model_class(cls2)
         
         self._known_classes.add(cls)
         
         # Check if cls is covered by our assets
-        module_name = self._store.get_module_name_for_pair_class(cls)
+        module_name = self._store.get_module_name_for_model_class(cls)
         if module_name:
             # cls is present in a module, add corresponding asset (overwrite ok)
             fname = module_name.replace('.', '-')
@@ -307,7 +307,7 @@ class SessionAssets:
                 self.use_asset(fname + '.js')
         elif not self._served:
             # Remember cls, will be served in the index
-            self._extra_pair_classes.append(cls)
+            self._extra_model_classes.append(cls)
         else:
             # Define class dynamically - assuming we're a session subclass ...
             logging.warn('Dynamically defining class %r' % cls)
@@ -319,12 +319,12 @@ class SessionAssets:
     def _get_js_and_css_assets(self):
         """ Get an ordered dictionary with the JS and CSS assets.
         """
-        # Create assets from our extra pair classes
-        if self._extra_pair_classes:
-            css, js = create_css_and_js_from_pair_classes(self._extra_pair_classes)
-            self.add_asset('index-extra-pair-classes.css', css.encode())
-            self.add_asset('index-extra-pair-classes.js', js.encode())
-        self._extra_pair_classes = None  # make sure we wont append to it anymore :)
+        # Create assets from our extra model classes
+        if self._extra_model_classes:
+            css, js = create_css_and_js_from_model_classes(self._extra_model_classes)
+            self.add_asset('index-extra-model-classes.css', css.encode())
+            self.add_asset('index-extra-model-classes.js', js.encode())
+        self._extra_model_classes = None  # make sure we wont append to it anymore :)
         # Mark that any new assets dont make it into the currently served page
         self._served = True
         # Collect assets

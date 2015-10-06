@@ -55,7 +55,7 @@ class FlexxJS:
             self.ws = None
     
     def get(self, id):
-        """ Get instance of a Pair class.
+        """ Get instance of a Model class.
         """
         if id == 'body':
             return document.body

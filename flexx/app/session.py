@@ -11,7 +11,7 @@ from ..util.icon import Icon
 from .. import webruntime
 from .. import react
 
-from .pair import Pair
+from .model import Model
 from .assetstore import SessionAssets
 
 
@@ -21,25 +21,25 @@ from .assetstore import SessionAssets
 class AppManager(object):
     """ Manage apps, or more specifically, the session objects.
     
-    There is one AppManager class (in ``flexx.pair.manager``). It's
+    There is one AppManager class (in ``flexx.model.manager``). It's
     purpose is to manage the application classes and instances. Intended
     for internal use.
     """
     
     def __init__(self):
-        # name -> (PairClass, pending, connected) - lists contain proxies
+        # name -> (ModelClass, pending, connected) - lists contain proxies
         self._proxies = {'__default__': (None, [], [])}
     
     def register_app_class(self, cls):
-        """ Register a Pair class as being an application.
+        """ Register a Model class as being an application.
         
         Applications are identified by the ``__name__`` attribute of
-        the class. The given class must inherit from ``Pair``.
+        the class. The given class must inherit from ``Model``.
         
         After registering a class, it becomes possible to connect to 
         "http://address:port/ClassName". 
         """
-        assert isinstance(cls, type) and issubclass(cls, Pair)
+        assert isinstance(cls, type) and issubclass(cls, Model)
         name = cls.__name__
         pending, connected = [], []
         if name in self._proxies and cls is not self._proxies[name][0]:
@@ -51,7 +51,7 @@ class AppManager(object):
     def get_default_session(self):
         """ Get the default session that is used for interactive use.
         
-        When a Pair class is created without a session, this method
+        When a Model class is created without a session, this method
         is called to get one. The default "app" is served at
         "http://address:port/__default__".
         """
@@ -179,7 +179,6 @@ def create_enum(*members):
     return type('Enum', (), enums)
     
 
-# todo: rename to Session
 class Session(SessionAssets):
     """ A session between Python and the client runtime
 
@@ -199,7 +198,7 @@ class Session(SessionAssets):
         self._app_name = app_name  # name of the app, available before the app itself
         self._runtime = None  # init web runtime, will be set when used
         self._ws = None  # init websocket, will be set when a connection is made
-        self._pair = None  # unless app_name is __default__, the session will have a Pair instance
+        self._model = None  # unless app_name is __default__, the session will have a Model instance
         
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
@@ -217,10 +216,10 @@ class Session(SessionAssets):
     
     @property
     def app(self):
-        """ The Pair instance that represents the app. Can be None if this
+        """ The Model instance that represents the app. Can be None if this
         is the ``__default__`` app.
         """
-        return self._pair
+        return self._model
     
     @property
     def runtime(self):
@@ -247,10 +246,10 @@ class Session(SessionAssets):
         for command in self._pending_commands:
             self._ws.command(command)
    
-    def _set_app(self, pair):
-        if self._pair is not None:
+    def _set_app(self, model):
+        if self._model is not None:
             raise RuntimeError('Session already has an associated Model.')
-        self._pair = pair
+        self._model = model
         # todo: connect to title change and icon change events
     
     def _set_runtime(self, runtime):
@@ -264,16 +263,15 @@ class Session(SessionAssets):
         # todo: close via JS
         if self._runtime:
             self._runtime.close()
-        if self._pair:
-            self._pair.disconnect_signals()
-            self._pair = None  # break circular reference
+        if self._model:
+            self._model.disconnect_signals()
+            self._model = None  # break circular reference
     
     @property
     def status(self):
         """ The status of this session. Can be PENDING, CONNECTED or
         CLOSED. See Session.STATUS enum.
         """
-        # todo: is this how we want to do enums throughout?
         if self._ws is None:
             return self.STATUS.PENDING  # not connected yet
         elif self._ws.close_code is None:
@@ -310,7 +308,7 @@ class Session(SessionAssets):
         elif command.startswith('SIGNAL '):
             # todo: seems weird to deal with here. implement this by registring some handler?
             _, id, esid, signal_name, txt = command.split(' ', 4)
-            ob = Pair._instances.get(id, None)
+            ob = Model._instances.get(id, None)
             if ob is not None:
                 ob._set_signal_from_js(signal_name, txt, esid)
         else:

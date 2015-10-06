@@ -13,7 +13,7 @@ import json
 import threading
 
 from .. import react
-from ..app import Pair, get_instance_by_id, no_sync
+from ..app import Model, get_instance_by_id, no_sync
 from ..app.serialize import serializer
 from ..react import undefined
 
@@ -44,7 +44,7 @@ def _get_default_parents():
     return _default_parents_per_thread.setdefault(tid, [])
 
 
-class Widget(Pair):
+class Widget(Model):
     """ Base widget class.
     
     When *subclassing* a Widget to create a compound widget (a widget
@@ -72,7 +72,7 @@ class Widget(Pair):
          
         # Pass properties via kwargs
         kwargs['parent'] = parent
-        Pair.__init__(self, **kwargs)
+        Model.__init__(self, **kwargs)
         
         # All widgets need phosphor
         self._session.use_asset('phosphor-all.js')
@@ -114,7 +114,7 @@ class Widget(Pair):
         disconnect the signals of any child widgets.
         """
         children = self.children()
-        Pair.disconnect_signals(self, *args)
+        Model.disconnect_signals(self, *args)
         for child in children:
             child.disconnect_signals(*args)
     
@@ -295,7 +295,7 @@ class Widget(Pair):
                 if not cls:
                     break
                 cls_name = cls.prototype._base_class._class_name
-                if not cls_name or cls_name == 'Pair':
+                if not cls_name or cls_name == 'Model':
                     break
             else:
                 raise RuntimeError('Error while determining class names')

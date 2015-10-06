@@ -815,7 +815,7 @@ class Parser2(Parser1):
         if len(self._stack) < 3:  # module, class, function
             #raise JSError('can only use super() inside a method.')
             # We just provide "super()" and hope that the user will
-            # replace the code (as we do in the Pair class).
+            # replace the code (as we do in the Model class).
             return 'super()'
         
         # Find the class of this function. Using this._base_class would work
@@ -841,7 +841,7 @@ class Parser2(Parser1):
 
 def get_class_definition(name, base='Object', docstring=''):
     """ Get a list of lines that defines a class in JS.
-    Used in the parser as well as by flexx.ui.Pair.
+    Used in the parser as well as by flexx.ui.Model.
     """
     code = []
     
