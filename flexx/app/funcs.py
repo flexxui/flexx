@@ -224,8 +224,8 @@ def export(cls, filename=None, single=True):
     exporter = ExporterWebSocketDummy()
     manager.connect_client(exporter, session.app_name, session.id)
     
-    # Clean up again
-    manager.disconnect_client(session)
+    # Clean up again - NO keep in memory to ensure two sessions dont get same id
+    # manager.disconnect_client(session)
     
     # Get HTML - this may be good enough
     html = session.get_page_for_export(exporter._commands, single)
@@ -236,7 +236,7 @@ def export(cls, filename=None, single=True):
     if filename.startswith('~'):
         filename = os.path.expanduser(filename)
     open(filename, 'wt', encoding='utf-8').write(html)
-    print('Exported app to %r' % filename)
+    logging.info('Exported app to %r' % filename)
 
 
 class ExporterWebSocketDummy(object):

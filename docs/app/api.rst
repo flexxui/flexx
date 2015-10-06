@@ -16,11 +16,11 @@ Functions related to the event loop
 .. autofunction:: flexx.app.call_later
 
 
-The Pair class
---------------
+The Model class
+---------------
 
-.. autoclass:: flexx.app.Pair
-  :members:
+.. autoclass:: flexx.app.Model
+    :members:
 
 .. autofunction:: flexx.app.serve
 
@@ -30,4 +30,23 @@ The Pair class
 
 .. autofunction:: flexx.app.get_instance_by_id
 
-.. autofunction:: flexx.app.get_pair_classes
+.. autofunction:: flexx.app.get_model_classes
+
+
+Session and Assets
+------------------
+
+The session handles the connection between Python and the JavaScript,
+and it allows adding client-side assets, which for instance makes it
+easy to create extensions based on existing JS libraries.
+
+The AssetStore provides all assets for clients connected to the current
+process. The global store is at ``flexx.app.assets``.
+
+.. autoclass:: flexx.app.Session
+    :inherited-members:
+    :members:
+
+
+.. autoclass:: flexx.app.assetstore.AssetStore
+    :members:

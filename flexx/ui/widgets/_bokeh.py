@@ -31,30 +31,20 @@ from ... import react
 from . import Widget
 
 
-def add_bokehjs_asset_to_flexx():
-    import bokeh
-    from ...app.clientcode import clientCode
-    res = os.path.abspath(os.path.join(bokeh.__file__, '..', 'server', 'static'))
-    fname_js = os.path.join(res, 'css', 'bokeh.min.css')
-    css, js = [open(os.path.join(res, x, 'bokeh.min.' + x), 'rt', encoding='utf-8').read()
-               for x in ('css', 'js')]
-    clientCode.add_asset('bokehjs.min.css', css)
-    clientCode.add_asset('bokehjs.min.js', js)
-
-
 class BokehWidget(Widget):
     """ A widget that shows a Bokeh plot object.
     """
     
-    _added = False
-    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # Handle client dependencies
         import bokeh
-        if not BokehWidget._added:
-            add_bokehjs_asset_to_flexx()  # todo: this raises a warning, can I fix that?
-            BokehWidget._added = True
-    
+        if not 'bokehjs.min.js' in self.session.get_used_asset_names():
+            res = os.path.abspath(os.path.join(bokeh.__file__, '..', 'server', 'static'))
+            for x in ('css', 'js'):
+                self.session.add_global_asset('bokehjs.min.'+x, os.path.join(res, x, 'bokeh.min.'+x))
+
     @react.nosync
     @react.input
     def plot(plot):

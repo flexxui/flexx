@@ -44,7 +44,7 @@ class AppManager(object):
         pending, connected = [], []
         if name in self._proxies and cls is not self._proxies[name][0]:
             oldCls, pending, connected = self._proxies[name]
-            logging.warn('Re-registering app class %r' % name)
+            logging.info('Re-registering app class %r' % name)
             #raise ValueError('App with name %r already registered' % name)
         self._proxies[name] = cls, pending, connected
     

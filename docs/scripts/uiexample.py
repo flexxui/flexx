@@ -21,6 +21,9 @@ if not os.path.isdir(HTML_DIR + '/ui'):
 if not os.path.isdir(HTML_DIR + '/ui/examples'):
     os.mkdir(HTML_DIR + '/ui/examples')
 
+# Make us find the modules that we write
+sys.path.insert(0, HTML_DIR + '/ui/examples')
+
 SIMPLE_CODE_T = """
 from flexx import app, ui
 
@@ -28,8 +31,6 @@ class App(ui.Widget):
 
     def init(self):
         """  # mind the indentation
-
-should_export_flexx_deps = True
 
 
 class uiexample(nodes.raw): pass
@@ -42,7 +43,8 @@ def visit_uiexample_html(self, node):
         return
     
     # Get code
-    code = node.code.strip() + '\n'
+    code = ori_code = node.code.strip() + '\n'
+    ori_code = '\n'.join([' '*8 + x for x in ori_code.splitlines()])  # for reporting
     
     # Is this a simple example?
     if 'import' not in code:
@@ -52,7 +54,9 @@ def visit_uiexample_html(self, node):
     this_id = hashlib.md5(code.encode('utf-8')).hexdigest()
     fname = 'example%s.html' % this_id
     filename_html = os.path.join(HTML_DIR, 'ui', 'examples', fname)
+    filename_py = os.path.join(HTML_DIR, 'ui', 'examples', 'example%s.py' % this_id)
     
+    # Compose code
     code += '\n\n'
     if 'class MyApp' in code:
         code += 'App = MyApp\n'
@@ -60,35 +64,27 @@ def visit_uiexample_html(self, node):
         code += 'App = Example\n'
     if not 'app' in code:
         code += 'from flexx import app\n'
-    code += 'app.export(App, %r, False, %i)\n' % (fname, should_export_flexx_deps)
-    
-    should_export_flexx_deps = False  # Export deps only once
+    code += 'app.export(App, %r, False)\n' % filename_html
     
     # Write filename so Python can find the source
-    filename_py = os.path.join(HTML_DIR, 'ui', 'examples', 'example%s.py' % this_id)
     open(filename_py, 'wt', encoding='utf-8').write(code)
     
-    # Call a fresh process to run the app
-    env = os.environ.copy()
-    env['PYTHONPATH'] = ROOT_DIR
     try:
-        subprocess.check_output([sys.executable, filename_py], 
-                                 stderr=subprocess.STDOUT, env=env, 
-                                 cwd=os.path.join(HTML_DIR, 'ui', 'examples'))
+        __import__('example%s' % this_id)  # import to exec
+    except ImportError as err:
+        err_text = str(err)
+        msg = 'Example not generated. <pre>%s</pre>' % err_text
+        if os.environ.get('READTHEDOCS', False):
+            node.height = 60
+            msg = 'This example is not build on read-the-docs. <pre>%s</pre>' % err_text
+        open(filename_html, 'wt', encoding='utf-8').write(msg)
+        warnings.warn('Ui example dependency not met: %s' % err_text)
     except Exception as err:
-        err_text = err.output.decode()
-        err_short = err_text.strip().split('\n')[-1]
-        if 'ImportError' in err_text:
-            msg = 'Example not generated. <pre>%s</pre>' % err_short
-            if os.environ.get('READTHEDOCS', False):
-                node.height = 60
-                msg = 'This example is not build on read-the-docs. <pre>%s</pre>' % err_short
-            open(filename_html, 'wt', encoding='utf-8').write(msg)
-            warnings.warn('Ui example dependency not met: %s' % err_short)
-        else:
-            msg = 'Example not generated. <pre>%s</pre>' % err_text
-            open(filename_html, 'wt', encoding='utf-8').write(msg.replace('\\n', '<br />'))
-            raise RuntimeError('Could not create ui example:' + err_text)
+        err_text = str(err)
+        msg = 'Example not generated. <pre>%s</pre>' % err_text
+        open(filename_html, 'wt', encoding='utf-8').write(msg.replace('\\n', '<br />'))
+        raise RuntimeError('Could not create ui example: %s\n%s' % (err_text, ori_code) )
+        #print('Could not create ui example: %s\n%s' % (err_text, ori_code) )
     
     rel_path = '../ui/examples/' + fname
     
