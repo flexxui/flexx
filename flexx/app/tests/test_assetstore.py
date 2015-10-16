@@ -1,5 +1,6 @@
 import os
 import tempfile
+import shutil
 
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
@@ -43,12 +44,33 @@ def test_asset_store_simple():
     raises(ValueError, s.add_asset, 'xxx', 'some file that does not exist')  # str means filename
     raises(RuntimeError, s._cache_get, 'nonexistent.ever')  # Runtime error, because this should never happen
     
-    # Assets from http (not currently supported)
-    s.add_asset('webresource.js', 'https://foo.com/x.js')
-    raises(NotImplementedError, s.load_asset, 'webresource.js')
+    # Assets from http 
+    s.add_asset('webresource.js', 'http://code.jquery.com/jquery.min.js')
+    assert len(s.load_asset('webresource.js')) > 0
     
     # Fail load_asset
     raises(IndexError, s.load_asset, 'nonexistent.js')
+
+
+def test_asset_store_export():
+    
+    dir = os.path.join(tempfile.gettempdir(), 'flexx_export')
+    if os.path.isdir(dir):
+        shutil.rmtree(dir)
+    os.mkdir(dir)
+    
+    s = AssetStore()
+    
+    s.export(dir)
+    assert not os.listdir(dir)
+    
+    s.add_asset('foo.js', b'xx')
+    s.add_asset('foo.css', b'xx')
+    s.export(dir)
+    assert len(os.listdir(dir)) == 2
+    
+    # Fail
+    raises(ValueError, s.export, os.path.join(dir, 'doesnotexist'))
 
 
 def test_cache_submodules():
@@ -92,6 +114,7 @@ def test_session_assets():
     s.use_global_asset('spam.js')
     assert s.get_used_asset_names()[-1] == 'spam.js'
     raises(IndexError, s.use_global_asset, 'unknown-asset.js')
+    raises(ValueError, s.add_asset, 3, b'a')
     
     # Add assets after loading page
     s.get_page()
@@ -101,6 +124,16 @@ def test_session_assets():
     s.add_global_asset('eggs.js', b'12345')
     assert s.get_used_asset_names()[-1] == 'eggs.js'
     assert store.load_asset('eggs.js') == b'12345'
+    raises(ValueError, s.use_global_asset, 3)
+    
+    # Remote assets
+    s.use_remote_asset('http://linked.com/not/verified.js')
+    s.use_remote_asset('http://linked.com/not/verified.css')
+    s.use_remote_asset('http://linked.com/not/verified.css')  # twice is ok
+    raises(ValueError, s.use_remote_asset, 3)
+    page = s.get_page()
+    assert 'not/verified.js' in page
+    assert 'not/verified.css' in page
 
 
 def test_session_registering_model_classes():

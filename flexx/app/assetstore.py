@@ -185,7 +185,7 @@ class AssetStore:
         """ Write all assets to the given directory.
         """
         # Normalize and check
-        if dirname.startswith('~'):
+        if dirname.startswith('~'):  # pragma: no cover
             dirname = os.path.expanduser(dirname)
         if not os.path.isdir(dirname):
             raise ValueError('dirname %r for export is not a directory.' % dirname)
