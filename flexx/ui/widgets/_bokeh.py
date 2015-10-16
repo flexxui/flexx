@@ -35,15 +35,25 @@ class BokehWidget(Widget):
     """ A widget that shows a Bokeh plot object.
     """
     
+    CSS = """
+    .flx-BokehWidget > .plotdiv {
+        overflow: hidden;
+    }
+    """
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
         # Handle client dependencies
         import bokeh
-        if not 'bokehjs.min.js' in self.session.get_used_asset_names():
-            res = os.path.abspath(os.path.join(bokeh.__file__, '..', 'server', 'static'))
+        dev = os.environ.get('BOKEH_RESOURCES', '') == 'relative-dev'
+        modname = 'bokeh.' if dev else 'bokeh.min.'
+        if not (modname + 'js') in self.session.get_used_asset_names():
+            res = bokeh.resources.bokehjsdir()
+            if dev:
+                res = os.path.abspath(os.path.join(bokeh.__file__, '..', '..', 'bokehjs', 'build'))
             for x in ('css', 'js'):
-                self.session.add_global_asset('bokehjs.min.'+x, os.path.join(res, x, 'bokeh.min.'+x))
+                self.session.add_global_asset(modname + x, os.path.join(res, x, modname + x))
 
     @react.nosync
     @react.input
@@ -61,13 +71,13 @@ class BokehWidget(Widget):
     def plot_components(plot):
         from bokeh.embed import components
         script, div = components(plot)
-        script = '\n'.join(script.split('\n')[1:-1])
+        script = '\n'.join(script.strip().split('\n')[1:-1])
         return script, div, plot.ref['id']
     
     class JS:
         
         @react.nosync
-        @react.input
+        @react.source
         def plot(plot=None):
             return plot
         
@@ -90,5 +100,8 @@ class BokehWidget(Widget):
         
         @react.connect('real_size')
         def __resize_plot(self, size):
-            if self.plot():
-                self.plot().resize()
+            if self.plot() and self.parent() and self.plot().resize_width_height:
+                cstyle = getComputedStyle(self.parent().node)
+                use_x = cstyle['overflow-x'] not in ('auto', 'scroll')
+                use_y = cstyle['overflow-y'] not in ('auto', 'scroll')
+                self.plot().resize_width_height(use_x, use_y)

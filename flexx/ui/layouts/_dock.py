@@ -45,6 +45,7 @@ class DockPanel(Layout):
             border: 1px solid #C0C0C0;
             border-top: none;
             box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+            z-index: 0;
         }
         
         .p-DockTabPanel-overlay {
