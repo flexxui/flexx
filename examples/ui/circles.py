@@ -12,7 +12,7 @@ from flexx import app, ui
 
 class Circle(ui.Label):
     CSS = """
-    .flx-circle {
+    .flx-Circle {
         background: #f00;
         border-radius: 10px;
         width: 10px;
