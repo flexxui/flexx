@@ -10,7 +10,7 @@ from bokeh.embed import file_html, components
 
 from flexx import app, ui, react
 
-src = 'https://github.com/zoofIO/flexx/blob/master/examples/ui/bokeh_plot.py'
+src = 'https://github.com/zoofIO/flexx/blob/master/examples/ui/with_bokeh.py'
 
 # Plot 1
 N = 1000

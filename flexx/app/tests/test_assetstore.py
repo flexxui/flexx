@@ -89,13 +89,13 @@ def test_session_assets():
     
     # Use asset
     store.add_asset('spam.js', b'1234')
-    s.use_asset('spam.js')
+    s.use_global_asset('spam.js')
     assert s.get_used_asset_names()[-1] == 'spam.js'
-    raises(IndexError, s.use_asset, 'unknown-asset.js')
+    raises(IndexError, s.use_global_asset, 'unknown-asset.js')
     
     # Add assets after loading page
     s.get_page()
-    s.use_asset('spam.js')  # prints a warning, but it does work
+    s.use_global_asset('spam.js')  # prints a warning, but it does work
 
     # Global assets
     s.add_global_asset('eggs.js', b'12345')

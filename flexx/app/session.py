@@ -193,7 +193,7 @@ class Session(SessionAssets):
         
         # Init assets
         self.add_asset('index-flexx-id.js', ('window.flexx_session_id = %r;\n' % self.id).encode())
-        self.use_asset('flexx-app.js')
+        self.use_global_asset('flexx-app.js')
         
         self._app_name = app_name  # name of the app, available before the app itself
         self._runtime = None  # init web runtime, will be set when used

@@ -20,6 +20,7 @@ are not provided via such a module asset will be added to the index.
 import os
 import sys
 import logging
+from urllib.request import urlopen
 from collections import OrderedDict
 
 from ..pyscript import py2js, clean_code
@@ -65,7 +66,7 @@ class AssetStore:
     """ Global provider of client assets (CSS, JavaScript, images, etc.).
     
     Assets are global to the process via the AssetStore instance at
-    ``flexx.app.assets``. Use the Session instance to get unique (name
+    ``flexx.app.assets``. Use the Session instance for unique (name
     mangled) assets.
     """
     
@@ -79,7 +80,7 @@ class AssetStore:
         """
         if key not in self._cache:
             if key.startswith('http://') or key.startswith('https://'):
-                raise NotImplementedError('HTTP assets not supported yet')
+                self._cache[key] = urlopen(key, timeout=5.0).read()
             elif os.path.isfile(key):
                 self._cache[key] = open(key, 'rb').read()
             else:  # this should never happen
@@ -98,9 +99,9 @@ class AssetStore:
         Parameters:
             fname (str): the (relative) filename for the asset.
             content (str, bytes): the content of the asset. If a str,
-                it is interpreted as the filename to the asset (the
-                contents will be cached). If bytes, it is interpreted
-                as the raw asset content.
+                it is interpreted as the filename or url to the asset
+                (the contents will be cached). If bytes, it is
+                interpreted as the raw asset content.
         """
         if fname in self._assets:
             if content == self._assets[fname]:
@@ -205,6 +206,7 @@ class SessionAssets:
         self._store = store if (store is not None) else assets
         assert isinstance(self._store, AssetStore)
         self._asset_names = list()
+        self._remote_asset_names = []  # e.g. JS and CSS to load from a CDN
         self._served = False
         self._known_classes = set()  # Cache what classes we know (for performance)
         self._extra_model_classes = []  # Model classes that are not in an asset/module
@@ -221,16 +223,33 @@ class SessionAssets:
         """
         return list(self._asset_names)  # Note: order matters
     
-    def use_asset(self, fname):
-        """ Make this session use the given asset.
+    def use_remote_asset(self, url):
+        """ Make this session use a remote CSS/JS asset.
         
-        The given asset must be available in the asset store
+        Assets specified in this way will always be included as a link
+        (even when exporting to a single-page app). These will typically
+        be on-line resources (e.g. from a CDN), though can also be used
+        for local files (as long as the app only runs locally).
+        """
+        if not isinstance(url, str):
+            raise ValueError('Remote asset name must be a string.')
+        if url not in self._remote_asset_names:
+            self._remote_asset_names.append(url)
+    
+    def use_global_asset(self, fname):
+        """ Make this session use a global asset.
+        
+        The given asset must be available in the global asset store
         (``app.assets``). JS and CSS assets are added/linked in the
-        page index.
+        page index. It is ok to call this multiple times for the same
+        asset.
         
         Parameters:
             fname (str): the (relative) filename for the asset.
         """
+        if not isinstance(fname, str):
+            raise ValueError('Asset name must be a string.')
+        
         if fname in self._asset_names:
             return  # ok
         
@@ -254,11 +273,13 @@ class SessionAssets:
         Parameters:
             fname (str): the (relative) filename for the asset.
             content (str, bytes): the content of the asset. If a str,
-                it is interpreted as the filename to the asset. If
-                bytes, it is interpreted as the raw asset content.
+                it is interpreted as the filename or url to the asset.
+                If bytes, it is interpreted as the raw asset content.
         Returns:
             fname (str): A mangled version of the given ``fname``.
         """
+        if not isinstance(fname, str):
+            raise ValueError('Asset name must be a string.')
         part1, dot, part2 = fname.rpartition('.')
         fname = '%s-%s%s%s' % (part1, self.id, dot, part2)
         self.add_global_asset(fname, content)
@@ -270,10 +291,11 @@ class SessionAssets:
         Use this for JS and CSS, but probably not for images and content
         specific for a certain app. This is equivalent to
         ``app.assets.add_asset(fname, content)`` followed  by
-        ``session.use_asset(fname)``.
+        ``session.use_global_asset(fname)``. It's ok if the asset is already
+        in the global assets, as long as it has the same content.
         """
         self._store.add_asset(fname, content)
-        self.use_asset(fname)
+        self.use_global_asset(fname)
     
     def register_model_class(self, cls):
         """ Ensure that the client knows the given class. A class can
@@ -303,8 +325,8 @@ class SessionAssets:
             # cls is present in a module, add corresponding asset (overwrite ok)
             fname = module_name.replace('.', '-')
             if (fname + '.js') not in self._asset_names:
-                self.use_asset(fname + '.css')
-                self.use_asset(fname + '.js')
+                self.use_global_asset(fname + '.css')
+                self.use_global_asset(fname + '.js')
         elif not self._served:
             # Remember cls, will be served in the index
             self._extra_model_classes.append(cls)
@@ -373,6 +395,15 @@ class SessionAssets:
         js_elements = []  # links to external JS docs
         css_elements = []  # links to external CSS docs
         index_elements = []  # code to put in the index
+        
+        # Collect remote assets
+        for url in self._remote_asset_names:
+            if url.endswith('.css'):
+                css = "    <link rel='stylesheet' type='text/css' href='%s' />" % url
+                css_elements.append(css)
+            else:
+                js = "    <script src='%s'></script>" % url
+                js_elements.append(js)
         
         # Collect JS and CSS
         for fname, code in self._get_js_and_css_assets().items():

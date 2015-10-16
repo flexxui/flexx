@@ -124,9 +124,9 @@ def init_notebook():
         session._original_send_command = session._send_command
         session._send_command = my_send_command
         try:
-            session.use_asset('phosphor-all.js')
-            session.use_asset('flexx-ui.css')
-            session.use_asset('flexx-ui.js')
+            session.use_global_asset('phosphor-all.js')
+            session.use_global_asset('flexx-ui.css')
+            session.use_global_asset('flexx-ui.js')
         except IndexError:
             pass  # Ok if it fails; assets can be loaded dynamically.
     
