@@ -115,7 +115,7 @@ Notebooks
 ---------
 
 There is a collection of 
-`notebooks in our Github repo <https://github.com/zoofIO/flexx/tree/master/examples/notebooks>`_.
+`notebooks on Github <https://github.com/zoofIO/flexx-notebooks>`_.
 The tutorial notebooks are also listed in the examples section of each
 subpackage in the reference docs.
 

@@ -2,8 +2,10 @@
 """
 
 import os
+import json
 from types import ModuleType
 from flexx import ui, app
+from urllib.request import urlopen
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -12,6 +14,18 @@ EXAMPLES_DIR = os.path.abspath(os.path.join(DOC_DIR, '..', 'examples'))
 OUTPUT_DIR = os.path.join(DOC_DIR, 'examples')
 
 created_files = []
+
+def get_notebook_list():
+    url = 'https://api.github.com/repos/zoofio/flexx-notebooks/contents'
+    s = json.loads(urlopen(url, timeout=5.0).read().decode())
+    filenames = []
+    for file in s:
+        if file['name'].endswith('ipynb'):
+            filenames.append(file['name'])
+    return filenames
+    
+notebook_list = get_notebook_list()
+
 
 def main():
     
@@ -70,9 +84,9 @@ def main():
             docs = better_names.get(sub, sub.capitalize()) + ' examples'
             docs += '\n%s\n\n' % (len(docs) * '=')
             # Include notebooks?
-            for fname in os.listdir(os.path.join(EXAMPLES_DIR, 'notebooks')):
+            for fname in notebook_list:
                 if fname.endswith('.ipynb') and ('_%s.' % sub) in fname:
-                    url = 'http://github.com/zoofIO/flexx/blob/master/examples/notebooks/' + fname
+                    url = 'http://github.com/zoofIO/flexx-notebooks/blob/master/' + fname
                     docs += '* `%s <%s>`_ (external notebook)\n' % (fname, url)
             # List examples
             for name in sorted(examples[sub]):
