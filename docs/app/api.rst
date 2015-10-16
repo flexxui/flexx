@@ -16,11 +16,8 @@ Functions related to the event loop
 .. autofunction:: flexx.app.call_later
 
 
-The Model class
----------------
-
-.. autoclass:: flexx.app.Model
-    :members:
+Functions related to us Model classes as apps
+---------------------------------------------
 
 .. autofunction:: flexx.app.serve
 
@@ -31,6 +28,13 @@ The Model class
 .. autofunction:: flexx.app.get_instance_by_id
 
 .. autofunction:: flexx.app.get_model_classes
+
+
+The Model class
+---------------
+
+.. autoclass:: flexx.app.Model
+    :members:
 
 
 Session and Assets
