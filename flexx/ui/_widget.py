@@ -13,7 +13,7 @@ import json
 import threading
 
 from .. import react
-from ..app import Pair, get_instance_by_id, no_sync
+from ..app import Model, get_instance_by_id
 from ..app.serialize import serializer
 from ..react import undefined
 
@@ -44,7 +44,7 @@ def _get_default_parents():
     return _default_parents_per_thread.setdefault(tid, [])
 
 
-class Widget(Pair):
+class Widget(Model):
     """ Base widget class.
     
     When *subclassing* a Widget to create a compound widget (a widget
@@ -66,13 +66,18 @@ class Widget(Pair):
             if default_parents:
                 parent = default_parents[-1]
         
-        # Use parent proxy unless proxy was given
-        if parent is not None and not kwargs.get('_proxy', None):
-            kwargs['proxy'] = parent.proxy
+        # Use parent session unless session was given
+        if parent is not None and not kwargs.get('session', None):
+            kwargs['session'] = parent.session
          
         # Pass properties via kwargs
         kwargs['parent'] = parent
-        Pair.__init__(self, **kwargs)
+        Model.__init__(self, **kwargs)
+        
+        # All widgets need phosphor
+        self._session.use_global_asset('phosphor-all.js')
+        
+        # todo: can I make widgets not need the session immediately? The fact that session and app need each-other is a bit awkward?
         
         with self:
             self.init()
@@ -80,7 +85,7 @@ class Widget(Pair):
         # Signal dependencies may have been added during init(), also in JS
         self.connect_signals(False)
         cmd = 'flexx.instances.%s.connect_signals(false);' % self._id
-        self._proxy._exec(cmd)
+        self._session._exec(cmd)
     
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
@@ -109,7 +114,7 @@ class Widget(Pair):
         disconnect the signals of any child widgets.
         """
         children = self.children()
-        Pair.disconnect_signals(self, *args)
+        Model.disconnect_signals(self, *args)
         for child in children:
             child.disconnect_signals(*args)
     
@@ -187,7 +192,7 @@ class Widget(Pair):
         """
         return str(v)
     
-    @no_sync
+    @react.nosync
     @react.input
     def parent(self, new_parent=None):
         """ The parent widget, or None if it has no parent.
@@ -199,7 +204,7 @@ class Widget(Pair):
         # from the input function: while we are inside this function,
         # the signal is "locked". In JS we perform the exact same trick.
         # To sync Python and JS, we only sync the children signal,
-        # otherwise we'd create a loop. We use the ``no_sync``
+        # otherwise we'd create a loop. We use the ``nosync``
         # decorator. In the end, we can set the parent and children
         # signal, and the other signal is updated immediately. This
         # works in JS and Py.
@@ -290,7 +295,7 @@ class Widget(Pair):
                 if not cls:
                     break
                 cls_name = cls.prototype._base_class._class_name
-                if not cls_name or cls_name == 'Pair':
+                if not cls_name or cls_name == 'Model':
                     break
             else:
                 raise RuntimeError('Error while determining class names')
@@ -391,7 +396,7 @@ class Widget(Pair):
             if id == 'body':
                 self.node.classList.add('flx-main-widget')
         
-        @no_sync
+        @react.nosync
         @react.input
         def parent(self, new_parent=None):
             old_parent = self.parent._value

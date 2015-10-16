@@ -23,25 +23,18 @@ else:  # pragma: no cover
     string_types = basestring,
 
 
-pair_classes = []
-def get_pair_classes():
-    """ Get a list of all known Pair subclasses.
+model_classes = []
+def get_model_classes():
+    """ Get a list of all known Model subclasses.
     """
-    return [c for c in HasSignalsMeta.CLASSES if issubclass(c, Pair)]
+    return [c for c in HasSignalsMeta.CLASSES if issubclass(c, Model)]
 
 
 def get_instance_by_id(id):
-    """ Get instance of Pair class corresponding to the given id,
+    """ Get instance of Model class corresponding to the given id,
     or None if it does not exist.
     """
-    return Pair._instances.get(id, None)
-
-
-def no_sync(signal):
-    """ Decorator for signals that should not be synced between Py and JS.
-    """
-    signal.flags['no_sync'] = True
-    return signal
+    return Model._instances.get(id, None)
 
 
 class JSSignal(react.SourceSignal):
@@ -94,8 +87,8 @@ class PyInputSignal(PySignal):
     pass
 
 
-class PairMeta(HasSignalsMeta):
-    """ Meta class for Pair
+class ModelMeta(HasSignalsMeta):
+    """ Meta class for Model
     Set up proxy signals in Py/JS.
     """
  
@@ -153,7 +146,7 @@ class PairMeta(HasSignalsMeta):
         cls_name = 'flexx.classes.' + cls.__name__
         base_class = 'flexx.classes.%s.prototype' % cls.mro()[1].__name__
         code = []
-        # Add JS version of HasSignals when this is the Pair class
+        # Add JS version of HasSignals when this is the Model class
         if cls.mro()[1] is react.HasSignals:
             c = py2js(serializer.__class__, 'flexx.Serializer')
             code.append(c)
@@ -164,12 +157,12 @@ class PairMeta(HasSignalsMeta):
         code.append(create_js_signals_class(cls.JS, cls_name, base_class))
         code[-1] += '%s.prototype._class_name = "%s";\n' % (cls_name, cls.__name__)
         if cls.mro()[1] is react.HasSignals:
-            code.append('flexx.serializer.add_reviver("Flexx-Pair", flexx.classes.Pair.prototype.__from_json__);\n')
+            code.append('flexx.serializer.add_reviver("Flexx-Model", flexx.classes.Model.prototype.__from_json__);\n')
         return '\n'.join(code)
 
 
-class Pair(with_metaclass(PairMeta, react.HasSignals)):
-    """ Subclass of HasSignals representing Python-JavaScript object pairs
+class Model(with_metaclass(ModelMeta, react.HasSignals)):
+    """ Subclass of HasSignals representing Python-JavaScript object models
     
     Each instance of this class has a corresponding object in
     JavaScript, and their signals are synced both ways. Signals defined
@@ -179,12 +172,8 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
     class. One can define methods, signals, and (json serializable)
     constants on the JS class.
     
-    Note:
-        This class may be renamed. Maybe Object, PairObject, ModelView
-        or something, suggestion welcome.
-    
     Parameters:
-        proxy: the proxy object that connects this instance to a JS client.
+        session: the session object that connects this instance to a JS client.
         kwargs: initial signal values (see HasSignals).
     
     Notes:
@@ -197,7 +186,7 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
     
         .. code-block:: py
         
-            class MyPair(Pair):
+            class MyModel(Model):
                 
                 def a_python_method(self):
                 ...
@@ -220,33 +209,33 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
     CSS = ""
     
     def __json__(self):
-        return {'__type__': 'Flexx-Pair', 'id': self.id}
+        return {'__type__': 'Flexx-Model', 'id': self.id}
     
     def __from_json__(dct):
         return get_instance_by_id(dct['id'])
     
-    def __init__(self, proxy=None, **kwargs):
+    def __init__(self, session=None, **kwargs):
         
         # Set id and register this instance
-        Pair._counter += 1
-        self._id = self.__class__.__name__ + str(Pair._counter)
-        Pair._instances[self._id] = self
+        Model._counter += 1
+        self._id = self.__class__.__name__ + str(Model._counter)
+        Model._instances[self._id] = self
         
         # Flag to implement eventual synchronicity
         self._seid_from_js = 0
         
-        # Init proxy
-        if proxy is None:
-            from .proxy import manager
-            proxy = manager.get_default_proxy()
-        self._proxy = proxy
+        # Init session
+        if session is None:
+            from .session import manager
+            session = manager.get_default_session()
+        self._session = session
         
-        self._proxy.register_pair_class(self.__class__)
+        self._session.register_model_class(self.__class__)
         
         # Instantiate JavaScript version of this class
         clsname = 'flexx.classes.' + self.__class__.__name__
         cmd = 'flexx.instances.%s = new %s(%r);' % (self._id, clsname, self._id)
-        self._proxy._exec(cmd)
+        self._session._exec(cmd)
         
         self._init()
         
@@ -261,22 +250,22 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
     
     @property
     def id(self):
-        """ The unique id of this Pair instance. """
+        """ The unique id of this Model instance. """
         return self._id
     
     @property
-    def proxy(self):
-        """ The proxy object that connects us to the runtime.
+    def session(self):
+        """ The session object that connects us to the runtime.
         """
-        return self._proxy
+        return self._session
     
     def __setattr__(self, name, value):
-        # Sync attributes that are Pair instances
+        # Sync attributes that are Model instances
         react.HasSignals.__setattr__(self, name, value)
-        if isinstance(value, Pair):
+        if isinstance(value, Model):
             txt = serializer.saves(value)
             cmd = 'flexx.instances.%s.%s = flexx.serializer.loads(%r);' % (self._id, name, txt)
-            self._proxy._exec(cmd)
+            self._session._exec(cmd)
     
     def _set_signal_from_js(self, name, text, esid):
         """ Notes on synchronizing:
@@ -306,35 +295,35 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         # Set esid to 0 if it originates from Py, or to what we got from JS
         esid = self._seid_from_js
         self._seid_from_js = 0
-        if not isinstance(signal, JSSignal) and not signal.flags.get('no_sync', False):
+        if not isinstance(signal, JSSignal) and not signal.flags.get('nosync', False):
             #txt = json.dumps(signal.value)
             txt = serializer.saves(signal.value)
             cmd = 'flexx.instances.%s._set_signal_from_py(%r, %r, %r);' % (self._id, signal.name, txt, esid)
-            self._proxy._exec(cmd)
+            self._session._exec(cmd)
     
     def _link_js_signal(self, name, link=True):
         """ Make a link between a JS signal and its proxy in Python.
         This is done when a proxy signal is used as input for a signal
         in Python.
         """
-        # if self._proxy is None:
+        # if self._session is None:
         #     self._initial_signal_links.discart(name)
         #     if link:
         #         self._initial_signal_links.add(name)
         # else:
         link = 'true' if link else 'false'
         cmd = 'flexx.instances.%s._link_js_signal(%r, %s);' % (self._id, name, link)
-        self._proxy._exec(cmd)
+        self._session._exec(cmd)
     
     def call_js(self, call):
         cmd = 'flexx.instances.%s.%s;' % (self._id, call)
-        self._proxy._exec(cmd)
+        self._session._exec(cmd)
     
     
     class JS:
         
         def __json__(self):
-            return {'__type__': 'Flexx-Pair', 'id': self.id}
+            return {'__type__': 'Flexx-Model', 'id': self.id}
         
         def __from_json__(dct):
             return flexx.instances[dct.id]
@@ -377,7 +366,7 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
             # todo: what signals do we sync? all but private signals? or only linked?
             # signals like `text` should always sync, signals like a 100Hz timer not, mouse_pos maybe neither unless linked against
             #if signal.signal_type == 'PyInputSignal' or self._linked_signals[signal._name]:
-            if signal.flags.no_sync:
+            if signal.flags.nosync:
                 return
             if signal.signal_type != 'PySignal' and not signal._name.startswith('_'):
                 #txt = JSON.stringify(signal.value)
@@ -409,5 +398,5 @@ class Pair(with_metaclass(PairMeta, react.HasSignals)):
         #     element.addEventListener(event_name, lambda ev: that[method_name](ev), False)
 
 
-# Make pair objects de-serializable
-serializer.add_reviver('Flexx-Pair', Pair.__from_json__)
+# Make model objects de-serializable
+serializer.add_reviver('Flexx-Model', Model.__from_json__)

@@ -322,8 +322,9 @@ class Parser0(object):
             lines = docstring.splitlines()
             getindent = lambda x: len(x) - len(x.strip())
             indent = min([getindent(x) for x in lines[1:]]) if (len(lines) > 1) else 0
-            lines[0] = ' ' * indent + lines[0]
-            lines = [line[indent:] for line in lines]
+            if lines:
+                lines[0] = ' ' * indent + lines[0]
+                lines = [line[indent:] for line in lines]
             docstring = '\n'.join(lines)
         return docstring
     

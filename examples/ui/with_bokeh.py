@@ -10,7 +10,7 @@ from bokeh.embed import file_html, components
 
 from flexx import app, ui, react
 
-src = 'https://github.com/zoofIO/flexx/blob/master/examples/ui/bokeh_plot.py'
+src = 'https://github.com/zoofIO/flexx/blob/master/examples/ui/with_bokeh.py'
 
 # Plot 1
 N = 1000
@@ -24,7 +24,8 @@ p1.scatter(x,y, alpha=0.1, nonselection_alpha=0.01)
 t = np.linspace(0, 6.5, 100)
 p2 = figure(tools=TOOLS)
 p2.line(t, np.sin(t))
-
+p3 = figure(tools=TOOLS)
+p3.line(t, np.cos(t))
 
 class Example(ui.Widget):
     
@@ -37,8 +38,9 @@ class Example(ui.Widget):
                     self.amp = ui.Slider(title='Amplitude', max=2, value=1)
                     self.freq = ui.Slider(title='Frequency', max=10, value=5)
                     self.phase = ui.Slider(title='Phase',max=3, value=1)
-                self.plot2 = ui.BokehWidget(plot=p2)
-                ui.Widget(flex=1)  # Spacer
+                with ui.Widget(style='overflow-y:auto;', flex=1):
+                    self.plot2 = ui.BokehWidget(plot=p2)
+                    self.plot3 = ui.BokehWidget(plot=p3)
             # Add some colorful panels just for fun
             ui.Label(title='Info', text='Source is <a href="%s">%s</a>' % (src, src))
             ui.Widget(style='background:#0a0;', title='green')

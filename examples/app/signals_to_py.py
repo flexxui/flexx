@@ -6,7 +6,7 @@ from flexx import react
 from flexx import app
 
 
-class Clock(app.Pair):
+class Clock(app.Model):
     
     @react.connect('time')
     def show_time(t):

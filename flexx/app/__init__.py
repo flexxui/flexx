@@ -5,7 +5,7 @@ It implements a simple server based on Tornado. HTML is served to
 provide the client with the JavaScript and CSS, but once connected, all
 communication goed via a websocket.
 
-A central component is the ``Pair`` class, which allows definition of
+A central component is the ``Model`` class, which allows definition of
 objects that have both a Python and JavaScript representation, forming
 a basis for model-view-like systems.
 
@@ -20,7 +20,7 @@ object.
 Applications
 ------------
 
-A ``Pair`` class can be made into an application by decorating it with
+A ``Model`` class can be made into an application by decorating it with
 ``app.serve``. This registers the application, so that clients can connect
 to the app based on its name. One instance of this class is instantiated
 per connection. Multiple apps can be hosted from the same process simply
@@ -34,8 +34,8 @@ is the intended way to launch desktop-like apps. An app can also be
 exported to HTML via ``app.export()``.
 
 Further, there is a notion of a default app, intended for interactive use
-and use inside the Jupyter notebook; any ``Pair`` instance created
-without a ``proxy`` argument will connect to this default app.
+and use inside the Jupyter notebook; any ``Model`` instance created
+without a ``session`` argument will connect to this default app.
 
 Starting the server
 -------------------
@@ -58,6 +58,31 @@ For each widget that gets used as a cell output, a container DOM
 element is created, in which the widget is displayed.
 """
 
-from .proxy import run, start, stop, init_notebook, call_later
-from .proxy import serve, launch, export, manager
-from .pair import Pair, get_instance_by_id, get_pair_classes, no_sync
+_DEV_NOTES = """
+Overview of classes:
+
+* Model: the base class for creating Python-JS objects.
+* AssetStore: one instance of this class is used to provide all client
+  assets in this process (JS, CSS, images, etc.).
+* SessionAssets: base class for Session that implements the assets part.
+  Assets specific to the session are name-mangled.
+* Session: object that handles connection between Python and JS. Has a
+  websocket, and optionally a reference to the runtime.
+* WebSocket: tornado WS handler.
+* AppManager: keeps track of what apps are registered. Has functionality
+  to instantiate apps and connect the websocket to them.
+* Server: handles http requests. Uses manager to create new app
+  instances or get the page for a pending session. Hosts assets by using
+  the global asset store.
+* FlexxJS (in clientcore.py): more or less the JS side of a session.
+
+"""
+
+from .session import manager, Session
+from .model import Model, get_instance_by_id, get_model_classes
+from .funcs import run, start, stop, call_later
+from .funcs import init_notebook, serve, launch, export
+from .assetstore import assets
+from .clientcore import FlexxJS
+
+assets.create_module_assets('flexx.app', js=FlexxJS + 'var flexx = new FlexxJS();\n')

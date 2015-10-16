@@ -16,7 +16,7 @@ def message_relay(msg):
 
 class MessageBox(ui.Label):
     CSS = """
-    .flx-messagebox {
+    .flx-MessageBox {
         overflow-y:scroll;
         background: #e8e8e8;
         border: 1px solid #444;

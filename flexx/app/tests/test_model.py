@@ -1,14 +1,14 @@
-""" This tests the Pair class.
+""" This tests the Model class.
 """
 
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.app.pair import Pair, JSSignal, PySignal
+from flexx.app.model import Model, JSSignal, PySignal
 from flexx import react
 
 
-class Foo1(Pair):
+class Foo1(Model):
     
     @react.input
     def title(v=''):

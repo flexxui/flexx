@@ -53,6 +53,8 @@ def main():
                 for bcls in cls.__bases__:
                     if getattr(ui, bcls.__name__, None):
                         bases.append(':class:`%s <flexx.ui.%s>`' % (bcls.__name__, bcls.__name__))
+                    elif getattr(app, bcls.__name__, None):
+                        bases.append(':class:`%s <flexx.app.%s>`' % (bcls.__name__, bcls.__name__))
                     else:
                         bases.append(':class:`%s <%s.%s>`' % (bcls.__name__, bcls.__module__, bcls.__name__))
                 line = '    *Inherits from:* ' + ', '.join(bases)

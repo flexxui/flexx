@@ -1,4 +1,6 @@
-""" flexx.ui client serving a web page using Tornado.
+"""
+Serve web page and handle web sockets. Uses Tornado, though this
+can be generalized.
 """
 
 import os
@@ -7,24 +9,120 @@ import time
 import logging
 import urllib
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 
 import tornado.web
+import tornado.ioloop
 import tornado.websocket
-from concurrent.futures import ThreadPoolExecutor
 from tornado import gen
 
 from ..webruntime.common import default_icon
 
-from .proxy import manager, call_later
-from .clientcode import clientCode
-
-THIS_DIR = os.path.abspath(os.path.dirname(__file__))
-HTML_DIR = os.path.join(os.path.dirname(THIS_DIR), 'html')
+from .session import manager
+from .assetstore import assets
 
 # todo: threading, or even multi-process
 #executor = ThreadPoolExecutor(4)
 
 
+class AbstractServer:
+    """ This is an attempt to generalize the server, so that in the
+    future we may have e.g. a Pyramid server.
+    
+    A server must implement this, and use the manager to instantiate,
+    connect and disconnect proxies. The assets object must be used to
+    server assets to the client.
+    """
+    
+    def open(self, host, port):
+        """ Open the connection as a host. If port is None, auto-select one. """
+        raise NotImplementedError()
+    
+    def start(self):
+        """ Start the event loop. """
+        raise NotImplementedError()
+    
+    def stop(self):
+        """ Stop the event loop. """
+        raise NotImplementedError()
+    
+    def call_later(self, delay, callback, *args, **kwargs):
+        """ Call a function in a later event loop iteration. """
+        raise NotImplementedError()
+
+
+class TornadoServer(AbstractServer):
+    """ Flexx Server implemented in Tornado.
+    """
+    
+    def __init__(self):
+        self._app = None
+        self._loop = tornado.ioloop.IOLoop.instance()
+    
+    def open(self, host, port):
+        
+        # Check that its not already running
+        if self._app is not None:
+            # return
+            raise RuntimeError('flexx server is already hosting.')
+        
+        # Create server
+        self._app = tornado.web.Application([(r"/(.*)/ws", WSHandler), 
+                                             (r"/(.*)", MainHandler), ])
+        
+        # Start server (find free port number if port not given)
+        if port is not None:
+            port = int(port)
+            self._app.listen(port, host)
+        else:
+            for i in range(100):
+                port = port_hash('flexx%i' % i)
+                try:
+                    self._app.listen(port, host)
+                    break
+                except OSError:
+                    pass  # address already in use
+            else:
+                raise RuntimeError('Could not bind to free address')    
+        
+        # Notify address, so its easy to e.g. copy and paste in the browser
+        self.serving_at = self._app.serving_at = host, port
+        print('Serving apps at http://%s:%i/' % (host, port))
+    
+    def start(self):
+        if not getattr(self._loop, '_running', False):
+            self._loop.start()
+    
+    def stop(self):
+        self._loop.stop()
+    
+    def call_later(self, delay, callback, *args, **kwargs):
+        if delay <= 0:
+            self._loop.add_callback(callback, *args, **kwargs)
+        else:
+            self._loop.add_timeout(self._loop.time() + delay, callback, *args, **kwargs)
+            #self._loop.call_later(delay, callback, *args, **kwargs)  # v4.0+
+
+# Create server instance
+server = TornadoServer()
+
+
+def port_hash(name):
+    """ Given a string, returns a port number between 49152 and 65535
+    
+    This range (of 2**14 posibilities) is the range for dynamic and/or
+    private ports (ephemeral ports) specified by iana.org. The algorithm
+    is deterministic.
+    """
+    fac = 0xd2d84a61
+    val = 0
+    for c in name:
+        val += ( val>>3 ) + ( ord(c)*fac )
+    val += (val>>3) + (len(name)*fac)
+    return 49152 + (val % 2**14)
+
+
+# todo: contribute this to tornado
 def _flexx_run_callback(self, callback, *args, **kwargs):
     """ Patched version of Tornado's _run_callback that sets traceback
     info when an exception occurs, so that we can do PM debugging.
@@ -54,29 +152,7 @@ def _patch_tornado():
             WebSocketProtocol._orig_run_callback = WebSocketProtocol.async_callback
             WebSocketProtocol.async_callback = _flexx_run_callback
 
-
 _patch_tornado()
-
-
-class FlexxTornadoApplication(tornado.web.Application):
-    """ Simple subclass of tornado Application.
-    
-    Has functionality for serving our html/css/js files, and caching them.
-    """
-    def __init__(self):
-        tornado.web.Application.__init__(self, 
-            [(r"/(.*)/ws", WSHandler), (r"/(.*)", MainHandler), ])
-        self._cache = {}
-    
-    # def load(self, fname):
-    #     """ Load a file with the given name. Returns bytes.
-    #     """
-    #     if fname not in self._cache:
-    #         filename = os.path.join(HTML_DIR, fname)
-    #         blob = open(filename, 'rb').read()
-    #         return blob  # todo: bypasse cache
-    #         self._cache[fname] = blob
-    #     return self._cache[fname]
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -89,26 +165,22 @@ class MainHandler(tornado.web.RequestHandler):
     
     @gen.coroutine
     def get(self, path=None):
-        print('get', path)
         
         # Analyze path to derive components
         # app_name - class name of the app, must be a valid identifier
-        # app_id - optional id to associate connection to a specific instance
         # file_name - path (can have slashes) to a file
         parts = [p for p in path.split('/') if p]
-        if parts and parts[0].split('-')[0].isidentifier():
-            app_name, _, app_id = parts[0].partition('-')
-            file_name = '/'.join(parts[1:])
+        if parts and parts[0].isidentifier():
+            app_name, file_name = parts[0], '/'.join(parts[1:])
         else:
-            app_name, app_id = None, None
-            file_name = '/'.join(parts)
+            app_name, file_name = None, '/'.join(parts)
         
-        # todo: maybe when app_id is given, redirect to normal name, but
-        # modify flexx.app_id in index.html, so that the websocket can connect
-        # with id ... (mmm also not very nice)
+        # Session id (if any) is provided via "?session_id=X"
+        session_id = self.get_argument('session_id', None)
         
         if not path:
             # Not a path, index / home page
+            # todo: allow __index__ app
             all_apps = ['<a href="%s">%s</a>' % (name, name) for name in 
                         manager.get_app_names()]
             all_apps = ', '.join(all_apps)
@@ -121,27 +193,20 @@ class MainHandler(tornado.web.RequestHandler):
                 # This looks like an app, redirect, serve app, or error
                 if not '/' in path:
                     self.redirect('/%s/' % app_name)
-                elif app_id:
-                    proxy = manager.get_proxy_by_id(app_name, app_id)
-                    if proxy:
-                        self.write(clientCode.get_page().encode())
+                elif session_id:
+                    # If session_id matches a pending app, use that session
+                    session = manager.get_session_by_id(app_name, session_id)
+                    if session and session.status == session.STATUS.PENDING:
+                        self.write(session.get_page().encode())
                     else:
-                        self.write('App %r with id %r is not available' % 
-                                   (app_name, app_id))
+                        self.redirect('/%s/' % app_name)  # redirect for normal serve
+                        #self.write('App %r with id %r is not available' % (app_name, session_id))
                 elif manager.has_app_name(app_name):
-                    #self.write(self.application.load('index.html'))
-                    #self.serve_index()
-                    self.write(clientCode.get_page().encode())
+                    # Create session - client will connect to it via session_id
+                    session = manager.create_session(app_name)
+                    self.write(session.get_page().encode())
                 else:
-                    self.write('No app %r is hosted right now' % app_name)
-            elif file_name.endswith('.ico'):
-                # Icon, look it up from the app instance
-                id = file_name.split('.')[0]
-                if manager.has_app_name(app_name):
-                    client = manager.get_proxy_by_id(app_name, id)
-                    # todo: serve icon stored on app widget
-                    #if app:
-                    #    self.write(app._config.icon.to_bytes())
+                    self.write('No app %r is currently hosted.' % app_name)
             elif file_name:
                 # A resource, e.g. js/css/icon
                 if file_name.endswith('.css'):
@@ -149,10 +214,8 @@ class MainHandler(tornado.web.RequestHandler):
                 elif file_name.endswith('.js'):
                     self.set_header("Content-Type", 'application/x-javascript')
                 try:
-                    #raise RuntimeError('This is for page_light, but we might never implement that')
-                    #res = self.application.load(file_name)
-                    res = clientCode.load(file_name).encode()
-                except IOError:
+                    res = assets.load_asset(file_name)
+                except (IOError, IndexError):
                     #self.write('invalid resource')
                     super().write_error(404)
                 else:
@@ -197,26 +260,23 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     
     # --- callbacks
     
-    # todo: use ping() and close()
     def open(self, path=None):
         """ Called when a new connection is made.
         """
         if not hasattr(self, 'close_code'):  # old version of Tornado?
             self.close_code, self.close_reason = None, None
         
+        self._session = None
+        
         # Don't collect messages to send them more efficiently, just send asap
         self.set_nodelay(True)
+        
         if isinstance(path, bytes):
             path = path.decode()
+        self.app_name = path.strip('/')
+        
         print('new ws connection', path)
-        app_name, _, app_id = path.strip('/').partition('-')
-        if manager.has_app_name(app_name):
-            try:
-                self._proxy = manager.connect_client(self, app_name, app_id)
-            except Exception as err:
-                self.close(1003, "Could not launch app: %r" % err)
-                raise
-            self.write_message("PRINT Hello World from server", binary=True)
+        if manager.has_app_name(self.app_name):
             if tornado.version_info < (4, ):
                 tornado.ioloop.IOLoop.current().add_callback(self.pinger)
             else:
@@ -231,17 +291,27 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         We now have a very basic protocol for receiving messages,
         we should at some point define a real formalized protocol.
         """
-        self._proxy._receive_command(message)
- 
+        if self._session is None:
+            if message.startswith('hiflexx '):
+                session_id = message.split(' ', 1)[1].strip()
+                try:
+                    self._session = manager.connect_client(self, self.app_name, session_id)
+                except Exception as err:
+                    self.close(1003, "Could not launch app: %r" % err)
+                    raise
+                self.write_message("PRINT Flexx server says hi", binary=True)
+        else:
+            self._session._receive_command(message)
+    
     def on_close(self):
         """ Called when the connection is closed.
         """
         self.close_code = code = self.close_code or 0
         reason = self.close_reason or self.known_reasons.get(code, '')
         print('detected close: %s (%i)' % (reason, code))
-        if hasattr(self, '_proxy'):
-            manager.disconnect_client(self._proxy)
-            self._proxy = None  # Allow cleaning up
+        if self._session is not None:
+            manager.disconnect_client(self._session)
+            self._session = None  # Allow cleaning up
     
     @gen.coroutine
     def pinger(self):

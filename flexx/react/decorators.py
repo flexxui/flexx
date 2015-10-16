@@ -174,3 +174,11 @@ def lazy(*input_signals):
         s = LazySignal(func, input_signals, frame=frame)
         return s
     return _lazy    
+
+
+def nosync(signal):
+    """ Decorator for signals that should not be synced.
+    In Flexx.app this means no syncing between Py and JS.
+    """
+    signal.flags['nosync'] = True
+    return signal
