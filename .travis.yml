@@ -47,12 +47,10 @@ before_script:
 # Run the tests
 script: 
     - python -c "import sys; print(sys.version, '\n', sys.prefix)"
-    
     - if [ "${TEST_UNIT}" == "1" ]; then
         python make test unit;
       fi;
     - if [ "${TEST_FLAKE}" == "1" ]; then
-        #python make test style;
         echo "Not doing flake tests for now ...";
       fi;
     - if [ "${TEST_DOCS}" == "1" ]; then

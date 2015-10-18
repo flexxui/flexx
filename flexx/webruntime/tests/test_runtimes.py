@@ -47,6 +47,14 @@ def has_qt():
     return True
 
 
+def has_nw():
+    exe = webruntime.nodewebkit.get_nodewebkit_exe or 'nw'
+    try:
+        subprocess.check_call([exe, '--version'], shell=True)
+    except Exception:
+        return False
+    return True
+
 
 ## Misc
 
@@ -88,6 +96,7 @@ def test_xul():
     p.close()  # should do no harm
 
 
+@pytest.mark.skipif(not has_nw(), reason='need nw')
 def test_nwjs():
     p = launch(URL, 'nwjs')
     assert p._proc

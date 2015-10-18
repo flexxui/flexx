@@ -129,10 +129,15 @@ class NodejsRuntime(BaseRuntime):
             # raise ValueError('Nodejs runtime needs "code" attribute.')
         
         # Handle URL
-        p = urlparse(self._kwargs['url'])
-        loc = json.dumps({'hostname': p.hostname, 
-                          'port': str(p.port or 80), 
-                          'pathname': p.path.strip('/')})
+        url = self._kwargs['url']
+        if url.startswith('file://'):
+            loc = json.dumps({'hostname': '', 'port': '',
+                              'pathname': url.split('//', 1)[1]})
+        else:
+            p = urlparse(url)
+            loc = json.dumps({'hostname': p.hostname, 
+                            'port': str(p.port or 80), 
+                            'pathname': p.path.strip('/')})
         code = ('var location = %s;\n' % loc) + code
         
         # Fix for Windows - by default global modules are searched in wrong place
