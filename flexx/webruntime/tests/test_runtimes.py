@@ -56,6 +56,11 @@ def has_nw():
     return True
 
 
+def has_chrome():
+    return (webruntime.chromeapp.get_chrome_exe() or
+            webruntime.chromeapp.get_chromium_exe())
+
+
 ## Misc
 
 def test_iconize():
@@ -103,6 +108,7 @@ def test_nwjs():
     p.close()
 
 
+@pytest.mark.skipif(not has_chrome(), reason='need chrome/chromium')
 def test_chomeapp():
     p = launch(URL, 'chromeapp')
     assert p._proc
@@ -131,12 +137,13 @@ def test_browser_fallback():
     assert p._proc is None
 
 
+@pytest.mark.skipif(os.getenv('TRAVIS') == 'true', reason='skip selenium on Travis')
 def test_selenium():
     p = launch(URL, 'selenium-firefox')
     assert p._proc is None
     assert p.driver
+    time.sleep(0.5)
     p.close()
-
     pytest.raises(ValueError, launch, URL, 'selenium')
 
 
