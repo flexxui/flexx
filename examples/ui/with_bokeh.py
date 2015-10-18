@@ -17,8 +17,8 @@ N = 1000
 x = np.random.normal(0, np.pi, N)
 y = np.sin(x) + np.random.normal(0, 0.2, N)
 TOOLS = "pan,wheel_zoom,box_zoom,reset,box_select"
-p1 = figure(tools=TOOLS, webgl=True)
-p1.scatter(x,y, alpha=0.1, nonselection_alpha=0.01)
+p1 = figure(tools=TOOLS)
+p1.scatter(x,y, alpha=0.1, nonselection_alpha=0.1)
 
 # Plot2
 t = np.linspace(0, 6.5, 100)
