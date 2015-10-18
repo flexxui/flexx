@@ -1,49 +1,63 @@
-# Travis CI configuration file for Zoof
-# Resources:
+# Travis CI configuration file for Flexx
 # Validate this at http://lint.travis-ci.org/
 
 language: python
 
+# use container-based infrastructure
+sudo : false
 
-python:
-    # all versions except pypy and pypy3 have numpy as well.
-    # -> TRAVIS_PYTHON_VERSION
-    # Versions we want some lib code to work on
-    - "pypy3"
-    - "2.6"
-    - "2.7"
-    - "3.2"
-    # For GUI stuff
-    - "3.3"  # Will install miniconda /w PyQt4
-    - "3.4"  # Will install miniconda /w PySide
-
+matrix:
+    include:
+        - python: "3.3"
+          env: TEST_UNIT=1
+        - python: "3.4"
+          env: TEST_UNIT=1 TEST_INSTALL=1
+        - python: "3.5"
+          env: TEST_UNIT=1
+        - python: "pypy3"
+          env: TEST_UNIT=1
+        - python: "3.4"
+          env: TEST_UNIT=0 TEST_DOCS=1
+        - python: "3.4"
+          env: TEST_UNIT=0 TEST_FLAKE=1
 
 before_install:
     - REDIRECT_TO=/dev/stdout  # change to /dev/null to silence Travis
-    - if [ "${TRAVIS_PYTHON_VERSION}" == "3.3" ]; then
-        wget -q http://repo.continuum.io/miniconda/Miniconda-3.6.0-Linux-x86_64.sh -O miniconda.sh;
-        chmod +x miniconda.sh;
-        ./miniconda.sh -b -p ~/anaconda &> ${REDIRECT_TO};
-        export PATH=~/anaconda/bin:$PATH;
-        conda update --yes --quiet conda &> ${REDIRECT_TO};
-      fi;
 
 # Install dependencies
 install:
-    - if [ "${TRAVIS_PYTHON_VERSION}" == "3.3" ]; then
-        conda create -n testenv --yes --quiet pip python=$TRAVIS_PYTHON_VERSION > ${REDIRECT_TO};
-        source activate testenv > ${REDIRECT_TO};
-        conda install --yes --quiet pytest pyqt > ${REDIRECT_TO};
+    - if [ "${TEST_UNIT}" == "1" ]; then
+        pip install pytest-cov;
+        pip install tornado;
+      fi;
+    - if [ "${TEST_INSTALL}" == "1" ]; then
+        python setup.py install;
+        cd ~;
+      fi;
+    - if [ "${TEST_FLAKE}" == "1" ]; then
+        pip install flake8;
+      fi;
+    - if [ "${TEST_DOCS}" == "1" ]; then
+        pip install sphinx;
+        pip install tornado;
       fi;
 
 before_script:
 
-
 # Run the tests
 script: 
     - python -c "import sys; print(sys.version, '\n', sys.prefix)"
-    # - python make test X
-
+    
+    - if [ "${TEST_UNIT}" == "1" ]; then
+        python make test unit;
+      fi;
+    - if [ "${TEST_FLAKE}" == "1" ]; then
+        #python make test style;
+        echo "Not doing flake tests for now ...";
+      fi;
+    - if [ "${TEST_DOCS}" == "1" ]; then
+        python make docs html;
+      fi;
 
 after_success:
     - echo SUCCESS!
