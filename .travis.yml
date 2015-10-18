@@ -53,7 +53,7 @@ script:
       fi;
     - if [ "${TEST_FLAKE}" == "1" ]; then
         #python make test style;
-        echo Not doing flake tests for now ...
+        echo "Not doing flake tests for now ...";
       fi;
     - if [ "${TEST_DOCS}" == "1" ]; then
         python make docs html;
