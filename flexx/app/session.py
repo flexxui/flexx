@@ -69,20 +69,21 @@ class AppManager(object):
         
         Instantiate an app and matching session object corresponding
         to the given name, and return the session. The client should
-        be connected via connect_client().
+        be connected later via connect_client().
         """
+        # Called by the server when a client connects, and from the
+        # launch and export functions.
         
-        if name not in self._proxies:
+        if name == '__default__':
+            raise RuntimeError('Cannot connect to __default__ app like this.')
+        elif name not in self._proxies:
             raise ValueError('Can only instantiate a session with a valid app name.')
         
         cls, pending, connected = self._proxies[name]
         
-        if name == '__default__':
-            xxxx
-        
         # Session and app class need each-other, thus the _set_app()
         session = Session(cls.__name__)
-        app = cls(session=session, container='body')
+        app = cls(session=session, is_app=True)  # is_app marks this Model as "main"
         session._set_app(app)
         
         # Now wait for the client to connect. The client will be served
@@ -182,7 +183,7 @@ def create_enum(*members):
 class Session(SessionAssets):
     """ A session between Python and the client runtime
 
-    This class is basically a wrapper for the app widget, the web runtime,
+    This class is what holds together the app widget, the web runtime,
     and the websocket instance that connects to it.
     """
     
@@ -278,8 +279,6 @@ class Session(SessionAssets):
             return self.STATUS.CONNECTED  # alive and kicking
         else:
             return self.STATUS.CLOSED  # connection closed
-    
-    ## Widget-facing code
     
     def _send_command(self, command):
         """ Send the command, add to pending queue.

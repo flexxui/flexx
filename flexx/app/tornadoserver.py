@@ -315,14 +315,13 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     
     @gen.coroutine
     def pinger(self):
-        """ Check for timeouts. Hopefully this fixes there being
-        seemingly many connections when runnung the server for a while.
+        """ Check for timeouts. This helps remove lingering false connections.
         """
         self._pongtime = time.time()
-        while True:
+        while self.close_code is None:
             self.ping(b'')
             yield gen.sleep(2)
-            if time.time() - self._pongtime > 3:
+            if time.time() - self._pongtime > 5:
                 self.close(1000, 'Conection timed out (no pong).')
                 return
     
@@ -332,7 +331,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         logging.debug('pong')
         self._pongtime = time.time()
     
-    # --- methdos
+    # --- methods
     
     def command(self, cmd):
         self.write_message(cmd, binary=True)

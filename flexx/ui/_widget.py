@@ -65,13 +65,17 @@ class Widget(Model):
             default_parents = _get_default_parents()
             if default_parents:
                 parent = default_parents[-1]
+        kwargs['parent'] = parent
         
         # Use parent session unless session was given
         if parent is not None and not kwargs.get('session', None):
             kwargs['session'] = parent.session
-         
-        # Pass properties via kwargs
-        kwargs['parent'] = parent
+        
+        # Set container if this widget represents the main app
+        if kwargs.get('is_app', False):
+            kwargs['container'] = 'body'
+        
+        # Init - pass signal values via kwargs
         Model.__init__(self, **kwargs)
         
         # All widgets need phosphor

@@ -173,7 +173,11 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
     constants on the JS class.
     
     Parameters:
-        session: the session object that connects this instance to a JS client.
+        session (Session, None): the session object that connects this
+            instance to a JS client.
+        is_app (bool): whether this object is the main app object. Set
+            by Flexx internally. Not used by the Model class, but can
+            be used by subclasses.
         kwargs: initial signal values (see HasSignals).
     
     Notes:
@@ -214,7 +218,10 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
     def __from_json__(dct):
         return get_instance_by_id(dct['id'])
     
-    def __init__(self, session=None, **kwargs):
+    def __init__(self, session=None, is_app=False, **kwargs):
+        
+        # Param "is_app" is not used, but we "take" the argument so it
+        # is not mistaken for a signal value.
         
         # Set id and register this instance
         Model._counter += 1

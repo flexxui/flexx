@@ -65,7 +65,7 @@ class Button(Widget):
             this.node.innerHTML = text
     
         @react.source
-        def mouse_down(v):
+        def mouse_down(v=False):
             """ True when the mouse is currently pressed down.
             """
             return bool(v)

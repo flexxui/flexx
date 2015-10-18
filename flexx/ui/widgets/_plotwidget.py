@@ -124,22 +124,19 @@ class PlotWidget(Widget):
                 for i in [10, 20, 25, 50]:
                     self._tick_units.append(i*10**e)
         
-        @react.connect('real_size')
-        def _update_canvas_size(self, size):
-            if size[0] and size[1]:
-                self.node.width = size[0]
-                self.node.height = size[1]
-        
         @react.connect('xdata', 'ydata', 'yrange',
                        'line_color', 'line_width',
                        'marker_color', 'marker_size',
                        'title', 'xlabel', 'ylabel',
-                       '_update_canvas_size')
+                       'real_size')
         def _update_plot(self, xx, yy, yrange, lc, lw, mc, ms, title, xlabel, ylabel):
+            
             
             # Prepare
             ctx = self._context
-            w, h = self.node.width, self.node.height
+            w, h = self.node.offsetWidth, self.node.offsetHeight
+            self.node.width = w
+            self.node.height = h
             
             # Get range
             x1, x2 = min(xx), max(xx)

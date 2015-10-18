@@ -110,7 +110,9 @@ def init_notebook():
     
     from IPython.display import display, Javascript, HTML
     
-    # todo: in exported notebooks, the code display divs take up space?
+    # todo: ideally you don't want user interactions done this way:
+    # they result in spamming of JavaScript "objects" and when nbconverting,
+    # this will result in a huge number of output_javascript elements.
     def my_send_command(command):
         display(Javascript('flexx.command(%r);' % command))
     
@@ -134,6 +136,9 @@ def init_notebook():
     _server_open()
     host, port = server.serving_at
     all_css, all_js = session.get_all_css_and_js()
+    
+    # Make the JS that we inject not take any vertical space when nbconverted
+    all_css += '\n.output_subarea.output_javascript { padding: 0px; }\n'
     
     # Compose HTML to inject
     url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)

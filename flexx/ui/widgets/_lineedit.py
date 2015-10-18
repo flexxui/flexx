@@ -91,10 +91,12 @@ class LineEdit(Widget):
             return v
         
         @react.source
-        def submit(key):
+        def submit(key=None):
             """ The user strikes the enter or return key. """
             if key == 13:
                 return True
+            elif key is None:
+                return False  # init the value
             return undefined
         
         @react.connect('text')
