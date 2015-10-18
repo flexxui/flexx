@@ -77,7 +77,7 @@ class BokehWidget(Widget):
     class JS:
         
         @react.nosync
-        @react.source
+        @react.input
         def plot(plot=None):
             return plot
         
