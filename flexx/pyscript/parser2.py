@@ -706,7 +706,7 @@ class Parser2(Parser1):
         # Handle varargs
         if node.args.vararg:
             asarray = 'Array.prototype.slice.call(arguments)'
-            name = node.args.vararg.arg
+            name = node.args.vararg if isinstance(node.args.vararg, str) else node.args.vararg.arg
             self.vars.add(name)
             if not argnames:
                 # Make available under *arg name

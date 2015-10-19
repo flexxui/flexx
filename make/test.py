@@ -24,7 +24,7 @@ def test(arg='', *args):
         sys.exit('invalid test mode %r' % arg)
 
 
-def test_unit(rel_path=''):
+def test_unit(rel_path='.'):
     """ Peform unit tests using flake
     """
     # Test if pytest is there
@@ -36,8 +36,9 @@ def test_unit(rel_path=''):
     cov_report = '--cov-report=term --cov-report=html'
     os.chdir(ROOT_DIR)
     try:
-        return pytest.main('-v --cov %s --cov-config=.coveragerc %s %r' % 
-                            (NAME, cov_report, rel_path))
+        res = pytest.main('--cov %s --cov-config=.coveragerc %s %r' % 
+                          (NAME, cov_report, rel_path))
+        sys.exit(res)
     finally:
         m = __import__(NAME)
         print('Tests were performed on', str(m))

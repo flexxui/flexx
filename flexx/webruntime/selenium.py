@@ -22,10 +22,11 @@ class SeleniumRuntime(BaseRuntime):
         url = self._kwargs['url']
         type = self._kwargs.get('type', '')
         
+        self._driver = None
+        
         # Import here; selenium is an optional dependency
         from selenium import webdriver
         
-        self._driver = None
         if type.lower() == 'firefox':
             self._driver = webdriver.Firefox()
         elif type.lower() == 'chrome':

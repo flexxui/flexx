@@ -81,6 +81,8 @@ def get_nodewebkit_exe():
     
     for dir in dirs:
         dir = os.path.expanduser(dir)
+        if not os.path.isdir(dir):
+            continue
         subs = os.listdir(dir)
         exes = []
         for sub in subs:
@@ -132,8 +134,9 @@ class NodeWebkitRuntime(DesktopRuntime):
         
         # Fix libudef bug
         fix_libudef(app_path)
+        llp = os.getenv('LD_LIBRARY_PATH', '')
         if sys.platform.startswith('linux'):
-            llp = app_path + os.pathsep + os.getenv('LD_LIBRARY_PATH', '')
+            llp = app_path + os.pathsep + llp
         
         # Launch
         exe = get_nodewebkit_exe() or 'nw'

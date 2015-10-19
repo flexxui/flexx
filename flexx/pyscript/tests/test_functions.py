@@ -1,6 +1,7 @@
 """ Tests for PyScript functions
 """
 
+import os
 import tempfile
 
 from pytest import raises
@@ -147,13 +148,12 @@ def test_clean_code():
 def test_scripts():
     # Prepare
     pycode = 'foo = 42; print(foo)'
-    f = tempfile.NamedTemporaryFile('wt', suffix='.py')
-    f.file.write(pycode)
-    f.file.flush()
-    jsname = f.name[:-3] + '.js'
+    pyname = os.path.join(tempfile.gettempdir(), 'flexx_test.py')
+    open(pyname, 'wb').write(pycode.encode())
+    jsname = pyname[:-3] + '.js'
     
     # Convert - plain file (no module)
-    script2js(f.name)
+    script2js(pyname)
     
     # Check result
     jscode = open(jsname, 'rt', encoding='utf-8').read()
@@ -161,7 +161,7 @@ def test_scripts():
     assert 'define(' not in jscode
     
     # Convert - module
-    script2js(f.name, 'mymodule')
+    script2js(pyname, 'mymodule')
     
     # Check result
     jscode = open(jsname, 'rt', encoding='utf-8').read()
@@ -171,7 +171,7 @@ def test_scripts():
     assert 'root.mymodule' in jscode
     
     # Convert - no module, explicit file
-    script2js(f.name, None, jsname)
+    script2js(pyname, None, jsname)
     
     # Check result
     jscode = open(jsname, 'rt', encoding='utf-8').read()

@@ -47,6 +47,19 @@ def has_qt():
     return True
 
 
+def has_nw():
+    exe = webruntime.nodewebkit.get_nodewebkit_exe or 'nw'
+    try:
+        subprocess.check_call([exe, '--version'], shell=True)
+    except Exception:
+        return False
+    return True
+
+
+def has_chrome():
+    return (webruntime.chromeapp.get_chrome_exe() or
+            webruntime.chromeapp.get_chromium_exe())
+
 
 ## Misc
 
@@ -88,12 +101,14 @@ def test_xul():
     p.close()  # should do no harm
 
 
+@pytest.mark.skipif(not has_nw(), reason='need nw')
 def test_nwjs():
     p = launch(URL, 'nwjs')
     assert p._proc
     p.close()
 
 
+@pytest.mark.skipif(not has_chrome(), reason='need chrome/chromium')
 def test_chomeapp():
     p = launch(URL, 'chromeapp')
     assert p._proc
@@ -122,12 +137,13 @@ def test_browser_fallback():
     assert p._proc is None
 
 
+@pytest.mark.skipif(os.getenv('TRAVIS') == 'true', reason='skip selenium on Travis')
 def test_selenium():
     p = launch(URL, 'selenium-firefox')
     assert p._proc is None
     assert p.driver
+    time.sleep(0.5)
     p.close()
-
     pytest.raises(ValueError, launch, URL, 'selenium')
 
 
