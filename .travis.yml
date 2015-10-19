@@ -19,13 +19,40 @@ matrix:
         - python: "3.4"
           env: TEST_UNIT=0 TEST_DOCS=1
         - python: "3.4"
-          env: TEST_UNIT=0 TEST_FLAKE=1
+          env: TEST_UNIT=0 TEST_STYLE=1
 
 before_install:
+    - SRC_DIR=$(pwd)
     - REDIRECT_TO=/dev/stdout  # change to /dev/null to silence Travis
+    # file size checks run on minimal build for time
+    - if [ "${TEST_STYLE}" == "1" ]; then
+        if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
+          GIT_TARGET_EXTRA="+refs/heads/${TRAVIS_BRANCH}";
+          GIT_SOURCE_EXTRA="+refs/pull/${TRAVIS_PULL_REQUEST}/merge";
+        else
+          GIT_TARGET_EXTRA="";
+          GIT_SOURCE_EXTRA="";
+        fi;
+        cd ~;
+        mkdir target-size-clone && cd target-size-clone;
+        git init &> ${REDIRECT_TO} && git remote add -t ${TRAVIS_BRANCH} origin git://github.com/${TRAVIS_REPO_SLUG}.git &>${REDIRECT_TO};
+        git fetch origin ${GIT_TARGET_EXTRA} &> ${REDIRECT_TO} && git checkout -qf FETCH_HEAD &> ${REDIRECT_TO};
+        git tag travis-merge-target &> ${REDIRECT_TO};
+        git gc --aggressive &> ${REDIRECT_TO};
+        TARGET_SIZE=`du -s . | sed -e "s/\t.*//"`;
+        git pull origin ${GIT_SOURCE_EXTRA} &> ${REDIRECT_TO};
+        git gc --aggressive &> ${REDIRECT_TO};
+        MERGE_SIZE=`du -s . | sed -e "s/\t.*//"`;
+        if [ "${MERGE_SIZE}" != "${TARGET_SIZE}" ]; then
+          SIZE_DIFF=`expr \( ${MERGE_SIZE} - ${TARGET_SIZE} \)`;
+        else
+          SIZE_DIFF=0;
+        fi;
+      fi;
 
 # Install dependencies
 install:
+    - cd ${SRC_DIR}
     - if [ "${TEST_UNIT}" == "1" ]; then
         pip install pytest-cov;
         pip install tornado;
@@ -34,27 +61,34 @@ install:
     - if [ "${TEST_INSTALL}" == "1" ]; then
         python setup.py install;
       fi;
-    - if [ "${TEST_FLAKE}" == "1" ]; then
-        pip install flake8;
-      fi;
     - if [ "${TEST_DOCS}" == "1" ]; then
         pip install sphinx;
         pip install tornado;
+      fi;
+    - if [ "${TEST_STYLE}" == "1" ]; then
+        pip install flake8;
       fi;
 
 before_script:
 
 # Run the tests
 script: 
+    - cd ${SRC_DIR}
     - python -c "import sys; print(sys.version, '\n', sys.prefix)"
     - if [ "${TEST_UNIT}" == "1" ]; then
         python make test unit;
       fi;
-    - if [ "${TEST_FLAKE}" == "1" ]; then
-        echo "Not doing flake tests for now ...";
-      fi;
     - if [ "${TEST_DOCS}" == "1" ]; then
         python make docs html;
+      fi;
+    - if [ "${TEST_STYLE}" == "1" ]; then
+        echo "Not doing flake tests for now ...";
+        echo "Size difference ${SIZE_DIFF} kB";
+        if git log --format=%B -n 2 | grep -q "\[size skip\]"; then
+          echo "Skipping size test";
+        else
+          test ${SIZE_DIFF} -lt 100;
+        fi;
       fi;
 
 after_success:
