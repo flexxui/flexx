@@ -27,12 +27,27 @@ def get_phosphor(commit):
     if not os.path.isdir(dest):
         raise ValueError('Phosphor dest dir %r is not a directory.' % dest)
     if not os.path.isfile(filename):
-        logging.warn('Downloading %s' % url)
-        data = urlopen(url, timeout=5.0).read()
+        data = _fetch_file(url)
         open(filename, 'wb').write(data)
     
     return open(filename, 'rt', encoding='utf-8').read()
 
 
+def _fetch_file(url):
+    """ Fetches a file from the internet. Retry a few times before
+    giving up on failure.
+    """
+    logging.warn('Downloading %s' % url)
+    for tries in range(4):
+        try:
+            return urlopen(url, timeout=5.0).read()
+        except Exception as e:
+            logging.warn('Error while fetching file: %s' % str(e))
+    raise IOError('Unable to download %r. Perhaps there is a no internet '
+                  'connection? If there is, please report this problem.' % url)
+
+
 if __name__ == '__main__':
     get_phosphor('0736d35c')
+
+
