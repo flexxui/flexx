@@ -1,6 +1,9 @@
 Flexx
 =====
 
+[![Build Status](https://travis-ci.org/zoofIO/flexx.svg)](https://travis-ci.org/zoofIO/flexx)
+[![Documentation Status](https://readthedocs.org/projects/flexx/badge/?version=latest)](https://flexx.readthedocs.org)
+
 [Flexx](https://flexx.readthedocs.org) is a pure Python toolkit for creating
 graphical user interfaces (GUI's), that uses web technology for its
 rendering. You can use Flexx to create desktop applications, web
