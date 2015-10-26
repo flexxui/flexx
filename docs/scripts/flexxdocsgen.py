@@ -4,6 +4,8 @@
 #import examplesgenerator
 import genuiclasses
 import genexamples
+import gencommonast
+
 
 def init():
     print('GENERATING DOCS ...')
@@ -12,11 +14,14 @@ def init():
     genuiclasses.main()
     print('  Generating examples.')
     genexamples.main()
+    print('  Generating commonast.')
+    gencommonast.main()
 
 
 def clean(app, *args):
     genuiclasses.clean()
     genexamples.clean()
+    gencommonast.clean()
 
 def setup(app):
     init()

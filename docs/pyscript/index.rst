@@ -9,6 +9,7 @@ JavaScript. We call Python code aimed to translated this way "PyScript".
    :maxdepth: 2
    
    intro
+   commonast
    api
    guide
    examples
