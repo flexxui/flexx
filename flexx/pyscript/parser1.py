@@ -146,8 +146,10 @@ As in Python, the default return value of a function is ``None`` (i.e.
 
 # todo: compat with Py 3.5? I heard they changed ast parsing
 
-import ast
 import re
+# import ast
+from . import commonast as ast
+
 
 from .parser0 import Parser0, JSError, unify  # noqa
 
@@ -169,25 +171,24 @@ class Parser1(Parser0):
     ## Literals
     
     def parse_Num(self, node):
-        return repr(node.n)
+        return repr(node.value)
     
     def parse_Str(self, node):
-        return repr(node.s)
+        return repr(node.value)
     
     def parse_Bytes(self, node):
         raise JSError('No Bytes in JS')
     
     def parse_NameConstant(self, node):
-        # Py3k
         M = {True: 'true', False: 'false', None: 'null'}
         return M[node.value]
     
     def parse_List(self, node):
         code = ['[']
-        for child in node.elts:
+        for child in node.element_nodes:
             code += self.parse(child)
             code.append(', ')
-        if node.elts:
+        if node.element_nodes:
             code.pop(-1)  # skip last comma
         code.append(']')
         return code
@@ -197,12 +198,12 @@ class Parser1(Parser0):
     
     def parse_Dict(self, node):
         code = ['{']
-        for key, val in zip(node.keys, node.values):
+        for key, val in zip(node.key_nodes, node.value_nodes):
             code += self.parse(key)
             code.append(': ')
             code += self.parse(val)
             code.append(', ')
-        if node.keys:
+        if node.key_nodes:
             code.pop(-1)  # skip last comma
         code.append('}')
         return code
@@ -214,14 +215,15 @@ class Parser1(Parser0):
     
     def parse_Name(self, node):
         # node.ctx can be Load, Store, Del -> can be of use somewhere?
-        id = node.id
-        if id in self.vars:
-            id = self.with_prefix(id)
+        name = node.name
+        if name in self.vars:
+            name = self.with_prefix(name)
         else:
-            id = self.NAME_MAP.get(id, id)
-        return id
+            name = self.NAME_MAP.get(name, name)
+        return name
     
     def parse_Starred(self, node):
+        # they're present in Call arguments, but we parse them there.
         raise JSError('Starred args are not supported.')
     
     ## Expressions
@@ -229,43 +231,44 @@ class Parser1(Parser0):
     def parse_Expr(self, node):
         # Expression (not stored in a variable)
         code = [self.lf()]
-        code += self.parse(node.value)
+        code += self.parse(node.value_node)
         code.append(';')
         return code
     
     def parse_UnaryOp(self, node):
-        if isinstance(node.op, ast.Not):
-            return '!', self._wrap_truthy(node.operand)
+        if node.op == node.OPS.Not:
+            return '!', self._wrap_truthy(node.right_node)
         else:
-            op = self.UNARY_OP[node.op.__class__.__name__]
-            right = unify(self.parse(node.operand))
+            op = self.UNARY_OP[node.op]
+            right = unify(self.parse(node.right_node))
             return op, right
     
     def parse_BinOp(self, node):
-        if isinstance(node.op, ast.Mod) and isinstance(node.left, ast.Str):
+        if node.op == node.OPS.Mod and isinstance(node.left_node, ast.Str):
             # Modulo on a string is string formatting in Python
             return self._format_string(node)
         
-        left = unify(self.parse(node.left))
-        right = unify(self.parse(node.right))
+        left = unify(self.parse(node.left_node))
+        right = unify(self.parse(node.right_node))
         
-        if isinstance(node.op, ast.Pow):
+        if node.op == node.OPS.Pow:
             return ["Math.pow(", left, ", ", right, ")"]
-        elif isinstance(node.op, ast.FloorDiv):
+        elif node.op == node.OPS.FloorDiv:
             return ["Math.floor(", left, "/", right, ")"]
         else:
-            op = ' %s ' % self.BINARY_OP[node.op.__class__.__name__]
+            op = ' %s ' % self.BINARY_OP[node.op]
             return [left, op, right]
     
     def _format_string(self, node):
         # Get left end, stripped from the separator
-        left = ''.join(self.parse(node.left))
+        left = ''.join(self.parse(node.left_node))
         sep, left = left[0], left[1:-1]
         # Get items
-        if isinstance(node.right, (ast.Tuple, ast.List)):
-            items = [unify(self.parse(n)) for n in node.right.elts]
+        right = node.right_node
+        if isinstance(right, (ast.Tuple, ast.List)):
+            items = [unify(self.parse(n)) for n in right.element_nodes]
         else:
-            items = [unify(self.parse(node.right))]
+            items = [unify(self.parse(right))]
         # Get matches
         matches = list(re.finditer(r'%[0-9\.\+\-\#]*[srdeEfgGioxXc]', left))
         if len(matches) != len(items):
@@ -298,49 +301,43 @@ class Parser1(Parser0):
             return '_truthy(%s)' % test
     
     def parse_BoolOp(self, node):
-        op = ' %s ' % self.BOOL_OP[node.op.__class__.__name__]
-        values = [unify(self._wrap_truthy(val)) for val in node.values]
+        op = ' %s ' % self.BOOL_OP[node.op]
+        values = [unify(self._wrap_truthy(val)) for val in node.value_nodes]
         return op.join(values)
     
     def parse_Compare(self, node):
         
-        if len(node.ops) != 1:
-            raise JSError('Comparisons with multiple ops is not supported.')
-        if len(node.comparators) != 1:
-            raise JSError('Comparisons with multiple comps is not supported.')
+        left = unify(self.parse(node.left_node))
+        right = unify(self.parse(node.right_node))
         
-        opnode = node.ops[0]
-        left = unify(self.parse(node.left))
-        right = unify(self.parse(node.comparators[0]))
-        
-        if isinstance(opnode, (ast.In, ast.NotIn)):
+        if node.op in (node.COMP.In, node.COMP.NotIn):
             dummy = self.dummy()
             s = "((%s = %s).indexOf ? %s : Object.keys(%s)).indexOf(%s)" % (
                 dummy, right, dummy, dummy, left)
-            if isinstance(opnode, ast.In):
+            if node.op == node.COMP.In:
                 return s + ' >= 0'
             else:
                 return s + ' < 0'
         else:
-            op = self.COMP_OP[opnode.__class__.__name__]
+            op = self.COMP_OP[node.op]
             return "%s %s %s" % (left, op, right)
     
     def parse_Call(self, node):
         
         # Get full function name and method name if it exists
         
-        if isinstance(node.func, ast.Attribute):
-            method_name = node.func.attr
-            base_name = unify(self.parse(node.func.value))
+        if isinstance(node.func_node, ast.Attribute):
+            method_name = node.func_node.attr
+            base_name = unify(self.parse(node.func_node.value_node))
             full_name = base_name + '.' + method_name
-        elif isinstance(node.func, ast.Subscript):
-            base_name = unify(self.parse(node.func.value))
-            full_name = unify(self.parse(node.func))
+        elif isinstance(node.func_node, ast.Subscript):
+            base_name = unify(self.parse(node.func_node.value_node))
+            full_name = unify(self.parse(node.func_node))
             method_name = ''
-        else:
+        else:  # ast.Name
             method_name = ''
             base_name = ''
-            full_name = unify(self.parse(node.func))
+            full_name = unify(self.parse(node.func_node))
         
         # Handle special functions and methods
         res = None
@@ -373,32 +370,52 @@ class Parser1(Parser0):
         "(" or ".apply(".
         """
         # Check for keywords (not supported) after handling special functions
-        if node.keywords:
-            raise JSError('function calls do not support keyword arguments')
-        if node.kwargs:
-            raise JSError('function calls do not support **kwargs')
+        if node.kwarg_nodes:
+            raise JSError('function calls do not support keyword arguments or kwargs')
         
         base_name = base_name or 'null'
         
         # flatten args and add commas
+        use_starargs = False
         argswithcommas = []
-        for arg in node.args:
-            argswithcommas.extend(self.parse(arg))
-            argswithcommas.append(', ')
-        if argswithcommas:
-            argswithcommas.pop(-1)
-        
-        if node.starargs:
-            # Note that this goes wrong if the original code uses apply()
-            starname = ''.join(self.parse(node.starargs))
-            code = ['.apply(', base_name, ', ']
-            if argswithcommas:
-                code += ['[']
-                code += argswithcommas
-                code += ['].concat(', starname, '))']
+        arglists = [argswithcommas]
+        for arg in node.arg_nodes:
+            if isinstance(arg, ast.Starred):
+                use_starargs = True
+                starname = ''.join(self.parse(arg.value_node))
+                arglists.append(starname)
+                argswithcommas = []
+                arglists.append(argswithcommas)
             else:
+                argswithcommas.extend(self.parse(arg))
+                argswithcommas.append(', ')
+        
+        # Clear empty lists and trailing commas
+        for i in reversed(range(len(arglists))):
+            arglist = arglists[i]
+            if not arglist:
+                arglists.pop(i)
+            elif arglist[-1] == ', ':
+                arglist.pop(-1)
+        
+        if use_starargs:
+            # Note that this goes wrong if the original code uses apply()
+            code = ['.apply(', base_name, ', ']
+            if len(arglists) == 1:
                 # the concat thing does not seem to work well with "arguments"
                 code += starname, ')'
+            else:
+                code += ['[].concat(']
+                for arglist in arglists:
+                    if isinstance(arglist, list):
+                        code += ['[']
+                        code += arglist
+                        code += [']']
+                    else:
+                        code += [arglist]
+                    code += [', ']
+                code.pop(-1)
+                code += '))'
             return code
         elif use_call_or_apply:
             if argswithcommas:
@@ -410,7 +427,7 @@ class Parser1(Parser0):
             return ["("] + argswithcommas + [")"]
     
     def parse_Attribute(self, node):
-        return "%s.%s" % (unify(self.parse(node.value)), node.attr)
+        return "%s.%s" % (unify(self.parse(node.value_node)), node.attr)
     
     ## Statements
     
@@ -420,7 +437,7 @@ class Parser1(Parser0):
         
         # Parse targets
         tuple = []
-        for target in node.targets:
+        for target in node.target_nodes:
             var = ''.join(self.parse(target))
             if isinstance(target, ast.Name):
                 if '.' in var:
@@ -435,13 +452,13 @@ class Parser1(Parser0):
             elif isinstance(target, (ast.Tuple, ast.List)):
                 dummy = self.dummy()
                 code.append(dummy)
-                tuple = [unify(self.parse(x)) for x in target.elts]
+                tuple = [unify(self.parse(x)) for x in target.element_nodes]
             else:
                 raise JSError("Unsupported assignment type")
             code.append(' = ')
         
         # Parse right side
-        code += self.parse(node.value)
+        code += self.parse(node.value_node)
         code.append(';')
         
         # Handle tuple unpacking
@@ -454,21 +471,21 @@ class Parser1(Parser0):
         return code
     
     def parse_AugAssign(self, node):  # -> x += 1
-        target = ''.join(self.parse(node.target))
-        value = ''.join(self.parse(node.value))
+        target = ''.join(self.parse(node.target_node))
+        value = ''.join(self.parse(node.value_node))
         
         nl = self.lf()
-        if isinstance(node.op, ast.Pow):
+        if node.op == node.OPS.Pow:
             return [nl, target, " = Math.pow(", target, ", ", value, ")"]
-        elif isinstance(node.op, ast.FloorDiv):
+        elif node.op == node.OPS.FloorDiv:
             return [nl, target, " = Math.floor(", target, "/", value, ")"]
         else:
-            op = ' %s= ' % self.BINARY_OP[node.op.__class__.__name__]
+            op = ' %s= ' % self.BINARY_OP[node.op]
             return [nl, target, op, value, ';']
     
     def parse_Delete(self, node):
         code = []
-        for target in node.targets:
+        for target in node.target_nodes:
             code.append(self.lf('delete '))
             code += self.parse(target)
             code.append(';')
@@ -481,13 +498,13 @@ class Parser1(Parser0):
     
     def parse_Subscript(self, node):
         
-        value_list = self.parse(node.value)
-        slice_list = self.parse(node.slice)
+        value_list = self.parse(node.value_node)
+        slice_list = self.parse(node.slice_node)
         
         code = []
         code += value_list
         
-        if isinstance(node.slice, ast.Index):
+        if isinstance(node.slice_node, ast.Index):
             code.append('[')
             if slice_list[0].startswith('-'):
                 code.append(unify(value_list) + '.length ')
@@ -500,19 +517,19 @@ class Parser1(Parser0):
         return code
     
     def parse_Index(self, node):
-        return self.parse(node.value)
+        return self.parse(node.value_node)
     
     def parse_Slice(self, node):
         code = []
-        if node.step:
+        if node.step_node:
             raise JSError('Slicing with step not supported.')
-        if node.lower:
-            code += self.parse(node.lower)
+        if node.lower_node:
+            code += self.parse(node.lower_node)
         else:
             code.append('0')
-        if node.upper:
+        if node.upper_node:
             code.append(',')
-            code += self.parse(node.upper)
+            code += self.parse(node.upper_node)
         return code
     
     def parse_ExtSlice(self, node):
@@ -521,18 +538,12 @@ class Parser1(Parser0):
     ## Imports - no imports
 
     def parse_Import(self, node):
-        raise JSError('Imports not supported.')
-    
-    def parse_ImportFrom(self, node):
         
-        if ('.' + node.module).endswith('pyscript'):
+        if node.root and node.root.endswith('pyscript'):
             # User is probably importing names from here to allow
             # writing the JS code and command to parse it in one module.
             # Ignore this import.
             return []
-        raise JSError('Imports not supported.')
-    
-    def parse_alias(self, node):
         raise JSError('Imports not supported.')
     
     def parse_Module(self, node):
@@ -549,6 +560,6 @@ class Parser1(Parser0):
             for line in docstring.splitlines():
                 code.append(self.lf('// ' + line))
             code.append('\n')
-        for child in node.body:
+        for child in node.body_nodes:
             code += self.parse(child)
         return code

@@ -16,7 +16,8 @@ situations:
 
 import sys
 import re
-import ast
+# import ast
+from . import commonast as ast
 
 
 class JSError(Exception):
@@ -316,9 +317,9 @@ class Parser0(object):
         empty string.
         """
         docstring = ''
-        if (node.body and isinstance(node.body[0], ast.Expr) and
-                          isinstance(node.body[0].value, ast.Str)):
-            docstring = node.body.pop(0).value.s.strip()
+        if (node.body_nodes and isinstance(node.body_nodes[0], ast.Expr) and
+                                isinstance(node.body_nodes[0].value_node, ast.Str)):
+            docstring = node.body_nodes.pop(0).value_node.value.strip()
             lines = docstring.splitlines()
             getindent = lambda x: len(x) - len(x.strip())
             indent = min([getindent(x) for x in lines[1:]]) if (len(lines) > 1) else 0
