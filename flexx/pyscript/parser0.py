@@ -30,20 +30,19 @@ def unify(x):
     """ Turn string or list of strings parts into string. Braces are
     placed around it if its not alphanumerical
     """
+    # Note that r'[\.\w]' matches anyting in 'ab_01.äé'
+    
     if isinstance(x, (tuple, list)):
         x = ''.join(x)
     
     if x[0] in '\'"' and x[0] == x[-1] and x.count(x[0]) == 2:
         return x  # string
-    #elif x.isidentifier() or x.isalnum():
-    elif re.match(r'^[.\w]*$', x):
-        return x  # identifier, numbers, dots
-    elif re.match(r'^[.\w]*\(.*\)', x) and x.endswith(')') and x.count(')') == 1:
-        return x  # function calls (e.g. super())
-    elif x.startswith('(') and x.endswith(')') and x.count(')') == 1:
-        return x
-    elif x.startswith('[') and x.endswith(']') and x.count(']') == 1:
-        return x
+    elif re.match(r'^[\.\w]*$', x):
+        return x  # words consisting of normal chars, numbers and dots
+    elif re.match(r'^[\.\w]*\(.*\)$', x) and x.count(')') == 1:
+        return x  # function calls (e.g. 'super()' or 'foo.bar(...)')
+    elif re.match(r'^[\.\w]*\[.*\]$', x) and x.count(']') == 1:
+        return x  # indexing
     else:
         return '(%s)' % x
 
