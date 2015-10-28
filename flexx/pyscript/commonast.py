@@ -72,12 +72,12 @@ class Node:
         NotIn = 'NotIn'
     
     def __init__(self, *args):
-        assert not hasattr(self, '__dict__'), 'Nodes must have __slots__'
-        assert not self.__class__ is Node, 'Node is an abstract class'
-        names = self._get_names()
+        names = self.__slots__
         # Checks
-        assert len(args) == len(names)
+        assert len(args) == len(names)  # check this always
         if docheck:
+            assert not hasattr(self, '__dict__'), 'Nodes must have __slots__'
+            assert not self.__class__ is Node, 'Node is an abstract class'
             for name, val in zip(names, args):
                 assert not isinstance(val, ast.AST)
                 if name == 'name':
@@ -94,10 +94,6 @@ class Node:
         # Assign
         for name, val in zip(names, args):
             setattr(self, name, val)
-    
-    def _get_names(self):
-        return tuple(self.__slots__)
-        #return self.__init__.__func__.__code__.co_varnames[1:]
     
     def tojson(self, indent=2):
         """ Return a string with the JSON representatiom of this AST.
@@ -136,7 +132,7 @@ class Node:
         """
         d = {}
         d['_type'] = self.__class__.__name__
-        for name in self._get_names():
+        for name in self.__slots__:
             val = getattr(self, name)
             if val is None:
                 val = 'null'
@@ -155,7 +151,7 @@ class Node:
         return self._todict() == other._todict()
     
     def __repr__(self):
-        names = ', '.join([repr(x) for x in self._get_names()])
+        names = ', '.join([repr(x) for x in self.__slots__])
         return '<%s with %s at 0x%x>' % (self.__class__.__name__, names, id(self))
     
     def __str__(self):
@@ -738,23 +734,19 @@ class NativeAstConverter:
         # Some node attributes can be None
         if n is None:
             return None
-        
+        # Get converter function
         type = n.__class__.__name__
-        converter = getattr(self, '_convert_' + type, None)
-        if converter:
-            val = converter(n)
-            assert isinstance(val, Node)
-            # Set its position
-            val.lineno = getattr(n, 'lineno', 1)
-            val.col_offset = getattr(n, 'col_offset', 0)
-            return val
-        else:
+        try:
+            converter = getattr(self, '_convert_' + type)
+        except AttributeError:
             raise RuntimeError('%s cannot convert %s nodes.' % (self.__class__.__name__, type))
-    
-    def _listconvert(self, *nn):
-        if len(nn) == 1 and isinstance(nn[0], (tuple, list)):
-            nn = nn[0]
-        return [self._convert(n) for n in nn]
+        # Convert node
+        val = converter(n)
+        assert isinstance(val, Node)
+        # Set its position
+        val.lineno = getattr(n, 'lineno', 1)
+        val.col_offset = getattr(n, 'col_offset', 0)
+        return val
     
     def _convert_Module(self, n):
         node = Module([])
@@ -774,16 +766,20 @@ class NativeAstConverter:
         return Bytes(n.s)
     
     def _convert_List(self, n):
-        return List(self._listconvert(n.elts))
+        c = self._convert
+        return List([c(x) for x in n.elts])
     
     def _convert_Tuple(self, n):
-        return Tuple(self._listconvert(n.elts))
+        c = self._convert
+        return Tuple([c(x) for x in n.elts])
     
     def _convert_Set(self, n):
-        return Set(self._listconvert(n.elts))
+        c = self._convert
+        return Set([c(x) for x in n.elts])
     
     def _convert_Dict(self, n):
-        return Dict(self._listconvert(n.keys), self._listconvert(n.values))
+        c = self._convert
+        return Dict([c(x) for x in n.keys], [c(x) for x in n.values])
     
     def _convert_Ellipses(self, n):
         return Ellipsis()
@@ -812,10 +808,12 @@ class NativeAstConverter:
         return Index(self._convert(n.value))
     
     def _convert_Slice(self, n):
-        return Slice(*self._listconvert(n.lower, n.upper, n.step))
+        c = self._convert
+        return Slice(c(n.lower), c(n.upper), c(n.step))
     
     def _convert_ExtSlice(self, n):
-        return ExtSlice(self._listconvert(n.dims))
+        c = self._convert
+        return ExtSlice([c(x) for x in n.dims])
     
     ## Expressions
     
@@ -831,12 +829,14 @@ class NativeAstConverter:
         return BinOp(op, self._convert(n.left), self._convert(n.right))
     
     def _convert_BoolOp(self, n):
+        c = self._convert
         op = n.op.__class__.__name__
-        return BoolOp(op, self._listconvert(n.values))  # list of value_nodes
+        return BoolOp(op, [c(x) for x in n.values])  # list of value_nodes
     
     def _convert_Compare(self, n):
+        c = self._convert
         # Get compares and ops
-        comps = self._listconvert([n.left] + n.comparators)
+        comps = [c(x) for x in ([n.left] + n.comparators)]
         ops = [op.__class__.__name__ for op in n.ops]
         assert len(ops) == (len(comps) - 1)
         # Create our comparison operators
@@ -852,16 +852,17 @@ class NativeAstConverter:
             return BoolOp(Node.OPS.And, compares)
     
     def _convert_Call(self, n):
-        arg_nodes = [self._convert(a) for a in n.args]
-        kwarg_nodes = [self._convert(a) for a in n.keywords]
+        c = self._convert
+        arg_nodes = [c(a) for a in n.args]
+        kwarg_nodes = [c(a) for a in n.keywords]
         
         if pyversion < (3, 5):
             if n.starargs:
-                arg_nodes.append(Starred(self._convert(n.starargs)))
+                arg_nodes.append(Starred(c(n.starargs)))
             if n.kwargs:
-                kwarg_nodes.append(Keyword('', self._convert(n.kwargs)))
+                kwarg_nodes.append(Keyword('', c(n.kwargs)))
         
-        return Call(self._convert(n.func), arg_nodes, kwarg_nodes)
+        return Call(c(n.func), arg_nodes, kwarg_nodes)
     
     def _convert_keyword(self, n):
         return Keyword(n.arg, self._convert(n.value))
@@ -872,37 +873,42 @@ class NativeAstConverter:
         # todo: mmmm, so comments wont work inside ifs, for-loops, etc. :/
     
     def _convert_ListComp(self, n):
-        return ListComp(self._convert(n.elt), self._listconvert(n.generators))
+        c = self._convert
+        return ListComp(c(n.elt), [c(x) for x in n.generators])
     
     def _convert_SetComp(self, n):
-        return SetComp(self._convert(n.elt), self._listconvert(n.generators))
+        c = self._convert
+        return SetComp(c(n.elt), [c(x) for x in n.generators])
     
     def _convert_GeneratorExp(self, n):
-        return GeneratorExp(self._convert(n.elt), self._listconvert(n.generators))
+        c = self._convert
+        return GeneratorExp(c(n.elt), [c(x) for x in n.generators])
     
     def _convert_DictComp(self, n):
-        comp_nodes = self._listconvert(n.generators)
-        return DictComp(self._convert(n.key), self._convert(n.value), comp_nodes)
+        c = self._convert
+        return DictComp(c(n.key), c(n.value), [c(x) for x in n.generators])
     
     def _convert_comprehension(self, n):
-        if_nodes = self._listconvert(n.ifs)
-        return Comprehension(self._convert(n.target), self._convert(n.iter), if_nodes)
+        c = self._convert
+        return Comprehension(c(n.target), c(n.iter), [c(x) for x in n.ifs])
     
     ## Statements
     
     def _convert_Assign(self, n):
-        return Assign(self._listconvert(n.targets), self._convert(n.value))
+        c = self._convert
+        return Assign([c(x) for x in n.targets], c(n.value))
     
     def _convert_AugAssign(self, n):
         op = n.op.__class__.__name__
         return AugAssign(self._convert(n.target), op, self._convert(n.value))
     
     def _convert_Print(self, n):  # pragma: no cover
+        c = self._convert
         # Python 2.x compat
-        arg_nodes = self._listconvert(n.values)
+        arg_nodes = [c(x) for x in n.values]
         kwarg_nodes = []
         if n.dest is not None:
-            kwarg_nodes.append(Keyword('dest', self._convert(n.dest)))
+            kwarg_nodes.append(Keyword('dest', c(n.dest)))
         if not n.nl:
             kwarg_nodes.append(Keyword('end', Str('')))
         return Call(arg_nodes, kwarg_nodes)
@@ -914,7 +920,8 @@ class NativeAstConverter:
         return Assert(self._convert(n.test), self._convert(n.msg))
     
     def _convert_Delete(self, n):
-        return Delete(self._listconvert(n.targets))
+        c = self._convert
+        return Delete([c(x) for x in n.targets])
     
     def _convert_Pass(self, n):
         return Pass()
@@ -929,16 +936,16 @@ class NativeAstConverter:
     ## Control flow
     
     def _convert_If(self, n):
-        c, lc = self._convert, self._listconvert
-        return If(c(n.test), lc(n.body), lc(n.orelse))
+        c = self._convert
+        return If(c(n.test), [c(x) for x in n.body], [c(x) for x in n.orelse])
     
     def _convert_For(self, n):
-        c, lc = self._convert, self._listconvert
-        return For(c(n.target), c(n.iter), lc(n.body), lc(n.orelse))
+        c = self._convert
+        return For(c(n.target), c(n.iter), [c(x) for x in n.body], [c(x) for x in n.orelse])
     
     def _convert_While(self, n):
-        c, lc = self._convert, self._listconvert
-        return While(c(n.test), lc(n.body), lc(n.orelse))
+        c = self._convert
+        return While(c(n.test), [c(x) for x in n.body], [c(x) for x in n.orelse])
     
     def _convert_Break(self, n):
         return Break()
@@ -947,23 +954,26 @@ class NativeAstConverter:
         return Continue()
     
     def _convert_Try(self, n):
-        c, lc = self._convert, self._listconvert
-        return Try(lc(n.body), lc(n.handlers), lc(n.orelse), lc(n.finalbody))
+        c = self._convert
+        return Try([c(x) for x in n.body], [c(x) for x in n.handlers], 
+                   [c(x) for x in n.orelse], [c(x) for x in n.finalbody])
     
     def _convert_TryFinally(self, n):  # Python <= 3.2
-        c, lc = self._convert, self._listconvert
-        return Try(lc(n.body), [], [], lc(n.finalbody))
+        c = self._convert
+        return Try([c(x) for x in n.body], [], [], [c(x) for x in n.finalbody])
     
     def _convert_TryExcept(self, n):  # Python <= 3.2
-        c, lc = self._convert, self._listconvert
-        return Try(lc(n.body), lc(n.handlers), lc(n.orelse), [])
+        c = self._convert
+        return Try([c(x) for x in n.body], [c(x) for x in n.handlers], 
+                   [c(x) for x in n.orelse], [])
     
     def _convert_ExceptHandler(self, n):
-        c, lc = self._convert, self._listconvert
-        return ExceptHandler(c(n.type), n.name, lc(n.body))
+        c = self._convert
+        return ExceptHandler(c(n.type), n.name, [c(x) for x in n.body])
     
     def _convert_With(self, n):
-        return With(self._listconvert(n.items), self._convert(n.body))
+        c = self._convert
+        return With([c(x) for x in n.items], [c(x) for x in n.body])
     
     def _convert_WithItem(self, n):
         return WithItem(self._convert(n.context_expr), self._convert(n.optional_vars))
@@ -971,16 +981,16 @@ class NativeAstConverter:
     ## Function and class definitions
     
     def _convert_FunctionDef(self, n):
-        args = n.args
         c = self._convert
-        args_nodes = self._listconvert(args.args)
-        kwargs_nodes = self._listconvert(args.kwonlyargs)
+        args = n.args
+        args_nodes = [c(x) for x in args.args]
+        kwargs_nodes = [c(x) for x in args.kwonlyargs]
         for i, default in enumerate(reversed(args.defaults)):
             args_nodes[-1-i].value_node = c(default)
         for i, default in enumerate(reversed(args.kw_defaults)):
             kwargs_nodes[-1-i].value_node = c(default) 
         
-        node = FunctionDef(n.name, self._listconvert(n.decorator_list), c(n.returns), 
+        node = FunctionDef(n.name, [c(x) for x in n.decorator_list], c(n.returns), 
                            args_nodes, kwargs_nodes, c(args.vararg), c(args.kwarg),
                            [])
         if docheck:
@@ -994,17 +1004,17 @@ class NativeAstConverter:
         return node
     
     def _convert_Lambda(self, n):
-        args = n.args
         c = self._convert
-        args_nodes = self._listconvert(args.args)
-        kwargs_nodes = self._listconvert(args.kwonlyargs)
+        args = n.args
+        args_nodes = [c(x) for x in args.args]
+        kwargs_nodes = [c(x) for x in args.kwonlyargs]
         for i, default in enumerate(reversed(args.defaults)):
             args_nodes[-1-i].value_node = c(default)
         for i, default in enumerate(reversed(args.kw_defaults)):
             kwargs_nodes[-1-i].value_node = c(default) 
         
         return Lambda(args_nodes, kwargs_nodes, 
-                      c(args.vararg), c(args.kwarg), self._convert(n.body))
+                      c(args.vararg), c(args.kwarg), c(n.body))
         
     def _convert_arg(self, n):
         return Arg(n.arg, None, self._convert(n.annotation))  # Value is initially None
@@ -1025,15 +1035,16 @@ class NativeAstConverter:
         return Nonlocal()
     
     def _convert_ClassDef(self, n):
-        arg_nodes = [self._convert(a) for a in n.bases]
-        kwarg_nodes = [self._convert(a) for a in n.keywords]
+        c = self._convert
+        arg_nodes = [c(a) for a in n.bases]
+        kwarg_nodes = [c(a) for a in n.keywords]
     
         if n.starargs:
             arg_nodes.append(Starred(self._convert(n.starargs)))
         if n.kwargs:
             kwarg_nodes.append(Keyword(None, self._convert(n.kwargs)))
         
-        node = ClassDef(n.name, self._listconvert(n.decorator_list),
+        node = ClassDef(n.name, [c(a) for a in n.decorator_list],
                         arg_nodes, kwarg_nodes, [])
         
         for sub in n.body:
