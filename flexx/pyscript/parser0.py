@@ -1,3 +1,4 @@
+# -*- coding: utf-8
 """
 Parts of this code (and in the other modules that define the parser
 class) are inspired by / taken from the py2js project.
