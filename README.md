@@ -58,6 +58,13 @@ However, we're interested in feedback, so we invite you to play with
 it!
 
 
+Requirements
+------------
+
+Flexx requires Python 3.3 or higher, and also supports Pypy3. Further,
+it needs the [tornado](http://www.tornadoweb.org) library (pure Python).
+
+
 Getting started
 ---------------
 
