@@ -32,7 +32,8 @@ HTML = """
 def setup_module():
     global URL, FILE
     fname = os.path.join(tempfile.gettempdir(), 'flexx_testpage.html')
-    open(fname, 'wt', encoding='utf-8').write(HTML)
+    with open(fname, 'wb') as f:
+        f.write(HTML.encode())
     URL = 'file://' + fname
 
 

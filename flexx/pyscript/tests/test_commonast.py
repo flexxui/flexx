@@ -29,7 +29,8 @@ def _export_python_sample_ast():
         code = open(filename, 'rb').read().decode()
         root = commonast.parse(code)
         ast_bin = bz2.compress(root.tojson(indent=None).encode())
-        n = open(filename_bz2, 'wb').write(ast_bin)
+        with open(filename_bz2, 'wb') as f:
+            n = f.write(ast_bin)
         print('wrote %i bytes to %s' % (n, filename_bz2))
 
 

@@ -20,7 +20,8 @@ def test_asset_store_simple():
     
     raises(IndexError, s.load_asset, 'foo.js')
     
-    open(test_filename, 'wb').write(b'bar')
+    with open(test_filename, 'wb') as f:
+        f.write(b'bar')
     
     s.add_asset('foo.css', b'foo')
     s.add_asset('foo.js', test_filename)
@@ -29,7 +30,8 @@ def test_asset_store_simple():
     assert s.load_asset('foo.css') == b'foo'
     assert s.load_asset('foo.js') == b'bar'
     # Check caching
-    open(test_filename, 'wb').write(b'foo')
+    with open(test_filename, 'wb') as f:
+        f.write(b'foo')
     assert s.load_asset('foo.js') == b'bar'
     
     # Setting same asset
@@ -94,7 +96,8 @@ def test_session_assets():
     
     assert not s.get_used_asset_names()
     
-    open(test_filename, 'wb').write(b'bar')
+    with open(test_filename, 'wb') as f:
+        f.write(b'bar')
     
     # Add assets, check mangles name
     a1 = s.add_asset('foo.css', b'foo')

@@ -28,7 +28,8 @@ def get_phosphor(commit):
         raise ValueError('Phosphor dest dir %r is not a directory.' % dest)
     if not os.path.isfile(filename):
         data = _fetch_file(url)
-        open(filename, 'wb').write(data)
+        with open(filename, 'wb') as f:
+            f.write(data)
     
     return open(filename, 'rt', encoding='utf-8').read()
 
