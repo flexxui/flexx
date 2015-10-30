@@ -166,8 +166,8 @@ from .parser2 import Parser2
 from .parser3 import Parser3
 
 # Assert py3k
-if sys.version_info < (3, ):
-    raise RuntimeError('flexx.pyscript needs Python 3')
+if sys.version_info < (3, 2):
+    raise RuntimeError('flexx.pyscript needs Python 3.2 or higher')
 
 
 class BasicParser(Parser2):
