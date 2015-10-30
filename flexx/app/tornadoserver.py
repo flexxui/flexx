@@ -122,39 +122,6 @@ def port_hash(name):
     return 49152 + (val % 2**14)
 
 
-# todo: contribute this to tornado
-def _flexx_run_callback(self, callback, *args, **kwargs):
-    """ Patched version of Tornado's _run_callback that sets traceback
-    info when an exception occurs, so that we can do PM debugging.
-    """
-    def _callback(*args, **kwargs):
-        try:
-            callback(*args, **kwargs)
-        except Exception:
-            type, value, tb = sys.exc_info()
-            tb = tb.tb_next  # Skip *this* frame
-            sys.last_type = type
-            sys.last_value = value
-            sys.last_traceback = tb
-            del tb  # Get rid of it in this namespace
-            raise
-    return self._orig_run_callback(_callback, *args, **kwargs)
-
-
-def _patch_tornado():
-    WebSocketProtocol = tornado.websocket.WebSocketProtocol
-    if not hasattr(WebSocketProtocol, '_orig_run_callback'):
-        
-        if not hasattr(WebSocketProtocol, 'async_callback'):
-            WebSocketProtocol._orig_run_callback = WebSocketProtocol._run_callback
-            WebSocketProtocol._run_callback = _flexx_run_callback
-        else:
-            WebSocketProtocol._orig_run_callback = WebSocketProtocol.async_callback
-            WebSocketProtocol.async_callback = _flexx_run_callback
-
-_patch_tornado()
-
-
 class MainHandler(tornado.web.RequestHandler):
     """ Handler for http requests: serve pages
     """
