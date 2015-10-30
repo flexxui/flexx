@@ -4,7 +4,7 @@
 import sys
 import weakref
 
-from pytest import raises
+from pytest import raises, mark
 from flexx.util.testing import run_tests_if_main
 
 from flexx.react import HasSignals, input, connect, lazy, Signal, InputSignal
@@ -254,6 +254,7 @@ def test_props():
     assert title_lengths[-1] == 3
 
 
+@mark.skipif('__pypy__' in sys.builtin_module_names, reason='cannot test this on pypy')
 def test_no_memory_leak():
     def stub(v=''): pass
     
@@ -275,13 +276,13 @@ def test_no_memory_leak():
     
     t = Test()
     wt = weakref.ref(t)
-    assert sys.getrefcount(t) >= 3
+    assert sys.getrefcount(t) >= 3  # pypy does not have getrefcount()
     
     t.disconnect_signals()
     t.foo.disconnect_signals()
     t.bar.disconnect()
     del t
-    assert wt() is None
+    assert wt() is None  # pypy fails here, maybe needs a gc.collect()?
 
 
 run_tests_if_main()

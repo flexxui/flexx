@@ -348,7 +348,8 @@ class XulRuntime(DesktopRuntime):
                             ('chrome/content/main.js', main_js),
                             ('chrome/content/main.xul', main_xul),
                             ]:
-            open(op.join(path, fname), 'wb').write(text.encode('utf-8'))
+            with open(op.join(path, fname), 'wb') as f:
+                f.write(text.encode())
 
         # Icon - use Icon class to write a png (Unix) and an ico (Windows)
         # The launch function ensures that there always is an icon
@@ -520,7 +521,8 @@ class XulRuntime(DesktopRuntime):
                    op.join(path, 'Contents', 'MacOS', 'xulrunner'))
         # Make info.plist
         info = INFO_PLIST.format(name=title)
-        open(op.join(path, 'Contents', 'info.plist'), 'wt', encoding='utf-8').write(info)
+        with open(op.join(path, 'Contents', 'info.plist'), 'wb') as f:
+            f.write(info.encode())
         # Make icon - ensured by launch function
         if self._kwargs.get('icon'):
             icon = self._kwargs.get('icon')

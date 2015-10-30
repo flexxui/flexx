@@ -6,8 +6,8 @@ Getting started
 Dependencies
 ------------
 
-Flexx is CPython 3.x only for now. Support for Pypy very likely. Support
-for 2.x maybe.
+Flexx requires Python 3.3 or higher, and also supports Pypy3. Support
+for legacy Python (version 2.7) *might* be considered for some components.
 
 The ``react``, ``webruntime`` and ``pyscrip`` subpackages require no
 dependencies. The ``app`` and ``ui`` subpackages require Tornado (a

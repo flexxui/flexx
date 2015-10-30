@@ -188,9 +188,9 @@ you can only catch Error objects.
 
 """
 
-import ast
 import sys
 
+from . import commonast as ast
 from .parser1 import Parser1, JSError, unify  # noqa
 
 
@@ -203,28 +203,19 @@ class Parser2(Parser1):
     def parse_Raise(self, node):
         # We raise the exception as an Error object
         
-        if sys.version_info >= (3, ):
-            if node.exc is None:
-                raise JSError('When raising, provide an error object.')
-            if node.cause is not None:
-                raise JSError('When raising, "cause" is not supported.')
-            err_node = node.exc
-        else:  # pragma: no cover
-            if node.type is None:
-                raise JSError('When raising, provide a type.')
-            if node.inst is not None:
-                raise JSError('When raising, "instance" is not supported.')
-            if node.tback is not None:
-                raise JSError('When raising, "tback" is not supported.')
-            err_node = node.exc
+        if node.exc_node is None:
+            raise JSError('When raising, provide an error object.')
+        if node.cause_node is not None:
+            raise JSError('When raising, "cause" is not supported.')
+        err_node = node.exc_node
         
         # Get cls and msg
         err_cls, err_msg = None, "''"
         if isinstance(err_node, ast.Name):
-            err_cls = err_node.id
+            err_cls = err_node.name
         elif isinstance(err_node, ast.Call):
-            err_cls = err_node.func.id
-            err_msg = ''.join([unify(self.parse(arg)) for arg in err_node.args])
+            err_cls = err_node.func_node.name
+            err_msg = ''.join([unify(self.parse(arg)) for arg in err_node.arg_nodes])
         else:
             err_msg = ''.join(self.parse(err_node))
         
@@ -251,10 +242,10 @@ class Parser2(Parser1):
     
     def parse_Assert(self, node):
         
-        test = ''.join(self.parse(node.test))
+        test = ''.join(self.parse(node.test_node))
         msg = test
-        if node.msg:
-            msg = ''.join(self.parse(node.msg))
+        if node.msg_node:
+            msg = ''.join(self.parse(node.msg_node))
         
         code = []
         code.append(self.lf('if (!('))
@@ -266,16 +257,7 @@ class Parser2(Parser1):
         return code
     
     def parse_Try(self, node):
-        # Python >= 3.3
-        return self.parse_TryExcept(node)
-    
-    def parse_TryFinally(self, node):
-        # Python < 3.3
-        return self.parse_TryExcept(node)
-    
-    def parse_TryExcept(self, node):
-        # Python < 3.3
-        if node.orelse:
+        if node.else_nodes:
             raise JSError('No support for try-else clause.')
         
         code = []
@@ -284,17 +266,17 @@ class Parser2(Parser1):
         if True:
             code.append(self.lf('try {'))
             self._indent += 1
-            for n in node.body:
+            for n in node.body_nodes:
                 code += self.parse(n)
             self._indent -= 1
             code.append(self.lf('}'))
         
         # Except
-        if node.handlers:
+        if node.handler_nodes:
             self._indent += 1
             err_name = 'err_%i' % self._indent
             code.append(' catch(%s) {' % err_name)
-            for i, handler in enumerate(node.handlers):
+            for i, handler in enumerate(node.handler_nodes):
                 if i == 0:
                     code.append(self.lf(''))
                 else:
@@ -305,10 +287,10 @@ class Parser2(Parser1):
             code.append(self.lf('}'))  # end catch
         
         # Finally
-        if node.finalbody:
+        if node.finally_nodes:
             code.append(' finally {')
             self._indent += 1
-            for n in node.finalbody:
+            for n in node.finally_nodes:
                 code += self.parse(n)
             self._indent -= 1
             code.append(self.lf('}'))  # end finally
@@ -320,7 +302,7 @@ class Parser2(Parser1):
         
         # Setup the catch
         code = []
-        err_type = unify(self.parse(node.type)) if node.type else ''
+        err_type = unify(self.parse(node.type_node)) if node.type_node else ''
         if err_type and err_type != 'Exception':
             code.append('if (%s instanceof Error && %s.name === "%s") {' %
                         (err_name, err_name, err_type))
@@ -332,7 +314,7 @@ class Parser2(Parser1):
             self.vars.add(node.name)
         
         # Insert the body
-        for n in node.body:
+        for n in node.body_nodes:
             code += self.parse(n)
         self._indent -= 1
         
@@ -343,9 +325,9 @@ class Parser2(Parser1):
     
     def parse_IfExp(self, node):
         # in "a if b else c"
-        a = self.parse(node.body)
-        b = self._wrap_truthy(node.test)
-        c = self.parse(node.orelse)
+        a = self.parse(node.body_node)
+        b = self._wrap_truthy(node.test_node)
+        c = self.parse(node.else_node)
         
         code = []
         code.append('(')
@@ -358,28 +340,28 @@ class Parser2(Parser1):
         return code
     
     def parse_If(self, node):
-        if (True and isinstance(node.test, ast.Compare) and
-                     isinstance(node.test.left, ast.Name) and
-                     node.test.left.id == '__name__'):
+        if (True and isinstance(node.test_node, ast.Compare) and
+                     isinstance(node.test_node.left_node, ast.Name) and
+                     node.test_node.left_node.name == '__name__'):
             # Ignore ``__name__ == '__main__'``, since it may be
             # used inside a PyScript file for the compiling.
             return []
         
         code = [self.lf('if (')]  # first part (popped in elif parsing)
-        code.append(self._wrap_truthy(node.test))
+        code.append(self._wrap_truthy(node.test_node))
         code.append(') {')
         self._indent += 1
-        for stmt in node.body:
+        for stmt in node.body_nodes:
             code += self.parse(stmt)
         self._indent -= 1
-        if node.orelse:
-            if len(node.orelse) == 1 and isinstance(node.orelse[0], ast.If):
+        if node.else_nodes:
+            if len(node.else_nodes) == 1 and isinstance(node.else_nodes[0], ast.If):
                 code.append(self.lf("} else if ("))
-                code += self.parse(node.orelse[0])[1:-1]  # skip first and last
+                code += self.parse(node.else_nodes[0])[1:-1]  # skip first and last
             else:
                 code.append(self.lf("} else {"))
                 self._indent += 1
-                for stmt in node.orelse:
+                for stmt in node.else_nodes:
                     code += self.parse(stmt)
                 self._indent -= 1
         code.append(self.lf("}"))  # last part (popped in elif parsing)
@@ -395,28 +377,28 @@ class Parser2(Parser1):
         sure_is_range = False  # dito for range
         
         # First see if this for-loop is something that we support directly
-        if isinstance(node.iter, ast.Call):
-            f = node.iter.func
-            if isinstance(f, ast.Attribute) and not node.iter.args and f.attr in METHODS:
+        if isinstance(node.iter_node, ast.Call):
+            f = node.iter_node.func_node
+            if isinstance(f, ast.Attribute) and not node.iter_node.arg_nodes and f.attr in METHODS:
                 sure_is_dict = f.attr
-                iter = ''.join(self.parse(f.value))  #  '%s.%s()' % (f.value.id, f.attr)
-            elif isinstance(f, ast.Name) and f.id == 'range':
-                sure_is_range = [''.join(self.parse(arg)) for arg in node.iter.args]
+                iter = ''.join(self.parse(f.value_node))  #  '%s.%s()' % (f.value.id, f.attr)
+            elif isinstance(f, ast.Name) and f.name == 'range':
+                sure_is_range = [''.join(self.parse(arg)) for arg in node.iter_node.arg_nodes]
         
         # Otherwise we parse the iter
         if iter is None:
-            iter = ''.join(self.parse(node.iter))
+            iter = ''.join(self.parse(node.iter_node))
         
         # Get target
-        if isinstance(node.target, ast.Name):
-            target = [node.target.id]
+        if isinstance(node.target_node, ast.Name):
+            target = [node.target_node.name]
             if sure_is_dict == 'values':
                 target.append(target[0])
             elif sure_is_dict == 'items':
                 raise JSError('Iteration over a dict with .items() '
                               'needs two iterators.')
-        elif isinstance(node.target, ast.Tuple):
-            target = [''.join(self.parse(t)) for t in node.target.elts]
+        elif isinstance(node.target_node, ast.Tuple):
+            target = [''.join(self.parse(t)) for t in node.target_node.element_nodes]
             if sure_is_dict:
                 if not (sure_is_dict == 'items' and len(target) == 2):
                     raise JSError('Iteration over a dict needs one iterator, '
@@ -430,9 +412,9 @@ class Parser2(Parser1):
         for_body = []
         for_else = []
         self._indent += 1
-        for n in node.body:
+        for n in node.body_nodes:
             for_body += self.parse(n)
-        for n in node.orelse:
+        for n in node.else_nodes:
             for_else += self.parse(n)
         self._indent -= 1
         
@@ -440,7 +422,7 @@ class Parser2(Parser1):
         code = []
         
         # Prepare variable to detect else
-        if node.orelse:
+        if node.else_nodes:
             else_dummy = self.dummy('else')
             code.append(self.lf('%s = true;' % else_dummy))
         
@@ -513,7 +495,7 @@ class Parser2(Parser1):
         code.append(self.lf('}'))
         
         # Handle else
-        if node.orelse:
+        if node.else_nodes:
             code.append(' if (%s) {' % else_dummy)
             code += for_else
             code.append(self.lf("}"))
@@ -541,15 +523,15 @@ class Parser2(Parser1):
     
     def parse_While(self, node):
         
-        test = ''.join(self.parse(node.test))
+        test = ''.join(self.parse(node.test_node))
         
         # Collect body and else-body
         for_body = []
         for_else = []
         self._indent += 1
-        for n in node.body:
+        for n in node.body_nodes:
             for_body += self.parse(n)
-        for n in node.orelse:
+        for n in node.else_nodes:
             for_else += self.parse(n)
         self._indent -= 1
         
@@ -557,7 +539,7 @@ class Parser2(Parser1):
         code = []
         
         # Prepare variable to detect else
-        if node.orelse:
+        if node.else_nodes:
             else_dummy = self.dummy('else')
             code.append(self.lf('%s = true;' % else_dummy))
         
@@ -569,7 +551,7 @@ class Parser2(Parser1):
         code.append(self.lf('}'))
         
         # Handle else
-        if node.orelse:
+        if node.else_nodes:
             code.append(' if (%s) {' % else_dummy)
             code += for_else
             code.append(self.lf("}"))
@@ -593,28 +575,28 @@ class Parser2(Parser1):
     
     def parse_ListComp(self, node):
         
-        elt = ''.join(self.parse(node.elt))
+        elt = ''.join(self.parse(node.element_node))
         code = ['(function list_comprehenson () {', 'var res = [];']
         vars = []
         
-        for iter, comprehension in enumerate(node.generators):
+        for iter, comprehension in enumerate(node.comp_nodes):
             cc = []
             # Get target (can be multiple vars)
-            if isinstance(comprehension.target, ast.Tuple):
-                target = [''.join(self.parse(t)) for t in comprehension.target.elts]
+            if isinstance(comprehension.target_node, ast.Tuple):
+                target = [''.join(self.parse(t)) for t in comprehension.target_node.element_nodes]
             else:
-                target = [''.join(self.parse(comprehension.target))]
+                target = [''.join(self.parse(comprehension.target_node))]
             for t in target:
                 vars.append(t)
-            # comprehension(target, iter, ifs)
-            cc.append('iter# = %s;' % ''.join(self.parse(comprehension.iter)))
+            # comprehension(target_node, iter_node, if_nodes)
+            cc.append('iter# = %s;' % ''.join(self.parse(comprehension.iter_node)))
             cc.append('if ((typeof iter# === "object") && (!Array.isArray(iter#))) {iter# = Object.keys(iter#);}')
             cc.append('for (i#=0; i#<iter#.length; i#++) {')
             cc.append(self._iterator_assign('iter#[i#]', *target))
             # Ifs
-            if comprehension.ifs:
+            if comprehension.if_nodes:
                 cc.append('if (!(')
-                for iff in comprehension.ifs:
+                for iff in comprehension.if_nodes:
                     cc += unify(self.parse(iff))
                     cc.append('&&')
                 cc.pop(-1); # pop '&&'
@@ -624,7 +606,7 @@ class Parser2(Parser1):
             vars.extend(['iter%i' % iter, 'i%i' % iter])
         # Push result
         code.append('{res.push(%s);}' % elt)
-        for comprehension in node.generators:
+        for comprehension in node.comp_nodes:
             code.append('}')  # end for
         # Finalize
         code.append('return res;})')  # end function
@@ -666,10 +648,8 @@ class Parser2(Parser1):
         
         # Collect args
         argnames = []
-        for arg in node.args.args:
-            if not isinstance(arg, (ast.arg, ast.Name)):
-                raise JSError("tuples in argument list are not supported")
-            name = ''.join(self.parse(arg))
+        for arg in node.arg_nodes:  # ast.Arg nodes
+            name = self.NAME_MAP.get(arg.name, arg.name)
             if name != 'this':
                 argnames.append(name)
                 # Add code and comma
@@ -679,11 +659,11 @@ class Parser2(Parser1):
             code.pop(-1)  # pop last comma
         
         # Check
-        if (not lambda_) and node.decorator_list:
+        if (not lambda_) and node.decorator_nodes:
             raise JSError('No support for function decorators')
-        if node.args.kwonlyargs:
+        if node.kwarg_nodes:
             raise JSError('No support for keyword only arguments')
-        if node.args.kwarg:
+        if node.kwargs_node:
             raise JSError('No support for kwargs')
         
         # Prepare for content
@@ -697,16 +677,17 @@ class Parser2(Parser1):
             self.vars.add(name)
         
         # Apply defaults
-        offset = len(argnames) - len(node.args.defaults)
-        for name, default in zip(argnames[offset:], node.args.defaults):
-            d = ''.join(self.parse(default))
-            x = '%s = (%s === undefined) ? %s: %s;' % (name, name, d, name)
-            code.append(self.lf(x))
+        for arg in node.arg_nodes:
+            if arg.value_node is not None:
+                name = arg.name
+                d = ''.join(self.parse(arg.value_node))
+                x = '%s = (%s === undefined) ? %s: %s;' % (name, name, d, name)
+                code.append(self.lf(x))
         
         # Handle varargs
-        if node.args.vararg:
+        if node.args_node:
             asarray = 'Array.prototype.slice.call(arguments)'
-            name = node.args.vararg if isinstance(node.args.vararg, str) else node.args.vararg.arg
+            name = node.args_node.name  # always an ast.Arg
             self.vars.add(name)
             if not argnames:
                 # Make available under *arg name
@@ -719,11 +700,11 @@ class Parser2(Parser1):
         # Apply content
         if lambda_:
             code.append('return ')
-            code += self.parse(node.body)
+            code += self.parse(node.body_node)
             code.append(';')
         else:
             docstring = self.pop_docstring(node)
-            if docstring and not node.body:
+            if docstring and not node.body_nodes:
                 # Raw JS
                 for line in docstring.splitlines():
                     code.append(self.lf(line))
@@ -732,7 +713,7 @@ class Parser2(Parser1):
                 if self._docstrings:
                     for line in docstring.splitlines():
                         code.append(self.lf('// ' + line))
-                for child in node.body:
+                for child in node.body_nodes:
                     code += self.parse(child)
         
         # Wrap up
@@ -757,32 +738,27 @@ class Parser2(Parser1):
     def parse_Lambda(self, node):
         return self.parse_FunctionDef(node, True)
     
-    def parse_arg(self, node):
-        # Py3k only
-        name = node.arg
-        return self.NAME_MAP.get(name, name)
-    
     def parse_Return(self, node):
-        if node.value is not None:
-            return self.lf('return %s;' % ''.join(self.parse(node.value)))
+        if node.value_node is not None:
+            return self.lf('return %s;' % ''.join(self.parse(node.value_node)))
         else:
             return self.lf("return null;")
     
     def parse_ClassDef(self, node):
         
         # Checks
-        for base in node.bases:
+        for base in node.arg_nodes:
             if not isinstance(base, ast.Name):
                 raise JSError('Base classes must be simple names.')
-        if len(node.bases) > 1:
+        if len(node.arg_nodes) > 1:
             raise JSError('Multiple inheritance not (yet) supported.')
-        if node.keywords or node.starargs or node.kwargs:
+        if node.kwarg_nodes:
             raise JSError('Metaclasses not supported.')
-        if node.decorator_list:
+        if node.decorator_nodes:
             raise JSError('Class decorators not supported.')
         
         # Get base class (not the constructor)
-        base_class = node.bases[0].id if node.bases else 'Object'
+        base_class = node.arg_nodes[0].name if node.arg_nodes else 'Object'
         if base_class.lower() == 'object':  # maybe Python "object"
             base_class = 'Object'
         else:
@@ -797,7 +773,7 @@ class Parser2(Parser1):
         # Body ...
         self.vars.add(node.name)
         self.push_stack('class', node.name)
-        for sub in node.body:
+        for sub in node.body_nodes:
             code += self.parse(sub)
         code.append('\n')
         self.pop_stack()
@@ -810,7 +786,7 @@ class Parser2(Parser1):
         # Note that in parse_Call() we ensure that a call using super
         # uses .call(this, ...) so that the instance is handled ok.
         
-        if node.args:
+        if node.arg_nodes:
             raise JSError('super() accepts 0 or 1 arguments.')
         if len(self._stack) < 3:  # module, class, function
             #raise JSError('can only use super() inside a method.')

@@ -192,7 +192,8 @@ class AssetStore:
         # Export all assets
         for fname in self.get_asset_names():
             if not fname.startswith('index-'):
-                open(os.path.join(dirname, fname), 'wb').write(self.load_asset(fname))
+                with open(os.path.join(dirname, fname), 'wb') as f:
+                    f.write(self.load_asset(fname))
 
 # Our singleton asset store
 assets = AssetStore()

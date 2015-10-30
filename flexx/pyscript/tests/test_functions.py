@@ -149,7 +149,8 @@ def test_scripts():
     # Prepare
     pycode = 'foo = 42; print(foo)'
     pyname = os.path.join(tempfile.gettempdir(), 'flexx_test.py')
-    open(pyname, 'wb').write(pycode.encode())
+    with open(pyname, 'wb') as f:
+        f.write(pycode.encode())
     jsname = pyname[:-3] + '.js'
     
     # Convert - plain file (no module)

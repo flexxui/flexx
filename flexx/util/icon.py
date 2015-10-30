@@ -323,20 +323,24 @@ class Icon(object):
         
         if filename.lower().endswith('.ico'):
             data = self._to_ico()
-            open(filename, 'wb').write(data)
+            with open(filename, 'wb') as f:
+                f.write(data)
         elif filename.lower().endswith('.icns'):
             data = self._to_icns()
-            open(filename, 'wb').write(data)    
+            with open(filename, 'wb') as f:
+                f.write(data)
         elif filename.lower().endswith('.png'):
             for size in sorted(self._ims):
                 filename2 = '%s%i%s' % (filename[:-4], size, filename[-4:])
                 data = self._to_png(self._ims[size])
-                open(filename2, 'wb').write(data)
+                with open(filename2, 'wb') as f:
+                    f.write(data)
         elif filename.lower().endswith('.bmp'):
             for size in sorted(self._ims):
                 filename2 = '%s%i%s' % (filename[:-4], size, filename[-4:])
                 data = self._to_bmp(self._ims[size], file_header=True)
-                open(filename2, 'wb').write(data)
+                with open(filename2, 'wb') as f:
+                    f.write(data)
         else:
             raise ValueError('Can only export to png, bmp, or ico')
     

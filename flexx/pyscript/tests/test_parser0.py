@@ -16,11 +16,11 @@ def test_unify():
     # Simple names
     assert unify('foo') == 'foo'
     assert unify('foo.bar') == 'foo.bar'
-    assert unify('foo12') == 'foo12'
+    assert unify('foo_12') == 'foo_12'
     
     # Simple calls
     assert unify('foo()') == 'foo()'
-    assert unify('bar.foo()') == 'bar.foo()'
+    assert unify('bar.fo_o()') == 'bar.fo_o()'
     
     # Anything that already has braces or []
     assert unify('(foo)') == '(foo)'
@@ -31,11 +31,16 @@ def test_unify():
     assert unify('_truthy(some args bla)') == '_truthy(some args bla)'
     assert unify('foo(3)') == 'foo(3)'
     
+    # Indexing
+    assert unify('foo[1]') == 'foo[1]'
+    assert unify('bar.foo[1:2,3]') == 'bar.foo[1:2,3]'
+    
     # Otherwise ... braces!
     assert unify('3+3') == '(3+3)'
     assert unify('(3)+(3)') == '((3)+(3))'
     assert unify('[3]+[3]') == '([3]+[3])'
     assert unify('foo((3))') == '(foo((3)))'
+    assert unify('bar+foo(3)') == '(bar+foo(3))'
 
 
 run_tests_if_main()

@@ -187,7 +187,8 @@ def script2js(filename, namespace=None, target=None):
         filename2 = os.path.join(dirname, fname[:-3] + '.js')
     else:
         filename2 = target
-    open(filename2, 'wt', encoding='utf-8').write(jscode)
+    with open(filename2, 'wb') as f:
+        f.write(jscode.encode())
 
 
 def clean_code(code):

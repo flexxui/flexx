@@ -1,3 +1,4 @@
+# -*- coding: utf-8
 """
 Parts of this code (and in the other modules that define the parser
 class) are inspired by / taken from the py2js project.
@@ -16,7 +17,8 @@ situations:
 
 import sys
 import re
-import ast
+
+from . import commonast as ast
 
 
 class JSError(Exception):
@@ -29,20 +31,19 @@ def unify(x):
     """ Turn string or list of strings parts into string. Braces are
     placed around it if its not alphanumerical
     """
+    # Note that r'[\.\w]' matches anyting in 'ab_01.äé'
+    
     if isinstance(x, (tuple, list)):
         x = ''.join(x)
     
     if x[0] in '\'"' and x[0] == x[-1] and x.count(x[0]) == 2:
         return x  # string
-    #elif x.isidentifier() or x.isalnum():
-    elif re.match(r'^[.\w]*$', x):
-        return x  # identifier, numbers, dots
-    elif re.match(r'^[.\w]*\(.*\)', x) and x.endswith(')') and x.count(')') == 1:
-        return x  # function calls (e.g. super())
-    elif x.startswith('(') and x.endswith(')') and x.count(')') == 1:
-        return x
-    elif x.startswith('[') and x.endswith(']') and x.count(']') == 1:
-        return x
+    elif re.match(r'^[\.\w]*$', x):
+        return x  # words consisting of normal chars, numbers and dots
+    elif re.match(r'^[\.\w]*\(.*\)$', x) and x.count(')') == 1:
+        return x  # function calls (e.g. 'super()' or 'foo.bar(...)')
+    elif re.match(r'^[\.\w]*\[.*\]$', x) and x.count(']') == 1:
+        return x  # indexing
     else:
         return '(%s)' % x
 
@@ -316,9 +317,9 @@ class Parser0(object):
         empty string.
         """
         docstring = ''
-        if (node.body and isinstance(node.body[0], ast.Expr) and
-                          isinstance(node.body[0].value, ast.Str)):
-            docstring = node.body.pop(0).value.s.strip()
+        if (node.body_nodes and isinstance(node.body_nodes[0], ast.Expr) and
+                                isinstance(node.body_nodes[0].value_node, ast.Str)):
+            docstring = node.body_nodes.pop(0).value_node.value.strip()
             lines = docstring.splitlines()
             getindent = lambda x: len(x) - len(x.strip())
             indent = min([getindent(x) for x in lines[1:]]) if (len(lines) > 1) else 0

@@ -240,7 +240,8 @@ def export(cls, filename=None, single=True):
     # Save to file
     if filename.startswith('~'):
         filename = os.path.expanduser(filename)
-    open(filename, 'wt', encoding='utf-8').write(html)
+    with open(filename, 'wb') as f:
+        f.write(html.encode())
     logging.info('Exported app to %r' % filename)
 
 
