@@ -17,7 +17,7 @@ situations:
 
 import sys
 import re
-# import ast
+
 from . import commonast as ast
 
 

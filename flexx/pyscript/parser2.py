@@ -189,8 +189,8 @@ you can only catch Error objects.
 """
 
 import sys
-from . import commonast as ast
 
+from . import commonast as ast
 from .parser1 import Parser1, JSError, unify  # noqa
 
 

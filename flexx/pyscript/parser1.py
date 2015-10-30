@@ -144,13 +144,9 @@ As in Python, the default return value of a function is ``None`` (i.e.
 
 """
 
-# todo: compat with Py 3.5? I heard they changed ast parsing
-
 import re
-# import ast
+
 from . import commonast as ast
-
-
 from .parser0 import Parser0, JSError, unify  # noqa
 
 

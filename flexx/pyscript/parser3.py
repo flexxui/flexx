@@ -177,7 +177,6 @@ Additional sugar
 """
 
 from . import commonast as ast
-
 from .parser2 import Parser2, JSError, unify  # noqa
 
 # List of possibly relevant builtin functions:

@@ -1011,7 +1011,6 @@ class NativeAstConverter:
         return node
     
     def _convert_With(self, n):
-        # todo: unnest when we have multiple context expr
         c = self._convert
         if hasattr(n, 'items'):
             node = With([c(x) for x in n.items], [])
