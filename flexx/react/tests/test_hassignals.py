@@ -275,7 +275,8 @@ def test_no_memory_leak():
     
     t = Test()
     wt = weakref.ref(t)
-    assert sys.getrefcount(t) >= 3
+    if hasattr(sys, 'getrefcount'):  # pypy has not
+        assert sys.getrefcount(t) >= 3
     
     t.disconnect_signals()
     t.foo.disconnect_signals()
