@@ -13,6 +13,7 @@ import json
 import base64
 
 pyversion = sys.version_info
+NoneType = None.__class__
 
 # do some extra asserts when running tests, but not always, for speed
 docheck = 'pytest' in sys.modules
@@ -77,21 +78,23 @@ class Node:
         assert len(args) == len(names)  # check this always
         if docheck:
             assert not hasattr(self, '__dict__'), 'Nodes must have __slots__'
-            assert not self.__class__ is Node, 'Node is an abstract class'
+            assert self.__class__ is not Node, 'Node is an abstract class'
             for name, val in zip(names, args):
                 assert not isinstance(val, ast.AST)
                 if name == 'name':
-                    assert isinstance(val, (str, None.__class__)), 'name is not a string'
+                    assert isinstance(val, (str, NoneType)), 'name is not a string'
                 elif name == 'op':
                     assert val in Node.OPS.__dict__ or val in Node.COMP.__dict__
                 elif name.endswith('_node'):
-                    assert isinstance(val, (Node, None.__class__)), '%r is not a Node instance' % name
+                    assert isinstance(val, (Node, NoneType)), '%r is not a Node' % name
                 elif name.endswith('_nodes'):
-                    islistofnodes = isinstance(val, list) and all(isinstance(n, Node) for n in val)
+                    islistofnodes = (isinstance(val, list) and 
+                                     all(isinstance(n, Node) for n in val))
                     assert islistofnodes, '%r is not a list of nodes' % name
                 else:
-                    assert not isinstance(val, Node), '%r should not be a Node instance' % name
-                    assert not (isinstance(val, list) and all(isinstance(n, Node) for n in val))
+                    assert not isinstance(val, Node), '%r should not be a Node' % name
+                    assert not (isinstance(val, list) and 
+                                all(isinstance(n, Node) for n in val))
         # Assign
         for name, val in zip(names, args):
             setattr(self, name, val)
@@ -428,7 +431,7 @@ class DictComp(Node):
         value_node: the value of the item being evaluated.
         comp_nodes: a list of Comprehension nodes.
     """
-    __slots__ = 'key_node', 'value_node',  'comp_nodes'
+    __slots__ = 'key_node', 'value_node', 'comp_nodes'
 
 class Comprehension(Node):
     """ Represents a single for-clause in a comprehension.
@@ -1041,15 +1044,15 @@ class NativeAstConverter:
         # Parse args_node and kwargs_node
         args_node = Arg(args.vararg, None, c(args.varargannotation)) \
                     if isinstance(args.vararg, str) else c(args.vararg)
-        kwargs_node = Arg(args.kwarg, None, c(args.kwargannotation )) \
+        kwargs_node = Arg(args.kwarg, None, c(args.kwargannotation)) \
                       if isinstance(args.kwarg, str) else c(args.kwarg)
         
-        node = FunctionDef(n.name, [c(x) for x in n.decorator_list], c(n.returns), 
+        node = FunctionDef(n.name, [c(x) for x in n.decorator_list], c(n.returns),
                            arg_nodes, kwarg_nodes, args_node, kwargs_node,
                            [])
         if docheck:
-            assert isinstance(node.args_node, (None.__class__, Arg))
-            assert isinstance(node.kwargs_node, (None.__class__, Arg))
+            assert isinstance(node.args_node, (NoneType, Arg))
+            assert isinstance(node.kwargs_node, (NoneType, Arg))
             for x in node.arg_nodes + node.kwarg_nodes:
                 assert isinstance(x, Arg)
         
@@ -1064,9 +1067,9 @@ class NativeAstConverter:
         for i, default in enumerate(reversed(args.defaults)):
             arg_nodes[-1-i].value_node = c(default)
         for i, default in enumerate(reversed(args.kw_defaults)):
-            kwarg_nodes[-1-i].value_node = c(default) 
+            kwarg_nodes[-1-i].value_node = c(default)
         
-        return Lambda(arg_nodes, kwarg_nodes, 
+        return Lambda(arg_nodes, kwarg_nodes,
                       c(args.vararg), c(args.kwarg), c(n.body))
         
     def _convert_arg(self, n):
