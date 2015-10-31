@@ -63,24 +63,6 @@ def run_tests_if_main(show_coverage=False):
         webbrowser.open_new_tab(fname)
 
 
-## Functions to use from make
-
-def test_unit(cov_report='term'):
-    """ Run all unit tests. Returns exit code.
-    """
-    orig_dir = os.getcwd()
-    os.chdir(ROOT_DIR)
-    try:
-        _clear_our_modules()
-        _enable_faulthandler()
-        return pytest.main('-v --cov %s --cov-config .coveragerc '
-                           '--cov-report %s tests' % (PACKAGE_NAME, cov_report))
-    finally:
-        os.chdir(orig_dir)
-        m = __import__(PACKAGE_NAME)
-        print('Tests were performed on', str(m))
-
-
 ## Requirements
 
 def _enable_faulthandler():
