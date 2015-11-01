@@ -26,6 +26,7 @@ Interactive example:
                 self.label.text('x'.repeat(value))
 """
 
+from ...pyscript.stubs import undefined, phosphor
 from ... import react
 from . import Widget
 
@@ -65,12 +66,13 @@ class Slider(Widget):
             self.p = phosphor.createWidget('input')
             self.p.node.type = 'range'
             that = self
-            this.p.node.addEventListener('input', lambda ev: that.user_value._set(that.node.value), False)
+            f = lambda ev: that.user_value._set(that.node.value)
+            self.p.node.addEventListener('input', f, False)
             #if IE10:
-            #    this.node.addEventListener('change', lambda ev: that.user_value._set(that.node.value), False)
+            #   this.node.addEventListener('change', f, False)
             
         @react.source
-        def user_value(v):
+        def user_value(self, v):
             """ The slider value set by the user (updates on user interaction). """
             if v is not undefined:
                 v = float(v)

@@ -10,10 +10,9 @@ from .. import react
 from ..react.hassignals import HasSignalsMeta, with_metaclass
 from ..react.pyscript import create_js_signals_class, HasSignalsJS
 from ..pyscript.functions import py2js, js_rename
+from ..pyscript.stubs import flexx
 
 from .serialize import serializer
-
-flexx = None  # fool pyflakes
 
 
 model_classes = []

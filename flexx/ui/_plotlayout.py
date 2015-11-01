@@ -33,7 +33,6 @@ Example:
 
 """
 
-from .. import react
 from . import Widget
 from . import Layout, VBox, HBox, GroupWidget, PlotWidget
 

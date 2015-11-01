@@ -32,7 +32,7 @@ Interactive example:
 """
 
 from ... import react
-from . import Widget
+from . import Widget, phosphor
 
 
 class ProgressBar(Widget):
@@ -65,4 +65,3 @@ class ProgressBar(Widget):
         @react.connect('max')
         def _max_changed(self, max_value):
             self.node.max = max_value
-

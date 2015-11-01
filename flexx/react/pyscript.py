@@ -6,14 +6,9 @@ import json
 
 from ..pyscript import py2js
 from ..pyscript.parser2 import get_class_definition
+from ..pyscript.stubs import undefined, console, Object, Date
 
 from .signals import Signal, SourceSignal
-
-# Fool pyflakes
-from ..pyscript import undefined
-Date = None
-Object = None
-console = None
 
 
 class HasSignalsJS:

@@ -69,11 +69,11 @@ To lean about the individual widgets, check the
 # small set of closely related classes). In order not to pollute this
 # namespace, we prefix the module names with an underscrore.
 
-from ._widget import Widget
-from .layouts import *
-from .widgets import *
+from ._widget import Widget  # noqa
+from .layouts import *  # noqa
+from .widgets import *  # noqa
 
-from ._plotlayout import PlotLayout
+from ._plotlayout import PlotLayout  # noqa
 
 # flexx.ui needs phosphor
 def _install_assets():

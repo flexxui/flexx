@@ -10,6 +10,7 @@ Example:
 """
 
 from ... import react
+from ...pyscript.stubs import phosphor
 from . import Widget
 
  
@@ -28,7 +29,7 @@ class IFrame(Widget):
         does not have '://' in it.
         """
         v = str(v)
-        if v and not '://' in v:
+        if v and '://' not in v:
             v = 'http://' + v
         return v
     

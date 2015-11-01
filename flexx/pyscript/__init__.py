@@ -200,16 +200,3 @@ class Parser(Parser3):
 
 
 from .functions import py2js, evaljs, evalpy, script2js, clean_code, js_rename  # noqa
-
-
-# Some names that users may want to import to fool pyflakes
-window = '<<JS-WINDOW>>'  # noqa
-document = '<<JS-DOCUMENT>>'  # noqa
-Object = '<<JS-OBJECT>>'  # noqa
-
-# We'll be using "undefined" in flexx.react as weel, and want to use
-# the same exact object, without having dependencies.
-class undefined:
-    def __repr__(self):
-        return 'undefined'
-undefined = getattr(sys, '_undefined', undefined())  # noqa

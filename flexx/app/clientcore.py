@@ -2,15 +2,9 @@
 The client's core Flexx engine, implemented in PyScript.
 """
 
-from ..pyscript import py2js, undefined, window, root
-
-# fool pyflakes
-console = None 
-document = None
-flexx = None
-module = None
-require = None
-typeof = None
+from ..pyscript import py2js
+from ..pyscript.stubs import (undefined, window, root, console, document,
+                             module, flexx, require, typeof)
 
 
 @py2js
