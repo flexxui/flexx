@@ -13,7 +13,7 @@ import threading
 
 from .. import react
 from ..app import Model
-from ...pyscript.stubs import phosphor, undefined, window, document, flexx
+from ..pyscript.stubs import phosphor, undefined, window, document, flexx
 
 def _check_two_scalars(name, v):
     if not (isinstance(v, (list, tuple)) and
@@ -221,7 +221,7 @@ class Widget(Model):
         if old_parent is undefined:
             return new_parent
         
-        if old_parent is not None:
+        if old_parent is not None and old_parent is not undefined:
             children = list(old_parent.children())
             while self in children:
                 children.remove(self)

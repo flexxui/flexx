@@ -13,7 +13,7 @@ import logging
 class undefined:
     def __repr__(self):
         return 'undefined'
-undefined = getattr(sys, '_undefined', undefined())
+undefined = sys._undefined = getattr(sys, '_undefined', undefined())
 
 
 class SignalValueError(Exception):

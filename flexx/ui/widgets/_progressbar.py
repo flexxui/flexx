@@ -32,7 +32,8 @@ Interactive example:
 """
 
 from ... import react
-from . import Widget, phosphor
+from ...pyscript.stubs import phosphor
+from . import Widget
 
 
 class ProgressBar(Widget):
