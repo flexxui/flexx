@@ -308,8 +308,8 @@ something we'd need to work out ...
 
 """
 
-from .signals import SignalValueError, Signal, undefined
-from .signals import Signal, SourceSignal, InputSignal, LazySignal
-from .decorators import connect, source, input, lazy, nosync
-from .hassignals import HasSignals
-from .functional import map, filter, reduce, merge
+from .signals import SignalValueError, Signal, undefined  # noqa
+from .signals import Signal, SourceSignal, InputSignal, LazySignal  # noqa
+from .decorators import connect, source, input, lazy, nosync  # noqa
+from .hassignals import HasSignals  # noqa
+from .functional import map, filter, reduce, merge  # noqa
