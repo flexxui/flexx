@@ -78,11 +78,11 @@ Overview of classes:
 
 """
 
-from .session import manager, Session
-from .model import Model, get_instance_by_id, get_model_classes
-from .funcs import run, start, stop, call_later
-from .funcs import init_notebook, serve, launch, export
-from .assetstore import assets
-from .clientcore import FlexxJS
+from .session import manager, Session  # noqa
+from .model import Model, get_instance_by_id, get_model_classes  # noqa
+from .funcs import run, start, stop, call_later  # noqa
+from .funcs import init_notebook, serve, launch, export  # noqa
+from .assetstore import assets  # noqa
+from .clientcore import FlexxJS  # noqa
 
 assets.create_module_assets('flexx.app', js=FlexxJS + 'var flexx = new FlexxJS();\n')

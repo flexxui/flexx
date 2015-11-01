@@ -2,7 +2,15 @@
 The client's core Flexx engine, implemented in PyScript.
 """
 
-from ..pyscript import py2js
+from ..pyscript import py2js, undefined, window, root
+
+# fool pyflakes
+console = None 
+document = None
+flexx = None
+module = None
+require = None
+typeof = None
 
 
 @py2js
@@ -17,8 +25,8 @@ class FlexxJS:
         self.last_msg = None
         self.is_notebook = False  # if not, we "close" when the ws closes
         # For nodejs, the location is set by the flexx nodejs runtime.
-        self.ws_url = ('ws://%s:%s/%s/ws' % (location.hostname, location.port, 
-                                             location.pathname))
+        loc = window.location
+        self.ws_url = ('ws://%s:%s/%s/ws' % (loc.hostname, loc.port, loc.pathname))
         self.is_exported = False
         self.classes = {}
         self.instances = {}
@@ -27,8 +35,8 @@ class FlexxJS:
             self._global = root
             self.nodejs = True
             root.setTimeout(self.init, 1)  # ms
-            process.on('exit', self.exit, False)
-            process.on('SIGINT', self.exit, False)
+            root.process.on('exit', self.exit, False)
+            root.process.on('SIGINT', self.exit, False)
             root.setTimeout(self.exit, 10000000)  # keep alive ~35k years
         else:
             # browser
@@ -113,7 +121,7 @@ class FlexxJS:
             ws.onopen = on_ws_open
             ws.onmessage = on_ws_message
             ws.onclose = on_ws_close
-            ws.onerror  = on_ws_error
+            ws.onerror = on_ws_error
     
     def initLogging(self):
         """ Setup logging so that messages are proxied to Python.
@@ -128,23 +136,28 @@ class FlexxJS:
         
         def log(self, msg):
             console.ori_log(msg)
-            if flexx.ws is not None: flexx.ws.send("PRINT " + msg)
+            if flexx.ws is not None:
+                flexx.ws.send("PRINT " + msg)
         def info(self, msg):
             console.ori_info(msg)
-            if flexx.ws is not None: flexx.ws.send("INFO " + msg)
+            if flexx.ws is not None:
+                flexx.ws.send("INFO " + msg)
         def warn(self, msg):
             console.ori_warn(msg)
-            if flexx.ws is not None: flexx.ws.send("WARN " + msg)
+            if flexx.ws is not None:
+                flexx.ws.send("WARN " + msg)
         def error(self, msg):
             console.ori_error(msg)
-            if flexx.ws is not None: flexx.ws.send("ERROR " + msg)
+            if flexx.ws is not None:
+                flexx.ws.send("ERROR " + msg)
         def on_error(self, evt):
             msg = evt
             if evt.message and evt.lineno:  # message, url, linenumber (not in nodejs)
                 msg = "On line %i in %s:\n%s" % (evt.lineno, evt.filename, evt.message)
             elif evt.stack:
                 msg = evt.stack
-            if flexx.ws is not None: flexx.ws.send("ERROR " + msg)
+            if flexx.ws is not None:
+                flexx.ws.send("ERROR " + msg)
         
         # Set new versions
         console.log = log
@@ -153,7 +166,7 @@ class FlexxJS:
         console.error = error
         # Create error handler, so that JS errors get into Python
         if self.nodejs:
-            process.on('uncaughtException', on_error, False)
+            root.process.on('uncaughtException', on_error, False)
         else:
             window.addEventListener('error', on_error, False)
     
@@ -204,7 +217,8 @@ class FlexxJS:
             data = new Uint8Array(arrayBuffer);
     
         // If we have a BOM skip it
-        if (data.length >= 3 && data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) {
+        if (data.length >= 3 &&
+            data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) {
             i = 3;
         }
     
@@ -227,7 +241,8 @@ class FlexxJS:
                 }
                 c2 = data[i + 1];
                 c3 = data[i + 2];
-                result += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+                result += String.fromCharCode(((c & 15) << 12) |
+                                              ((c2 & 63) << 6) | (c3 & 63));
                 i += 3;
             }
         }

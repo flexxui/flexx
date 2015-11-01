@@ -3,17 +3,13 @@ Functional API for flexx.app
 """
 
 import os
-import time
-import inspect
 import logging
 
-from ..util.icon import Icon
 from .. import webruntime
 from .. import react
 
 from .model import Model
-from .session import Session, manager
-from .assetstore import assets
+from .session import manager
 from .tornadoserver import server
 
 
@@ -194,11 +190,11 @@ def launch(cls, runtime='xul', **runtime_kwargs):
     host, port = server.serving_at
     if runtime == 'nodejs':
         all_js = session.get_all_css_and_js()[1]
-        session._runtime = launch('http://%s:%i/%s/' % (host, port, session.app_name), 
-                                runtime=runtime, code=all_js)
+        url = '%s:%i/%s/' % (host, port, session.app_name)
+        session._runtime = launch('http://' + url, runtime=runtime, code=all_js)
     else:
-        session._runtime = launch('http://%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id), 
-                                runtime=runtime, **runtime_kwargs)
+        url = '%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id)
+        session._runtime = launch('http://' + url, runtime=runtime, **runtime_kwargs)
     
     return session.app
 
@@ -256,7 +252,8 @@ class ExporterWebSocketDummy(object):
         self._commands = []
         # todo: make icon and title work
         #self.command('ICON %s.ico' % session.id)
-        #self.command('TITLE %s' % session._runtime_kwargs.get('title', 'Exported flexx app'))
+        # self.command('TITLE %s' % session._runtime_kwargs.get('title', 
+        #                                                       'Exported flexx app'))
     
     def command(self, cmd):
         self._commands.append(cmd)

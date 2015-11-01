@@ -3,24 +3,17 @@ Base class for objects that live in both Python and JS.
 This basically implements the syncing of signals.
 """
 
-import sys
-import json
 import weakref
-import hashlib
+import logging
 
 from .. import react
 from ..react.hassignals import HasSignalsMeta, with_metaclass
 from ..react.pyscript import create_js_signals_class, HasSignalsJS
-
 from ..pyscript.functions import py2js, js_rename
-from ..pyscript.parser2 import get_class_definition
 
 from .serialize import serializer
 
-if sys.version_info[0] >= 3:
-    string_types = str,
-else:  # pragma: no cover
-    string_types = basestring,
+flexx = None  # fool pyflakes
 
 
 model_classes = []
@@ -48,7 +41,7 @@ class JSSignal(react.SourceSignal):
         if doc is not None:
             func.__doc__ = doc
         
-        if isinstance(func_or_name, string_types):
+        if isinstance(func_or_name, str):
             func.__name__ = func_or_name
         else:
             func.__name__ = func_or_name.__name__
@@ -107,12 +100,13 @@ class ModelMeta(HasSignalsMeta):
                     elif isinstance(getattr(cls, name), (JSSignal, react.InputSignal)):
                         pass  # ok, overloading on JS side, or an input signal
                     else:
-                        print('Warning: JS signal %r not proxied, as it would hide a Py attribute.' % name)
+                        logging.warn('JS signal %r not proxied, '
+                                     'as it would hide a Py attribute.' % name)
         
         # Implicit inheritance for JS "sub"-class
         jsbases = [getattr(b, 'JS') for b in cls.__bases__ if hasattr(b, 'JS')]
         JS = type('JS', tuple(jsbases), {})
-        for c in (cls, ): #cls.__bases__ + (cls, ):
+        for c in (cls, ):  # cls.__bases__ + (cls, ):
             if 'JS' in c.__dict__:
                 if '__init__' in c.JS.__dict__:
                     JS.__init__ = c.JS.__init__
@@ -134,7 +128,8 @@ class ModelMeta(HasSignalsMeta):
                 elif isinstance(getattr(cls.JS, name), (PySignal, react.InputSignal)):
                     pass  # ok, overloaded signal on JS side
                 else:
-                    print('Warning: Py signal %r not proxied, as it would hide a JS attribute.' % name)
+                    logging.warn('Py signal %r not proxied, '
+                                 'as it would hide a JS attribute.' % name)
         
         # Set JS and CSS for this class
         cls.JS.CODE = cls._get_js()
@@ -151,13 +146,15 @@ class ModelMeta(HasSignalsMeta):
             c = py2js(serializer.__class__, 'flexx.Serializer')
             code.append(c)
             code.append('flexx.serializer = new flexx.Serializer();')
-            c = js_rename(HasSignalsJS.JSCODE, 'HasSignalsJS', 'flexx.classes.HasSignals')
+            c = js_rename(HasSignalsJS.JSCODE, 'HasSignalsJS',
+                          'flexx.classes.HasSignals')
             code.append(c)
         # Add this class
         code.append(create_js_signals_class(cls.JS, cls_name, base_class))
         code[-1] += '%s.prototype._class_name = "%s";\n' % (cls_name, cls.__name__)
         if cls.mro()[1] is react.HasSignals:
-            code.append('flexx.serializer.add_reviver("Flexx-Model", flexx.classes.Model.prototype.__from_json__);\n')
+            code.append('flexx.serializer.add_reviver("Flexx-Model",'
+                        ' flexx.classes.Model.prototype.__from_json__);\n')
         return '\n'.join(code)
 
 
@@ -271,7 +268,8 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
         react.HasSignals.__setattr__(self, name, value)
         if isinstance(value, Model):
             txt = serializer.saves(value)
-            cmd = 'flexx.instances.%s.%s = flexx.serializer.loads(%r);' % (self._id, name, txt)
+            cmd = 'flexx.instances.%s.%s = flexx.serializer.loads(%r);' % (
+                self._id, name, txt)
             self._session._exec(cmd)
     
     def _set_signal_from_js(self, name, text, esid):
@@ -305,7 +303,8 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
         if not isinstance(signal, JSSignal) and not signal.flags.get('nosync', False):
             #txt = json.dumps(signal.value)
             txt = serializer.saves(signal.value)
-            cmd = 'flexx.instances.%s._set_signal_from_py(%r, %r, %r);' % (self._id, signal.name, txt, esid)
+            cmd = 'flexx.instances.%s._set_signal_from_py(%r, %r, %r);' % (
+                self._id, signal.name, txt, esid)
             self._session._exec(cmd)
     
     def _link_js_signal(self, name, link=True):
@@ -371,14 +370,15 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
                 return
             signal._esid = signal._count  # mark signal as just updated by us
             # todo: what signals do we sync? all but private signals? or only linked?
-            # signals like `text` should always sync, signals like a 100Hz timer not, mouse_pos maybe neither unless linked against
-            #if signal.signal_type == 'PyInputSignal' or self._linked_signals[signal._name]:
+            # signals like `text` should always sync, signals like a 100Hz
+            # timer not, mouse_pos maybe neither unless linked against
             if signal.flags.nosync:
                 return
             if signal.signal_type != 'PySignal' and not signal._name.startswith('_'):
                 #txt = JSON.stringify(signal.value)
                 txt = flexx.serializer.saves(signal.value)
-                flexx.ws.send('SIGNAL ' + [self.id, signal._esid, signal._name, txt].join(' '))
+                flexx.ws.send('SIGNAL ' +
+                              [self.id, signal._esid, signal._name, txt].join(' '))
         
         def _link_js_signal(self, name, link):
             if link:
@@ -388,22 +388,6 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
                     self._signal_changed(self[name])
             elif self._linked_signals[name]:
                 del self._linked_signals[name]
-        
-        
-        ## JS event system
-        
-        # def _proxy_event(self, element, name):
-        #     """ Easily get JS events from DOM elements in our event system.
-        #     """
-        #     that = this
-        #     element.addEventListener(name, lambda ev: that.emit_event(name, {'cause': ev}), False)
-        # 
-        # def _connect_js_event(self, element, event_name, method_name):
-        #     """ Connect methods of this object to JS events.
-        #     """
-        #     that = this
-        #     element.addEventListener(event_name, lambda ev: that[method_name](ev), False)
-
 
 # Make model objects de-serializable
 serializer.add_reviver('Flexx-Model', Model.__from_json__)
