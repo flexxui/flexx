@@ -12,7 +12,7 @@ ROOT_DIR = op.dirname(THIS_DIR)
 
 # Setup paths
 os.chdir(ROOT_DIR)
-sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, '.')
 if 'make' in sys.path:
     sys.path.remove('make')
 

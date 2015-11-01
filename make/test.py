@@ -28,29 +28,34 @@ def test(arg='', *args):
 
 
 def test_unit(rel_path='.'):
-    
+    # Ensure we have pytest
     try:
         import pytest  # noqa
     except ImportError:
         sys.exit('Cannot do unit tests, pytest not installed')
-    
-    _enable_faulthandler()
-    
-    cov_report = '--cov-report=term --cov-report=html'
+    # If testing installed version, import module first
+    if os.getenv('TEST_INSTALL', '').lower() in ('1', 'yes', 'true'):
+        os.chdir(os.path.expanduser('~'))
+        m = __import__(NAME)
+        assert ROOT_DIR not in m.__path__[0]
+    # Goto root dir - where the test scripts are
     os.chdir(ROOT_DIR)
+    # Start tests
+    _enable_faulthandler()
+    cov_report = '--cov-report=term --cov-report=html'
     try:
         res = pytest.main('--cov %s --cov-config=.coveragerc %s %r' % 
                           (NAME, cov_report, rel_path))
         sys.exit(res)
     finally:
         m = __import__(NAME)
-        print('Tests were performed on', str(m))
+        print('Unit tests were performed on', str(m))
 
 
 def show_coverage_term():
     from coverage import coverage
     cov = coverage(auto_data=False, branch=True, data_suffix=None,
-                   source=['flexx'])  # should match testing/_coverage.py
+                   source=[NAME])  # should match testing/_coverage.py
     cov.load()
     cov.report()
     
@@ -61,7 +66,7 @@ def show_coverage_html():
     
     print('Generating HTML...')
     cov = coverage(auto_data=False, branch=True, data_suffix=None,
-                   source=['flexx'])  # should match testing/_coverage.py
+                   source=[NAME])  # should match testing/_coverage.py
     cov.load()
     cov.html_report()
     print('Done, launching browser.')
@@ -72,23 +77,31 @@ def show_coverage_html():
 
 
 def test_style(rel_path='.'):
-    
+    # Ensure we have flake8
     try:
+        import flake8.main
         from flake8.main import main  # noqa
     except ImportError:
         sys.exit('Cannot do style test, flake8 not installed')
-    
+    # Monkey-patch flake8 to get a clear summary
+    def my_report(report, flake8_style):
+        print('%sFound %i errors in %i lines in %i files.' % (
+              'Arg! ' if report.total_errors else 'Hooray! ',
+              report.total_errors,
+              report.counters['logical lines'],
+              report.counters['files']))
+        return flake8.main.ori_print_report(report, flake8_style)
+    if not hasattr(flake8.main, 'ori_print_report'):
+        flake8.main.ori_print_report = flake8.main.print_report
+        flake8.main.print_report = my_report
+    # Prepare
     orig_dir = os.getcwd()
     orig_argv = sys.argv
-    
     os.chdir(ROOT_DIR)
+    # Do test
+    print('Running flake8 tests ...')
     sys.argv[1:] = [rel_path]
-    try:
-        from flake8.main import main
-        main()  # Raises SystemExit
-    finally:
-        os.chdir(orig_dir)
-        sys.argv[:] = orig_argv
+    flake8.main.main()  # Raises SystemExit
 
 
 class FileForTesting(object):
