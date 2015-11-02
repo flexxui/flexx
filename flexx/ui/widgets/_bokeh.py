@@ -64,7 +64,7 @@ class BokehWidget(Widget):
         from bokeh.models import PlotObject
         if not isinstance(plot, PlotObject):
             raise ValueError('Plot must be a Bokeh plot object.')
-        plot.responsive = True
+        plot.responsive = False  # Flexx handles responsiveness
         return plot
     
     @react.connect('plot')
