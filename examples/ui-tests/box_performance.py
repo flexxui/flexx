@@ -2,8 +2,6 @@
 one with hboxes in vboxes in hboxes. For performance testing
 """
 
-import time
-import flexx
 from flexx import ui
 
 

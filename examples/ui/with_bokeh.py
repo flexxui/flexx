@@ -5,8 +5,7 @@ layout. Includes client-side interaction with sliders.
 
 import numpy as np
 
-from bokeh.plotting import figure, show, output_file
-from bokeh.embed import file_html, components
+from bokeh.plotting import figure
 
 from flexx import app, ui, react
 
@@ -18,7 +17,7 @@ x = np.random.normal(0, np.pi, N)
 y = np.sin(x) + np.random.normal(0, 0.2, N)
 TOOLS = "pan,wheel_zoom,box_zoom,reset,box_select"
 p1 = figure(tools=TOOLS)
-p1.scatter(x,y, alpha=0.1, nonselection_alpha=0.1)
+p1.scatter(x, y, alpha=0.1, nonselection_alpha=0.1)
 
 # Plot2
 t = np.linspace(0, 6.5, 100)
@@ -37,7 +36,7 @@ class Example(ui.Widget):
                 with ui.FormLayout():
                     self.amp = ui.Slider(title='Amplitude', max=2, value=1)
                     self.freq = ui.Slider(title='Frequency', max=10, value=5)
-                    self.phase = ui.Slider(title='Phase',max=3, value=1)
+                    self.phase = ui.Slider(title='Phase', max=3, value=1)
                 with ui.Widget(style='overflow-y:auto;', flex=1):
                     self.plot2 = ui.BokehWidget(plot=p2)
                     self.plot3 = ui.BokehWidget(plot=p3)
@@ -60,10 +59,9 @@ class Example(ui.Widget):
                         break
             # Update
             if glyph:
-                glyph.y = [amp*Math.sin(x*freq+phase) for x in glyph.x]
+                glyph.y = [amp*Math.sin(x*freq+phase) for x in glyph.x]  # noqa
                 plot.render()
 
 
 if __name__ == '__main__':
     m = app.launch(Example)
-

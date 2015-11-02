@@ -1,3 +1,4 @@
+# flake8: noqa
 """
 Examample data-viz app. It shows real temperature data from the region
 where I live. The data are monthly average temperatures for the pas 65
@@ -5,6 +6,7 @@ years. The month can be selected with a slider. Via another slider, the
 data can be smoothed so the upward trend can be made more apparent.
 This app can be exported to a standalone HTML document.
 """
+
 
 from flexx import app, ui, react
 
@@ -132,7 +134,8 @@ class Twente(ui.Widget):
     class JS:
         
         data = data
-        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'total']
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 
+                  'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'total']
         
         @react.connect('month.value', 'smoothing.value')
         def _update_plot(self, month, smoothing):
@@ -157,6 +160,7 @@ class Twente(ui.Widget):
             self.plot.ydata(yy2)
 
 if __name__ == '__main__':
-    m = app.launch(Twente, runtime='browser', title='Temperature 1951 - 2014', size=(900, 400))
+    m = app.launch(Twente, runtime='browser', title='Temperature 1951 - 2014',
+                   size=(900, 400))
     m.style('background:#eee;')  # more desktop-like
     app.run()

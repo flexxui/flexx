@@ -17,7 +17,7 @@ import struct
 
 if sys.version_info < (3, ):
     bytes = str
-    str = basestring
+    str = basestring  # noqa
 
 VALID_SIZES = 16, 32, 48, 64, 128, 256
 
@@ -157,6 +157,9 @@ def read_png(f):
         raise RuntimeError('Can only deal with RGB or RGBA.')
     if interlace_method != 0:
         raise RuntimeError('Can only deal with non-interlaced.')
+    if filter_method != 0:
+        raise RuntimeError('Can only deal with unfiltered data.')
+    assert compression_method == 0  # this is always the case for PNG
     
     # If this is the case ... extract pixel info
     lines, prev = [], None
@@ -494,7 +497,7 @@ class Icon(object):
         # Get info from this header
         width = intl(bb[4:8])
         height = intl(bb[8:12]) // (2 - file_header)  # half if not from file 
-        color_planes = intl(bb[12:14])
+        #color_planes = intl(bb[12:14])
         bpp = intl(bb[14:16])
         compression = intl(bb[16:20])
         data_length = intl(bb[20:24])
@@ -588,7 +591,7 @@ class Icon(object):
         if shape[0] != shape[1]:
             raise RuntimeError('Width and height must be equal in icon')
         if shape[0] not in VALID_SIZES:
-            raise RuntimeError('Invalid size %r in png' % width)
+            raise RuntimeError('Invalid size %r in png' % shape[0])
         
         # Make RGBA if necessary
         if shape[2] == 3:

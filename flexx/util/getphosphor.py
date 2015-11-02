@@ -50,5 +50,3 @@ def _fetch_file(url):
 
 if __name__ == '__main__':
     get_phosphor('0736d35c')
-
-

@@ -4,7 +4,7 @@ The client's core Flexx engine, implemented in PyScript.
 
 from ..pyscript import py2js
 from ..pyscript.stubs import (undefined, window, root, console, document,
-                             module, flexx, require, typeof)
+                              module, flexx, require, typeof)
 
 
 @py2js

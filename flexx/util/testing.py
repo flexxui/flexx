@@ -10,11 +10,8 @@ from __future__ import absolute_import, print_function, division
 import os
 import sys
 import inspect
-import shutil
-import atexit
 
 import pytest
-from _pytest import runner
 
 # Get root dir
 PACKAGE_NAME = __name__.split('.')[0]
@@ -80,7 +77,7 @@ def _enable_faulthandler():
 def _clear_our_modules():
     # Remove ourselves from sys.modules to force an import
     for key in list(sys.modules.keys()):
-        if key.startswith(PACKAGE_NAME) and not 'testing' in key:
+        if key.startswith(PACKAGE_NAME) and 'testing' not in key:
             del sys.modules[key]
 
 

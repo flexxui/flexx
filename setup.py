@@ -11,7 +11,6 @@ Release:
 """
 
 import os
-from os import path as op
 
 try:
     # use setuptools namespace, allows for "develop"
@@ -70,7 +69,7 @@ setup(
     platforms='any',
     provides=[name],
     install_requires=[],  # react, pyscript and webruntime require nothing
-    extras_require = extras_require,
+    extras_require=extras_require,
     packages=package_tree(name),
     package_dir={name: name},
     package_data={'flexx': ['resources/*']},

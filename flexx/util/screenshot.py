@@ -8,8 +8,8 @@ if sys.platform.startswith('win'):
     
     import ctypes
     from ctypes import windll
-    from ctypes.wintypes import (BOOL, DOUBLE, DWORD, HBITMAP, HDC, HGDIOBJ, HWND,
-                                INT, LPARAM, LONG, RECT, UINT, WORD)
+    from ctypes.wintypes import (BOOL, DOUBLE, DWORD, HBITMAP, HDC, HGDIOBJ,  # noqa
+                                 HWND, INT, LPARAM, LONG, UINT, WORD)  # noqa
     
     SRCCOPY = 13369376
     DIB_RGB_COLORS = BI_RGB = 0
@@ -37,7 +37,9 @@ if sys.platform.startswith('win'):
     GetWindowThreadProcessId = windll.user32.GetWindowThreadProcessId
     IsWindowVisible = windll.user32.IsWindowVisible
     EnumWindows = windll.user32.EnumWindows
-    EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int))
+    EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool,
+                                         ctypes.POINTER(ctypes.c_int),
+                                         ctypes.POINTER(ctypes.c_int))
     
     GetWindowDC = windll.user32.GetWindowDC
     CreateCompatibleDC = windll.gdi32.CreateCompatibleDC
@@ -55,7 +57,7 @@ if sys.platform.startswith('win'):
     windll.gdi32.BitBlt.argtypes = [HDC, INT, INT, INT, INT, HDC, INT, INT, DWORD]
     windll.gdi32.DeleteObject.argtypes = [HGDIOBJ]
     windll.gdi32.GetDIBits.argtypes = [HDC, HBITMAP, UINT, UINT, ctypes.c_void_p,
-                                    ctypes.POINTER(BITMAPINFO), UINT]
+                                        ctypes.POINTER(BITMAPINFO), UINT]
     # Return types
     windll.user32.GetWindowDC.restypes = HDC
     windll.gdi32.CreateCompatibleDC.restypes = HDC
@@ -77,7 +79,7 @@ if sys.platform.startswith('win'):
                 return True
             # get the proccessid from the windowhandle
             p_id = ctypes.c_int()
-            t_id = GetWindowThreadProcessId(hwnd, ctypes.byref(p_id))
+            #t_id = GetWindowThreadProcessId(hwnd, ctypes.byref(p_id))
             if p_id.value == pid:
                 handles.append(hwnd)
                 return False
@@ -111,14 +113,14 @@ if sys.platform.startswith('win'):
         try:
             # Get device contexts
             hwndDC = GetWindowDC(hwnd)
-            saveDC  = CreateCompatibleDC(hwndDC)
+            saveDC = CreateCompatibleDC(hwndDC)
             # Get bitmap
             bmp = CreateCompatibleBitmap(hwndDC, w, h)
             SelectObject(saveDC, bmp)
             if client:
-                result = PrintWindow(hwnd, saveDC, 1)
+                PrintWindow(hwnd, saveDC, 1)  # todo: result is never used??
             else:
-                result = PrintWindow(hwnd, saveDC, 0)
+                PrintWindow(hwnd, saveDC, 0)
             # Init bitmap info
             # We grab the image in RGBX mode, so that each word is 32bit and
             # we have no striding, then we transform to RGB

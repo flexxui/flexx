@@ -17,10 +17,10 @@ def help(command=''):
     if not command:
         # List all commands
         fnames = [fname for fname in os.listdir(THIS_DIR) if
-                os.path.isfile(os.path.join(THIS_DIR, fname)) and
-                fname.endswith('.py') and
-                fname.count('.') == 1 and
-                not fname.startswith('_')]
+                  os.path.isfile(os.path.join(THIS_DIR, fname)) and
+                  fname.endswith('.py') and
+                  fname.count('.') == 1 and
+                  not fname.startswith('_')]
         print('Developer tools for project %s\n' % NAME.capitalize())
         print('  python make <command> [arg]\n')
         for fname in sorted(fnames):
