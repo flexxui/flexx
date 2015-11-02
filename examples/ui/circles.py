@@ -28,7 +28,7 @@ class App(ui.Widget):
             for i in range(32):
                 x = math.sin(i*0.2)*0.3 + 0.5
                 y = math.cos(i*0.2)*0.3 + 0.5
-                w = Circle(pos=(x,y))
+                w = Circle(pos=(x, y))
                 self._circles.append(w)
         
         self.tick()

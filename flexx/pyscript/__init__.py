@@ -161,9 +161,9 @@ Not currently supported:
 import sys
 
 from .parser0 import Parser0, JSError  # noqa
-from .parser1 import Parser1
-from .parser2 import Parser2
-from .parser3 import Parser3
+from .parser1 import Parser1  # noqa
+from .parser2 import Parser2  # noqa
+from .parser3 import Parser3  # noqa
 
 # Assert py3k
 if sys.version_info < (3, 2):
@@ -200,15 +200,3 @@ class Parser(Parser3):
 
 
 from .functions import py2js, evaljs, evalpy, script2js, clean_code, js_rename  # noqa
-
-
-# Some names that users may want to import to fool pyflakes
-window = '<<JS-WINDOW>>'  # noqa
-document = '<<JS-DOCUMENT>>'  # noqa
-Object = '<<JS-OBJECT>>'  # noqa
-
-# We'll be using "undefined" in flexx.react as weel, and want to use
-# the same exact object, without having dependencies.
-class undefined:
-    def __repr__(self): return 'undefined'
-undefined = getattr(sys, '_undefined', undefined())  # noqa

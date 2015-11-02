@@ -28,6 +28,7 @@ Example:
 """
 
 from ... import react
+from ...pyscript.stubs import phosphor
 from . import Widget, Layout
 
 

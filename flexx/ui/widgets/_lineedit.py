@@ -30,6 +30,7 @@ Interactive example:
 """
 
 from ... import react
+from ...pyscript.stubs import document, undefined, phosphor
 from . import Widget
 
 
@@ -77,13 +78,15 @@ class LineEdit(Widget):
             self._node.appendChild(self._autocomp)
             
             that = self
-            this._node.addEventListener('input', lambda ev: that.user_text._set(that._node.value), False)
-            this._node.addEventListener('keydown', lambda ev: that.submit._set(ev.which), False)
+            f1 = lambda ev: that.user_text._set(that._node.value)
+            f2 = lambda ev: that.submit._set(ev.which)
+            self._node.addEventListener('input', f1, False)
+            self._node.addEventListener('keydown', f2, False)
             #if IE10:
-            #    this.node.addEventListener('change', lambda ev: that.user_value._set(that.node.value), False)
+            #    this.node.addEventListener('change', f1, False)
             
         @react.source
-        def user_text(v):
+        def user_text(self, v):
             """ The text set by the user (updates on each keystroke). """
             if v is not undefined:
                 v = str(v)
@@ -91,7 +94,7 @@ class LineEdit(Widget):
             return v
         
         @react.source
-        def submit(key=None):
+        def submit(self, key=None):
             """ The user strikes the enter or return key. """
             if key == 13:
                 return True

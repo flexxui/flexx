@@ -2,10 +2,11 @@
 """
 
 from .. import react
+from ...pyscript.stubs import phosphor
 from . import Widget
 
 
-class Canvas2D(ui.Widget):
+class Canvas2D(Widget):
     
     """ A w
     """
@@ -13,7 +14,7 @@ class Canvas2D(ui.Widget):
         
         def _create_node(self):
             self.p = phosphor.createWidget('canvas')
-            self._context = ctx = self.node.getContext('2d')
+            self._context = self.node.getContext('2d')
             
             # create tick units
             self._tick_units = []

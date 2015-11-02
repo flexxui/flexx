@@ -9,16 +9,11 @@ import weakref
 import logging
 
 
-if sys.version_info >= (3, ):
-    string_types = str
-else:  # pragma: no cover
-    string_types = basestring
-
-
 # Get global version of "undefined", so we can use ``is`` operator.
 class undefined:
-    def __repr__(self): return 'undefined'
-undefined = getattr(sys, '_undefined', undefined())
+    def __repr__(self):
+        return 'undefined'
+undefined = sys._undefined = getattr(sys, '_undefined', undefined())
 
 
 class SignalValueError(Exception):
@@ -83,12 +78,13 @@ class Signal(object):
         self._flags = {} if flags is None else dict(flags)
         
         # Set docstring this appears correct in sphinx docs
-        self.__doc__ = '*%s*: %s' % (self.__class__.__name__, func.__doc__ or self._name)
+        self.__doc__ = '*%s*: %s' % (self.__class__.__name__,
+                                     func.__doc__ or self._name)
         
         # Check and set dependencies
         upstream = [s for s in upstream]
         for s in upstream:
-            assert isinstance(s, string_types) or isinstance(s, Signal)
+            assert isinstance(s, str) or isinstance(s, Signal)
         self._upstream_given = [s for s in upstream]
         self._upstream = []
         self._downstream = []
@@ -128,7 +124,8 @@ class Signal(object):
 
     def __repr__(self):
         des = '-descriptor' if self._class_desciptor else ''
-        conn = '(not connected)' if self.not_connected else 'with value %s' % repr(self._value)
+        conn = '(not connected)' if self.not_connected else ('with value %s' % 
+                                                             repr(self._value))
         conn = '' if des else conn 
         return '<%s%s %r %s at 0x%x>' % (self.__class__.__name__, des, self._name, 
                                          conn, id(self))
@@ -174,7 +171,8 @@ class Signal(object):
         except AttributeError:
             sys._getframe()
             frame = ObjectFrame(instance, self._frame.f_back)
-            new = self.__class__(self._func, self._upstream_given, frame, instance, self.flags)
+            new = self.__class__(self._func, self._upstream_given, frame, 
+                                 instance, self.flags)
             setattr(instance, private_name, new)
             return new
     
@@ -224,7 +222,8 @@ class Signal(object):
         if self._not_connected:
             self._set_status(3)
             if raise_on_fail:
-                raise RuntimeError('Connection error in signal %r: ' % self._name + self._not_connected)
+                raise RuntimeError('Connection error in signal %r: %s' % 
+                                   (self._name, self._not_connected))
             return False
         
         # Update status (also downstream)
@@ -266,7 +265,8 @@ class Signal(object):
             try:
                 ob = ob()
             except SignalValueError:
-                return 'Signal %r does not have all parts ready' % fullname  # we'll rebind when that signal gets a value
+                # we'll rebind when that signal gets a value
+                return 'Signal %r does not have all parts ready' % fullname
         # Resolve name
         name, nameparts = nameparts[0], nameparts[1:]
         if name == '*' and isinstance(ob, (tuple, list)):
@@ -427,7 +427,8 @@ class Signal(object):
         if initiator is None:
             initiator = self
         # Calculate status from given status and upstream statuses
-        # todo: pyscript comprehensions -> statuses = [s._status for s in self._upstream if s is not initiator]
+        # todo: pyscript comprehensions 
+        # -> statuses = [s._status for s in self._upstream if s is not initiator]
         # statuses.extend([1, status])
         statuses = [1, status]
         for s in self._upstream:
@@ -515,7 +516,8 @@ class InputSignal(SourceSignal):
         elif len(args) == 1:
             return self._set(args[0])
         else:
-            raise ValueError('Setting an input signal (%r) requires exactly one argument' % self._name)
+            raise ValueError('Setting an input signal (%r) requires exactly '
+                             'one argument' % self._name)
 
 
 class PropSignal(InputSignal):

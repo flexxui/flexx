@@ -188,8 +188,6 @@ you can only catch Error objects.
 
 """
 
-import sys
-
 from . import commonast as ast
 from .parser1 import Parser1, JSError, unify  # noqa
 
@@ -379,11 +377,13 @@ class Parser2(Parser1):
         # First see if this for-loop is something that we support directly
         if isinstance(node.iter_node, ast.Call):
             f = node.iter_node.func_node
-            if isinstance(f, ast.Attribute) and not node.iter_node.arg_nodes and f.attr in METHODS:
+            if (isinstance(f, ast.Attribute) and 
+                    not node.iter_node.arg_nodes and f.attr in METHODS):
                 sure_is_dict = f.attr
-                iter = ''.join(self.parse(f.value_node))  #  '%s.%s()' % (f.value.id, f.attr)
+                iter = ''.join(self.parse(f.value_node))
             elif isinstance(f, ast.Name) and f.name == 'range':
-                sure_is_range = [''.join(self.parse(arg)) for arg in node.iter_node.arg_nodes]
+                sure_is_range = [''.join(self.parse(arg)) for arg in 
+                                 node.iter_node.arg_nodes]
         
         # Otherwise we parse the iter
         if iter is None:
@@ -511,7 +511,7 @@ class Parser2(Parser1):
         code = []
         lf = self.lf
         if not newlines:  # pragma: no cover
-            lf = lambda x:x
+            lf = lambda x: x
         
         if name1 != name2:
             code.append(lf('%s = %s;' % (name2, name1)))
@@ -583,14 +583,16 @@ class Parser2(Parser1):
             cc = []
             # Get target (can be multiple vars)
             if isinstance(comprehension.target_node, ast.Tuple):
-                target = [''.join(self.parse(t)) for t in comprehension.target_node.element_nodes]
+                target = [''.join(self.parse(t)) for t in 
+                          comprehension.target_node.element_nodes]
             else:
                 target = [''.join(self.parse(comprehension.target_node))]
             for t in target:
                 vars.append(t)
             # comprehension(target_node, iter_node, if_nodes)
             cc.append('iter# = %s;' % ''.join(self.parse(comprehension.iter_node)))
-            cc.append('if ((typeof iter# === "object") && (!Array.isArray(iter#))) {iter# = Object.keys(iter#);}')
+            cc.append('if ((typeof iter# === "object") && '
+                      '(!Array.isArray(iter#))) {iter# = Object.keys(iter#);}')
             cc.append('for (i#=0; i#<iter#.length; i#++) {')
             cc.append(self._iterator_assign('iter#[i#]', *target))
             # Ifs
@@ -599,10 +601,11 @@ class Parser2(Parser1):
                 for iff in comprehension.if_nodes:
                     cc += unify(self.parse(iff))
                     cc.append('&&')
-                cc.pop(-1); # pop '&&'
+                cc.pop(-1)  # pop '&&'
                 cc.append(')) {continue;}')
             # Insert code for this comprehension loop
-            code.append(''.join(cc).replace('i#', 'i%i' % iter).replace('iter#', 'iter%i' % iter))
+            code.append(''.join(cc).replace('i#', 'i%i' % iter).replace(
+                                            'iter#', 'iter%i' % iter))
             vars.extend(['iter%i' % iter, 'i%i' % iter])
         # Push result
         code.append('{res.push(%s);}' % elt)

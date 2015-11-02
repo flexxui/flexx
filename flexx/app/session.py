@@ -2,13 +2,8 @@
 Definition of App class and the app manager.
 """
 
-import os
-import time
-import inspect
 import logging
 
-from ..util.icon import Icon
-from .. import webruntime
 from .. import react
 
 from .model import Model
@@ -193,13 +188,14 @@ class Session(SessionAssets):
         super().__init__()
         
         # Init assets
-        self.add_asset('index-flexx-id.js', ('window.flexx_session_id = %r;\n' % self.id).encode())
+        id_asset = ('window.flexx_session_id = %r;\n' % self.id).encode()
+        self.add_asset('index-flexx-id.js', id_asset)
         self.use_global_asset('flexx-app.js')
         
         self._app_name = app_name  # name of the app, available before the app itself
         self._runtime = None  # init web runtime, will be set when used
         self._ws = None  # init websocket, will be set when a connection is made
-        self._model = None  # unless app_name is __default__, the session will have a Model instance
+        self._model = None  # Model instance, None if app_name is __default__
         
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
@@ -305,7 +301,7 @@ class Session(SessionAssets):
         elif command.startswith('INFO '):
             logging.info('JS - ' + command[5:].strip())
         elif command.startswith('SIGNAL '):
-            # todo: seems weird to deal with here. implement this by registring some handler?
+            # todo: seems weird to deal with here. implement by registring some handler?
             _, id, esid, signal_name, txt = command.split(' ', 4)
             ob = Model._instances.get(id, None)
             if ob is not None:

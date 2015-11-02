@@ -3,7 +3,6 @@
 
 import os
 import sys
-import time
 
 from .common import DesktopRuntime, create_temp_app_dir
 

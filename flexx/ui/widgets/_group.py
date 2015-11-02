@@ -31,6 +31,7 @@ Interactive example:
 """
 
 from ... import react
+from ...pyscript.stubs import phosphor, document
 from . import Widget
 
 

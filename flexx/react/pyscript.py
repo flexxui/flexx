@@ -4,8 +4,9 @@ Implementation of flexx.react in JS via PyScript.
 
 import json
 
-from ..pyscript import py2js, evaljs, evalpy
+from ..pyscript import py2js
 from ..pyscript.parser2 import get_class_definition
+from ..pyscript.stubs import undefined, console, Object, Date
 
 from .signals import Signal, SourceSignal
 
@@ -37,20 +38,21 @@ class HasSignalsJS:
                 continue
             s = self[name]
             if s.not_connected:
-                connected = s.connect(raise_on_fail)  # dont combine this with next line
+                connected = s.connect(raise_on_fail)  # dont combine with next line
                 success = success and connected
         return success 
     
-    def _create_property(obj, name, private_name, initial):
+    def _create_property(self, obj, name, private_name, initial):
         def getter():
             return obj[private_name]
         def setter():
             raise ValueError(name + ' is not settable')
         obj[private_name] = initial
-        opts = {'enumerable': True, 'configurable': False, 'get': getter, 'set': setter}
+        opts = {'enumerable': True, 'configurable': False,
+                'get': getter, 'set': setter}
         Object.defineProperty(obj, name, opts)
     
-    def _create_signals():
+    def _create_signals(self):
         self.__props__ = []  # todo: get rid of this?
         for name in self.__signals__:
             func = self['_' + name + '_func']
@@ -61,22 +63,22 @@ class HasSignalsJS:
             signal.signal_type = func._signal_type
             self._create_property(self, name, '_' + name + '_signal', signal)
     
-    def _create_PySignal(func, upstream, selff):  # proxy for Model
+    def _create_PySignal(self, func, upstream, selff):  # proxy for Model
         return self._create_SourceSignal(func, upstream, selff)
     
-    def _create_PyInputSignal(func, upstream, selff):  # proxy for Model
+    def _create_PyInputSignal(self, func, upstream, selff):  # proxy for Model
         return self._create_InputSignal(func, upstream, selff)
         
-    def _create_SourceSignal(func, upstream, selff):
+    def _create_SourceSignal(self, func, upstream, selff):
         
         selff = self._create_Signal(func, upstream, selff)
         
-        SourceSignal__update_value_from_py
-        SourceSignal__set_from_py
+        SourceSignal__update_value_from_py  # noqa
+        SourceSignal__set_from_py  # noqa
         
         return selff
     
-    def _create_InputSignal(func, upstream):
+    def _create_InputSignal(self, func, upstream):
         
         def selff(*args):
             if not len(args):
@@ -84,34 +86,36 @@ class HasSignalsJS:
             elif len(args) == 1:
                 return selff._set(args[0])
             else:
-                raise ValueError('Setting input signal %r requires exactly one argument.' % selff._name)
+                raise ValueError('Setting input signal %r requires exactly '
+                                 'one argument.' % selff._name)
         
         return self._create_SourceSignal(func, upstream, selff)
     
-    def _create_LazySignal(func, upstream, selff=None):
+    def _create_LazySignal(self, func, upstream, selff=None):
         selff = self._create_Signal(func, upstream, selff)
         selff._active = False
         return selff
     
-    def _create_Signal(func, upstream, selff=None):
+    def _create_Signal(self, func, upstream, selff=None):
         # We create the selff function which then serves as the signal object
         # that we populate with attributres, properties and functions.
-        obj = this
+        obj = self
         
         if selff is None:
             def selff(*args):
                 if not len(args):
                     return selff._get_value()
                 else:
-                    raise RuntimeError('Can only set signal values of InputSignal objects, '
-                                       'which signal %r is not.' % selff._name)
+                    raise RuntimeError('Can only set signal values of InputSignal '
+                                       'objects, which signal %r is not.' % selff._name)
         
         # Create public attributes
         self._create_property(selff, 'value', '_value', undefined)
         self._create_property(selff, 'last_value', '_last_value', undefined)
         self._create_property(selff, 'timestamp', '_timestamp', 0)
         self._create_property(selff, 'last_timestamp', '_last_timestamp', 0)
-        self._create_property(selff, 'not_connected', '_not_connected', 'No connection attempt yet.')
+        self._create_property(selff, 'not_connected', '_not_connected', 
+                              'No connection attempt yet.')
         #self._create_property(selff, 'name', '_name', func.name)  already is a property
         selff._name = func._name
         
@@ -129,14 +133,14 @@ class HasSignalsJS:
         selff._downstream_reconnect = []
         
         # Functions that we re-use from the Python implementation of signals
-        BaseSignal_connect_from_py
-        BaseSignal_disconnect_from_py
-        BaseSignal__subscribe_from_py
-        BaseSignal__unsubscribe_from_py
-        BaseSignal__get_value_from_py
-        BaseSignal__update_value_from_py
-        BaseSignal__set_status_from_py
-        BaseSignal__seek_signal_from_py
+        BaseSignal_connect_from_py  # noqa
+        BaseSignal_disconnect_from_py  # noqa
+        BaseSignal__subscribe_from_py  # noqa
+        BaseSignal__unsubscribe_from_py  # noqa
+        BaseSignal__get_value_from_py  # noqa
+        BaseSignal__update_value_from_py  # noqa
+        BaseSignal__set_status_from_py  # noqa
+        BaseSignal__seek_signal_from_py  # noqa
         
         # Some functions need JS specifics
         
@@ -158,7 +162,7 @@ class HasSignalsJS:
         def _save_update():
             try:
                 selff()
-            except SignalValueError:
+            except SignalValueError:  # noqa
                 pass
             except Exception as err:
                 #print('Error updating signal:', err.stack)
@@ -166,7 +170,7 @@ class HasSignalsJS:
         
         def _set_value(value):
             if value is undefined:
-                self._status = 3 if (self._count == 0) else 0
+                selff._status = 3 if (selff._count == 0) else 0
                 return  # new tick, but no update of value
             selff._last_value = selff._value
             selff._value = value
@@ -193,9 +197,10 @@ def patch_HasSignals(jscode):
     """
     for signal_type, cls in [('BaseSignal', Signal), ('SourceSignal', SourceSignal)]:
         for name in ('connect', 'disconnect', '_subscribe', '_unsubscribe', '_set',
-                    '_get_value', '_update_value', '_set_status', '_seek_signal'):
+                     '_get_value', '_update_value', '_set_status', '_seek_signal'):
             if name in cls.__dict__:
-                code = py2js(cls.__dict__[name], 'selff.' + name, indent=1, docstrings=False)
+                code = py2js(cls.__dict__[name], 'selff.' + name, indent=1,
+                             docstrings=False)
                 template = '%s_%s_from_py;' % (signal_type, name)
                 jscode = jscode.replace(template, code.lstrip())
     assert 'from_py' not in jscode
@@ -226,7 +231,7 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
     total_code[0] = prefix + total_code[0]
     
     for name, val in sorted(cls.__dict__.items()):
-        name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix name mangling
+        name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix mangling
         if isinstance(val, Signal):
             signals.append(name)
             funcname = '_' + name + '_func'
@@ -254,8 +259,10 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             try:
                 serialized = json.dumps(val)
             except Exception as err:  # pragma: no cover
-                raise ValueError('Attributes on JS HasSignals class must be JSON compatible.\n%s' % str(err))
-            total_code.append('%s.prototype.%s = JSON.parse(%r)' % (cls_name, name, serialized))
+                raise ValueError('Attributes on JS HasSignals class must be '
+                                 'JSON compatible.\n%s' % str(err))
+            total_code.append('%s.prototype.%s = JSON.parse(%r)' % 
+                              (cls_name, name, serialized))
     
     # Insert __signals__ that we found
     if base_class in ('Object', 'HasSignals.prototype'):

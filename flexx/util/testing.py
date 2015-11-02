@@ -10,11 +10,8 @@ from __future__ import absolute_import, print_function, division
 import os
 import sys
 import inspect
-import shutil
-import atexit
 
 import pytest
-from _pytest import runner
 
 # Get root dir
 PACKAGE_NAME = __name__.split('.')[0]
@@ -63,24 +60,6 @@ def run_tests_if_main(show_coverage=False):
         webbrowser.open_new_tab(fname)
 
 
-## Functions to use from make
-
-def test_unit(cov_report='term'):
-    """ Run all unit tests. Returns exit code.
-    """
-    orig_dir = os.getcwd()
-    os.chdir(ROOT_DIR)
-    try:
-        _clear_our_modules()
-        _enable_faulthandler()
-        return pytest.main('-v --cov %s --cov-config .coveragerc '
-                           '--cov-report %s tests' % (PACKAGE_NAME, cov_report))
-    finally:
-        os.chdir(orig_dir)
-        m = __import__(PACKAGE_NAME)
-        print('Tests were performed on', str(m))
-
-
 ## Requirements
 
 def _enable_faulthandler():
@@ -98,7 +77,7 @@ def _enable_faulthandler():
 def _clear_our_modules():
     # Remove ourselves from sys.modules to force an import
     for key in list(sys.modules.keys()):
-        if key.startswith(PACKAGE_NAME) and not 'testing' in key:
+        if key.startswith(PACKAGE_NAME) and 'testing' not in key:
             del sys.modules[key]
 
 

@@ -4,9 +4,6 @@ Selenium is a Python library to automate browsers.
 
 """
 
-import os
-import logging
-
 from .common import BaseRuntime
 
 
@@ -48,7 +45,10 @@ class SeleniumRuntime(BaseRuntime):
             
         else:
             raise ValueError('To use selenium runtime specify a browser type".')
-    
+        
+        # Open page
+        self._driver.get(url)
+        
     def close(self):
         if self._driver:
             self._driver.close()

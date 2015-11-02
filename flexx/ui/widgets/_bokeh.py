@@ -28,7 +28,10 @@ Simple example:
 import os
 
 from ... import react
+from ...pyscript.stubs import document, window
 from . import Widget
+
+Bokeh = None  # fool flakes
 
 
 class BokehWidget(Widget):
@@ -51,9 +54,11 @@ class BokehWidget(Widget):
         if not (modname + 'js') in self.session.get_used_asset_names():
             res = bokeh.resources.bokehjsdir()
             if dev:
-                res = os.path.abspath(os.path.join(bokeh.__file__, '..', '..', 'bokehjs', 'build'))
+                res = os.path.abspath(
+                    os.path.join(bokeh.__file__, '..', '..', 'bokehjs', 'build'))
             for x in ('css', 'js'):
-                self.session.add_global_asset(modname + x, os.path.join(res, x, modname + x))
+                filename = os.path.join(res, x, modname + x)
+                self.session.add_global_asset(modname + x, filename)
 
     @react.nosync
     @react.input
@@ -92,7 +97,7 @@ class BokehWidget(Widget):
             self.node.appendChild(el)
             #eval(script)
             # Get plot from id in next event-loop iter
-            that = this
+            that = self
             def getplot():
                 that.plot._set(Bokeh.index[id])
                 that.plot().resize()
@@ -101,7 +106,7 @@ class BokehWidget(Widget):
         @react.connect('real_size')
         def __resize_plot(self, size):
             if self.plot() and self.parent() and self.plot().resize_width_height:
-                cstyle = getComputedStyle(self.parent().node)
+                cstyle = window.getComputedStyle(self.parent().node)
                 use_x = cstyle['overflow-x'] not in ('auto', 'scroll')
                 use_y = cstyle['overflow-y'] not in ('auto', 'scroll')
                 self.plot().resize_width_height(use_x, use_y)

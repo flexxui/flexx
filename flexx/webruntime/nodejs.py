@@ -13,7 +13,6 @@ communicate via the websocket.
 import os
 import sys
 import json
-import logging
 import subprocess
 import tempfile
 try:
@@ -52,7 +51,7 @@ def get_js_from_url(url):
     """
     html = urlopen(url, timeout=5.0).read().decode()
     root, last = url.rsplit('/', 1)
-    if not '.' in last:
+    if '.' not in last:
         root += '/' + last
     return get_js_from_html(html, root)
 
@@ -136,8 +135,8 @@ class NodejsRuntime(BaseRuntime):
         else:
             p = urlparse(url)
             loc = json.dumps({'hostname': p.hostname, 
-                            'port': str(p.port or 80), 
-                            'pathname': p.path.strip('/')})
+                              'port': str(p.port or 80), 
+                              'pathname': p.path.strip('/')})
         code = ('var location = %s;\n' % loc) + code
         
         # Fix for Windows - by default global modules are searched in wrong place

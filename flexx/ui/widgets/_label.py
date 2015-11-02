@@ -27,6 +27,7 @@ Interactive example:
 """
 
 from ... import react
+from ...pyscript.stubs import phosphor
 from . import Widget
 
 
@@ -49,7 +50,7 @@ class Label(Widget):
     def wrap(v=False):
         """ Whether the content is allowed to be wrapped on multiple lines.
         """
-        return {0: 0, 1:1, 2:2}.get(v, int(bool(v)))
+        return {0: 0, 1: 1, 2: 2}.get(v, int(bool(v)))
     
     class JS:
         
@@ -58,9 +59,9 @@ class Label(Widget):
         
         @react.connect('text')
         def _text_changed(self, text):
-            this.node.innerHTML = text
+            self.node.innerHTML = text
         
         @react.connect('wrap')
         def _wrap_changed(self, wrap):
-            this.node.style['word-wrap'] = ['initial', 'normal', 'break-word'][wrap]
-            this.node.style['white-space'] = ['no-wrap', 'normal', 'normal'][wrap]
+            self.node.style['word-wrap'] = ['initial', 'normal', 'break-word'][wrap]
+            self.node.style['white-space'] = ['no-wrap', 'normal', 'normal'][wrap]

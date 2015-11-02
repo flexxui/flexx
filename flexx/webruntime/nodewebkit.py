@@ -9,7 +9,6 @@ https://github.com/nwjs/nw.js
 import os
 import sys
 import json
-import shutil
 
 from .common import DesktopRuntime, create_temp_app_dir
 
@@ -57,12 +56,11 @@ def fix_libudef(dest):
     github.com/rogerwang/node-webkit/wiki/The-solution-of-lacking-libudev.so.0 
     """
     
-    paths = [
-        "/lib/x86_64-linux-gnu/libudev.so.1",  # Ubuntu, Xubuntu, Mint
-        "/usr/lib64/libudev.so.1",  # SUSE, Fedora
-        "/usr/lib/libudev.so.1",  # Arch, Fedora 32bit
-        "/lib/i386-linux-gnu/libudev.so.1",  # Ubuntu 32bit
-        ]
+    paths = ["/lib/x86_64-linux-gnu/libudev.so.1",  # Ubuntu, Xubuntu, Mint
+             "/usr/lib64/libudev.so.1",  # SUSE, Fedora
+             "/usr/lib/libudev.so.1",  # Arch, Fedora 32bit
+             "/lib/i386-linux-gnu/libudev.so.1",  # Ubuntu 32bit
+             ]
     
     target = os.path.join(dest, 'libudev.so.0')
     for path in paths:

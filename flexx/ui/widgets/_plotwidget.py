@@ -43,6 +43,7 @@ Interactive example:
                 self.plot.ydata(ydata)
 """
 
+from ...pyscript.stubs import Math, RegExp, phosphor
 from ... import react
 from . import Widget
 
@@ -116,7 +117,7 @@ class PlotWidget(Widget):
         
         def _create_node(self):
             self.p = phosphor.createWidget('canvas')
-            self._context = ctx = self.p.node.getContext('2d')
+            self._context = self.p.node.getContext('2d')
             
             # create tick units
             self._tick_units = []
@@ -160,9 +161,12 @@ class PlotWidget(Widget):
             # 0.5 offset so we land on whole pixels with axis
             lpad = rpad = bpad = tpad = 25.5
             lpad += 30
-            if title: tpad += 10
-            if xlabel: bpad += 20
-            if ylabel: lpad += 20
+            if title:
+                tpad += 10
+            if xlabel:
+                bpad += 20
+            if ylabel:
+                lpad += 20
             scale_x = (w-lpad-rpad) / (x2-x1)
             scale_y = (h-bpad-tpad) / (y2-y1)
             sxx = [lpad + (x-x1)*scale_x for x in xx]
@@ -282,7 +286,8 @@ class PlotWidget(Widget):
                 t = ticks[i].toPrecision(4)
                 if '.' in t:
                     t = t.replace(RegExp("[0]+$"), "")
-                if t[-1] == '.': t += '0'
+                if t[-1] == '.':    
+                    t += '0'
                 ticks[i] = t
                 
             return ticks

@@ -36,7 +36,6 @@ import subprocess
 import os.path as op
 
 from .common import DesktopRuntime, create_temp_app_dir, appdata_dir
-from ..util.icon import Icon
 
 # todo: title should change with title of web page?
 # todo: enable setting position/size at runtime?
@@ -188,7 +187,7 @@ def has_firefox():
         return True
 
     try:
-        version = subprocess.check_output(['firefox', '--version'])
+        subprocess.check_output(['firefox', '--version'])
         return True
     except Exception:
         return False
@@ -278,7 +277,7 @@ class XulRuntime(DesktopRuntime):
             # See if we can use firefox command, Firefox may be
             # available even though we failed to find it.
             try:
-                version = subprocess.check_output(['firefox', '--version'])
+                subprocess.check_output(['firefox', '--version'])
                 exe = 'firefox'
             except Exception:
                 pass
@@ -294,7 +293,8 @@ class XulRuntime(DesktopRuntime):
         self._start_subprocess(cmd)
 
     def _check_compat(self):
-        if any([name+'.QtCore' in sys.modules for name in ('PySide', 'PyQt4', 'PyQt5')]):
+        qts = 'PySide', 'PyQt4', 'PyQt5'
+        if any([name+'.QtCore' in sys.modules for name in qts]):
             logging.warn("Using Flexx' Xul runtime and Qt (PySide/PyQt4/PyQt5) "
                          "together may cause problems.")
 
@@ -334,10 +334,10 @@ class XulRuntime(DesktopRuntime):
 
         # Create directory structure
         for subdir in ('',
-                    'chrome', 'chrome/content',
-                    'chrome/icons', 'chrome/icons/default',
-                    'defaults', 'defaults/preferences',
-                    ):
+                       'chrome', 'chrome/content',
+                       'chrome/icons', 'chrome/icons/default',
+                       'defaults', 'defaults/preferences',
+                       ):
             os.mkdir(op.join(path, subdir))
 
         # Create files
@@ -490,7 +490,7 @@ class XulRuntime(DesktopRuntime):
         """
 
         # Get app of firefox
-        if not 'Contents/MacOS' in xul_path:
+        if 'Contents/MacOS' not in xul_path:
             raise NotImplementedError('Cannot deal with real xulrunner yet')
         xul_app = op.dirname(op.dirname(op.dirname(xul_path)))
         if not xul_app.endswith('.app'):

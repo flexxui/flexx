@@ -1,3 +1,4 @@
+# flake8: noqa
 """
 Example demonstrating how signals in Py can connect to signals in JS.
 """
@@ -17,9 +18,9 @@ class Clock(app.Model):
         def _init(this):
             that = this
             def _set_time():
-                that.time._set(time.perf_counter())  # perf_counter() is a PyScript feature
+                that.time._set(time.perf_counter())
             
-            setInterval(_set_time, 200)
+            window.setInterval(_set_time, 200)
         
         @react.source
         def time(t):

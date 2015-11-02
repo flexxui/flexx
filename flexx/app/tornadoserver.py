@@ -3,20 +3,16 @@ Serve web page and handle web sockets. Uses Tornado, though this
 can be generalized.
 """
 
-import os
-import sys
 import time
 import logging
 import urllib
 import traceback
-from concurrent.futures import ThreadPoolExecutor
+# from concurrent.futures import ThreadPoolExecutor
 
 import tornado.web
 import tornado.ioloop
 import tornado.websocket
 from tornado import gen
-
-from ..webruntime.common import default_icon
 
 from .session import manager
 from .assetstore import assets
@@ -117,8 +113,8 @@ def port_hash(name):
     fac = 0xd2d84a61
     val = 0
     for c in name:
-        val += ( val>>3 ) + ( ord(c)*fac )
-    val += (val>>3) + (len(name)*fac)
+        val += (val >> 3) + (ord(c) * fac)
+    val += (val >> 3) + (len(name) * fac)
     return 49152 + (val % 2**14)
 
 
@@ -158,7 +154,7 @@ class MainHandler(tornado.web.RequestHandler):
             
             if not file_name:
                 # This looks like an app, redirect, serve app, or error
-                if not '/' in path:
+                if '/' not in path:
                     self.redirect('/%s/' % app_name)
                 elif session_id:
                     # If session_id matches a pending app, use that session
@@ -167,7 +163,6 @@ class MainHandler(tornado.web.RequestHandler):
                         self.write(session.get_page().encode())
                     else:
                         self.redirect('/%s/' % app_name)  # redirect for normal serve
-                        #self.write('App %r with id %r is not available' % (app_name, session_id))
                 elif manager.has_app_name(app_name):
                     # Create session - client will connect to it via session_id
                     session = manager.create_session(app_name)
@@ -262,7 +257,8 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             if message.startswith('hiflexx '):
                 session_id = message.split(' ', 1)[1].strip()
                 try:
-                    self._session = manager.connect_client(self, self.app_name, session_id)
+                    self._session = manager.connect_client(self, self.app_name,
+                                                           session_id)
                 except Exception as err:
                     self.close(1003, "Could not launch app: %r" % err)
                     raise

@@ -41,9 +41,11 @@ class CPUMonitor(ui.Widget):
                     self.button = ui.Button(text='Do some work')
                 
                 self.cpu_plot = ui.PlotWidget(style='width: 640px; height: 320px;',
-                                              xdata=[], yrange=(0, 100), ylabel='CPU usage (%)')
+                                              xdata=[], yrange=(0, 100), 
+                                              ylabel='CPU usage (%)')
                 self.mem_plot = ui.PlotWidget(style='width: 640px; height: 320px;',
-                                              xdata=[], yrange=(0, 100), ylabel='Mem usage (%)')
+                                              xdata=[], yrange=(0, 100), 
+                                              ylabel='Mem usage (%)')
                 ui.Widget(flex=1)
     
     @react.connect('global_cpu_usage')

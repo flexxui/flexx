@@ -2,9 +2,11 @@
 """
 
 import os
+import re
 import os.path as op
 import sys
 import shutil
+import subprocess
 
 
 if sys.version_info[0] < 3:
@@ -55,6 +57,8 @@ def sphinx_show(html_dir):
     import webbrowser
     webbrowser.open_new_tab(index_html)
 
+
+ROOT_DIR, DOC_DIR, DOC_BUILD_DIR, WEBSITE_DIR = None, None, None, None
 
 def sphinx_copy_pages(html_dir, pages_dir, pages_repo):
     print('COPYING PAGES')

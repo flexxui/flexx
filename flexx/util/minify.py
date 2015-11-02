@@ -20,7 +20,8 @@ def minify(code, remove_whitespace=False):
 
 def remove_comments(code):
     chars = ['\n']
-    class non_local: pass
+    class non_local:
+        pass
     non_local._i = -1
     
     def read():
@@ -31,7 +32,8 @@ def remove_comments(code):
         chars.append(c0)
         while True:
             c = read()
-            if not c: break
+            if not c:
+                break
             chars.append(c)
             if c == c0 and chars[-1] != '\\':
                 return
@@ -44,13 +46,15 @@ def remove_comments(code):
         lastchar = ''
         while True:
             c = read()
-            if not c: break
+            if not c:
+                break
             if c == '/' and lastchar == '*':
                 return
             lastchar = c
     while True:
         c = read()
-        if not c: break  # end of code
+        if not c:
+            break  # end of code
         elif c == "'" or c == '"':
             to_end_of_string(c)
         elif c == '/' and chars[-1] == '/' and chars[-2] != '\\':
@@ -71,7 +75,8 @@ def remove_all_whitespace(code):
     code = code.replace('\t', ' ').replace('\r', ' ').replace('\n', ' ')
     space_safe = ' =+-/*&|(){},.><:;'
     chars = ['\n']
-    class non_local: pass
+    class non_local:
+        pass
     non_local._i = -1
     
     def read():
@@ -80,7 +85,8 @@ def remove_all_whitespace(code):
             return code[non_local._i]
     while True:
         c = read()
-        if not c: break  # end of code
+        if not c:
+            break  # end of code
         if c in ' ':
             if chars[-1] not in space_safe:
                 chars.append(c)

@@ -20,7 +20,7 @@ class BaseRuntime(object):
     """
 
     def __init__(self, **kwargs):
-        if not 'url' in kwargs:
+        if 'url' not in kwargs:
             raise KeyError('No url provided for runtime.')
 
         self._kwargs = kwargs
@@ -146,7 +146,7 @@ class StreamReader(threading.Thread):
             logging.info('runtime process stopped')
         else:
             logging.error('runtime process stopped (%i), stdout:\n%s' %
-                        (code, '\n'.join(msgs)))
+                          (code, '\n'.join(msgs)))
 
 
 def create_temp_app_dir(prefix, suffix='', cleanup=60):
@@ -215,7 +215,7 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
     # Maybe we should store things local to the executable (in case of a
     # portable distro or a frozen application that wants to be portable)
     prefix = sys.prefix
-    if getattr(sys, 'frozen', None): # See application_dir() function
+    if getattr(sys, 'frozen', None):  # See application_dir() function
         prefix = os.path.abspath(os.path.dirname(sys.path[0]))
     for reldir in ('settings', '../settings'):
         localpath = os.path.abspath(os.path.join(prefix, reldir))
@@ -224,7 +224,7 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
                 open(os.path.join(localpath, 'test.write'), 'wb').close()
                 os.remove(os.path.join(localpath, 'test.write'))
             except IOError:
-                pass # We cannot write in this directory
+                pass  # We cannot write in this directory
             else:
                 path = localpath
                 break
@@ -232,7 +232,7 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
     # Get path specific for this app
     if appname:
         if path == userDir:
-            appname = '.' + appname.lstrip('.') # Make it a hidden directory
+            appname = '.' + appname.lstrip('.')  # Make it a hidden directory
         path = os.path.join(path, appname)
         if not os.path.isdir(path):  # pragma: no cover
             os.mkdir(path)

@@ -8,14 +8,16 @@ Example:
     class Example(ui.Widget):
         def init(self):
             with ui.PinboardLayout():
-                self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30), size=(100, 100))
+                self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30),
+                                    size=(100, 100))
                 self.b2 = ui.Button(text='Dynamic at (30%, 30%)', pos=(0.3, 0.3))
                 self.b3 = ui.Button(text='Dynamic at (50%, 70%)', pos=(0.5, 0.7))
 
 """
 
 from ... import react
-from . import Widget, Layout
+from ...pyscript.stubs import phosphor
+from . import Layout
 
 
 class PinboardLayout(Layout):
@@ -42,8 +44,9 @@ class PinboardLayout(Layout):
         def __pos_changed(self, *poses):
             for child in self.children():
                 pos = child.pos()
-                child.p.node.style.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
-                child.p.node.style.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
+                st = child.p.node.style
+                st.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
+                st.style.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
         
         @react.connect('children.*.size')
         def __size_changed(self, *sizes):

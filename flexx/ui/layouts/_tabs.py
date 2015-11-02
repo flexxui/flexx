@@ -14,7 +14,8 @@ Example:
 """
 
 from ... import react
-from . import Widget, Layout
+from ...pyscript.stubs import phosphor
+from . import Layout
 
 
 # class TabBar(Widget):

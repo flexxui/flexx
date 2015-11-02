@@ -1,15 +1,14 @@
 """ Namespace for all widgets (that are not layouts).
 """
 
+from .. import Widget  # noqa
 
-from .. import Widget
-
-from ._button import Button
-from ._slider import Slider
-from ._lineedit import LineEdit
-from ._label import Label
-from ._group import GroupWidget
-from ._progressbar import ProgressBar
-from ._plotwidget import PlotWidget
-from ._iframe import IFrame
-from ._bokeh import BokehWidget
+from ._button import Button  # noqa
+from ._slider import Slider  # noqa
+from ._lineedit import LineEdit  # noqa
+from ._label import Label  # noqa
+from ._group import GroupWidget  # noqa
+from ._progressbar import ProgressBar  # noqa
+from ._plotwidget import PlotWidget  # noqa
+from ._iframe import IFrame  # noqa
+from ._bokeh import BokehWidget  # noqa

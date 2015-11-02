@@ -9,14 +9,11 @@
 
 """
 
-import json
 import threading
 
 from .. import react
-from ..app import Model, get_instance_by_id
-from ..app.serialize import serializer
-from ..react import undefined
-
+from ..app import Model
+from ..pyscript.stubs import phosphor, undefined, window, document, flexx
 
 def _check_two_scalars(name, v):
     if not (isinstance(v, (list, tuple)) and
@@ -81,7 +78,8 @@ class Widget(Model):
         # All widgets need phosphor
         self._session.use_global_asset('phosphor-all.js')
         
-        # todo: can I make widgets not need the session immediately? The fact that session and app need each-other is a bit awkward?
+        # todo: can I make widgets not need the session immediately?
+        # The fact that session and app need each-other is a bit awkward?
         
         with self:
             self.init()
@@ -223,7 +221,7 @@ class Widget(Model):
         if old_parent is undefined:
             return new_parent
         
-        if old_parent is not None:
+        if old_parent is not None and old_parent is not undefined:
             children = list(old_parent.children())
             while self in children:
                 children.remove(self)
@@ -280,7 +278,7 @@ class Widget(Model):
             self._create_node()
             self.node = self.p.node
             
-            that = this
+            that = self
             class SizeNotifier:
                 def filterMessage(handler, msg):
                     if msg._type == 'resize':
@@ -314,7 +312,8 @@ class Widget(Model):
             """ Emits when the style signal changes, and provides a dict with
             the changed style atributes.
             """
-            #self.node.style = style  # forbidden in strict mode, plus it clears all previously set style
+            # self.node.style = style  # forbidden in strict mode,
+            # plus it clears all previously set style
             d = {}
             for part in style.split(';'):
                 if ':' in part:
@@ -325,7 +324,7 @@ class Widget(Model):
             return d
         
         @react.connect('style_changed')
-        def __check_size_limits_changed(style):
+        def __check_size_limits_changed(self, style):
             size_limits_keys = 'min-width', 'min-height', 'max-width', 'max-height'
             
             size_limits_changed = False
@@ -387,7 +386,7 @@ class Widget(Model):
         def __container_changed(self, id):
             self.node.classList.remove('flx-main-widget')
             if self.parent():
-               return 
+                return 
             if id:
                 el = document.getElementById(id)
                 if self.p.isAttached:
@@ -396,7 +395,7 @@ class Widget(Model):
                     self.node.parentNode.removeChild(self.node)
                 phosphor.widget.attachWidget(self.p, el)
                 p = self.p
-                window.addEventListener('resize', lambda:p.update())
+                window.addEventListener('resize', lambda: p.update())
             if id == 'body':
                 self.node.classList.add('flx-main-widget')
         
@@ -408,7 +407,7 @@ class Widget(Model):
             if new_parent is old_parent:
                 return undefined
             if not (new_parent is None or new_parent.__signals__):
-               raise ValueError('parent must be a widget or None')
+                raise ValueError('parent must be a widget or None')
             
             if old_parent is undefined:
                 return new_parent
@@ -432,7 +431,8 @@ class Widget(Model):
             # todo: PyScript support deep comparisons
             #if new_children == old_children:
             #    return undefined
-            if old_children is not undefined and len(new_children) == len(old_children):
+            if (old_children is not undefined and
+                    len(new_children) == len(old_children)):
                 for i in range(len(new_children)):
                     if new_children[i] != old_children[i]:
                         break
@@ -469,9 +469,11 @@ class Widget(Model):
                 self._add_child(child)
         
         def _add_child(self, widget):
-            """ Add the DOM element. Called right after the child widget is added. """
+            """ Add the DOM element.
+            Called right after the child widget is added. """
             self.p.addChild(widget.p)
             
         def _remove_child(self, widget):
-            """ Remove the DOM element. Called right after the child widget is removed. """
+            """ Remove the DOM element.
+            Called right after the child widget is removed. """
             self.p.removeChild(widget.p)

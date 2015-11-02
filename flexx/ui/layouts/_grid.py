@@ -12,12 +12,14 @@ Example:
                     # Show min-width in action
                     self.a = ui.Widget(style='background:#a00;', pos=(0, 0), flex=1)
                     self.b = ui.Widget(style='background:#0a0;', pos=(1, 0))
-                    self.c = ui.Widget(style='background:#00a; min-width:50px; min-height:50px;', pos=(1, 1))
+                    self.c = ui.Widget(style='background:#00a; min-width:50px; ' +
+                                       'min-height:50px;', pos=(1, 1))
                 with ui.GridPanel(pos=(1, 0)):
                     # Show max-width in action
                     self.a = ui.Widget(style='background:#a00;', pos=(0, 0))
                     self.b = ui.Widget(style='background:#0a0;', pos=(1, 0))
-                    self.c = ui.Widget(style='background:#00a; max-width:50px; max-height:50px', pos=(1, 1))
+                    self.c = ui.Widget(style='background:#00a; max-width:50px; ' +
+                                       'max-height:50px', pos=(1, 1))
                 with ui.GridPanel(pos=(0, 1)):
                     # Flex
                     self.a = ui.Widget(style='background:#a00;', pos=(0, 0), flex=1)
@@ -27,11 +29,13 @@ Example:
                     # Base size
                     self.a = ui.Widget(style='background:#a00;', pos=(0, 0))
                     self.b = ui.Widget(style='background:#0a0;', pos=(1, 0))
-                    self.c = ui.Widget(style='background:#00a;', pos=(1, 1), size=(100, 100))
+                    self.c = ui.Widget(style='background:#00a;', pos=(1, 1),
+                                       size=(100, 100))
 """
 
 from ... import react
-from . import Widget, Layout
+from ...pyscript.stubs import phosphor, Infinity
+from . import Layout
 from ._form import BaseTableLayout
 
 
@@ -64,7 +68,7 @@ class GridPanel(Layout):
         def _init(self):
             super()._init()
             
-            that = this
+            that = self
             class LayoutNotifier:
                 def filterMessage(handler, msg):
                     if msg._type == 'layout-request':
@@ -90,8 +94,10 @@ class GridPanel(Layout):
                 max_row = max(max_row, y)
             
             # Collect specs from all children
-            colSpecs = [{'stretch': 0, 'minSize': 0, 'maxSize': Infinity, 'sizeBasis': 0} for i in range(max_col+1)]
-            rowSpecs = [{'stretch': 0, 'minSize': 0, 'maxSize': Infinity, 'sizeBasis': 0} for i in range(max_row+1)]
+            colSpecs = [{'stretch': 0, 'minSize': 0, 'maxSize': Infinity,
+                         'sizeBasis': 0} for i in range(max_col+1)]
+            rowSpecs = [{'stretch': 0, 'minSize': 0, 'maxSize': Infinity,
+                         'sizeBasis': 0} for i in range(max_row+1)]
             for child in self.children():
                 x, y = child.pos()
                 limits = child.p.sizeLimits

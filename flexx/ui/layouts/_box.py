@@ -108,7 +108,8 @@ Interactive example:
 """
 
 from ... import react
-from . import Widget, Layout
+from ...pyscript.stubs import phosphor
+from . import Layout
 
 
 class BaseBoxLayout(Layout):
@@ -153,13 +154,15 @@ class BoxLayout(BaseBoxLayout):
         display: -moz-flex;
         display: flex;
         
-        /* How space is divided when all flex-factors are 0: start, end, center, space-between, space-around */
+        /* How space is divided when all flex-factors are 0:
+           start, end, center, space-between, space-around */
         -webkit-justify-content: space-around;
         -ms-justify-content: space-around;
         -moz-justify-content: space-around;
         justify-content: space-around;
         
-        /* How items are aligned in the other direction: center, stretch, baseline */
+        /* How items are aligned in the other direction:
+           center, stretch, baseline */
         -webkit-align-items: stretch;  
         -ms-align-items: stretch;
         -moz-align-items: stretch;
@@ -171,15 +174,24 @@ class BoxLayout(BaseBoxLayout):
         width: 100%;
     }
     .flx-vbox {
-        -webkit-flex-flow: column; -ms-flex-flow: column; -moz-flex-flow: column; flex-flow: column;
+        -webkit-flex-flow: column;
+        -ms-flex-flow: column;
+        -moz-flex-flow: column;
+        flex-flow: column;
         height: 100%; width: 100%;
     }
     .flx-hboxr {
-        -webkit-flex-flow: row-reverse; -ms-flex-flow: row-reverse; -moz-flex-flow: row-reverse; flex-flow: row-reverse;
+        -webkit-flex-flow: row-reverse;
+        -ms-flex-flow: row-reverse;
+        -moz-flex-flow: row-reverse;
+        flex-flow: row-reverse;
         width: 100%;
     }
     .flx-vboxr {
-        -webkit-flex-flow: column-reverse; -ms-flex-flow: column-reverse; -moz-flex-flow: column-reverse; flex-flow: column-reverse;
+        -webkit-flex-flow: column-reverse;
+        -ms-flex-flow: column-reverse;
+        -moz-flex-flow: column-reverse;
+        flex-flow: column-reverse;
         height: 100%; width: 100%;
     }
     
@@ -205,7 +217,7 @@ class BoxLayout(BaseBoxLayout):
             self.p = phosphor.widget.Widget()
         
         @react.connect('orientation', 'children.*.flex')
-        def __set_flexes(ori, *flexes):
+        def __set_flexes(self, ori, *flexes):
             i = 0 if ori in (0, 'h', 'hr') else 1
             for widget in self.children():
                 self._applyBoxStyle(widget.node, 'flex-grow', widget.flex()[i])
@@ -293,7 +305,7 @@ class BoxPanel(BaseBoxLayout):
             self.p = phosphor.boxpanel.BoxPanel()
         
         @react.connect('orientation', 'children.*.flex')
-        def __set_flexes(ori, *flexes):
+        def __set_flexes(self, ori, *flexes):
             i = 0 if ori in (0, 'h', 'hr') else 1
             for widget in self.children():
                 phosphor.boxpanel.BoxPanel.setStretch(widget.p, widget.flex()[i])

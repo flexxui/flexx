@@ -189,7 +189,8 @@ from .parser2 import Parser2, JSError, unify  # noqa
 #
 # Further, all methods of: list, dict, str, set?
 
-# todo: make these more robust by not applying the Python version if a JS version exists.
+# todo: make these more robust 
+# by not applying the Python version if a JS version exists.
 
 class Parser3(Parser2):
     """ Parser to transcompile Python to JS, allowing more Pythonic
@@ -282,7 +283,7 @@ class Parser3(Parser2):
             raise JSError('hasattr() expects two or three arguments.')
     
     def function_setattr(self, node):
-        is_ok = "(ob !== undefined && ob !== null && ob[name] !== undefined)"
+        # is_ok = "(ob !== undefined && ob !== null && ob[name] !== undefined)"
         
         if len(node.arg_nodes) == 3:
             ob = unify(self.parse(node.arg_nodes[0]))
@@ -375,7 +376,8 @@ class Parser3(Parser2):
             code += 'if (Array.isArray(x)) {'
             code += 'for (i=0; i<x.length; i++) {t=x[i]; r[t[0]] = t[1];} return r;'
             code += '} else {'
-            code += 'keys = Object.keys(x); for (i=0; i<keys.length; i++) {t=keys[i]; r[t] = x[t];} return r;}})'
+            code += ('keys = Object.keys(x); for (i=0; i<keys.length; i++) '
+                     '{t=keys[i]; r[t] = x[t];} return r;}})')
             return code + '(%s)' % ''.join(self.parse(node.arg_nodes[0]))
         else:
             raise JSError('dict() needs at least one argument')
@@ -395,7 +397,8 @@ class Parser3(Parser2):
         return self.function_list(node)
     
     def function_range(self, node):
-        fun = 'function (start, end, step) {var i, res = []; for (i=start; i<end; i+=step) {res.push(i);} return res;}'
+        fun = ('function (start, end, step) {var i, res = []; '
+                'for (i=start; i<end; i+=step) {res.push(i);} return res;}')
         
         if len(node.arg_nodes) == 1:
             end = unify(self.parse(node.arg_nodes[0]))
@@ -459,9 +462,6 @@ class Parser3(Parser2):
     
     def function_repr(self, node):
         if len(node.arg_nodes) == 1:
-            # code = 'function (x) {if (typeof x === "object") {return JSON.stringify(x);}'
-            # code += ' else if (typeof x === "string") {return "\'" + x + "\'";}'
-            # code += ' else {return x.toString();}}'
             self.vars_for_functions['repr'] = 'JSON.stringify'
         else:
             raise JSError('repr() needs one argument')
@@ -469,7 +469,8 @@ class Parser3(Parser2):
     def function_bool(self, node):
         if len(node.arg_nodes) == 1:
             self._wrap_truthy(ast.Name('x'))  # trigger _truthy function declaration
-            self.vars_for_functions['bool'] = 'function (x) {return Boolean(_truthy(x));}'
+            self.vars_for_functions['bool'] = ('function (x) {'
+                                               'return Boolean(_truthy(x));}')
         else:
             raise JSError('bool() needs one argument')
     
@@ -489,7 +490,8 @@ class Parser3(Parser2):
     def function_all(self, node):
         if len(node.arg_nodes) == 1:
             self._wrap_truthy(ast.Name('x'))  # trigger _truthy function declaration
-            code = 'function (x) {for (var i=0; i<x.length; i++) {if (!_truthy(x[i])){return false}} return true;}'
+            code = ('function (x) {for (var i=0; i<x.length; i++) {'
+                    'if (!_truthy(x[i])){return false}} return true;}')
             self.vars_for_functions['all'] = code
         else:
             raise JSError('all() needs one argument')
@@ -497,7 +499,8 @@ class Parser3(Parser2):
     def function_any(self, node):
         if len(node.arg_nodes) == 1:
             self._wrap_truthy(ast.Name('x'))  # trigger _truthy function declaration
-            code = 'function (x) {for (var i=0; i<x.length; i++) {if (_truthy(x[i])){return true}} return false;}'
+            code = ('function (x) {for (var i=0; i<x.length; i++) {'
+                    'if (_truthy(x[i])){return true}} return false;}')
             self.vars_for_functions['any'] = code
         else:
             raise JSError('any() needs one argument')
@@ -545,7 +548,8 @@ class Parser3(Parser2):
     def function_filter(self, node):
         if len(node.arg_nodes) == 2:
             code = 'function (func, iter) {'
-            code += 'if (typeof func === "undefined" || func === null) {func = function(x) {return x;}}'
+            code += ('if (typeof func === "undefined" || func === null) '
+                     '{func = function(x) {return x;}}')
             code += 'return iter.filter(func);}'
             self.vars_for_functions['filter'] = code
         else:
@@ -626,6 +630,7 @@ class Parser3(Parser2):
             if len(node.arg_nodes) == 0:
                 # Work in nodejs and browser
                 dummy = self.dummy()
-                return '(typeof(process) === "undefined" ? performance.now()*1e-3 : ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy)
+                return ('(typeof(process) === "undefined" ? performance.now()*1e-3 '
+                        ': ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy))
             else:
                 raise JSError('perf_counter() needs no argument')

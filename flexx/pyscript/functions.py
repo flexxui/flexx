@@ -218,6 +218,3 @@ def clean_code(code):
                 known_funcs[line2] = indent
         lines.append(line)
     return '\n'.join(lines)
-
-
-

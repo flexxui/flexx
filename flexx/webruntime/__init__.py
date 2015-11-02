@@ -36,9 +36,7 @@ Memory considerations
 
 """
 
-import os
-
-from .common import BaseRuntime, DesktopRuntime
+from .common import BaseRuntime, DesktopRuntime  # noqa
 from .xul import XulRuntime, has_firefox
 from .nodewebkit import NodeWebkitRuntime
 from .browser import BrowserRuntime
@@ -129,4 +127,3 @@ def _print_autoclasses():  # pragma: no cover
         seen.add(Cls)
         lines.append('.. autoclass:: flexx.webruntime.%s\n  :members:' % Cls.__name__)
     print('\n\n'.join(lines))
-    

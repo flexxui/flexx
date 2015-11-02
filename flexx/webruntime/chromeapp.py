@@ -17,13 +17,15 @@ def get_chrome_exe():
     If the path could not be found, returns None.
     """
     paths = []
+    eu = os.path.expanduser
     
     # Collect possible locations
     if sys.platform.startswith('win'):
-        paths.append("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
-        paths.append("C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe")
-        paths.append(os.path.expanduser("~\\AppData\\Local\\Google\\Chrome\\chrome.exe"))
-        paths.append(os.path.expanduser("~\\Local Settings\\Application Data\\Google\\Chrome\\chrome.exe"))  # xp
+        paths.append("C:\\Program Files\\Google\\Chrome\\Application")
+        paths.append("C:\\Program Files (x86)\\Google\\Chrome\\Application")
+        paths.append(eu("~\\AppData\\Local\\Google\\Chrome\\chrome.exe"))
+        paths.append(eu("~\\Local Settings\\Application Data\\Google\\Chrome"))  # xp
+        paths = [p + '\\chrome.exe' for p in paths]
     elif sys.platform.startswith('linux'):
         paths.append('/usr/bin/google-chrome-stable')
         paths.append('/usr/bin/google-chrome-beta')
@@ -45,13 +47,14 @@ def get_chromium_exe():
     If the path could not be found, returns None.
     """
     paths = []
+    eu = os.path.expanduser
     
     # Collect possible locations
     if sys.platform.startswith('win'):
         paths.append("C:\\Program Files\\Chromium\\Application\\chrome.exe")
         paths.append("C:\\Program Files (x86)\\Chromium\\Application\\chrome.exe")
-        paths.append(os.path.expanduser("~\\AppData\\Local\\Chromium\\chrome.exe"))
-        paths.append(os.path.expanduser("~\\Local Settings\\Application Data\\Chromium\\chrome.exe"))  # xp
+        paths.append(eu("~\\AppData\\Local\\Chromium\\chrome.exe"))
+        paths.append(eu("~\\Local Settings\\Application Data\\Chromium\\chrome.exe"))
        
     elif sys.platform.startswith('linux'):
         paths.append('/usr/bin/chromium')

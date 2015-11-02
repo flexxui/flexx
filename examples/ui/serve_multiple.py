@@ -1,3 +1,4 @@
+# flake8: noqa
 """
 Import apps from other example modules, and host these from one
 process.

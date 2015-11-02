@@ -8,6 +8,11 @@ sudo : false
 
 matrix:
     include:
+        - python: "3.5"
+          env: TEST_UNIT=0 TEST_STYLE=1
+        - python: "3.5"
+          env: TEST_UNIT=0 TEST_DOCS=1
+        #
         - python: "pypy3"
           env: TEST_UNIT=1
         - python: "3.3"
@@ -16,10 +21,6 @@ matrix:
           env: TEST_UNIT=1 TEST_INSTALL=1
         - python: "3.5"
           env: TEST_UNIT=1
-        - python: "3.4"
-          env: TEST_UNIT=0 TEST_DOCS=1
-        - python: "3.4"
-          env: TEST_UNIT=0 TEST_STYLE=1
 
 before_install:
     - SRC_DIR=$(pwd)
@@ -73,7 +74,7 @@ before_script:
 
 # Run the tests
 script: 
-    - cd ${SRC_DIR}
+    - cd ${SRC_DIR};
     - python -c "import sys; print(sys.version, '\n', sys.prefix)"
     - if [ "${TEST_UNIT}" == "1" ]; then
         python make test unit;
@@ -82,7 +83,9 @@ script:
         python make docs html;
       fi;
     - if [ "${TEST_STYLE}" == "1" ]; then
-        echo "Not doing flake tests for now ...";
+        python make test style;
+        fi;
+    - if [ "${TEST_STYLE}" == "1" ]; then
         echo "Size difference ${SIZE_DIFF} kB";
         if git log --format=%B -n 2 | grep -q "\[size skip\]"; then
           echo "Skipping size test";

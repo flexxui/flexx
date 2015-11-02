@@ -18,12 +18,11 @@ are not provided via such a module asset will be added to the index.
 """
 
 import os
-import sys
 import logging
 from urllib.request import urlopen
 from collections import OrderedDict
 
-from ..pyscript import py2js, clean_code
+from ..pyscript import clean_code
 from .model import Model, get_model_classes
 
 INDEX = """<!doctype html>
@@ -84,7 +83,8 @@ class AssetStore:
             elif os.path.isfile(key):
                 self._cache[key] = open(key, 'rb').read()
             else:  # this should never happen
-                raise RuntimeError('Asset cache key is not a known module or filename: %r' % key)
+                raise RuntimeError('Asset cache key is not a known module '
+                                   'or filename: %r' % key)
         return self._cache[key]
     
     def get_asset_names(self):
@@ -107,7 +107,8 @@ class AssetStore:
             if content == self._assets[fname]:
                 return  # asset is the same (same filename or same bytes)
             else:
-                raise ValueError('Asset %r is already set. Can only reuse if content is a filename and the same.' % fname)
+                raise ValueError('Asset %r is already set. Can only reuse if '
+                                 'content is a filename and the same.' % fname)
         
         if isinstance(content, bytes):
             self._assets[fname] = content
@@ -259,8 +260,9 @@ class SessionAssets:
         
         if self._served and (fname.endswith('.js') or fname.endswith('.css')):
             suffix = fname.split('.')[-1].upper()
-            self._send_command('DEFINE-%s %s' % (suffix, self._store.load_asset(fname).decode()))
-            #logging.warn('Adding asset %r but the page has already been "served".' % fname)
+            code = self._store.load_asset(fname).decode()
+            self._send_command('DEFINE-%s %s' % (suffix, code))
+            #logging.warn('Adding asset %r but the page was already "served".' % fname)
         
         self._asset_names.append(fname)
     
@@ -400,11 +402,11 @@ class SessionAssets:
         # Collect remote assets
         for url in self._remote_asset_names:
             if url.endswith('.css'):
-                css = "    <link rel='stylesheet' type='text/css' href='%s' />" % url
-                css_elements.append(css)
+                t = "    <link rel='stylesheet' type='text/css' href='%s' />"
+                css_elements.append(t % url)
             else:
-                js = "    <script src='%s'></script>" % url
-                js_elements.append(js)
+                t = "    <script src='%s'></script>"
+                js_elements.append(t % url)
         
         # Collect JS and CSS
         for fname, code in self._get_js_and_css_assets().items():
@@ -412,18 +414,18 @@ class SessionAssets:
                 continue
             if single or fname.startswith('index-'):
                 if fname.endswith('.css'):
-                    css = "<style>\n/* CSS for %s */\n%s\n</style>" % (fname, code)
-                    index_elements.append(css)
+                    t = "<style>\n/* CSS for %s */\n%s\n</style>"
+                    index_elements.append(t % (fname, code))
                 else:
-                    js = "<script>\n/* JS for %s */\n%s\n</script>" % (fname, code)
-                    index_elements.append(js)
+                    t = "<script>\n/* JS for %s */\n%s\n</script>"
+                    index_elements.append(t % (fname, code))
             else:
                 if fname.endswith('.css'):
-                    css = "    <link rel='stylesheet' type='text/css' href='%s' />" % fname
-                    css_elements.append(css)
+                    t = "    <link rel='stylesheet' type='text/css' href='%s' />"
+                    css_elements.append(t % fname)
                 else:
-                    js = "    <script src='%s'></script>" % fname
-                    js_elements.append(js)
+                    t = "    <script src='%s'></script>"
+                    js_elements.append(t % fname)
         
         # Compose index page
         src = INDEX

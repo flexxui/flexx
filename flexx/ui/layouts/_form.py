@@ -15,7 +15,8 @@ Example:
 """
 
 from ... import react
-from . import Widget, Layout
+from ...pyscript.stubs import document, phosphor, undefined
+from . import Layout
 
 
 class BaseTableLayout(Layout):
@@ -101,10 +102,11 @@ class BaseTableLayout(Layout):
                 row = table.children[i]
                 row.vflex = vflexes[i] or 0  # Store for use during resizing
                 for j in range(ncols):
-                    col = row.children[j];
+                    col = row.children[j]
                     if (col is undefined) or (col.children.length is 0):
                         continue
-                    self._apply_cell_layout(row, col, vflexes[i], hflexes[j], cum_vflex, cum_hflex)
+                    self._apply_cell_layout(row, col, vflexes[i], hflexes[j],
+                                            cum_vflex, cum_hflex)
         
         @react.connect('real_size')
         def _adapt_to_size_change(self, size):
@@ -145,7 +147,8 @@ class BaseTableLayout(Layout):
                 for i in range(len(table.children)):
                     row = table.children[i]
                     if row.vflex > 0:
-                        row.style.height = round(row.vflex / cum_vflex * remainingPercentage) + 1 + '%'
+                        row.style.height = round(row.vflex /cum_vflex *
+                                                 remainingPercentage) + 1 + '%'
         
         def _apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):
             raise NotImplementedError()
@@ -169,7 +172,7 @@ class FormLayout(BaseTableLayout):
     class JS:
         
         def _create_node(self):
-            this.p = phosphor.createWidget('table')
+            self.p = phosphor.createWidget('table')
         
         def _apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):
             AUTOFLEX = 729
@@ -192,7 +195,7 @@ class FormLayout(BaseTableLayout):
         def _add_child(self, widget):
             # Create row
             row = document.createElement('tr')
-            this.node.appendChild(row)
+            self.node.appendChild(row)
             # Create element for label
             td = document.createElement("td")
             td.classList.add('title')

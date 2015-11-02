@@ -2,6 +2,9 @@
 * unit - run unit tests
 * style - flake style testing (PEP8 and more)
 * cover - open html coverage report in web browser
+
+For 'unit' and 'style' the relative dir to test can be specified as an
+additional argument.
 """
 
 import os
@@ -25,29 +28,34 @@ def test(arg='', *args):
 
 
 def test_unit(rel_path='.'):
-    """ Peform unit tests using flake
-    """
-    # Test if pytest is there
+    # Ensure we have pytest
     try:
         import pytest  # noqa
     except ImportError:
         sys.exit('Cannot do unit tests, pytest not installed')
+    # If testing installed version, import module first
+    if os.getenv('TEST_INSTALL', '').lower() in ('1', 'yes', 'true'):
+        os.chdir(os.path.expanduser('~'))
+        m = __import__(NAME)
+        assert ROOT_DIR not in m.__path__[0]
+    # Goto root dir - where the test scripts are
+    os.chdir(ROOT_DIR)
+    # Start tests
     _enable_faulthandler()
     cov_report = '--cov-report=term --cov-report=html'
-    os.chdir(ROOT_DIR)
     try:
         res = pytest.main('--cov %s --cov-config=.coveragerc %s %r' % 
                           (NAME, cov_report, rel_path))
         sys.exit(res)
     finally:
         m = __import__(NAME)
-        print('Tests were performed on', str(m))
+        print('Unit tests were performed on', str(m))
 
 
 def show_coverage_term():
     from coverage import coverage
     cov = coverage(auto_data=False, branch=True, data_suffix=None,
-                   source=['flexx'])  # should match testing/_coverage.py
+                   source=[NAME])  # should match testing/_coverage.py
     cov.load()
     cov.report()
     
@@ -58,7 +66,7 @@ def show_coverage_html():
     
     print('Generating HTML...')
     cov = coverage(auto_data=False, branch=True, data_suffix=None,
-                   source=['flexx'])  # should match testing/_coverage.py
+                   source=[NAME])  # should match testing/_coverage.py
     cov.load()
     cov.html_report()
     print('Done, launching browser.')
@@ -68,86 +76,32 @@ def show_coverage_html():
     webbrowser.open_new_tab(fname)
 
 
-def test_style(rel_path=''):
-    """ Test style using flake8
-    """
-    # Test if flake is there
+def test_style(rel_path='.'):
+    # Ensure we have flake8
     try:
+        import flake8.main
         from flake8.main import main  # noqa
     except ImportError:
-        sys.exit('Cannot do flake8 test, flake8 not installed')
-    
-    path = os.path.join(ROOT_DIR, rel_path)
-    
-    # Reporting
-    print('Running flake8 on %s' % path)
-    sys.stdout = FileForTesting(sys.stdout)
-    
-    # Init
-    #ignores = STYLE_IGNORES.copy()
-    fail = False
-    count_ok, count_fail = 0, 0
-    
-    # Iterate over files
-    for dir, dirnames, filenames in os.walk(path):
-        dir = os.path.relpath(dir, path)
-        # Skip this dir?
-        exclude_dirs = set(['.git', 'docs', 'build', 'dist', '__pycache__'])
-        if exclude_dirs.intersection(dir.split(os.path.sep)):
-            continue
-        # Check all files ...
-        for fname in filenames:
-            if fname.endswith('.py'):
-                # Get test options for this file
-                filename = os.path.join(path, dir, fname)
-                #skip, extra_ignores = _get_style_test_options(filename)
-                #if skip:
-                #    continue
-                # Test
-                thisfail = _test_style(filename, [])#, ignores + extra_ignores)
-                if thisfail:
-                    count_fail += 1
-                    fail = True
-                    print('----')
-                else:
-                    count_ok += 1
-                sys.stdout.flush()
-    
-    # Report result
-    count_total = count_ok + count_fail
-    sys.stdout.revert()
-    if count_total == 0:
-        raise RuntimeError('    Arg! flake8 did not check any files')
-    elif count_fail:
-        raise RuntimeError('    Arg! flake8 failed (errors in %i/%i files)' % 
-                           (count_fail, count_total))
-    else:
-        print('    Hooray! flake8 passed (checked %i files)' % count_total)
-
-
-def _test_style(filename, ignore):
-    """ Test style for a certain file.
-    """
-    if isinstance(ignore, (list, tuple)):
-        ignore = ','.join(ignore)
-    
+        sys.exit('Cannot do style test, flake8 not installed')
+    # Monkey-patch flake8 to get a clear summary
+    def my_report(report, flake8_style):
+        print('%sFound %i errors in %i lines in %i files.' % (
+              'Arg! ' if report.total_errors else 'Hooray! ',
+              report.total_errors,
+              report.counters['logical lines'],
+              report.counters['files']))
+        return flake8.main.ori_print_report(report, flake8_style)
+    if not hasattr(flake8.main, 'ori_print_report'):
+        flake8.main.ori_print_report = flake8.main.print_report
+        flake8.main.print_report = my_report
+    # Prepare
     orig_dir = os.getcwd()
     orig_argv = sys.argv
-    
     os.chdir(ROOT_DIR)
-    sys.argv[1:] = [filename]
-    sys.argv.append('--ignore=' + ignore)
-    try:
-        from flake8.main import main
-        main()
-    except SystemExit as ex:
-        if ex.code in (None, 0):
-            return False
-        else:
-            return True
-    finally:
-        os.chdir(orig_dir)
-        sys.argv[:] = orig_argv
+    # Do test
+    print('Running flake8 tests ...')
+    sys.argv[1:] = [rel_path]
+    flake8.main.main()  # Raises SystemExit
 
 
 class FileForTesting(object):
