@@ -255,25 +255,25 @@ class Parser3(Parser2):
     
     def function_hasattr(self, node):
         if len(node.arg_nodes) == 2:
-            return self.use_std_function('hasattr', node.arg_nodes)
+            return self.use_std_func('hasattr', node.arg_nodes)
         else:
             raise JSError('hasattr() expects two arguments.')
     
     def function_getattr(self, node):
         if len(node.arg_nodes) in (2, 3):
-            return self.use_std_function('getattr', node.arg_nodes)
+            return self.use_std_func('getattr', node.arg_nodes)
         else:
             raise JSError('hasattr() expects two or three arguments.')
     
     def function_setattr(self, node):
         if len(node.arg_nodes) == 3:
-            return self.use_std_function('setattr', node.arg_nodes)
+            return self.use_std_func('setattr', node.arg_nodes)
         else:
             raise JSError('setattr() expects three arguments.')
     
     def function_delattr(self, node):
         if len(node.arg_nodes) == 2:
-            return self.use_std_function('delattr', node.arg_nodes)
+            return self.use_std_func('delattr', node.arg_nodes)
         else:
             raise JSError('delattr() expects two arguments.')
     
@@ -348,7 +348,7 @@ class Parser3(Parser2):
         if len(node.arg_nodes) == 0:
             return '{}'
         if len(node.arg_nodes) == 1:
-            return self.use_std_function('dict', node.arg_nodes)
+            return self.use_std_func('dict', node.arg_nodes)
         else:
             raise JSError('dict() needs at least one argument')
     
@@ -356,7 +356,7 @@ class Parser3(Parser2):
         if len(node.arg_nodes) == 0:
             return '[]'
         if len(node.arg_nodes) == 1:
-            return self.use_std_function('list', node.arg_nodes)
+            return self.use_std_func('list', node.arg_nodes)
         else:
             raise JSError('list() needs at least one argument')
     
@@ -369,12 +369,12 @@ class Parser3(Parser2):
         
         if len(node.arg_nodes) == 1:
             args = ast.Num(0), node.arg_nodes[0], ast.Num(1)
-            return self.use_std_function('range', args)
+            return self.use_std_func('range', args)
         elif len(node.arg_nodes) == 2:
             args = node.arg_nodes[0], node.arg_nodes[1], ast.Num(1)
-            return self.use_std_function('range', args)
+            return self.use_std_func('range', args)
         elif len(node.arg_nodes) == 3:
-            return self.use_std_function('range', node.arg_nodes)
+            return self.use_std_func('range', node.arg_nodes)
         else:
             raise JSError('range() needs 1, 2 or 3 arguments')
     
@@ -382,112 +382,162 @@ class Parser3(Parser2):
     
     def function_pow(self, node):
         if len(node.arg_nodes) == 2:
-            return self.use_std_function('pow', node.arg_nodes)
+            return self.use_std_func('pow', node.arg_nodes)
         else:
             raise JSError('pow() needs exactly two argument2')
     
     def function_sum(self, node):
         if len(node.arg_nodes) == 1:
-            return self.use_std_function('sum', node.arg_nodes)
+            return self.use_std_func('sum', node.arg_nodes)
+            # code = 'function (x) {return x.reduce(function(a, b) {return a + b;});}'
+            # self.vars_for_functions['sum'] = code
+            # return None
         else:
             raise JSError('sum() needs exactly one argument')
     
     def function_round(self, node):
         if len(node.arg_nodes) == 1:
-            return self.use_std_function('round', node.arg_nodes)
+            return self.use_std_func('round', node.arg_nodes)
         else:
             raise JSError('round() needs at least one argument')
     
     def function_int(self, node):
+        # No need to turn into number first
         if len(node.arg_nodes) == 1:
-            return self.use_std_function('int', node.arg_nodes)
+            return self.use_std_func('int', node.arg_nodes)
+            # code = 'function (x) {return x<0 ? Math.ceil(x): Math.floor(x);}'
+            # self.vars_for_functions['int'] = code
         else:
             raise JSError('int() needs one argument')
     
     def function_float(self, node):
         if len(node.arg_nodes) == 1:
-            return self.use_std_function('float', node.arg_nodes)
+            return self.use_std_func('float', node.arg_nodes)
+            # self.vars_for_functions['float'] = 'Number'
         else:
             raise JSError('float() needs one argument')
     
     def function_str(self, node):
         if len(node.arg_nodes) in (0, 1):
-            return self.use_std_function('str', node.arg_nodes)
+            return self.use_std_func('str', node.arg_nodes)
+            # self.vars_for_functions['str'] = 'String'
         else:
             raise JSError('str() needs zero or one argument')
     
     def function_repr(self, node):
         if len(node.arg_nodes) == 1:
-            return self.use_std_function('repr', node.arg_nodes)
+            return self.use_std_func('repr', node.arg_nodes)
+            # self.vars_for_functions['repr'] = 'JSON.stringify'
         else:
             raise JSError('repr() needs one argument')
     
     def function_bool(self, node):
         if len(node.arg_nodes) == 1:
-            self.use_std_function('truthy', [])  # trigger truthy usage
-            return self.use_std_function('bool', node.arg_nodes)
+            self.use_std_func('truthy', [])  # trigger truthy usage
+            return self.use_std_func('bool', node.arg_nodes)
+            # self._wrap_truthy(ast.Name('x'))  # trigger _truthy function declaration
+            # self.vars_for_functions['bool'] = ('function (x) {'
+            #                                    'return Boolean(_truthy(x));}')
         else:
             raise JSError('bool() needs one argument')
     
     def function_abs(self, node):
         if len(node.arg_nodes) == 1:
-            return self.use_std_function('abs', node.arg_nodes)
+            return self.use_std_func('abs', node.arg_nodes)
+            # self.vars_for_functions['abs'] = 'Math.abs'
         else:
             raise JSError('abs() needs one argument')
     
     def function_divmod(self, node):
         if len(node.arg_nodes) == 2:
-            return self.use_std_function('divmod', node.arg_nodes)
+            return self.use_std_func('divmod', node.arg_nodes)
+            # code = 'function (x, y) {var m = x % y; return [(x-m)/y, m];}'
+            # self.vars_for_functions['divmod'] = code
         else:
             raise JSError('divmod() needs two arguments')
         
     def function_all(self, node):
         if len(node.arg_nodes) == 1:
-            self.use_std_function('truthy', [])  # trigger truthy usage
-            return self.use_std_function('all', node.arg_nodes)
+            self.use_std_func('truthy', [])  # trigger truthy usage
+            return self.use_std_func('all', node.arg_nodes)
+            # self._wrap_truthy(ast.Name('x'))  # trigger _truthy function declaration
+            # code = ('function (x) {for (var i=0; i<x.length; i++) {'
+            #         'if (!_truthy(x[i])){return false}} return true;}')
+            # self.vars_for_functions['all'] = code
         else:
             raise JSError('all() needs one argument')
     
     def function_any(self, node):
         if len(node.arg_nodes) == 1:
-            self.use_std_function('truthy', [])  # trigger truthy usage
-            return self.use_std_function('any', node.arg_nodes)
+            self.use_std_func('truthy', [])  # trigger truthy usage
+            return self.use_std_func('any', node.arg_nodes)
+            # self._wrap_truthy(ast.Name('x'))  # trigger _truthy function declaration
+            # code = ('function (x) {for (var i=0; i<x.length; i++) {'
+            #         'if (_truthy(x[i])){return true}} return false;}')
+            # self.vars_for_functions['any'] = code
         else:
             raise JSError('any() needs one argument')
     
     def function_enumerate(self, node):
         if len(node.arg_nodes) == 1:
-            return self.use_std_function('enumerate', node.arg_nodes)
+            return self.use_std_func('enumerate', node.arg_nodes)
+            # code = 'function (iter) { var i, res=[];'
+            # code += self._make_iterable('iter', 'iter', False)
+            # code += 'for (i=0; i<iter.length; i++) {res.push([i, iter[i]]);}'
+            # code += 'return res;}'
+            # self.vars_for_functions['enumerate'] = code
         else:
             raise JSError('enumerate() needs one argument')
     
     def function_zip(self, node):
         if len(node.arg_nodes) == 2:
-            return self.use_std_function('zip', node.arg_nodes)
+            return self.use_std_func('zip', node.arg_nodes)
+            # code = 'function (iter1, iter2) { var i, res=[];'
+            # code += self._make_iterable('iter1', 'iter1', False)
+            # code += self._make_iterable('iter2', 'iter2', False)
+            # code += 'var len = Math.min(iter1.length, iter2.length);'
+            # code += 'for (i=0; i<len; i++) {res.push([iter1[i], iter2[i]]);}'
+            # code += 'return res;}'
+            # self.vars_for_functions['zip'] = code
         else:
             raise JSError('zip() needs two arguments')
              
     def function_reversed(self, node):
         if len(node.arg_nodes) == 1:
-            return self.use_std_function('reversed', node.arg_nodes)
+            return self.use_std_func('reversed', node.arg_nodes)
+            # code = 'function (iter) {'
+            # code += self._make_iterable('iter', 'iter', False)
+            # code += 'return iter.slice().reverse();}'
+            # self.vars_for_functions['reversed'] = code
         else:
             raise JSError('reversed() needs one argument')
     
     def function_sorted(self, node):
         if len(node.arg_nodes) == 1:
-            return self.use_std_function('sorted', node.arg_nodes)
+            return self.use_std_func('sorted', node.arg_nodes)
+            # code = 'function (iter) {'
+            # code += self._make_iterable('iter', 'iter', False)
+            # code += 'return iter.slice().sort();}'
+            # self.vars_for_functions['sorted'] = code
         else:
             raise JSError('sorted() needs one argument')
     
     def function_filter(self, node):
         if len(node.arg_nodes) == 2:
-            return self.use_std_function('filter', node.arg_nodes)
+            return self.use_std_func('filter', node.arg_nodes)
+            # code = 'function (func, iter) {'
+            # code += ('if (typeof func === "undefined" || func === null) '
+            #          '{func = function(x) {return x;}}')
+            # code += 'return iter.filter(func);}'
+            # self.vars_for_functions['filter'] = code
         else:
             raise JSError('filter() needs two arguments')
     
     def function_map(self, node):
         if len(node.arg_nodes) == 2:
-            return self.use_std_function('map', node.arg_nodes)
+            return self.use_std_func('map', node.arg_nodes)
+            # code = 'function (func, iter) {return iter.map(func);}'
+            # self.vars_for_functions['map'] = code
         else:
             raise JSError('map() needs two arguments')
     
@@ -509,28 +559,30 @@ class Parser3(Parser2):
     
     def method_keys(self, node, base):
         if len(node.arg_nodes) == 0:
-            return self.use_std_method(base, 'keys', node.arg_nodes)
+            return 'Object.keys(%s)' % base
     
     ## Str methods
     
     def method_startswith(self, node, base):
         if len(node.arg_nodes) == 1:
-            return self.use_std_method(base, 'startswith', node.arg_nodes)
-            # arg = unify(self.parse(node.arg_nodes[0]))
-            # return unify(base), '.indexOf(', arg, ') == 0'
+            arg = unify(self.parse(node.arg_nodes[0]))
+            return unify(base), '.indexOf(', arg, ') == 0'
     
     ## Extra functions / methods
     
     def method_time(self, node, base):  # time.time()
         if base == 'time':
             if len(node.arg_nodes) == 0:
-                return self.use_std_function('time', [])
+                return '((new Date()).getTime() / 1000)'
             else:
                 raise JSError('time() needs no argument')
     
     def method_perf_counter(self, node, base):  # time.perf_counter()
         if base == 'time':
             if len(node.arg_nodes) == 0:
-                return self.use_std_function('perf_counter', [])
+                # Work in nodejs and browser
+                dummy = self.dummy()
+                return ('(typeof(process) === "undefined" ? performance.now()*1e-3 '
+                        ': ((%s=process.hrtime())[0] + %s[1]*1e-9))' % (dummy, dummy))
             else:
                 raise JSError('perf_counter() needs no argument')

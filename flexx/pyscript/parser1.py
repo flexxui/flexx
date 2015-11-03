@@ -152,6 +152,7 @@ from .parser0 import Parser0, JSError, unify  # noqa
 
 # Define JS function that returns false on an empty array or dict, and
 # otherwise lets the original value through.
+# todo: remove this
 bool_func = 'function (v) {'
 bool_func += 'if (v === null || typeof v !== "object") {return v;} '
 bool_func += 'else if (v.length !== undefined) {return v.length ? v : false;} '

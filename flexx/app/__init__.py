@@ -85,4 +85,7 @@ from .funcs import init_notebook, serve, launch, export  # noqa
 from .assetstore import assets  # noqa
 from .clientcore import FlexxJS  # noqa
 
-assets.create_module_assets('flexx.app', js=FlexxJS + 'var flexx = new FlexxJS();\n')
+from ..pyscript.stdlib import get_full_std_lib as _get_full_std_lib
+
+assets.create_module_assets('flexx.app', js='%s\n\n%s\nvar flexx = new FlexxJS();\n' %
+                            (_get_full_std_lib(), FlexxJS))

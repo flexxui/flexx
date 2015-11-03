@@ -166,7 +166,7 @@ from .parser2 import Parser2  # noqa
 from .parser3 import Parser3  # noqa
 
 # Assert py3k
-if sys.version_info < (3, 2):
+if sys.version_info < (3, 2):  # pragma: no cover
     raise RuntimeError('flexx.pyscript needs Python 3.2 or higher')
 
 
@@ -199,4 +199,5 @@ class Parser(Parser3):
     pass
 
 
-from .functions import py2js, evaljs, evalpy, script2js, clean_code, js_rename  # noqa
+from .functions import py2js, evaljs, evalpy, script2js, js_rename  # noqa
+from . import stubs

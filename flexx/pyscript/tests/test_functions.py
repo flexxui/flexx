@@ -7,7 +7,7 @@ import tempfile
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.pyscript import py2js, evaljs, evalpy, script2js, clean_code
+from flexx.pyscript import py2js, evaljs, evalpy, script2js, stdlib
 
 
 def test_py2js_on_wrong_vals():
@@ -24,6 +24,21 @@ def test_py2js_on_strings():
     assert py2js('3 + 3') == '3 + 3;'
     assert py2js('list()') == '[];'
 
+def test_stdlib():
+    code = stdlib.get_full_std_lib()
+    assert isinstance(code, str)
+    assert 'var py_hasattr =' in code
+    assert 'var py_list =' in code
+    assert code.count('var') > 10
+    
+    code = stdlib.get_partial_std_lib(['hasattr'], [])
+    assert isinstance(code, str)
+    assert 'var py_hasattr =' in code
+    assert 'var py_list =' not in code
+    assert code.count('var') == 1
+    
+    assert 'py_hasattr = function' in py2js('hasattr(x, "foo")')
+    assert 'py_hasattr = function' not in py2js('hasattr(x, "foo")', inline_stdlib=False)
 
 def test_evaljs():
     assert evaljs('3+4') == '7'
@@ -74,10 +89,20 @@ def test_py2js_on_function():
     def foo2():
         pass
     
+    @py2js
+    def foo3():
+        pass
+    
+    @py2js(indent=1)
+    def foo4():
+        pass
+    
     assert callable(foo1)
     assert callable(foo2)
     assert py2js(foo1).pycode.startswith('def foo')
     assert py2js(foo2).pycode.startswith('def foo')
+    assert foo3.startswith('var foo3')
+    assert foo4.startswith('    var foo4')
 
 
 def test_py2js_on_class():
@@ -138,11 +163,11 @@ f2 = function () {
 }
 """
 
-def test_clean_code():
-    
-    code = clean_code(TEST_CODE)
-    assert code.count('var foo =') == 1
-    assert code.count('var bar =') == 2
+# def test_clean_code():
+#     
+#     code = clean_code(TEST_CODE)
+#     assert code.count('var foo =') == 1
+#     assert code.count('var bar =') == 2
 
 
 def test_scripts():

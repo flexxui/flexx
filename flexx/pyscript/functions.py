@@ -21,7 +21,7 @@ class JSString(text_type):
     pass
 
 
-def py2js(ob, new_name=None, **parser_options):
+def py2js(ob=None, new_name=None, **parser_options):
     """ Convert Python to JavaScript.
     
     Parameters:
@@ -43,44 +43,49 @@ def py2js(ob, new_name=None, **parser_options):
     
     """
     
-    if isinstance(ob, string_types):
-        thetype = 'str'
-        pycode = ob
-    elif isinstance(ob, type) or isinstance(ob, (types.FunctionType, types.MethodType)):
-        thetype = 'class' if isinstance(ob, type) else 'def'
-        # Get code
-        try:
-            lines, linenr = inspect.getsourcelines(ob)
-        except Exception as err:
-            raise ValueError('Could not get source code for object %r: %s' % (ob, err))
-        # Normalize indentation
-        indent = len(lines[0]) - len(lines[0].lstrip())
-        lines = [line[indent:] for line in lines]
-        # Skip any decorators
-        while not lines[0].lstrip().startswith(thetype):
-            lines.pop(0)
-        # join lines and rename
-        pycode = ''.join(lines)
-    else:
-        raise ValueError('py2js() only accepts classes and real functions.')
+    def py2js_(ob):
+        if isinstance(ob, string_types):
+            thetype = 'str'
+            pycode = ob
+        elif isinstance(ob, type) or isinstance(ob, (types.FunctionType, types.MethodType)):
+            thetype = 'class' if isinstance(ob, type) else 'def'
+            # Get code
+            try:
+                lines, linenr = inspect.getsourcelines(ob)
+            except Exception as err:
+                raise ValueError('Could not get source code for object %r: %s' % (ob, err))
+            # Normalize indentation
+            indent = len(lines[0]) - len(lines[0].lstrip())
+            lines = [line[indent:] for line in lines]
+            # Skip any decorators
+            while not lines[0].lstrip().startswith(thetype):
+                lines.pop(0)
+            # join lines and rename
+            pycode = ''.join(lines)
+        else:
+            raise ValueError('py2js() only accepts classes and real functions.')
+        
+        # Get hash, in case we ever want to cache JS accross sessions
+        h = hashlib.sha256('pyscript version 1'.encode())
+        h.update(pycode.encode())
+        hash = h.digest()
+        
+        # Get JS code
+        p = Parser(pycode, **parser_options)
+        jscode = p.dump()
+        if new_name and thetype in ('class', 'def'):
+            jscode = js_rename(jscode, ob.__name__, new_name)
+        
+        # Wrap in JSString
+        jscode = JSString(jscode)
+        jscode.pycode = pycode
+        jscode.pyhash = hash
+        
+        return jscode
     
-    # Get hash, in case we ever want to cache JS accross sessions
-    h = hashlib.sha256('pyscript version 1'.encode())
-    h.update(pycode.encode())
-    hash = h.digest()
-    
-    # Get JS code
-    p = Parser(pycode, **parser_options)
-    jscode = p.dump()
-    if new_name and thetype in ('class', 'def'):
-        jscode = js_rename(jscode, ob.__name__, new_name)
-    
-    # Wrap in JSString
-    jscode = JSString(jscode)
-    jscode.pycode = pycode
-    jscode.pyhash = hash
-    
-    return jscode
+    if ob is None:
+        return py2js_  # uses as a decorator with some options set
+    return py2js_(ob)
 
 
 def js_rename(jscode, cur_name, new_name):
@@ -189,32 +194,34 @@ def script2js(filename, namespace=None, target=None):
         filename2 = target
     with open(filename2, 'wb') as f:
         f.write(jscode.encode())
-
-
-def clean_code(code):
-    """ Remove duplicate declarations of std function definitions.
-    
-    Use this if you build a JS source file from multiple snippets and
-    want to get rid of the function declarations like ``_truthy`` and
-    ``sum``.
-    
-    Parameters:
-        code (str): the complete source code.
-    
-    Returns:
-        new_code (str): the code with duplicate definitions filtered out.
-    """
-    known_funcs = {}
-    
-    lines = []
-    for line in code.splitlines():
-        line2 = line.lstrip()
-        indent = len(line) - len(line2)
-        if line2.startswith('var ') and ' = function ' in line2:
-            prev_indent = known_funcs.get(line2, 999)
-            if prev_indent == 0 :
-                continue
-            if indent == 0:
-                known_funcs[line2] = indent
-        lines.append(line)
-    return '\n'.join(lines)
+# 
+# 
+# def clean_code(code):
+#     """ Remove duplicate declarations of std function definitions.
+#     
+#     Use this if you build a JS source file from multiple snippets and
+#     want to get rid of the function declarations like ``_truthy`` and
+#     ``sum``.
+#     
+#     Parameters:
+#         code (str): the complete source code.
+#     
+#     Returns:
+#         new_code (str): the code with duplicate definitions filtered out.
+#     """
+#     return code
+#     # todo: remove this function
+#     known_funcs = {}
+#     
+#     lines = []
+#     for line in code.splitlines():
+#         line2 = line.lstrip()
+#         indent = len(line) - len(line2)
+#         if line2.startswith('var ') and ' = function ' in line2:
+#             prev_indent = known_funcs.get(line2, 999)
+#             if prev_indent == 0 :
+#                 continue
+#             if indent == 0:
+#                 known_funcs[line2] = indent
+#         lines.append(line)
+#     return '\n'.join(lines)

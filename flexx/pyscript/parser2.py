@@ -377,7 +377,7 @@ class Parser2(Parser1):
         # First see if this for-loop is something that we support directly
         if isinstance(node.iter_node, ast.Call):
             f = node.iter_node.func_node
-            if (isinstance(f, ast.Attribute) and 
+            if (isinstance(f, ast.Attribute) and
                     not node.iter_node.arg_nodes and f.attr in METHODS):
                 sure_is_dict = f.attr
                 iter = ''.join(self.parse(f.value_node))

@@ -19,6 +19,7 @@ import sys
 import re
 
 from . import commonast as ast
+from . import stdlib
 
 
 class JSError(Exception):
@@ -113,7 +114,8 @@ class Parser0(object):
             indentation level means 4 spaces.
         docstrings (bool): whether docstrings are included in JS
             (default True).
-    
+        inline_stdlib (bool): whether the used stdlib functions are inlined
+            (default True). Set to False if the stdlib is already loaded.
     """
     
     # Developer notes:
@@ -163,12 +165,14 @@ class Parser0(object):
         'IsNot' : "!==",
     }
     
-    def __init__(self, code, module=None, indent=0, docstrings=True):
+    def __init__(self, code, module=None, indent=0, docstrings=True, inline_stdlib=True):
         self._pycode = code  # helpfull during debugging
         self._root = ast.parse(code)
         self._stack = []
         self._indent = indent
         self._dummy_counter = 0
+        self._std_functions = set()
+        self._std_methods = set()
         
         # Options
         self._docstrings = bool(docstrings)  # whether to inclue docstrings
@@ -204,6 +208,13 @@ class Parser0(object):
         ns = self.pop_stack()  # Pop module namespace
         if ns:
             self._parts.insert(0, self.get_declarations(ns))
+        
+        # Add part of the stdlib that was actually used
+        if inline_stdlib:
+            libcode = stdlib.get_partial_std_lib(self._std_functions, 
+                                                self._std_methods, self._indent)
+            if libcode:
+                self._parts.insert(0, libcode)
         
         # Post-process
         if module:
@@ -295,6 +306,7 @@ class Parser0(object):
     def vars_for_functions(self):
         """ Function declarations are added to the second stack if available.
         """
+        # todo: remove this
         return self._stack[0][2]
     
     def lf(self, code=''):
@@ -309,6 +321,22 @@ class Parser0(object):
         name = 'dummy%i_%s' % (self._dummy_counter, name)
         self.vars.add(name)
         return name
+    
+    def use_std_function(self, name, arg_nodes):
+        """ Use a function from the PyScript standard library.
+        """
+        self._std_functions.add(name)
+        mangled_name = stdlib.FUNCTION_PREFIX + name
+        args = [unify(self.parse(a)) for a in arg_nodes]
+        return '%s(%s)' % (mangled_name, ', '.join(args))
+    
+    def use_std_method(self, base, name, arg_nodes):
+        """ Use a method from the PyScript standard library.
+        """
+        self._std_methods.add(name)
+        mangled_name = stdlib.METHOD_PREFIX + name
+        args = [unify(self.parse(a)) for a in arg_nodes]
+        return '%s.%s(%s)' % (base, mangled_name, ', '.join(args)) 
     
     def pop_docstring(self, node):
         """ If a docstring is present, in the body of the given node,

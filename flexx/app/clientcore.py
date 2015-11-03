@@ -7,7 +7,7 @@ from ..pyscript.stubs import (undefined, window, root, console, document,
                               module, flexx, require, typeof)
 
 
-@py2js
+@py2js(inline_stdlib=False)
 class FlexxJS:
     """ JavaScript Flexx module. This provides the connection between
     the Python and JS (via a websocket).

@@ -36,11 +36,11 @@ class TestConrolFlow:
     def test_for(self):
         
         # Test all possible ranges
-        line = nowhitespace(py2js('for i in range(9): pass'))
+        line = nowhitespace(py2js('for i in range(9): pass', inline_stdlib=False))
         assert line == 'vari;for(i=0;i<9;i+=1){}'
-        line = nowhitespace(py2js('for i in range(2, 99): pass'))
+        line = nowhitespace(py2js('for i in range(2, 99): pass', inline_stdlib=False))
         assert line == 'vari;for(i=2;i<99;i+=1){}'
-        line = nowhitespace(py2js('for i in range(100, 0, -1): pass'))
+        line = nowhitespace(py2js('for i in range(100, 0, -1): pass', inline_stdlib=False))
         assert line == 'vari;for(i=100;i>0;i+=-1){}'
         
         # Test enumeration (code)

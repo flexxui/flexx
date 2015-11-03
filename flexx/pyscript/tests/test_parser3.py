@@ -166,9 +166,9 @@ class TestHardcoreBuildins:
 
 class TestOtherBuildins:
     
-    def test_allow_overload(self):
-        assert evalpy('sum([3, 4])') == '7'
-        assert evalpy('sum = lambda x:1\nsum([3, 4])') == '1'
+    # def test_allow_overload(self):
+    #     assert evalpy('sum([3, 4])') == '7'
+    #     assert evalpy('sum = lambda x:1\nsum([3, 4])') == '1'
     
     def test_pow(self):
         assert evalpy('pow(2, 3)') == '8'
