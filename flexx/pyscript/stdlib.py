@@ -133,12 +133,12 @@ FUNCTIONS['enumerate'] = """function (iter) {
     return res;
 }"""
         
-FUNCTIONS['zip'] = """function (iter1, iter2) {
+FUNCTIONS['zip'] = """function (it1, it2) {
     var i, res=[];
-    if ((typeof iter1==="object") && (!Array.isArray(iter1))) {iter1 = Object.keys(iter1);}
-    if ((typeof iter2==="object") && (!Array.isArray(iter2))) {iter2 = Object.keys(iter2);}
-    var len = Math.min(iter1.length, iter2.length);
-    for (i=0; i<len; i++) {res.push([iter1[i], iter2[i]]);}
+    if ((typeof it1==="object") && (!Array.isArray(it1))) {it1 = Object.keys(it1);}
+    if ((typeof it2==="object") && (!Array.isArray(it2))) {it2 = Object.keys(it2);}
+    var len = Math.min(it1.length, it2.length);
+    for (i=0; i<len; i++) {res.push([it1[i], it2[i]]);}
     return res;
 }"""
 
@@ -244,16 +244,19 @@ METHODS['sort'] = """function (key, reverse) {
 METHODS['clear'] = """function () {
     if (Array.isArray(this)) {
         this.splice(0, this.length);
-    } else if (typeof this === 'object') {
-    
+    } else if (this.constructor === Object) {
+        var keys = Object.keys(this);
+        for (var i=0; i<keys.length; i++) delete this[keys[i]];
     } else return this.KEY.apply(this, arguments);
 }"""
 
 METHODS['copy'] = """function () {
     if (Array.isArray(this)) {
         return this.slice(0);
-    } else if (typeof this === 'object') {
-    
+    } else if (this.constructor === Object) {
+        var keys = Object.keys(this), res = {};
+        for (var i=0; i<keys.length; i++) {key = keys[i]; res[key] = this[key];}
+        return res;
     } else return this.KEY.apply(this, arguments);
 }"""
 
@@ -264,18 +267,30 @@ METHODS['pop'] = """function (i, d) {
         var popped = this.splice(i, 1);
         if (popped.length)  return popped[0];
         var e = Error(i); e.name='IndexError'; throw e;
-    } else if (typeof this === 'object') {
-    
+    } else if (this.constructor === Object) {
+        var res = this[i]
+        if (res !== undefined) {delete this[i]; return res;}
+        else if (d !== undefined) return d;
+        var e = Error(i); e.name='KeyError'; throw e;
     } else return this.KEY.apply(this, arguments);
 }"""
 
 # Dict only
 
-METHODS['get'] = """function (name, deflt) {
-    if (typeof this['KEY'] === 'function') return this.KEY.apply(this, arguments);
-    if (this[name] !== undefined) {return this[name];}
-    else if (deflt !== undefined) {return deflt;}
+# note: fromkeys is a classmethod, and we dont support it.
+
+METHODS['get'] = """function (key, d) {
+    if (this.constructor !== Object) return this.KEY.apply(this, arguments);
+    if (this[key] !== undefined) {return this[key];}
+    else if (d !== undefined) {return d;}
     else {return null;}
+}"""
+
+METHODS['items'] = """function () {
+    if (this.constructor !== Object) return this.KEY.apply(this, arguments);
+    var key, keys = Object.keys(this), res = []
+    for (var i=0; i<keys.length; i++) {key = keys[i]; res.push([key, this[key]]);}
+    return res;
 }"""
 
 METHODS['keys'] = """function () {
@@ -283,7 +298,34 @@ METHODS['keys'] = """function () {
     return Object.keys(this);
 }"""
 
+METHODS['popitem'] = """function () {
+    if (this.constructor !== Object) return this.KEY.apply(this, arguments);
+    var keys, key, val;
+    keys = Object.keys(this);
+    if (keys.length == 0) {var e = Error(); e.name='KeyError'; throw e;}
+    key = keys[0]; val = this[key]; delete this[key];
+    return [key, val];
+}"""
 
+METHODS['setdefault'] = """function (key, d) {
+    if (this.constructor !== Object) return this.KEY.apply(this, arguments);
+    if (this[key] !== undefined) {return this[key];}
+    else if (d !== undefined) { this[key] = d; return d;}
+    else {return null;}
+}"""
+
+METHODS['update'] = """function (other) {
+    if (this.constructor !== Object) return this.KEY.apply(this, arguments);
+    var keys = Object.keys(other);
+    for (var i=0; i<keys.length; i++) {key = keys[i]; this[key] = other[key];}
+}"""
+
+METHODS['values'] = """function () {
+    if (this.constructor !== Object) return this.KEY.apply(this, arguments);
+    var keys = Object.keys(this), res = [];
+    for (var i=0; i<keys.length; i++) {key = keys[i]; res.push(this[key]);}
+    return res;
+}"""
 
 # String
 

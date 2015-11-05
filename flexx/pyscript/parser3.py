@@ -364,9 +364,6 @@ class Parser3(Parser2):
         return self.function_list(node)
     
     def function_range(self, node):
-        fun = ('function (start, end, step) {var i, res = []; '
-                'for (i=start; i<end; i+=step) {res.push(i);} return res;}')
-        
         if len(node.arg_nodes) == 1:
             args = ast.Num(0), node.arg_nodes[0], ast.Num(1)
             return self.use_std_function('range', args)
@@ -492,8 +489,10 @@ class Parser3(Parser2):
             raise JSError('map() needs two arguments')
     
     ## List methods
-    # LIST: append, clear, copy, count, extend, index, insert, pop, remove, reverse, sort
-    # DICT: clear, copy, fromkeys, get, items, keys, pop, popitem, setdefault, update, values
+    # LIST: append, clear, copy, count, extend, index, insert, pop,
+    # remove, reverse, sort
+    # DICT: clear, copy, fromkeys, get, items, keys, pop, popitem,
+    # setdefault, update, values
     # STR: capitalize, casefold, center, count, encode, endswith,
     # expandtabs, find, format, format_map, index, isalnum, isalpha,
     # isdecimal, isdigit, isidentifier, islower, isnumeric, isprintable,
@@ -566,9 +565,29 @@ class Parser3(Parser2):
         if len(node.arg_nodes) in (1, 2):
             return self.use_std_method(base, 'get', node.arg_nodes)
     
+    def method_items(self, node, base):
+        if len(node.arg_nodes) == 0:
+            return self.use_std_method(base, 'items', node.arg_nodes)
+    
     def method_keys(self, node, base):
         if len(node.arg_nodes) == 0:
             return self.use_std_method(base, 'keys', node.arg_nodes)
+    
+    def method_popitem(self, node, base):
+        if len(node.arg_nodes) == 0:
+            return self.use_std_method(base, 'popitem', node.arg_nodes)
+    
+    def method_setdefault(self, node, base):
+        if len(node.arg_nodes) in (1, 2):
+            return self.use_std_method(base, 'setdefault', node.arg_nodes)
+    
+    def method_update(self, node, base):
+        if len(node.arg_nodes) == 1:
+            return self.use_std_method(base, 'update', node.arg_nodes)
+    
+    def method_values(self, node, base):
+        if len(node.arg_nodes) == 0:
+            return self.use_std_method(base, 'values', node.arg_nodes)
     
     ## Str methods
     

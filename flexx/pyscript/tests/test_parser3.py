@@ -60,7 +60,7 @@ class TestHardcoreBuildins:
         assert evalpy('isinstance(3, types.FunctionType)') == 'false'
         
         # own class
-        code = 'function MyClass () {return this;}\nx = new MyClass();\n'
+        code = 'function MyClass () {return this;}\nvar x = new MyClass();\n'
         assert evaljs(code + py2js('isinstance(x, "object")')) == 'true'
         assert evaljs(code + py2js('isinstance(x, "Object")')) == 'true'
         assert evaljs(code + py2js('isinstance(x, "MyClass")')) == 'true'
@@ -331,7 +331,12 @@ class TestListMethods:
         assert evalpy(code + 'a.pop(); a') == '[ 1, 2, 3, 4 ]'
         assert evalpy(code + 'a.pop(-1); a') == '[ 1, 2, 3, 4 ]'
         assert 'IndexError' in evalpy(code + 'try:\n  a.pop(9);\nexcept Exception as e:\n  e')
-
+    
+    def test_no_list(self):
+        code = 'class Foo:\n  def append(self): self.bar = 3\nfoo = Foo(); foo.append(2)\n'
+        assert evalpy(code + 'foo.bar') == '3'
+        code = 'class Foo:\n  def clear(self): self.bar = 3\nfoo = Foo(); foo.clear()\n'
+        assert evalpy(code + 'foo.bar') == '3'
 
 class TestDictMethods:
     
@@ -342,13 +347,52 @@ class TestDictMethods:
         assert evalpy('a = {"foo":3}; a.get("bar", 0)') == '0'
         assert evalpy('{"foo":3}.get("foo")') == '3'
         assert evalpy('{"foo":3}.get("bar", 0)') == '0'
-        
-        # Test that if a get exists, that one is used
-        fun = 'def fun(x): return 42\n'
-        assert evalpy(fun + 'a = {"get": fun}; a.get("bar")') == '42'
+    
+    def test_items(self):
+        assert nowhitespace(evalpy("{'a':1, 'b':2, 3:3}.items()")) == "[['3',3],['a',1],['b',2]]"
+        assert nowhitespace(evalpy("{}.items()")) == "[]"
         
     def test_keys(self):
-        assert evalpy('a = {"foo":3}; a.keys()') == "[ 'foo' ]"
+        assert nowhitespace(evalpy("{'a':1, 'b':2, 3:3}.keys()")) == "['3','a','b']"
+        assert nowhitespace(evalpy("{}.keys()")) == "[]"
+    
+    def test_popitem(self):
+        assert evalpy("{'a': 1, 'b':2}.popitem()") == "[ 'a', 1 ]"
+        assert 'KeyError' in evalpy("try:\n  {}.popitem()\nexcept Exception as e:\n  e")
+    
+    def test_setdefault(self):
+        assert evalpy("a = {}; a.setdefault('a', 7)") == '7'
+        assert evalpy("a = {}; a.setdefault('a', 7); a.setdefault('a', 8)") == '7'
+    
+    def test_update(self):
+        assert evalpy("a={}; b={'a':1, 'b':2}; a.update(b); a") == "{ a: 1, b: 2 }"
+        assert evalpy("a={}; b={'a':1, 'b':2}; b.update(a); a") == "{}"
+    
+    def test_values(self):
+        assert nowhitespace(evalpy("{'a':1, 'b':2, 3:3}.values()")) == "[3,1,2]"
+        assert nowhitespace(evalpy("{}.values()")) == "[]"
+    
+    def test_clear(self):
+        assert evalpy("a={'a':1, 'b':2}; a.clear(); a") == '{}'
+        assert evalpy("a={}; a.clear(); a") == '{}'
+    
+    def test_copy(self):
+        assert evalpy("a={'a':1, 'b':2}; b = a.copy(); b") == "{ a: 1, b: 2 }"
+        assert evalpy("a={'a':1, 'b':2}; b = a.copy(); a['a']=9; b") == "{ a: 1, b: 2 }"
+        assert evalpy("a={}; b = a.copy(); b") == "{}"
+    
+    def test_pop(self):
+        assert evalpy("a={'a':1, 'b':2}; a.pop('a')") == '1'
+        assert evalpy("a={'a':1, 'b':2}; a.pop('a', 9)") == '1'
+        assert evalpy("a={'a':1, 'b':2}; a.pop('z', 9)") == '9'
+        assert evalpy("a={'a':1, 'b':2}; a.pop('a'); a") == "{ b: 2 }"
+    
+    def test_no_dict(self):
+        code = 'class Foo:\n  def get(self): return 42\n'
+        assert evalpy(code + 'foo = Foo(); foo.get(1)') == '42'
+        
+        code = 'class Foo:\n  def clear(self): self.bar = 42\n'
+        assert evalpy(code + 'foo = Foo(); foo.clear(); foo.bar') == '42'
 
 
 class TestStrMethods:

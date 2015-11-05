@@ -200,4 +200,4 @@ class Parser(Parser3):
 
 
 from .functions import py2js, evaljs, evalpy, script2js, js_rename  # noqa
-from . import stubs
+from . import stubs  # noqa

@@ -165,7 +165,8 @@ class Parser0(object):
         'IsNot' : "!==",
     }
     
-    def __init__(self, code, module=None, indent=0, docstrings=True, inline_stdlib=True):
+    def __init__(self, code, module=None, indent=0, docstrings=True,
+                 inline_stdlib=True):
         self._pycode = code  # helpfull during debugging
         self._root = ast.parse(code)
         self._stack = []
@@ -212,7 +213,7 @@ class Parser0(object):
         # Add part of the stdlib that was actually used
         if inline_stdlib:
             libcode = stdlib.get_partial_std_lib(self._std_functions, 
-                                                self._std_methods, self._indent)
+                                                 self._std_methods, self._indent)
             if libcode:
                 self._parts.insert(0, libcode)
         
