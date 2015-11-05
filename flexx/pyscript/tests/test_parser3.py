@@ -280,10 +280,58 @@ class TestListMethods:
         assert nowhitespace(evalpy('a = [2]; a.append(3); a')) == '[2,3]'
     
     def test_remove(self):
-        assert nowhitespace(evalpy('a = [2, 3]; a.remove(3); a')) == '[2]'
-        assert nowhitespace(evalpy('a = [2, 3]; a.remove(2); a')) == '[3]'
+        code = 'a=[1,2,3,4,3,5];\n'
+        assert evalpy(code + 'a.remove(2); a') == '[ 1, 3, 4, 3, 5 ]'
+        assert evalpy(code + 'a.remove(3); a') == '[ 1, 2, 4, 3, 5 ]'
+        assert 'ValueError' in evalpy(code + 'try:\n  a.remove(9);\nexcept Exception as e:\n  e')
         assert nowhitespace(evalpy('x = {"a":[2, 3]}; x.a.remove(2); x.a')) == '[3]'
-        
+    
+    def test_count(self):
+        assert evalpy('[1,2,3,4,5,3].count(9)') == '0'
+        assert evalpy('[1,2,3,4,5,3].count(2)') == '1'
+        assert evalpy('[1,2,3,4,5,3].count(3)') == '2'
+
+    def test_extend(self):
+        assert evalpy('a=[1, 2]; b=[3, 4];a.extend(b); a') == '[ 1, 2, 3, 4 ]'
+    
+    def test_index(self):
+        assert evalpy('[1,2,3,4,5,3].index(2)') == '1'
+        assert evalpy('[1,2,3,4,5,3].index(3)') == '2'
+        assert 'ValueError' in evalpy('try:\n  [1,2,3,4,5,3].index(9);\nexcept Exception as e:\n  e')
+        assert evalpy('[1,2,3,4,5,3].index(3, 4)') == '5'
+        assert evalpy('[1,2,3,4,5,3].index(3, -2)') == '5'
+        assert evalpy('[1,2,3,4,5,3].index(3, 0, -2)') == '2'
+    
+    def test_insert(self):
+        code = 'a=[1,2,3,4,5];'
+        assert evalpy(code + 'a.insert(2, 9); a') == '[ 1, 2, 9, 3, 4, 5 ]'
+        assert evalpy(code + 'a.insert(-1, 9); a') == '[ 1, 2, 3, 4, 9, 5 ]'
+        assert evalpy(code + 'a.insert(99, 9); a') == '[ 1, 2, 3, 4, 5, 9 ]'
+    
+    def test_reverse(self):
+        assert evalpy('a=[1,2,3,4,5]; a.reverse(); a') == '[ 5, 4, 3, 2, 1 ]'
+        assert evalpy('a=[]; a.reverse(); a') == '[]'
+    
+    def test_sort(self):
+        assert evalpy('a=[3,1,4,2]; a.sort(); a') == '[ 1, 2, 3, 4 ]'
+        assert evalpy('a=[3,1,4,2]; a.sort(reverse=True); a') == '[ 4, 3, 2, 1 ]'
+        assert evalpy('a=[3,1,4,2]; a.sort(key=lambda x: -x); a') == '[ 4, 3, 2, 1 ]'
+        assert evalpy('a=[3,1,4,2]; a.sort(key=lambda x: -x, reverse=True); a') == '[ 1, 2, 3, 4 ]'
+    
+    def test_clear(self):
+        assert evalpy('a=[3,1,4,2]; a.clear(); a') == '[]'
+    
+    def test_copy(self):
+        assert evalpy('a=[3,1,4,2]; b = a.copy(); a.push(1); b') == '[ 3, 1, 4, 2 ]'
+    
+    def test_pop(self):
+        code = 'a=[1,2,3,4,5];\n'
+        assert evalpy(code + 'a.pop(2); a') == '[ 1, 2, 4, 5 ]'
+        assert evalpy(code + 'a.pop(0); a') == '[ 2, 3, 4, 5 ]'
+        assert evalpy(code + 'a.pop(); a') == '[ 1, 2, 3, 4 ]'
+        assert evalpy(code + 'a.pop(-1); a') == '[ 1, 2, 3, 4 ]'
+        assert 'IndexError' in evalpy(code + 'try:\n  a.pop(9);\nexcept Exception as e:\n  e')
+
 
 class TestDictMethods:
     

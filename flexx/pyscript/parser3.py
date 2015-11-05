@@ -492,6 +492,19 @@ class Parser3(Parser2):
             raise JSError('map() needs two arguments')
     
     ## List methods
+    # LIST: append, clear, copy, count, extend, index, insert, pop, remove, reverse, sort
+    # DICT: clear, copy, fromkeys, get, items, keys, pop, popitem, setdefault, update, values
+    # STR: capitalize, casefold, center, count, encode, endswith,
+    # expandtabs, find, format, format_map, index, isalnum, isalpha,
+    # isdecimal, isdigit, isidentifier, islower, isnumeric, isprintable,
+    # isspace, istitle, isupper, join, ljust, lower, lstrip, maketrans,
+    # partition, replace, rfind, rindex, rjust, rpartition, rsplit,
+    # rstrip, split, splitlines, startswith, strip, swapcase, title,
+    # translate, upper, zfill
+    # SET: add, clear, copy, difference, difference_update, discard,
+    # intersection, intersection_update, isdisjoint, issubset,
+    # issuperset, pop, remove, symmetric_difference,
+    # symmetric_difference_update, union, update
     
     def method_append(self, node, base):
         if len(node.arg_nodes) == 1:
@@ -500,6 +513,52 @@ class Parser3(Parser2):
     def method_remove(self, node, base):
         if len(node.arg_nodes) == 1:
             return self.use_std_method(base, 'remove', node.arg_nodes)
+    
+    def method_count(self, node, base):
+        if len(node.arg_nodes) == 1:
+            return self.use_std_method(base, 'count', node.arg_nodes)
+
+    def method_extend(self, node, base):
+        if len(node.arg_nodes) == 1:
+            return self.use_std_method(base, 'extend', node.arg_nodes)
+    
+    def method_index(self, node, base):
+        if len(node.arg_nodes) in (1, 2, 3):
+            return self.use_std_method(base, 'index', node.arg_nodes)
+    
+    def method_insert(self, node, base):
+        if len(node.arg_nodes) == 2:
+            return self.use_std_method(base, 'insert', node.arg_nodes)
+    
+    def method_reverse(self, node, base):
+        if len(node.arg_nodes) == 0:
+            return self.use_std_method(base, 'reverse', node.arg_nodes)
+    
+    def method_sort(self, node, base):
+        if len(node.arg_nodes) == 0:  # sorts args are keyword-only
+            key, reverse = ast.Name('undefined'), ast.NameConstant(False)
+            for kw in node.kwarg_nodes:
+                if kw.name == 'key':
+                    key = kw.value_node
+                elif kw.name == 'reverse':
+                    reverse = kw.value_node
+                else:
+                    raise JSError('Invalid keyword argument for sort: %r' % kw.name)
+            return self.use_std_method(base, 'sort', [key, reverse])
+    
+    ## List and dict methods
+    
+    def method_clear(self, node, base):
+        if len(node.arg_nodes) == 0:
+            return self.use_std_method(base, 'clear', node.arg_nodes)
+            
+    def method_copy(self, node, base):
+        if len(node.arg_nodes) == 0:
+            return self.use_std_method(base, 'copy', node.arg_nodes)
+    
+    def method_pop(self, node, base):
+        if len(node.arg_nodes) in (1, 2):
+            return self.use_std_method(base, 'pop', node.arg_nodes)
     
     ## Dict methods
     

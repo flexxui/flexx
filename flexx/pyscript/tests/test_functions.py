@@ -7,7 +7,7 @@ import tempfile
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.pyscript import py2js, evaljs, evalpy, script2js, stdlib
+from flexx.pyscript import py2js, evaljs, evalpy, script2js
 
 
 def test_py2js_on_wrong_vals():
@@ -24,21 +24,6 @@ def test_py2js_on_strings():
     assert py2js('3 + 3') == '3 + 3;'
     assert py2js('list()') == '[];'
 
-def test_stdlib():
-    code = stdlib.get_full_std_lib()
-    assert isinstance(code, str)
-    assert 'var py_hasattr =' in code
-    assert 'var py_list =' in code
-    assert code.count('var') > 10
-    
-    code = stdlib.get_partial_std_lib(['hasattr'], [])
-    assert isinstance(code, str)
-    assert 'var py_hasattr =' in code
-    assert 'var py_list =' not in code
-    assert code.count('var') == 1
-    
-    assert 'py_hasattr = function' in py2js('hasattr(x, "foo")')
-    assert 'py_hasattr = function' not in py2js('hasattr(x, "foo")', inline_stdlib=False)
 
 def test_evaljs():
     assert evaljs('3+4') == '7'

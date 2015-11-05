@@ -8,7 +8,7 @@ PyScript standard functions.
 FUNCTIONS = {}
 METHODS = {}
 FUNCTION_PREFIX = 'py_'
-METHOD_PREFIX = 'py_'
+METHOD_PREFIX = '_py_'
 
 def get_partial_std_lib(func_names, method_names, indent=0):
     """ Get the code for the PyScript standard library consisting of
@@ -175,30 +175,120 @@ FUNCTIONS['truthy'] = """function (v) {
 
 ## Methods
 
+# List only
+
 METHODS['append'] = """function (x) {
-    if (typeof this['append'] === 'function') return this.append(x);
+    if (!Array.isArray(this)) return this.KEY.apply(this, arguments);
     this.push(x);
 }"""
 
 METHODS['remove'] = """function (x) {
-    if (typeof this['remove'] === 'function') return this.remove(x);
+    if (!Array.isArray(this)) return this.KEY.apply(this, arguments);
     this.splice(this.indexOf(x), 1);
 }"""
 
+METHODS['count'] = """function (x) {
+    if (!Array.isArray(this)) return this.KEY.apply(this, arguments);
+    var count = 0;
+    for (var i=0; i<this.length; i++) { 
+        if (this[i] == x) {count+=1;}
+        //if (%sequals(this[i], x)) {count+=1;}
+    } return count;
+}""" % FUNCTION_PREFIX  # todo: make this use equals
+
+METHODS['extend'] = """function (x) {
+    if (!Array.isArray(this)) return this.KEY.apply(this, arguments);
+    this.push.apply(this, x);   
+}"""
+
+METHODS['index'] = """function (x, start, stop) {
+    if (!Array.isArray(this)) return this.KEY.apply(this, arguments);
+    start = (start === undefined) ? 0 : start;
+    stop = (stop === undefined) ? this.length : stop;
+    start = Math.max(0, ((start < 0) ? this.length + start : start));
+    stop = Math.min(this.length, ((stop < 0) ? this.length + stop : stop));
+    for (var i=start; i<stop; i++) { 
+        if (this[i] == x) {return i;}
+        //if (%sequals(this[i], x)) {return i;} // this is why we dont use indexOf
+    }
+    var e = Error(x); e.name='ValueError'; throw e;
+}""" % FUNCTION_PREFIX  # todo: make this use equals
+
+METHODS['insert'] = """function (i, x) {
+    if (!Array.isArray(this)) return this.KEY.apply(this, arguments);
+    i = (i < 0) ? this.length + i : i;
+    this.splice(i, 0, x);
+}"""
+
+METHODS['remove'] = """function (x) {
+    if (!Array.isArray(this)) return this.KEY.apply(this, arguments);
+    for (var i=0; i<this.length; i++) { 
+        if (this[i] == x) {this.splice(i, 1); return;}
+        //if (%sequals(this[i], x)) {this.splice(i, 1); return;}
+    }
+    var e = Error(x); e.name='ValueError'; throw e;
+}""" % FUNCTION_PREFIX  # todo: make this use equals
+
+METHODS['reverse'] = """function () {this.reverse();}"""
+
+METHODS['sort'] = """function (key, reverse) {
+    if (!Array.isArray(this)) return this.KEY.apply(this, arguments);
+    var comp = function (a, b) {return key(a) - key(b);};
+    comp = Boolean(key) ? comp : undefined; 
+    this.sort(comp);
+    if (reverse) this.reverse();
+}"""
+
+# List and dict
+
+METHODS['clear'] = """function () {
+    if (Array.isArray(this)) {
+        this.splice(0, this.length);
+    } else if (typeof this === 'object') {
+    
+    } else return this.KEY.apply(this, arguments);
+}"""
+
+METHODS['copy'] = """function () {
+    if (Array.isArray(this)) {
+        return this.slice(0);
+    } else if (typeof this === 'object') {
+    
+    } else return this.KEY.apply(this, arguments);
+}"""
+
+METHODS['pop'] = """function (i, d) {
+    if (Array.isArray(this)) {
+        i = (i === undefined) ? -1 : i;
+        i = (i < 0) ? (this.length + i) : i;
+        var popped = this.splice(i, 1);
+        if (popped.length)  return popped[0];
+        var e = Error(i); e.name='IndexError'; throw e;
+    } else if (typeof this === 'object') {
+    
+    } else return this.KEY.apply(this, arguments);
+}"""
+
+# Dict only
+
 METHODS['get'] = """function (name, deflt) {
-    if (typeof this['get'] === 'function') return this.get.apply(this, arguments);
+    if (typeof this['KEY'] === 'function') return this.KEY.apply(this, arguments);
     if (this[name] !== undefined) {return this[name];}
     else if (deflt !== undefined) {return deflt;}
     else {return null;}
 }"""
 
 METHODS['keys'] = """function () {
-    if (typeof this['keys'] === 'function') return this.keys.apply(this, arguments);
+    if (typeof this['KEY'] === 'function') return this.KEY.apply(this, arguments);
     return Object.keys(this);
 }"""
 
+
+
+# String
+
 METHODS['startswith'] = """function (x) {
-    if (typeof this['startswith'] === 'function') return this.startswith.apply(this, arguments);
+    if (typeof this['KEY'] === 'function') return this.KEY.apply(this, arguments);
     return this.indexOf(x) == 0;
 }"""
 
@@ -213,3 +303,8 @@ FUNCTIONS['perf_counter'] = """function() {
     if (typeof(process) === "undefined"){return performance.now()*1e-3;}
     else {var t = process.hrtime(); return t[0] + t[1]*1e-9;}
 }"""  # Work in nodejs and browser
+
+
+
+for key in METHODS:
+    METHODS[key] = METHODS[key].replace('KEY', key)
