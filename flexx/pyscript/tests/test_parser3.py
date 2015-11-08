@@ -9,7 +9,7 @@ def nowhitespace(s):
     return s.replace('\n', '').replace('\t', '').replace(' ', '')
 
 
-class TestHardcoreBuildins:
+class _TestHardcoreBuildins:
     
     def test_isinstance(self):
         # The resulting code is not particularly pretty, so we just
@@ -164,7 +164,7 @@ class TestHardcoreBuildins:
         assert evalpy('list(range(2, 9, 2))') == '[ 2, 4, 6, 8 ]'
         assert evalpy('list(range(10, 3, -2))') == '[ 10, 8, 6, 4 ]'
 
-class TestOtherBuildins:
+class _TestOtherBuildins:
     
     # def test_allow_overload(self):
     #     assert evalpy('sum([3, 4])') == '7'
@@ -198,11 +198,11 @@ class TestOtherBuildins:
         assert evalpy('float("5.2") + 2') == '7.2'
     
     def test_repr(self):
-        # The replace is to ensure the result is a string
-        assert evalpy('repr(5).replace("5", "6")') == '6'
+        # The [:] is to ensure the result is a string
+        assert evalpy('repr(5)[:]') == '5'
         assert evalpy('repr("abc")') == '"abc"'
-        assert evalpy('repr([1, 2, 3]).replace("1", "0")') == "[0,2,3]"
-        assert evalpy('repr({1:2}).replace("1", "0")') == '{"0":2}'
+        assert evalpy('repr([1, 2, 3])[:]') == "[1,2,3]"
+        assert evalpy('repr({1:2})[:]') == '{"1":2}'
     
     def test_str(self):
         assert evalpy('str(5) + 2') == '52'
@@ -337,6 +337,16 @@ class TestListMethods:
         assert evalpy(code + 'foo.bar') == '3'
         code = 'class Foo:\n  def clear(self): self.bar = 3\nfoo = Foo(); foo.clear()\n'
         assert evalpy(code + 'foo.bar') == '3'
+    
+    def test_that_all_list_methods_are_tested(self):
+        tested = set([x.split('_')[1] for x in dir(self) if x.startswith('test_')])
+        needed = set([x for x in dir(list) if not x.startswith('_')])
+        ignore = ''
+        needed = needed.difference(ignore.split(' '))
+        
+        not_tested = needed.difference(tested)
+        assert not not_tested
+
 
 class TestDictMethods:
     
@@ -394,13 +404,346 @@ class TestDictMethods:
         code = 'class Foo:\n  def clear(self): self.bar = 42\n'
         assert evalpy(code + 'foo = Foo(); foo.clear(); foo.bar') == '42'
 
+    def test_that_all_dict_methods_are_tested(self):
+        tested = set([x.split('_')[1] for x in dir(self) if x.startswith('test_')])
+        needed = set([x for x in dir(dict) if not x.startswith('_')])
+        ignore = 'fromkeys'
+        needed = needed.difference(ignore.split(' '))
+        
+        not_tested = needed.difference(tested)
+        assert not not_tested
+
 
 class TestStrMethods:
     
-    def test_startswith(self):
-        assert evalpy('"foobar".startswith("foo")') == "true"
-        assert evalpy('"foobar".startswith("bar")') == "false"
-        assert evalpy('("fo" + "obar").startswith("foo")') == "true"
+    def test_capitalize(self):
+        assert evalpy('"".capitalize()') == ""
+        assert evalpy('" _12".capitalize()') == " _12"
+        assert evalpy('"_a".capitalize()') == "_a"
+        assert evalpy('"foo bar".capitalize()') == "Foo bar"
+        assert evalpy('"foo BAR".capitalize()') == "Foo bar"
+    
+    def test_title(self):
+        assert evalpy('"".title()') == ""
+        assert evalpy('" _12".title()') == " _12"
+        assert evalpy('"_a".title()') == "_A"
+        assert evalpy('"foo bar".title()') == "Foo Bar"
+        assert evalpy('"foo BAR".title()') == "Foo Bar"
+    
+    def test_lower(self):
+        assert evalpy('"".lower()') == ""
+        assert evalpy('" _12".lower()') == " _12"
+        assert evalpy('"foo bar".lower()') == "foo bar"
+        assert evalpy('"foo BAR".lower()') == "foo bar"
+    
+    def test_upper(self):
+        assert evalpy('"".upper()') == ""
+        assert evalpy('" _12".upper()') == " _12"
+        assert evalpy('"foo bar".upper()') == "FOO BAR"
+        assert evalpy('"foo BAR".upper()') == "FOO BAR"
+    
+    def test_casefold(self):
+        assert evalpy('"FoO bAr".casefold()') == "foo bar"
+    
+    def test_swapcase(self):
+        assert evalpy('"".swapcase()') == ""
+        assert evalpy('" _12".swapcase()') == " _12"
+        assert evalpy('"foo bar".swapcase()') == "FOO BAR"
+        assert evalpy('"foo BAR".swapcase()') == "FOO bar"
+    
+    def test_center(self):
+        assert evalpy('"foo".center(5) + "."') == ' foo .'
+        assert evalpy('"fo".center(5) + "."') == '  fo .'
+        assert evalpy('"foo".center(1) + "."') == 'foo.'
+        assert evalpy('"foo".center(5, "-")') == '-foo-'
+    
+    def test_ljust(self):
+        assert evalpy('"foo".ljust(5) + "."') == 'foo  .'
+        assert evalpy('"fo".ljust(5) + "."') == 'fo   .'
+        assert evalpy('"foo".ljust(1) + "."') == 'foo.'
+        assert evalpy('"foo".ljust(5, "-")') == 'foo--'
+    
+    def test_rjust(self):
+        assert evalpy('"foo".rjust(5) + "."') == '  foo.'
+        assert evalpy('"fo".rjust(5) + "."') == '   fo.'
+        assert evalpy('"foo".rjust(1) + "."') == 'foo.'
+        assert evalpy('"foo".rjust(5, "-")') == '--foo'
+    
+    def test_zfill(self):
+        assert evalpy('"foo".zfill(5) + "."') == '00foo.'
+        assert evalpy('"fo".zfill(5) + "."') == '000fo.'
+        assert evalpy('"foo".zfill(1) + "."') == 'foo.'
+    
+    def test_count(self):
+        assert evalpy('"foo".count("o")') == '2'
+        assert evalpy('"foo".count("f")') == '1'
+        assert evalpy('"foo".count("x")') == '0'
+        assert evalpy('"foo".count("")') == '3'
         
+        assert evalpy('"a--a--a".count("a")') == '3'
+        assert evalpy('"a--a--a".count("a", 0)') == '3'
+        assert evalpy('"a--a--a".count("a", 0, 99)') == '3'
+        assert evalpy('"a--a--a".count("a", 1)') == '2'
+        assert evalpy('"a--a--a".count("a", 0, 4)') == '2'
+        assert evalpy('"a--a--a".count("a", 1, 4)') == '1'
+        
+    def test_endswith(self):
+        assert evalpy('"blafoo".endswith("foo")') == 'true'
+        assert evalpy('"blafoo".endswith("")') == 'true'
+        assert evalpy('"foo".endswith("foo")') == 'true'
+        assert evalpy('"".endswith("foo")') == 'false'
+        assert evalpy('"".endswith("")') == 'true'
+    
+    def test_startswith(self):
+        assert evalpy('"foobla".startswith("foo")') == 'true'
+        assert evalpy('"foobla".startswith("")') == 'true'
+        assert evalpy('"foo".startswith("foo")') == 'true'
+        assert evalpy('"".startswith("foo")') == 'false'
+        assert evalpy('"".startswith("")') == 'true'
+        
+        assert evalpy('("fo" + "obar").startswith("foo")') == "true"
+    
+    def test_expandtabs(self):
+        assert evalpy('"a\tb\t\tc".expandtabs()') == 'a        b                c'
+        assert evalpy('"a\tb\t\tc".expandtabs(2)') == 'a  b    c' 
+    
+    def test_find(self):
+        assert evalpy('"abcdefgh".find("a")') == '0'
+        assert evalpy('"abcdefgh".find("h")') == '7' 
+        assert evalpy('"abcdefgh".find("z")') == '-1'
+        assert evalpy('"abcdefgh".find("")') == '0'
+        
+        assert evalpy('"abcdefgh".find("cd")') == '2'
+        assert evalpy('"abcdefgh".find("def")') == '3'
+        
+        assert evalpy('"ab ab ab".find("ab", 0)') == '0'
+        assert evalpy('"ab ab ab".find("ab", 1)') == '3'
+        assert evalpy('"ab ab ab".find("ab", -2)') == '6'
+        assert evalpy('"     ab".find("ab", 0, 4)') == '-1'
+        assert evalpy('"     ab".find("ab", 0, -1)') == '-1'
+    
+    def test_index(self):
+        # We know that the implementation is basded on find; no need to test all
+        assert evalpy('"abcdefgh".index("a")') == '0'
+        assert evalpy('"abcdefgh".index("h")') == '7' 
+        assert evalpy('"abcdefgh".index("")') == '0'
+        assert 'ValueError' in evalpy('try:\n  "abcdefgh".index("z")\nexcept Exception as e:\n  e')
+    
+    def test_rfind(self):
+        assert evalpy('"abcdefgh".rfind("a")') == '0'
+        assert evalpy('"abcdefgh".rfind("h")') == '7' 
+        assert evalpy('"abcdefgh".rfind("z")') == '-1'
+        assert evalpy('"abcdefgh".rfind("")') == '8'
+        
+        assert evalpy('"abcdefgh".rfind("cd")') == '2'
+        assert evalpy('"abcdefgh".rfind("def")') == '3'
+        
+        assert evalpy('"ab ab ab".rfind("ab", 0, -2)') == '3'
+        assert evalpy('"ab ab ab".rfind("ab", 0, 3)') == '0'
+        assert evalpy('"ab      ".rfind("ab", 3)') == '-1'
+    
+    def test_rindex(self):
+        # We know that the implementation is basded on find; no need to test all
+        assert evalpy('"abcdefghb".rindex("a")') == '0'
+        assert evalpy('"abcdefghb".rindex("h")') == '7' 
+        assert evalpy('"abcdefghb".rindex("")') == '9'
+        assert evalpy('"abcdefghb".rindex("b")') == '8'
+        assert 'ValueError' in evalpy('try:\n  "abcdefgh".rindex("z")\nexcept Exception as e:\n  e')
+    
+    def test_isalnum(self):
+        assert evalpy('"".isalnum()') == 'false'
+        assert evalpy('"012".isalnum()') == 'true'
+        assert evalpy('"abc".isalnum()') == 'true'
+        assert evalpy('"0a1b2c".isalnum()') == 'true'
+        assert evalpy('"0a_".isalnum()') == 'false'
+    
+    def test_isalpha(self):
+        assert evalpy('"".isalpha()') == 'false'
+        assert evalpy('"012".isalpha()') == 'false'
+        assert evalpy('"abc".isalpha()') == 'true'
+        assert evalpy('"0a1b2c".isalpha()') == 'false'
+        assert evalpy('"0a_".isalpha()') == 'false'
+    
+    def test_isnumeric(self):
+        assert evalpy('"".isnumeric()') == 'false'
+        assert evalpy('"012".isnumeric()') == 'true'
+        assert evalpy('"abc".isnumeric()') == 'false'
+        assert evalpy('"0a1b2c".isnumeric()') == 'false'
+        assert evalpy('"0a_".isnumeric()') == 'false'
+    
+    def test_isidentifier(self):
+        assert evalpy('"".isidentifier()') == 'false'
+        assert evalpy('"012".isidentifier()') == 'false'
+        assert evalpy('"abc".isidentifier()') == 'true'
+        assert evalpy('"0a1b2c".isidentifier()') == 'false'
+        assert evalpy('"a0a1b2c".isidentifier()') == 'true'
+        assert evalpy('"0a_".isidentifier()') == 'false'
+        assert evalpy('"_a".isidentifier()') == 'true'
+        assert evalpy('"_0".isidentifier()') == 'true'
+    
+    def test_islower(self):
+        assert evalpy('"".islower()') == 'false'
+        assert evalpy('" ".islower()') == 'false'
+        assert evalpy('"aBc".islower()') == 'false'
+        assert evalpy('"aBc 01_".islower()') == 'false'
+        
+        assert evalpy('"abc".islower()') == 'true'
+        assert evalpy('"abc 01_".islower()') == 'true'
+    
+    def test_isupper(self):
+        assert evalpy('"".isupper()') == 'false'
+        assert evalpy('" ".isupper()') == 'false'
+        assert evalpy('"AbC".isupper()') == 'false'
+        assert evalpy('"AbC 01_".isupper()') == 'false'
+        
+        assert evalpy('"ABC".isupper()') == 'true'
+        assert evalpy('"ABC 01_".isupper()') == 'true'
+    
+    def test_isspace(self):
+        assert evalpy('"".isspace()') == 'false'
+        assert evalpy('" ".isspace()') == 'true'
+        assert evalpy('" \\t\\n".isspace()') == 'true'
+        assert evalpy('" _".isspace()') == 'false'
+        assert evalpy('" a".isspace()') == 'false'
+        assert evalpy('" 1".isspace()') == 'false'
+    
+    def test_istitle(self):
+        assert evalpy('"".istitle()') == 'false'
+        assert evalpy('" ".istitle()') == 'false'
+        assert evalpy('"AbC".istitle()') == 'false'
+        assert evalpy('"Foo bar".istitle()') == 'false'
+        assert evalpy('"AbC 01_".istitle()') == 'false'
+        
+        assert evalpy('"Foo".istitle()') == 'true'
+        assert evalpy('"Foo Bar".istitle()') == 'true'
+        assert evalpy('"Foo 01_".istitle()') == 'true'
+    
+    def test_join(self):
+        assert evalpy('"".join(["foo", "bar"])') == 'foobar'
+        assert evalpy('" ".join(["foo", "bar"])') == 'foo bar'
+        assert evalpy('"AA".join(["foo", "bar"])') == 'fooAAbar'
+    
+    def test_lstrip(self):
+        assert evalpy('"".lstrip() + "."') == '.'
+        assert evalpy('" \\t\\r\\n".lstrip() + "."') == '.'
+        assert evalpy('"  ab x cd  ".lstrip() + "."') == 'ab x cd  .'
+        assert evalpy('"  ab x cd  ".lstrip("x") + "."') == '  ab x cd  .'
+        assert evalpy('"  ab x cd  ".lstrip(" x") + "."') == 'ab x cd  .'
+        assert evalpy('"x x ab x cd x x".lstrip(" x") + "."') == 'ab x cd x x.'
+    
+    def test_rstrip(self):
+        assert evalpy('"".rstrip() + "."') == '.'
+        assert evalpy('" \\t\\r\\n".rstrip() + "."') == '.'
+        assert evalpy('"  ab x cd  ".rstrip() + "."') == '  ab x cd.'
+        assert evalpy('"  ab x cd  ".rstrip("x") + "."') == '  ab x cd  .'
+        assert evalpy('"  ab x cd  ".rstrip(" x") + "."') == '  ab x cd.'
+        assert evalpy('"x x ab x cd x x".rstrip(" x") + "."') == 'x x ab x cd.'
+    
+    def test_strip(self):
+        assert evalpy('"".strip() + "."') == '.'
+        assert evalpy('" \\t\\r\\n".strip() + "."') == '.'
+        assert evalpy('"  ab x cd  ".strip() + "."') == 'ab x cd.'
+        assert evalpy('"  ab x cd  ".strip("x") + "."') == '  ab x cd  .'
+        assert evalpy('"  ab x cd  ".strip(" x") + "."') == 'ab x cd.'
+        assert evalpy('"x x ab x cd x x".strip(" x") + "."') == 'ab x cd.'
+    
+    def test_partition(self):
+        assert evalpy('"".partition("-")') == "[ '', '', '' ]"
+        assert evalpy('"abc".partition("-")') == "[ 'abc', '', '' ]"
+        assert evalpy('"-".partition("-")') == "[ '', '-', '' ]"
+        assert evalpy('"abc-".partition("-")') == "[ 'abc', '-', '' ]"
+        assert evalpy('"-def".partition("-")') == "[ '', '-', 'def' ]"
+        assert evalpy('"abc-def".partition("-")') == "[ 'abc', '-', 'def' ]"
+        
+        assert 'ValueError' in evalpy('try:\n  "aa".partition("")\nexcept Exception as e:\n  e')
+    
+    def test_rpartition(self):
+        assert evalpy('"".rpartition("-")') == "[ '', '', '' ]"
+        assert evalpy('"abc".rpartition("-")') == "[ '', '', 'abc' ]"
+        assert evalpy('"-".rpartition("-")') == "[ '', '-', '' ]"
+        assert evalpy('"abc-".rpartition("-")') == "[ 'abc', '-', '' ]"
+        assert evalpy('"-def".rpartition("-")') == "[ '', '-', 'def' ]"
+        assert evalpy('"abc-def".rpartition("-")') == "[ 'abc', '-', 'def' ]"
+    
+    def test_split(self):
+        assert evalpy('"".split("-")') == "[ '' ]"
+        assert evalpy('"abc".split("-")') == "[ 'abc' ]"
+        assert evalpy('"-".split("-")') == "[ '', '' ]"
+        assert evalpy('"abc-".split("-")') == "[ 'abc', '' ]"
+        assert evalpy('"-def".split("-")') == "[ '', 'def' ]"
+        assert evalpy('"abc-def".split("-")') == "[ 'abc', 'def' ]"
+        
+        assert evalpy('"a a a".split(" ", 0)') == "[ 'a a a' ]"
+        assert evalpy('"a a a".split(" ", 1)') == "[ 'a', 'a a' ]"
+        assert evalpy('"a a a".split(" ", 2)') == "[ 'a', 'a', 'a' ]"
+        assert evalpy('"a a a".split(" ", 3)') == "[ 'a', 'a', 'a' ]"
+        assert evalpy('"a a a".split(" ", 99)') == "[ 'a', 'a', 'a' ]"
+        
+        assert evalpy('"a a\\ta\\na".split()') == "[ 'a', 'a', 'a', 'a' ]"
+        assert 'ValueError' in evalpy('try:\n  "aa".split("")\nexcept Exception as e:\n  e')
+    
+    def test_rsplit(self):
+        assert evalpy('"".rsplit("-")') == "[ '' ]"
+        assert evalpy('"abc".rsplit("-")') == "[ 'abc' ]"
+        assert evalpy('"-".rsplit("-")') == "[ '', '' ]"
+        assert evalpy('"abc-".rsplit("-")') == "[ 'abc', '' ]"
+        assert evalpy('"-def".rsplit("-")') == "[ '', 'def' ]"
+        assert evalpy('"abc-def".rsplit("-")') == "[ 'abc', 'def' ]"
+        
+        assert evalpy('"a a a".rsplit(" ", 0)') == "[ 'a a a' ]"
+        assert evalpy('"a a a".rsplit(" ", 1)') == "[ 'a a', 'a' ]"
+        assert evalpy('"a a a".rsplit(" ", 2)') == "[ 'a', 'a', 'a' ]"
+        assert evalpy('"a a a".rsplit(" ", 3)') == "[ 'a', 'a', 'a' ]"
+        assert evalpy('"a a a".rsplit(" ", 99)') == "[ 'a', 'a', 'a' ]"
+        
+        assert evalpy('"a a\\ta\\na".split()') == "[ 'a', 'a', 'a', 'a' ]"
+        assert 'ValueError' in evalpy('try:\n  "aa".split("")\nexcept Exception as e:\n  e')
+    
+    def test_splitlines(self):
+        assert evalpy('"".splitlines()') == "[ '' ]"
+        assert evalpy('"".splitlines(true)') == "[ '' ]"
+        assert evalpy(r'"\n".splitlines()') == "[ '' ]"
+        assert evalpy(r'"\n".splitlines(True)') == "[ '\\n' ]"
+        
+        assert evalpy(r'"abc def".splitlines()') == "[ 'abc def' ]"
+        assert evalpy(r'"abc\ndef".splitlines()') == "[ 'abc', 'def' ]"
+        assert evalpy(r'"abc\ndef\n".splitlines()') == "[ 'abc', 'def' ]"
+        assert evalpy(r'"abc\rdef".splitlines()') == "[ 'abc', 'def' ]"
+        assert evalpy(r'"abc\r\ndef".splitlines()') == "[ 'abc', 'def' ]"
+        assert evalpy(r'"abc\n\rdef".splitlines()') == "[ 'abc', '', 'def' ]"
+        
+        assert evalpy(r'"abc def".splitlines(True)') == "[ 'abc def' ]"
+        assert evalpy(r'"abc\ndef".splitlines(True)') == "[ 'abc\\n', 'def' ]"
+        assert evalpy(r'"abc\ndef\n".splitlines(True)') == "[ 'abc\\n', 'def\\n' ]"
+        assert evalpy(r'"abc\rdef".splitlines(True)') == "[ 'abc\\r', 'def' ]"
+        assert evalpy(r'"abc\r\ndef".splitlines(True)') == "[ 'abc\\r\\n', 'def' ]"
+        
+        res = repr("X\n\nX\r\rX\r\n\rX\n\r\nX".splitlines(True)).replace(' ', '')
+        assert nowhitespace(evalpy(r'"X\n\nX\r\rX\r\n\rX\n\r\nX".splitlines(true)')) == res
+    
+    def test_replace(self):
+        assert evalpy("'abcABC'.replace('a', 'x')") == "xbcABC"
+        assert evalpy("'abcABC'.replace('C', 'x')") == "abcABx"
+        assert evalpy("'abcABC'.replace('cA', 'x')") == "abxBC"
+        
+        assert evalpy("'abababab'.replace('a', 'x', 0)") == "abababab"
+        assert evalpy("'abababab'.replace('a', 'x', 1)") == "xbababab"
+        assert evalpy("'abababab'.replace('a', 'x', 3)") == "xbxbxbab"
+        assert evalpy("'abababab'.replace('a', 'x', 99)") == "xbxbxbxb"
+        assert evalpy("'abababab'.replace('b', 'x', 2)") == "axaxabab"
+    
+    def test_translate(self):
+        code = "table = {'a':'x', 'b':'y', 'c': None}\n"
+        assert evalpy(code + "'abcde'.translate(table)") == "xyde"
+    
+    def test_that_all_str_methods_are_tested(self):
+        tested = set([x.split('_')[1] for x in dir(self) if x.startswith('test_')])
+        needed = set([x for x in dir(str) if not x.startswith('_')])
+        ignore = 'encode format format_map isdecimal isdigit isprintable maketrans'
+        needed = needed.difference(ignore.split(' '))
+        
+        not_tested = needed.difference(tested)
+        assert not not_tested
+
 
 run_tests_if_main()

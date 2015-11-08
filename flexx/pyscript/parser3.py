@@ -177,6 +177,7 @@ Additional sugar
 """
 
 from . import commonast as ast
+from . import stdlib
 from .parser2 import Parser2, JSError, unify  # noqa
 
 # List of possibly relevant builtin functions:
@@ -505,34 +506,6 @@ class Parser3(Parser2):
     # issuperset, pop, remove, symmetric_difference,
     # symmetric_difference_update, union, update
     
-    def method_append(self, node, base):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_method(base, 'append', node.arg_nodes)
-    
-    def method_remove(self, node, base):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_method(base, 'remove', node.arg_nodes)
-    
-    def method_count(self, node, base):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_method(base, 'count', node.arg_nodes)
-
-    def method_extend(self, node, base):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_method(base, 'extend', node.arg_nodes)
-    
-    def method_index(self, node, base):
-        if len(node.arg_nodes) in (1, 2, 3):
-            return self.use_std_method(base, 'index', node.arg_nodes)
-    
-    def method_insert(self, node, base):
-        if len(node.arg_nodes) == 2:
-            return self.use_std_method(base, 'insert', node.arg_nodes)
-    
-    def method_reverse(self, node, base):
-        if len(node.arg_nodes) == 0:
-            return self.use_std_method(base, 'reverse', node.arg_nodes)
-    
     def method_sort(self, node, base):
         if len(node.arg_nodes) == 0:  # sorts args are keyword-only
             key, reverse = ast.Name('undefined'), ast.NameConstant(False)
@@ -544,58 +517,6 @@ class Parser3(Parser2):
                 else:
                     raise JSError('Invalid keyword argument for sort: %r' % kw.name)
             return self.use_std_method(base, 'sort', [key, reverse])
-    
-    ## List and dict methods
-    
-    def method_clear(self, node, base):
-        if len(node.arg_nodes) == 0:
-            return self.use_std_method(base, 'clear', node.arg_nodes)
-            
-    def method_copy(self, node, base):
-        if len(node.arg_nodes) == 0:
-            return self.use_std_method(base, 'copy', node.arg_nodes)
-    
-    def method_pop(self, node, base):
-        if len(node.arg_nodes) in (1, 2):
-            return self.use_std_method(base, 'pop', node.arg_nodes)
-    
-    ## Dict methods
-    
-    def method_get(self, node, base):
-        if len(node.arg_nodes) in (1, 2):
-            return self.use_std_method(base, 'get', node.arg_nodes)
-    
-    def method_items(self, node, base):
-        if len(node.arg_nodes) == 0:
-            return self.use_std_method(base, 'items', node.arg_nodes)
-    
-    def method_keys(self, node, base):
-        if len(node.arg_nodes) == 0:
-            return self.use_std_method(base, 'keys', node.arg_nodes)
-    
-    def method_popitem(self, node, base):
-        if len(node.arg_nodes) == 0:
-            return self.use_std_method(base, 'popitem', node.arg_nodes)
-    
-    def method_setdefault(self, node, base):
-        if len(node.arg_nodes) in (1, 2):
-            return self.use_std_method(base, 'setdefault', node.arg_nodes)
-    
-    def method_update(self, node, base):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_method(base, 'update', node.arg_nodes)
-    
-    def method_values(self, node, base):
-        if len(node.arg_nodes) == 0:
-            return self.use_std_method(base, 'values', node.arg_nodes)
-    
-    ## Str methods
-    
-    def method_startswith(self, node, base):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_method(base, 'startswith', node.arg_nodes)
-            # arg = unify(self.parse(node.arg_nodes[0]))
-            # return unify(base), '.indexOf(', arg, ') == 0'
     
     ## Extra functions / methods
     
@@ -612,3 +533,35 @@ class Parser3(Parser2):
                 return self.use_std_function('perf_counter', [])
             else:
                 raise JSError('perf_counter() needs no argument')
+
+
+
+## Add methods to the class, using the stdib functions ...
+
+# todo: use this approach for all methods
+# todo: use this approach for functions too?
+
+def make_method(name, nargs, function_deps, method_deps):
+    def method_X(self, node, base):
+        if len(node.arg_nodes) in nargs:
+            for dep in function_deps:
+                self.use_std_function(dep, [])
+            for dep in method_deps:
+                self.use_std_method('x', dep, [])
+            return self.use_std_method(base, name, node.arg_nodes)
+    return method_X
+
+for name, code in stdlib.METHODS.items():
+    # Get how many arguments
+    _, _, nargs = code.splitlines()[0].partition('nargs:')
+    nargs = [int(i.strip()) for i in nargs.strip().replace(',', ' ').split(' ') if i]
+    # Collect dependencies on other funcs/methods
+    sep = '.' + stdlib.METHOD_PREFIX
+    method_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
+    sep = stdlib.FUNCTION_PREFIX
+    function_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
+    function_deps = [dep for dep in function_deps if dep not in method_deps]
+    # Create method
+    if nargs and not hasattr(Parser3, 'method_' + name):
+        m = make_method(name, tuple(nargs), function_deps, method_deps)
+        setattr(Parser3, 'method_' + name, m)
