@@ -28,18 +28,21 @@ def test_stdlib_full_and_partial():
 
 def test_stdlib_has_all_list_methods():
     method_names = [m for m in dir(list) if not m.startswith('_')]
-    parser_names = dir(Parser3)
     for method_name in method_names:
         assert method_name in stdlib.METHODS
-        assert ('method_' + method_name) in parser_names
 
 def test_stdlib_has_all_dict_methods():
     method_names = [m for m in dir(dict) if not m.startswith('_')]
-    parser_names = dir(Parser3)
     method_names.remove('fromkeys')  # classmethod
     for method_name in method_names:
         assert method_name in stdlib.METHODS
-        assert ('method_' + method_name) in parser_names
 
+def test_stdlib_has_all_str_methods():
+    method_names = [m for m in dir(str) if not m.startswith('_')]
+    ignore = 'encode format format_map isdecimal isdigit isprintable maketrans'
+    for name in ignore.split(' '):
+        method_names.remove(name)
+    for method_name in method_names:
+        assert method_name in stdlib.METHODS
 
 run_tests_if_main()

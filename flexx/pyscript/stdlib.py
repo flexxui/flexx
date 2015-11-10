@@ -1,5 +1,6 @@
 """
 PyScript standard functions.
+
 """
 
 # Functions not covered by this lib:
@@ -38,22 +39,22 @@ def get_full_std_lib(indent=0):
 
 ## Hardcore functions
 
-FUNCTIONS['hasattr'] = """function (ob, name) {
+FUNCTIONS['hasattr'] = """function (ob, name) { // nargs: 2
     return (ob !== undefined) && (ob !== null) && (ob[name] !== undefined);
 }"""
 
-FUNCTIONS['getattr'] = """function (ob, name, deflt) {
+FUNCTIONS['getattr'] = """function (ob, name, deflt) { // nargs: 2 3
     var has_attr = ob !== undefined && ob !== null && ob[name] !== undefined;
     if (has_attr) {return ob[name];}
     else if (deflt !== undefined) {return deflt;}
     else {var e = Error(name); e.name='AttributeError'; throw e;}
 }"""
 
-FUNCTIONS['setattr'] = """function (ob, name, value) {
+FUNCTIONS['setattr'] = """function (ob, name, value) {  // nargs: 3
     ob[name] = value;
 }"""
 
-FUNCTIONS['delattr'] = """function (ob, name) {
+FUNCTIONS['delattr'] = """function (ob, name) {  // nargs: 2
     delete ob[name];
 }"""
 
@@ -95,72 +96,90 @@ var i, res = [];
 
 ## Normal functions
 
-FUNCTIONS['pow'] = 'Math.pow'
+FUNCTIONS['pow'] = 'Math.pow // nargs: 2'
 
-FUNCTIONS['sum'] = 'function (x) {return x.reduce(function(a, b) {return a + b;});}'
+FUNCTIONS['sum'] = """function (x) {  // nargs: 1
+    return x.reduce(function(a, b) {return a + b;});
+}"""
 
-FUNCTIONS['round'] = 'Math.round'
+FUNCTIONS['round'] = 'Math.round // nargs: 1'
 
-FUNCTIONS['int'] = 'function (x) {return x<0 ? Math.ceil(x): Math.floor(x);}'
+FUNCTIONS['int'] = """function (x) { // nargs: 1
+    return x<0 ? Math.ceil(x): Math.floor(x);
+}"""
 
-FUNCTIONS['float'] = 'Number'
+FUNCTIONS['float'] = 'Number // nargs: 1'
 
-FUNCTIONS['str'] = 'String'
+FUNCTIONS['str'] = 'String // nargs: 0 1'
 
-FUNCTIONS['repr'] = 'JSON.stringify'
+FUNCTIONS['repr'] = 'JSON.stringify // nargs: 1'
 
-FUNCTIONS['bool'] = """function (x) {return Boolean(FUNCTION_PREFIXtruthy(x));}
-"""
+FUNCTIONS['bool'] = """function (x) { // nargs: 1
+    return Boolean(FUNCTION_PREFIXtruthy(x));
+}"""
 
-FUNCTIONS['abs'] = 'Math.abs'
+FUNCTIONS['abs'] = 'Math.abs // nargs: 1'
 
-FUNCTIONS['divmod'] = 'function (x, y) {var m = x % y; return [(x-m)/y, m];}'
+FUNCTIONS['divmod'] = """function (x, y) { // nargs: 2
+    var m = x % y; return [(x-m)/y, m];
+}"""
 
-FUNCTIONS['all'] = """function (x) {
+FUNCTIONS['all'] = """function (x) { // nargs: 1
     for (var i=0; i<x.length; i++) {
         if (!FUNCTION_PREFIXtruthy(x[i])){return false}
     } return true;
 }"""
 
-FUNCTIONS['any'] = """function (x) {
+FUNCTIONS['any'] = """function (x) { // nargs: 1
     for (var i=0; i<x.length; i++) {
         if (FUNCTION_PREFIXtruthy(x[i])){return true}
     } return false;
 }"""
 
-FUNCTIONS['enumerate'] = """function (iter) {
+FUNCTIONS['enumerate'] = """function (iter) { // nargs: 1
     var i, res=[];
     if ((typeof iter==="object") && (!Array.isArray(iter))) {iter = Object.keys(iter);}
     for (i=0; i<iter.length; i++) {res.push([i, iter[i]]);}
     return res;
 }"""
         
-FUNCTIONS['zip'] = """function (it1, it2) {
-    var i, res=[];
-    if ((typeof it1==="object") && (!Array.isArray(it1))) {it1 = Object.keys(it1);}
-    if ((typeof it2==="object") && (!Array.isArray(it2))) {it2 = Object.keys(it2);}
-    var len = Math.min(it1.length, it2.length);
-    for (i=0; i<len; i++) {res.push([it1[i], it2[i]]);}
+FUNCTIONS['zip'] = """function () { // nargs: 2 3 4 5 6 7 8 9
+    var i, j, tup, arg, args = [], res = [], len = 1e20;
+    for (i=0; i<arguments.length; i++) {
+        arg = arguments[i];
+        if ((typeof arg==="object") && (!Array.isArray(arg))) {arg = Object.keys(arg);}
+        args.push(arg);
+        len = Math.min(len, arg.length);
+    }
+    for (j=0; j<len; j++) {
+        tup = []
+        for (i=0; i<args.length; i++) {tup.push(args[i][j]);}
+        res.push(tup);
+    }
     return res;
 }"""
 
-FUNCTIONS['reversed'] = """function (iter) {
+FUNCTIONS['reversed'] = """function (iter) { // nargs: 1
     if ((typeof iter==="object") && (!Array.isArray(iter))) {iter = Object.keys(iter);}
     return iter.slice().reverse();
 }"""
 
-FUNCTIONS['sorted'] = """function (iter) {
+FUNCTIONS['sorted'] = """function (iter, key, reverse) { // nargs: 1 2 3
     if ((typeof iter==="object") && (!Array.isArray(iter))) {iter = Object.keys(iter);}
-    return iter.slice().sort();
+    var comp = function (a, b) {return key(a) - key(b);};
+    comp = Boolean(key) ? comp : undefined; 
+    iter = iter.slice().sort(comp);
+    if (reverse) iter.reverse();
+    return iter;
 }"""
 
-FUNCTIONS['filter'] = """function (func, iter) {
+FUNCTIONS['filter'] = """function (func, iter) { // nargs: 2
     if (typeof func === "undefined" || func === null) {func = function(x) {return x;}}
     if ((typeof iter==="object") && (!Array.isArray(iter))) {iter = Object.keys(iter);}
     return iter.filter(func);
 }"""
 
-FUNCTIONS['map'] = """function (func, iter) {
+FUNCTIONS['map'] = """function (func, iter) { // nargs: 2
     if (typeof func === "undefined" || func === null) {func = function(x) {return x;}}
     if ((typeof iter==="object") && (!Array.isArray(iter))) {iter = Object.keys(iter);}
     return iter.map(func);
@@ -244,7 +263,7 @@ METHODS['copy'] = """function () { // nargs: 0
     if (Array.isArray(this)) {
         return this.slice(0);
     } else if (this.constructor === Object) {
-        var keys = Object.keys(this), res = {};
+        var key, keys = Object.keys(this), res = {};
         for (var i=0; i<keys.length; i++) {key = keys[i]; res[key] = this[key];}
         return res;
     } else return this.KEY.apply(this, arguments);
@@ -346,20 +365,20 @@ METHODS['setdefault'] = """function (key, d) { // nargs: 1 2
 
 METHODS['update'] = """function (other) { // nargs: 1
     if (this.constructor !== Object) return this.KEY.apply(this, arguments);
-    var keys = Object.keys(other);
+    var key, keys = Object.keys(other);
     for (var i=0; i<keys.length; i++) {key = keys[i]; this[key] = other[key];}
 }"""
 
 METHODS['values'] = """function () { // nargs: 0
     if (this.constructor !== Object) return this.KEY.apply(this, arguments);
-    var keys = Object.keys(this), res = [];
+    var key, keys = Object.keys(this), res = [];
     for (var i=0; i<keys.length; i++) {key = keys[i]; res.push(this[key]);}
     return res;
 }"""
 
 ## String only
 
-# ignores: encode, format, format_map, isdecimal, isdigit, isprintable, maketrans
+# ignores: encode, decode, format, format_map, isdecimal, isdigit, isprintable, maketrans
 
 METHODS['capitalize'] = """function () { // nargs: 0
     if (this.constructor !== String) return this.KEY.apply(this, arguments);

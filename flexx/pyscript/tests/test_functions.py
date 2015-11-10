@@ -27,7 +27,7 @@ def test_py2js_on_strings():
 
 def test_evaljs():
     assert evaljs('3+4') == '7'
-    assert evaljs('x = {}; x.doesnotexist') == ''  # strip undefined
+    assert evaljs('var x = {}; x.doesnotexist') == ''  # strip undefined
 
 
 def test_evalpy():

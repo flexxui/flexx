@@ -566,8 +566,8 @@ class TestClasses:
                 return 2
         
         code = py2js(MyClass11) + py2js(MyClass12)
-        assert evaljs(code + 'm = new MyClass12(); m._res') == '122'
-        assert evaljs(code + 'm = new MyClass12(); m.m1()') == '100'
+        assert evaljs(code + 'var m = new MyClass12(); m._res') == '122'
+        assert evaljs(code + 'var m = new MyClass12(); m.m1()') == '100'
         
 
 

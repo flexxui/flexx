@@ -144,7 +144,7 @@ def evaljs(jscode, whitespace=True):
     returns:
         result (str): the last result as a string.
     """
-    res = subprocess.check_output([get_node_exe(), '-p', '-e', jscode])
+    res = subprocess.check_output([get_node_exe(), '--use_strict', '-p', '-e', jscode])
     res = res.decode().rstrip()
     if res.endswith('undefined'):
         res = res[:-9].rstrip()

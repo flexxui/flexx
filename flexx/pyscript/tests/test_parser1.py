@@ -262,7 +262,7 @@ class TestExpressions:
         assert 'new' not in py2js('a = this.Foo()')
         assert 'new' not in py2js('a = JSON.stringify(x)')
         
-        jscode = 'function Foo() {this.x = 3}\nx=1;\n'
+        jscode = 'function Foo() {this.x = 3}\nvar x=1;\n'
         assert evaljs(jscode + py2js('a=Foo()\nx')) == '1'
         
     def test_pass(self):

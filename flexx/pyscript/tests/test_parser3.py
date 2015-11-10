@@ -9,7 +9,7 @@ def nowhitespace(s):
     return s.replace('\n', '').replace('\t', '').replace(' ', '')
 
 
-class _TestHardcoreBuildins:
+class TestHardcoreBuildins:
     
     def test_isinstance(self):
         # The resulting code is not particularly pretty, so we just
@@ -164,7 +164,7 @@ class _TestHardcoreBuildins:
         assert evalpy('list(range(2, 9, 2))') == '[ 2, 4, 6, 8 ]'
         assert evalpy('list(range(10, 3, -2))') == '[ 10, 8, 6, 4 ]'
 
-class _TestOtherBuildins:
+class TestOtherBuildins:
     
     # def test_allow_overload(self):
     #     assert evalpy('sum([3, 4])') == '7'
@@ -244,6 +244,8 @@ class _TestOtherBuildins:
     
     def test_zip(self):
         assert evalpy('for i, x in zip([1, 2, 3], [10, 20, 30]): print(i*x)') == '10\n40\n90'
+        res = '111\n222\n333'
+        assert evalpy('for a, b, c in zip([1, 2, 3], [10, 20, 30], [100, 200, 300]): print(a+b+c)') == res
     
     def test_reversed(self):
         assert evalpy('for x in reversed([10, 20, 30]): print(x)') == '30\n20\n10'
@@ -251,6 +253,7 @@ class _TestOtherBuildins:
     def test_sorted(self):
         assert evalpy('for x in sorted([1, 9, 3, 2, 7, 8, 4]): print(x)') == '1\n2\n3\n4\n7\n8\n9'
         assert evalpy('for x in reversed(sorted([1, 9, 3, 2, 7, 8, 4])): print(x)') == '9\n8\n7\n4\n3\n2\n1'
+        assert evalpy('for x in sorted([1, 9, 3, 2, 7, 8, 4], key=lambda a: -a): print(x)') == '9\n8\n7\n4\n3\n2\n1'
     
     def test_filter(self):
         assert list(filter(lambda x:x>0, [-1, -2, 1, 2])) == [1, 2]

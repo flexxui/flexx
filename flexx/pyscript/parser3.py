@@ -9,6 +9,10 @@ getattr, setattr, delattr, print, len, max, min, chr, ord, dict, list,
 tuple, range, pow, sum, round, int, float, str, bool, abs, divmod, all,
 any, enumerate, zip, reversed, sorted, filter, map.
 
+Further all methods for list, dict and str are implemented (except str
+methods: encode, decode, format, format_map, isdecimal, isdigit,
+isprintable, maketrans).
+
 .. pyscript_example::
 
     # "self" is replaced with "this"
@@ -158,6 +162,7 @@ Str methods
 .. pyscript_example::
 
     "foobar".startswith('foo')
+    "foobar".replace('foo', 'bar')
 
 
 Additional sugar
@@ -180,18 +185,18 @@ from . import commonast as ast
 from . import stdlib
 from .parser2 import Parser2, JSError, unify  # noqa
 
-# List of possibly relevant builtin functions:
-#
-# abs all any bin bool callable chr complex delattr dict dir divmod
-# enumerate eval exec filter float format getattr globals hasattr hash
-# hex id int isinstance issubclass iter len list locals map max min next
-# object oct ord pow print property range repr reversed round set setattr
-# slice sorted str sum super tuple type vars zip
-#
-# Further, all methods of: list, dict, str, set?
 
-# todo: make these more robust 
-# by not applying the Python version if a JS version exists.
+# This class has several `function_foo()` and `method_bar()` methods
+# to implement corresponding functionality. Most of these are
+# auto-generated from the stdlib. However, some methods need explicit
+# implementation, e.g. to parse keyword arguments, or are inlined rather
+# than implemented via the stlib.
+#
+# Note that when the number of arguments does not match, almost all
+# functions raise a compile-time error. The methods, however, will
+# bypass the stdlib in this case, because it is assumed that the user
+# intended to call a special method on the object.
+
 
 class Parser3(Parser2):
     """ Parser to transcompile Python to JS, allowing more Pythonic
@@ -201,7 +206,7 @@ class Parser3(Parser2):
     NAME_MAP = {'self': 'this', }
     NAME_MAP.update(Parser2.NAME_MAP)
     
-    ## Hardcore functions (hide JS functions with the same name)
+    ## Python buildin functions
     
     def function_isinstance(self, node):
         if len(node.arg_nodes) != 2:
@@ -253,30 +258,6 @@ class Parser3(Parser2):
         if cls2 == 'object':
             cls2 = 'Object'
         return '(%s.prototype instanceof %s)' % (cls1, cls2)
-    
-    def function_hasattr(self, node):
-        if len(node.arg_nodes) == 2:
-            return self.use_std_function('hasattr', node.arg_nodes)
-        else:
-            raise JSError('hasattr() expects two arguments.')
-    
-    def function_getattr(self, node):
-        if len(node.arg_nodes) in (2, 3):
-            return self.use_std_function('getattr', node.arg_nodes)
-        else:
-            raise JSError('hasattr() expects two or three arguments.')
-    
-    def function_setattr(self, node):
-        if len(node.arg_nodes) == 3:
-            return self.use_std_function('setattr', node.arg_nodes)
-        else:
-            raise JSError('setattr() expects three arguments.')
-    
-    def function_delattr(self, node):
-        if len(node.arg_nodes) == 2:
-            return self.use_std_function('delattr', node.arg_nodes)
-        else:
-            raise JSError('delattr() expects two arguments.')
     
     def function_print(self, node):
         # Process keywords
@@ -376,138 +357,8 @@ class Parser3(Parser2):
         else:
             raise JSError('range() needs 1, 2 or 3 arguments')
     
-    ## Normal functions
-    
-    def function_pow(self, node):
-        if len(node.arg_nodes) == 2:
-            return self.use_std_function('pow', node.arg_nodes)
-        else:
-            raise JSError('pow() needs exactly two argument2')
-    
-    def function_sum(self, node):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_function('sum', node.arg_nodes)
-        else:
-            raise JSError('sum() needs exactly one argument')
-    
-    def function_round(self, node):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_function('round', node.arg_nodes)
-        else:
-            raise JSError('round() needs at least one argument')
-    
-    def function_int(self, node):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_function('int', node.arg_nodes)
-        else:
-            raise JSError('int() needs one argument')
-    
-    def function_float(self, node):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_function('float', node.arg_nodes)
-        else:
-            raise JSError('float() needs one argument')
-    
-    def function_str(self, node):
-        if len(node.arg_nodes) in (0, 1):
-            return self.use_std_function('str', node.arg_nodes)
-        else:
-            raise JSError('str() needs zero or one argument')
-    
-    def function_repr(self, node):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_function('repr', node.arg_nodes)
-        else:
-            raise JSError('repr() needs one argument')
-    
-    def function_bool(self, node):
-        if len(node.arg_nodes) == 1:
-            self.use_std_function('truthy', [])  # trigger truthy usage
-            return self.use_std_function('bool', node.arg_nodes)
-        else:
-            raise JSError('bool() needs one argument')
-    
-    def function_abs(self, node):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_function('abs', node.arg_nodes)
-        else:
-            raise JSError('abs() needs one argument')
-    
-    def function_divmod(self, node):
-        if len(node.arg_nodes) == 2:
-            return self.use_std_function('divmod', node.arg_nodes)
-        else:
-            raise JSError('divmod() needs two arguments')
-        
-    def function_all(self, node):
-        if len(node.arg_nodes) == 1:
-            self.use_std_function('truthy', [])  # trigger truthy usage
-            return self.use_std_function('all', node.arg_nodes)
-        else:
-            raise JSError('all() needs one argument')
-    
-    def function_any(self, node):
-        if len(node.arg_nodes) == 1:
-            self.use_std_function('truthy', [])  # trigger truthy usage
-            return self.use_std_function('any', node.arg_nodes)
-        else:
-            raise JSError('any() needs one argument')
-    
-    def function_enumerate(self, node):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_function('enumerate', node.arg_nodes)
-        else:
-            raise JSError('enumerate() needs one argument')
-    
-    def function_zip(self, node):
-        if len(node.arg_nodes) == 2:
-            return self.use_std_function('zip', node.arg_nodes)
-        else:
-            raise JSError('zip() needs two arguments')
-             
-    def function_reversed(self, node):
-        if len(node.arg_nodes) == 1:
-            return self.use_std_function('reversed', node.arg_nodes)
-        else:
-            raise JSError('reversed() needs one argument')
-    
     def function_sorted(self, node):
         if len(node.arg_nodes) == 1:
-            return self.use_std_function('sorted', node.arg_nodes)
-        else:
-            raise JSError('sorted() needs one argument')
-    
-    def function_filter(self, node):
-        if len(node.arg_nodes) == 2:
-            return self.use_std_function('filter', node.arg_nodes)
-        else:
-            raise JSError('filter() needs two arguments')
-    
-    def function_map(self, node):
-        if len(node.arg_nodes) == 2:
-            return self.use_std_function('map', node.arg_nodes)
-        else:
-            raise JSError('map() needs two arguments')
-    
-    ## List methods
-    # LIST: append, clear, copy, count, extend, index, insert, pop,
-    # remove, reverse, sort
-    # DICT: clear, copy, fromkeys, get, items, keys, pop, popitem,
-    # setdefault, update, values
-    # STR: capitalize, casefold, center, count, encode, endswith,
-    # expandtabs, find, format, format_map, index, isalnum, isalpha,
-    # isdecimal, isdigit, isidentifier, islower, isnumeric, isprintable,
-    # isspace, istitle, isupper, join, ljust, lower, lstrip, maketrans,
-    # partition, replace, rfind, rindex, rjust, rpartition, rsplit,
-    # rstrip, split, splitlines, startswith, strip, swapcase, title,
-    # translate, upper, zfill
-    # SET: add, clear, copy, difference, difference_update, discard,
-    # intersection, intersection_update, isdisjoint, issubset,
-    # issuperset, pop, remove, symmetric_difference,
-    # symmetric_difference_update, union, update
-    
-    def method_sort(self, node, base):
-        if len(node.arg_nodes) == 0:  # sorts args are keyword-only
             key, reverse = ast.Name('undefined'), ast.NameConstant(False)
             for kw in node.kwarg_nodes:
                 if kw.name == 'key':
@@ -515,8 +366,10 @@ class Parser3(Parser2):
                 elif kw.name == 'reverse':
                     reverse = kw.value_node
                 else:
-                    raise JSError('Invalid keyword argument for sort: %r' % kw.name)
-            return self.use_std_method(base, 'sort', [key, reverse])
+                    raise JSError('Invalid keyword argument for sorted: %r' % kw.name)
+            return self.use_std_function('sorted', [node.arg_nodes[0], key, reverse])
+        else:
+            raise JSError('sorted() needs one argument')
     
     ## Extra functions / methods
     
@@ -533,26 +386,51 @@ class Parser3(Parser2):
                 return self.use_std_function('perf_counter', [])
             else:
                 raise JSError('perf_counter() needs no argument')
+    
+    ## Methods of list/dict/str
+    
+    def method_sort(self, node, base):
+        if len(node.arg_nodes) == 0:  # sorts args are keyword-only
+            key, reverse = ast.Name('undefined'), ast.NameConstant(False)
+            for kw in node.kwarg_nodes:
+                if kw.name == 'key':
+                    key = kw.value_node
+                elif kw.name == 'reverse':
+                    reverse = kw.value_node
+                else:
+                    raise JSError('Invalid keyword argument for sort: %r' % kw.name)
+            return self.use_std_method(base, 'sort', [key, reverse])
 
 
+# Add functions and methods to the class, using the stdib functions ...
 
-## Add methods to the class, using the stdib functions ...
-
-# todo: use this approach for all methods
-# todo: use this approach for functions too?
+def make_function(name, nargs, function_deps, method_deps):
+    def function_X(self, node):
+        if node.kwarg_nodes:
+            raise JSError('Function %s does not support keyword args.' % name)
+        if len(node.arg_nodes) not in nargs:
+            raise JSError('Function %s needs #args in %r.' % (name, nargs))
+        for dep in function_deps:
+            self.use_std_function(dep, [])
+        for dep in method_deps:
+            self.use_std_method('x', dep, [])
+        return self.use_std_function(name, node.arg_nodes)
+    return function_X
 
 def make_method(name, nargs, function_deps, method_deps):
     def method_X(self, node, base):
-        if len(node.arg_nodes) in nargs:
-            for dep in function_deps:
-                self.use_std_function(dep, [])
-            for dep in method_deps:
-                self.use_std_method('x', dep, [])
-            return self.use_std_method(base, name, node.arg_nodes)
+        if node.kwarg_nodes:
+            raise JSError('Method %s does not support keyword args.' % name)
+        if len(node.arg_nodes) not in nargs:
+            return None  # call as-is, don't use our variant
+        for dep in function_deps:
+            self.use_std_function(dep, [])
+        for dep in method_deps:
+            self.use_std_method('x', dep, [])
+        return self.use_std_method(base, name, node.arg_nodes)
     return method_X
 
-for name, code in stdlib.METHODS.items():
-    # Get how many arguments
+def _get_std_info(code):
     _, _, nargs = code.splitlines()[0].partition('nargs:')
     nargs = [int(i.strip()) for i in nargs.strip().replace(',', ' ').split(' ') if i]
     # Collect dependencies on other funcs/methods
@@ -561,7 +439,16 @@ for name, code in stdlib.METHODS.items():
     sep = stdlib.FUNCTION_PREFIX
     function_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
     function_deps = [dep for dep in function_deps if dep not in method_deps]
-    # Create method
+    return nargs, function_deps, method_deps
+
+for name, code in stdlib.METHODS.items():
+    nargs, function_deps, method_deps = _get_std_info(code)
     if nargs and not hasattr(Parser3, 'method_' + name):
         m = make_method(name, tuple(nargs), function_deps, method_deps)
         setattr(Parser3, 'method_' + name, m)
+
+for name, code in stdlib.FUNCTIONS.items():
+    nargs, function_deps, method_deps = _get_std_info(code)
+    if nargs and not hasattr(Parser3, 'function_' + name):
+        m = make_function(name, tuple(nargs), function_deps, method_deps)
+        setattr(Parser3, 'function_' + name, m)
