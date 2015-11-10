@@ -91,8 +91,12 @@ Comparisons
     # Identity
     foo is bar
     
-    # Equality (loose equality in JS)
+    # Equality 
     foo == bar
+    
+    # But comparisons are deep (unlike JS)
+    (2, 3, 4) == (2, 3, 4)
+    (2, 3) in [(1,2), (2,3), (3,4)]
 
     # Test for null
     foo is None
@@ -147,6 +151,7 @@ As in Python, the default return value of a function is ``None`` (i.e.
 import re
 
 from . import commonast as ast
+from . import stdlib
 from .parser0 import Parser0, JSError, unify  # noqa
 
 
@@ -248,7 +253,11 @@ class Parser1(Parser0):
         left = unify(self.parse(node.left_node))
         right = unify(self.parse(node.right_node))
         
-        if node.op == node.OPS.Pow:
+        if node.op == node.OPS.Add:
+            return self.use_std_function('add', [left, right])
+        elif node.op == node.OPS.Mult:
+            return self.use_std_function('mult', [left, right])
+        elif node.op == node.OPS.Pow:
             return ["Math.pow(", left, ", ", right, ")"]
         elif node.op == node.OPS.FloorDiv:
             return ["Math.floor(", left, "/", right, ")"]
@@ -289,14 +298,16 @@ class Parser1(Parser0):
         return code
     
     def _wrap_truthy(self, node):
+        """ Wraps an operation in a truthy call, unless its not necessary. """
+        name = stdlib.FUNCTION_PREFIX + 'truthy'
+        eq_name = stdlib.FUNCTION_PREFIX + 'equals'
         test = ''.join(self.parse(node))
-        if (('_truthy(' in test) or test.endswith('.length') or test.isnumeric() or 
-                                    test == 'true' or test == 'false' or
-                                    test.count('==') or test.count('!=')):
+        if (((name + '(') in test) or test.endswith('.length') or test.isnumeric() or 
+                                      test == 'true' or test == 'false' or
+                                      test.count('==') or test.count(eq_name)):
             return unify(test)
         else:
-            self.vars_for_functions['_truthy'] = bool_func
-            return '_truthy(%s)' % test
+            return self.use_std_function('truthy', [test])
     
     def parse_BoolOp(self, node):
         op = ' %s ' % self.BOOL_OP[node.op]
@@ -308,14 +319,17 @@ class Parser1(Parser0):
         left = unify(self.parse(node.left_node))
         right = unify(self.parse(node.right_node))
         
-        if node.op in (node.COMP.In, node.COMP.NotIn):
-            dummy = self.dummy()
-            s = "((%s = %s).indexOf ? %s : Object.keys(%s)).indexOf(%s)" % (
-                dummy, right, dummy, dummy, left)
-            if node.op == node.COMP.In:
-                return s + ' >= 0'
-            else:
-                return s + ' < 0'
+        if node.op in (node.COMP.Eq, node.COMP.NotEq):
+            code = self.use_std_function('equals', [left, right])
+            if node.op == node.COMP.NotEq:
+                code = '!' + code
+            return code
+        elif node.op in (node.COMP.In, node.COMP.NotIn):
+            self.use_std_function('equals', [])  # trigger use of equals
+            code = self.use_std_function('contains', [left, right])
+            if node.op == node.COMP.NotIn:
+                code = '!' + code
+            return code
         else:
             op = self.COMP_OP[node.op]
             return "%s %s %s" % (left, op, right)
@@ -473,7 +487,11 @@ class Parser1(Parser0):
         value = ''.join(self.parse(node.value_node))
         
         nl = self.lf()
-        if node.op == node.OPS.Pow:
+        if node.op == node.OPS.Add:
+            return [nl, target, '=', self.use_std_function('add', [target, value])]
+        elif node.op == node.OPS.Mult:
+            return [nl, target, '=', self.use_std_function('mult', [target, value])]
+        elif node.op == node.OPS.Pow:
             return [nl, target, " = Math.pow(", target, ", ", value, ")"]
         elif node.op == node.OPS.FloorDiv:
             return [nl, target, " = Math.floor(", target, "/", value, ")"]

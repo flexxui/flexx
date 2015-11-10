@@ -163,6 +163,7 @@ Str methods
 
     "foobar".startswith('foo')
     "foobar".replace('foo', 'bar')
+    "foobar".upper()
 
 
 Additional sugar
@@ -328,7 +329,9 @@ class Parser3(Parser2):
     
     def function_dict(self, node):
         if len(node.arg_nodes) == 0:
-            return '{}'
+            kwargs = ['%s:%s' % (arg.name, unify(self.parse(arg.value_node)))
+                      for arg in node.kwarg_nodes]
+            return '{%s}' % ', '.join(kwargs)
         if len(node.arg_nodes) == 1:
             return self.use_std_function('dict', node.arg_nodes)
         else:

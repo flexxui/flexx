@@ -232,12 +232,18 @@ class TestOtherBuildins:
         assert evalpy('all([1, 2, 3])') == 'true' 
         assert evalpy('all([0, 2, 3])') == 'false'
         assert evalpy('all([])') == 'true'
+        
+        assert evalpy('all([3, [], 3])') == 'false'
+        assert evalpy('all([3, [1], 3])') == 'true'
     
     def test_any(self):
         assert evalpy('any([1, 2, 3])') == 'true' 
         assert evalpy('any([0, 2, 0])') == 'true'
         assert evalpy('any([0, 0, 0])') == 'false'
         assert evalpy('any([])') == 'false' 
+        
+        assert evalpy('any([0, [], 0])') == 'false'
+        assert evalpy('any([0, [1], 0])') == 'true'
     
     def test_enumerate(self):
         assert evalpy('for i, x in enumerate([10, 20, 30]): print(i*x)') == '0\n20\n60'
@@ -288,12 +294,16 @@ class TestListMethods:
         assert evalpy(code + 'a.remove(3); a') == '[ 1, 2, 4, 3, 5 ]'
         assert 'ValueError' in evalpy(code + 'try:\n  a.remove(9);\nexcept Exception as e:\n  e')
         assert nowhitespace(evalpy('x = {"a":[2, 3]}; x.a.remove(2); x.a')) == '[3]'
+        
+        assert evalpy('a=[1,(2,3),4]; a.remove((2,3)); a') == '[ 1, 4 ]'
     
     def test_count(self):
         assert evalpy('[1,2,3,4,5,3].count(9)') == '0'
         assert evalpy('[1,2,3,4,5,3].count(2)') == '1'
         assert evalpy('[1,2,3,4,5,3].count(3)') == '2'
-
+        
+        assert evalpy('a=[1,(2,3),4, (2,3), 5]; a.count((2,3))') == '2'
+    
     def test_extend(self):
         assert evalpy('a=[1, 2]; b=[3, 4];a.extend(b); a') == '[ 1, 2, 3, 4 ]'
     
@@ -304,6 +314,9 @@ class TestListMethods:
         assert evalpy('[1,2,3,4,5,3].index(3, 4)') == '5'
         assert evalpy('[1,2,3,4,5,3].index(3, -2)') == '5'
         assert evalpy('[1,2,3,4,5,3].index(3, 0, -2)') == '2'
+        
+        assert evalpy('a=[1,(2,3),4, (2,3), 5]; a.index((2,3))') == '1'
+        assert evalpy('a=[1,(2,3),4, (2,3), 5]; a.index((2,3),2)') == '3'
     
     def test_insert(self):
         code = 'a=[1,2,3,4,5];'

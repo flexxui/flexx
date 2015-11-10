@@ -45,6 +45,8 @@ def unify(x):
         return x  # function calls (e.g. 'super()' or 'foo.bar(...)')
     elif re.match(r'^[\.\w]*\[.*\]$', x) and x.count(']') == 1:
         return x  # indexing
+    elif re.match(r'^\{.*\}$', x) and x.count('}') == 1:
+        return x  # dicts
     else:
         return '(%s)' % x
 
@@ -303,13 +305,6 @@ class Parser0(object):
     def vars(self):
         return self._stack[-1][2]
     
-    @property
-    def vars_for_functions(self):
-        """ Function declarations are added to the second stack if available.
-        """
-        # todo: remove this
-        return self._stack[0][2]
-    
     def lf(self, code=''):
         """ Line feed - create a new line with the correct indentation.
         """
@@ -328,7 +323,8 @@ class Parser0(object):
         """
         self._std_functions.add(name)
         mangled_name = stdlib.FUNCTION_PREFIX + name
-        args = [unify(self.parse(a)) for a in arg_nodes]
+        args = [(a if isinstance(a, str) else unify(self.parse(a)))
+                for a in arg_nodes]
         return '%s(%s)' % (mangled_name, ', '.join(args))
     
     def use_std_method(self, base, name, arg_nodes):
@@ -336,7 +332,8 @@ class Parser0(object):
         """
         self._std_methods.add(name)
         mangled_name = stdlib.METHOD_PREFIX + name
-        args = [unify(self.parse(a)) for a in arg_nodes]
+        args = [(a if isinstance(a, str) else unify(self.parse(a)))
+                for a in arg_nodes]
         return '%s.%s(%s)' % (base, mangled_name, ', '.join(args)) 
     
     def pop_docstring(self, node):

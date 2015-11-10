@@ -2,6 +2,26 @@
 The pyscript module provides functionality for transpiling Python code
 to JavaScript.
 
+Quick intro
+-----------
+
+This is a brief intro for using PyScript. For more details see the
+sections below.
+
+PyScript is a tool to write JavaScript using (a subset) of the Python
+language. All relevant buildins, and the methods of list, dict and str
+are supported. Not supported are imports, set, slicing with steps,
+``**kwargs``, ``with``, ``yield``. Other than that, most Python code
+should work as expected, though if you pry hard enough the JavaScript
+may shine through. As a rule of thumb, the code should behave as
+expected when correct, but error reporting may not be very Pythonic.
+
+During development you may want to use 
+``from flexx.pyscript import py2js, evalpy`` to test certain parts of
+the code. In principal you do not need knowledge of JavaScript to write
+PyScript code.
+
+
 Goals
 -----
 
@@ -39,7 +59,7 @@ will not work.
 PyScript takes a more modest approach; it is a tool that allows one to
 write JavaScript with a Python syntax. PyScript is just JavaScript.
 
-This means that depending on what you want to achieve, you still need
+This means that depending on what you want to achieve, you may still need
 to know a thing or two about how JavaScript works. Further, not all Python
 code can be converted (e.g. ``**kwargs`` are not supported), and
 lists and dicts are really just JavaScript arrays and objects, respectively.
@@ -50,12 +70,23 @@ Pythonic
 
 PyScript makes writing JS more "Pythonic". Apart from allowing Python syntax
 for loops, classes, etc, all relevant Python buildins are supported,
-and all methods of list, dict and str as well (WIP). E.g. you can use
-``print()``, ``range()``, ``L.append()``, ``L.remove()``, etc.
+as well as the methods of list, dict and str. E.g. you can use
+``print()``, ``range()``, ``L.append()``, ``D.update()``, etc.
 
-Also, the empty list and dict evaluate to false (whereas in JS it's
-true), and ``isinstance()`` just works (whereas JS' ``typeof`` is broken).
+The empty list and dict evaluate to false (whereas in JS it's
+true), and ``isinstance()`` just works (whereas JS' ``typeof`` is
+broken). 
 
+Deep comparisons are supported (e.g. for ``==`` and ``in``), so you can
+actually compare two lists or dicts, or even a structure of nested
+lists/dicts. Lists can be combined with the plus operator, and lists
+and strings can be repeated with the multiply (star) operator.
+
+The overhead to realize the more Pythonic behavior can have a negative
+impact on performance in tight loops. The recommended approach is to
+write performance critical code in pure JavaScript if necessary. This
+can be done by defining a function with only a docstring (containing
+the JS code).
 
 Caveats
 -------
@@ -72,13 +103,7 @@ plan to make heavy use of PyScript.
   AttributeError but yield ``undefined``.
 * When storing a method in a new variable and then calling it 
   (``foo = x.foo; foo()``), self/this is null.
-* Cannot compare lists and dicts: ``[1, 2] == [1, 2]`` yields ``False``.
-  (may fix this)
-* Multiplying a string with a number will yield NaN (but the reverse
-  is probably different). (may fix this)
-* You cannot concatenate lists with the plus operator, use ``.extend()``
-  instead. (may fix this)
-
+* Magic functions on classes (e.g. for operator overloading) do not work.
 
 PyScript is valid Python
 ------------------------
@@ -91,7 +116,6 @@ be included by defining a function with only a docstring.
 PyScript itself (the compiler) is written in Python. Perhaps PyScript can
 at some point compile itself, so that it becomes possible to define
 PyScript inside HTML documents.
-
 
 Support
 -------
@@ -132,10 +156,13 @@ Supported Python conveniences:
   print, len, max, min, chr, ord, dict, list, tuple, range, pow, sum,
   round, int, float, str, bool, abs, divmod, all, any, enumerate, zip,
   reversed, sorted, filter, map.
-* some methods fo list, dict and str are supported. We plan to support
-  (almost) all methods soon.
+* all methods of list, dict and str are supported (except a few string
+  methods: encode format format_map isdecimal isdigit isprintable maketrans)
 * the default return value of a function is ``None``/``null`` instead
   of ``undefined``.
+* list concatenation using the plus operator, and list/str repeating
+  using the star operator.
+* deep comparisons.
 
 Not currently supported:
 

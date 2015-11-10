@@ -194,11 +194,51 @@ FUNCTIONS['truthy'] = """function (v) {
     else {return Object.getOwnPropertyNames(v).length ? v : false;}
 }"""
 
-# todo: implement this for real (deep equals)
-FUNCTIONS['equals'] = """function (a, b) { // nargs: 2
-    return a == b;
+FUNCTIONS['equals'] = """function equals (a, b) { // nargs: 2
+    if (a == null || b == null) {
+    } else if (Array.isArray(a) && Array.isArray(b)) {
+        var i = 0, iseq = a.length == b.length;
+        while (iseq && i < a.length) {iseq = equals(a[i], b[i]); i+=1;}
+        return iseq;
+    } else if (a.constructor === Object && b.constructor === Object) {
+        var akeys = Object.keys(a), bkeys = Object.keys(b);
+        akeys.sort(); bkeys.sort();
+        var i=0, k, iseq = equals(akeys, bkeys);
+        while (iseq && i < akeys.length) {k=akeys[i]; iseq = equals(a[k], b[k]); i+=1;}
+        return iseq;
+    } return a == b;
 }"""
 
+FUNCTIONS['contains'] = """function contains (a, b) { // nargs: 2
+    if (b == null) {
+    } else if (Array.isArray(b)) {
+        for (var i=0; i<b.length; i++) {if (FUNCTION_PREFIXequals(a, b[i])) return true;}
+        return false;
+    } else if (b.constructor === Object) {
+        for (var k in b) {if (a == k) return true;}
+        return false;
+    } else if (b.constructor == String) {
+        return b.indexOf(a) >= 0;
+    } var e = Error('Not a container: ' + b); e.name='TypeError'; throw e;
+}"""
+
+FUNCTIONS['add'] = """function (a, b) { // nargs: 2
+    if (Array.isArray(a) && Array.isArray(b)) {
+        return a.concat(b);
+    } return a + b;
+}"""
+
+FUNCTIONS['mult'] = """function (a, b) { // nargs: 2
+    if ((typeof a === 'number') + (typeof b === 'number') === 1) {
+        if (a.constructor === String) return a.repeat(b);
+        if (b.constructor === String) return b.repeat(a);
+        if (Array.isArray(b)) {var t=a; a=b; b=t;}
+        if (Array.isArray(a)) {
+            var res = []; for (var i=0; i<b; i++) res = res.concat(a);
+            return res;
+        }
+    } return a * b;
+}"""
 
 FUNCTIONS['time'] = """function () {return new Date().getTime() / 1000;}"""
 

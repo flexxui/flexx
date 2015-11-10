@@ -196,34 +196,3 @@ def script2js(filename, namespace=None, target=None):
         filename2 = target
     with open(filename2, 'wb') as f:
         f.write(jscode.encode())
-# 
-# 
-# def clean_code(code):
-#     """ Remove duplicate declarations of std function definitions.
-#     
-#     Use this if you build a JS source file from multiple snippets and
-#     want to get rid of the function declarations like ``_truthy`` and
-#     ``sum``.
-#     
-#     Parameters:
-#         code (str): the complete source code.
-#     
-#     Returns:
-#         new_code (str): the code with duplicate definitions filtered out.
-#     """
-#     return code
-#     # todo: remove this function
-#     known_funcs = {}
-#     
-#     lines = []
-#     for line in code.splitlines():
-#         line2 = line.lstrip()
-#         indent = len(line) - len(line2)
-#         if line2.startswith('var ') and ' = function ' in line2:
-#             prev_indent = known_funcs.get(line2, 999)
-#             if prev_indent == 0 :
-#                 continue
-#             if indent == 0:
-#                 known_funcs[line2] = indent
-#         lines.append(line)
-#     return '\n'.join(lines)
