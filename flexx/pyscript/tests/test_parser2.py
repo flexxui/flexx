@@ -421,6 +421,37 @@ class TestFunctions:
         assert 'var x' in py2js(func2)
         assert 'var x' in py2js(func3)
     
+    def test_global_and_nonlocal(self):
+        assert py2js('nonlocal foo;foo = 3').strip() == 'foo = 3;'
+        assert py2js('global foo;foo = 3').strip() == 'foo = 3;'
+        
+        def func1():
+            def inner():
+                x = 3
+            x = 2
+            inner()
+            return x
+        
+        def func2():
+            def inner():
+                global x
+                x = 3
+            x = 2
+            inner()
+            return x
+        
+        def func3():
+            def inner():
+                nonlocal x
+                x = 3
+            x = 2
+            inner()
+            return x
+        
+        assert evaljs(py2js(func1)+'func1()') == '2'
+        assert evaljs(py2js(func2)+'func2()') == '3'
+        assert evaljs(py2js(func3)+'func3()') == '3'
+    
     def test_raw_js(self):
         
         def func(a, b):

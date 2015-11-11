@@ -54,13 +54,13 @@ class BaseRuntime(object):
         # Discart process
         self._proc = None
 
-    def _start_subprocess(self, cmd, **env):
+    def _start_subprocess(self, cmd, shell=False, **env):
         """ For subclasses to easily launch the subprocess.
         """
         environ = os.environ.copy()
         environ.update(env)
         try:
-            self._proc = subprocess.Popen(cmd, env=environ,
+            self._proc = subprocess.Popen(cmd, env=environ, shell=shell,
                                           stdout=subprocess.PIPE,
                                           stderr=subprocess.STDOUT)
         except OSError as err:  # pragma: no cover

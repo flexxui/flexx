@@ -643,6 +643,7 @@ class Parser2(Parser1):
             prefixed = self.with_prefix(node.name)
             if prefixed == node.name:  # normal function vs method
                 self.vars.add(node.name)
+                self._seen_func_names.add(node.name)
             code.append(self.lf('%s = ' % prefixed))
             #code.append('function %s (' % node.name)
             code.append('function (')
@@ -775,6 +776,7 @@ class Parser2(Parser1):
         
         # Body ...
         self.vars.add(node.name)
+        self._seen_class_names.add(node.name)
         self.push_stack('class', node.name)
         for sub in node.body_nodes:
             code += self.parse(sub)
@@ -813,9 +815,14 @@ class Parser2(Parser1):
     
     #def parse_Yield
     #def parse_YieldFrom
-    #def parse_Global
-    #def parse_NonLocal
-
+    
+    def parse_Global(self, node):
+        return self.parse_Nonlocal(node)
+    
+    def parse_Nonlocal(self, node):
+        for name in node.names:
+            self.vars.set_nonlocal(name)
+        return '' 
 
 
 def get_class_definition(name, base='Object', docstring=''):

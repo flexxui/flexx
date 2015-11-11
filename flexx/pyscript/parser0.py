@@ -93,12 +93,21 @@ def get_module_preamble(name, deps):
 
 
 class NameSpace(dict):
-    """ Items can be added to the namespace with the value representing
-    the initial value. Or using ``add()`` no initial value.
+    """ Variable names can be added to the namespace with or without an
+    initial value.
+    
+    * If the value is False, its a global/nonlocal, it should not be declared.
+    * If the value is True, it should be declared.
+    * if the value is a string, it should be declared with the initial value
+      specified by the string.
     """
     
+    def set_nonlocal(self, key):
+        self[key] = False  # also if already exists
+    
     def add(self, key):
-        self[key] = None
+        if key not in self:
+            self[key] = True
     
     def discard(self, key):
         self.pop(key, None)
@@ -174,10 +183,16 @@ class Parser0(object):
         self._stack = []
         self._indent = indent
         self._dummy_counter = 0
-        self._imports = {}
-        self._imported_objects = set()
+        
+        # To keep track of std lib usage
         self._std_functions = set()
         self._std_methods = set()
+        self._imported_objects = set()
+        self._imports = {}
+        
+        # To help distinguish classes from functions
+        self._seen_func_names = set()
+        self._seen_class_names = set()
         
         # Options
         self._docstrings = bool(docstrings)  # whether to inclue docstrings
@@ -287,11 +302,13 @@ class Parser0(object):
             return ''
         code = []
         loose_vars = []
-        for name, init in sorted(ns.items()):
-            if init is None:
+        for name, value in sorted(ns.items()):
+            if value and isinstance(value, str):
+                code.append(self.lf('var %s = %s;' % (name, value)))
+            elif value:
                 loose_vars.append(name)
             else:
-                code.append(self.lf('var %s = %s;' % (name, init)))
+                pass  # global/nonlocal
         if loose_vars:
             code.insert(0, self.lf('var %s;' % ', '.join(loose_vars)))
         return ''.join(code)
@@ -307,6 +324,7 @@ class Parser0(object):
     
     @property
     def vars(self):
+        """ NameSpace instance for the current stack. """
         return self._stack[-1][2]
     
     def lf(self, code=''):

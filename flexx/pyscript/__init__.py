@@ -82,12 +82,6 @@ actually compare two lists or dicts, or even a structure of nested
 lists/dicts. Lists can be combined with the plus operator, and lists
 and strings can be repeated with the multiply (star) operator.
 
-The overhead to realize the more Pythonic behavior can have a negative
-impact on performance in tight loops. The recommended approach is to
-write performance critical code in pure JavaScript if necessary. This
-can be done by defining a function with only a docstring (containing
-the JS code).
-
 Caveats
 -------
 
@@ -104,6 +98,9 @@ plan to make heavy use of PyScript.
 * When storing a method in a new variable and then calling it 
   (``foo = x.foo; foo()``), self/this is null.
 * Magic functions on classes (e.g. for operator overloading) do not work.
+* Calling an object that starts with a capital letter is assumed to be
+  a class instantiation (using ``new``): PyScript classes *must* start
+  with a capital letter, and any other callables must not.
 
 PyScript is valid Python
 ------------------------
@@ -116,6 +113,20 @@ be included by defining a function with only a docstring.
 PyScript itself (the compiler) is written in Python. Perhaps PyScript can
 at some point compile itself, so that it becomes possible to define
 PyScript inside HTML documents.
+
+Performance
+-----------
+
+Because PyScript produces relatively bare JavaScript, it is pretty fast.
+Faster than CPython, and significantly faster than Brython and friends.
+Check out ``examples/app/benchmark.py``.
+
+Nevertheless, the overhead to realize the more Pythonic behavior can
+have a negative impact on performance in tight loops (in comparison to
+having writing the JS by hand). The recommended approach is to write
+performance critical code in pure JavaScript if necessary. This can be
+done by defining a function with only a docstring (containing the JS
+code).
 
 Support
 -------

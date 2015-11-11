@@ -309,7 +309,7 @@ class Parser1(Parser0):
         start = 0
         for i, m in enumerate(matches):
             fmt = m.group(0)
-            if fmt in ('%s', '%f', '%i', '%d'):
+            if fmt in ('%s', '%f', '%i', '%d', '%g'):
                 code.append(sep + left[start:m.start()] + sep)
                 code.append(' + ' + items[i] + ' + ')
             elif fmt == '%r':
@@ -401,8 +401,14 @@ class Parser1(Parser0):
             elif method_name:
                 if method_name[0].lower() != method_name[0]:
                     code.insert(0, 'new ')
-            elif full_name[0].lower() != full_name[0]:
-                code.insert(0, 'new ')
+            else:
+                fn = full_name
+                if fn in self._seen_func_names and fn not in self._seen_class_names:
+                    pass
+                elif fn not in self._seen_func_names and fn in self._seen_class_names:
+                    code.insert(0, 'new ')
+                elif full_name[0].lower() != full_name[0]:
+                    code.insert(0, 'new ')
             return code
     
     def _get_args(self, node, base_name, use_call_or_apply=False):
