@@ -19,7 +19,7 @@ class FlexxJS:
         self.last_msg = None
         self.is_notebook = False  # if not, we "close" when the ws closes
         # For nodejs, the location is set by the flexx nodejs runtime.
-        loc = window.location
+        loc = location
         self.ws_url = ('ws://%s:%s/%s/ws' % (loc.hostname, loc.port, loc.pathname))
         self.is_exported = False
         self.classes = {}
@@ -75,10 +75,10 @@ class FlexxJS:
                 #WebSocket = require('websocket').client
             except Exception:
                 # Better error message
-                raise "FAIL: you need to 'npm install -g ws'."
+                raise "FAIL: you need to 'npm install -g ws' (or 'websocket')."
         else:
             WebSocket = window.WebSocket
-            if (window.WebSocket is undefined):
+            if (WebSocket is undefined):
                 document.body.innerHTML = 'This browser does not support WebSockets'
                 raise "FAIL: need websocket"
         # Open web socket in binary mode
@@ -87,7 +87,7 @@ class FlexxJS:
         
         def on_ws_open(evt):
             console.info('Socket connected')
-            ws.send('hiflexx ' + window.flexx_session_id)
+            ws.send('hiflexx ' + flexx_session_id)
         def on_ws_message(evt):
             flexx.last_msg = evt.data or evt
             msg = flexx.decodeUtf8(flexx.last_msg)

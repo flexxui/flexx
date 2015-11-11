@@ -188,7 +188,7 @@ class Session(SessionAssets):
         super().__init__()
         
         # Init assets
-        id_asset = ('window.flexx_session_id = %r;\n' % self.id).encode()
+        id_asset = ('var flexx_session_id = %r;\n' % self.id).encode()
         self.add_asset('index-flexx-id.js', id_asset)
         self.use_global_asset('flexx-app.js')
         
