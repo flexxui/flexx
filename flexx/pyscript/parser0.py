@@ -174,6 +174,8 @@ class Parser0(object):
         self._stack = []
         self._indent = indent
         self._dummy_counter = 0
+        self._imports = {}
+        self._imported_objects = set()
         self._std_functions = set()
         self._std_methods = set()
         
@@ -214,8 +216,10 @@ class Parser0(object):
         
         # Add part of the stdlib that was actually used
         if inline_stdlib:
-            libcode = stdlib.get_partial_std_lib(self._std_functions, 
-                                                 self._std_methods, self._indent)
+            libcode = stdlib.get_partial_std_lib(self._std_functions,
+                                                 self._std_methods,
+                                                 self._imported_objects,
+                                                 self._indent)
             if libcode:
                 self._parts.insert(0, libcode)
         
@@ -336,6 +340,10 @@ class Parser0(object):
                 for a in arg_nodes]
         return '%s.%s(%s)' % (base, mangled_name, ', '.join(args)) 
     
+    def use_imported_object(self, name):
+        self._imported_objects.add(name)
+        return stdlib.IMPORT_PREFIX + name.replace('.', stdlib.IMPORT_DOT)
+        
     def pop_docstring(self, node):
         """ If a docstring is present, in the body of the given node,
         remove that string node and return it as a string, corrected

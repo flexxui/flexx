@@ -165,21 +165,6 @@ Str methods
     "foobar".replace('foo', 'bar')
     "foobar".upper()
 
-
-Additional sugar
-----------------
-
-.. pyscript_example::
-    
-    # Get time (number of seconds since epoch)
-    print(time.time())
-    
-    # High resolution timer (as in time.perf_counter on Python 3)
-    t0 = time.perf_counter()
-    do_something()
-    t1 = time.perf_counter()
-    print('this took me', t1-t0, 'seconds')
-
 """
 
 from . import commonast as ast
@@ -373,22 +358,6 @@ class Parser3(Parser2):
             return self.use_std_function('sorted', [node.arg_nodes[0], key, reverse])
         else:
             raise JSError('sorted() needs one argument')
-    
-    ## Extra functions / methods
-    
-    def method_time(self, node, base):  # time.time()
-        if base == 'time':
-            if len(node.arg_nodes) == 0:
-                return self.use_std_function('time', [])
-            else:
-                raise JSError('time() needs no argument')
-    
-    def method_perf_counter(self, node, base):  # time.perf_counter()
-        if base == 'time':
-            if len(node.arg_nodes) == 0:
-                return self.use_std_function('perf_counter', [])
-            else:
-                raise JSError('perf_counter() needs no argument')
     
     ## Methods of list/dict/str
     

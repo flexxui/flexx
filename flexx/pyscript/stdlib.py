@@ -11,7 +11,10 @@ METHODS = {}
 FUNCTION_PREFIX = 'py_'
 METHOD_PREFIX = '_py_'
 
-def get_partial_std_lib(func_names, method_names, indent=0):
+IMPORT_PREFIX = 'py_'
+IMPORT_DOT = '__'
+
+def get_partial_std_lib(func_names, method_names, imported_objects, indent=0):
     """ Get the code for the PyScript standard library consisting of
     the given function and method names. The given indent specifies how
     many sets of 4 spaces to prepend.
@@ -23,6 +26,12 @@ def get_partial_std_lib(func_names, method_names, indent=0):
     for name in sorted(method_names):
         code = METHODS[name].strip()
         lines.append('Object.prototype.%s%s = %s;' % (METHOD_PREFIX, name, code))
+    for name in sorted(imported_objects):
+        if IMPORTS[name] is None:
+            continue
+        code = IMPORTS[name].strip()
+        name = name.replace('.', IMPORT_DOT)
+        lines.append('var %s%s = %s;' % (IMPORT_PREFIX, name, code))
     code = '\n'.join(lines)
     if indent:
         lines = ['    '*indent + line for line in code.splitlines()]
@@ -33,7 +42,7 @@ def get_full_std_lib(indent=0):
     """ Get the code for the full PyScript standard library. The given
     indent specifies how many sets of 4 spaces to prepend.
     """
-    return get_partial_std_lib(FUNCTIONS.keys(), METHODS.keys(), indent)
+    return get_partial_std_lib(FUNCTIONS.keys(), METHODS.keys(), IMPORTS.keys(), indent)
 
 ## ----- Functions
 
@@ -212,7 +221,8 @@ FUNCTIONS['equals'] = """function equals (a, b) { // nargs: 2
 FUNCTIONS['contains'] = """function contains (a, b) { // nargs: 2
     if (b == null) {
     } else if (Array.isArray(b)) {
-        for (var i=0; i<b.length; i++) {if (FUNCTION_PREFIXequals(a, b[i])) return true;}
+        for (var i=0; i<b.length; i++) {if (FUNCTION_PREFIXequals(a, b[i]))
+                                           return true;}
         return false;
     } else if (b.constructor === Object) {
         for (var k in b) {if (a == k) return true;}
@@ -355,7 +365,7 @@ METHODS['index'] = """function (x, start, stop) { // nargs: 1 2 3
     stop = Math.min(this.length, ((stop < 0) ? this.length + stop : stop));
     if (Array.isArray(this)) {
         for (var i=start; i<stop; i++) {
-            if (FUNCTION_PREFIXequals(this[i], x)) {return i;} // this is why we dont use indexOf
+            if (FUNCTION_PREFIXequals(this[i], x)) {return i;} // indexOf cant do this
         }
     } else if (this.constructor === String) {
         var i = this.slice(start, stop).indexOf(x);
@@ -418,7 +428,8 @@ METHODS['values'] = """function () { // nargs: 0
 
 ## String only
 
-# ignores: encode, decode, format, format_map, isdecimal, isdigit, isprintable, maketrans
+# ignores: encode, decode, format, format_map, isdecimal, isdigit,
+# isprintable, maketrans
 
 METHODS['capitalize'] = """function () { // nargs: 0
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
@@ -672,9 +683,10 @@ METHODS['swapcase'] = """function () { // nargs: 0
 
 METHODS['title'] = """function () { // nargs: 0
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
-    var res = [], tester = /^[^A-Za-z]?[A-Za-z]$/;
+    var i0, res = [], tester = /^[^A-Za-z]?[A-Za-z]$/;
     for (var i=0; i<this.length; i++) {
-        if (tester.test(this.slice(Math.max(0, i-1), i+1))) res.push(this[i].toUpperCase());
+        i0 = Math.max(0, i-1);
+        if (tester.test(this.slice(i0, i+1))) res.push(this[i].toUpperCase());
         else res.push(this[i].toLowerCase());
     } return res.join('');
 }"""
@@ -711,3 +723,29 @@ for key in FUNCTIONS:
         'KEY', key).replace(
         'FUNCTION_PREFIX', FUNCTION_PREFIX).replace(
         'METHOD_PREFIX', METHOD_PREFIX)
+
+## Modules - experimental
+
+import sys
+IMPORTS = {}
+IMPORTS['sys'] = {}
+
+IMPORTS['sys'] = None  # mark sys as a module
+IMPORTS['sys.version_info'] = "[%s]" % ', '.join([str(x) for x in sys.version_info[:3]])
+IMPORTS['sys.version'] = "%r" % ('.'.join([str(x) for x in sys.version_info[:3]])
+                                    + ' [PyScript]')
+IMPORTS['sys.path'] = "[]"
+
+IMPORTS['time'] = None  # mark time as a module
+IMPORTS['time.perf_counter'] = """function() {
+    if (typeof(process) === "undefined"){return performance.now()*1e-3;}
+    else {var t = process.hrtime(); return t[0] + t[1]*1e-9;}
+}"""  # Work in nodejs and browser
+
+IMPORTS['time.clock'] = IMPORTS['time.perf_counter']
+IMPORTS['time.time'] = """function () {return new Date().getTime() / 1000;}"""
+
+IMPORTS['time.sleep'] = """function(secs) {
+    var msecs = secs * 1000, start = new Date();
+    while (new Date() - start < msecs) {}
+}""" 

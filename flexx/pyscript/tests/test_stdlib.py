@@ -17,7 +17,7 @@ def test_stdlib_full_and_partial():
     assert 'var py_list =' in code
     assert code.count('var') > 10
     
-    code = stdlib.get_partial_std_lib(['hasattr'], [])
+    code = stdlib.get_partial_std_lib(['hasattr'], [], []) 
     assert isinstance(code, str)
     assert 'var py_hasattr =' in code
     assert 'var py_list =' not in code

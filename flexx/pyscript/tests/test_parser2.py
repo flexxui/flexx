@@ -310,17 +310,17 @@ class TestFunctions:
     
     def test_default_args(self):
         
-        def func(self, foo, bar=4):
-            return foo + bar
+        def func(self, foo, bar=2):
+            return foo - bar
         
         code = py2js(func)
         lines = [line for line in code.split('\n') if line]
         
         assert lines[1] == 'func = function (foo, bar) {'
-        assert '4' in code
+        assert '2' in code
         
-        assert evaljs(code + 'func(2)') == '6'
-        assert evaljs(code + 'func(2, 2)') == '4'
+        assert evaljs(code + 'func(2)') == '0'
+        assert evaljs(code + 'func(4, 3)') == '1'
         assert evaljs(code + 'func(0, 0)') == '0'
     
     def test_var_args1(self):
@@ -386,9 +386,14 @@ class TestFunctions:
             stub = True  # noqa
             return res + y  # should return 1+2+3+1 == 7
         
+        # Find function start
         code = py2js(func)
-        vars1 = code.splitlines()[2]
-        vars2 = code.splitlines()[4]
+        i = code.splitlines().index('var func;')
+        assert i >= 0
+        
+        # Find first lines of functions, where the vars are defined
+        vars1 = code.splitlines()[i+2]
+        vars2 = code.splitlines()[i+4]
         assert vars1.strip().startswith('var ')
         assert vars2.strip().startswith('var ')
         

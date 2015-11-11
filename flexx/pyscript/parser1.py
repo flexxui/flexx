@@ -146,6 +146,26 @@ As in Python, the default return value of a function is ``None`` (i.e.
     # Support for star args (but not **kwargs)
     foo(*a)
 
+Imports
+-------
+
+PyScript has limited support for imports. At this point, only a few
+objects from ``time`` and ``sys`` are supported. Module support may be
+extended in the future.
+
+.. pyscript_example::
+    
+    # Get time (number of seconds since epoch)
+    import time
+    print(time.time())
+    
+    # High resolution timer (as in time.perf_counter on Python 3)
+    import time
+    t0 = time.perf_counter()
+    do_something()
+    t1 = time.perf_counter()
+    print('this took me', t1-t0, 'seconds')
+
 """
 
 import re
@@ -254,16 +274,20 @@ class Parser1(Parser0):
         right = unify(self.parse(node.right_node))
         
         if node.op == node.OPS.Add:
-            return self.use_std_function('add', [left, right])
+            C = ast.Num, ast.Str
+            if not (isinstance(node.left_node, C) or isinstance(node.right_node, C)):
+                return self.use_std_function('add', [left, right])
         elif node.op == node.OPS.Mult:
-            return self.use_std_function('mult', [left, right])
+            C = ast.Num
+            if not (isinstance(node.left_node, C) and isinstance(node.right_node, C)):
+                return self.use_std_function('mult', [left, right])
         elif node.op == node.OPS.Pow:
             return ["Math.pow(", left, ", ", right, ")"]
         elif node.op == node.OPS.FloorDiv:
             return ["Math.floor(", left, "/", right, ")"]
-        else:
-            op = ' %s ' % self.BINARY_OP[node.op]
-            return [left, op, right]
+        
+        op = ' %s ' % self.BINARY_OP[node.op]
+        return [left, op, right]
     
     def _format_string(self, node):
         # Get left end, stripped from the separator
@@ -350,6 +374,11 @@ class Parser1(Parser0):
             method_name = ''
             base_name = ''
             full_name = unify(self.parse(node.func_node))
+        
+        # Handle imports
+        imported = self._imports.get(base_name)
+        if imported:
+            full_name = self.use_imported_object(imported + '.' + method_name)
         
         # Handle special functions and methods
         res = None
@@ -439,7 +468,13 @@ class Parser1(Parser0):
             return ["("] + argswithcommas + [")"]
     
     def parse_Attribute(self, node):
-        return "%s.%s" % (unify(self.parse(node.value_node)), node.attr)
+        base_name = unify(self.parse(node.value_node))
+        # Handle imports
+        imported = self._imports.get(base_name)
+        if imported:
+            return self.use_imported_object(imported + '.' + node.attr)
+        # Handle normally
+        return "%s.%s" % (base_name, node.attr)
     
     ## Statements
     
@@ -551,7 +586,7 @@ class Parser1(Parser0):
     def parse_ExtSlice(self, node):
         raise JSError('Multidimensional slicing not supported in JS')
     
-    ## Imports - no imports
+    ## Imports 
 
     def parse_Import(self, node):
         
@@ -561,7 +596,29 @@ class Parser1(Parser0):
             # writing the JS code and command to parse it in one module.
             # Ignore this import.
             return []
-        raise JSError('Imports not supported.')
+        
+        if node.level:
+            raise JSError('PyScript does not support relative imports.')
+        
+        root = node.root + '.' if node.root else ''
+        names = [name[0] for name in node.names]
+        aliases = [name[1] for name in node.names]
+        
+        code = []
+        for name, alias in zip(names, aliases):
+            full_name = root + name
+            alias = alias if alias else name
+            if full_name in stdlib.IMPORTS:
+                if stdlib.IMPORTS[full_name] is None:
+                    # Register the module for later attribute lookup 
+                    self._imports[alias] = full_name
+                else:
+                    # Import the object
+                    realname = self.use_imported_object(full_name)
+                    code += [self.lf(), 'var %s = %s;' % (alias, realname)]
+            else:
+                raise JSError('Unknown import %r' % name)
+        return code
     
     def parse_Module(self, node):
         # Module level. Every piece of code has a module as the root.

@@ -6,6 +6,8 @@ from ..pyscript import py2js
 from ..pyscript.stubs import (undefined, window, root, console, document,
                               module, flexx, require, typeof)
 
+flexx_session_id = location = None  # fool PyFlakes
+
 
 @py2js(inline_stdlib=False)
 class FlexxJS:
