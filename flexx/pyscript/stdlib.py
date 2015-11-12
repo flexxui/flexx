@@ -14,6 +14,7 @@ METHOD_PREFIX = '_py_'
 IMPORT_PREFIX = 'py_'
 IMPORT_DOT = '__'
 
+
 def get_std_info(code):
     """ Given the JS code for a std function or method. Determine the
     number of arguments, function_deps and method_deps.
@@ -21,11 +22,17 @@ def get_std_info(code):
     _, _, nargs = code.splitlines()[0].partition('nargs:')
     nargs = [int(i.strip()) for i in nargs.strip().replace(',', ' ').split(' ') if i]
     # Collect dependencies on other funcs/methods
-    sep = '.' + METHOD_PREFIX
-    method_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
     sep = FUNCTION_PREFIX
     function_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
+    sep = '.' + METHOD_PREFIX
+    method_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
+    # Reduce and sort
+    function_deps = sorted(set(function_deps))
+    method_deps = sorted(set(method_deps))
+    # Filter
     function_deps = [dep for dep in function_deps if dep not in method_deps]
+    function_deps = [dep for dep in function_deps if dep in FUNCTIONS]
+    method_deps = [dep for dep in method_deps if dep in METHODS]
     return nargs, function_deps, method_deps
 
 def get_partial_std_lib(func_names, method_names, imported_objects, indent=0):
@@ -73,7 +80,7 @@ FUNCTIONS['hasattr'] = """function (ob, name) { // nargs: 2
 FUNCTIONS['getattr'] = """function (ob, name, deflt) { // nargs: 2 3
     var has_attr = ob !== undefined && ob !== null && ob[name] !== undefined;
     if (has_attr) {return ob[name];}
-    else if (deflt !== undefined) {return deflt;}
+    else if (arguments.length == 3) {return deflt;}
     else {var e = Error(name); e.name='AttributeError'; throw e;}
 }"""
 

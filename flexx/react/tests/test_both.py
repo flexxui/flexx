@@ -21,6 +21,7 @@ from flexx.util.testing import run_tests_if_main
 from flexx.react import source, input, connect, lazy, HasSignals, undefined
 from flexx.react.pyscript import create_js_signals_class, HasSignalsJS
 from flexx.pyscript.functions import py2js, evaljs, evalpy, js_rename
+from flexx.pyscript.stdlib import get_std_info, get_partial_std_lib
 
 
 def run_in_both(cls, reference, extra_classes=()):
@@ -39,8 +40,10 @@ def run_in_both(cls, reference, extra_classes=()):
             for c in extra_classes:
                 code += create_js_signals_class(c, c.__name__)
             code += create_js_signals_class(cls, cls.__name__, cls.__bases__[0].__name__+'.prototype')
-            code += py2js(func, 'test')
+            code += py2js(func, 'test', inline_stdlib=False)
             code += 'test(%s);' % cls.__name__
+            nargs, function_deps, method_deps = get_std_info(code)
+            code = get_partial_std_lib(function_deps, method_deps, []) + code
             jsresult = evaljs(code)
             jsresult = jsresult.replace('[ ', '[').replace(' ]', ']')
             jsresult = jsresult.replace('"', "'")

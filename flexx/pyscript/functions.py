@@ -2,8 +2,8 @@ import os
 import sys
 import types
 import inspect
-import subprocess
 import hashlib
+import subprocess
 
 from . import Parser
 from .stdlib import get_full_std_lib  # noqa
@@ -141,11 +141,12 @@ def evaljs(jscode, whitespace=True):
         jscode (str): the JavaScript code to evaluate.
         whitespace (bool): if whitespace is False, the whitespace
             is removed from the result. Default True.
-    
     returns:
         result (str): the last result as a string.
     """
+    # Call node
     res = subprocess.check_output([get_node_exe(), '--use_strict', '-p', '-e', jscode])
+    # process
     res = res.decode().rstrip()
     if res.endswith('undefined'):
         res = res[:-9].rstrip()
