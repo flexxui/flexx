@@ -18,6 +18,7 @@ class Foo:
     
     def eggs(self, y):
         self.y = self.x * y
+        hasattr(y, str)
 
 
 class Bar(Foo):

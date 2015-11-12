@@ -7,7 +7,7 @@ import tempfile
 from pytest import raises
 from flexx.util.testing import run_tests_if_main
 
-from flexx.pyscript import py2js, evaljs, evalpy, script2js, clean_code
+from flexx.pyscript import py2js, evaljs, evalpy, script2js
 
 
 def test_py2js_on_wrong_vals():
@@ -27,7 +27,7 @@ def test_py2js_on_strings():
 
 def test_evaljs():
     assert evaljs('3+4') == '7'
-    assert evaljs('x = {}; x.doesnotexist') == ''  # strip undefined
+    assert evaljs('var x = {}; x.doesnotexist') == ''  # strip undefined
 
 
 def test_evalpy():
@@ -74,10 +74,20 @@ def test_py2js_on_function():
     def foo2():
         pass
     
+    @py2js
+    def foo3():
+        pass
+    
+    @py2js(indent=1)
+    def foo4():
+        pass
+    
     assert callable(foo1)
     assert callable(foo2)
     assert py2js(foo1).pycode.startswith('def foo')
     assert py2js(foo2).pycode.startswith('def foo')
+    assert foo3.startswith('var foo3')
+    assert foo4.startswith('    var foo4')
 
 
 def test_py2js_on_class():
@@ -138,11 +148,11 @@ f2 = function () {
 }
 """
 
-def test_clean_code():
-    
-    code = clean_code(TEST_CODE)
-    assert code.count('var foo =') == 1
-    assert code.count('var bar =') == 2
+# def test_clean_code():
+#     
+#     code = clean_code(TEST_CODE)
+#     assert code.count('var foo =') == 1
+#     assert code.count('var bar =') == 2
 
 
 def test_scripts():

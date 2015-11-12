@@ -48,15 +48,15 @@ class TestExpressions:
         assert py2js('True and False') == 'true && false;'  # Boolean
         
         # No parentices around names, numbers and strings
-        assert py2js('foo + bar') == "foo + bar;"
-        assert py2js('_foo3 + _bar4') == "_foo3 + _bar4;"
-        assert py2js('3 + 4') == "3 + 4;"
-        assert py2js('"abc" + "def"') == "'abc' + 'def';"
-        assert py2js("'abc' + 'def'") == "'abc' + 'def';"
-        assert py2js("'abc' + \"'def\"") == "'abc' + \"'def\";"
+        assert py2js('foo - bar') == "foo - bar;"
+        assert py2js('_foo3 - _bar4') == "_foo3 - _bar4;"
+        assert py2js('3 - 4') == "3 - 4;"
+        assert py2js('"abc" - "def"') == "'abc' - 'def';"
+        assert py2js("'abc' - 'def'") == "'abc' - 'def';"
+        assert py2js("'abc' - \"'def\"") == "'abc' - \"'def\";"
         
         # But they should be if it gets more complex
-        assert py2js('foo + bar == 3') == "(foo + bar) == 3;"
+        assert py2js('foo - bar > 4') == "(foo - bar) > 4;"
         
         # Test outcome
         assert evalpy('2+3') == '5'  # Binary
@@ -78,6 +78,20 @@ class TestExpressions:
         assert evalpy('"x %f" % 6') == 'x 6'
         assert evalpy('"%s: %f" % ("value", 6)') == 'value: 6'
         assert evalpy('"%r: %r" % ("value", 6)') == '"value": 6'
+    
+    def test_overloaded_list_ops(self):
+        assert evalpy('[1, 2] + [3, 4]') == '[ 1, 2, 3, 4 ]'
+        assert evalpy('[3, 4] + [1, 2]') == '[ 3, 4, 1, 2 ]'
+        assert evalpy('"ab" + "cd"') == 'abcd'
+        assert evalpy('[3, 4] * 2') == '[ 3, 4, 3, 4 ]'
+        assert evalpy('2 * [3, 4]') == '[ 3, 4, 3, 4 ]'
+        assert evalpy('"ab" * 2') == 'abab'
+        assert evalpy('2 * "ab"') == 'abab'
+        
+        assert evalpy('a = [1, 2]; a += [3, 4]; a') == '[ 1, 2, 3, 4 ]'
+        assert evalpy('a = [3, 4]; a += [1, 2]; a') == '[ 3, 4, 1, 2 ]'
+        assert evalpy('a = [3, 4]; a *= 2; a') == '[ 3, 4, 3, 4 ]'
+        assert evalpy('a = "ab"; a *= 2; a') == 'abab'
     
     def test_comparisons(self):
         
@@ -108,6 +122,50 @@ class TestExpressions:
         
         # was a bug
         assert evalpy('not (1 is null and 1 is null)') == 'true'
+    
+    def test_deep_comparisons(self):
+        # List
+        arr = '[(1,2), (3,4), (5,6), (1,2), (7,8)]\n'
+        assert evalpy('a=' + arr + '(1,2) in a') == 'true'
+        assert evalpy('a=' + arr + '(7,8) in a') == 'true'
+        assert evalpy('a=' + arr + '(3,5) in a') == 'false'
+        assert evalpy('a=' + arr + '3 in a') == 'false'
+        
+        assert evalpy('(2, 3) == (2, 3)') == 'true'
+        assert evalpy('[2, 3] == [2, 3]') == 'true'
+        assert evalpy('a=' + arr + 'b=' + arr + 'a==b') == 'true'
+        
+        # Dict
+        dct = '{"a":7, 3:"foo", "bar": 1, "9": 3}\n'
+        assert evalpy('d=' + dct + '"a" in d') == 'true'
+        assert evalpy('d=' + dct + '"3" in d') == 'true'
+        assert evalpy('d=' + dct + '3 in d') == 'true'
+        assert evalpy('d=' + dct + '"bar" in d') == 'true'
+        assert evalpy('d=' + dct + '9 in d') == 'true'
+        assert evalpy('d=' + dct + '"9" in d') == 'true'
+        assert evalpy('d=' + dct + '7 in d') == 'false'
+        assert evalpy('d=' + dct + '"1" in d') == 'false'
+        
+        assert evalpy('{2: 3} == {"2": 3}') == 'true'
+        assert evalpy('dict(foo=7) == {"foo": 7}') == 'true'
+        assert evalpy('a=' + dct + 'b=' + dct + 'a==b') == 'true'
+        assert evalpy('{"foo": 1, "bar": 2}=={"bar": 2, "foo": 1}') == 'true'
+        assert evalpy('{"bar": 2, "foo": 1}=={"foo": 1, "bar": 2}') == 'true'
+        
+        # Deeper
+        d1 = 'd1={"foo": [2, 3, {1:2,3:4,5:["aa", "bb"]}], "bar": None}\n'
+        d2 = 'd2={"bar": None, "foo": [2, 3, {5:["aa", "bb"],1:2,3:4}]}\n'  # same
+        d3 = 'd3={"foo": [2, 3, {1:2,3:4,5:["aa", "b"]}], "bar": None}\n'  # minus b
+        assert evalpy(d1+d2+d3+'d1 == d2') == 'true'
+        assert evalpy(d1+d2+d3+'d2 == d1') == 'true'
+        assert evalpy(d1+d2+d3+'d1 != d2') == 'false'
+        assert evalpy(d1+d2+d3+'d1 == d3') == 'false'
+        assert evalpy(d1+d2+d3+'d1 != d3') == 'true'
+        #
+        assert evalpy(d1+d2+d3+'d2 in [2, d1, 4]') == 'true'
+        assert evalpy(d1+d2+d3+'d2 in ("xx", d2, None)') == 'true'
+        assert evalpy(d1+d2+d3+'d2 not in (1, d3, 2)') == 'true'
+        assert evalpy(d1+d2+d3+'4 in [2, d1, 4]') == 'true'
     
     def test_truthfulness_of_basic_types(self):
         # Numbers
@@ -236,6 +294,15 @@ class TestExpressions:
         modname = pyscript.__name__
         assert py2js('from %s import x, y, z\n42' % modname) == '42;'
     
+    def test_import(self):
+        # time
+        import time
+        assert abs(float(evalpy('import time; time.time()')) - time.time()) < 0.5
+        assert abs(float(evalpy('from time import time; time()')) - time.time()) < 0.5
+        assert evalpy('import time; t0=time.perf_counter(); t1=time.perf_counter(); (t1-t0)').startswith('0.0')
+        # sys
+        assert 'pyscript' in evalpy('import sys; sys.version').lower()
+        
     def test_funcion_call(self):
         jscode = 'var foo = function (x, y) {return x+y;};'
         assert evaljs(jscode + py2js('foo(2,2)')) == '4'
@@ -262,9 +329,19 @@ class TestExpressions:
         assert 'new' not in py2js('a = this.Foo()')
         assert 'new' not in py2js('a = JSON.stringify(x)')
         
-        jscode = 'function Foo() {this.x = 3}\nx=1;\n'
+        jscode = 'function Foo() {this.x = 3}\nvar x=1;\n'
         assert evaljs(jscode + py2js('a=Foo()\nx')) == '1'
         
+        # Existing classes and functions are used to determine if a
+        # call is an instantiation
+        assert 'new'     in py2js('class foo:pass\na = foo()')
+        assert 'new' not in py2js('class foo:pass\ndef foo():pass\na = foo()')
+        assert 'new' not in py2js('def foo():pass\nclass foo:pass\na = foo()')
+        #
+        assert 'new' not in py2js('def Foo():pass\na = Foo()')
+        assert 'new'     in py2js('def Foo():pass\nclass Foo:pass\na = Foo()')
+        assert 'new'     in py2js('class Foo:pass\ndef Foo():pass\na = Foo()')
+    
     def test_pass(self):
         assert py2js('pass') == ''
     

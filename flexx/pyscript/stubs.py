@@ -20,12 +20,12 @@ Object = '<<JS-OBJECT>>'  # noqa
 Math = '<<JS-MATH>>'  # noqa
 Date = '<<JS-DATE>>'  # noqa
 RegExp = '<<JS-REGEXP>>'  # noqa
-Infinity = '<<JS-INF>>'  # noqa
-NaN = '<<JS-NAN>>'  # noqa
+Infinity = float('inf')  # noqa
+NaN = float('nan')  # noqa
 
 # We'll be using "undefined" in flexx.react as well, and want to use
 # the same exact object, without having dependencies.
 class undefined:
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return 'undefined'
 undefined = sys._undefined = getattr(sys, '_undefined', undefined())  # noqa

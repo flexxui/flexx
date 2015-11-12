@@ -142,7 +142,7 @@ class ModelMeta(HasSignalsMeta):
         code = []
         # Add JS version of HasSignals when this is the Model class
         if cls.mro()[1] is react.HasSignals:
-            c = py2js(serializer.__class__, 'flexx.Serializer')
+            c = py2js(serializer.__class__, 'flexx.Serializer', inline_stdlib=False)
             code.append(c)
             code.append('flexx.serializer = new flexx.Serializer();')
             c = js_rename(HasSignalsJS.JSCODE, 'HasSignalsJS',

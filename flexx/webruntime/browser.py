@@ -63,6 +63,16 @@ class BrowserRuntime(BaseRuntime):
             self._start_subprocess([exe, url])
             self._proc = None  # Prevent closing
             return
+        elif type in ('ie', 'iexplore'):
+            from .mshtml import get_ie_exe
+            exe = get_ie_exe() or 'iexplore.exe'
+            self._start_subprocess([exe, url])
+            self._proc = None  # Prevent closing
+            return
+        elif type in ('edge'):
+            self._start_subprocess(['start', 'microsoft-edge:'+url], shell=True)
+            self._proc = None  # Prevent closing
+            return
         
         if errors:
             logging.warn('Given browser %r not valid/available;\n'

@@ -28,12 +28,15 @@ def test_unify():
     assert unify('[2, 3]') == '[2, 3]'
     
     # Func calls with args (but no extra braces)
-    assert unify('_truthy(some args bla)') == '_truthy(some args bla)'
+    assert unify('xxxxx(some args bla)') == 'xxxxx(some args bla)'
     assert unify('foo(3)') == 'foo(3)'
     
     # Indexing
     assert unify('foo[1]') == 'foo[1]'
     assert unify('bar.foo[1:2,3]') == 'bar.foo[1:2,3]'
+    
+    # Dict
+    assert unify('{a:3, b:"5"}') == '{a:3, b:"5"}'
     
     # Otherwise ... braces!
     assert unify('3+3') == '(3+3)'
@@ -41,6 +44,7 @@ def test_unify():
     assert unify('[3]+[3]') == '([3]+[3])'
     assert unify('foo((3))') == '(foo((3)))'
     assert unify('bar+foo(3)') == '(bar+foo(3))'
+    assert unify('b + {a:3}') == '(b + {a:3})'
 
 
 run_tests_if_main()

@@ -22,7 +22,6 @@ import logging
 from urllib.request import urlopen
 from collections import OrderedDict
 
-from ..pyscript import clean_code
 from .model import Model, get_model_classes
 
 INDEX = """<!doctype html>
@@ -58,7 +57,7 @@ def create_css_and_js_from_model_classes(classes, css='', js=''):
         js.append(cls.JS.CODE)
     css = [i for i in css if i.strip()]
     js = [i for i in js if i.strip()]
-    return '\n\n'.join(css), clean_code('\n\n'.join(js))
+    return '\n\n'.join(css), '\n\n'.join(js)
 
 
 class AssetStore:

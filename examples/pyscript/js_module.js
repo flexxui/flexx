@@ -15,7 +15,9 @@
         root.mymodule = factory();
     }
 }(this, function () {
-
+    var py_hasattr = function (ob, name) {
+        return (ob !== undefined) && (ob !== null) && (ob[name] !== undefined);
+    };
     var Bar, Foo;
     // Example on how to create a JavaScript module using PyScript.
     // 
@@ -38,6 +40,7 @@
 
     Foo.prototype.eggs = function (y) {
         this.y = this.x * y;
+        py_hasattr(y, str);
         return null;
     };
 

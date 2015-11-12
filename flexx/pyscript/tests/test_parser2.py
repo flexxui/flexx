@@ -36,11 +36,11 @@ class TestConrolFlow:
     def test_for(self):
         
         # Test all possible ranges
-        line = nowhitespace(py2js('for i in range(9): pass'))
+        line = nowhitespace(py2js('for i in range(9): pass', inline_stdlib=False))
         assert line == 'vari;for(i=0;i<9;i+=1){}'
-        line = nowhitespace(py2js('for i in range(2, 99): pass'))
+        line = nowhitespace(py2js('for i in range(2, 99): pass', inline_stdlib=False))
         assert line == 'vari;for(i=2;i<99;i+=1){}'
-        line = nowhitespace(py2js('for i in range(100, 0, -1): pass'))
+        line = nowhitespace(py2js('for i in range(100, 0, -1): pass', inline_stdlib=False))
         assert line == 'vari;for(i=100;i>0;i+=-1){}'
         
         # Test enumeration (code)
@@ -310,17 +310,17 @@ class TestFunctions:
     
     def test_default_args(self):
         
-        def func(self, foo, bar=4):
-            return foo + bar
+        def func(self, foo, bar=2):
+            return foo - bar
         
         code = py2js(func)
         lines = [line for line in code.split('\n') if line]
         
         assert lines[1] == 'func = function (foo, bar) {'
-        assert '4' in code
+        assert '2' in code
         
-        assert evaljs(code + 'func(2)') == '6'
-        assert evaljs(code + 'func(2, 2)') == '4'
+        assert evaljs(code + 'func(2)') == '0'
+        assert evaljs(code + 'func(4, 3)') == '1'
         assert evaljs(code + 'func(0, 0)') == '0'
     
     def test_var_args1(self):
@@ -386,9 +386,14 @@ class TestFunctions:
             stub = True  # noqa
             return res + y  # should return 1+2+3+1 == 7
         
+        # Find function start
         code = py2js(func)
-        vars1 = code.splitlines()[2]
-        vars2 = code.splitlines()[4]
+        i = code.splitlines().index('var func;')
+        assert i >= 0
+        
+        # Find first lines of functions, where the vars are defined
+        vars1 = code.splitlines()[i+2]
+        vars2 = code.splitlines()[i+4]
         assert vars1.strip().startswith('var ')
         assert vars2.strip().startswith('var ')
         
@@ -415,6 +420,37 @@ class TestFunctions:
         assert 'var x' in py2js(func1)
         assert 'var x' in py2js(func2)
         assert 'var x' in py2js(func3)
+    
+    def test_global_and_nonlocal(self):
+        assert py2js('nonlocal foo;foo = 3').strip() == 'foo = 3;'
+        assert py2js('global foo;foo = 3').strip() == 'foo = 3;'
+        
+        def func1():
+            def inner():
+                x = 3
+            x = 2
+            inner()
+            return x
+        
+        def func2():
+            def inner():
+                global x
+                x = 3
+            x = 2
+            inner()
+            return x
+        
+        def func3():
+            def inner():
+                nonlocal x
+                x = 3
+            x = 2
+            inner()
+            return x
+        
+        assert evaljs(py2js(func1)+'func1()') == '2'
+        assert evaljs(py2js(func2)+'func2()') == '3'
+        assert evaljs(py2js(func3)+'func3()') == '3'
     
     def test_raw_js(self):
         
@@ -566,8 +602,8 @@ class TestClasses:
                 return 2
         
         code = py2js(MyClass11) + py2js(MyClass12)
-        assert evaljs(code + 'm = new MyClass12(); m._res') == '122'
-        assert evaljs(code + 'm = new MyClass12(); m.m1()') == '100'
+        assert evaljs(code + 'var m = new MyClass12(); m._res') == '122'
+        assert evaljs(code + 'var m = new MyClass12(); m.m1()') == '100'
         
 
 

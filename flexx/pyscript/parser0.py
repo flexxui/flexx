@@ -19,6 +19,7 @@ import sys
 import re
 
 from . import commonast as ast
+from . import stdlib
 
 
 class JSError(Exception):
@@ -44,6 +45,8 @@ def unify(x):
         return x  # function calls (e.g. 'super()' or 'foo.bar(...)')
     elif re.match(r'^[\.\w]*\[.*\]$', x) and x.count(']') == 1:
         return x  # indexing
+    elif re.match(r'^\{.*\}$', x) and x.count('}') == 1:
+        return x  # dicts
     else:
         return '(%s)' % x
 
@@ -90,12 +93,21 @@ def get_module_preamble(name, deps):
 
 
 class NameSpace(dict):
-    """ Items can be added to the namespace with the value representing
-    the initial value. Or using ``add()`` no initial value.
+    """ Variable names can be added to the namespace with or without an
+    initial value.
+    
+    * If the value is False, its a global/nonlocal, it should not be declared.
+    * If the value is True, it should be declared.
+    * if the value is a string, it should be declared with the initial value
+      specified by the string.
     """
     
+    def set_nonlocal(self, key):
+        self[key] = False  # also if already exists
+    
     def add(self, key):
-        self[key] = None
+        if key not in self:
+            self[key] = True
     
     def discard(self, key):
         self.pop(key, None)
@@ -105,15 +117,7 @@ class Parser0(object):
     """ The Base parser class. Implements the basic mechanism to allow
     parsing to work, but does not implement any parsing on its own.
     
-    Parameters:
-        code (str): the Python source code.
-        module (str, optional): the module name. If given, produces an
-            AMD module.
-        indent (int): the base indentation level (default 0). One
-            indentation level means 4 spaces.
-        docstrings (bool): whether docstrings are included in JS
-            (default True).
-    
+    For details see the Parser class.
     """
     
     # Developer notes:
@@ -163,12 +167,23 @@ class Parser0(object):
         'IsNot' : "!==",
     }
     
-    def __init__(self, code, module=None, indent=0, docstrings=True):
+    def __init__(self, code, module=None, indent=0, docstrings=True,
+                 inline_stdlib=True):
         self._pycode = code  # helpfull during debugging
         self._root = ast.parse(code)
         self._stack = []
         self._indent = indent
         self._dummy_counter = 0
+        
+        # To keep track of std lib usage
+        self._std_functions = set()
+        self._std_methods = set()
+        self._imported_objects = set()
+        self._imports = {}
+        
+        # To help distinguish classes from functions
+        self._seen_func_names = set()
+        self._seen_class_names = set()
         
         # Options
         self._docstrings = bool(docstrings)  # whether to inclue docstrings
@@ -204,6 +219,15 @@ class Parser0(object):
         ns = self.pop_stack()  # Pop module namespace
         if ns:
             self._parts.insert(0, self.get_declarations(ns))
+        
+        # Add part of the stdlib that was actually used
+        if inline_stdlib:
+            libcode = stdlib.get_partial_std_lib(self._std_functions,
+                                                 self._std_methods,
+                                                 self._imported_objects,
+                                                 self._indent)
+            if libcode:
+                self._parts.insert(0, libcode)
         
         # Post-process
         if module:
@@ -269,11 +293,13 @@ class Parser0(object):
             return ''
         code = []
         loose_vars = []
-        for name, init in sorted(ns.items()):
-            if init is None:
+        for name, value in sorted(ns.items()):
+            if value and isinstance(value, str):
+                code.append(self.lf('var %s = %s;' % (name, value)))
+            elif value:
                 loose_vars.append(name)
             else:
-                code.append(self.lf('var %s = %s;' % (name, init)))
+                pass  # global/nonlocal
         if loose_vars:
             code.insert(0, self.lf('var %s;' % ', '.join(loose_vars)))
         return ''.join(code)
@@ -289,13 +315,8 @@ class Parser0(object):
     
     @property
     def vars(self):
+        """ NameSpace instance for the current stack. """
         return self._stack[-1][2]
-    
-    @property
-    def vars_for_functions(self):
-        """ Function declarations are added to the second stack if available.
-        """
-        return self._stack[0][2]
     
     def lf(self, code=''):
         """ Line feed - create a new line with the correct indentation.
@@ -310,6 +331,38 @@ class Parser0(object):
         self.vars.add(name)
         return name
     
+    def _handle_std_deps(self, code):
+        nargs, function_deps, method_deps = stdlib.get_std_info(code)
+        for dep in function_deps:
+            self.use_std_function(dep, [])
+        for dep in method_deps:
+            self.use_std_method('x', dep, [])
+    
+    def use_std_function(self, name, arg_nodes):
+        """ Use a function from the PyScript standard library.
+        """
+        self._handle_std_deps(stdlib.FUNCTIONS[name])
+        self._std_functions.add(name)
+        mangled_name = stdlib.FUNCTION_PREFIX + name
+        args = [(a if isinstance(a, str) else unify(self.parse(a)))
+                for a in arg_nodes]
+        return '%s(%s)' % (mangled_name, ', '.join(args))
+    
+    def use_std_method(self, base, name, arg_nodes):
+        """ Use a method from the PyScript standard library.
+        """
+        self._handle_std_deps(stdlib.METHODS[name])
+        self._std_methods.add(name)
+        mangled_name = stdlib.METHOD_PREFIX + name
+        args = [(a if isinstance(a, str) else unify(self.parse(a)))
+                for a in arg_nodes]
+        return '%s.%s(%s)' % (base, mangled_name, ', '.join(args)) 
+    
+    def use_imported_object(self, name):
+        self._handle_std_deps(stdlib.IMPORTS[name])
+        self._imported_objects.add(name)
+        return stdlib.IMPORT_PREFIX + name.replace('.', stdlib.IMPORT_DOT)
+        
     def pop_docstring(self, node):
         """ If a docstring is present, in the body of the given node,
         remove that string node and return it as a string, corrected

@@ -186,6 +186,18 @@ you can only catch Error objects.
     except Exception:
        print('something went wrong')
 
+Globals and nonlocal
+--------------------
+
+.. pyscript_example::
+    
+    a = 3
+    def foo():
+        global a
+        a = 4
+    foo()
+    # a is now 4
+
 """
 
 from . import commonast as ast
@@ -377,7 +389,7 @@ class Parser2(Parser1):
         # First see if this for-loop is something that we support directly
         if isinstance(node.iter_node, ast.Call):
             f = node.iter_node.func_node
-            if (isinstance(f, ast.Attribute) and 
+            if (isinstance(f, ast.Attribute) and
                     not node.iter_node.arg_nodes and f.attr in METHODS):
                 sure_is_dict = f.attr
                 iter = ''.join(self.parse(f.value_node))
@@ -643,6 +655,7 @@ class Parser2(Parser1):
             prefixed = self.with_prefix(node.name)
             if prefixed == node.name:  # normal function vs method
                 self.vars.add(node.name)
+                self._seen_func_names.add(node.name)
             code.append(self.lf('%s = ' % prefixed))
             #code.append('function %s (' % node.name)
             code.append('function (')
@@ -775,6 +788,7 @@ class Parser2(Parser1):
         
         # Body ...
         self.vars.add(node.name)
+        self._seen_class_names.add(node.name)
         self.push_stack('class', node.name)
         for sub in node.body_nodes:
             code += self.parse(sub)
@@ -813,9 +827,14 @@ class Parser2(Parser1):
     
     #def parse_Yield
     #def parse_YieldFrom
-    #def parse_Global
-    #def parse_NonLocal
-
+    
+    def parse_Global(self, node):
+        return self.parse_Nonlocal(node)
+    
+    def parse_Nonlocal(self, node):
+        for name in node.names:
+            self.vars.set_nonlocal(name)
+        return '' 
 
 
 def get_class_definition(name, base='Object', docstring=''):
