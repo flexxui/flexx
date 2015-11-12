@@ -6,6 +6,15 @@ seems to be the fastest Python-in-the-brower so far. It is also faster
 than CPython and for some tests on par with Pypy.
 
 See also http://brythonista.wordpress.com/2015/03/28
+
+Some quick pystone results on my machine (Win 10, Intel i7-4710 HQ 2.5GHz):
+
+* CPython 3.4:          126396 pystones / second
+* Pypy3:                980334 pystones / second
+* PyScript on Firefox:  443478 pystones / second
+* PyScript on Chrome:   268225 pystones / second
+* PyScript on MS Edge:  347451 pystones / second
+* Brython (debug off):    4751 pystones / second
 """
 
 import sys
