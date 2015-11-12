@@ -14,6 +14,20 @@ METHOD_PREFIX = '_py_'
 IMPORT_PREFIX = 'py_'
 IMPORT_DOT = '__'
 
+def get_std_info(code):
+    """ Given the JS code for a std function or method. Determine the
+    number of arguments, function_deps and method_deps.
+    """
+    _, _, nargs = code.splitlines()[0].partition('nargs:')
+    nargs = [int(i.strip()) for i in nargs.strip().replace(',', ' ').split(' ') if i]
+    # Collect dependencies on other funcs/methods
+    sep = '.' + METHOD_PREFIX
+    method_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
+    sep = FUNCTION_PREFIX
+    function_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
+    function_deps = [dep for dep in function_deps if dep not in method_deps]
+    return nargs, function_deps, method_deps
+
 def get_partial_std_lib(func_names, method_names, imported_objects, indent=0):
     """ Get the code for the PyScript standard library consisting of
     the given function and method names. The given indent specifies how
@@ -244,8 +258,8 @@ FUNCTIONS['add'] = """function (a, b) { // nargs: 2
 
 FUNCTIONS['mult'] = """function (a, b) { // nargs: 2
     if ((typeof a === 'number') + (typeof b === 'number') === 1) {
-        if (a.constructor === String) return a.repeat(b);
-        if (b.constructor === String) return b.repeat(a);
+        if (a.constructor === String) return a.METHOD_PREFIXrepeat(b);
+        if (b.constructor === String) return b.METHOD_PREFIXrepeat(a);
         if (Array.isArray(b)) {var t=a; a=b; b=t;}
         if (Array.isArray(a)) {
             var res = []; for (var i=0; i<b; i++) res = res.concat(a);
@@ -435,6 +449,19 @@ METHODS['values'] = """function () { // nargs: 0
 # ignores: encode, decode, format, format_map, isdecimal, isdigit,
 # isprintable, maketrans
 
+# Not a Python method, but a method that we need, and is only ECMA 6
+# http://stackoverflow.com/a/5450113/2271927
+METHODS['repeat'] = """function(count) { // nargs: 0
+    if (this.repeat) return this.repeat(count);
+    if (count < 1) return '';
+    var result = '', pattern = this.valueOf();
+    while (count > 1) {
+        if (count & 1) result += pattern;
+        count >>= 1, pattern += pattern;
+    }
+    return result + pattern;
+}"""
+
 METHODS['capitalize'] = """function () { // nargs: 0
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
     return this.slice(0, 1).toUpperCase() + this.slice(1).toLowerCase();
@@ -451,7 +478,7 @@ METHODS['center'] = """function (w, fill) { // nargs: 1 2
     var tofill = Math.max(0, w - this.length);
     var left = Math.ceil(tofill / 2);
     var right = tofill - left;
-    return fill.repeat(left) + this + fill.repeat(right);
+    return fill.METHOD_PREFIXrepeat(left) + this + fill.METHOD_PREFIXrepeat(right);
 }"""
 
 METHODS['endswith'] = """function (x) { // nargs: 1
@@ -462,7 +489,7 @@ METHODS['endswith'] = """function (x) { // nargs: 1
 METHODS['expandtabs'] = """function (tabsize) { // nargs: 0 1
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
     tabsize = (tabsize === undefined) ? 8 : tabsize;
-    return this.replace(/\\t/g, ' '.repeat(tabsize));
+    return this.replace(/\\t/g, ' '.METHOD_PREFIXrepeat(tabsize));
 }"""
 
 METHODS['find'] = """function (x, start, stop) { // nargs: 1 2 3
@@ -535,7 +562,7 @@ METHODS['ljust'] = """function (w, fill) { // nargs: 1 2
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
     fill = (fill === undefined) ? ' ' : fill;
     var tofill = Math.max(0, w - this.length);
-    return this + fill.repeat(tofill);
+    return this + fill.METHOD_PREFIXrepeat(tofill);
 }"""
 
 METHODS['lower'] = """function () { // nargs: 0
@@ -599,7 +626,7 @@ METHODS['rjust'] = """function (w, fill) { // nargs: 1 2
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
     fill = (fill === undefined) ? ' ' : fill;
     var tofill = Math.max(0, w - this.length);
-    return fill.repeat(tofill) + this;
+    return fill.METHOD_PREFIXrepeat(tofill) + this;
 }"""
 
 METHODS['rpartition'] = """function (sep) { // nargs: 1

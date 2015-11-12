@@ -402,25 +402,14 @@ def make_method(name, nargs, function_deps, method_deps):
         return self.use_std_method(base, name, node.arg_nodes)
     return method_X
 
-def _get_std_info(code):
-    _, _, nargs = code.splitlines()[0].partition('nargs:')
-    nargs = [int(i.strip()) for i in nargs.strip().replace(',', ' ').split(' ') if i]
-    # Collect dependencies on other funcs/methods
-    sep = '.' + stdlib.METHOD_PREFIX
-    method_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
-    sep = stdlib.FUNCTION_PREFIX
-    function_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
-    function_deps = [dep for dep in function_deps if dep not in method_deps]
-    return nargs, function_deps, method_deps
-
 for name, code in stdlib.METHODS.items():
-    nargs, function_deps, method_deps = _get_std_info(code)
+    nargs, function_deps, method_deps = stdlib.get_std_info(code)
     if nargs and not hasattr(Parser3, 'method_' + name):
         m = make_method(name, tuple(nargs), function_deps, method_deps)
         setattr(Parser3, 'method_' + name, m)
 
 for name, code in stdlib.FUNCTIONS.items():
-    nargs, function_deps, method_deps = _get_std_info(code)
+    nargs, function_deps, method_deps = stdlib.get_std_info(code)
     if nargs and not hasattr(Parser3, 'function_' + name):
         m = make_function(name, tuple(nargs), function_deps, method_deps)
         setattr(Parser3, 'function_' + name, m)

@@ -331,9 +331,17 @@ class Parser0(object):
         self.vars.add(name)
         return name
     
+    def _handle_std_deps(self, code):
+        nargs, function_deps, method_deps = stdlib.get_std_info(code)
+        for dep in function_deps:
+            self.use_std_function(dep, [])
+        for dep in method_deps:
+            self.use_std_method('x', dep, [])
+    
     def use_std_function(self, name, arg_nodes):
         """ Use a function from the PyScript standard library.
         """
+        self._handle_std_deps(stdlib.FUNCTIONS[name])
         self._std_functions.add(name)
         mangled_name = stdlib.FUNCTION_PREFIX + name
         args = [(a if isinstance(a, str) else unify(self.parse(a)))
@@ -343,6 +351,7 @@ class Parser0(object):
     def use_std_method(self, base, name, arg_nodes):
         """ Use a method from the PyScript standard library.
         """
+        self._handle_std_deps(stdlib.METHODS[name])
         self._std_methods.add(name)
         mangled_name = stdlib.METHOD_PREFIX + name
         args = [(a if isinstance(a, str) else unify(self.parse(a)))
@@ -350,6 +359,7 @@ class Parser0(object):
         return '%s.%s(%s)' % (base, mangled_name, ', '.join(args)) 
     
     def use_imported_object(self, name):
+        self._handle_std_deps(stdlib.IMPORTS[name])
         self._imported_objects.add(name)
         return stdlib.IMPORT_PREFIX + name.replace('.', stdlib.IMPORT_DOT)
         
