@@ -32,18 +32,19 @@ if sys.argv[1:]:
 pycode = open(pystone.__file__, 'rb').read().decode()
 jscode = pyscript.py2js(pycode, module='pystone')
 
+def Float32Array(n):
+    """ Factory function. """
+    return [0.0] * n
 
 def convolve():
     import time
-    N = 10000
-    data = [0] * N
+    N = 400000
+    data = Float32Array(N)
     support = 3
     t0 = time.time()
-    time.sleep(0.5)
-    for iter in range(10):
-        for i in range(support, N-support):
-            for j in range(-support, support+1):
-                data[i] += data[i+j] * (1/support*2)
+    for i in range(support, N-support):
+        for j in range(-support, support+1):
+            data[i] += data[i+j] * (1/support*2)
     t1 = time.time()
     print('convolution took %f s' % (t1-t0))
     

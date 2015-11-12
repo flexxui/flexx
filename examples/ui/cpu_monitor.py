@@ -69,7 +69,7 @@ class CPUMonitor(ui.Widget):
         for name in app.manager.get_app_names():
             proxies = app.manager.get_connections(name)
             n += len(proxies)
-        return n
+        return n, app.manager.total_sessions
     
     class JS:
         cpu_count = psutil.cpu_count()
@@ -77,14 +77,17 @@ class CPUMonitor(ui.Widget):
         
         def _init(self):
             super()._init()
+            import time
             self.start_time = time.time()
         
         @react.connect('number_of_connections')
         def _update_info(self, n):
-            self.info.text('There are %i connected clients.<br />' % n)
+            self.info.text('There are %i connected clients.<br />' % n[0] +
+                           'And in total we served %i connections.<br />' % n[1])
         
         @react.connect('cpu_usage')
         def _update_cpu_usage(self, v):
+            import time
             times = self.cpu_plot.xdata()
             usage = self.cpu_plot.ydata()
             times.append(time.time() - self.start_time)
@@ -96,6 +99,7 @@ class CPUMonitor(ui.Widget):
         
         @react.connect('mem_usage')
         def _update_mem_usage(self, v):
+            import time
             times = self.mem_plot.xdata()
             usage = self.mem_plot.ydata()
             times.append(time.time() - self.start_time)

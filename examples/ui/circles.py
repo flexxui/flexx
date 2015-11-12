@@ -5,7 +5,6 @@ yet.
 """
 
 import math
-import time
 
 from flexx import app, ui
 
@@ -35,6 +34,7 @@ class App(ui.Widget):
         # todo: animate in JS!
     
     def tick(self):
+        import time
         t = time.time()
         for i, circle in enumerate(self._circles):
             x = math.sin(i*0.2 + t)*0.3 + 0.5
