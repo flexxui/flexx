@@ -6,6 +6,11 @@ language: python
 # use container-based infrastructure
 sudo : false
 
+# Only run travis build on push for master branch
+branches:
+  only:
+    - master
+
 matrix:
     include:
         - python: "3.5"
