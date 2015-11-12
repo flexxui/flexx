@@ -186,6 +186,18 @@ you can only catch Error objects.
     except Exception:
        print('something went wrong')
 
+Globals and nonlocal
+--------------------
+
+.. pyscript_example::
+    
+    a = 3
+    def foo():
+        global a
+        a = 4
+    foo()
+    # a is now 4
+
 """
 
 from . import commonast as ast

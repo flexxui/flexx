@@ -10,16 +10,18 @@ sections below.
 
 PyScript is a tool to write JavaScript using (a subset) of the Python
 language. All relevant buildins, and the methods of list, dict and str
-are supported. Not supported are imports, set, slicing with steps,
-``**kwargs``, ``with``, ``yield``. Other than that, most Python code
-should work as expected, though if you pry hard enough the JavaScript
-may shine through. As a rule of thumb, the code should behave as
-expected when correct, but error reporting may not be very Pythonic.
+are supported. Not supported are set, slicing with steps,
+``**kwargs``, ``with``, ``yield``. Importing is currently limited to
+some names in the ``time`` and ``sys`` modules. Other than that, most
+Python code should work as expected, though if you pry hard enough the
+JavaScript may shine through. As a rule of thumb, the code should behave
+as expected when correct, but error reporting may not be very Pythonic.
 
-During development you may want to use 
-``from flexx.pyscript import py2js, evalpy`` to test certain parts of
-the code. In principal you do not need knowledge of JavaScript to write
-PyScript code.
+The most important functions you need to know about are
+:func:`py2js <flexx.pyscript.py2js>` and 
+:func:`evalpy <flexx.pyscript.evalpy>`.
+In principal you do not need knowledge of JavaScript to write PyScript
+code.
 
 
 Goals
@@ -82,6 +84,8 @@ actually compare two lists or dicts, or even a structure of nested
 lists/dicts. Lists can be combined with the plus operator, and lists
 and strings can be repeated with the multiply (star) operator.
 
+.. _pyscript-caveats:
+
 Caveats
 -------
 
@@ -128,11 +132,22 @@ performance critical code in pure JavaScript if necessary. This can be
 done by defining a function with only a docstring (containing the JS
 code).
 
+.. _pyscript-support:
+
 Support
 -------
 
 This is an overview of the language features that PyScript
-supports. Also see the quick user guide.
+supports/lacks. 
+
+Not currently supported:
+
+* importing limited (maybe we should translate an import to a ``require()``?)
+* the ``set`` class (JS has no set, but we could create one?)
+* slicing with steps (JS does not support this)
+* support for ``**kwargs`` (maps badly to JS call mechanism)
+* The ``with`` statement (no equivalent in JS)
+* Generators, i.e. ``yield`` (not widely supported in JS)
 
 Supported basics:
 
@@ -153,7 +168,9 @@ Supported basics:
 * list comprehensions
 * classes, with (single) inheritance, and the use of ``super()``
 * raising and catching exceptions, assertions
-* Creation of "modules"
+* creation of "modules"
+* globals / nonlocal
+* preliminary support for importing module (only ``time`` and ``sys`` for now).
 
 Supported Python conveniences:
 
@@ -174,15 +191,6 @@ Supported Python conveniences:
 * list concatenation using the plus operator, and list/str repeating
   using the star operator.
 * deep comparisons.
-
-Not currently supported:
-
-* importing (maybe we'll add this as a means for binding similar to require.js)
-* the ``set`` class (JS has no set, but we could create one?)
-* slicing with steps (JS does not support this)
-* support for ``**kwargs`` (maps badly to JS call mechanism)
-* The ``with`` statement (no equivalent in JS)
-* Generators, i.e. ``yield`` (not widely supported in JS)
 
 """
 
@@ -216,9 +224,7 @@ class BasicParser(Parser2):
 
 
 class Parser(Parser3):
-    # Re-use docs from Parser0
-    Parser0.__doc__.split('Parameters:', 1)[1] + """
-    Parser to convert Python to JavaScript.
+    """ Parser to convert Python to JavaScript.
     
     Instantiate this class with the Python code. Retrieve the JS code
     using the dump() method.
@@ -232,10 +238,18 @@ class Parser(Parser3):
     https://greentreesnakes.readthedocs.org
     
     Parameters:
-    
+        code (str): the Python source code.
+        module (str, optional): the module name. If given, produces an
+            AMD module.
+        indent (int): the base indentation level (default 0). One
+            indentation level means 4 spaces.
+        docstrings (bool): whether docstrings are included in JS
+            (default True).
+        inline_stdlib (bool): whether the used stdlib functions are inlined
+            (default True). Set to False if the stdlib is already loaded.
     """
     pass
 
 
-from .functions import py2js, evaljs, evalpy, script2js, js_rename  # noqa
+from .functions import py2js, evaljs, evalpy, script2js, js_rename, get_full_std_lib  # noqa
 from . import stubs  # noqa

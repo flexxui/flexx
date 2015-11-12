@@ -6,6 +6,7 @@ import subprocess
 import hashlib
 
 from . import Parser
+from .stdlib import get_full_std_lib  # noqa
 
 if sys.version_info[0] >= 3:
     string_types = str,
@@ -139,7 +140,7 @@ def evaljs(jscode, whitespace=True):
     parameters:
         jscode (str): the JavaScript code to evaluate.
         whitespace (bool): if whitespace is False, the whitespace
-            is removed from the result.
+            is removed from the result. Default True.
     
     returns:
         result (str): the last result as a string.
@@ -156,17 +157,13 @@ def evaljs(jscode, whitespace=True):
 def evalpy(pycode, whitespace=True):
     """ Evaluate PyScript code in Node.js (after translating to JS).
     
-    parameters
-    ----------
-    pycode : str
-        the PyScript code to evaluate.
-    whitespace : bool
-        if whitespace is False, the whitespace is removed from the result.
+    parameters:
+        pycode (str): the PyScript code to evaluate.
+        whitespace (bool): if whitespace is False, the whitespace is
+            removed from the result. Default True.
     
-    returns
-    -------
-    result : str
-        the last result as a string.
+    returns:
+        result (str): the last result as a string.
     """
     # delibirate numpy doc style to see if napoleon handles it the same
     return evaljs(py2js(pycode), whitespace)

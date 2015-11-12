@@ -332,6 +332,16 @@ class TestExpressions:
         jscode = 'function Foo() {this.x = 3}\nvar x=1;\n'
         assert evaljs(jscode + py2js('a=Foo()\nx')) == '1'
         
+        # Existing classes and functions are used to determine if a
+        # call is an instantiation
+        assert 'new'     in py2js('class foo:pass\na = foo()')
+        assert 'new' not in py2js('class foo:pass\ndef foo():pass\na = foo()')
+        assert 'new' not in py2js('def foo():pass\nclass foo:pass\na = foo()')
+        #
+        assert 'new' not in py2js('def Foo():pass\na = Foo()')
+        assert 'new'     in py2js('def Foo():pass\nclass Foo:pass\na = Foo()')
+        assert 'new'     in py2js('class Foo:pass\ndef Foo():pass\na = Foo()')
+    
     def test_pass(self):
         assert py2js('pass') == ''
     

@@ -175,16 +175,6 @@ from . import stdlib
 from .parser0 import Parser0, JSError, unify  # noqa
 
 
-# Define JS function that returns false on an empty array or dict, and
-# otherwise lets the original value through.
-# todo: remove this
-bool_func = 'function (v) {'
-bool_func += 'if (v === null || typeof v !== "object") {return v;} '
-bool_func += 'else if (v.length !== undefined) {return v.length ? v : false;} '
-bool_func += 'else if (v.byteLength !== undefined) {return v.byteLength ? v : false;} '
-bool_func += 'else {return Object.getOwnPropertyNames(v).length ? v : false;}}'
-
-
 class Parser1(Parser0):
     """ Parser that add basic functionality like assignments,
     operations, function calls, and indexing.

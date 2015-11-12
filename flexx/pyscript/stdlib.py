@@ -39,8 +39,12 @@ def get_partial_std_lib(func_names, method_names, imported_objects, indent=0):
     return code
 
 def get_full_std_lib(indent=0):
-    """ Get the code for the full PyScript standard library. The given
-    indent specifies how many sets of 4 spaces to prepend.
+    """ Get the code for the full PyScript standard library.
+    
+    The given indent specifies how many sets of 4 spaces to prepend.
+    If the full stdlib is made available in JavaScript, multiple
+    snippets of code can be transpiled without inlined stdlib parts by
+    using ``py2js(..., inline_stdlib=False)``.
     """
     return get_partial_std_lib(FUNCTIONS.keys(), METHODS.keys(), IMPORTS.keys(), indent)
 

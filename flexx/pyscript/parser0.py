@@ -117,16 +117,7 @@ class Parser0(object):
     """ The Base parser class. Implements the basic mechanism to allow
     parsing to work, but does not implement any parsing on its own.
     
-    Parameters:
-        code (str): the Python source code.
-        module (str, optional): the module name. If given, produces an
-            AMD module.
-        indent (int): the base indentation level (default 0). One
-            indentation level means 4 spaces.
-        docstrings (bool): whether docstrings are included in JS
-            (default True).
-        inline_stdlib (bool): whether the used stdlib functions are inlined
-            (default True). Set to False if the stdlib is already loaded.
+    For details see the Parser class.
     """
     
     # Developer notes:
