@@ -13,18 +13,18 @@ from flexx.pyscript import py2js, evaljs, evalpy, Parser3, stdlib
 def test_stdlib_full_and_partial():
     code = stdlib.get_full_std_lib()
     assert isinstance(code, str)
-    assert 'var py_hasattr =' in code
-    assert 'var py_list =' in code
+    assert 'var %shasattr =' % stdlib.FUNCTION_PREFIX in code
+    assert 'var %slist =' % stdlib.FUNCTION_PREFIX in code
     assert code.count('var') > 10
     
     code = stdlib.get_partial_std_lib(['hasattr'], [], []) 
     assert isinstance(code, str)
-    assert 'var py_hasattr =' in code
-    assert 'var py_list =' not in code
+    assert 'var %shasattr =' % stdlib.FUNCTION_PREFIX in code
+    assert 'var %slist =' % stdlib.FUNCTION_PREFIX not in code
     assert code.count('var') == 1
     
-    assert 'py_hasattr = function' in py2js('hasattr(x, "foo")')
-    assert 'py_hasattr = function' not in py2js('hasattr(x, "foo")', inline_stdlib=False)
+    assert '_hasattr = function' in py2js('hasattr(x, "foo")')
+    assert '_hasattr = function' not in py2js('hasattr(x, "foo")', inline_stdlib=False)
 
 def test_stdlib_has_all_list_methods():
     method_names = [m for m in dir(list) if not m.startswith('_')]

@@ -4,6 +4,7 @@
 
 Release:
 
+* bump __version__
 * python setup.py register
 * python setup.py sdist bdist_wheel --universal upload
 * build conda packages?

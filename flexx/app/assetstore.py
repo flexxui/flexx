@@ -18,7 +18,9 @@ are not provided via such a module asset will be added to the index.
 """
 
 import os
+import time
 import random
+import hashlib
 import logging
 from urllib.request import urlopen
 from collections import OrderedDict
@@ -454,7 +456,7 @@ def get_random_string(length=24, allowed_chars=None):
     except NotImplementedError:
         srandom = random
         logging.warn('Falling back to less secure Mersenne Twister random string.')
-        bogus = "%s%s%s" % (random.getstate(),time.time(), 'sdkhfbsdkfbsdbhf')
+        bogus = "%s%s%s" % (random.getstate(), time.time(), 'sdkhfbsdkfbsdbhf')
         random.seed(hashlib.sha256(bogus.encode()).digest())
 
-    return ''.join(random.choice(allowed_chars) for i in range(length))
+    return ''.join(srandom.choice(allowed_chars) for i in range(length))

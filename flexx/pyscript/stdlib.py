@@ -1,6 +1,11 @@
 """
 PyScript standard functions.
 
+Functions are declared as ... functions. Methods are written as methods
+(using this), but declared as functions, and then "apply()-ed" to the
+instance of interest. Declaring methods on Object is a bad idea (breaks
+Bokeh, jquery).
+
 """
 
 import re
@@ -10,10 +15,10 @@ import re
 
 FUNCTIONS = {}
 METHODS = {}
-FUNCTION_PREFIX = 'py_'
-METHOD_PREFIX = '_py_'
+FUNCTION_PREFIX = '_pyfunc_'
+METHOD_PREFIX = '_pymeth_'
 
-IMPORT_PREFIX = 'py_'
+IMPORT_PREFIX = '_pyimp_'
 IMPORT_DOT = '__'
 
 
@@ -26,8 +31,8 @@ def get_std_info(code):
     # Collect dependencies on other funcs/methods
     sep = FUNCTION_PREFIX
     function_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
-    sep = '.' + METHOD_PREFIX
-    method_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
+    sep = METHOD_PREFIX
+    method_deps = [part.split('.')[0].strip() for part in code.split(sep)[1:]]
     # Reduce and sort
     function_deps = sorted(set(function_deps))
     method_deps = sorted(set(method_deps))
@@ -636,7 +641,7 @@ METHODS['rjust'] = """function (w, fill) { // nargs: 1 2
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
     fill = (fill === undefined) ? ' ' : fill;
     var tofill = Math.max(0, w - this.length);
-    return METHOD_PREFIXrepeat(fill. tofill) + this;
+    return METHOD_PREFIXrepeat(fill, tofill) + this;
 }"""
 
 METHODS['rpartition'] = """function (sep) { // nargs: 1
@@ -763,6 +768,8 @@ for key in METHODS:
         ', )', ')')
     
 for key in FUNCTIONS:
+    FUNCTIONS[key] = re.subn(r'METHOD_PREFIX(.+?)\(',
+                             r'METHOD_PREFIX\1.call(', FUNCTIONS[key])[0]
     FUNCTIONS[key] = FUNCTIONS[key].replace(
         'KEY', key).replace(
         'FUNCTION_PREFIX', FUNCTION_PREFIX).replace(
