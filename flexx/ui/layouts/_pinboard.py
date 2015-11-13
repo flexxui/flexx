@@ -44,9 +44,9 @@ class PinboardLayout(Layout):
         def __pos_changed(self, *poses):
             for child in self.children():
                 pos = child.pos()
-                st = child.p.node.style
+                st = child.node.style
                 st.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
-                st.style.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
+                st.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
         
         @react.connect('children.*.size')
         def __size_changed(self, *sizes):

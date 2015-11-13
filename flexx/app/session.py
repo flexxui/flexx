@@ -21,6 +21,8 @@ class AppManager(object):
     for internal use.
     """
     
+    total_sessions = 0  # Keep track how many sessesions we've served in total
+    
     def __init__(self):
         # name -> (ModelClass, pending, connected) - lists contain proxies
         self._proxies = {'__default__': (None, [], [])}
@@ -107,6 +109,7 @@ class AppManager(object):
         assert session.status == Session.STATUS.PENDING
         session._set_ws(ws)
         connected.append(session)
+        AppManager.total_sessions += 1
         self.connections_changed._set(session.app_name)
         return session  # For the ws
     

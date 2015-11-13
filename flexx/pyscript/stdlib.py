@@ -1,17 +1,24 @@
 """
 PyScript standard functions.
 
+Functions are declared as ... functions. Methods are written as methods
+(using this), but declared as functions, and then "apply()-ed" to the
+instance of interest. Declaring methods on Object is a bad idea (breaks
+Bokeh, jquery).
+
 """
+
+import re
 
 # Functions not covered by this lib:
 # isinstance, issubclass, print, len, max, min, callable, chr, ord
 
 FUNCTIONS = {}
 METHODS = {}
-FUNCTION_PREFIX = 'py_'
-METHOD_PREFIX = '_py_'
+FUNCTION_PREFIX = '_pyfunc_'
+METHOD_PREFIX = '_pymeth_'
 
-IMPORT_PREFIX = 'py_'
+IMPORT_PREFIX = '_pyimp_'
 IMPORT_DOT = '__'
 
 
@@ -24,8 +31,8 @@ def get_std_info(code):
     # Collect dependencies on other funcs/methods
     sep = FUNCTION_PREFIX
     function_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
-    sep = '.' + METHOD_PREFIX
-    method_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
+    sep = METHOD_PREFIX
+    method_deps = [part.split('.')[0].strip() for part in code.split(sep)[1:]]
     # Reduce and sort
     function_deps = sorted(set(function_deps))
     method_deps = sorted(set(method_deps))
@@ -46,7 +53,8 @@ def get_partial_std_lib(func_names, method_names, imported_objects, indent=0):
         lines.append('var %s%s = %s;' % (FUNCTION_PREFIX, name, code))
     for name in sorted(method_names):
         code = METHODS[name].strip()
-        lines.append('Object.prototype.%s%s = %s;' % (METHOD_PREFIX, name, code))
+        # lines.append('Object.prototype.%s%s = %s;' % (METHOD_PREFIX, name, code))
+        lines.append('var %s%s = %s;' % (METHOD_PREFIX, name, code))
     for name in sorted(imported_objects):
         if IMPORTS[name] is None:
             continue
@@ -265,8 +273,8 @@ FUNCTIONS['add'] = """function (a, b) { // nargs: 2
 
 FUNCTIONS['mult'] = """function (a, b) { // nargs: 2
     if ((typeof a === 'number') + (typeof b === 'number') === 1) {
-        if (a.constructor === String) return a.METHOD_PREFIXrepeat(b);
-        if (b.constructor === String) return b.METHOD_PREFIXrepeat(a);
+        if (a.constructor === String) return METHOD_PREFIXrepeat(a, b);
+        if (b.constructor === String) return METHOD_PREFIXrepeat(b, a);
         if (Array.isArray(b)) {var t=a; a=b; b=t;}
         if (Array.isArray(a)) {
             var res = []; for (var i=0; i<b; i++) res = res.concat(a);
@@ -485,7 +493,7 @@ METHODS['center'] = """function (w, fill) { // nargs: 1 2
     var tofill = Math.max(0, w - this.length);
     var left = Math.ceil(tofill / 2);
     var right = tofill - left;
-    return fill.METHOD_PREFIXrepeat(left) + this + fill.METHOD_PREFIXrepeat(right);
+    return METHOD_PREFIXrepeat(fill, left) + this + METHOD_PREFIXrepeat(fill, right);
 }"""
 
 METHODS['endswith'] = """function (x) { // nargs: 1
@@ -496,7 +504,7 @@ METHODS['endswith'] = """function (x) { // nargs: 1
 METHODS['expandtabs'] = """function (tabsize) { // nargs: 0 1
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
     tabsize = (tabsize === undefined) ? 8 : tabsize;
-    return this.replace(/\\t/g, ' '.METHOD_PREFIXrepeat(tabsize));
+    return this.replace(/\\t/g, METHOD_PREFIXrepeat(' ', tabsize));
 }"""
 
 METHODS['find'] = """function (x, start, stop) { // nargs: 1 2 3
@@ -550,7 +558,7 @@ METHODS['isspace'] = """function () { // nargs: 0
 
 METHODS['istitle'] = """function () { // nargs: 0
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
-    var low = this.toLowerCase(), title = this.METHOD_PREFIXtitle();
+    var low = this.toLowerCase(), title = METHOD_PREFIXtitle(this);
     return low != title && title == this;
 }"""
 
@@ -569,7 +577,7 @@ METHODS['ljust'] = """function (w, fill) { // nargs: 1 2
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
     fill = (fill === undefined) ? ' ' : fill;
     var tofill = Math.max(0, w - this.length);
-    return this + fill.METHOD_PREFIXrepeat(tofill);
+    return this + METHOD_PREFIXrepeat(fill, tofill);
 }"""
 
 METHODS['lower'] = """function () { // nargs: 0
@@ -624,7 +632,7 @@ METHODS['rfind'] = """function (x, start, stop) { // nargs: 1 2 3
 
 METHODS['rindex'] = """function (x, start, stop) {  // nargs: 1 2 3
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
-    var i = this.METHOD_PREFIXrfind(x, start, stop);
+    var i = METHOD_PREFIXrfind(this, x, start, stop);
     if (i >= 0) return i;
     var e = Error(x); e.name='ValueError'; throw e;
 }"""
@@ -633,7 +641,7 @@ METHODS['rjust'] = """function (w, fill) { // nargs: 1 2
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
     fill = (fill === undefined) ? ' ' : fill;
     var tofill = Math.max(0, w - this.length);
-    return fill.METHOD_PREFIXrepeat(tofill) + this;
+    return METHOD_PREFIXrepeat(fill, tofill) + this;
 }"""
 
 METHODS['rpartition'] = """function (sep) { // nargs: 1
@@ -746,17 +754,22 @@ METHODS['upper'] = """function () { // nargs: 0
 
 METHODS['zfill'] = """function (width) { // nargs: 1
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
-    return this.METHOD_PREFIXrjust(width, '0');
+    return METHOD_PREFIXrjust(this, width, '0');
 }"""
 
 
 for key in METHODS:
+    METHODS[key] = re.subn(r'METHOD_PREFIX(.+?)\(',
+                           r'METHOD_PREFIX\1.call(', METHODS[key])[0]
     METHODS[key] = METHODS[key].replace(
         'KEY', key).replace(
         'FUNCTION_PREFIX', FUNCTION_PREFIX).replace(
-        'METHOD_PREFIX', METHOD_PREFIX)
-
+        'METHOD_PREFIX', METHOD_PREFIX).replace(
+        ', )', ')')
+    
 for key in FUNCTIONS:
+    FUNCTIONS[key] = re.subn(r'METHOD_PREFIX(.+?)\(',
+                             r'METHOD_PREFIX\1.call(', FUNCTIONS[key])[0]
     FUNCTIONS[key] = FUNCTIONS[key].replace(
         'KEY', key).replace(
         'FUNCTION_PREFIX', FUNCTION_PREFIX).replace(

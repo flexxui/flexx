@@ -282,9 +282,9 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         """
         self._pongtime = time.time()
         while self.close_code is None:
-            self.ping(b'')
+            self.ping(b'x')
             yield gen.sleep(2)
-            if time.time() - self._pongtime > 5:
+            if time.time() - self._pongtime > 20:
                 self.close(1000, 'Conection timed out (no pong).')
                 return
     

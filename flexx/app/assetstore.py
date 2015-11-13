@@ -18,6 +18,9 @@ are not provided via such a module asset will be added to the index.
 """
 
 import os
+import time
+import random
+import hashlib
 import logging
 from urllib.request import urlopen
 from collections import OrderedDict
@@ -211,12 +214,13 @@ class SessionAssets:
         self._served = False
         self._known_classes = set()  # Cache what classes we know (for performance)
         self._extra_model_classes = []  # Model classes that are not in an asset/module
+        self._id = get_random_string()
     
     @property
     def id(self):
         """ The unique identifier of this session.
         """
-        return '%x' % id(self)
+        return self._id
     
     def get_used_asset_names(self):
         """ Get a list of names of the assets used by this session, in
@@ -433,3 +437,26 @@ class SessionAssets:
         src = src.replace('INDEX-HOOK', '\n'.join(index_elements))
         
         return src
+
+
+# Use the system PRNG for session id generation (if possible)
+# NOTE: secure random string generation implementation is adapted
+#       from the Django project. 
+
+def get_random_string(length=24, allowed_chars=None):
+    """ Produce a securely generated random string.
+    
+    With a length of 12 with the a-z, A-Z, 0-9 character set returns
+    a 71-bit value. log_2((26+26+10)^12) =~ 71 bits
+    """
+    allowed_chars = allowed_chars or ('abcdefghijklmnopqrstuvwxyz' +
+                                      'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+    try:
+        srandom = random.SystemRandom()
+    except NotImplementedError:
+        srandom = random
+        logging.warn('Falling back to less secure Mersenne Twister random string.')
+        bogus = "%s%s%s" % (random.getstate(), time.time(), 'sdkhfbsdkfbsdbhf')
+        random.seed(hashlib.sha256(bogus.encode()).digest())
+
+    return ''.join(srandom.choice(allowed_chars) for i in range(length))
