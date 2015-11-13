@@ -356,7 +356,9 @@ class Parser0(object):
         mangled_name = stdlib.METHOD_PREFIX + name
         args = [(a if isinstance(a, str) else unify(self.parse(a)))
                 for a in arg_nodes]
-        return '%s.%s(%s)' % (base, mangled_name, ', '.join(args)) 
+        #return '%s.%s(%s)' % (base, mangled_name, ', '.join(args)) 
+        args.insert(0, base)
+        return '%s.call(%s)' % (mangled_name, ', '.join(args)) 
     
     def use_imported_object(self, name):
         self._handle_std_deps(stdlib.IMPORTS[name])
