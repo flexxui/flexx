@@ -23,8 +23,8 @@ also be used by themselves:
 * pyscript - Python to JavaScript transpiler
 * webruntime - to launch a runtime
 
-Example
--------
+Example and demo server
+-----------------------
 
 Working code example::
 
@@ -49,6 +49,9 @@ main = app.launch(Example)
 app.run()
 ```
 
+There is an Amazon instance running some demos on http://52.21.93.28:8000/ 
+(unless I turned it off for testing, etc.).
+
 Current status
 --------------
 
@@ -72,10 +75,3 @@ Getting started
   or ``python setup.py install``, or ``pip install flexx``.
 * Run the examples.
 * Read the [docs](http://flexx.readthedocs.org).
-
-
-Demo server
------------
-
-There is an Amazon instance running some demos on http://52.21.93.28:8000/ 
-(unless I turned it off for testing, etc.).
