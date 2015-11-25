@@ -394,8 +394,9 @@ class Widget(Model):
                 if self.node.parentNode is not None:  # detachWidget not enough
                     self.node.parentNode.removeChild(self.node)
                 phosphor.widget.attachWidget(self.p, el)
-                p = self.p
-                window.addEventListener('resize', lambda: p.update())
+                that = self
+                window.addEventListener('resize', lambda: (that.p.update(), 
+                                                           that._check_real_size()))
             if id == 'body':
                 self.node.classList.add('flx-main-widget')
         
@@ -408,7 +409,7 @@ class Widget(Model):
                 return undefined
             if not (new_parent is None or new_parent.__signals__):
                 raise ValueError('parent must be a widget or None')
-            
+                
             if old_parent is undefined:
                 return new_parent
             

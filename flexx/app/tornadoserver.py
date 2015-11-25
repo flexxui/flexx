@@ -253,6 +253,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         We now have a very basic protocol for receiving messages,
         we should at some point define a real formalized protocol.
         """
+        self._pongtime = time.time()
         if self._session is None:
             if message.startswith('hiflexx '):
                 session_id = message.split(' ', 1)[1].strip()
