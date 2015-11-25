@@ -147,11 +147,12 @@ def test_hassignal_attributes(Name):
         s.r.append(s.first_name.value)
     except Exception:
         s.r.append('err')
-    # cannot delete signals
-    try:
-        del s.first_name
-    except Exception:
-        pass  # on Python it raises, on JS it ignores
+    # cannot delete signals on Python, but on JS we can, because
+    # configurable = true to allow overloading signals.
+    # try:
+    #     del s.first_name
+    # except Exception:
+    #     pass  # on Python it raises, on JS it ignores
     s.r.append(s.first_name.value)
     return s.r
 

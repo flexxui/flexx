@@ -52,7 +52,7 @@ class HasSignalsJS:
         def setter():
             raise ValueError(name + ' is not settable')
         obj[private_name] = initial
-        opts = {'enumerable': True, 'configurable': False,
+        opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(obj, name, opts)
     
