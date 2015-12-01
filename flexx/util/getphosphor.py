@@ -11,7 +11,7 @@ from urllib.request import urlopen
 # todo: maybe this should be more generic; download a variety of JS libs (e.g. react)
 
 FNAME = 'phosphor-all.%s.js'
-URL = 'https://raw.githubusercontent.com/zoofIO/phosphor-all/%s/phosphor-all.js'
+URL = 'http://raw.githubusercontent.com/zoofIO/phosphor-all/%s/phosphor-all.js'
 
 
 def get_phosphor(commit):
@@ -38,7 +38,7 @@ def _fetch_file(url):
     """ Fetches a file from the internet. Retry a few times before
     giving up on failure. 
     """
-    logging.warn('Downloading %s' % url)
+    logging.warn('Downloading ... %s' % url[10:])
     for tries in range(4):
         try:
             return urlopen(url, timeout=5.0).read()
