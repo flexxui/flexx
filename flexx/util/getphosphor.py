@@ -11,7 +11,7 @@ from urllib.request import urlopen
 # todo: maybe this should be more generic; download a variety of JS libs (e.g. react)
 
 FNAME = 'phosphor-all.%s.js'
-URL = 'http://raw.githubusercontent.com/zoofIO/phosphor-all/%s/phosphor-all.js'
+URL = 'https://raw.githubusercontent.com/zoofIO/phosphor-all/%s/phosphor-all.js'
 
 
 def get_phosphor(commit):
