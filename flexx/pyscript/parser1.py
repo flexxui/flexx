@@ -495,7 +495,7 @@ class Parser1(Parser0):
             elif isinstance(target, (ast.Tuple, ast.List)):
                 dummy = self.dummy()
                 code.append(dummy)
-                tuple = [unify(self.parse(x)) for x in target.element_nodes]
+                tuple = target.element_nodes
             else:
                 raise JSError("Unsupported assignment type")
             code.append(' = ')
@@ -508,8 +508,10 @@ class Parser1(Parser0):
         if tuple:
             code.append(self.lf())
             for i, x in enumerate(tuple):
-                self.vars.add(x)
-                code.append('%s = %s[%i];' % (x, dummy, i))
+                var = unify(self.parse(x))
+                if isinstance(x, ast.Name):  # but not when attr or index
+                    self.vars.add(var)
+                code.append('%s = %s[%i];' % (var, dummy, i))
         
         return code
     

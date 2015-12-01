@@ -50,6 +50,8 @@ def get_partial_std_lib(func_names, method_names, imported_objects, indent=0):
     lines = []
     for name in sorted(func_names):
         code = FUNCTIONS[name].strip()
+        if '\n' not in code:
+            code = code.rsplit('//', 1)[0].rstrip()  # strip comment from one-liners
         lines.append('var %s%s = %s;' % (FUNCTION_PREFIX, name, code))
     for name in sorted(method_names):
         code = METHODS[name].strip()
@@ -168,13 +170,13 @@ FUNCTIONS['divmod'] = """function (x, y) { // nargs: 2
 
 FUNCTIONS['all'] = """function (x) { // nargs: 1
     for (var i=0; i<x.length; i++) {
-        if (!FUNCTION_PREFIXtruthy(x[i])){return false}
+        if (!FUNCTION_PREFIXtruthy(x[i])){return false;}
     } return true;
 }"""
 
 FUNCTIONS['any'] = """function (x) { // nargs: 1
     for (var i=0; i<x.length; i++) {
-        if (FUNCTION_PREFIXtruthy(x[i])){return true}
+        if (FUNCTION_PREFIXtruthy(x[i])){return true;}
     } return false;
 }"""
 

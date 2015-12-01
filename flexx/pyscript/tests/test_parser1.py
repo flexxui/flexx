@@ -244,6 +244,7 @@ class TestExpressions:
     def test_assignments(self):
         assert py2js('foo = 3') == 'var foo;\nfoo = 3;'  # with var
         assert py2js('foo.bar = 3') == 'foo.bar = 3;'  # without var
+        assert py2js('foo[i] = 3') == 'foo[i] = 3;'  # without var
         
         code = py2js('foo = 3; bar = 4')  # define both
         assert code.count('var') == 1
@@ -264,6 +265,11 @@ class TestExpressions:
         # Tuple unpacking
         evalpy('x=[1,2,3]\na, b, c = x\nb', False) == '2'
         evalpy('a,b,c = [1,2,3]\nc,b,a = a,b,c\n[a,b,c]', False) == '[3,2,1]'
+        
+        # For unpacking, test that variables are declared, but not when attr or index
+        assert py2js('xx, yy = 3, 4').count('xx') == 2
+        assert py2js('xx[0], yy[0] = 3, 4').count('xx') == 1
+        assert py2js('xx.a, yy.a = 3, 4').count('xx') == 1
         
         # Class variables don't get a var
         code = py2js('class Foo:\n  bar=3\n  bar = bar + 1')

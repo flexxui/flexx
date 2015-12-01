@@ -85,6 +85,7 @@ script:
         python make test unit;
       fi;
     - if [ "${TEST_DOCS}" == "1" ]; then
+        python -c 'import flexx.ui'
         python make docs html;
       fi;
     - if [ "${TEST_STYLE}" == "1" ]; then

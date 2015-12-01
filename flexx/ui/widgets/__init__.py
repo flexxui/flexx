@@ -12,3 +12,4 @@ from ._progressbar import ProgressBar  # noqa
 from ._plotwidget import PlotWidget  # noqa
 from ._iframe import IFrame  # noqa
 from ._bokeh import BokehWidget  # noqa
+from ._canvas import CanvasWidget  # noqa
