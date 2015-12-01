@@ -36,9 +36,9 @@ def get_phosphor(commit):
 
 def _fetch_file(url):
     """ Fetches a file from the internet. Retry a few times before
-    giving up on failure.
+    giving up on failure. 
     """
-    logging.warn('Downloading %s' % url)
+    logging.warn('Downloading ... %s' % url[10:])
     for tries in range(4):
         try:
             return urlopen(url, timeout=5.0).read()
