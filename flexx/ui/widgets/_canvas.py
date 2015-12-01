@@ -16,9 +16,12 @@ class CanvasWidget(Widget):
         def _init(self):
             super()._init()
             that = self
-            self.node.addEventListener('mousedown', lambda ev: that.mouse_down._set(1), 0)
-            self.node.addEventListener('mouseup', lambda ev: that.mouse_down._set(0), 0)
-            self.node.addEventListener('mousemove', lambda ev: that.mouse_pos._set((ev.clientX, ev.clientY)), 0)
+            _mouse_down = lambda ev: that.mouse_down._set(1)
+            _mouse_up = lambda ev: that.mouse_down._set(0)
+            _mouse_move = lambda ev: that.mouse_pos._set((ev.clientX, ev.clientY))
+            self.node.addEventListener('mousedown', _mouse_down, 0)
+            self.node.addEventListener('mouseup', _mouse_up, 0)
+            self.node.addEventListener('mousemove', _mouse_move, 0)
         
         def _create_node(self):
             self.p = phosphor.createWidget('canvas')
@@ -37,7 +40,7 @@ class CanvasWidget(Widget):
             return bool(v)
         
         @react.source
-        def mouse_pos(pos=(0,0)):
+        def mouse_pos(pos=(0, 0)):
             """ The current position of the mouse inside this widget.
             """
-            return float(pos[0]),  float(pos[1])
+            return float(pos[0]), float(pos[1])
