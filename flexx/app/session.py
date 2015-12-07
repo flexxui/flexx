@@ -70,7 +70,8 @@ class AppManager(object):
                 if name == '__default__':
                     continue
                 _, pending, _ = self._proxies[name]
-                to_remove = [s for s in pending if (time.time() - s._creation_time) > 10]
+                to_remove = [s for s in pending
+                             if (time.time() - s._creation_time) > 10]
                 for s in to_remove:
                     pending.remove(s)
                 count += len(to_remove)
