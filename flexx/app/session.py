@@ -2,6 +2,7 @@
 Definition of App class and the app manager.
 """
 
+import time
 import logging
 
 from .. import react
@@ -10,8 +11,7 @@ from .model import Model
 from .assetstore import SessionAssets
 
 
-# todo: periodically clean old sessions in the pending list
-
+# todo: thread safety
 
 class AppManager(object):
     """ Manage apps, or more specifically, the session objects.
@@ -26,6 +26,7 @@ class AppManager(object):
     def __init__(self):
         # name -> (ModelClass, pending, connected) - lists contain proxies
         self._proxies = {'__default__': (None, [], [])}
+        self._last_check_time = time.time()
     
     def register_app_class(self, cls):
         """ Register a Model class as being an application.
@@ -61,6 +62,25 @@ class AppManager(object):
             pending.append(session)
             return session
     
+    def _clear_old_pending_sessions(self):
+        try:
+            
+            count = 0
+            for name in self._proxies:
+                if name == '__default__':
+                    continue
+                _, pending, _ = self._proxies[name]
+                to_remove = [s for s in pending
+                             if (time.time() - s._creation_time) > 10]
+                for s in to_remove:
+                    pending.remove(s)
+                count += len(to_remove)
+            if count:
+                logging.warn('Cleared %i old pending sessions' % count)
+        
+        except Exception as err:
+            logging.error('Error when clearing old pending sessions: %s' % str(err))
+    
     def create_session(self, name):
         """ Create a session for the app with the given name.
         
@@ -70,6 +90,10 @@ class AppManager(object):
         """
         # Called by the server when a client connects, and from the
         # launch and export functions.
+        
+        if time.time() - self._last_check_time > 5:
+            self._last_check_time = time.time()
+            self._clear_old_pending_sessions()
         
         if name == '__default__':
             raise RuntimeError('Cannot connect to __default__ app like this.')
@@ -168,16 +192,6 @@ class AppManager(object):
 manager = AppManager()
 
 
-# Note: This enum mechanism stands a bit by itself. But it works well
-# and is not very much exposed to the user, so I guess its ok for now.
-def create_enum(*members):
-    """ Create an enum type from given string arguments.
-    """
-    assert all([isinstance(m, str) for m in members])
-    enums = dict([(s, s) for s in members])
-    return type('Enum', (), enums)
-    
-
 class Session(SessionAssets):
     """ A session between Python and the client runtime
 
@@ -185,7 +199,7 @@ class Session(SessionAssets):
     and the websocket instance that connects to it.
     """
     
-    STATUS = create_enum('PENDING', 'CONNECTED', 'CLOSED')
+    STATUS = type('Enum', (), {'PENDING': 1, 'CONNECTED': 2, 'CLOSED': 0})
     
     def __init__(self, app_name):
         super().__init__()
@@ -203,6 +217,8 @@ class Session(SessionAssets):
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
         self._pending_commands = []
+        
+        self._creation_time = time.time()
     
     def __repr__(self):
         s = self.status.lower()
@@ -269,8 +285,11 @@ class Session(SessionAssets):
     
     @property
     def status(self):
-        """ The status of this session. Can be PENDING, CONNECTED or
-        CLOSED. See Session.STATUS enum.
+        """ The status of this session. The lifecycle for each session is:
+        
+        * status 1: pending
+        * statys 2: connected
+        * status 0: closed
         """
         if self._ws is None:
             return self.STATUS.PENDING  # not connected yet

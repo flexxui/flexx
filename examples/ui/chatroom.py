@@ -46,6 +46,8 @@ class ChatRoom(ui.Widget):
         self._update_participants()
     
     def _update_participants(self):
+        if not self.session.status:
+            return  # and dont't invoke a new call
         proxies = app.manager.get_connections(self.__class__.__name__)
         names = [p.app.name.text() for p in proxies]
         text = '<br />%i persons in this chat:<br /><br />' % len(names)
