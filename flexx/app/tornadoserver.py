@@ -169,6 +169,27 @@ class MainHandler(tornado.web.RequestHandler):
                     self.write(session.get_page().encode())
                 else:
                     self.write('No app %r is currently hosted.' % app_name)
+            elif file_name and '.js:' in file_name:
+                # Request for a view of a JS source file at a certain line, redirect
+                fname, where = file_name.split(':')[:2]
+                self.redirect('/%s/%s.debug%s#L%s' % (app_name, fname, where, where))
+            elif file_name and '.debug' in file_name:
+                # Show JS source file at a certain line
+                fname, lineno = file_name.split('.debug', 1)
+                try:
+                    res = assets.load_asset(fname)
+                except (IOError, IndexError):
+                    self.write('invalid resource: %s' % fname)
+                else:
+                    lines = ['<html><head><style>%s</style></head><body>' % 
+                             "pre {display:inline} #L%s {background:#cca;}" % lineno]
+                    for i, line in enumerate(res.decode().splitlines()):
+                        table = {ord('&'): '&amp;', ord('<'): '&lt;', ord('>'): '&gt;'}
+                        line = line.translate(table).replace('\t', '    ')
+                        lines.append('<a id="L%i">%i<pre>  %s</pre></a><br />' %
+                                     (i+1, i+1, line))
+                    lines.append('</body></html>')
+                    self.write('\n'.join(lines))
             elif file_name:
                 # A resource, e.g. js/css/icon
                 if file_name.endswith('.css'):
