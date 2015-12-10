@@ -6,7 +6,7 @@ import json
 
 from ..pyscript import py2js as py2js_
 from ..pyscript.parser2 import get_class_definition
-from ..pyscript.stubs import undefined, console, Object, Date
+from ..pyscript.stubs import undefined, Object, Date
 
 from .signals import Signal, SourceSignal
 
@@ -164,13 +164,14 @@ class HasSignalsJS:
             return False  # no error
         
         def _save_update():
-            try:
-                selff()
-            except SignalValueError:  # noqa
-                pass
-            except Exception as err:
-                #print('Error updating signal:', err.stack)
-                console.error('Error updating signal: ' + err)
+            """
+            try {
+                selff();
+            } catch(err) {
+                if (err instanceof Error && err.name === "SignalValueError") {
+                } else {throw err;}
+            }
+            """
         
         def _set_value(value):
             if value is undefined:
