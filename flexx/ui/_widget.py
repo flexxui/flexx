@@ -305,7 +305,7 @@ class Widget(Model):
             super()._init()
         
         def _create_node(self):
-            self.p = window.phosphor.createWidget('div')
+            self.p = window.phosphor.widget.Panel()
         
         @react.connect('style')
         def style_changed(self, style):
@@ -390,10 +390,10 @@ class Widget(Model):
             if id:
                 el = window.document.getElementById(id)
                 if self.p.isAttached:
-                    window.phosphor.widget.detachWidget(self.p)
+                    self.p.detach()
                 if self.node.parentNode is not None:  # detachWidget not enough
                     self.node.parentNode.removeChild(self.node)
-                window.phosphor.widget.attachWidget(self.p, el)
+                self.p.attach(el)
                 that = self
                 window.addEventListener('resize', lambda: (that.p.update(), 
                                                            that._check_real_size()))
@@ -477,7 +477,9 @@ class Widget(Model):
         def _remove_child(self, widget):
             """ Remove the DOM element.
             Called right after the child widget is removed. """
-            self.p.removeChild(widget.p)
+            # Put *something* in thid method body so the docstring is
+            # not interpreted as JS
+            return
     
         ## Special
         

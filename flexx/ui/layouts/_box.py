@@ -220,7 +220,7 @@ class BoxLayout(BaseBoxLayout):
     class JS:
     
         def _create_node(self):
-            self.p = window.phosphor.widget.Widget()
+            self.p = window.phosphor.widget.Panel()
         
         @react.connect('orientation', 'children.*.flex')
         def __set_flexes(self, ori, *flexes):
