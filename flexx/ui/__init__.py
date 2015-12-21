@@ -77,7 +77,7 @@ from ._plotlayout import PlotLayout  # noqa
 
 # flexx.ui needs phosphor
 def _install_assets():
-    COMMIT = 'da6d6baa'  # <-- update this to sync with specific version
+    COMMIT = '3f94e94819'  # <-- update this to sync with specific version
     from ..app import assets
     from ..util.getphosphor import get_phosphor
     assets.add_asset('phosphor-all.js', get_phosphor(COMMIT).encode())

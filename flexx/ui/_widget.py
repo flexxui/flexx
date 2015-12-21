@@ -335,14 +335,14 @@ class Widget(Model):
             if size_limits_changed:
                 # Clear phosphor's limit cache (no need for getComputedStyle())
                 values = [self.node.style[k] for k in size_limits_keys]
-                self.p.clearSizeLimits()
+                # todo: do I need a variant of self.p.clearSizeLimits()?
                 for k, v in zip(size_limits_keys, values):
                     self.node.style[k] = v
                 # Allow parent to re-layout
                 parent = self.parent()
                 if parent:
-                    parent.p.processMessage(window.phosphor.widget.MSG_LAYOUT_REQUEST)
-        
+                    parent.p.fit()  # i.e. p.processMessage(p.MsgFitRequest)
+
         ## Size 
         
         @react.source
@@ -476,10 +476,11 @@ class Widget(Model):
             
         def _remove_child(self, widget):
             """ Remove the DOM element.
-            Called right after the child widget is removed. """
-            # Put *something* in thid method body so the docstring is
-            # not interpreted as JS
-            return
+            Called right after the child widget is removed.
+            """
+            widget.p.parent = None
+        
+        # todo: destroy with self.p.dispose()
     
         ## Special
         

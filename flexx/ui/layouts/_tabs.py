@@ -108,16 +108,16 @@ class TabPanel(Layout):
             self.p = window.phosphor.tabs.TabPanel()
         
         def _add_child(self, widget):
-            widget._tab = window.phosphor.tabs.Tab(widget.title() or '-')
-            window.phosphor.tabs.TabPanel.setTab(widget.p, widget._tab)
-            self.p.addWidget(widget.p)
+            widget.p.title.text = widget.title()
+            self.p.stack.addChild(widget.p)
         
-        def _remove_child(self, widget):
-            if widget._tab:
-                del widget._tab
+        #def _remove_child(self, widget):
+        #    widget.
             
         @react.connect('children.*.title')
         def __update_titles(self, *titles):
             for widget in self.children():
-                if hasattr(widget, '_tab'):
-                    widget._tab.text = widget.title() or '-'
+                # todo: Phosphor widgets have title prop now
+                widget.p.title.text = widget.title()
+                #if hasattr(widget, '_tab'):
+                #    widget._tab.text = widget.title() or '-'

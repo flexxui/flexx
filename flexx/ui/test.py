@@ -18,7 +18,7 @@ class MyApp(ui.Widget):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 11
+        TEST = 10
         
         if TEST == 0:
             ui.Button(text='Hola', flex=1)
