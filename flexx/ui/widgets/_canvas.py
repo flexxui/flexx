@@ -40,7 +40,8 @@ class CanvasWidget(Widget):
             return bool(v)
         
         @react.source
-        def mouse_pos(pos=(0, 0)):
+        def mouse_pos(self, pos=(0, 0)):
             """ The current position of the mouse inside this widget.
             """
-            return float(pos[0]), float(pos[1])
+            offset = self.node.offsetLeft, self.node.offsetTop
+            return float(pos[0] - offset[0]), float(pos[1] - offset[1])
