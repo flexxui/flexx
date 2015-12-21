@@ -147,14 +147,15 @@ class FlexxJS:
             if flexx.ws is not None:
                 flexx.ws.send("ERROR " + msg)
         def on_error(self, evt):
-            msg = evt
-            if evt.message and evt.lineno:  # message, url, linenumber (not in nodejs)
-                msg = "On line %i in %s:\n%s" % (evt.lineno, evt.filename, evt.message)
-            elif evt.stack:
-                msg = evt.stack
-            if flexx.ws is not None:
-                flexx.ws.send("ERROR " + msg)
-        
+            msg = evt.message
+            if evt.error.stack:
+                stack = [x.replace('@', ' @ ') if '.js' in x else x.split('@')[0]
+                         for x in evt.error.stack.splitlines()]
+                msg += '\n' + '\n'.join(stack)
+            elif evt.message and evt.lineno:  # message, url, linenumber (not in nodejs)
+                msg += "\nIn %s:%i" % (evt.filename, evt.lineno)
+            console.error(msg)
+            evt.preventDefault()  # Don't do the standard error 
         # Set new versions
         console.log = log
         console.info = info
