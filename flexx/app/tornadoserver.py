@@ -230,6 +230,50 @@ class MainHandler(tornado.web.RequestHandler):
         pass  # print('finish request')
 
 
+
+class MessageCounter:
+    """ Simple class to count incoming messages and periodically log
+    the number of messages per second.
+    """
+    
+    def __init__(self):
+        self._collect_interval = 0.2  # period over which to collect messages
+        self._notify_interval = 3.0  # period on which to log the mps
+        self._window_interval = 4.0  # size of sliding window
+        
+        self._mps = [(time.time(), 0)]  # tuples of (time, count)
+        self._collect_count = 0
+        self._collect_stoptime = 0
+        
+        self._stop = False
+        self._notify()
+    
+    def trigger(self):
+        t = time.time()
+        if t < self._collect_stoptime:
+            self._collect_count += 1
+        else:
+            self._mps.append((self._collect_stoptime, self._collect_count))
+            self._collect_count = 1
+            self._collect_stoptime = t + self._collect_interval
+    
+    def _notify(self):
+        mintime = time.time() - self._window_interval
+        self._mps = [x for x in self._mps if x[0] > mintime]
+        if self._mps:
+            n = sum([x[1] for x in self._mps])
+            T = self._mps[-1][0] - self._mps[0][0] + self._collect_interval
+        else:
+            n, T = 0, self._collect_interval
+        logging.warn('Websocket messages per second: %1.1f' % (n / T))
+        
+        if not self._stop:
+            server.call_later(self._notify_interval, self._notify)
+    
+    def stop(self):
+        self._stop = True
+
+
 class WSHandler(tornado.websocket.WebSocketHandler):
     """ Handler for websocket.
     """
@@ -250,9 +294,10 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             self.close_code, self.close_reason = None, None
         
         self._session = None
+        self._mps_counter = MessageCounter()
         
         # Don't collect messages to send them more efficiently, just send asap
-        self.set_nodelay(True)
+        # self.set_nodelay(True)
         
         if isinstance(path, bytes):
             path = path.decode()
@@ -274,6 +319,8 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         We now have a very basic protocol for receiving messages,
         we should at some point define a real formalized protocol.
         """
+        self._mps_counter.trigger()
+        
         self._pongtime = time.time()
         if self._session is None:
             if message.startswith('hiflexx '):
@@ -294,6 +341,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         self.close_code = code = self.close_code or 0
         reason = self.close_reason or self.known_reasons.get(code, '')
         print('detected close: %s (%i)' % (reason, code))
+        self._mps_counter.stop()
         if self._session is not None:
             manager.disconnect_client(self._session)
             self._session = None  # Allow cleaning up
