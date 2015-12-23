@@ -15,8 +15,7 @@ single quotes.
 
 """
 
-from pytest import raises
-from flexx.util.testing import run_tests_if_main
+from flexx.util.testing import run_tests_if_main, raises
 
 from flexx.react import source, input, connect, lazy, HasSignals, undefined
 from flexx.react.pyscript import create_js_signals_class, HasSignalsJS

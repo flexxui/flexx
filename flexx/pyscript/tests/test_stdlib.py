@@ -4,8 +4,7 @@ will mostly test if the implemenation is correct. This module does some
 meta tests.
 """
 
-from pytest import raises
-from flexx.util.testing import run_tests_if_main
+from flexx.util.testing import run_tests_if_main, raises
 
 from flexx.pyscript import py2js, evaljs, evalpy, Parser3, stdlib
 

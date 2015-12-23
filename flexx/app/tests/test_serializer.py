@@ -1,6 +1,5 @@
 
-from pytest import raises
-from flexx.util.testing import run_tests_if_main
+from flexx.util.testing import run_tests_if_main, raises
 
 from flexx.pyscript import py2js, evaljs
 

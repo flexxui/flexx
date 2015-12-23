@@ -6,8 +6,7 @@ import ast
 import json
 import time
 
-from pytest import raises, mark
-from flexx.util.testing import run_tests_if_main
+from flexx.util.testing import run_tests_if_main, raises, skipif
 
 from flexx.pyscript import commonast
 
@@ -218,7 +217,7 @@ def test_consistent_ast():
     _compare_large_strings(_get_ref_json(filename1), js)
 
 
-@mark.skipif(sys.version_info > (3,), reason='not Python 2.x')
+@skipif(sys.version_info > (3,), reason='not Python 2.x')
 def test_consistent_ast2():
     # Parse the sample file and export as a json string
     code = open(filename2, 'rb').read().decode()
@@ -228,7 +227,7 @@ def test_consistent_ast2():
     _compare_large_strings(_get_ref_json(filename2), js)
 
 
-@mark.skipif(sys.version_info < (3,), reason='not Python 3.x')
+@skipif(sys.version_info < (3,), reason='not Python 3.x')
 def test_consistent_ast3():
     # Parse the sample file and export as a json string
     code = open(filename3, 'rb').read().decode()
@@ -298,7 +297,7 @@ def test_call_some_more():
     assert node.kwarg_nodes[1].value_node.name == 'd' # keyword with emtpy name
 
 
-@mark.skipif(sys.version_info < (3,5), reason='Need Python 3.5+')
+@skipif(sys.version_info < (3,5), reason='Need Python 3.5+')
 def test_call_even_some_more():
     from flexx.pyscript.commonast import Name, Num, Starred, Keyword
     
@@ -330,7 +329,7 @@ def test_classdef_some_more():
     assert node.kwarg_nodes[1].value_node.name == 'extra_kwargs'
 
 
-@mark.skipif(sys.version_info < (3,3), reason='Need Python 3.3+')
+@skipif(sys.version_info < (3,3), reason='Need Python 3.3+')
 def test_python_33_plus():
     
     # Yield from
