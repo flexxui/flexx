@@ -2,8 +2,7 @@ import os
 import tempfile
 import shutil
 
-from pytest import raises
-from flexx.util.testing import run_tests_if_main
+from flexx.util.testing import run_tests_if_main, raises
 
 from flexx.app.assetstore import assets, AssetStore, SessionAssets
 from flexx import ui, app

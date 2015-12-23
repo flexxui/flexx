@@ -4,8 +4,7 @@
 import sys
 import weakref
 
-from pytest import raises, mark
-from flexx.util.testing import run_tests_if_main
+from flexx.util.testing import run_tests_if_main, skipif, raises
 
 from flexx.react import HasSignals, input, connect, lazy, Signal, InputSignal
 
@@ -254,7 +253,7 @@ def test_props():
     assert title_lengths[-1] == 3
 
 
-@mark.skipif('__pypy__' in sys.builtin_module_names, reason='cannot test this on pypy')
+@skipif('__pypy__' in sys.builtin_module_names, reason='cannot test this on pypy')
 def test_no_memory_leak():
     def stub(v=''): pass
     

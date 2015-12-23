@@ -6,8 +6,7 @@ import subprocess
 
 from flexx.util import icon
 
-import pytest
-from flexx.util.testing import run_tests_if_main
+from flexx.util.testing import run_tests_if_main, raises, skipif
 
 from flexx.webruntime.common import BaseRuntime
 from flexx.webruntime import launch
@@ -81,13 +80,13 @@ def test_iconize():
     assert webruntime.common.iconize(icn) is icn
 
     # Error
-    pytest.raises(ValueError, webruntime.common.iconize, [])
+    raises(ValueError, webruntime.common.iconize, [])
 
 
 ## Runtimes
 
 
-@pytest.mark.skipif(not has_qt(), reason='need qt')
+@skipif(not has_qt(), reason='need qt')
 def test_qtwebkit():
     p = launch(URL, 'pyqt')
     assert p._proc
@@ -102,14 +101,14 @@ def test_xul():
     p.close()  # should do no harm
 
 
-@pytest.mark.skipif(not has_nw(), reason='need nw')
+@skipif(not has_nw(), reason='need nw')
 def test_nwjs():
     p = launch(URL, 'nwjs')
     assert p._proc
     p.close()
 
 
-@pytest.mark.skipif(not has_chrome(), reason='need chrome/chromium')
+@skipif(not has_chrome(), reason='need chrome/chromium')
 def test_chomeapp():
     p = launch(URL, 'chromeapp')
     assert p._proc
@@ -138,18 +137,18 @@ def test_browser_fallback():
     assert p._proc is None
 
 
-@pytest.mark.skipif(os.getenv('TRAVIS') == 'true', reason='skip selenium on Travis')
+@skipif(os.getenv('TRAVIS') == 'true', reason='skip selenium on Travis')
 def test_selenium():
     p = launch(URL, 'selenium-firefox')
     assert p._proc is None
     assert p.driver
     time.sleep(0.5)
     p.close()
-    pytest.raises(ValueError, launch, URL, 'selenium')
+    raises(ValueError, launch, URL, 'selenium')
 
 
 def test_unknown():
-    pytest.raises(ValueError, launch, URL, 'foo')
+    raises(ValueError, launch, URL, 'foo')
 
 
 def test_default():
@@ -159,7 +158,7 @@ def test_default():
 
 
 def test_base_runtime_must_have_url_in_kwargs():
-    with pytest.raises(KeyError) as excinfo:
+    with raises(KeyError) as excinfo:
         BaseRuntime()
 
     assert 'url' in str(excinfo.value)

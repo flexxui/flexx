@@ -1,5 +1,4 @@
-from pytest import raises
-from flexx.util.testing import run_tests_if_main
+from flexx.util.testing import run_tests_if_main, raises
 
 from flexx import react
 

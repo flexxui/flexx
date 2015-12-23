@@ -1,9 +1,21 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2015, Almar Klein
-# Distributed under the (new) BSD License. See LICENSE.txt for more info.
+# Distributed under the (new) BSD License.
 
-""" Functionality used for testing. This code itself is not covered in tests.
 """
+Functionality used for testing, based on pytest. This module is designed
+to just work, without modification, in most projects.
+
+Write your tests like this:
+
+    from yourproject.xxx.testing import run_tests_if_main, raises, skipif
+    ...
+    run_tests_if_main()
+
+Then you can run the test file as a script, which will run all tests
+and report coverage. Magic!
+"""
+
 
 from __future__ import absolute_import, print_function, division
 
@@ -13,30 +25,27 @@ import inspect
 
 import pytest
 
-# Get root dir
+
 PACKAGE_NAME = __name__.split('.')[0]
 
-# Get root dir
+# Get project root dir
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 ROOT_DIR = THIS_DIR
 for i in range(9):
     ROOT_DIR = os.path.dirname(ROOT_DIR)
-    if os.path.isfile(os.path.join(ROOT_DIR, '.gitignore')):
+    if os.path.basename(ROOT_DIR) == PACKAGE_NAME:
+        ROOT_DIR = os.path.dirname(ROOT_DIR)
         break
+else:
+    print('testing.py could not find project root dir, '
+          'using testing.py directory instead.')
+    ROOT_DIR = THIS_DIR
 
 
-STYLE_IGNORES = ['E226', 
-                 'E241', 
-                 'E265', 
-                 'E266',  # too many leading '#' for block comment
-                 'E402',  # module level import not at top of file
-                 'E731',  # do not assign a lambda expression, use a def
-                 'W291', 
-                 'W293',
-                 ]
+# Inject some function names so they can be obtained with one import
+raises = pytest.raises
+skipif = pytest.mark.skipif
 
-
-## Functions to use in tests
 
 def run_tests_if_main(show_coverage=False):
     """ Run tests in a given file if it is run as a script
@@ -52,15 +61,14 @@ def run_tests_if_main(show_coverage=False):
     fname = str(local_vars['__file__'])
     _clear_our_modules()
     _enable_faulthandler()
-    pytest.main('-v -x --color=yes --cov flexx '
-                '--cov-config .coveragerc --cov-report html %s' % repr(fname))
+    pytest.main('-v -x --color=yes --cov %s '
+                '--cov-config .coveragerc --cov-report html %s' %
+                (PACKAGE_NAME, repr(fname)))
     if show_coverage:
         import webbrowser
         fname = os.path.join(ROOT_DIR, 'htmlcov', 'index.html')
         webbrowser.open_new_tab(fname)
 
-
-## Requirements
 
 def _enable_faulthandler():
     """ Enable faulthandler (if we can), so that we get tracebacks
@@ -75,26 +83,8 @@ def _enable_faulthandler():
 
 
 def _clear_our_modules():
-    # Remove ourselves from sys.modules to force an import
+    """ Remove ourselves from sys.modules to force an import.
+    """
     for key in list(sys.modules.keys()):
         if key.startswith(PACKAGE_NAME) and 'testing' not in key:
             del sys.modules[key]
-
-
-class FileForTesting(object):
-    """ Alternative to stdout that makes path relative to ROOT_DIR
-    """
-    def __init__(self, original):
-        self._original = original
-    
-    def write(self, msg):
-        if msg.startswith(ROOT_DIR):
-            msg = os.path.relpath(msg, ROOT_DIR)
-        self._original.write(msg)
-        self._original.flush()
-    
-    def flush(self):
-        self._original.flush()
-    
-    def revert(self):
-        sys.stdout = self._original
