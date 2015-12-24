@@ -265,7 +265,7 @@ class MessageCounter:
             T = self._mps[-1][0] - self._mps[0][0] + self._collect_interval
         else:
             n, T = 0, self._collect_interval
-        logging.warn('Websocket messages per second: %1.1f' % (n / T))
+        logging.debug('Websocket messages per second: %1.1f' % (n / T))
         
         if not self._stop:
             server.call_later(self._notify_interval, self._notify)
