@@ -765,9 +765,6 @@ class Parser2(Parser1):
     def parse_ClassDef(self, node):
         
         # Checks
-        for base in node.arg_nodes:
-            if not isinstance(base, ast.Name):
-                raise JSError('Base classes must be simple names.')
         if len(node.arg_nodes) > 1:
             raise JSError('Multiple inheritance not (yet) supported.')
         if node.kwarg_nodes:
@@ -776,8 +773,12 @@ class Parser2(Parser1):
             raise JSError('Class decorators not supported.')
         
         # Get base class (not the constructor)
-        base_class = node.arg_nodes[0].name if node.arg_nodes else 'Object'
-        if base_class.lower() == 'object':  # maybe Python "object"
+        base_class = 'Object'
+        if node.arg_nodes:
+            base_class = ''.join(self.parse(node.arg_nodes[0]))
+        if not base_class.replace('.', '_').isidentifier():
+            raise JSError('Base classes must be simple names')
+        elif base_class.lower() == 'object':  # maybe Python "object"
             base_class = 'Object'
         else:
             base_class = base_class + '.prototype'

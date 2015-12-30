@@ -46,7 +46,11 @@ class BaseTableLayout(Layout):
     .flx-vbox > .flx-BaseTableLayout {
         height: auto;
     }
-
+    
+    td.vflex, td.hflex {
+        padding: 1px;
+    }
+    
     /* In flexed cells, occupy the full space */
     td.vflex > .flx-Widget {
         height: 100%;

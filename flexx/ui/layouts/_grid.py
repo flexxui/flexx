@@ -42,6 +42,9 @@ from ._form import BaseTableLayout
 class GridPanel(Layout):
     """ A panel which lays out its children in a grid. 
     
+    NOTE: the GridPanel is temporarily deprecated until the Phosphorjs
+    GridPanel is fixed.
+    
     The "pos" signal of each child represents its integer position/index
     in the grid.
     

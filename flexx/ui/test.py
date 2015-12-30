@@ -18,7 +18,7 @@ class MyApp(ui.Widget):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 10
+        TEST = 3
         
         if TEST == 0:
             ui.Button(text='Hola', flex=1)
@@ -92,7 +92,7 @@ class MyApp(ui.Widget):
         
         if TEST == 5:
             with ui.SplitPanel():
-                ui.Widget(style='background:#aaa;')
+                ui.Widget(style='background:#aaf;')
                 with ui.PinboardLayout() as self.grid:
                     self.b1 = ui.Button(text='Stuck at (20, 20)', pos=(20, 30))
                     self.b2 = ui.Button(text='Dynamic at (20%, 20%)', pos=(0.2, 0.2))

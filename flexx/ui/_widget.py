@@ -343,6 +343,10 @@ class Widget(Model):
                 if parent:
                     parent.p.fit()  # i.e. p.processMessage(p.MsgFitRequest)
 
+        @react.connect('title')
+        def __title_changed(self, title):
+            self.p.title.text = title  # All Phosphor widgets have a title
+        
         ## Size 
         
         @react.source
