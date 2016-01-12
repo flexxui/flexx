@@ -135,7 +135,7 @@ class PlotWidget(Widget):
             
             # Prepare
             ctx = self._context
-            w, h = self.node.offsetWidth, self.node.offsetHeight
+            w, h = self.node.clientWidth, self.node.clientHeight
             self.node.width = w
             self.node.height = h
             

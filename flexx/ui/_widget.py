@@ -363,8 +363,8 @@ class Widget(Model):
             """
             n = self.node
             cursize = self.real_size()
-            if cursize[0] != n.offsetWidth or cursize[1] !=n.offsetHeight:
-                self.real_size._set([n.offsetWidth, n.offsetHeight])
+            if cursize[0] != n.clientWidth or cursize[1] !=n.clientHeight:
+                self.real_size._set([n.clientWidth, n.clientHeight])
         
         # NOTE: this is how we would handle signals for min_size and max_size
         
