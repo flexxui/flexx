@@ -1,4 +1,6 @@
-from flexx.util.testing import run_tests_if_main, raises
+import sys
+
+from flexx.util.testing import run_tests_if_main, raises, skipif
 
 from flexx.pyscript import JSError, py2js, evaljs, evalpy
 
@@ -420,8 +422,7 @@ class TestFunctions:
         assert 'var x' in py2js(func2)
         assert 'var x' in py2js(func3)
     
-    def test_global_and_nonlocal(self):
-        assert py2js('nonlocal foo;foo = 3').strip() == 'foo = 3;'
+    def test_global(self):
         assert py2js('global foo;foo = 3').strip() == 'foo = 3;'
         
         def func1():
@@ -438,18 +439,23 @@ class TestFunctions:
             x = 2
             inner()
             return x
+    
+        assert evaljs(py2js(func1)+'func1()') == '2'
+        assert evaljs(py2js(func2)+'func2()') == '3'
+    
+    @skipif(sys.version_info < (3,), reason='no nonlocal on legacy Python')
+    def test_nonlocal(self):
+        assert py2js('nonlocal foo;foo = 3').strip() == 'foo = 3;'
         
-        def func3():
+        func3_code = """def func3():
             def inner():
                 nonlocal x
                 x = 3
             x = 2
             inner()
             return x
-        
-        assert evaljs(py2js(func1)+'func1()') == '2'
-        assert evaljs(py2js(func2)+'func2()') == '3'
-        assert evaljs(py2js(func3)+'func3()') == '3'
+        """
+        assert evaljs(py2js(func3_code)+'func3()') == '3'
     
     def test_raw_js(self):
         

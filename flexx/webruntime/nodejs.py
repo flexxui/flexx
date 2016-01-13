@@ -15,12 +15,8 @@ import sys
 import json
 import subprocess
 import tempfile
-try:
-    from urllib.parse import urlparse
-    from urllib.request import urlopen
-except ImportError:  # Py2k
-    from urlparse import urlparse
-    from urllib2 import urlopen
+from urllib.parse import urlparse  # will be translated by 3to2
+from urllib.request import urlopen
 
 from .common import BaseRuntime
 

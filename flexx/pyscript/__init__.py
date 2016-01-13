@@ -211,10 +211,6 @@ from .parser1 import Parser1  # noqa
 from .parser2 import Parser2  # noqa
 from .parser3 import Parser3  # noqa
 
-# Assert py3k
-if sys.version_info < (3, 2):  # pragma: no cover
-    raise RuntimeError('flexx.pyscript needs Python 3.2 or higher')
-
 
 class BasicParser(Parser2):
     """ A parser without the Pythonic features for converting builtin
