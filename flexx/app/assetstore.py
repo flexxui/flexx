@@ -323,6 +323,15 @@ class SessionAssets:
             if cls2 not in self._known_classes:
                 self.register_model_class(cls2)
         
+        # Make sure that no two models have the same name, or we get problems
+        # that are difficult to debug.
+        same_name = [c for c in self._known_classes if c.__name__ == cls.__name__]
+        if same_name:
+            same_name.append(cls)
+            raise RuntimeError('Cannot have multiple Model classes with the '
+                               'same name: %r' % same_name)
+        
+        logging.info('Registering Model class %r' % cls.__name__)
         self._known_classes.add(cls)
         
         # Check if cls is covered by our assets
