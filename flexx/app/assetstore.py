@@ -22,7 +22,7 @@ import time
 import random
 import hashlib
 import logging
-from urllib.request import urlopen
+import urllib.request.urlopen as urlopen
 from collections import OrderedDict
 
 from .model import Model, get_model_classes

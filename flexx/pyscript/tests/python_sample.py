@@ -5,7 +5,7 @@ modified for Python 3.3+ and 2.7.
 """
 
 # Needed so Python 2.5's compiler understands this code
-from __future__ import with_statement
+from __future__ import print_function, with_statement
 
 # Might as well try the other imports here
 import a

@@ -5,8 +5,8 @@ can be generalized.
 
 import time
 import logging
-import urllib
 import traceback
+import urllib.parse.urlparse as urlparse
 # from concurrent.futures import ThreadPoolExecutor
 
 import tornado.web
@@ -384,7 +384,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         """ Handle cross-domain access; override default same origin policy.
         """
         host, port = self.application.serving_at  # set by us
-        incoming_host = urllib.parse.urlparse(origin).hostname
+        incoming_host = urlparse(origin).hostname
         if host == 'localhost':
             return True  # Safe
         elif host == '0.0.0.0':

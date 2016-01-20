@@ -10,6 +10,8 @@ PNG files. Written for Python 2.7 and Python 3.2+.
 * read_png() and write_png() - functions to deal with simple PNG files.
 """
 
+from __future__ import print_function, division, absolute_import
+
 import os
 import sys
 import zlib

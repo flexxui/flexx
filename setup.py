@@ -50,44 +50,24 @@ def package_tree(pkgroot):
 
 
 def copy_for_legacy_python(src_dir, dest_dir):
-    
     if sys.argv[1:] != ['install']:
         raise RuntimeError('Setup.py can only be used to "install" on Python 2.x')
-    
-    # todo: usefull error if lib3to2 is not there
-    from lib3to2.main import main
-    
+    from translate_to_legacy import LegacyPythonTranslator
+    # Add custom import mapping for specific imports that we use
+    LegacyPythonTranslator.IMPORT_MAPPING.update({
+        'urllib.parse.urlparse': 'urllib2.urlparse'})
+    # Dirs and files to ignore during copying, and skip during translation
     ignore_dirs = ['__pycache__']
-    ignores = ['pyscript/tests/python_sample.py', 
-               'pyscript/tests/python_sample2.py',
-               'pyscript/tests/python_sample3.py']
-    
+    skip = ['pyscript/tests/python_sample.py', 
+            'pyscript/tests/python_sample2.py',
+            'pyscript/tests/python_sample3.py']
     # Make a copy of the flexx package
     if os.path.isdir(dest_dir):
         shutil.rmtree(dest_dir)
     shutil.copytree(src_dir, dest_dir,
                     ignore=lambda src, names: [n for n in names if n in ignore_dirs])
-    for fname in ignores:
-        os.remove(os.path.join(dest_dir, fname))
-    
-    # Convert code inplace
-    main("lib3to2.fixes", ['--fix', 'all', '--fix', 'printfunction', '--nofix', 'print', '--write', '--nobackups', '--no-diffs', dest_dir])
-    
-    # Copy originals of the files we wanted to ignore
-    for fname in ignores:
-        shutil.copy(os.path.join(src_dir, fname), os.path.join(dest_dir, fname))
-    
-    # Apply some very specific fixes
-    fixes = [("react/hassignals.py", "u'temporary_class'", "'temporary_class'"),
-            ]
-    for fname, needle, rep in fixes:
-        filename = os.path.join(dest_dir, fname)
-        code = open(filename, 'rb').read().decode()
-        code = code.replace(needle, rep)
-        with open(filename, 'wb') as f:
-            f.write(code.encode())
-    
-    #sys.exit()
+    # Translate in-place
+    LegacyPythonTranslator.translate_dir(dest_dir, skip=skip)
 
 
 ## Collect info for setup()

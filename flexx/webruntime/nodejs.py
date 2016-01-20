@@ -15,8 +15,8 @@ import sys
 import json
 import subprocess
 import tempfile
-from urllib.parse import urlparse  # will be translated by 3to2
-from urllib.request import urlopen
+import urllib.parse.urlparse as urlparse
+import urllib.request.urlopen as urlopen
 
 from .common import BaseRuntime
 
