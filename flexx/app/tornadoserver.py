@@ -3,6 +3,7 @@ Serve web page and handle web sockets. Uses Tornado, though this
 can be generalized.
 """
 
+import json
 import time
 import logging
 import urllib
@@ -90,7 +91,11 @@ class TornadoServer(AbstractServer):
             self._loop.start()
     
     def stop(self):
-        self._loop.stop()
+        """ Stop the server. Thread-safe.
+        """
+        # todo: explicitly close all websocket connections
+        print('Stopping server')
+        self._loop.add_callback(self._loop.stop)
     
     def call_later(self, delay, callback, *args, **kwargs):
         if delay <= 0:
@@ -141,13 +146,37 @@ class MainHandler(tornado.web.RequestHandler):
         # Session id (if any) is provided via "?session_id=X"
         session_id = self.get_argument('session_id', None)
         
+        # What to do when selecting root?
         if not path:
-            # Not a path, index / home page
-            # todo: allow __index__ app
+            if 'Index' in manager.get_app_names():
+                app_name = 'Index'
+            else:
+                app_name = '__index__'
+        
+        if app_name == '__index__':
+            # Show plain index page
             all_apps = ['<a href="%s">%s</a>' % (name, name) for name in 
                         manager.get_app_names()]
             all_apps = ', '.join(all_apps)
-            self.write('Root selected, apps available: %s' % all_apps)
+            self.write('Index of available apps: %s' % all_apps)
+        
+        elif app_name == '__cmd__':
+            # Control the server using http, but only from localhost
+            if not self.request.host.startswith('localhost:'):
+                self.write('403')
+                return
+            
+            if file_name == 'info':
+                info = dict(address=self.application.serving_at,
+                            app_names=manager.get_app_names(),
+                            nsessions=sum([len(manager.get_connections(x))
+                                           for x in manager.get_app_names()]),
+                            )
+                self.write(json.dumps(info))
+            elif file_name == 'stop':
+                server.stop()
+            else:
+                self.write('unknown command')
         
         elif app_name:
             # App name given. But is it the app, or a resource for it?

@@ -56,6 +56,7 @@ Contents
    webruntime/index
    util
    
+   cli
    releasenotes
 
 
