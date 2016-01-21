@@ -167,10 +167,10 @@ class MainHandler(tornado.web.RequestHandler):
                 return
             
             if file_name == 'info':
-                info = dict(address = self.application.serving_at,
-                            app_names = manager.get_app_names(),
-                            nsessions = sum([len(manager.get_connections(x))
-                                             for x in manager.get_app_names()]),
+                info = dict(address=self.application.serving_at,
+                            app_names=manager.get_app_names(),
+                            nsessions=sum([len(manager.get_connections(x))
+                                           for x in manager.get_app_names()]),
                             )
                 self.write(json.dumps(info))
             elif file_name == 'stop':
