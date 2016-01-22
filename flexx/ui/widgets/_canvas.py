@@ -2,7 +2,7 @@
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor
+from ...pyscript.stubs import phosphor, window
 from .. import Widget
 
 
@@ -23,11 +23,11 @@ class CanvasWidget(Widget):
             self.canvas.addEventListener('mouseup', _mouse_up, 0)
             self.canvas.addEventListener('mousemove', _mouse_move, 0)
             # The canvas seems to need a bit of extra help to size at first
-            setTimeout(lambda ev=None: that._check_real_size(), 10)
+            window.setTimeout(lambda ev=None: that._check_real_size(), 10)
         
         def _create_node(self):
             self.p = phosphor.createWidget('div')
-            self.canvas = document.createElement('canvas')
+            self.canvas = window.document.createElement('canvas')
             self.p.node.appendChild(self.canvas)
             # Set position to absolute so that the canvas is not going
             # to be forcing a size on the container div.

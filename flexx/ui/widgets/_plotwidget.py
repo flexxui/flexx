@@ -43,9 +43,8 @@ Interactive example:
                 self.plot.ydata(ydata)
 """
 
-from ...pyscript.stubs import Math, RegExp, phosphor
+from ...pyscript.stubs import Math, RegExp
 from ... import react
-from . import Widget
 from ._canvas import CanvasWidget
 
 
