@@ -43,17 +43,15 @@ Interactive example:
                 self.plot.ydata(ydata)
 """
 
-from ...pyscript.stubs import Math, RegExp, phosphor
+from ...pyscript.stubs import Math, RegExp
 from ... import react
-from . import Widget
+from ._canvas import CanvasWidget
 
 
-class PlotWidget(Widget):
+class PlotWidget(CanvasWidget):
     """ Widget to show a plot of x vs y values. Enough for simple
     plotting tasks.
     """
-    
-    CSS = "flx-PlotWidget {min-width: 300px; min-height: 200px;}"
     
     @react.input
     def xdata(self, v=()):
@@ -116,8 +114,8 @@ class PlotWidget(Widget):
     class JS:
         
         def _create_node(self):
-            self.p = phosphor.createWidget('canvas')
-            self._context = self.p.node.getContext('2d')
+            super()._create_node()
+            self._context = self.canvas.getContext('2d')
             
             # create tick units
             self._tick_units = []
@@ -136,8 +134,6 @@ class PlotWidget(Widget):
             # Prepare
             ctx = self._context
             w, h = self.node.clientWidth, self.node.clientHeight
-            self.node.width = w
-            self.node.height = h
             
             # Get range
             x1, x2 = min(xx), max(xx)
