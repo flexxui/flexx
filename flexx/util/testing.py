@@ -45,6 +45,7 @@ else:
 # Inject some function names so they can be obtained with one import
 raises = pytest.raises
 skipif = pytest.mark.skipif
+skip = pytest.skip
 
 
 def run_tests_if_main(show_coverage=False):
