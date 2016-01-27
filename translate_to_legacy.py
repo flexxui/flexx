@@ -294,17 +294,21 @@ class LegacyPythonTranslator(BaseTranslator):
     """ A Translator to translate Python 3 to Python 2.7.
     """
     
+    FUTURES = ('print_function', 'absolute_import', 'with_statement',
+               'unicode_literals', 'division')
+    
     def dumps(self):
         return '# -*- coding: utf-8 -*-\n' + BaseTranslator.dumps(self)
     
     def fix_cancel(self, token):
-        """ Cancel translation if using `from __future__ import print_function`
+        """ Cancel translation if using `from __future__ import xxx`
         """
         if (token.type == 'keyword' and token.text == 'from' and
-            token.next_token.text == '__future__' and
-            any([t.text == 'print_function' for t in token.line_tokens])):
-            # Assume this module is already Python 2.7 compatible; abort.
-            raise CancelTranslation()
+            token.next_token.text == '__future__'):
+                for future in self.FUTURES:
+                    if any([t.text == future for t in token.line_tokens]):
+                        # Assume this module is already Python 2.7 compatible
+                        raise CancelTranslation()
     
     def fix_future(self, token):
         """ Fix print_function, absolute_import, with_statement.
@@ -314,16 +318,13 @@ class LegacyPythonTranslator(BaseTranslator):
         if status == 2:
             return  # Done
         
-        imports = ('print_function, absolute_import, ' +
-                   'with_statement, unicode_literals, division')
-        
         if status == 0 and token.type == 'string':
             self._future_status = 1  # docstring
         elif token.type != 'comment':
             self._future_status = 2  # done
             i = max(0, token.find_backward('\n'))
             t = Token(token.total_text, '', i, i)
-            t.fix = '\nfrom __future__ import %s\n' % imports
+            t.fix = '\nfrom __future__ import %s\n' % (', '.join(self.FUTURES))
             return t
     
     def fix_newstyle(self, token):

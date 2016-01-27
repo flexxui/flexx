@@ -2,18 +2,24 @@
 Module that defines a common AST description, independent from Python
 version and implementation. Also provides a function ``parse()`` to
 generate this common AST by using the buildin ast module and converting
-the result.
+the result. Supports CPython 2.7, CPython 3.2+, Pypy.
 
 https://github.com/almarklein/commonast
 """
 
+from __future__ import print_function, absolute_import
+
 import sys
 import ast
 import json
-import base64
+from base64 import encodestring as encodebytes, decodestring as decodebytes
 
 pyversion = sys.version_info
 NoneType = None.__class__
+
+if sys.version_info[0] > 2:
+    basestring = str
+
 
 # do some extra asserts when running tests, but not always, for speed
 docheck = 'pytest' in sys.modules
@@ -29,7 +35,7 @@ def parse(code, comments=False):
     return converter.convert(comments)
 
 
-class Node:
+class Node(object):
     """ Abstract base class for all Nodes.
     """
     
@@ -82,7 +88,7 @@ class Node:
             for name, val in zip(names, args):
                 assert not isinstance(val, ast.AST)
                 if name == 'name':
-                    assert isinstance(val, (str, NoneType)), 'name is not a string'
+                    assert isinstance(val, (basestring, NoneType)), 'name not a string'
                 elif name == 'op':
                     assert val in Node.OPS.__dict__ or val in Node.COMP.__dict__
                 elif name.endswith('_node'):
@@ -125,11 +131,13 @@ class Node:
                 val = Node._fromdict(val)
             elif name.endswith('_nodes'):
                 val = [Node._fromdict(x) for x in val]
-            elif isinstance(val, str):
+            elif isinstance(val, basestring):
                 if val.startswith('BYTES:'):
-                    val = base64.decodebytes(val[6:].encode())
+                    val = decodebytes(val[6:].encode('utf-8'))
                 elif val.startswith('COMPLEX:'):
                     val = complex(val[8:])
+                elif pyversion < (3, ):
+                    val = unicode(val)
             args.append(val)
         return Cls(*args)
     
@@ -147,9 +155,9 @@ class Node:
                 val = val._todict()
             elif name.endswith('_nodes'):
                 val = [x._todict() for x in val]
-            elif isinstance(val, bytes):
-                val = 'BYTES:' + base64.encodebytes(val).decode().rstrip()
-            elif isinstance(val, complex):
+            elif isinstance(self, Bytes) and isinstance(val, bytes):
+                val = 'BYTES:' + encodebytes(val).decode('utf-8').rstrip()
+            elif isinstance(self, Num) and isinstance(val, complex):
                 val = 'COMPLEX:' + repr(val)
             d[name] = val
         return d
@@ -703,7 +711,7 @@ class ClassDef(Node):
 
 
 class NativeAstConverter:
-    """ Convert ast produced bt Python's ast module to common ast.
+    """ Convert ast produced by Python's ast module to common ast.
     """
     
     def __init__(self, code):
@@ -772,9 +780,14 @@ class NativeAstConverter:
     ## Literals
     
     def _convert_Num(self, n):
+        if pyversion < (3, ) and str(n.n).startswith('-'):
+            # -4 is a unary sub on 4, dont forget complex numbers
+            return UnaryOp(Node.OPS.USub, Num(-n.n))
         return Num(n.n)
-        
+    
     def _convert_Str(self, n):
+        if pyversion < (3, ) and self._lines[n.lineno-1][n.col_offset] == 'b':
+            return Bytes(n.s)
         return Str(n.s)
     
     def _convert_Bytes(self, n):
@@ -797,6 +810,8 @@ class NativeAstConverter:
         return Dict([c(x) for x in n.keys], [c(x) for x in n.values])
     
     def _convert_Ellipsis(self, n):
+        if pyversion < (3, ):
+            return Index(Ellipsis())  # Ellipses must be wrapped in an index
         return Ellipsis()
     
     def _convert_NameConstant(self, n):
@@ -809,6 +824,8 @@ class NativeAstConverter:
             M = {'None': None, 'False': False, 'True': True}
             if n.id in M:
                 return NameConstant(M[n.id])  # Python < 3.4
+        if pyversion < (3, ) and isinstance(n.ctx , ast.Param):
+            return Arg(n.id, None, None)
         return Name(n.id)
     
     def _convert_Starred(self, n):
@@ -825,7 +842,11 @@ class NativeAstConverter:
     
     def _convert_Slice(self, n):
         c = self._convert
-        return Slice(c(n.lower), c(n.upper), c(n.step))
+        step = c(n.step)
+        if pyversion < (3, ) and isinstance(step, NameConstant) and step.value is None:
+            if not self._lines[n.step.lineno-1][n.step.col_offset:].startswith('None'):
+                step = None  # silly Python 2 turns a[::] into a[::None]
+        return Slice(c(n.lower), c(n.upper), step)
     
     def _convert_ExtSlice(self, n):
         c = self._convert
@@ -917,18 +938,32 @@ class NativeAstConverter:
         op = n.op.__class__.__name__
         return AugAssign(self._convert(n.target), op, self._convert(n.value))
     
-    def _convert_Print(self, n):  # pragma: no cover
+    def _convert_Print(self, n):  # pragma: no cover - Python 2.x compat
         c = self._convert
-        # Python 2.x compat
         arg_nodes = [c(x) for x in n.values]
         kwarg_nodes = []
         if n.dest is not None:
             kwarg_nodes.append(Keyword('dest', c(n.dest)))
         if not n.nl:
             kwarg_nodes.append(Keyword('end', Str('')))
-        return Call(arg_nodes, kwarg_nodes)
+        return Call(Name('print'), arg_nodes, kwarg_nodes)
+    
+    def _convert_Exec(self, n):  # pragma: no cover - Python 2.x compat
+        c = self._convert
+        arg_nodes = [c(n.body)]
+        arg_nodes.append(c(n.globals) or NameConstant(None))
+        arg_nodes.append(c(n.locals) or NameConstant(None))
+        return Call(Name('exec'), arg_nodes, [])
+    
+    def _convert_Repr(self, n):  # pragma: no cover - Python 2.x compat
+        c = self._convert
+        return Call(Name('repr'), [c(n.value)], [])
     
     def _convert_Raise(self, n):
+        if pyversion < (3, ):
+            if n.inst or n.tback:
+                raise RuntimeError('Commonast does not support old raise syntax')
+            return Raise(self._convert(n.type), None)
         return Raise(self._convert(n.exc), self._convert(n.cause))
     
     def _convert_Assert(self, n):
@@ -1009,7 +1044,8 @@ class NativeAstConverter:
     
     def _convert_ExceptHandler(self, n):
         c = self._convert
-        node = ExceptHandler(c(n.type), n.name, [])
+        name = n.name.id if isinstance(n.name, ast.Name) else n.name
+        node = ExceptHandler(c(n.type), name, [])
         self._stack.append((node.body_nodes, n.body))
         return node
     
@@ -1036,18 +1072,33 @@ class NativeAstConverter:
         args = n.args
         # Parse arg_nodes and kwarg_nodes
         arg_nodes = [c(x) for x in args.args]
-        kwarg_nodes = [c(x) for x in args.kwonlyargs]
         for i, default in enumerate(reversed(args.defaults)):
-            arg_nodes[-1-i].value_node = c(default)
-        for i, default in enumerate(reversed(args.kw_defaults)):
-            kwarg_nodes[-1-i].value_node = c(default) 
+            arg_node = arg_nodes[-1-i]
+            if isinstance(arg_node, Tuple):
+                raise RuntimeError('Tuple arguments in function def not supported.')
+            arg_node.value_node = c(default)
+        if pyversion < (3,):
+            kwarg_nodes = []
+        else:
+            kwarg_nodes = [c(x) for x in args.kwonlyargs]
+            for i, default in enumerate(reversed(args.kw_defaults)):
+                kwarg_nodes[-1-i].value_node = c(default) 
         # Parse args_node and kwargs_node
-        args_node = Arg(args.vararg, None, c(args.varargannotation)) \
-                    if isinstance(args.vararg, str) else c(args.vararg)
-        kwargs_node = Arg(args.kwarg, None, c(args.kwargannotation)) \
-                      if isinstance(args.kwarg, str) else c(args.kwarg)
+        if pyversion < (3, ):
+            args_node = Arg(args.vararg, None, None) if args.vararg else None
+            kwargs_node = Arg(args.kwarg, None, None) if args.kwarg else None
+        elif pyversion < (3, 4):
+            args_node = kwargs_node = None
+            if args.vararg:
+                args_node = Arg(args.vararg, None, c(args.varargannotation))
+            if args.kwarg: 
+                kwargs_node = Arg(args.kwarg, None, c(args.kwargannotation))
+        else:
+            args_node = c(args.vararg)
+            kwargs_node = c(args.kwarg)
         
-        node = FunctionDef(n.name, [c(x) for x in n.decorator_list], c(n.returns),
+        returns = None if pyversion < (3, ) else c(n.returns)
+        node = FunctionDef(n.name, [c(x) for x in n.decorator_list], returns,
                            arg_nodes, kwarg_nodes, args_node, kwargs_node,
                            [])
         if docheck:
@@ -1063,11 +1114,14 @@ class NativeAstConverter:
         c = self._convert
         args = n.args
         arg_nodes = [c(x) for x in args.args]
-        kwarg_nodes = [c(x) for x in args.kwonlyargs]
         for i, default in enumerate(reversed(args.defaults)):
             arg_nodes[-1-i].value_node = c(default)
-        for i, default in enumerate(reversed(args.kw_defaults)):
-            kwarg_nodes[-1-i].value_node = c(default)
+        if pyversion < (3,):
+            kwarg_nodes = []
+        else:
+            kwarg_nodes = [c(x) for x in args.kwonlyargs]
+            for i, default in enumerate(reversed(args.kw_defaults)):
+                kwarg_nodes[-1-i].value_node = c(default)
         
         return Lambda(arg_nodes, kwarg_nodes,
                       c(args.vararg), c(args.kwarg), c(n.body))
@@ -1094,8 +1148,8 @@ class NativeAstConverter:
     def _convert_ClassDef(self, n):
         c = self._convert
         arg_nodes = [c(a) for a in n.bases]
-        kwarg_nodes = [c(a) for a in n.keywords]
-    
+        kwarg_nodes = [] if pyversion < (3,) else [c(a) for a in n.keywords]
+        
         if getattr(n, 'starargs', None):
             arg_nodes.append(Starred(self._convert(n.starargs)))
         if getattr(n, 'kwargs', None):
