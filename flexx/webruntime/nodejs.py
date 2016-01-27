@@ -15,8 +15,8 @@ import sys
 import json
 import subprocess
 import tempfile
-import urllib.parse.urlparse as urlparse
-import urllib.request.urlopen as urlopen
+from urllib.parse import urlparse
+from urllib.request import urlopen
 
 from .common import BaseRuntime
 

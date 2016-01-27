@@ -6,7 +6,7 @@ resource of Phosphor.
 
 import os
 import logging
-import urllib.request.urlopen as urlopen
+from urllib.request import urlopen
 
 # todo: maybe this should be more generic; download a variety of JS libs (e.g. react)
 

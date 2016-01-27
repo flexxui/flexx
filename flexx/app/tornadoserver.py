@@ -6,7 +6,7 @@ can be generalized.
 import time
 import logging
 import traceback
-import urllib.parse.urlparse as urlparse
+from urllib.parse import urlparse
 # from concurrent.futures import ThreadPoolExecutor
 
 import tornado.web
