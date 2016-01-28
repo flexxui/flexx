@@ -408,7 +408,7 @@ class LegacyPythonTranslator(BaseTranslator):
             tokens = token.line_tokens
             
             # For each import case ...
-            for name, replacement in IMPORT_MAPPING.items():
+            for name, replacement in self.IMPORT_MAPPING.items():
                 parts = name.split('.')
                 # Walk over tokens to find start of match
                 for i in range(len(tokens)):
@@ -439,100 +439,100 @@ class LegacyPythonTranslator(BaseTranslator):
                 if tokens[3].text == 'import':
                     xxyy = tokens[1].text + '.' + tokens[2].text
                     name = tokens[4].text
-                    if xxyy in IMPORT_MAPPING2:
-                        for possible_module in IMPORT_MAPPING2[xxyy]:
-                            if name in PY2MODULES[possible_module]:
+                    if xxyy in self.IMPORT_MAPPING2:
+                        for possible_module in self.IMPORT_MAPPING2[xxyy]:
+                            if name in self.PY2MODULES[possible_module]:
                                 tokens[1].fix = possible_module
                                 tokens[1].end = tokens[2].end
                                 tokens[2].start = tokens[2].end
                                 break
 
 
-# Map simple import paths to new import import paths
-IMPORT_MAPPING = {
-        "reprlib": "repr",
-        "winreg": "_winreg",
-        "configparser": "ConfigParser",
-        "copyreg": "copy_reg",
-        "queue": "Queue",
-        "socketserver": "SocketServer",
-        "_markupbase": "markupbase",
-        "test.support": "test.test_support",
-        "dbm.bsd": "dbhash",
-        "dbm.ndbm": "dbm",
-        "dbm.dumb": "dumbdbm",
-        "dbm.gnu": "gdbm",
-        "html.parser": "HTMLParser",
-        "html.entities": "htmlentitydefs",
-        "http.client": "httplib",
-        "http.cookies": "Cookie",
-        "http.cookiejar": "cookielib",
-        "urllib.robotparser": "robotparser",
-        "xmlrpc.client": "xmlrpclib",
-        "builtins": "__builtin__",
-        }
-
-
-# Map import paths to ... a set of possible import paths
-IMPORT_MAPPING2 = {
-            'urllib.request' :
-                ('urllib2', 'urllib'),
-            'urllib.error' :
-                ('urllib2', 'urllib'),
-            'urllib.parse' :
-                ('urllib2', 'urllib', 'urlparse'),
-            'dbm.__init__' :
-                ('anydbm', 'whichdb'),
-            'http.server' :
-                ('CGIHTTPServer', 'SimpleHTTPServer', 'BaseHTTPServer'),
-            'xmlrpc.server' :
-                ('DocXMLRPCServer', 'SimpleXMLRPCServer'),
+    # Map simple import paths to new import import paths
+    IMPORT_MAPPING = {
+            "reprlib": "repr",
+            "winreg": "_winreg",
+            "configparser": "ConfigParser",
+            "copyreg": "copy_reg",
+            "queue": "Queue",
+            "socketserver": "SocketServer",
+            "_markupbase": "markupbase",
+            "test.support": "test.test_support",
+            "dbm.bsd": "dbhash",
+            "dbm.ndbm": "dbm",
+            "dbm.dumb": "dumbdbm",
+            "dbm.gnu": "gdbm",
+            "html.parser": "HTMLParser",
+            "html.entities": "htmlentitydefs",
+            "http.client": "httplib",
+            "http.cookies": "Cookie",
+            "http.cookiejar": "cookielib",
+            "urllib.robotparser": "robotparser",
+            "xmlrpc.client": "xmlrpclib",
+            "builtins": "__builtin__",
             }
-
-# This defines what names are in specific Python 2 modules
-PY2MODULES = {
-            'urllib2' : (
-                'AbstractBasicAuthHandler', 'AbstractDigestAuthHandler',
-                'AbstractHTTPHandler', 'BaseHandler', 'CacheFTPHandler',
-                'FTPHandler', 'FileHandler', 'HTTPBasicAuthHandler',
-                'HTTPCookieProcessor', 'HTTPDefaultErrorHandler',
-                'HTTPDigestAuthHandler', 'HTTPError', 'HTTPErrorProcessor',
-                'HTTPHandler', 'HTTPPasswordMgr',
-                'HTTPPasswordMgrWithDefaultRealm', 'HTTPRedirectHandler',
-                'HTTPSHandler', 'OpenerDirector', 'ProxyBasicAuthHandler',
-                'ProxyDigestAuthHandler', 'ProxyHandler', 'Request',
-                'StringIO', 'URLError', 'UnknownHandler', 'addinfourl',
-                'build_opener', 'install_opener', 'parse_http_list',
-                'parse_keqv_list', 'randombytes', 'request_host', 'urlopen'),
-            'urllib' : (
-                'ContentTooShortError', 'FancyURLopener','URLopener',
-                'basejoin', 'ftperrors', 'getproxies',
-                'getproxies_environment', 'localhost', 'pathname2url',
-                'quote', 'quote_plus', 'splitattr', 'splithost',
-                'splitnport', 'splitpasswd', 'splitport', 'splitquery',
-                'splittag', 'splittype', 'splituser', 'splitvalue',
-                'thishost', 'unquote', 'unquote_plus', 'unwrap',
-                'url2pathname', 'urlcleanup', 'urlencode', 'urlopen',
-                'urlretrieve',),
-            'urlparse' : (
-                'parse_qs', 'parse_qsl', 'urldefrag', 'urljoin',
-                'urlparse', 'urlsplit', 'urlunparse', 'urlunsplit'),
-            'dbm' : (
-                'ndbm', 'gnu', 'dumb'),
-            'anydbm' : (
-                'error', 'open'),
-            'whichdb' : (
-                'whichdb',),
-            'BaseHTTPServer' : (
-                'BaseHTTPRequestHandler', 'HTTPServer'),
-            'CGIHTTPServer' : (
-                'CGIHTTPRequestHandler',),
-            'SimpleHTTPServer' : (
-                'SimpleHTTPRequestHandler',),
-            'DocXMLRPCServer' : (
-                'DocCGIXMLRPCRequestHandler', 'DocXMLRPCRequestHandler',
-                'DocXMLRPCServer', 'ServerHTMLDoc','XMLRPCDocGenerator'),
-            }
+    
+    
+    # Map import paths to ... a set of possible import paths
+    IMPORT_MAPPING2 = {
+                'urllib.request' :
+                    ('urllib2', 'urllib'),
+                'urllib.error' :
+                    ('urllib2', 'urllib'),
+                'urllib.parse' :
+                    ('urllib2', 'urllib', 'urlparse'),
+                'dbm.__init__' :
+                    ('anydbm', 'whichdb'),
+                'http.server' :
+                    ('CGIHTTPServer', 'SimpleHTTPServer', 'BaseHTTPServer'),
+                'xmlrpc.server' :
+                    ('DocXMLRPCServer', 'SimpleXMLRPCServer'),
+                }
+    
+    # This defines what names are in specific Python 2 modules
+    PY2MODULES = {
+                'urllib2' : (
+                    'AbstractBasicAuthHandler', 'AbstractDigestAuthHandler',
+                    'AbstractHTTPHandler', 'BaseHandler', 'CacheFTPHandler',
+                    'FTPHandler', 'FileHandler', 'HTTPBasicAuthHandler',
+                    'HTTPCookieProcessor', 'HTTPDefaultErrorHandler',
+                    'HTTPDigestAuthHandler', 'HTTPError', 'HTTPErrorProcessor',
+                    'HTTPHandler', 'HTTPPasswordMgr',
+                    'HTTPPasswordMgrWithDefaultRealm', 'HTTPRedirectHandler',
+                    'HTTPSHandler', 'OpenerDirector', 'ProxyBasicAuthHandler',
+                    'ProxyDigestAuthHandler', 'ProxyHandler', 'Request',
+                    'StringIO', 'URLError', 'UnknownHandler', 'addinfourl',
+                    'build_opener', 'install_opener', 'parse_http_list',
+                    'parse_keqv_list', 'randombytes', 'request_host', 'urlopen'),
+                'urllib' : (
+                    'ContentTooShortError', 'FancyURLopener','URLopener',
+                    'basejoin', 'ftperrors', 'getproxies',
+                    'getproxies_environment', 'localhost', 'pathname2url',
+                    'quote', 'quote_plus', 'splitattr', 'splithost',
+                    'splitnport', 'splitpasswd', 'splitport', 'splitquery',
+                    'splittag', 'splittype', 'splituser', 'splitvalue',
+                    'thishost', 'unquote', 'unquote_plus', 'unwrap',
+                    'url2pathname', 'urlcleanup', 'urlencode', 'urlopen',
+                    'urlretrieve',),
+                'urlparse' : (
+                    'parse_qs', 'parse_qsl', 'urldefrag', 'urljoin',
+                    'urlparse', 'urlsplit', 'urlunparse', 'urlunsplit'),
+                'dbm' : (
+                    'ndbm', 'gnu', 'dumb'),
+                'anydbm' : (
+                    'error', 'open'),
+                'whichdb' : (
+                    'whichdb',),
+                'BaseHTTPServer' : (
+                    'BaseHTTPRequestHandler', 'HTTPServer'),
+                'CGIHTTPServer' : (
+                    'CGIHTTPRequestHandler',),
+                'SimpleHTTPServer' : (
+                    'SimpleHTTPRequestHandler',),
+                'DocXMLRPCServer' : (
+                    'DocCGIXMLRPCRequestHandler', 'DocXMLRPCRequestHandler',
+                    'DocXMLRPCServer', 'ServerHTMLDoc','XMLRPCDocGenerator'),
+                }
 
 
 if __name__ == '__main__':
