@@ -1,5 +1,4 @@
 import os
-import sys
 import types
 import inspect
 import hashlib
@@ -8,15 +7,8 @@ import subprocess
 from . import Parser
 from .stdlib import get_full_std_lib  # noqa
 
-if sys.version_info[0] >= 3:
-    string_types = str,
-    text_type = str
-else:  # pragma: no cover
-    string_types = basestring,
-    text_type = unicode
 
-
-class JSString(text_type):
+class JSString(str):
     """ A subclass of string, so we can add attributes to JS string objects.
     """
     pass
@@ -45,7 +37,7 @@ def py2js(ob=None, new_name=None, **parser_options):
     """
     
     def py2js_(ob):
-        if isinstance(ob, string_types):
+        if isinstance(ob, str):
             thetype = 'str'
             pycode = ob
         elif isinstance(ob, type) or isinstance(ob, (types.FunctionType,

@@ -17,7 +17,7 @@ from base64 import encodestring as encodebytes, decodestring as decodebytes
 pyversion = sys.version_info
 NoneType = None.__class__
 
-if sys.version_info[0] > 2:
+if pyversion >= (3, ):
     basestring = str
 
 
@@ -1077,7 +1077,7 @@ class NativeAstConverter:
             if isinstance(arg_node, Tuple):
                 raise RuntimeError('Tuple arguments in function def not supported.')
             arg_node.value_node = c(default)
-        if pyversion < (3,):
+        if pyversion < (3, ):
             kwarg_nodes = []
         else:
             kwarg_nodes = [c(x) for x in args.kwonlyargs]
@@ -1116,7 +1116,7 @@ class NativeAstConverter:
         arg_nodes = [c(x) for x in args.args]
         for i, default in enumerate(reversed(args.defaults)):
             arg_nodes[-1-i].value_node = c(default)
-        if pyversion < (3,):
+        if pyversion < (3, ):
             kwarg_nodes = []
         else:
             kwarg_nodes = [c(x) for x in args.kwonlyargs]
@@ -1148,7 +1148,7 @@ class NativeAstConverter:
     def _convert_ClassDef(self, n):
         c = self._convert
         arg_nodes = [c(a) for a in n.bases]
-        kwarg_nodes = [] if pyversion < (3,) else [c(a) for a in n.keywords]
+        kwarg_nodes = [] if pyversion < (3, ) else [c(a) for a in n.keywords]
         
         if getattr(n, 'starargs', None):
             arg_nodes.append(Starred(self._convert(n.starargs)))

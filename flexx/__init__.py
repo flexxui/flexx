@@ -24,9 +24,12 @@ For more information, see http://flexx.readthedocs.org.
 __version__ = '0.2'
 
 
-# Assert py3k
+# Assert compatibility
 import sys
-if sys.version_info < (3, ):  # pragma: no cover
-    if type(b'') == type(''):  # 3to2 turns these into b'' and u''
+if sys.version_info[0] == 2:  # pragma: no cover
+    if sys.version_info < (2, 7):
+        raise RuntimeError('Flexx needs at least Python 2.7')
+    if type(b'') == type(''):  # These will be str and unicode after conversion
         raise RuntimeError('Flexx can only run on Python 2.x after 3to2 conversion.')
+
 del sys
