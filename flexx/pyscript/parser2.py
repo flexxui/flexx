@@ -804,7 +804,8 @@ class Parser2(Parser1):
         # uses .call(this, ...) so that the instance is handled ok.
         
         if node.arg_nodes:
-            raise JSError('super() accepts 0 or 1 arguments.')
+            #raise JSError('super() accepts 0 or 1 arguments.')
+            pass  # In Python 2, arg nodes are provided, and we ignore them
         if len(self._stack) < 3:  # module, class, function
             #raise JSError('can only use super() inside a method.')
             # We just provide "super()" and hope that the user will

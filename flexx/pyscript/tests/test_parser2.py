@@ -528,7 +528,7 @@ class TestClasses:
                 super().addTwo()
                 self.bar += 1  # haha, we add four!
             def addFour(self):
-                super().add(4)
+                super(MyClass3, self).add(4)  # Use legact Python syntax
         
         code = py2js(MyClass1) + py2js(MyClass2) + py2js(MyClass3)
         code += 'var m1=new MyClass1(), m2=new MyClass2(), m3=new MyClass3();'
