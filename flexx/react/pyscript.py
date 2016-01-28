@@ -129,7 +129,7 @@ class HasSignalsJS:
         selff._func = func
         selff._status = 3
         selff._count = 0
-        selff.__self__ = obj  # note: not a weakref...
+        selff._self = obj  # note: not a weakref...
         selff._upstream_given = upstream
         selff._upstream = []
         selff._downstream = []

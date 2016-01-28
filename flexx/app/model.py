@@ -51,12 +51,12 @@ class JSSignal(react.SourceSignal):
     def _subscribe(self, *args):
         react.SourceSignal._subscribe(self, *args)
         if not self._linked:
-            self.__self__._link_js_signal(self.name)
+            self._self._link_js_signal(self.name)
     
     def _unsubscribe(self, *args):
         react.SourceSignal._unsubscribe(self, *args)
         if self._linked and not self._downstream:
-            self.__self__._link_js_signal(self.name, False)
+            self._self._link_js_signal(self.name, False)
 
 
 class PySignal(react.SourceSignal):

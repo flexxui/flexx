@@ -131,7 +131,7 @@ class Signal(object):
                                          conn, id(self))
     
     @property
-    def __self__(self):
+    def _self(self):
         """ The HasSignals instance that this signal is associated with
         (stored as a weak reference internally). None for plain signals.
         """
