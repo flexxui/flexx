@@ -32,10 +32,10 @@ INDEX = """<!doctype html>
 <head>
     <meta charset="utf-8">
     <title>Flexx UI</title>
-    
-CSS-HOOK
 
 JS-HOOK
+    
+CSS-HOOK
 
 </head>
 
