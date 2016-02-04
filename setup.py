@@ -74,6 +74,7 @@ setup(
     packages=package_tree(name),
     package_dir={name: name},
     package_data={'flexx': ['resources/*']},
+    entry_points={'console_scripts': ['flexx = flexx.__main__'], },
     zip_safe=False,
     classifiers=[
         'Development Status :: 3 - Alpha',

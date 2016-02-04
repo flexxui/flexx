@@ -75,25 +75,37 @@ class CLI:
         The kind of info that is provided is not standardized/documented yet.
         """
         if port is None:
-            return self.help('info')
-        print(http_fetch('http://localhost:%i/__cmd__/info' % int(port)))
+            return self.cmd_help('info')
+        port = int(port)
+        try:
+            print(http_fetch('http://localhost:%i/__cmd__/info' % port))
+        except FetchError:
+            print('There appears to be no local server at port %i' % port)
     
     def cmd_stop(self, port=None):
         """ stop the flexx server process corresponding to the given port.
         """
         if port is None:
-            return self.help('stop')
-        print(http_fetch('http://localhost:%i/__cmd__/stop' % int(port)))
+            return self.cmd_help('stop')
+        port = int(port)
+        try:
+            print(http_fetch('http://localhost:%i/__cmd__/stop' % port))
+            print('stopped server at %i' % port)
+        except FetchError:
+            print('There appears to be no local server at port %i' % port)
     
     def cmd_log(self, port=None, level='info'):
         """ Start listening to log messages from a server process - STUB
         flexx log port level
         """
         if port is None:
-            return self.help('log')
+            return self.cmd_help('log')
         print('not yet implemented')
         #print(http_fetch('http://localhost:%i/__cmd__/log' % int(port)))
 
+
+class FetchError(Exception):
+    pass
 
 def http_fetch(url):
     """ Perform an HTTP request.
@@ -103,7 +115,7 @@ def http_fetch(url):
     try:
         response = http_client.fetch(url)
     except Exception as err:
-        raise RuntimeError('http fetch failed: %s' % str(err))
+        raise FetchError('http fetch failed: %s' % str(err))
     finally:
         http_client.close()
     return response.body.decode()
