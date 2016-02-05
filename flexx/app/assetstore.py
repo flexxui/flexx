@@ -18,6 +18,7 @@ are not provided via such a module asset will be added to the index.
 """
 
 import os
+import sys
 import time
 import random
 import hashlib
@@ -46,6 +47,15 @@ INDEX-HOOK
 </body>
 </html>
 """
+
+
+def lookslikeafilename(s):
+    # We need this to allow smart-asset setting on legacy Python
+    if sys.version_info[0] == 2:
+        fchars = '\n\r\x00\x0a'.encode('utf-8')
+        return isinstance(s, unicode) or (isinstance(s, bytes) and
+                                          not any([c in s for c in fchars]))
+    return isinstance(s, str)
 
 
 def modname_startswith(x, y):
@@ -112,17 +122,17 @@ class AssetStore:
                 raise ValueError('Asset %r is already set. Can only reuse if '
                                  'content is a filename and the same.' % fname)
         
-        if isinstance(content, bytes):
-            self._assets[fname] = content
-        elif isinstance(content, str):
+        if lookslikeafilename(content):  # isinstance(content, str) on py3k
             if content.startswith('http://') or content.startswith('https://'):
                 pass  # don't check now
             elif not os.path.isfile(content):
                 content = content if (len(content) < 99) else content[:99] + '...'
                 raise ValueError('Asset file does not exist: %r' % content)
             self._assets[fname] = content
+        elif isinstance(content, bytes):
+            self._assets[fname] = content
         else:
-            raise ValueError('An asset must be str or bytes.')
+            raise ValueError('An asset must be str filename or bytes.')
     
     def load_asset(self, fname):
         """ Get the asset corresponding to the given name.

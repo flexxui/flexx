@@ -1,14 +1,32 @@
 import os
+import sys
 import tempfile
 import shutil
 
 from flexx.util.testing import run_tests_if_main, raises
 
 from flexx.app.assetstore import assets, AssetStore, SessionAssets
+from flexx.app.assetstore import lookslikeafilename
+
 from flexx import ui, app
 
 
 test_filename = os.path.join(tempfile.gettempdir(), 'flexx_asset_cache.test')
+
+
+def test_lookslikeafilename():
+    # Note that this code will be made legacy-readyl string lits will be ucode
+    assert lookslikeafilename('foo/bar/'*10)
+    assert lookslikeafilename('foo.js')
+    assert lookslikeafilename('http://aksjbdkjasd.com/asdasd/asdfoo.js')
+    assert lookslikeafilename('string\nso\nlooks\nlike\nfilename\x00')
+    
+    assert not lookslikeafilename(b'this is\ncode')
+    assert not lookslikeafilename(b'this is\rcode')
+    assert not lookslikeafilename(b'these are bytes\x00')
+    assert not lookslikeafilename(b'these are bytes\x0a')
+    if sys.version_info[0] > 2:
+        assert not lookslikeafilename(b'foo.js')
 
 
 def test_asset_store_simple():
