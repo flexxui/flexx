@@ -11,8 +11,6 @@ interlaced, have a bit depth of 8, and are either RGB or RGBA.
 from __future__ import print_function, division, absolute_import
 
 import io
-import os
-import sys
 import struct
 import zlib
 
@@ -128,7 +126,8 @@ def read_png(f, return_ndarray=False):
     
     # Read header
     if not (bb[0:1] == b'\x89' and bb[1:4] == b'PNG'):
-        raise RuntimeError('Image data does not appear to have a PNG header: %r' % bb[:10])
+        raise RuntimeError('Image data does not appear to have a PNG '
+                           'header: %r' % bb[:10])
     chunk_pointer = 8
     
     # Read first chunk
@@ -195,8 +194,7 @@ def read_png(f, return_ndarray=False):
     
     # Done
     if return_ndarray:
-        if np is None:
-            raise RuntimeError('Need numpy to return png as ndarray')
+        import numpy as np
         return np.frombuffer(im, 'uint8').reshape(shape)
     else:
         return im, shape

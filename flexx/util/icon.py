@@ -1,25 +1,22 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2015, Almar Klein
+# Copyright (c) 2016, Almar Klein
 # This module is distributed under the terms of the new BSD License.
 
 """
-Pure python module to handle the .ico format. Also support for simple
-PNG files. Written for Python 2.7 and Python 3.2+.
-
-* Icon - class to populate an icon stack and export it to ICO or PNG
-* read_png() and write_png() - functions to deal with simple PNG files.
+Pure python module to handle the .ico format. Written for Python 2.7
+and Python 3.2+. Depends on png.py.
 """
 
 from __future__ import print_function, division, absolute_import
 
-import os
 import sys
-import zlib
 import struct
 
-if sys.version_info < (3, ):
-    bytes = str
-    str = basestring  # noqa
+from .png import read_png, write_png
+
+if sys.version_info[0] > 2:
+    basestring = str  # noqa
+
 
 VALID_SIZES = 16, 32, 48, 64, 128, 256
 
@@ -27,6 +24,7 @@ VALID_SIZES = 16, 32, 48, 64, 128, 256
 w1 = lambda x: struct.pack('<B', x)
 w2 = lambda x: struct.pack('<H', x)
 w4 = lambda x: struct.pack('<I', x)
+
 
 def intl(x):
     """ little endian int decoding (for bmp/ico reading)
@@ -46,7 +44,7 @@ class Icon(object):
     deal with images stored raw (BMP) and compressed (PNG).
     
     """
-    # Convetions:
+    # Conventions:
     # im -> an image stores as a bytearray array, uint8, NxNx4
     # bb -> bytes, possibly a png/bmp/ico
     
@@ -67,8 +65,10 @@ class Icon(object):
     def add(self, data):
         """ Add an image represented as bytes or bytearray.
         """
-        assert isinstance(data, (bytes, bytearray))
-        self._store_image(data)
+        if isinstance(data, (bytes, bytearray)):
+            self._store_image(data)
+        else:
+            raise ValueError('Data to add should be bytes or bytearray')
     
     def read(self, filename):
         """ Read an image from the given filename and add to collection
@@ -77,8 +77,8 @@ class Icon(object):
         it is converted to RGBA. Some restrictions may apply to the
         formats that can be read.
         """
-        if not isinstance(filename, str):
-            raise ValueError('Icon.read() needs a file name')
+        if not isinstance(filename, basestring):
+            raise TypeError('Icon.read() needs a file name')
         
         if filename.startswith('http'):
             try:
@@ -105,8 +105,8 @@ class Icon(object):
         multiple images may be generated, the image size is appended
         to the file name.
         """
-        if not isinstance(filename, str):
-            raise ValueError('Icon.write() needs a file name')
+        if not isinstance(filename, basestring):
+            raise TypeError('Icon.write() needs a file name')
         
         if filename.lower().endswith('.ico'):
             data = self._to_ico()
@@ -241,20 +241,20 @@ class Icon(object):
                 # Store RGBA
                 imdatas.append(type)
                 imdatas.append(struct.pack('>I', len(data) + 8))
-                imdatas.append(data)
+                imdatas.append(bytes(data))
                 # RGBA to A
                 data = bytearray(len(im)//4)
                 data[:] = im[3::4]
                 # Store alpha
                 imdatas.append(apha_type)
                 imdatas.append(struct.pack('>I', len(data) + 8))
-                imdatas.append(data)
+                imdatas.append(bytes(data))
             elif False:  # size in png_types:
                 # Store as png, does not seem to work
                 data = self._to_png(im)
                 imdatas.append(png_types[size])
                 imdatas.append(struct.pack('>I', len(data) + 8))
-                imdatas.append(data)
+                imdatas.append(bytes(data))
             else:
                 print('Skipping export size %i to .icns' % size)
                 continue
@@ -380,10 +380,10 @@ class Icon(object):
         # Make RGBA if necessary
         if shape[2] == 3:
             im2 = bytearray(int(len(im)*1.333333333334))
-            im2[3::4] = 255
-            im2[0::4] = im[0::4]
-            im2[1::4] = im[1::4]
-            im2[2::4] = im[2::4]
+            im2[3::4] = b'\xff' * (shape[0] * shape[1])
+            im2[0::4] = im[0::3]
+            im2[1::4] = im[1::3]
+            im2[2::4] = im[2::3]
         else:
             im2 = im  # already bytearray
         
@@ -393,22 +393,3 @@ class Icon(object):
     def _to_png(self, im):
         size = self._image_size(im)
         return write_png(bytes(im), (size, size, 4))
-
-
-if __name__ == '__main__':
-    icondir = '/home/almar/projects/pyapps/iep/default/iep/resources/appicons/'
-    icondir = '/Users/almar/py/iep/iep/resources/appicons/'
-    #print(get_png_info(icondir+'ieplogo32.png'))
-    
-    
-    #icon = Icon(icondir+'test.ico')
-#     icon = Icon(icondir+'ieplogo16.png', icondir+'ieplogo32.png', 
-#                 icondir+'ieplogo48.png', icondir+'ieplogo64.png', 
-#                 icondir+'ieplogo128.png', icondir+'ieplogo256.png')
-#     icon = Icon(icondir+'test16.bmp', icondir+'test32.bmp', 
-#                 icondir+'test48.bmp', icondir+'test64.bmp', 
-#                 icondir+'test128.bmp', icondir+'test256.bmp')
-    icon = Icon(icondir + 'ieplogo.ico')
-    icon.write(icondir+'test.ico')
-    icon.write(icondir+'test.icns')
-    icon.write(icondir+'test.png')
