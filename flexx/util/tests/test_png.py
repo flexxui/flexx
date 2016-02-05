@@ -7,8 +7,9 @@ import sys
 import tempfile
 from flexx.util.testing import run_tests_if_main, raises, skip
 
-from flexx.util.png import read_png, write_png
-
+#from flexx.util.png import read_png, write_png
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from util.png import read_png, write_png
 
 
 try:
@@ -118,13 +119,15 @@ def test_writing_failures():
 
 def test_reading():
     
-    # Read using filename
-    for i in range(5):
-        filename = os.path.join(tempdir, 'test%i.png' % i)
-        im, shape = read_png(filename)
-        assert isinstance(im, bytearray)
-        assert shape == shapes[i]
-        assert im == ims[i]
+    # # Read using filename (also as unicode)
+    # for i in range(5):
+    #     filename = os.path.join(tempdir, 'test%i.png' % i)
+    #     if sys.version_info[0] == 2 and i > 2:
+    #         filename = unicode(filename)
+    #     im, shape = read_png(filename)
+    #     assert isinstance(im, bytearray)
+    #     assert shape[:len(shapes[i])] == shapes[i]
+    #     assert im == ims[i]
     
     # Read using file object
     for i in range(5):
@@ -132,8 +135,12 @@ def test_reading():
         with open(filename, 'rb') as f:
             im, shape = read_png(f)
         assert isinstance(im, bytearray)
-        assert shape == shapes[i]
-        assert im == ims[i]
+        if len(shapes[i]) == 2:
+            assert shape == shapes[i] + (3, )
+            assert im[::3] == ims[i]
+        else:
+            assert shape == shapes[i]
+            assert im == ims[i]
     
     # Read using binary blob
     for i in range(5):
@@ -141,12 +148,15 @@ def test_reading():
         with open(filename, 'rb') as f:
             blob = f.read()
             im, shape = read_png(blob)
-        assert isinstance(im, bytearray)
-        assert shape == shapes[i]
-        assert im == ims[i]
+        if len(shapes[i]) == 2:
+            assert shape == shapes[i] + (3, )
+            assert im[::3] == ims[i]
+        else:
+            assert shape == shapes[i]
+            assert im == ims[i]
     
-    with raises((OSError, IOError)):
-        read_png('not_a_png_file.png')
+    with raises((RuntimeError, TypeError)):  # RuntimeError on legacy py
+        read_png('not_a_png_blob.png')
     with raises(TypeError):
         read_png([])
     with raises(RuntimeError):
@@ -181,8 +191,9 @@ def test_with_numpy():
     im_bytes, shape = read_png(blob)
     assert isinstance(im_bytes, (bytearray, bytes))
     im_check = np.frombuffer(im_bytes, 'uint8').reshape(shape)
-    assert im_check.shape == im.shape
-    assert (im_check == im).all()
+    assert im_check.shape == im.shape + (3, )
+    for i in range(3):
+        assert (im_check[:,:,i] == im).all()
 
 
 run_tests_if_main()

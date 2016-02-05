@@ -16,18 +16,18 @@ import sys
 import struct
 import zlib
 
-if sys.version_info < (3, ):
-    bytes = str
-    str = basestring  # noqa
-
 
 def write_png(im, shape=None, file=None):
     """ Write a png image.
     
-    Given an image (as numpy array, bytes or bytearray), in grayscale,
-    RGB or RGBA, write it as a PNG to the given file object. If file
-    is not given or None, the bytes for the PNG are returned. If im is
-    a numpy array, the shape does not have not be given.
+    Parameters:
+        im (bytes, bytearray, numpy-array): the image data to write.
+        shape (tuple): the shape of the image. If im is a numpy array,
+            the shape can be omitted. The shape can be (N, M) for grayscale, 
+            (N, M, 3) for RGB and (N, M, 4) for RGBA. Note that grayscale
+            images are stored as RGB.
+        file (file-like object, None): where to write the resulting
+            image. If omitted or None, the result is returned as bytes.
     """
     
     # Check types
@@ -63,7 +63,7 @@ def write_png(im, shape=None, file=None):
     if (shape[0] * shape[1] * shape[2]) != len(im):
         raise ValueError('Shape does not match number of elements in image')
     
-    # Check file
+    # Get file object
     f = io.BytesIO() if file is None else file
     
     def add_chunk(data, name):
@@ -87,7 +87,7 @@ def write_png(im, shape=None, file=None):
     # Chunk with pixels. Just one chunk, no fancy filters.
     line_len = w * shape[2]
     lines = [im[i*line_len:(i+1)*line_len] for i in range(h)]
-    lines = [b'\x00' + line for line in lines]  # prepend filter byte
+    lines = [b'\x00' + bytes(line) for line in lines]  # prepend filter byt
     pixels_compressed = zlib.compress(b''.join(lines), 9)
     add_chunk(pixels_compressed, 'IDAT')
     
@@ -99,36 +99,24 @@ def write_png(im, shape=None, file=None):
 
 
 def read_png(f, return_ndarray=False):
-    """ Read a png image from a filename, file object, or bytes object.
+    """ Read a png image.
     
-    Returns (pixel_array, shape), with shape being NxM, NxMx3 or NxMx4,
-    for grayscale, RGB, and RGBA, respectively. The pixel_array is a
-    bytearray object. If return_ndarray is True, return as a numpy array
-    (requires numpy).
+    Parameters:
+        f (file-object, bytes): the source to read the png data from.
+        return_ndarray (bool): if True, returns the result as a numpy array.
     
-    Simple implementation; can only read PNG's that are not interlaced,
-    have a bit depth of 8, and are either RGB or RGBA.
+    If return_ndarray is False, returns (pixel_array, shape), with shape
+    being NxMx3 or NxMx4, for RGB and RGBA, respectively. The
+    pixel_array is a bytearray object.
+    
+    This is a simple implementation; can only read PNG's that are not
+    interlaced, have a bit depth of 8, and are either RGB or RGBA.
     """
-    # This function is written to be standalone, but needs _png_scanline()
-    
     # http://en.wikipedia.org/wiki/Portable_Network_Graphics
     # http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html
     
     asint_map = {1: '>B', 2: '>H', 4: '>I'}
     asint = lambda x: struct.unpack(asint_map[len(x)], x)[0]
-    
-    # Try filename
-    if sys.version_info < (3, ):
-        if isinstance(f, bytes) and (b'\x00' not in f) and (b'\x0a' not in f):
-            if os.path.isfile(f):
-                f = open(f, 'rb').read()
-            else:
-                raise IOError("File does not exist %r" % f)
-    elif isinstance(f, str):
-        if os.path.isfile(f):
-            f = open(f, 'rb').read()
-        else:
-            raise IOError("File does not exist %r" % f)
     
     # Get bytes
     if isinstance(f, (bytes, bytearray)):
@@ -136,11 +124,11 @@ def read_png(f, return_ndarray=False):
     elif hasattr(f, 'read'):
         bb = f.read()
     else:
-        raise TypeError('Do not know how to read PNG from %r' % f)
+        raise TypeError('read_png() needs file object or bytes, not %r' % f)
     
     # Read header
     if not (bb[0:1] == b'\x89' and bb[1:4] == b'PNG'):
-        raise RuntimeError('Image data does not appear to have a PNG header.')
+        raise RuntimeError('Image data does not appear to have a PNG header: %r' % bb[:10])
     chunk_pointer = 8
     
     # Read first chunk
@@ -204,18 +192,6 @@ def read_png(f, return_ndarray=False):
         i += line_len
     
     shape = width, height, bytes_per_pixel
-    
-    # Check if grayscale
-    for fraction in 0.01, 0.1, 1:
-        npixels = int(fraction * (width * height))
-        r = im[0:npixels*3:3]
-        g = im[1:npixels*3:3]
-        b = im[2:npixels*3:3]
-        if not (r == g and r == b):
-           break
-    else:
-        im = im[0:npixels*3:3]
-        shape = width, height
     
     # Done
     if return_ndarray:
