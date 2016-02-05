@@ -21,6 +21,13 @@ def with_metaclass(meta, *bases):
     return type.__new__(metaclass, tmp_name, (), {})
 
 
+def new_type(name, *args, **kwargs):
+    """ Alternative for type(...) to be legacy-py compatible.
+    """
+    name = name.encode() if sys.version_info[0] == 2 else name
+    return type(name, *args, **kwargs)
+
+
 class HasSignalsMeta(type):
     """ Meta class for HasSignals
     * Set the name of each signal

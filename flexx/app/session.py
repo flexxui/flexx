@@ -6,6 +6,7 @@ import time
 import logging
 
 from .. import react
+from ..react.hassignals import new_type
 
 from .model import Model
 from .assetstore import SessionAssets
@@ -199,7 +200,7 @@ class Session(SessionAssets):
     and the websocket instance that connects to it.
     """
     
-    STATUS = type('Enum', (), {'PENDING': 1, 'CONNECTED': 2, 'CLOSED': 0})
+    STATUS = new_type('Enum', (), {'PENDING': 1, 'CONNECTED': 2, 'CLOSED': 0})
     
     def __init__(self, app_name):
         super().__init__()

@@ -7,7 +7,7 @@ import weakref
 import logging
 
 from .. import react
-from ..react.hassignals import HasSignalsMeta, with_metaclass
+from ..react.hassignals import HasSignalsMeta, with_metaclass, new_type
 from ..react.pyscript import create_js_signals_class, HasSignalsJS
 from ..pyscript.functions import py2js, js_rename
 from ..pyscript.stubs import flexx
@@ -104,7 +104,7 @@ class ModelMeta(HasSignalsMeta):
         
         # Implicit inheritance for JS "sub"-class
         jsbases = [getattr(b, 'JS') for b in cls.__bases__ if hasattr(b, 'JS')]
-        JS = type('JS', tuple(jsbases), {})
+        JS = new_type('JS', tuple(jsbases), {})
         for c in (cls, ):  # cls.__bases__ + (cls, ):
             if 'JS' in c.__dict__:
                 if '__init__' in c.JS.__dict__:
