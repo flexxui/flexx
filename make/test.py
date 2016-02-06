@@ -33,8 +33,11 @@ def test_unit(rel_path='.'):
         import pytest  # noqa
     except ImportError:
         sys.exit('Cannot do unit tests, pytest not installed')
+    # Running on legacy Python ...
+    py2 = sys.version_info[0] == 2
+    rel_path = 'flexx_legacy_py/' + rel_path if py2 else 'flexx/' + rel_path
     # If testing installed version, import module first
-    if os.getenv('TEST_INSTALL', '').lower() in ('1', 'yes', 'true'):
+    if py2 or os.getenv('TEST_INSTALL', '').lower() in ('1', 'yes', 'true'):
         os.chdir(os.path.expanduser('~'))
         m = __import__(NAME)
         assert ROOT_DIR not in m.__path__[0]
