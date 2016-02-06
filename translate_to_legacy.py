@@ -372,8 +372,12 @@ class LegacyPythonTranslator(BaseTranslator):
             elif token.text == 'str' and token.next_char == '(':
                 # Calling str
                 token.fix = 'unicode'
+            elif token.text == 'str' and (token.next_char == ')' and
+                                          token.prev_char == '(' and
+                                          token.line_tokens[0].text == 'class'):
+                token.fix = 'unicode'
             elif token.text == 'isinstance' and token.next_char == '(':
-                # Using str in isinstance
+                # Check for usage of str in isinstance
                 end = token.find_forward(')')
                 t = token.next_token
                 while t.next_token and t.next_token.start < end:
