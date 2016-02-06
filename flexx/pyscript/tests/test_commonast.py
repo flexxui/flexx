@@ -213,6 +213,16 @@ def _compare_large_strings(text1, text2):
         assert sec1 == sec2
 
 
+def test_compare_print():
+    ast = commonast.parse('print(foo, bar)')
+    n = ast.body_nodes[0].value_node
+    assert isinstance(n, commonast.Call)
+    assert n.func_node.name == 'print'
+    assert len(n.arg_nodes) == 2
+    assert n.arg_nodes[0].name == 'foo'
+    assert n.arg_nodes[1].name == 'bar'
+
+
 def test_consistent_ast():
     # Parse the sample file and export as a json string
     code = open(filename1, 'rb').read().decode()

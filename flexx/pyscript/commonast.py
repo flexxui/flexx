@@ -940,20 +940,23 @@ class NativeAstConverter:
     
     def _convert_Print(self, n):  # pragma: no cover - Python 2.x compat
         c = self._convert
-        arg_nodes = [c(x) for x in n.values]
+        if len(n.values) == 1 and isinstance(n.values[0], ast.Tuple):
+            arg_nodes = [c(x) for x in n.values[0].elts]
+        else:
+            arg_nodes = [c(x) for x in n.values]
         kwarg_nodes = []
         if n.dest is not None:
             kwarg_nodes.append(Keyword('dest', c(n.dest)))
         if not n.nl:
             kwarg_nodes.append(Keyword('end', Str('')))
-        return Call(Name('print'), arg_nodes, kwarg_nodes)
+        return Expr(Call(Name('print'), arg_nodes, kwarg_nodes))
     
     def _convert_Exec(self, n):  # pragma: no cover - Python 2.x compat
         c = self._convert
         arg_nodes = [c(n.body)]
         arg_nodes.append(c(n.globals) or NameConstant(None))
         arg_nodes.append(c(n.locals) or NameConstant(None))
-        return Call(Name('exec'), arg_nodes, [])
+        return Expr(Call(Name('exec'), arg_nodes, []))
     
     def _convert_Repr(self, n):  # pragma: no cover - Python 2.x compat
         c = self._convert
