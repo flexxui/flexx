@@ -53,8 +53,16 @@ def lookslikeafilename(s):
     # We need this to allow smart-asset setting on legacy Python
     if sys.version_info[0] == 2:
         fchars = '\n\r\x00\x0a'.encode('utf-8')
-        return isinstance(s, unicode) or (isinstance(s, bytes) and
-                                          not any([c in s for c in fchars]))
+        if isinstance(s, unicode):
+            return True
+        elif not isinstance(s, bytes):
+            return False
+        elif any([c in s for c in fchars]):
+            return False
+        elif len(s) > 500 and s.count('function(') > 5:
+            return False  # Looks like a minified file. Bah, rather arbitrary
+        else:
+            return True
     return isinstance(s, str)
 
 
@@ -147,7 +155,7 @@ class AssetStore:
         except KeyError:
             raise IndexError('Asset %r not known.' % fname)
         
-        if isinstance(content, str):
+        if lookslikeafilename(content):
             return self._cache_get(content)
         else:
             return content
