@@ -201,7 +201,7 @@ Globals and nonlocal
 """
 
 from . import commonast as ast
-from .parser1 import Parser1, JSError, unify  # noqa
+from .parser1 import Parser1, JSError, unify, reprs  # noqa
 
 
 class Parser2(Parser1):
@@ -237,7 +237,7 @@ class Parser2(Parser1):
         if err_cls:
             code.append(self.lf("%s = " % err_name))
             code.append('new Error(')
-            code.append(repr(err_cls + ':') + ' + ')
+            code.append(reprs(err_cls + ':') + ' + ')
         else:
             code.append(self.lf("throw "))
         code.append(err_msg or '""')
@@ -393,7 +393,7 @@ class Parser2(Parser1):
                     not node.iter_node.arg_nodes and f.attr in METHODS):
                 sure_is_dict = f.attr
                 iter = ''.join(self.parse(f.value_node))
-            elif isinstance(f, ast.Name) and f.name == 'range':
+            elif isinstance(f, ast.Name) and f.name in ('xrange', 'range'):
                 sure_is_range = [''.join(self.parse(arg)) for arg in 
                                  node.iter_node.arg_nodes]
         

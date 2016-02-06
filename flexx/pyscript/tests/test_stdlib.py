@@ -4,6 +4,8 @@ will mostly test if the implemenation is correct. This module does some
 meta tests.
 """
 
+import sys
+
 from flexx.util.testing import run_tests_if_main, raises
 
 from flexx.pyscript import py2js, evaljs, evalpy, Parser3, stdlib
@@ -32,13 +34,21 @@ def test_stdlib_has_all_list_methods():
 
 def test_stdlib_has_all_dict_methods():
     method_names = [m for m in dir(dict) if not m.startswith('_')]
-    method_names.remove('fromkeys')  # classmethod
+    if sys.version_info[0] == 2:
+        ignore = 'fromkeys has_key viewitems viewkeys viewvalues iteritems iterkeys itervalues'
+    else:
+        ignore = 'fromkeys'
+    for name in ignore.split(' '):
+        method_names.remove(name)
     for method_name in method_names:
         assert method_name in stdlib.METHODS
 
 def test_stdlib_has_all_str_methods():
     method_names = [m for m in dir(str) if not m.startswith('_')]
-    ignore = 'encode format format_map isdecimal isdigit isprintable maketrans'
+    if sys.version_info[0] == 2:
+        ignore = 'encode decode format isdigit'
+    else:
+        ignore = 'encode format format_map isdecimal isdigit isprintable maketrans'
     for name in ignore.split(' '):
         method_names.remove(name)
     for method_name in method_names:

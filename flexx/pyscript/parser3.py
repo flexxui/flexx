@@ -169,7 +169,7 @@ Str methods
 
 from . import commonast as ast
 from . import stdlib
-from .parser2 import Parser2, JSError, unify  # noqa
+from .parser2 import Parser2, JSError, unify, reprs  # noqa
 
 
 # This class has several `function_foo()` and `method_bar()` methods
@@ -223,7 +223,7 @@ class Parser3(Parser2):
             return ["({}).toString.call(",
                     ob,
                     ").match(/\s([a-zA-Z]+)/)[1].toLowerCase() === ",
-                    repr(cmp.lower())
+                    reprs(cmp.lower())
                     ]
         
         else:

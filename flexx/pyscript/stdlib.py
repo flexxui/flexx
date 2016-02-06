@@ -785,7 +785,7 @@ IMPORTS['sys'] = {}
 
 IMPORTS['sys'] = None  # mark sys as a module
 IMPORTS['sys.version_info'] = "[%s]" % ', '.join([str(x) for x in sys.version_info[:3]])
-IMPORTS['sys.version'] = "%r" % ('.'.join([str(x) for x in sys.version_info[:3]])
+IMPORTS['sys.version'] = "'%s'" % ('.'.join([str(x) for x in sys.version_info[:3]])
                                     + ' [PyScript]')
 IMPORTS['sys.path'] = "[]"
 

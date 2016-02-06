@@ -172,7 +172,7 @@ import re
 
 from . import commonast as ast
 from . import stdlib
-from .parser0 import Parser0, JSError, unify  # noqa
+from .parser0 import Parser0, JSError, unify, reprs  # noqa
 
 
 class Parser1(Parser0):
@@ -186,7 +186,7 @@ class Parser1(Parser0):
         return repr(node.value)
     
     def parse_Str(self, node):
-        return repr(node.value)
+        return reprs(node.value)
     
     def parse_Bytes(self, node):
         raise JSError('No Bytes in JS')
@@ -594,6 +594,8 @@ class Parser1(Parser0):
             # writing the JS code and command to parse it in one module.
             # Ignore this import.
             return []
+        if node.root and node.root == '__future__':
+            return []  # stuff to help the parser
         
         if node.level:
             raise JSError('PyScript does not support relative imports.')

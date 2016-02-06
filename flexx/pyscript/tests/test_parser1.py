@@ -374,7 +374,3 @@ class TestModules:
 
 
 run_tests_if_main()
-# if __name__ == '__main__':
-#     t = TestClasses()
-#     t.test_class()
-#     t.test_inheritance()

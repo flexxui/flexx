@@ -1,5 +1,5 @@
-
-from flexx.util.testing import run_tests_if_main, raises
+import sys
+from flexx.util.testing import run_tests_if_main, raises, skip
 
 from flexx.pyscript import JSError, py2js, evaljs, evalpy
 
@@ -411,6 +411,8 @@ class TestDictMethods:
         assert evalpy(code + 'foo = Foo(); foo.clear(); foo.bar') == '42'
 
     def test_that_all_dict_methods_are_tested(self):
+        if sys.version_info[0] == 2:
+            skip('On legacy py, the dict methods are different')
         tested = set([x.split('_')[1] for x in dir(self) if x.startswith('test_')])
         needed = set([x for x in dir(dict) if not x.startswith('_')])
         ignore = 'fromkeys'
@@ -725,6 +727,7 @@ class TestStrMethods:
         assert evalpy(r'"abc\r\ndef".splitlines(True)') == "[ 'abc\\r\\n', 'def' ]"
         
         res = repr("X\n\nX\r\rX\r\n\rX\n\r\nX".splitlines(True)).replace(' ', '')
+        res = res.replace('u"', '"').replace("u'", "'")  # arg legacy py
         assert nowhitespace(evalpy(r'"X\n\nX\r\rX\r\n\rX\n\r\nX".splitlines(true)')) == res
     
     def test_replace(self):
@@ -745,7 +748,7 @@ class TestStrMethods:
     def test_that_all_str_methods_are_tested(self):
         tested = set([x.split('_')[1] for x in dir(self) if x.startswith('test_')])
         needed = set([x for x in dir(str) if not x.startswith('_')])
-        ignore = 'encode format format_map isdecimal isdigit isprintable maketrans'
+        ignore = 'encode decode format format_map isdecimal isdigit isprintable maketrans'
         needed = needed.difference(ignore.split(' '))
         
         not_tested = needed.difference(tested)
