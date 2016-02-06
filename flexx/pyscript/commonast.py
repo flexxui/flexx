@@ -18,7 +18,7 @@ pyversion = sys.version_info
 NoneType = None.__class__
 
 if pyversion >= (3, ):
-    basestring = str
+    basestring = str  # noqa
 
 
 # do some extra asserts when running tests, but not always, for speed
@@ -137,7 +137,7 @@ class Node(object):
                 elif val.startswith('COMPLEX:'):
                     val = complex(val[8:])
                 elif pyversion < (3, ):
-                    val = unicode(val)
+                    val = unicode(val)  # noqa
             args.append(val)
         return Cls(*args)
     

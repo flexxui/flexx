@@ -204,8 +204,6 @@ Supported Python conveniences:
 # demonstrating the features defined in that module. In the docs these
 # docstrings are combined into one complete guide.
 
-import sys
-
 from .parser0 import Parser0, JSError  # noqa
 from .parser1 import Parser1  # noqa
 from .parser2 import Parser2  # noqa

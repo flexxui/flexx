@@ -206,7 +206,7 @@ class BaseTranslator:
             # not backslash) before the end char(s).
             start = match.start()
             string_style = match.group(3)
-            end = endProgs[string_style].search(text,  match.end() - 1).end()
+            end = endProgs[string_style].search(text, match.end() - 1).end()
             return Token(text, 'string', start, end)
         else:
             # Identifier ("a word or number") Find out whether it is a key word
@@ -303,12 +303,12 @@ class LegacyPythonTranslator(BaseTranslator):
     def fix_cancel(self, token):
         """ Cancel translation if using `from __future__ import xxx`
         """
-        if (token.type == 'keyword' and token.text == 'from' and
-            token.next_token.text == '__future__'):
-                for future in self.FUTURES:
-                    if any([t.text == future for t in token.line_tokens]):
-                        # Assume this module is already Python 2.7 compatible
-                        raise CancelTranslation()
+        if token.type == 'keyword' and (token.text == 'from' and
+                                        token.next_token.text == '__future__'):
+            for future in self.FUTURES:
+                if any([t.text == future for t in token.line_tokens]):
+                    # Assume this module is already Python 2.7 compatible
+                    raise CancelTranslation()
     
     def fix_future(self, token):
         """ Fix print_function, absolute_import, with_statement.
@@ -417,7 +417,7 @@ class LegacyPythonTranslator(BaseTranslator):
                 # Walk over tokens to find start of match
                 for i in range(len(tokens)):
                     if (tokens[i].text == parts[0] and
-                        len(tokens[i:]) >= len(parts)):
+                            len(tokens[i:]) >= len(parts)):
                         # Is it a complete match?
                         for j, part in enumerate(parts):
                             if tokens[i+j].text != part:
@@ -479,64 +479,58 @@ class LegacyPythonTranslator(BaseTranslator):
     
     # Map import paths to ... a set of possible import paths
     IMPORT_MAPPING2 = {
-                'urllib.request' :
-                    ('urllib2', 'urllib'),
-                'urllib.error' :
-                    ('urllib2', 'urllib'),
-                'urllib.parse' :
-                    ('urllib2', 'urllib', 'urlparse'),
-                'dbm.__init__' :
-                    ('anydbm', 'whichdb'),
-                'http.server' :
-                    ('CGIHTTPServer', 'SimpleHTTPServer', 'BaseHTTPServer'),
-                'xmlrpc.server' :
-                    ('DocXMLRPCServer', 'SimpleXMLRPCServer'),
-                }
-    
+        'urllib.request': ('urllib2', 'urllib'),
+        'urllib.error': ('urllib2', 'urllib'),
+        'urllib.parse': ('urllib2', 'urllib', 'urlparse'),
+        'dbm.__init__': ('anydbm', 'whichdb'),
+        'http.server': ('CGIHTTPServer', 'SimpleHTTPServer', 'BaseHTTPServer'),
+        'xmlrpc.server': ('DocXMLRPCServer', 'SimpleXMLRPCServer'),
+        }
+
     # This defines what names are in specific Python 2 modules
     PY2MODULES = {
-                'urllib2' : (
-                    'AbstractBasicAuthHandler', 'AbstractDigestAuthHandler',
-                    'AbstractHTTPHandler', 'BaseHandler', 'CacheFTPHandler',
-                    'FTPHandler', 'FileHandler', 'HTTPBasicAuthHandler',
-                    'HTTPCookieProcessor', 'HTTPDefaultErrorHandler',
-                    'HTTPDigestAuthHandler', 'HTTPError', 'HTTPErrorProcessor',
-                    'HTTPHandler', 'HTTPPasswordMgr',
-                    'HTTPPasswordMgrWithDefaultRealm', 'HTTPRedirectHandler',
-                    'HTTPSHandler', 'OpenerDirector', 'ProxyBasicAuthHandler',
-                    'ProxyDigestAuthHandler', 'ProxyHandler', 'Request',
-                    'StringIO', 'URLError', 'UnknownHandler', 'addinfourl',
-                    'build_opener', 'install_opener', 'parse_http_list',
-                    'parse_keqv_list', 'randombytes', 'request_host', 'urlopen'),
-                'urllib' : (
-                    'ContentTooShortError', 'FancyURLopener','URLopener',
-                    'basejoin', 'ftperrors', 'getproxies',
-                    'getproxies_environment', 'localhost', 'pathname2url',
-                    'quote', 'quote_plus', 'splitattr', 'splithost',
-                    'splitnport', 'splitpasswd', 'splitport', 'splitquery',
-                    'splittag', 'splittype', 'splituser', 'splitvalue',
-                    'thishost', 'unquote', 'unquote_plus', 'unwrap',
-                    'url2pathname', 'urlcleanup', 'urlencode', 'urlopen',
-                    'urlretrieve',),
-                'urlparse' : (
-                    'parse_qs', 'parse_qsl', 'urldefrag', 'urljoin',
-                    'urlparse', 'urlsplit', 'urlunparse', 'urlunsplit'),
-                'dbm' : (
-                    'ndbm', 'gnu', 'dumb'),
-                'anydbm' : (
-                    'error', 'open'),
-                'whichdb' : (
-                    'whichdb',),
-                'BaseHTTPServer' : (
-                    'BaseHTTPRequestHandler', 'HTTPServer'),
-                'CGIHTTPServer' : (
-                    'CGIHTTPRequestHandler',),
-                'SimpleHTTPServer' : (
-                    'SimpleHTTPRequestHandler',),
-                'DocXMLRPCServer' : (
-                    'DocCGIXMLRPCRequestHandler', 'DocXMLRPCRequestHandler',
-                    'DocXMLRPCServer', 'ServerHTMLDoc','XMLRPCDocGenerator'),
-                }
+        'urllib2' : (
+            'AbstractBasicAuthHandler', 'AbstractDigestAuthHandler',
+            'AbstractHTTPHandler', 'BaseHandler', 'CacheFTPHandler',
+            'FTPHandler', 'FileHandler', 'HTTPBasicAuthHandler',
+            'HTTPCookieProcessor', 'HTTPDefaultErrorHandler',
+            'HTTPDigestAuthHandler', 'HTTPError', 'HTTPErrorProcessor',
+            'HTTPHandler', 'HTTPPasswordMgr',
+            'HTTPPasswordMgrWithDefaultRealm', 'HTTPRedirectHandler',
+            'HTTPSHandler', 'OpenerDirector', 'ProxyBasicAuthHandler',
+            'ProxyDigestAuthHandler', 'ProxyHandler', 'Request',
+            'StringIO', 'URLError', 'UnknownHandler', 'addinfourl',
+            'build_opener', 'install_opener', 'parse_http_list',
+            'parse_keqv_list', 'randombytes', 'request_host', 'urlopen'),
+        'urllib' : (
+            'ContentTooShortError', 'FancyURLopener', 'URLopener',
+            'basejoin', 'ftperrors', 'getproxies',
+            'getproxies_environment', 'localhost', 'pathname2url',
+            'quote', 'quote_plus', 'splitattr', 'splithost',
+            'splitnport', 'splitpasswd', 'splitport', 'splitquery',
+            'splittag', 'splittype', 'splituser', 'splitvalue',
+            'thishost', 'unquote', 'unquote_plus', 'unwrap',
+            'url2pathname', 'urlcleanup', 'urlencode', 'urlopen',
+            'urlretrieve',),
+        'urlparse' : (
+            'parse_qs', 'parse_qsl', 'urldefrag', 'urljoin',
+            'urlparse', 'urlsplit', 'urlunparse', 'urlunsplit'),
+        'dbm' : (
+            'ndbm', 'gnu', 'dumb'),
+        'anydbm' : (
+            'error', 'open'),
+        'whichdb' : (
+            'whichdb',),
+        'BaseHTTPServer' : (
+            'BaseHTTPRequestHandler', 'HTTPServer'),
+        'CGIHTTPServer' : (
+            'CGIHTTPRequestHandler',),
+        'SimpleHTTPServer' : (
+            'SimpleHTTPRequestHandler',),
+        'DocXMLRPCServer' : (
+            'DocCGIXMLRPCRequestHandler', 'DocXMLRPCRequestHandler',
+            'DocXMLRPCServer', 'ServerHTMLDoc', 'XMLRPCDocGenerator'),
+        }
 
 
 if __name__ == '__main__':

@@ -53,7 +53,7 @@ def lookslikeafilename(s):
     # We need this to allow smart-asset setting on legacy Python
     if sys.version_info[0] == 2:
         fchars = '\n\r\x00\x0a'.encode('utf-8')
-        if isinstance(s, unicode):
+        if isinstance(s, unicode):  # noqa
             return True
         elif not isinstance(s, bytes):
             return False

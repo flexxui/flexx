@@ -29,7 +29,7 @@ import sys
 if sys.version_info[0] == 2:  # pragma: no cover
     if sys.version_info < (2, 7):
         raise RuntimeError('Flexx needs at least Python 2.7')
-    if type(b'') == type(''):  # These will be str and unicode after conversion
+    if type(b'') == type(''):  # noqa - will be str and unicode after conversion
         raise RuntimeError('Flexx can only run on Python 2.x after 3to2 conversion.')
 
 del sys
