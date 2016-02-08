@@ -76,7 +76,7 @@ class Widget(Model):
         Model.__init__(self, **kwargs)
         
         # All widgets need phosphor
-        self._session.use_global_asset('phosphor-all.js')
+        self._session.use_global_asset('phosphor-all.js', before='flexx-ui.css')
         
         # todo: can I make widgets not need the session immediately?
         # The fact that session and app need each-other is a bit awkward?
