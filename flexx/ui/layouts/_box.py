@@ -198,12 +198,11 @@ class BoxLayout(BaseBoxLayout):
     /* Make child widgets (and layouts) size correctly */
     .flx-hbox > .flx-Widget, .flx-hboxr > .flx-Widget {
         height: 100%;
-        width: auto;
     }
     .flx-vbox > .flx-Widget, .flx-vboxr > .flx-Widget {
         width: 100%;
-        height: auto;
     }
+    
     """
     
     @react.input

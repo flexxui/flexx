@@ -11,6 +11,13 @@ class CanvasWidget(Widget):
     the available space.
     """
     
+    CSS = """
+    .flx-CanvasWidget {
+        min-width: 50px;
+        min-height: 50px;
+    }
+    """ 
+    
     class JS:
         
         def _init(self):
@@ -35,7 +42,7 @@ class CanvasWidget(Widget):
         
         @react.connect('real_size')
         def _update_canvas_size(self, size):
-            if size[0] and size[1]:
+            if size[0] or size[1]:
                 self.canvas.width = size[0]
                 self.canvas.height = size[1]
                 self.canvas.style.width = size[0] + 'px'
