@@ -134,13 +134,13 @@ def init_notebook():
     asset_elements = session.get_assets_as_html()
     
     # Make the JS that we inject not take any vertical space when nbconverted
-    all_css += '\n.output_subarea.output_javascript { padding: 0px; }\n'
+    extra_css = '.output_subarea.output_javascript { padding: 0px; }'
     
     # Compose HTML to inject
     url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)
     t = "<i>Injecting Flexx JS and CSS</i>"
     t += '\n\n'.join(asset_elements)
-    t += '\n\n'
+    t += '\n\n<style>%s</style>\n' % extra_css
     t += "<script>flexx.ws_url=%r; flexx.is_notebook=true; flexx.init();</script>" % url
     
     display(HTML(t))
