@@ -197,10 +197,12 @@ class BoxLayout(BaseBoxLayout):
     
     /* Make child widgets (and layouts) size correctly */
     .flx-hbox > .flx-Widget, .flx-hboxr > .flx-Widget {
-        height: 100%;
+        height: auto;
+        width: auto;
     }
     .flx-vbox > .flx-Widget, .flx-vboxr > .flx-Widget {
-        width: 100%;
+        width: auto;
+        height: auto;
     }
     
     /* If a boxLayout is in a compound widget, we need to make that widget
