@@ -51,10 +51,15 @@ def unify(x):
         return '(%s)' % x
 
 
-def reprs(x):
+def reprs(x, hard=False):
     """ Save string representation; strips the u in u'xx'.
     """
-    return repr(x).lstrip('u')
+    if hard:
+        return repr(x).replace("u'", "'").replace('u"', '"')
+    elif isinstance(x, str):
+        return repr(x).lstrip('u')
+    else:
+        return repr(x)
 
 
 # https://github.com/umdjs/umd/blob/master/returnExports.js
@@ -135,6 +140,8 @@ class Parser0(object):
         'True'  : 'true',
         'False' : 'false',
         'None'  : 'null',
+        'unicode': 'str',  # legacy Py compat
+        'unichr': 'chr',
     }
     
     BINARY_OP = {
