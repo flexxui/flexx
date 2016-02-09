@@ -211,6 +211,7 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
     def __json__(self):
         return {'__type__': 'Flexx-Model', 'id': self.id}
     
+    @staticmethod
     def __from_json__(dct):
         return get_instance_by_id(dct['id'])
     

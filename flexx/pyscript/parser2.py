@@ -676,7 +676,9 @@ class Parser2(Parser1):
         
         # Check
         if (not lambda_) and node.decorator_nodes:
-            raise JSError('No support for function decorators')
+            if not (len(node.decorator_nodes) == 1 and
+                    node.decorator_nodes[0].name == 'staticmethod'):
+                raise JSError('No support for function decorators')
         if node.kwarg_nodes:
             raise JSError('No support for keyword only arguments')
         if node.kwargs_node:
