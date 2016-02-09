@@ -203,6 +203,11 @@ class BoxLayout(BaseBoxLayout):
         width: 100%;
     }
     
+    /* If a boxLayout is in a compound widget, we need to make that widget
+       a flex container (done with JS in Widget class), and scale here */
+    .flx-Widget > .flx-BoxLayout {
+        flex-grow: 1;
+    }
     """
     
     @react.input

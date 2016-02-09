@@ -487,11 +487,14 @@ class Widget(Model):
             if 'flx-Layout' not in self.node.className:
                 # Ok, no layout, so maybe we need to take care of CSS.
                 # If we have a child that is a hbox/vbox, we need to be a
-                # good container.
-                self.node.style['height'] = ''
-                self.node.style['width'] = ''
+                # flex container.
+                self.node.style['display'] = ''
+                self.node.style['flex-flow'] = ''
                 if len(children) == 1:
                     subClassName = children[0].node.className
-                    if 'flx-hbox' in subClassName or 'flx-vbox' in subClassName:
-                        self.node.style['height'] = '100%'
-                        self.node.style['width'] = '100%'
+                    if 'flx-hbox' in subClassName:
+                        self.node.style['display'] = 'flex'
+                        self.node.style['flex-flow'] = 'row'
+                    elif 'flx-vbox' in subClassName:
+                        self.node.style['display'] = 'flex'
+                        self.node.style['flex-flow'] = 'column'
