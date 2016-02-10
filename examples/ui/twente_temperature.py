@@ -127,7 +127,7 @@ class Twente(ui.Widget):
                 self.plot = ui.PlotWidget(style='width: 640px; height: 480px;',
                                           xdata=years, yrange=(-5, 20),
                                           title='Average monthly temperature',
-                                          xlabel='year', ylabel='temperature (°C)')
+                                          xlabel='year', ylabel=u'temperature (°C)')
                 ui.Widget(flex=1)
             ui.Widget(flex=1)
 

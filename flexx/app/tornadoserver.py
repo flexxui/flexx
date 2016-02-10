@@ -14,7 +14,7 @@ import tornado.ioloop
 import tornado.websocket
 from tornado import gen
 
-from .session import manager
+from .session import manager, valid_app_name
 from .assetstore import assets
 
 # todo: threading, or even multi-process
@@ -133,7 +133,7 @@ class MainHandler(tornado.web.RequestHandler):
         # app_name - class name of the app, must be a valid identifier
         # file_name - path (can have slashes) to a file
         parts = [p for p in path.split('/') if p]
-        if parts and parts[0].isidentifier():
+        if parts and valid_app_name(parts[0]):
             app_name, file_name = parts[0], '/'.join(parts[1:])
         else:
             app_name, file_name = None, '/'.join(parts)
@@ -168,7 +168,7 @@ class MainHandler(tornado.web.RequestHandler):
                     session = manager.create_session(app_name)
                     self.write(session.get_page().encode())
                 else:
-                    self.write('No app %r is currently hosted.' % app_name)
+                    self.write('No app "%s" is currently hosted.' % app_name)
             elif file_name and '.js:' in file_name:
                 # Request for a view of a JS source file at a certain line, redirect
                 fname, where = file_name.split(':')[:2]

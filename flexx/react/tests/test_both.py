@@ -49,7 +49,7 @@ def run_in_both(cls, reference, extra_classes=()):
             jsresult = jsresult.replace('"', "'")
             print('js:', jsresult)
             # Run in Python
-            pyresult = reprs(func(cls), True)
+            pyresult = reprs(func(cls))
             pyresult = pyresult.replace('"', "'")
             print('py:', pyresult)
             #

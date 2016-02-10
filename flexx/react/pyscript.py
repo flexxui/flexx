@@ -246,15 +246,14 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             funcs_code.append(code)
             # Add upstream signal names to the function object
             t = '%s.prototype.%s._upstream = %s;\n'
-            funcs_code.append(t % (cls_name, funcname,
-                                   reprs(val._upstream_given, True)))
+            funcs_code.append(t % (cls_name, funcname, reprs(val._upstream_given)))
             # Add type of signal too
             t = '%s.prototype.%s._signal_type = %s;\n'
             signal_type = val.__class__.__name__
-            funcs_code.append(t % (cls_name, funcname, reprs(signal_type, True)))
+            funcs_code.append(t % (cls_name, funcname, reprs(signal_type)))
             # Add flags
             t = '%s.prototype.%s.flags = JSON.parse(%s);\n'
-            funcs_code.append(t % (cls_name, funcname, reprs(json.dumps(val.flags), True)))
+            funcs_code.append(t % (cls_name, funcname, reprs(json.dumps(val.flags))))
         elif callable(val):
             code = py2js(val, cls_name + '.prototype.' + name)
             code = code.replace('super()', base_class)  # fix super
@@ -268,15 +267,15 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
                 raise ValueError('Attributes on JS HasSignals class must be '
                                  'JSON compatible.\n%s' % str(err))
             total_code.append('%s.prototype.%s = JSON.parse(%s)' %
-                              (cls_name, name, reprs(serialized, True)))
+                              (cls_name, name, reprs(serialized)))
     
     # Insert __signals__ that we found
     if base_class in ('Object', 'HasSignals.prototype'):
         t = '%s.prototype.__signals__ = %s.sort();'
-        total_code.append(t % (cls_name, reprs(signals, True)))
+        total_code.append(t % (cls_name, reprs(signals)))
     else:
         t = '%s.prototype.__signals__ = %s.__signals__.concat(%s).sort();'
-        total_code.append(t % (cls_name, base_class, reprs(signals, True)))
+        total_code.append(t % (cls_name, base_class, reprs(signals)))
     
     total_code.extend(funcs_code)
     return '\n'.join(total_code)

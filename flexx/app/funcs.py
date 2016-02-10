@@ -3,6 +3,7 @@ Functional API for flexx.app
 """
 
 import os
+import json
 import logging
 
 from .. import webruntime
@@ -12,6 +13,8 @@ from .model import Model
 from .session import manager
 from .tornadoserver import server
 
+
+reprs = json.dumps
 
 ## Main loop functions
 
@@ -110,7 +113,7 @@ def init_notebook():
     # they result in spamming of JavaScript "objects" and when nbconverting,
     # this will result in a huge number of output_javascript elements.
     def my_send_command(command):
-        display(Javascript('flexx.command(%r);' % command))
+        display(Javascript('flexx.command(%s);' % reprs(command)))
     
     # Create default session and monkey-patch it
     # Not very pretty, but this keeps notebook logic confined to this module/function.
@@ -141,7 +144,8 @@ def init_notebook():
     t = "<i>Injecting Flexx JS and CSS</i>"
     t += "<style>\n%s\n</style>\n" % all_css
     t += "<script>\n%s\n</script>" % all_js
-    t += "<script>flexx.ws_url=%r; flexx.is_notebook=true; flexx.init();</script>" % url
+    t += "<script>flexx.ws_url=%s; " % reprs(url)
+    t += "flexx.is_notebook=true; flexx.init();</script>"
     
     display(HTML(t))
 

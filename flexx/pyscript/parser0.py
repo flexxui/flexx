@@ -15,8 +15,9 @@ situations:
 
 """
 
-import sys
 import re
+import sys
+import json
 
 from . import commonast as ast
 from . import stdlib
@@ -51,15 +52,10 @@ def unify(x):
         return '(%s)' % x
 
 
-def reprs(x, hard=False):
+def reprs(x):
     """ Save string representation; strips the u in u'xx'.
     """
-    if hard:
-        return repr(x).replace("u'", "'").replace('u"', '"')
-    elif isinstance(x, str):
-        return repr(x).lstrip('u')
-    else:
-        return repr(x)
+    return json.dumps(x)
 
 
 # https://github.com/umdjs/umd/blob/master/returnExports.js

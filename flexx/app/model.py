@@ -5,6 +5,7 @@ This basically implements the syncing of signals.
 
 import weakref
 import logging
+import json
 
 from .. import react
 from ..react.hassignals import HasSignalsMeta, with_metaclass, new_type
@@ -14,6 +15,7 @@ from ..pyscript.stubs import flexx
 
 from .serialize import serializer
 
+reprs = json.dumps
 
 model_classes = []
 def get_model_classes():
@@ -238,7 +240,7 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
         
         # Instantiate JavaScript version of this class
         clsname = 'flexx.classes.' + self.__class__.__name__
-        cmd = 'flexx.instances.%s = new %s(%r);' % (self._id, clsname, self._id)
+        cmd = 'flexx.instances.%s = new %s(%s);' % (self._id, clsname, reprs(self._id))
         self._session._exec(cmd)
         
         self._init()
@@ -268,8 +270,8 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
         react.HasSignals.__setattr__(self, name, value)
         if isinstance(value, Model):
             txt = serializer.saves(value)
-            cmd = 'flexx.instances.%s.%s = flexx.serializer.loads(%r);' % (
-                self._id, name, txt)
+            cmd = 'flexx.instances.%s.%s = flexx.serializer.loads(%s);' % (
+                self._id, name, reprs(txt))
             self._session._exec(cmd)
     
     def _set_signal_from_js(self, name, text, esid):
@@ -303,8 +305,8 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
         if not isinstance(signal, JSSignal) and not signal.flags.get('nosync', False):
             #txt = json.dumps(signal.value)
             txt = serializer.saves(signal.value)
-            cmd = 'flexx.instances.%s._set_signal_from_py(%r, %r, %r);' % (
-                self._id, signal.name, txt, esid)
+            cmd = 'flexx.instances.%s._set_signal_from_py(%s, %s, %s);' % (
+                self._id, reprs(signal.name), reprs(txt), reprs(esid))
             self._session._exec(cmd)
     
     def _link_js_signal(self, name, link=True):
@@ -318,7 +320,7 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
         #         self._initial_signal_links.add(name)
         # else:
         link = 'true' if link else 'false'
-        cmd = 'flexx.instances.%s._link_js_signal(%r, %s);' % (self._id, name, link)
+        cmd = 'flexx.instances.%s._link_js_signal(%s, %s);' % (self._id, reprs(name), link)
         self._session._exec(cmd)
     
     def call_js(self, call):

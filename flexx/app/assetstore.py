@@ -19,6 +19,7 @@ are not provided via such a module asset will be added to the index.
 
 import os
 import sys
+import json
 import time
 import random
 import hashlib
@@ -49,6 +50,8 @@ INDEX-HOOK
 """
 
 
+reprs = json.dumps
+
 def lookslikeafilename(s):
     # We need this to allow smart-asset setting on legacy Python
     if sys.version_info[0] == 2:
@@ -78,7 +81,7 @@ def create_css_and_js_from_model_classes(classes, css='', js=''):
         js.append(cls.JS.CODE)
     css = [i for i in css if i.strip()]
     js = [i for i in js if i.strip()]
-    return '\n\n'.join(css), '\n\n'.join(js)
+    return '\n\n'.join(css) or '\n', '\n\n'.join(js) or '\n'
 
 
 class AssetStore:
@@ -404,7 +407,7 @@ class SessionAssets:
         lines = []
         lines.append('flexx.is_exported = true;\n')
         lines.append('flexx.runExportedApp = function () {')
-        lines.extend(['    flexx.command(%r);' % c for c in commands])
+        lines.extend(['    flexx.command(%s);' % rerps(c) for c in commands])
         lines.append('};\n')
         
         # Create an extra asset for the export
