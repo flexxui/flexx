@@ -1,9 +1,9 @@
 """ Test a live app connection.
 """
 
-from flexx import app, react
+from flexx import app, react, webruntime
 
-from flexx.util.testing import run_tests_if_main, raises
+from flexx.util.testing import run_tests_if_main, raises, skip
 
 
 def runner(cls):
@@ -55,6 +55,10 @@ class TesterApp2(BaseTesterApp):
 
 
 def test_apps():
+    
+    if not webruntime.has_firefox():
+        skip('This live test needs firefox.')
+    
     runner(TesterApp1)
     runner(TesterApp2)
 
