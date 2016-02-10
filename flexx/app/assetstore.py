@@ -52,6 +52,7 @@ INDEX-HOOK
 
 reprs = json.dumps
 
+
 def lookslikeafilename(s):
     # We need this to allow smart-asset setting on legacy Python
     if sys.version_info[0] == 2:
@@ -407,7 +408,7 @@ class SessionAssets:
         lines = []
         lines.append('flexx.is_exported = true;\n')
         lines.append('flexx.runExportedApp = function () {')
-        lines.extend(['    flexx.command(%s);' % rerps(c) for c in commands])
+        lines.extend(['    flexx.command(%s);' % reprs(c) for c in commands])
         lines.append('};\n')
         
         # Create an extra asset for the export

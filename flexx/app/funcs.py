@@ -144,7 +144,7 @@ def init_notebook():
     t = "<i>Injecting Flexx JS and CSS</i>"
     t += "<style>\n%s\n</style>\n" % all_css
     t += "<script>\n%s\n</script>" % all_js
-    t += "<script>flexx.ws_url=%s; " % reprs(url)
+    t += "<script>flexx.ws_url='%s'; " % url
     t += "flexx.is_notebook=true; flexx.init();</script>"
     
     display(HTML(t))

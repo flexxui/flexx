@@ -4,11 +4,15 @@ Implementation of flexx.react in JS via PyScript.
 
 import json
 
-from ..pyscript import reprs, py2js as py2js_
+from ..pyscript import py2js as py2js_
 from ..pyscript.parser2 import get_class_definition
 from ..pyscript.stubs import undefined, Object, Date
 
 from .signals import Signal, SourceSignal
+
+
+reprs = json.dumps
+
 
 def py2js(*args, **kwargs):
     kwargs['inline_stdlib'] = False

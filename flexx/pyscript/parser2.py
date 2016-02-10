@@ -201,7 +201,7 @@ Globals and nonlocal
 """
 
 from . import commonast as ast
-from .parser1 import Parser1, JSError, unify, reprs  # noqa
+from .parser1 import Parser1, JSError, unify  # noqa
 
 
 class Parser2(Parser1):
@@ -237,7 +237,7 @@ class Parser2(Parser1):
         if err_cls:
             code.append(self.lf("%s = " % err_name))
             code.append('new Error(')
-            code.append(reprs(err_cls + ':') + ' + ')
+            code.append('"%s:" + ' % err_cls)
         else:
             code.append(self.lf("throw "))
         code.append(err_msg or '""')

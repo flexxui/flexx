@@ -320,7 +320,8 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
         #         self._initial_signal_links.add(name)
         # else:
         link = 'true' if link else 'false'
-        cmd = 'flexx.instances.%s._link_js_signal(%s, %s);' % (self._id, reprs(name), link)
+        cmd = 'flexx.instances.%s._link_js_signal(%s, %s);' % (self._id,
+                                                               reprs(name), link)
         self._session._exec(cmd)
     
     def call_js(self, call):

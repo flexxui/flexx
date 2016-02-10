@@ -23,6 +23,9 @@ from . import commonast as ast
 from . import stdlib
 
 
+reprs = json.dumps  # Save string representation without the u in u'xx'.
+
+
 class JSError(Exception):
     """ Exception raised when unable to convert Python to JS.
     """
@@ -50,12 +53,6 @@ def unify(x):
         return x  # dicts
     else:
         return '(%s)' % x
-
-
-def reprs(x):
-    """ Save string representation; strips the u in u'xx'.
-    """
-    return json.dumps(x)
 
 
 # https://github.com/umdjs/umd/blob/master/returnExports.js

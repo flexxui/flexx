@@ -18,10 +18,9 @@ single quotes.
 from flexx.util.testing import run_tests_if_main, raises
 
 from flexx.react import source, input, connect, lazy, HasSignals, undefined
-from flexx.react.pyscript import create_js_signals_class, HasSignalsJS
+from flexx.react.pyscript import create_js_signals_class, HasSignalsJS, reprs
 from flexx.pyscript.functions import py2js, evaljs, evalpy, js_rename
 from flexx.pyscript.stdlib import get_std_info, get_partial_std_lib
-from flexx.pyscript import reprs
 
 
 def run_in_both(cls, reference, extra_classes=()):
