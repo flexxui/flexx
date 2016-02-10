@@ -134,16 +134,16 @@ def init_notebook():
     # Open server - we only use websocket for JS-to-Py communication
     _server_open()
     host, port = server.serving_at
-    all_css, all_js = session.get_all_css_and_js()
+    asset_elements = session.get_assets_as_html()
     
     # Make the JS that we inject not take any vertical space when nbconverted
-    all_css += '\n.output_subarea.output_javascript { padding: 0px; }\n'
+    extra_css = '.output_subarea.output_javascript { padding: 0px; }'
     
     # Compose HTML to inject
     url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)
     t = "<i>Injecting Flexx JS and CSS</i>"
-    t += "<style>\n%s\n</style>\n" % all_css
-    t += "<script>\n%s\n</script>" % all_js
+    t += '\n\n'.join(asset_elements)
+    t += '\n\n<style>%s</style>\n' % extra_css
     t += "<script>flexx.ws_url='%s'; " % url
     t += "flexx.is_notebook=true; flexx.init();</script>"
     
@@ -193,7 +193,7 @@ def launch(cls, runtime='xul', **runtime_kwargs):
     _server_open()
     host, port = server.serving_at
     if runtime == 'nodejs':
-        all_js = session.get_all_css_and_js()[1]
+        all_js = session.get_js_only()
         url = '%s:%i/%s/' % (host, port, session.app_name)
         session._runtime = launch('http://' + url, runtime=runtime, code=all_js)
     else:

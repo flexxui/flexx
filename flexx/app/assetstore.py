@@ -34,19 +34,66 @@ INDEX = """<!doctype html>
 <head>
     <meta charset="utf-8">
     <title>Flexx UI</title>
-    
-CSS-HOOK
 
-JS-HOOK
+ASSET-LINK-HOOK
 
 </head>
 
 <body id='body'>
 
-INDEX-HOOK
+ASSET-CONTENT-HOOK
 
 </body>
 </html>
+"""
+
+RESET = """
+/*! normalize.css v3.0.3 | MIT License | github.com/necolas/normalize.css */
+html
+{font-family:sans-serif;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}
+body{margin:0}
+article,aside,details,figcaption,figure,footer,header,hgroup,main,menu,nav,
+section,summary{display:block}
+audio,canvas,progress,video{display:inline-block;vertical-align:baseline}
+audio:not([controls]){display:none;height:0}
+[hidden],template{display:none}
+a{background-color:transparent}
+a:active,a:hover{outline:0}
+abbr[title]{border-bottom:1px dotted}
+b,strong{font-weight:bold}
+dfn{font-style:italic}
+h1{font-size:2em;margin:.67em 0}
+mark{background:#ff0;color:#000}
+small{font-size:80%}
+sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}
+sup{top:-0.5em}
+sub{bottom:-0.25em}
+img{border:0}
+svg:not(:root){overflow:hidden}
+figure{margin:1em 40px}
+hr{box-sizing:content-box;height:0}
+pre{overflow:auto}
+code,kbd,pre,samp{font-family:monospace,monospace;font-size:1em}
+button,input,optgroup,select,textarea{color:inherit;font:inherit;margin:0}
+button{overflow:visible}
+button,select{text-transform:none}
+button,html input[type="button"],input[type="reset"],input[type="submit"]
+{-webkit-appearance:button;cursor:pointer}
+button[disabled],html input[disabled]{cursor:default}
+button::-moz-focus-inner,input::-moz-focus-inner{border:0;padding:0}
+input{line-height:normal}
+input[type="checkbox"],input[type="radio"]{box-sizing:border-box;padding:0}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button{height:auto}
+input[type="search"]{-webkit-appearance:textfield;box-sizing:content-box}
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration{-webkit-appearance:none}
+fieldset{border:1px solid #c0c0c0;margin:0 2px;padding:.35em .625em .75em}
+legend{border:0;padding:0}
+textarea{overflow:auto}
+optgroup{font-weight:bold}
+table{border-collapse:collapse;border-spacing:0}
+td,th{padding:0}
 """
 
 
@@ -97,6 +144,7 @@ class AssetStore:
         self._cache = {}
         self._assets = {}
         self._module_names = []
+        self.add_asset('reset.css', RESET.encode())
     
     def _cache_get(self, key):
         """ Get content using caching.
@@ -263,7 +311,7 @@ class SessionAssets:
         if url not in self._remote_asset_names:
             self._remote_asset_names.append(url)
     
-    def use_global_asset(self, fname):
+    def use_global_asset(self, fname, before=None):
         """ Make this session use a global asset.
         
         The given asset must be available in the global asset store
@@ -273,6 +321,8 @@ class SessionAssets:
         
         Parameters:
             fname (str): the (relative) filename for the asset.
+            before (str, None): If given, places the new asset before the
+                given asset.
         """
         if not isinstance(fname, str):
             raise ValueError('Asset name must be a string.')
@@ -289,9 +339,13 @@ class SessionAssets:
             self._send_command('DEFINE-%s %s' % (suffix, code))
             #logging.warn('Adding asset %r but the page was already "served".' % fname)
         
-        self._asset_names.append(fname)
+        if before:
+            index = self._asset_names.index(before)
+            self._asset_names.insert(index, fname)
+        else:
+            self._asset_names.append(fname)
     
-    def add_asset(self, fname, content):
+    def add_asset(self, fname, content, before=None):
         """ Add an asset specific for this session.
         
         Assets are global to the process (stored in AssetStore
@@ -303,6 +357,8 @@ class SessionAssets:
             content (str, bytes): the content of the asset. If a str,
                 it is interpreted as the filename or url to the asset.
                 If bytes, it is interpreted as the raw asset content.
+            before (str, None): If given, places the new asset before the
+                given asset.
         Returns:
             fname (str): A mangled version of the given ``fname``.
         """
@@ -310,10 +366,10 @@ class SessionAssets:
             raise ValueError('Asset name must be a string.')
         part1, dot, part2 = fname.rpartition('.')
         fname = '%s-%s%s%s' % (part1, self.id, dot, part2)
-        self.add_global_asset(fname, content)
+        self.add_global_asset(fname, content, before)
         return fname
     
-    def add_global_asset(self, fname, content):
+    def add_global_asset(self, fname, content, before=None):
         """ Add an asset that is global to this process.
         
         Use this for JS and CSS, but probably not for images and content
@@ -323,7 +379,7 @@ class SessionAssets:
         in the global assets, as long as it has the same content.
         """
         self._store.add_asset(fname, content)
-        self.use_global_asset(fname)
+        self.use_global_asset(fname, before)
     
     def register_model_class(self, cls):
         """ Ensure that the client knows the given class. A class can
@@ -345,6 +401,15 @@ class SessionAssets:
             if cls2 not in self._known_classes:
                 self.register_model_class(cls2)
         
+        # Make sure that no two models have the same name, or we get problems
+        # that are difficult to debug.
+        same_name = [c for c in self._known_classes if c.__name__ == cls.__name__]
+        if same_name:
+            same_name.append(cls)
+            raise RuntimeError('Cannot have multiple Model classes with the '
+                               'same name: %r' % same_name)
+        
+        logging.info('Registering Model class %r' % cls.__name__)
         self._known_classes.add(cls)
         
         # Check if cls is covered by our assets
@@ -366,7 +431,7 @@ class SessionAssets:
             if css.strip():
                 self._send_command('DEFINE-CSS ' + css)
     
-    def _get_js_and_css_assets(self):
+    def _get_js_and_css_assets(self, with_reset=False):
         """ Get an ordered dictionary with the JS and CSS assets.
         """
         # Create assets from our extra model classes
@@ -379,22 +444,40 @@ class SessionAssets:
         self._served = True
         # Collect assets
         d = OrderedDict()
+        if with_reset:
+            fname = 'reset.css'
+            d[fname] = self._store.load_asset(fname).decode()
         for fname in self.get_used_asset_names():
             if fname.endswith('.js') or fname.endswith('.css'):
                 d[fname] = self._store.load_asset(fname).decode()
         return d
     
-    def get_all_css_and_js(self):
-        """ Get a string with all css and a string with all JS.
+    def get_js_only(self):
+        """ Get all JS assets as a single string. Intended for apps
+        that make no use of CSS (like in Node).
         """
-        css, js = [], []
+        js = []
         for fname, code in self._get_js_and_css_assets().items():
-            if fname.endswith('.css'):
-                css.append(code)
-            elif fname.endswith('.js'):
+            if fname.endswith('.js'):
                 js.append(code)
-            
-        return '\n\n'.join(css), '\n\n'.join(js)
+        return '\n\n'.join(js)
+    
+    def get_assets_as_html(self):
+        """ Get a list of "<script>" and "<style>" html elements (as
+        strings) representing the assets. No reset.css is included, nor
+        any remote assets.
+        """
+        content_assets = []
+        for fname, code in self._get_js_and_css_assets(False).items():
+            if not code.strip():  # pragma: no cover
+                continue
+            elif fname.endswith('.css'):
+                t = "<style>\n/* CSS for %s */\n%s\n</style>"
+                content_assets.append(t % (fname, code))
+            else:
+                t = "<script>\n/* JS for %s */\n%s\n</script>"
+                content_assets.append(t % (fname, code))
+        return content_assets
     
     def get_page(self, single=False):
         """ Get the string for the HTML page to render this session's app.
@@ -420,43 +503,41 @@ class SessionAssets:
         composes an index page to serve/export.
         """
         # Init source code from template
-        js_elements = []  # links to external JS docs
-        css_elements = []  # links to external CSS docs
-        index_elements = []  # code to put in the index
+        link_assets = []
+        content_assets = []
         
         # Collect remote assets
         for url in self._remote_asset_names:
             if url.endswith('.css'):
                 t = "    <link rel='stylesheet' type='text/css' href='%s' />"
-                css_elements.append(t % url)
+                link_assets.append(t % url)
             else:
                 t = "    <script src='%s'></script>"
-                js_elements.append(t % url)
+                link_assets.append(t % url)
         
         # Collect JS and CSS
-        for fname, code in self._get_js_and_css_assets().items():
+        for fname, code in self._get_js_and_css_assets(True).items():
             if not code.strip():  # pragma: no cover
                 continue
             if single or fname.startswith('index-'):
                 if fname.endswith('.css'):
                     t = "<style>\n/* CSS for %s */\n%s\n</style>"
-                    index_elements.append(t % (fname, code))
+                    content_assets.append(t % (fname, code))
                 else:
                     t = "<script>\n/* JS for %s */\n%s\n</script>"
-                    index_elements.append(t % (fname, code))
+                    content_assets.append(t % (fname, code))
             else:
                 if fname.endswith('.css'):
                     t = "    <link rel='stylesheet' type='text/css' href='%s' />"
-                    css_elements.append(t % fname)
+                    link_assets.append(t % fname)
                 else:
                     t = "    <script src='%s'></script>"
-                    js_elements.append(t % fname)
+                    link_assets.append(t % fname)
         
         # Compose index page
         src = INDEX
-        src = src.replace('JS-HOOK', '\n'.join(js_elements))
-        src = src.replace('CSS-HOOK', '\n'.join(css_elements))
-        src = src.replace('INDEX-HOOK', '\n'.join(index_elements))
+        src = src.replace('ASSET-LINK-HOOK', '\n'.join(link_assets))
+        src = src.replace('ASSET-CONTENT-HOOK', '\n'.join(content_assets))
         
         return src
 

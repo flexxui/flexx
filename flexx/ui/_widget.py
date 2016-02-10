@@ -76,7 +76,7 @@ class Widget(Model):
         Model.__init__(self, **kwargs)
         
         # All widgets need phosphor
-        self._session.use_global_asset('phosphor-all.js')
+        self._session.use_global_asset('phosphor-all.js', before='flexx-ui.css')
         
         # todo: can I make widgets not need the session immediately?
         # The fact that session and app need each-other is a bit awkward?
@@ -478,3 +478,23 @@ class Widget(Model):
             """ Remove the DOM element.
             Called right after the child widget is removed. """
             self.p.removeChild(widget.p)
+    
+        ## Special
+        
+        @react.connect('children')
+        def __update_css(self, children):
+            
+            if 'flx-Layout' not in self.node.className:
+                # Ok, no layout, so maybe we need to take care of CSS.
+                # If we have a child that is a hbox/vbox, we need to be a
+                # flex container.
+                self.node.style['display'] = ''
+                self.node.style['flex-flow'] = ''
+                if len(children) == 1:
+                    subClassName = children[0].node.className
+                    if 'flx-hbox' in subClassName:
+                        self.node.style['display'] = 'flex'
+                        self.node.style['flex-flow'] = 'row'
+                    elif 'flx-vbox' in subClassName:
+                        self.node.style['display'] = 'flex'
+                        self.node.style['flex-flow'] = 'column'

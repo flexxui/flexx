@@ -115,7 +115,7 @@ class Twente(ui.Widget):
         
         with ui.HBox():
             ui.Widget(flex=1)
-            with ui.VBox():
+            with ui.VBox(flex=0):
                 with ui.GroupWidget(title='Plot options'):
                     with ui.VBox():
                         self.month_label = ui.Label(text='Month')
@@ -123,12 +123,12 @@ class Twente(ui.Widget):
                         self.smoothing_label = ui.Label(text='Smoothing')
                         self.smoothing = ui.Slider(max=20, step=2)
                 ui.Widget(flex=1)
-            with ui.VBox():
-                self.plot = ui.PlotWidget(style='width: 640px; height: 480px;',
+            with ui.VBox(flex=4):
+                self.plot = ui.PlotWidget(flex=1,
                                           xdata=years, yrange=(-5, 20),
                                           title='Average monthly temperature',
                                           xlabel='year', ylabel=u'temperature (°C)')
-                ui.Widget(flex=1)
+                ui.Widget(flex=0, style='height:30px')
             ui.Widget(flex=1)
 
     class JS:

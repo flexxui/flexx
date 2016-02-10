@@ -42,7 +42,7 @@ def test_lookslikeafilename():
 def test_asset_store_simple():
     
     s = AssetStore()
-    assert not s.get_asset_names()
+    assert len(s.get_asset_names()) == 1  # reset.css
     assert not s._cache
     
     raises(IndexError, s.load_asset, 'foo.js')
@@ -53,9 +53,10 @@ def test_asset_store_simple():
     s.add_asset('foo.css', b'foo\n')
     s.add_asset('foo.js', test_filename)
     
-    assert s.get_asset_names() == ['foo.css', 'foo.js']  # alphabetically
+    assert s.get_asset_names() == ['foo.css', 'foo.js', 'reset.css']  # alphabetically
     assert s.load_asset('foo.css') == b'foo\n'
     assert s.load_asset('foo.js') == b'bar\n'
+    
     # Check caching
     with open(test_filename, 'wb') as f:
         f.write(b'foo\n')
@@ -91,12 +92,13 @@ def test_asset_store_export():
     s = AssetStore()
     
     s.export(dir)
-    assert not os.listdir(dir)
+    assert len(os.listdir(dir)) == 1
+    assert os.path.isfile(os.path.join(dir, 'reset.css'))
     
     s.add_asset('foo.js', b'xx\n')
     s.add_asset('foo.css', b'xx\n')
     s.export(dir)
-    assert len(os.listdir(dir)) == 2
+    assert len(os.listdir(dir)) == 3
     
     # Fail
     raises(ValueError, s.export, os.path.join(dir, 'doesnotexist'))
@@ -185,7 +187,7 @@ def test_session_registering_model_classes():
     s.register_model_class(ui.Button)
     
     # Get result
-    css, js = s.get_all_css_and_js()
+    js = s.get_js_only()
     assert js.count('.Button = function ') == 1
     assert js.count('.Slider = function ') == 1
     assert js.count('.Widget = function ') == 1

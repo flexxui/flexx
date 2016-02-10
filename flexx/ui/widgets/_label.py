@@ -35,8 +35,16 @@ class Label(Widget):
     """ Widget to show text/html.
     """
     
-    CSS = ".flx-Label { border: 0px solid #454; }"
-
+    CSS = """
+        .flx-Label {
+            border: 0px solid #454;
+            /* phosphor sets this to none */
+            user-select: text;
+            -moz-user-select: text;
+            -webkit-user-select: text;
+            -ms-user-select: text;
+        }"""
+    
     @react.input
     def text(v=''):
         """ The text on the label.
