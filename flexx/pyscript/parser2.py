@@ -237,7 +237,7 @@ class Parser2(Parser1):
         if err_cls:
             code.append(self.lf("%s = " % err_name))
             code.append('new Error(')
-            code.append('"%s:" + ' % err_cls)
+            code.append("'%s:' + " % err_cls)
         else:
             code.append(self.lf("throw "))
         code.append(err_msg or '""')
@@ -261,9 +261,9 @@ class Parser2(Parser1):
         code.append(self.lf('if (!('))
         code += test
         code.append(')) {')
-        code.append('throw "AssertionError: ')  # don't bother with new Error
+        code.append("throw 'AssertionError: ")  # don't bother with new Error
         code.append(msg)
-        code.append('";}')
+        code.append("';}")
         return code
     
     def parse_Try(self, node):
