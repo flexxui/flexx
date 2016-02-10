@@ -1,13 +1,14 @@
 """ Test a live app connection.
 """
 
+import os
 from flexx import app, react, webruntime
 
 from flexx.util.testing import run_tests_if_main, raises, skip
 
 
 def runner(cls):
-    t = app.launch(cls, 'xul')
+    t = app.launch(cls, 'firefox')
     t.test_init()
     app.run()
     t.test_check()
@@ -27,12 +28,13 @@ class BaseTesterApp(app.Model):
     @react.connect('output')
     def _done(self, v):
         self._result = v
-        self.session.close()
+        #print('done', v)
+        app.stop()
     
     class JS:
         @react.connect('input')
         def _handle_input(self, v):
-            #print('handling, setting output', v)
+            #print('handle input', v)
             self.output(v + 1)
 
 
@@ -56,6 +58,8 @@ class TesterApp2(BaseTesterApp):
 
 def test_apps():
     
+    if os.getenv('TRAVIS', '') == 'true':
+        skip('This live test is skipped on Travis for now.')
     if not webruntime.has_firefox():
         skip('This live test needs firefox.')
     
@@ -64,3 +68,5 @@ def test_apps():
 
 
 run_tests_if_main()
+#if __name__ == '__main__':
+#    test_apps()
