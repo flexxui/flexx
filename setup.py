@@ -53,10 +53,7 @@ def copy_for_legacy_python(src_dir, dest_dir):
     if sys.argv[1:] != ['install']:
         raise RuntimeError('Setup.py can only be used to "install" on Python 2.x')
     from translate_to_legacy import LegacyPythonTranslator
-    # Add custom import mapping for specific imports that we use
-    LegacyPythonTranslator.IMPORT_MAPPING.update({
-        'urllib.parse.urlparse': 'urllib2.urlparse'})
-    # Dirs and files to ignore during copying, and skip during translation
+    # Dirs and files to explicitly not translate
     ignore_dirs = ['__pycache__']
     skip = ['pyscript/tests/python_sample.py', 
             'pyscript/tests/python_sample2.py',

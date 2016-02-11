@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Source: https://github.com/almarklein/translate_to_legacy
-# Copyright (c) 2016, Almar Klein
+# Copyright (c) 2016, Almar Klein - this code is subject to the BSD license
 # The parser code and regexes are based on code by Rob Reilink from the
 # IEP project.
 
