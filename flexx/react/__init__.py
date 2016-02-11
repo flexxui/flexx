@@ -313,3 +313,6 @@ from .signals import Signal, SourceSignal, InputSignal, LazySignal  # noqa
 from .decorators import connect, source, input, lazy, nosync  # noqa
 from .hassignals import HasSignals  # noqa
 from .functional import map, filter, reduce, merge  # noqa
+
+import logging
+logging.warn('flexx.react is likely to be replaced for a different event system')
