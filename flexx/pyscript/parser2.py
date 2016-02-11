@@ -201,7 +201,7 @@ Globals and nonlocal
 """
 
 from . import commonast as ast
-from .parser1 import Parser1, JSError, unify  # noqa
+from .parser1 import Parser1, JSError, unify, reprs  # noqa
 
 
 class Parser2(Parser1):
@@ -261,9 +261,9 @@ class Parser2(Parser1):
         code.append(self.lf('if (!('))
         code += test
         code.append(')) {')
-        code.append("throw 'AssertionError: ")  # don't bother with new Error
-        code.append(msg)
-        code.append("';}")
+        code.append('throw "AssertionError: " + ')  # don't bother with new Error
+        code.append(reprs(msg))
+        code.append(";}")
         return code
     
     def parse_Try(self, node):
