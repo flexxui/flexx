@@ -246,4 +246,24 @@ class Parser(Parser3):
 
 
 from .functions import py2js, evaljs, evalpy, script2js, js_rename, get_full_std_lib  # noqa
-from . import stubs  # noqa
+
+# Create stubs
+
+import sys
+
+class JSConstant:
+    def __init__(self, name):
+        self._name = name
+    def __repr__(self):  # pragma: no cover
+        return self._name
+
+Infinity = float('inf')  # noqa
+NaN = float('nan')  # noqa
+
+window = JSConstant('window')  # noqa
+
+# We'll be using "undefined" in flexx.react as well, and want to use
+# the same exact object, without having dependencies.
+undefined = sys._undefined = getattr(sys, '_undefined', JSConstant('undefined'))  # noqa
+
+del sys, JSConstant

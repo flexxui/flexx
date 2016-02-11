@@ -13,7 +13,7 @@ import threading
 
 from .. import react
 from ..app import Model
-from ..pyscript.stubs import phosphor, undefined, window, document, flexx
+from ..pyscript import undefined, window
 
 def _check_two_scalars(name, v):
     if not (isinstance(v, (list, tuple)) and
@@ -285,7 +285,7 @@ class Widget(Model):
                         that._check_real_size()
                     return False
             if self.p:
-                phosphor.messaging.installMessageFilter(self.p, SizeNotifier())
+                window.phosphor.messaging.installMessageFilter(self.p, SizeNotifier())
             
             #flexx.get('body').appendChild(this.node)
             # todo: allow setting a placeholder DOM element, or any widget parent
@@ -293,7 +293,7 @@ class Widget(Model):
             cls_name = self._class_name
             for i in range(32):  # i.e. a safe while-loop
                 self.node.classList.add('flx-' + cls_name)
-                cls = flexx.classes[cls_name]
+                cls = window.flexx.classes[cls_name]
                 if not cls:
                     break
                 cls_name = cls.prototype._base_class._class_name
@@ -305,7 +305,7 @@ class Widget(Model):
             super()._init()
         
         def _create_node(self):
-            self.p = phosphor.createWidget('div')
+            self.p = window.phosphor.createWidget('div')
         
         @react.connect('style')
         def style_changed(self, style):
@@ -341,7 +341,7 @@ class Widget(Model):
                 # Allow parent to re-layout
                 parent = self.parent()
                 if parent:
-                    parent.p.processMessage(phosphor.widget.MSG_LAYOUT_REQUEST)
+                    parent.p.processMessage(window.phosphor.widget.MSG_LAYOUT_REQUEST)
         
         ## Size 
         
@@ -388,12 +388,12 @@ class Widget(Model):
             if self.parent():
                 return 
             if id:
-                el = document.getElementById(id)
+                el = window.document.getElementById(id)
                 if self.p.isAttached:
-                    phosphor.widget.detachWidget(self.p)
+                    window.phosphor.widget.detachWidget(self.p)
                 if self.node.parentNode is not None:  # detachWidget not enough
                     self.node.parentNode.removeChild(self.node)
-                phosphor.widget.attachWidget(self.p, el)
+                window.phosphor.widget.attachWidget(self.p, el)
                 that = self
                 window.addEventListener('resize', lambda: (that.p.update(), 
                                                            that._check_real_size()))

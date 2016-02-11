@@ -165,6 +165,25 @@ Str methods
     "foobar".replace('foo', 'bar')
     "foobar".upper()
 
+
+Using JS specicic functionality
+-------------------------------
+
+When writing PyScript inside Python modules, we recommend that where
+specific JavaScript functionality is used, that the references are
+prefixed with ``window.``. This helps make it clear that the
+functionality is specific to JS, and also helps static code analysis
+tools like flake8.
+
+.. pyscript_example::
+    
+    from flexx.pyscript import window  # this is a stub
+    def foo(a):
+        return window.Math.cos(a)
+
+Aside from ``window``, ``flexx.pyscript`` also provides ``undefined``,
+``Inifinity``, and ``NaN``.
+
 """
 
 from . import commonast as ast

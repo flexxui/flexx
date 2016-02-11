@@ -19,7 +19,7 @@ Example:
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor
+from ...pyscript import window
 from . import Layout
 
 
@@ -72,11 +72,11 @@ class DockPanel(Layout):
     class JS:
         
         def _create_node(self):
-            self.p = phosphor.dockpanel.DockPanel()
+            self.p = window.phosphor.dockpanel.DockPanel()
         
         def _add_child(self, widget):
-            widget._tab = phosphor.tabs.Tab(widget.title() or '-')
-            phosphor.dockpanel.DockPanel.setTab(widget.p, widget._tab)
+            widget._tab = window.phosphor.tabs.Tab(widget.title() or '-')
+            window.phosphor.dockpanel.DockPanel.setTab(widget.p, widget._tab)
             self.p.addWidget(widget.p)
             
         def _remove_child(self, widget):

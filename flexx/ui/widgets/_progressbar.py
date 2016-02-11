@@ -32,7 +32,7 @@ Interactive example:
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor
+from ...pyscript import window
 from . import Widget
 
 
@@ -57,7 +57,7 @@ class ProgressBar(Widget):
     class JS:
     
         def _create_node(self):
-            self.p = phosphor.createWidget('progress')
+            self.p = window.phosphor.createWidget('progress')
     
         @react.connect('value')
         def _value_changed(self, value):

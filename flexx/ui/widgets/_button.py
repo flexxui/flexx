@@ -30,7 +30,7 @@ Example with interaction:
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor
+from ...pyscript import window
 from . import Widget
 
 
@@ -55,7 +55,7 @@ class Button(Widget):
     class JS:
         
         def _create_node(self):
-            self.p = phosphor.createWidget('button')
+            self.p = window.phosphor.createWidget('button')
             node = self.p.node
             that = self
             node.addEventListener('mousedown', lambda ev: that.mouse_down._set(1), 0)

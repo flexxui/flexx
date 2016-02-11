@@ -28,7 +28,7 @@ Simple example:
 import os
 
 from ... import react
-from ...pyscript.stubs import document, window
+from ...pyscript import window
 from . import Widget
 
 Bokeh = None  # fool flakes
@@ -92,7 +92,7 @@ class BokehWidget(Widget):
             # Embed div
             self.node.innerHTML = div
             # "exec" code
-            el = document.createElement('script')
+            el = window.document.createElement('script')
             el.innerHTML = script 
             self.node.appendChild(el)
             #eval(script)

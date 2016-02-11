@@ -13,13 +13,15 @@ Simple example:
 .. UIExample:: 200
     
     p = ui.PlotWidget(xdata=range(5), ydata=[1,3,4,2,5], 
-                      line_width=4, line_color='red', marker_color='')
+                      line_width=4, line_color='red', marker_color='',
+                      style='min-height:200px;')
 
 Interactive example:
 
 .. UIExample:: 300
     
     from flexx import app, ui, react
+    from flexx.pyscript import window
     
     class Example(ui.Widget):
         def init(self):
@@ -39,11 +41,11 @@ Interactive example:
             def __update_amplitude(self, freq, phase):
                 ydata = []
                 for x in self.plot.xdata():
-                    ydata.append(Math.sin(freq*x*2*Math.PI+phase))
+                    ydata.append(window.Math.sin(freq*x*2*window.Math.PI+phase))
                 self.plot.ydata(ydata)
 """
 
-from ...pyscript.stubs import Math, RegExp
+from ...pyscript import window
 from ... import react
 from ._canvas import CanvasWidget
 
@@ -231,7 +233,7 @@ class PlotWidget(CanvasWidget):
             if ylabel:
                 ctx.save()
                 ctx.translate(0, h/2)
-                ctx.rotate(-Math.PI/2)
+                ctx.rotate(-window.Math.PI/2)
                 ctx.textBaseline = 'top'
                 ctx.fillText(ylabel, 0, 5)
                 ctx.restore()
@@ -260,7 +262,7 @@ class PlotWidget(CanvasWidget):
                 ctx.fillStyle = mc
                 for x, y in zip(sxx, syy):
                     ctx.beginPath()
-                    ctx.arc(x, h-y, ms/2, 0, 2*Math.PI)
+                    ctx.arc(x, h-y, ms/2, 0, 2*window.Math.PI)
                     ctx.fill()
         
         def _get_ticks(self, scale, t1, t2, min_tick_dist=40):
@@ -271,8 +273,8 @@ class PlotWidget(CanvasWidget):
             else:
                 return []
             # Calculate tick values
-            first_tick = Math.ceil(t1 / tick_unit) * tick_unit
-            last_tick = Math.floor(t2 / tick_unit) * tick_unit
+            first_tick = window.Math.ceil(t1 / tick_unit) * tick_unit
+            last_tick = window.Math.floor(t2 / tick_unit) * tick_unit
             ticks = []
             t = first_tick
             while t <= last_tick:
@@ -281,7 +283,7 @@ class PlotWidget(CanvasWidget):
             for i in range(len(ticks)):
                 t = ticks[i].toPrecision(4)
                 if '.' in t:
-                    t = t.replace(RegExp("[0]+$"), "")
+                    t = t.replace(window.RegExp("[0]+$"), "")
                 if t[-1] == '.':    
                     t += '0'
                 ticks[i] = t

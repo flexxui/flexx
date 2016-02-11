@@ -15,7 +15,7 @@ Example:
 """
 
 from ... import react
-from ...pyscript.stubs import document, phosphor, undefined
+from ...pyscript import window, undefined
 from . import Layout
 
 
@@ -172,7 +172,7 @@ class FormLayout(BaseTableLayout):
     class JS:
         
         def _create_node(self):
-            self.p = phosphor.createWidget('table')
+            self.p = window.phosphor.createWidget('table')
         
         def _apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):
             AUTOFLEX = 729
@@ -194,16 +194,16 @@ class FormLayout(BaseTableLayout):
         
         def _add_child(self, widget):
             # Create row
-            row = document.createElement('tr')
+            row = window.document.createElement('tr')
             self.node.appendChild(row)
             # Create element for label
-            td = document.createElement("td")
+            td = window.document.createElement("td")
             td.classList.add('title')
             row.appendChild(td)
             widget._title_elem = td
             td.innerHTML = widget.title()
             # Create element for widget
-            td = document.createElement("td")
+            td = window.document.createElement("td")
             row.appendChild(td)
             td.appendChild(widget.node)
             #

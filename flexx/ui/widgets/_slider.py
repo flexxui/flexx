@@ -26,7 +26,7 @@ Interactive example:
                 self.label.text('x'.repeat(value))
 """
 
-from ...pyscript.stubs import undefined, phosphor
+from ...pyscript import undefined, window
 from ... import react
 from . import Widget
 
@@ -63,7 +63,7 @@ class Slider(Widget):
     class JS:
     
         def _create_node(self):
-            self.p = phosphor.createWidget('input')
+            self.p = window.phosphor.createWidget('input')
             self.p.node.type = 'range'
             that = self
             f = lambda ev: that.user_value._set(that.node.value)

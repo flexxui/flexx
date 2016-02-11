@@ -14,7 +14,7 @@ Example:
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor
+from ...pyscript import window
 from . import Layout
 
 
@@ -23,7 +23,7 @@ from . import Layout
 #     """
 #     
 #     def _create_node(self):
-#         self.p = phosphor.tabs.TabBar()
+#         self.p = window.phosphor.tabs.TabBar()
 # 
 #     def _add_child(self, widget):
 #         raise ValueError('A TabBar cannot have children.')
@@ -105,11 +105,11 @@ class TabPanel(Layout):
     class JS:
         
         def _create_node(self):
-            self.p = phosphor.tabs.TabPanel()
+            self.p = window.phosphor.tabs.TabPanel()
         
         def _add_child(self, widget):
-            widget._tab = phosphor.tabs.Tab(widget.title() or '-')
-            phosphor.tabs.TabPanel.setTab(widget.p, widget._tab)
+            widget._tab = window.phosphor.tabs.Tab(widget.title() or '-')
+            window.phosphor.tabs.TabPanel.setTab(widget.p, widget._tab)
             self.p.addWidget(widget.p)
         
         def _remove_child(self, widget):

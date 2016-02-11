@@ -10,7 +10,7 @@ Example:
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor
+from ...pyscript import window
 from . import Widget
 
  
@@ -36,7 +36,7 @@ class IFrame(Widget):
     class JS:
         
         def _create_node(self):
-            self.p = phosphor.createWidget('iframe')
+            self.p = window.phosphor.createWidget('iframe')
         
         @react.connect('url')
         def _update_url(self, url):

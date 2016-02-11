@@ -34,7 +34,7 @@ Example:
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor, Infinity
+from ...pyscript import window, Infinity
 from . import Layout
 from ._form import BaseTableLayout
 
@@ -74,10 +74,10 @@ class GridPanel(Layout):
                     if msg._type == 'layout-request':
                         that._child_limits_changed()
                     return False
-            phosphor.messaging.installMessageFilter(self.p, LayoutNotifier())
+            window.phosphor.messaging.installMessageFilter(self.p, LayoutNotifier())
         
         def _create_node(self):
-            self.p = phosphor.gridpanel.GridPanel()
+            self.p = window.phosphor.gridpanel.GridPanel()
         
         @react.connect('children.*.pos', 'children.*.flex', 'children.*.size')
         def __update_positions(self):
@@ -88,8 +88,8 @@ class GridPanel(Layout):
             max_row, max_col = 0, 0
             for child in self.children():
                 x, y = child.pos()
-                phosphor.gridpanel.GridPanel.setColumn(child.p, x)
-                phosphor.gridpanel.GridPanel.setRow(child.p, y)
+                window.phosphor.gridpanel.GridPanel.setColumn(child.p, x)
+                window.phosphor.gridpanel.GridPanel.setRow(child.p, y)
                 max_col = max(max_col, x)
                 max_row = max(max_row, y)
             
@@ -114,7 +114,7 @@ class GridPanel(Layout):
             # Assign
             self.p._columnSpecs = colSpecs
             self.p._rowSpecs = rowSpecs
-            Spec = phosphor.gridpanel.Spec
+            Spec = window.phosphor.gridpanel.Spec
             self.p.columnSpecs = [Spec(i) for i in colSpecs]
             self.p.rowSpecs = [Spec(i) for i in rowSpecs]
         

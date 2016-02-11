@@ -2,7 +2,7 @@
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor, window
+from ...pyscript import window
 from .. import Widget
 
 
@@ -33,7 +33,7 @@ class CanvasWidget(Widget):
             window.setTimeout(lambda ev=None: that._check_real_size(), 10)
         
         def _create_node(self):
-            self.p = phosphor.createWidget('div')
+            self.p = window.phosphor.createWidget('div')
             self.canvas = window.document.createElement('canvas')
             self.p.node.appendChild(self.canvas)
             # Set position to absolute so that the canvas is not going
