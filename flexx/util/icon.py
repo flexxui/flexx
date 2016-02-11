@@ -14,7 +14,7 @@ import struct
 
 from .png import read_png, write_png
 
-if sys.version_info[0] > 2:
+if sys.version_info[0] >= 3:
     basestring = str  # noqa
 
 
