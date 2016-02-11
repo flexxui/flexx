@@ -127,8 +127,8 @@ widgets are organized.
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=3)
                 
-                ui.Label(text='margin 10 (around layout)')
-                with ui.HBox(flex=0, margin=10):
+                ui.Label(text='padding 10 (around layout)')
+                with ui.HBox(flex=0, padding=10):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=1)
                     self.b3 = ui.Button(text='Foo bar', flex=1)
