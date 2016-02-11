@@ -2,6 +2,7 @@
 """
 
 import os
+import sys
 from flexx import app, react, webruntime
 
 from flexx.util.testing import run_tests_if_main, raises, skip
