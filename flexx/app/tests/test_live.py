@@ -10,6 +10,7 @@ from flexx.util.testing import run_tests_if_main, raises, skip
 def runner(cls):
     t = app.launch(cls, 'firefox')
     t.test_init()
+    app.call_later(3, app.stop)
     app.run()
     t.test_check()
 
@@ -58,8 +59,8 @@ class TesterApp2(BaseTesterApp):
 
 def test_apps():
     
-    if os.getenv('TRAVIS', '') == 'true':
-        skip('This live test is skipped on Travis for now.')
+    # if os.getenv('TRAVIS', '') == 'true':
+        # skip('This live test is skipped on Travis for now.')
     if not webruntime.has_firefox():
         skip('This live test needs firefox.')
     
