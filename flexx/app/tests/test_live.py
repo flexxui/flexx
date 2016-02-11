@@ -7,11 +7,17 @@ from flexx import app, react, webruntime
 from flexx.util.testing import run_tests_if_main, raises, skip
 
 
+ON_TRAVIS = os.getenv('TRAVIS', '') == 'true'
+ON_PYPY = '__pypy__' in sys.builtin_module_names
+
+
 def runner(cls):
     t = app.launch(cls, 'firefox')
     t.test_init()
+    app.call_later(3, app.stop)
     app.run()
-    t.test_check()
+    if not (ON_TRAVIS and ON_PYPY):  # has intermittent fails on pypy3
+        t.test_check()
 
 
 class BaseTesterApp(app.Model):
@@ -58,8 +64,8 @@ class TesterApp2(BaseTesterApp):
 
 def test_apps():
     
-    if os.getenv('TRAVIS', '') == 'true':
-        skip('This live test is skipped on Travis for now.')
+    # if os.getenv('TRAVIS', '') == 'true':
+        # skip('This live test is skipped on Travis for now.')
     if not webruntime.has_firefox():
         skip('This live test needs firefox.')
     
