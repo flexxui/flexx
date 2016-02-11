@@ -27,8 +27,8 @@ Example for BoxLayout:
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=3)
                 
-                ui.Label(text='margin 10 (around layout)')
-                with ui.HBox(flex=0, margin=10):
+                ui.Label(text='padding 10 (around layout)')
+                with ui.HBox(flex=0, padding=10):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=1)
                     self.b3 = ui.Button(text='Foo bar', flex=1)
@@ -213,7 +213,7 @@ class BoxLayout(BaseBoxLayout):
     """
     
     @react.input
-    def margin(v=1):
+    def padding(v=1):
         """ The empty space around the layout (in pixels). """
         return float(v)
     
@@ -254,8 +254,8 @@ class BoxLayout(BaseBoxLayout):
             for widget in self.children():
                 widget._check_real_size()
         
-        @react.connect('margin')
-        def __margin_changed(self, margin):
+        @react.connect('padding')
+        def __padding_changed(self, margin):
             self.node.style['padding'] = margin + 'px'
             for widget in self.children():
                 widget._check_real_size()
