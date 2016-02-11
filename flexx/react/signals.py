@@ -131,7 +131,7 @@ class Signal(object):
                                          conn, id(self))
     
     @property
-    def __self__(self):
+    def _self(self):
         """ The HasSignals instance that this signal is associated with
         (stored as a weak reference internally). None for plain signals.
         """
@@ -254,9 +254,9 @@ class Signal(object):
         # Done traversing name: add to list or fail
         if ob is undefined or len(nameparts) == 0:
             if ob is undefined:
-                return 'Signal %r does not exist.' % fullname
+                return 'Signal "%s" does not exist.' % fullname
             if not hasattr(ob, '_IS_SIGNAL'):
-                return 'Object %r is not a signal.' % fullname
+                return 'Object "%s" is not a signal.' % fullname
             self._upstream.append(ob)
             return None  # ok
         # Get value if ob is a signal

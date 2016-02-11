@@ -15,11 +15,15 @@ situations:
 
 """
 
-import sys
 import re
+import sys
+import json
 
 from . import commonast as ast
 from . import stdlib
+
+
+reprs = json.dumps  # Save string representation without the u in u'xx'.
 
 
 class JSError(Exception):
@@ -84,8 +88,8 @@ def get_module_preamble(name, deps):
         Don't forget to return the namespace, and put ``}));`` at the end.
     """
     
-    dep_strings = ', '.join([repr(dep) for dep in deps])
-    dep_requires = ', '.join(['require(%s)' % repr(dep) for dep in deps])
+    dep_strings = ', '.join([reprs(dep) for dep in deps])
+    dep_requires = ', '.join(['require(%s)' % reprs(dep) for dep in deps])
     dep_names = ', '.join(deps)
     dep_fullnames = ', '.join('root.' + dep for dep in deps)
     
@@ -129,6 +133,8 @@ class Parser0(object):
         'True'  : 'true',
         'False' : 'false',
         'None'  : 'null',
+        'unicode': 'str',  # legacy Py compat
+        'unichr': 'chr',
     }
     
     BINARY_OP = {
@@ -170,7 +176,12 @@ class Parser0(object):
     def __init__(self, code, module=None, indent=0, docstrings=True,
                  inline_stdlib=True):
         self._pycode = code  # helpfull during debugging
+        if sys.version_info[0] == 2:
+            fut = 'from __future__ import unicode_literals, print_function\n'
+            code = fut + code
         self._root = ast.parse(code)
+        if sys.version_info[0] == 2:
+            self._root.body_nodes.pop(0)  # remove that import node we added
         self._stack = []
         self._indent = indent
         self._dummy_counter = 0
@@ -233,7 +244,7 @@ class Parser0(object):
         if module:
             self._indent -= 1
             exports = [name for name in sorted(ns) if not name.startswith('_')]
-            export_keyvals = [repr(name) + ': ' + name for name in exports]
+            export_keyvals = [reprs(name) + ': ' + name for name in exports]
             code = self._parts
             code.insert(0, get_module_preamble(module, []))
             code.append('\n    return {%s};\n' % ', '.join(export_keyvals))

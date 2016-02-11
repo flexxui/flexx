@@ -2,6 +2,8 @@
 Implements the HasSignals class (and its meta class).
 """
 
+import sys
+
 from .signals import Signal, PropSignal
 
 
@@ -11,10 +13,19 @@ def with_metaclass(meta, *bases):
     # This requires a bit of explanation: the basic idea is to make a dummy
     # metaclass for one level of class instantiation that replaces itself with
     # the actual metaclass.
+    # On Python 2.7, the name cannot be unicode :/
+    tmp_name = b'tmp_class' if sys.version_info[0] == 2 else 'tmp_class'
     class metaclass(meta):
         def __new__(cls, name, this_bases, d):
             return meta(name, bases, d)
-    return type.__new__(metaclass, 'temporary_class', (), {})
+    return type.__new__(metaclass, tmp_name, (), {})
+
+
+def new_type(name, *args, **kwargs):
+    """ Alternative for type(...) to be legacy-py compatible.
+    """
+    name = name.encode() if sys.version_info[0] == 2 else name
+    return type(name, *args, **kwargs)
 
 
 class HasSignalsMeta(type):

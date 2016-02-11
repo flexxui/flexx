@@ -223,7 +223,7 @@ class Parser3(Parser2):
             return ["({}).toString.call(",
                     ob,
                     ").match(/\s([a-zA-Z]+)/)[1].toLowerCase() === ",
-                    repr(cmp.lower())
+                    "'%s'" % cmp.lower()
                     ]
         
         else:

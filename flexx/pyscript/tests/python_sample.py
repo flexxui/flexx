@@ -4,8 +4,8 @@ Taken from https://github.com/erezsh/plyplus (MIT licensed) and
 modified for Python 3.3+ and 2.7.
 """
 
-# Needed so Python 2.5's compiler understands this code
-from __future__ import with_statement
+# Python 2 produces different ast for print() if print_function is not imported
+from __future__ import print_function, with_statement 
 
 # Might as well try the other imports here
 import a

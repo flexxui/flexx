@@ -379,7 +379,7 @@ class XulRuntime(DesktopRuntime):
                                   '../Resources/application.ini')
             else:
                 inifile = op.join(op.dirname(ff_exe), 'application.ini')
-            for line in open(inifile, 'rt', encoding='utf-8').read().splitlines():
+            for line in open(inifile, 'rb').read().decode().splitlines():
                 if line.lower().startswith('version'):
                     ff_version = 'xul_' + line.split('=')[1].strip()
                     break

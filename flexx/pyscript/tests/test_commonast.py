@@ -1,4 +1,6 @@
 
+from __future__ import print_function, absolute_import
+
 import os
 import sys
 import bz2
@@ -8,7 +10,10 @@ import time
 
 from flexx.util.testing import run_tests_if_main, raises, skipif
 
-from flexx.pyscript import commonast
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+import commonast
+#from flexx.pyscript import commonast
+
 
 dirname = os.path.dirname(__file__)
 filename1 = os.path.join(dirname, 'python_sample.py')
@@ -29,8 +34,8 @@ def _export_python_sample_ast():
         root = commonast.parse(code)
         ast_bin = bz2.compress(root.tojson(indent=None).encode())
         with open(filename_bz2, 'wb') as f:
-            n = f.write(ast_bin)
-        print('wrote %i bytes to %s' % (n, filename_bz2))
+            n = f.write(ast_bin) or 'some'
+        print('wrote %s bytes to %s' % (n, filename_bz2))
 
 
 def _get_ref_json(filename):
@@ -116,7 +121,7 @@ def test_Node_creation():
     raises(AssertionError, MyNode, 'a', 'Add', stubnode, stubnodes, stubnodes)
 
 def test_json_conversion():
-    from flexx.pyscript.commonast import Node, Assign, Name, BinOp, Bytes, Num
+    from commonast import Node, Assign, Name, BinOp, Bytes, Num
     
     # Test json conversion
     roota = Assign([Name('foo')], BinOp('Add', Name('a'), Num(3)))
@@ -208,6 +213,16 @@ def _compare_large_strings(text1, text2):
         assert sec1 == sec2
 
 
+def test_compare_print():
+    ast = commonast.parse('print(foo, bar)')
+    n = ast.body_nodes[0].value_node
+    assert isinstance(n, commonast.Call)
+    assert n.func_node.name == 'print'
+    assert len(n.arg_nodes) == 2
+    assert n.arg_nodes[0].name == 'foo'
+    assert n.arg_nodes[1].name == 'bar'
+
+
 def test_consistent_ast():
     # Parse the sample file and export as a json string
     code = open(filename1, 'rb').read().decode()
@@ -237,6 +252,7 @@ def test_consistent_ast3():
     _compare_large_strings(_get_ref_json(filename3), js)
 
 
+@skipif(sys.version_info < (3,), reason='not Python 3.x')
 def test_functiondef_some_more():
     code = """
     def foo(a, b=3, *, c=4, d):
@@ -281,7 +297,7 @@ def test_functiondef_some_more():
 
 
 def test_call_some_more():
-    from flexx.pyscript.commonast import Name, Num, Starred, Keyword
+    from commonast import Name, Num, Starred, Keyword
     
     code = "foo(1, a, *b, c=3, **d)"
     node = commonast.parse(code).body_nodes[0].value_node  # Call is in an Expr
@@ -299,7 +315,7 @@ def test_call_some_more():
 
 @skipif(sys.version_info < (3,5), reason='Need Python 3.5+')
 def test_call_even_some_more():
-    from flexx.pyscript.commonast import Name, Num, Starred, Keyword
+    from commonast import Name, Num, Starred, Keyword
     
     code = "foo(a, *b, c, *d, **e, **f)"
     node = commonast.parse(code).body_nodes[0].value_node
@@ -311,6 +327,7 @@ def test_call_even_some_more():
         isinstance(arg, cls)
     
 
+@skipif(sys.version_info < (3,), reason='not Python 3.x')
 def test_classdef_some_more():
     code = "class Foo(Bar, *bases, metaclass=X, **extra_kwargs): pass"
     node = commonast.parse(code).body_nodes[0]
@@ -327,6 +344,19 @@ def test_classdef_some_more():
     assert node.kwarg_nodes[0].value_node.name == 'X'  # Name node
     assert node.kwarg_nodes[1].name is None 
     assert node.kwarg_nodes[1].value_node.name == 'extra_kwargs'
+
+
+@skipif(sys.version_info > (3,), reason='not Python 2.x')
+def test_python2_old_syntax():
+    # We do not support tuple function arg; it would complicate things
+    with raises(RuntimeError):
+        commonast.parse('def foo((a,)=c):pass')
+    # Print statement becomes print function
+    assert commonast.parse('print(foo)') == commonast.parse('print foo')
+    # Exec statement becomes a d function
+    assert commonast.parse('exec(foo)') == commonast.parse('exec foo')
+    # Backticks becomes repr function
+    assert commonast.parse('repr(foo)') == commonast.parse('`foo`')
 
 
 @skipif(sys.version_info < (3,3), reason='Need Python 3.3+')

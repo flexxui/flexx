@@ -11,6 +11,7 @@ class Foo:
         self.val = val
     def __json__(self):
         return {'__type__': 'Foo', 'val': self.val}
+    @staticmethod
     def __from_json__(obj):
         return Foo(obj['val'])
     def __eq__(self, other):

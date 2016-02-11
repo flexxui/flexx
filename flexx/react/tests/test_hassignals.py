@@ -59,7 +59,7 @@ def test_hassignals_without_self():
     
     t = Test()
     
-    assert t.title.__self__ is t
+    assert t.title._self is t
     
     assert set(t.__signals__) == set(['title', 'title_len', 'show_title'])
     

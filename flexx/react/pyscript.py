@@ -10,6 +10,10 @@ from ..pyscript.stubs import undefined, Object, Date
 
 from .signals import Signal, SourceSignal
 
+
+reprs = json.dumps
+
+
 def py2js(*args, **kwargs):
     kwargs['inline_stdlib'] = False
     return py2js_(*args, **kwargs)
@@ -129,7 +133,7 @@ class HasSignalsJS:
         selff._func = func
         selff._status = 3
         selff._count = 0
-        selff.__self__ = obj  # note: not a weakref...
+        selff._self = obj  # note: not a weakref...
         selff._upstream_given = upstream
         selff._upstream = []
         selff._downstream = []
@@ -245,15 +249,15 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code)
             # Add upstream signal names to the function object
-            t = '%s.prototype.%s._upstream = %r;\n'
-            funcs_code.append(t % (cls_name, funcname, val._upstream_given))
+            t = '%s.prototype.%s._upstream = %s;\n'
+            funcs_code.append(t % (cls_name, funcname, reprs(val._upstream_given)))
             # Add type of signal too
-            t = '%s.prototype.%s._signal_type = %r;\n'
+            t = '%s.prototype.%s._signal_type = %s;\n'
             signal_type = val.__class__.__name__
-            funcs_code.append(t % (cls_name, funcname, signal_type))
+            funcs_code.append(t % (cls_name, funcname, reprs(signal_type)))
             # Add flags
-            t = '%s.prototype.%s.flags = JSON.parse(%r);\n'
-            funcs_code.append(t % (cls_name, funcname, json.dumps(val.flags)))
+            t = '%s.prototype.%s.flags = JSON.parse(%s);\n'
+            funcs_code.append(t % (cls_name, funcname, reprs(json.dumps(val.flags))))
         elif callable(val):
             code = py2js(val, cls_name + '.prototype.' + name)
             code = code.replace('super()', base_class)  # fix super
@@ -266,16 +270,16 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             except Exception as err:  # pragma: no cover
                 raise ValueError('Attributes on JS HasSignals class must be '
                                  'JSON compatible.\n%s' % str(err))
-            total_code.append('%s.prototype.%s = JSON.parse(%r)' % 
-                              (cls_name, name, serialized))
+            total_code.append('%s.prototype.%s = JSON.parse(%s)' %
+                              (cls_name, name, reprs(serialized)))
     
     # Insert __signals__ that we found
     if base_class in ('Object', 'HasSignals.prototype'):
-        t = '%s.prototype.__signals__ = %r.sort();'
-        total_code.append(t % (cls_name, signals))
+        t = '%s.prototype.__signals__ = %s.sort();'
+        total_code.append(t % (cls_name, reprs(signals)))
     else:
-        t = '%s.prototype.__signals__ = %s.__signals__.concat(%r).sort();'
-        total_code.append(t % (cls_name, base_class, signals))
+        t = '%s.prototype.__signals__ = %s.__signals__.concat(%s).sort();'
+        total_code.append(t % (cls_name, base_class, reprs(signals)))
     
     total_code.extend(funcs_code)
     return '\n'.join(total_code)

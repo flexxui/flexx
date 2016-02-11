@@ -201,7 +201,7 @@ Globals and nonlocal
 """
 
 from . import commonast as ast
-from .parser1 import Parser1, JSError, unify  # noqa
+from .parser1 import Parser1, JSError, unify, reprs  # noqa
 
 
 class Parser2(Parser1):
@@ -237,7 +237,7 @@ class Parser2(Parser1):
         if err_cls:
             code.append(self.lf("%s = " % err_name))
             code.append('new Error(')
-            code.append(repr(err_cls + ':') + ' + ')
+            code.append("'%s:' + " % err_cls)
         else:
             code.append(self.lf("throw "))
         code.append(err_msg or '""')
@@ -261,9 +261,9 @@ class Parser2(Parser1):
         code.append(self.lf('if (!('))
         code += test
         code.append(')) {')
-        code.append('throw "AssertionError: ')  # don't bother with new Error
-        code.append(msg)
-        code.append('";}')
+        code.append('throw "AssertionError: " + ')  # don't bother with new Error
+        code.append(reprs(msg))
+        code.append(";}")
         return code
     
     def parse_Try(self, node):
@@ -393,7 +393,7 @@ class Parser2(Parser1):
                     not node.iter_node.arg_nodes and f.attr in METHODS):
                 sure_is_dict = f.attr
                 iter = ''.join(self.parse(f.value_node))
-            elif isinstance(f, ast.Name) and f.name == 'range':
+            elif isinstance(f, ast.Name) and f.name in ('xrange', 'range'):
                 sure_is_range = [''.join(self.parse(arg)) for arg in 
                                  node.iter_node.arg_nodes]
         
@@ -676,7 +676,9 @@ class Parser2(Parser1):
         
         # Check
         if (not lambda_) and node.decorator_nodes:
-            raise JSError('No support for function decorators')
+            if not (len(node.decorator_nodes) == 1 and
+                    node.decorator_nodes[0].name == 'staticmethod'):
+                raise JSError('No support for function decorators')
         if node.kwarg_nodes:
             raise JSError('No support for keyword only arguments')
         if node.kwargs_node:
@@ -804,7 +806,8 @@ class Parser2(Parser1):
         # uses .call(this, ...) so that the instance is handled ok.
         
         if node.arg_nodes:
-            raise JSError('super() accepts 0 or 1 arguments.')
+            #raise JSError('super() accepts 0 or 1 arguments.')
+            pass  # In Python 2, arg nodes are provided, and we ignore them
         if len(self._stack) < 3:  # module, class, function
             #raise JSError('can only use super() inside a method.')
             # We just provide "super()" and hope that the user will

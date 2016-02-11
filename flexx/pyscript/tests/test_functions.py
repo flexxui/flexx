@@ -166,7 +166,7 @@ def test_scripts():
     script2js(pyname)
     
     # Check result
-    jscode = open(jsname, 'rt', encoding='utf-8').read()
+    jscode = open(jsname, 'rb').read().decode()
     assert 'foo = 42;' in jscode
     assert 'define(' not in jscode
     
@@ -174,7 +174,7 @@ def test_scripts():
     script2js(pyname, 'mymodule')
     
     # Check result
-    jscode = open(jsname, 'rt', encoding='utf-8').read()
+    jscode = open(jsname, 'rb').read().decode()
     assert 'foo = 42;' in jscode
     assert 'define(' in jscode
     assert 'module.exports' in jscode
@@ -184,7 +184,7 @@ def test_scripts():
     script2js(pyname, None, jsname)
     
     # Check result
-    jscode = open(jsname, 'rt', encoding='utf-8').read()
+    jscode = open(jsname, 'rb').read().decode()
     assert 'foo = 42;' in jscode
     assert 'define(' not in jscode
 

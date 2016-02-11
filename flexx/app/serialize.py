@@ -8,9 +8,10 @@ import json
 undefined = None
 
 class JSON:
+    @staticmethod
     def parse(text, reviver=None):
         return json.loads(text, object_hook=reviver)
-    
+    @staticmethod
     def stringify(obj, replacer=None):
         return json.dumps(obj, default=replacer)
 

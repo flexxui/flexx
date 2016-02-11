@@ -204,16 +204,10 @@ Supported Python conveniences:
 # demonstrating the features defined in that module. In the docs these
 # docstrings are combined into one complete guide.
 
-import sys
-
 from .parser0 import Parser0, JSError  # noqa
 from .parser1 import Parser1  # noqa
 from .parser2 import Parser2  # noqa
 from .parser3 import Parser3  # noqa
-
-# Assert py3k
-if sys.version_info < (3, 2):  # pragma: no cover
-    raise RuntimeError('flexx.pyscript needs Python 3.2 or higher')
 
 
 class BasicParser(Parser2):

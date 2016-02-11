@@ -33,19 +33,27 @@ def test_unit(rel_path='.'):
         import pytest  # noqa
     except ImportError:
         sys.exit('Cannot do unit tests, pytest not installed')
-    # If testing installed version, import module first
-    if os.getenv('TEST_INSTALL', '').lower() in ('1', 'yes', 'true'):
+    # Get path to test
+    py2 = sys.version_info[0] == 2
+    rel_path = 'flexx_legacy_py/' + rel_path if py2 else 'flexx/' + rel_path
+    test_path = os.path.join(ROOT_DIR, rel_path)
+    # Import flexx, from installed, or from ROOT_DIR
+    if py2 or os.getenv('TEST_INSTALL', '').lower() in ('1', 'yes', 'true'):
+        if ROOT_DIR in sys.path:
+            sys.path.remove(ROOT_DIR)
         os.chdir(os.path.expanduser('~'))
         m = __import__(NAME)
-        assert ROOT_DIR not in m.__path__[0]
-    # Goto root dir - where the test scripts are
-    os.chdir(ROOT_DIR)
+        assert ROOT_DIR not in os.path.abspath(m.__path__[0])
+    else:
+        os.chdir(ROOT_DIR)
+        m = __import__(NAME)
+        assert ROOT_DIR in os.path.abspath(m.__path__[0])
     # Start tests
     _enable_faulthandler()
     cov_report = '--cov-report=term --cov-report=html'
     try:
         res = pytest.main('--cov %s --cov-config=.coveragerc %s %r' % 
-                          (NAME, cov_report, rel_path))
+                          (NAME, cov_report, test_path))
         sys.exit(res)
     finally:
         m = __import__(NAME)

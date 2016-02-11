@@ -31,7 +31,7 @@ def get_phosphor(commit):
         with open(filename, 'wb') as f:
             f.write(data)
     
-    return open(filename, 'rt', encoding='utf-8').read()
+    return open(filename, 'rb').read().decode()
 
 
 def _fetch_file(url):

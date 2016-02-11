@@ -50,9 +50,9 @@ class TestExpressions:
         assert py2js('foo - bar') == "foo - bar;"
         assert py2js('_foo3 - _bar4') == "_foo3 - _bar4;"
         assert py2js('3 - 4') == "3 - 4;"
-        assert py2js('"abc" - "def"') == "'abc' - 'def';"
-        assert py2js("'abc' - 'def'") == "'abc' - 'def';"
-        assert py2js("'abc' - \"'def\"") == "'abc' - \"'def\";"
+        assert py2js('"abc" - "def"') == '"abc" - "def";'
+        assert py2js("'abc' - 'def'") == '"abc" - "def";'
+        assert py2js("'\"abc\" - \"def\"'") == '"\\"abc\\" - \\"def\\"";'
         
         # But they should be if it gets more complex
         assert py2js('foo - bar > 4') == "(foo - bar) > 4;"
@@ -287,7 +287,7 @@ class TestExpressions:
         assert py2js('False') == 'false;'
         assert py2js('None') == 'null;'
         
-        assert py2js('"bla\\"bla"') == "'bla\"bla';"
+        assert py2js('"bla\\"bla"') == '"bla\\"bla";'
         assert py2js('3') == '3;'
         assert py2js('3.1415') == '3.1415;'
         
@@ -374,7 +374,3 @@ class TestModules:
 
 
 run_tests_if_main()
-# if __name__ == '__main__':
-#     t = TestClasses()
-#     t.test_class()
-#     t.test_inheritance()

@@ -15,12 +15,8 @@ import sys
 import json
 import subprocess
 import tempfile
-try:
-    from urllib.parse import urlparse
-    from urllib.request import urlopen
-except ImportError:  # Py2k
-    from urlparse import urlparse
-    from urllib2 import urlopen
+from urllib.parse import urlparse
+from urllib.request import urlopen
 
 from .common import BaseRuntime
 
@@ -90,7 +86,7 @@ def get_js_from_html(html, root):
                     code = urlopen(filename, timeout=5.0).read().decode()
                     break
                 elif os.path.isfile(filename):
-                    code = open(filename, 'rt', encoding='utf-8').read()
+                    code = open(filename, 'rb').read().decode()
                     break
             else:
                 raise IOError('Could not get JS for file %r' % fname)
@@ -140,12 +136,15 @@ class NodejsRuntime(BaseRuntime):
         code = ('var location = %s;\n' % loc) + code
         
         # Fix for Windows - by default global modules are searched in wrong place
-        if sys.platform.startswith('win') and os.getenv('NODE_PATH') is None:
-            os.environ['NODE_PATH'] = os.getenv('APPDATA') + '\\npm\\node_modules'
-        elif sys.platform.startswith('linux') and not os.getenv('NODE_PATH'):
+        NODE_PATH = b'NODE_PATH' if sys.version_info[0] == 2 else 'NODE_PATH'
+        if sys.platform.startswith('win') and os.getenv(NODE_PATH) is None:
+            os.environ[NODE_PATH] = os.getenv('APPDATA') + '\\npm\\node_modules'
+        elif sys.platform.startswith('linux') and not os.getenv(NODE_PATH):
             path = os.path.expanduser('/usr/local/lib/node_modules')
             if os.path.isdir(path):
-                os.environ['NODE_PATH'] = path
+                os.environ[NODE_PATH] = path
+        if sys.version_info[0] == 2 and os.getenv(NODE_PATH):  # str lits are uni
+            os.environ[NODE_PATH] = os.environ[NODE_PATH].encode()
         
         # Write code to tempfile
         f = tempfile.NamedTemporaryFile('wt', prefix='flexx_nodejs_', suffix='.js')

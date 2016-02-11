@@ -18,6 +18,8 @@ are not provided via such a module asset will be added to the index.
 """
 
 import os
+import sys
+import json
 import time
 import random
 import hashlib
@@ -95,6 +97,26 @@ td,th{padding:0}
 """
 
 
+reprs = json.dumps
+
+
+def lookslikeafilename(s):
+    # We need this to allow smart-asset setting on legacy Python
+    if sys.version_info[0] == 2:
+        fchars = '\n\r\x00\x0a'.encode('utf-8')
+        if isinstance(s, unicode):  # noqa
+            return True
+        elif not isinstance(s, bytes):
+            return False
+        elif any([c in s for c in fchars]):
+            return False
+        elif len(s) > 500 and s.count('function(') > 5:
+            return False  # Looks like a minified file. Bah, rather arbitrary
+        else:
+            return True
+    return isinstance(s, str)
+
+
 def modname_startswith(x, y):
     return (x + '.').startswith(y + '.')
 
@@ -107,7 +129,7 @@ def create_css_and_js_from_model_classes(classes, css='', js=''):
         js.append(cls.JS.CODE)
     css = [i for i in css if i.strip()]
     js = [i for i in js if i.strip()]
-    return '\n\n'.join(css), '\n\n'.join(js)
+    return '\n\n'.join(css) or '\n', '\n\n'.join(js) or '\n'
 
 
 class AssetStore:
@@ -160,17 +182,17 @@ class AssetStore:
                 raise ValueError('Asset %r is already set. Can only reuse if '
                                  'content is a filename and the same.' % fname)
         
-        if isinstance(content, bytes):
-            self._assets[fname] = content
-        elif isinstance(content, str):
+        if lookslikeafilename(content):  # isinstance(content, str) on py3k
             if content.startswith('http://') or content.startswith('https://'):
                 pass  # don't check now
             elif not os.path.isfile(content):
                 content = content if (len(content) < 99) else content[:99] + '...'
                 raise ValueError('Asset file does not exist: %r' % content)
             self._assets[fname] = content
+        elif isinstance(content, bytes):
+            self._assets[fname] = content
         else:
-            raise ValueError('An asset must be str or bytes.')
+            raise ValueError('An asset must be str filename or bytes.')
     
     def load_asset(self, fname):
         """ Get the asset corresponding to the given name.
@@ -185,7 +207,7 @@ class AssetStore:
         except KeyError:
             raise IndexError('Asset %r not known.' % fname)
         
-        if isinstance(content, str):
+        if lookslikeafilename(content):
             return self._cache_get(content)
         else:
             return content
@@ -469,7 +491,7 @@ class SessionAssets:
         lines = []
         lines.append('flexx.is_exported = true;\n')
         lines.append('flexx.runExportedApp = function () {')
-        lines.extend(['    flexx.command(%r);' % c for c in commands])
+        lines.extend(['    flexx.command(%s);' % reprs(c) for c in commands])
         lines.append('};\n')
         
         # Create an extra asset for the export

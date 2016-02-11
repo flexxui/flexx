@@ -12,53 +12,90 @@ Release:
 """
 
 import os
+import sys
+import shutil
 
 try:
-    # use setuptools namespace, allows for "develop"
     import setuptools  # noqa, analysis:ignore
 except ImportError:
-    pass  # it's not essential for installation
+    pass  # setuptools allows for "develop", but it's not essential
+
 from distutils.core import setup
 
-name = 'flexx'
-description = "Pure Python toolkit for creating GUI's using web technology."
 
+## Function we need
 
-# Get version and docstring
-__version__ = None
-__doc__ = ''
-docStatus = 0  # Not started, in progress, done
-initFile = os.path.join(os.path.dirname(__file__), name, '__init__.py')
-for line in open(initFile, 'rt', encoding='utf-8').readlines():
-    if (line.startswith('version_info') or line.startswith('__version__')):
-        exec(line.strip())
-    elif line.startswith('"""'):
-        if docStatus == 0:
-            docStatus = 1
-            line = line.lstrip('"')
-        elif docStatus == 1:
-            docStatus = 2
-    if docStatus == 1:
-        __doc__ += line
+def get_version_and_doc(filename):
+    __version__, __doc__ = None, ''
+    docStatus = 0  # Not started, in progress, done
+    for line in open(filename, 'rb').read().decode().splitlines():
+        if (line.startswith('version_info') or line.startswith('__version__')):
+            exec(line.strip())
+        elif line.startswith('"""'):
+            if docStatus == 0:
+                docStatus = 1
+                line = line.lstrip('"')
+            elif docStatus == 1:
+                docStatus = 2
+        if docStatus == 1:
+            __doc__ += line
+    return __version__, __doc__
 
 
 def package_tree(pkgroot):
-    path = os.path.dirname(__file__)
-    subdirs = [os.path.relpath(i[0], path).replace(os.path.sep, '.')
-               for i in os.walk(os.path.join(path, pkgroot))
+    subdirs = [os.path.relpath(i[0], THIS_DIR).replace(os.path.sep, '.')
+               for i in os.walk(os.path.join(THIS_DIR, pkgroot))
                if '__init__.py' in i[2]]
     return subdirs
 
+
+def copy_for_legacy_python(src_dir, dest_dir):
+    if sys.argv[1:] != ['install']:
+        raise RuntimeError('Setup.py can only be used to "install" on Python 2.x')
+    from translate_to_legacy import LegacyPythonTranslator
+    # Dirs and files to explicitly not translate
+    ignore_dirs = ['__pycache__']
+    skip = ['pyscript/tests/python_sample.py', 
+            'pyscript/tests/python_sample2.py',
+            'pyscript/tests/python_sample3.py']
+    # Make a copy of the flexx package
+    if os.path.isdir(dest_dir):
+        shutil.rmtree(dest_dir)
+    shutil.copytree(src_dir, dest_dir,
+                    ignore=lambda src, names: [n for n in names if n in ignore_dirs])
+    # Translate in-place
+    LegacyPythonTranslator.translate_dir(dest_dir, skip=skip)
+
+
+## Collect info for setup()
+
+THIS_DIR = os.path.dirname(__file__)
+
+# Define name and description
+name = 'flexx'
+description = "Pure Python toolkit for creating GUI's using web technology."
+
+# Get version and docstring (i.e. long description)
+version, doc = get_version_and_doc(os.path.join(THIS_DIR, name, '__init__.py'))
 
 # Define dependencies per subpackage
 extras_require = {'app': ['tornado']}
 extras_require['ui'] = extras_require['app']
 extras_require['all'] = [i for ii in extras_require.values() for i in ii]
 
+# Get directory to install
+package_dir = name
+if sys.version_info[0] == 2:
+    package_dir += '_legacy_py'
+    copy_for_legacy_python(os.path.join(THIS_DIR, name),
+                           os.path.join(THIS_DIR, package_dir))
+
+
+## Setup
 
 setup(
     name=name,
-    version=__version__,
+    version=version,
     author='Flexx contributors',
     author_email='almar.klein@gmail.com',
     license='(new) BSD',
@@ -66,13 +103,13 @@ setup(
     download_url='https://pypi.python.org/pypi/flexx',
     keywords="ui design, web runtime, pyscript, reactive programming, FRP",
     description=description,
-    long_description=__doc__,
+    long_description=doc,
     platforms='any',
     provides=[name],
     install_requires=[],  # react, pyscript and webruntime require nothing
     extras_require=extras_require,
     packages=package_tree(name),
-    package_dir={name: name},
+    package_dir={name: package_dir},
     package_data={'flexx': ['resources/*']},
     entry_points={'console_scripts': ['flexx = flexx.__main__'], },
     zip_safe=False,
@@ -86,7 +123,8 @@ setup(
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX',
         'Programming Language :: Python',
-        #'Programming Language :: Python :: 2.7',  # not yet supported
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
     ],
 )

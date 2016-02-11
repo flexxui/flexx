@@ -6,12 +6,18 @@ import time
 import logging
 
 from .. import react
+from ..react.hassignals import new_type
 
 from .model import Model
 from .assetstore import SessionAssets
 
 
 # todo: thread safety
+
+def valid_app_name(name):
+    T = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789'
+    return name and name[0] in T[:-10] and all([c in T for c in name])
+
 
 class AppManager(object):
     """ Manage apps, or more specifically, the session objects.
@@ -39,6 +45,8 @@ class AppManager(object):
         """
         assert isinstance(cls, type) and issubclass(cls, Model)
         name = cls.__name__
+        if not valid_app_name(name):
+            raise ValueError('Given app does not have a valid name %r' % name)
         pending, connected = [], []
         if name in self._proxies and cls is not self._proxies[name][0]:
             oldCls, pending, connected = self._proxies[name]
@@ -199,13 +207,13 @@ class Session(SessionAssets):
     and the websocket instance that connects to it.
     """
     
-    STATUS = type('Enum', (), {'PENDING': 1, 'CONNECTED': 2, 'CLOSED': 0})
+    STATUS = new_type('Enum', (), {'PENDING': 1, 'CONNECTED': 2, 'CLOSED': 0})
     
     def __init__(self, app_name):
         super().__init__()
         
         # Init assets
-        id_asset = ('var flexx_session_id = %r;\n' % self.id).encode()
+        id_asset = ('var flexx_session_id = "%s";\n' % self.id).encode()
         self.add_asset('index-flexx-id.js', id_asset)
         self.use_global_asset('flexx-app.js')
         
