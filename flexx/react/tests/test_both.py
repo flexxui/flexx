@@ -49,7 +49,7 @@ def run_in_both(cls, reference, extra_classes=()):
             print('js:', jsresult)
             # Run in Python
             pyresult = reprs(func(cls))
-            pyresult = pyresult.replace('"', "'")
+            pyresult = pyresult.replace('"', "'").replace("\\'", "'")
             print('py:', pyresult)
             #
             assert pyresult.lower() == reference
