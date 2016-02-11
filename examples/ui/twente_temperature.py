@@ -160,7 +160,7 @@ class Twente(ui.Widget):
             self.plot.ydata(yy2)
 
 if __name__ == '__main__':
-    m = app.launch(Twente, runtime='firefox', title='Temperature 1951 - 2014',
+    m = app.launch(Twente, runtime='browser', title='Temperature 1951 - 2014',
                    size=(900, 400))
     m.style('background:#eee;')  # more desktop-like
     app.run()

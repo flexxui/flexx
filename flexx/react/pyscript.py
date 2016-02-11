@@ -4,11 +4,12 @@ Implementation of flexx.react in JS via PyScript.
 
 import json
 
-from ..pyscript import py2js as py2js_, undefined, window
+from ..pyscript import py2js as py2js_, undefined
 from ..pyscript.parser2 import get_class_definition
 
 from .signals import Signal, SourceSignal
 
+Object = Date = None  # fool pyflake
 
 reprs = json.dumps
 
@@ -57,7 +58,7 @@ class HasSignalsJS:
         obj[private_name] = initial
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
-        window.Object.defineProperty(obj, name, opts)
+        Object.defineProperty(obj, name, opts)
     
     def _create_signals(self):
         self.__props__ = []  # todo: get rid of this?
@@ -184,7 +185,7 @@ class HasSignalsJS:
             selff._value = value
             selff._last_timestamp = selff._timestamp
             selff._count += 1
-            selff._timestamp = window.Date().getTime() / 1000
+            selff._timestamp = Date().getTime() / 1000
             selff._status = 0
             obj._signal_changed(selff)
         
