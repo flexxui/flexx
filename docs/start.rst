@@ -6,8 +6,8 @@ Getting started
 Dependencies
 ------------
 
-Flexx requires Python 3.3 or higher, and also supports Pypy3. Support
-for legacy Python (version 2.7) *might* be considered for some components.
+Flexx is written for Python 3, but can also be installed on legacy
+Python (Python 2.7). It also works on Pypy.
 
 The ``react``, ``webruntime`` and ``pyscrip`` subpackages require no
 dependencies. The ``app`` and ``ui`` subpackages require Tornado (a
@@ -16,8 +16,8 @@ apps, we recommend having Firefox installed.
 
 Developers that want to run the tests need:
 
-* pytest (a Python package, get it via conda or pip)
-* flake8 (a Python package, get it via conda or pip)
+* pytest and pytest-cov (get them via conda or pip)
+* flake8 (get it via conda or pip)
 * Nodejs
 * Firefox
 
@@ -45,7 +45,8 @@ Installation
 * ``pip install flexx``
 * ``pip install flexx[all]``  (will also install Tornado)
 * Old school: ``python setup.py install``
-* Clone the repo and add the root dir to your PYTHONPATH (developer mode)
+* Clone the repo and add the root dir to your PYTHONPATH (developer
+  mode, not possible for Python 2.7)
 
 
 Motivation
