@@ -30,7 +30,7 @@ Interactive example:
 """
 
 from ... import react
-from ...pyscript.stubs import document, undefined, phosphor
+from ...pyscript import window, undefined
 from . import Widget
 
 
@@ -64,16 +64,16 @@ class LineEdit(Widget):
     class JS:
     
         def _create_node(self):
-            self.p = phosphor.createWidget('div')
+            self.p = window.phosphor.createWidget('div')
             self.p.node.innerHTML = '<input type="text", list="%s" />' % self.id
             self._node = self.p.node.childNodes[0]
             
-            # self.p = phosphor.createWidget('input')
+            # self.p = window.phosphor.createWidget('input')
             # self.node = self.p.node
             # self.node.type = 'text'
             # self.node.list = self.id
             
-            self._autocomp = document.createElement('datalist')
+            self._autocomp = window.document.createElement('datalist')
             self._autocomp.id = self.id
             self._node.appendChild(self._autocomp)
             
@@ -118,6 +118,6 @@ class LineEdit(Widget):
                 self._autocomp.removeChild(op)
             # Add new options
             for option in autocomp:
-                op = document.createElement('option')
+                op = window.document.createElement('option')
                 op.value = option
                 self._autocomp.appendChild(op)

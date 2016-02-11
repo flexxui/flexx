@@ -27,7 +27,7 @@ Interactive example:
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor
+from ...pyscript import window
 from . import Widget
 
 
@@ -63,7 +63,7 @@ class Label(Widget):
     class JS:
         
         def _js_create_node(self):
-            self.p = phosphor.createWidget('div')
+            self.p = window.phosphor.createWidget('div')
         
         @react.connect('text')
         def _text_changed(self, text):

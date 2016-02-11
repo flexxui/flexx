@@ -20,7 +20,7 @@ Example:
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor
+from ...pyscript import window
 from . import Layout
 
 
@@ -52,13 +52,13 @@ class SplitPanel(Layout):
     class JS:
         
         def _create_node(self):
-            self.p = phosphor.splitpanel.SplitPanel()
+            self.p = window.phosphor.splitpanel.SplitPanel()
         
         @react.connect('orientation')
         def __orientation_changed(self, orientation):
             if orientation == 0 or orientation == 'h':
-                self.p.orientation = phosphor.splitpanel.SplitPanel.Horizontal
+                self.p.orientation = window.phosphor.splitpanel.SplitPanel.Horizontal
             elif orientation == 1 or orientation == 'v':
-                self.p.orientation = phosphor.splitpanel.SplitPanel.Vertical
+                self.p.orientation = window.phosphor.splitpanel.SplitPanel.Vertical
             else:
                 raise ValueError('Invalid splitter orientation: ' + orientation)

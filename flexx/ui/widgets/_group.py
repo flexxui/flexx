@@ -31,7 +31,7 @@ Interactive example:
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor, document
+from ...pyscript import window
 from . import Widget
 
 
@@ -45,8 +45,8 @@ class GroupWidget(Widget):
     class JS:
         
         def _create_node(self):
-            self.p = phosphor.createWidget('fieldset')
-            self._legend = document.createElement('legend')
+            self.p = window.phosphor.createWidget('fieldset')
+            self._legend = window.document.createElement('legend')
             self.p.node.appendChild(self._legend)
         
         @react.connect('title')

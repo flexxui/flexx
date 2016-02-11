@@ -108,7 +108,7 @@ Interactive example:
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor
+from ...pyscript import window
 from . import Layout
 
 
@@ -220,7 +220,7 @@ class BoxLayout(BaseBoxLayout):
     class JS:
     
         def _create_node(self):
-            self.p = phosphor.widget.Widget()
+            self.p = window.phosphor.widget.Widget()
         
         @react.connect('orientation', 'children.*.flex')
         def __set_flexes(self, ori, *flexes):
@@ -308,14 +308,14 @@ class BoxPanel(BaseBoxLayout):
     class JS:
         
         def _create_node(self):
-            self.p = phosphor.boxpanel.BoxPanel()
+            self.p = window.phosphor.boxpanel.BoxPanel()
         
         @react.connect('orientation', 'children.*.flex')
         def __set_flexes(self, ori, *flexes):
             i = 0 if ori in (0, 'h', 'hr') else 1
             for widget in self.children():
-                phosphor.boxpanel.BoxPanel.setStretch(widget.p, widget.flex()[i])
-                phosphor.boxpanel.BoxPanel.setSizeBasis(widget.p, 100)
+                window.phosphor.boxpanel.BoxPanel.setStretch(widget.p, widget.flex()[i])
+                window.phosphor.boxpanel.BoxPanel.setSizeBasis(widget.p, 100)
         
         @react.connect('spacing')
         def __spacing_changed(self, spacing):
@@ -324,12 +324,12 @@ class BoxPanel(BaseBoxLayout):
         @react.connect('orientation')
         def __orientation_changed(self, orientation):
             if orientation == 0 or orientation == 'h':
-                self.p.direction = phosphor.boxpanel.BoxPanel.LeftToRight
+                self.p.direction = window.phosphor.boxpanel.BoxPanel.LeftToRight
             elif orientation == 1 or orientation == 'v':
-                self.p.direction = phosphor.boxpanel.BoxPanel.TopToBottom
+                self.p.direction = window.phosphor.boxpanel.BoxPanel.TopToBottom
             elif orientation == 'hr':
-                self.p.direction = phosphor.boxpanel.BoxPanel.RightToLeft
+                self.p.direction = window.phosphor.boxpanel.BoxPanel.RightToLeft
             elif orientation == 'vr':
-                self.p.direction = phosphor.boxpanel.BoxPanel.BottomToTop
+                self.p.direction = window.phosphor.boxpanel.BoxPanel.BottomToTop
             else:
                 raise ValueError('Invalid boxpanel orientation: ' + orientation)

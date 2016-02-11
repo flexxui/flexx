@@ -10,10 +10,12 @@ import logging
 
 
 # Get global version of "undefined", so we can use ``is`` operator.
-class undefined:
-    def __repr__(self):
-        return 'undefined'
-undefined = sys._undefined = getattr(sys, '_undefined', undefined())
+class JSConstant:
+    def __init__(self, name):
+        self._name = name
+    def __repr__(self):  # pragma: no cover
+        return self._name
+undefined = sys._undefined = getattr(sys, '_undefined', JSConstant('undefined'))
 
 
 class SignalValueError(Exception):

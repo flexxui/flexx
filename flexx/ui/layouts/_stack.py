@@ -28,7 +28,7 @@ Example:
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor
+from ...pyscript import window
 from . import Widget, Layout
 
 
@@ -48,7 +48,7 @@ class StackedPanel(Layout):
     class JS:
         
         def _create_node(self):
-            self.p = phosphor.stackedpanel.StackedPanel()
+            self.p = window.phosphor.stackedpanel.StackedPanel()
         
         @react.connect('current')
         def __set_current_widget(self, widget):

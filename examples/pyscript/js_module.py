@@ -7,7 +7,7 @@ and in combination with browserify and related tools.
 
 # This import is ignored by PyScript, it allows using these variable
 # names without triggering pyflakes (a static Python source analysis tool).
-from flexx.pyscript.stubs import undefined, document, window  # noqa
+from flexx.pyscript import undefined, window  # noqa
 
 class Foo:
     

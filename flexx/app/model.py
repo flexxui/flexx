@@ -10,8 +10,7 @@ import json
 from .. import react
 from ..react.hassignals import HasSignalsMeta, with_metaclass, new_type
 from ..react.pyscript import create_js_signals_class, HasSignalsJS
-from ..pyscript.functions import py2js, js_rename
-from ..pyscript.stubs import flexx
+from ..pyscript import py2js, js_rename, window
 
 from .serialize import serializer
 
@@ -335,7 +334,7 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
             return {'__type__': 'Flexx-Model', 'id': self.id}
         
         def __from_json__(dct):
-            return flexx.instances[dct.id]
+            return window.flexx.instances[dct.id]
         
         def __init__(self, id):
             # Set id alias. In most browsers this shows up as the first element
@@ -358,7 +357,7 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
             pass
         
         def _set_signal_from_py(self, name, text, esid):
-            value = flexx.serializer.loads(text)
+            value = window.flexx.serializer.loads(text)
             signal = self[name]
             if esid == 0 or signal._esid == 0:
                 self._signal_emit_lock = True  # do not send back to py
@@ -366,7 +365,7 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
                 signal._esid = 0  # mark signal as updated from py
         
         def _signal_changed(self, signal):
-            if flexx.ws is None:  # we could be exported or in an nbviewer
+            if window.flexx.ws is None:  # we could be exported or in an nbviewer
                 return
             if self._signal_emit_lock:
                 self._signal_emit_lock = False
@@ -379,9 +378,9 @@ class Model(with_metaclass(ModelMeta, react.HasSignals)):
                 return
             if signal.signal_type != 'PySignal' and not signal._name.startswith('_'):
                 #txt = JSON.stringify(signal.value)
-                txt = flexx.serializer.saves(signal.value)
-                flexx.ws.send('SIGNAL ' +
-                              [self.id, signal._esid, signal._name, txt].join(' '))
+                txt = window.flexx.serializer.saves(signal.value)
+                window.flexx.ws.send('SIGNAL ' + [self.id, signal._esid,
+                                                  signal._name, txt].join(' '))
         
         def _link_js_signal(self, name, link):
             if link:

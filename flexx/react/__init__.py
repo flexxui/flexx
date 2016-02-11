@@ -316,3 +316,4 @@ from .functional import map, filter, reduce, merge  # noqa
 
 import logging
 logging.warn('flexx.react is likely to be replaced for a different event system')
+del logging

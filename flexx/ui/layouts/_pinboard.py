@@ -16,7 +16,7 @@ Example:
 """
 
 from ... import react
-from ...pyscript.stubs import phosphor
+from ...pyscript import window
 from . import Layout
 
 
@@ -38,7 +38,7 @@ class PinboardLayout(Layout):
     
     class JS:
         def _create_node(self):
-            self.p = phosphor.createWidget('div')
+            self.p = window.phosphor.createWidget('div')
         
         @react.connect('children.*.pos')
         def __pos_changed(self, *poses):
