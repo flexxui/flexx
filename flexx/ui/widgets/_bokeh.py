@@ -66,8 +66,11 @@ class BokehWidget(Widget):
         """ The Bokeh plot object to display. In JS, this signal
         provides the corresponding backbone model.
         """
-        from bokeh.models import PlotObject
-        if not isinstance(plot, PlotObject):
+        try:
+            from bokeh.models import Plot
+        except ImportError:
+            from bokeh.models import PlotObject as Plot
+        if not isinstance(plot, Plot):
             raise ValueError('Plot must be a Bokeh plot object.')
         plot.responsive = False  # Flexx handles responsiveness
         return plot
@@ -101,6 +104,7 @@ class BokehWidget(Widget):
             def getplot():
                 that.plot._set(Bokeh.index[id])
                 that.plot().resize()
+                that.real_size._set(that.real_size())
             window.setTimeout(getplot, 10)
         
         @react.connect('real_size')
