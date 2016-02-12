@@ -1,6 +1,8 @@
 """
-Example:
+The GridPanel is deprecated for the time being.
 
+"""
+"""
 .. UIExample:: 250
     
     from flexx import ui
@@ -53,6 +55,9 @@ class GridPanel(Layout):
     If all flex factors are zero, all columns/rows become of equal size
     (subject to size limits).
     """
+    
+    def init(self):
+        raise NotImplementedError('The GridPanel is (temporarily) deprecated.')
     
     @react.input
     def spacing(v=5):

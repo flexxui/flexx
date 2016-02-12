@@ -18,7 +18,6 @@ Example:
 
 """
 
-from ... import react
 from ...pyscript import window
 from . import Layout
 

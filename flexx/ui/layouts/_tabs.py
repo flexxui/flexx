@@ -13,7 +13,6 @@ Example:
                 self.c = ui.Widget(title='blue', style='background:#00a;')
 """
 
-from ... import react
 from ...pyscript import window
 from . import Layout
 

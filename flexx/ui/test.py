@@ -18,7 +18,7 @@ class MyApp(ui.Widget):
         
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 3
+        TEST = 6
         
         if TEST == 0:
             ui.Button(text='Hola', flex=1)
@@ -54,7 +54,7 @@ class MyApp(ui.Widget):
                             self.b3 = ui.Button(text='Foo bar', flex=3)
                         
                         ui.Label(text='margin 20 (around layout)', flex=0)
-                        with ui.HBox(flex=0, margin=20) as self.hbox3:
+                        with ui.HBox(flex=0, padding=20) as self.hbox3:
                             self.b1 = ui.Button(text='Hola', flex=1)
                             self.b2 = ui.Button(text='Hello world', flex=1)
                             self.b3 = ui.Button(text='Foo bar', flex=1)

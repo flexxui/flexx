@@ -45,21 +45,22 @@ class GroupWidget(Widget):
     class JS:
         
         def _create_node(self):
-            # class FieldsetPanel(phosphor.widget.Panel):
-            #     def createNode():
-            #         return document.createElement('fieldset')
+            # class FieldsetPanel(phosphor.panel.Panel):
+            #      def createNode():
+            #          return document.createElement('fieldset')
             # self.p = FieldsetPanel()
             
-            # todo: make a createPanel function in phosphor all
-            ori = window.phosphor.widget.Panel.createNode
+            # todo: make a createPanel function in phosphor all 
+            # (especially if this is needed in more places)
+            ori = window.phosphor.panel.Panel.createNode
             def _():
-                return document.createElement('fieldset')
-            window.phosphor.widget.Panel.createNode = _
-            self.p = phosphor.widget.Panel()
-            window.phosphor.widget.Panel.createNode = ori
+                return window.document.createElement('fieldset')
+            window.phosphor.panel.Panel.createNode = _
+            self.p = window.phosphor.panel.Panel()
+            window.phosphor.panel.Panel.createNode = ori
             
             #self.p = phosphor.createWidget('fieldset')
-            self._legend = document.createElement('legend')
+            self._legend = window.document.createElement('legend')
             self.p.node.appendChild(self._legend)
         
         @react.connect('title')

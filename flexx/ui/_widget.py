@@ -305,7 +305,7 @@ class Widget(Model):
             super()._init()
         
         def _create_node(self):
-            self.p = window.phosphor.widget.Panel()
+            self.p = window.phosphor.panel.Panel()
         
         @react.connect('style')
         def style_changed(self, style):
