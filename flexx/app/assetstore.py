@@ -125,12 +125,17 @@ def modname_startswith(x, y):
 
 def create_css_and_js_from_model_classes(classes, css='', js=''):
     # Collect CSS and JS, and filter out empty ones
-    css, js = [HEADER, css], [HEADER, '"use strict";', js]
+    css, js = [css], [js]
     for cls in classes:
         css.append(cls.CSS)  # the CSS is '' if not specified for that class
         js.append(cls.JS.CODE)
     css = [i for i in css if i.strip()]
     js = [i for i in js if i.strip()]
+    if css:
+        css.insert(0, HEADER)
+    if js:
+        js.insert(0, '"use strict";')
+        js.insert(0, HEADER)
     return '\n\n'.join(css) or '\n', '\n\n'.join(js) or '\n'
 
 
