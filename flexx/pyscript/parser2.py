@@ -776,7 +776,7 @@ class Parser2(Parser1):
         base_class = 'Object'
         if node.arg_nodes:
             base_class = ''.join(self.parse(node.arg_nodes[0]))
-        if not base_class.replace('.', '_').isidentifier():
+        if not base_class.replace('.', '_').isalnum():
             raise JSError('Base classes must be simple names')
         elif base_class.lower() == 'object':  # maybe Python "object"
             base_class = 'Object'
