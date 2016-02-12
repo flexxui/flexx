@@ -7,6 +7,8 @@ exp/html_examples.txt
 flexx/resources/phosphor-all.*.js
 _flexx-notebooks
 flexx_legacy_py
+_phosphor-all
+examples/ui/*.html
 
 # C extensions
 *.so

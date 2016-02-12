@@ -52,4 +52,6 @@ class StackedPanel(Layout):
         
         @react.connect('current')
         def __set_current_widget(self, widget):
-            self.p.currentWidget = widget.p
+            for i in range(self.p.childCount()):
+                self.p.childAt(i).hide()
+            widget.p.show()

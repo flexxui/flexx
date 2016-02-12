@@ -55,6 +55,8 @@ class PlotWidget(CanvasWidget):
     plotting tasks.
     """
     
+    CSS = ".flx-PlotWidget {min-width: 300px; min-height: 200px;}"
+    
     @react.input
     def xdata(self, v=()):
         """ A list of values for the x-axis. """
@@ -131,7 +133,6 @@ class PlotWidget(CanvasWidget):
                        'title', 'xlabel', 'ylabel',
                        'real_size')
         def _update_plot(self, xx, yy, yrange, lc, lw, mc, ms, title, xlabel, ylabel):
-            
             
             # Prepare
             ctx = self._context

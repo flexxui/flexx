@@ -38,7 +38,7 @@ class PinboardLayout(Layout):
     
     class JS:
         def _create_node(self):
-            self.p = window.phosphor.createWidget('div')
+            self.p = window.phosphor.panel.Panel()
         
         @react.connect('children.*.pos')
         def __pos_changed(self, *poses):

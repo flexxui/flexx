@@ -49,4 +49,5 @@ def _fetch_file(url):
 
 
 if __name__ == '__main__':
-    get_phosphor('0736d35c')
+    # Note that the commit id must be updated in ui/__init__.py
+    get_phosphor('xxx')

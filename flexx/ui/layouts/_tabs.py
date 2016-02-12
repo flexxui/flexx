@@ -13,7 +13,6 @@ Example:
                 self.c = ui.Widget(title='blue', style='background:#00a;')
 """
 
-from ... import react
 from ...pyscript import window
 from . import Layout
 
@@ -42,40 +41,9 @@ class TabPanel(Layout):
             min-height: 24px;
         }
         
-        .p-TabBar-content {
+        .p-TabBar-body {
             bottom: 1px;
-            align-items: flex-end;
             border-bottom: 1px solid #C0C0C0;
-        }
-        
-        .p-TabBar-content > .p-Tab {
-            flex-basis: 125px;
-            max-height: 21px;
-            min-width: 35px;
-            margin-left: -1px;
-            border: 1px solid #C0C0C0;
-            border-bottom: none;
-            padding: 0px 10px;
-            background: #E5E5E5;
-            font: 12px Helvetica, Arial, sans-serif;
-        }
-        
-        .p-TabBar-content > .p-Tab.p-mod-first {
-            margin-left: 0;
-        }
-        
-        .p-TabBar-content > .p-Tab.p-mod-selected {
-            min-height: 24px;
-            background: white;
-            transform: translateY(1px);
-        }
-        
-        .p-TabBar-content > .p-Tab:hover:not(.p-mod-selected) {
-            background: #F0F0F0;
-        }
-        
-        .p-TabBar-content > .p-Tab > span {
-            line-height: 21px;
         }
         
         .p-TabBar-footer {
@@ -84,13 +52,39 @@ class TabPanel(Layout):
             background: #C0C0C0;
         }
         
-        .p-Tab.p-mod-closable > .p-Tab-close-icon {
-            margin-left: 4px;
+        .p-TabBar-content {
+            align-items: flex-end;
         }
         
-        .p-Tab.p-mod-closable > .p-Tab-close-icon:before {
-            content: '\f00d';
-            font-family: FontAwesome;
+        .p-TabBar-tab {
+            flex-basis: 125px;
+            max-height: 21px;
+            margin-left: -1px;
+            border: 1px solid #C0C0C0;
+            border-bottom: none;
+            padding: 0px 10px;
+            background: #E5E5E5;
+            font: 12px Helvetica, Arial, sans-serif;
+        }
+        
+        .p-TabBar-tab:first-child {
+            margin-left: 2px;
+        }
+        
+        .p-TabBar-tab.p-mod-current {
+            min-height: 24px;
+            background: white;
+            transform: translateY(1px);
+        }
+        
+        .p-TabBar-tab:hover:not(.p-mod-current) {
+            background: #F0F0F0;
+        }
+        
+        .p-TabBar-tab-icon,
+        .p-TabBar-tab-text,
+        .p-TabBar-tab-close {
+            line-height: 21px;
         }
         
         .p-TabPanel > .p-StackedPanel {
@@ -99,7 +93,15 @@ class TabPanel(Layout):
             border: 1px solid #C0C0C0;
             border-top: none;
         }
-
+        
+        .p-TabBar-tab.p-mod-closable > .p-TabBar-tab-close {
+            margin-left: 4px;
+        }
+        
+        .p-TabBar-tab.p-mod-closable > .p-TabBar-tab-close:before {
+            content: '\f00d';
+            font-family: FontAwesome;
+        }
     """
     
     class JS:
@@ -107,17 +109,6 @@ class TabPanel(Layout):
         def _create_node(self):
             self.p = window.phosphor.tabs.TabPanel()
         
-        def _add_child(self, widget):
-            widget._tab = window.phosphor.tabs.Tab(widget.title() or '-')
-            window.phosphor.tabs.TabPanel.setTab(widget.p, widget._tab)
-            self.p.addWidget(widget.p)
-        
-        def _remove_child(self, widget):
-            if widget._tab:
-                del widget._tab
-            
-        @react.connect('children.*.title')
-        def __update_titles(self, *titles):
-            for widget in self.children():
-                if hasattr(widget, '_tab'):
-                    widget._tab.text = widget.title() or '-'
+        # def _add_child(self, widget):
+        #     widget.p.title.text = widget.title()
+        #     self.p.stack.addChild(widget.p)

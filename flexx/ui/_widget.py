@@ -305,7 +305,7 @@ class Widget(Model):
             super()._init()
         
         def _create_node(self):
-            self.p = window.phosphor.createWidget('div')
+            self.p = window.phosphor.panel.Panel()
         
         @react.connect('style')
         def style_changed(self, style):
@@ -335,13 +335,17 @@ class Widget(Model):
             if size_limits_changed:
                 # Clear phosphor's limit cache (no need for getComputedStyle())
                 values = [self.node.style[k] for k in size_limits_keys]
-                self.p.clearSizeLimits()
+                # todo: do I need a variant of self.p.clearSizeLimits()?
                 for k, v in zip(size_limits_keys, values):
                     self.node.style[k] = v
                 # Allow parent to re-layout
                 parent = self.parent()
                 if parent:
-                    parent.p.processMessage(window.phosphor.widget.MSG_LAYOUT_REQUEST)
+                    parent.p.fit()  # i.e. p.processMessage(p.MsgFitRequest)
+
+        @react.connect('title')
+        def __title_changed(self, title):
+            self.p.title.text = title  # All Phosphor widgets have a title
         
         ## Size 
         
@@ -390,10 +394,10 @@ class Widget(Model):
             if id:
                 el = window.document.getElementById(id)
                 if self.p.isAttached:
-                    window.phosphor.widget.detachWidget(self.p)
+                    self.p.detach()
                 if self.node.parentNode is not None:  # detachWidget not enough
                     self.node.parentNode.removeChild(self.node)
-                window.phosphor.widget.attachWidget(self.p, el)
+                self.p.attach(el)
                 that = self
                 window.addEventListener('resize', lambda: (that.p.update(), 
                                                            that._check_real_size()))
@@ -476,8 +480,11 @@ class Widget(Model):
             
         def _remove_child(self, widget):
             """ Remove the DOM element.
-            Called right after the child widget is removed. """
-            self.p.removeChild(widget.p)
+            Called right after the child widget is removed.
+            """
+            widget.p.parent = None
+        
+        # todo: destroy with self.p.dispose()
     
         ## Special
         

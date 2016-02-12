@@ -1,6 +1,8 @@
 """
-Example:
+The GridPanel is deprecated for the time being.
 
+"""
+"""
 .. UIExample:: 250
     
     from flexx import ui
@@ -42,6 +44,9 @@ from ._form import BaseTableLayout
 class GridPanel(Layout):
     """ A panel which lays out its children in a grid. 
     
+    NOTE: the GridPanel is temporarily deprecated until the Phosphorjs
+    GridPanel is fixed.
+    
     The "pos" signal of each child represents its integer position/index
     in the grid.
     
@@ -50,6 +55,9 @@ class GridPanel(Layout):
     If all flex factors are zero, all columns/rows become of equal size
     (subject to size limits).
     """
+    
+    def init(self):
+        raise NotImplementedError('The GridPanel is (temporarily) deprecated.')
     
     @react.input
     def spacing(v=5):

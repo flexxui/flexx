@@ -18,7 +18,6 @@ Example:
 
 """
 
-from ... import react
 from ...pyscript import window
 from . import Layout
 
@@ -35,38 +34,31 @@ class DockPanel(Layout):
     """
     
     CSS = """
-        .p-DockTabPanel {
-            padding-right: 2px;
-            padding-bottom: 2px;
-        }
-        
-        .p-DockTabPanel > .p-StackedPanel {
-            padding: 10px;
-            background: white;
-            border: 1px solid #C0C0C0;
-            border-top: none;
-            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-            z-index: 0;
-        }
-        
-        .p-DockTabPanel-overlay {
-            background: rgba(255, 255, 255, 0.6);
-            border: 1px solid rgba(0, 0, 0, 0.6);
-        }
-        
-        .p-Tab.p-mod-docking {
-            font: 12px Helvetica, Arial, sans-serif;
-            height: 24px;
-            width: 125px;
-            padding: 0px 10px;
-            background: white;
-            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-            transform: translateX(-50px) translateY(-14px);
-        }
-        
-        .p-Tab.p-mod-docking > span {
-            line-height: 21px;
-        }
+    .p-DockTabPanel {
+        padding-right: 2px;
+        padding-bottom: 2px;
+    }
+    
+    .p-DockTabPanel > .p-StackedPanel {
+        padding: 10px;
+        background: white;
+        border: 1px solid #C0C0C0;
+        border-top: none;
+        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    
+    .p-DockPanel-overlay {
+        background: rgba(255, 255, 255, 0.7);
+        border: 2px dotted #404040;
+    }
+    
+    .p-DockPanel-overlay.p-mod-root-top,
+    .p-DockPanel-overlay.p-mod-root-left,
+    .p-DockPanel-overlay.p-mod-root-right,
+    .p-DockPanel-overlay.p-mod-root-bottom,
+    .p-DockPanel-overlay.p-mod-root-center {
+        border-width: 2px;
+    }
     """
     
     class JS:
@@ -75,16 +67,5 @@ class DockPanel(Layout):
             self.p = window.phosphor.dockpanel.DockPanel()
         
         def _add_child(self, widget):
-            widget._tab = window.phosphor.tabs.Tab(widget.title() or '-')
-            window.phosphor.dockpanel.DockPanel.setTab(widget.p, widget._tab)
-            self.p.addWidget(widget.p)
-            
-        def _remove_child(self, widget):
-            if widget._tab:
-                del widget._tab
-            
-        @react.connect('children.*.title')
-        def __update_titles(self, *titles):
-            for widget in self.children():
-                if hasattr(widget, '_tab'):
-                    widget._tab.text = widget.title() or '-'
+            self.p.insertRight(widget.p)
+            # todo: phosphor allows fine-grained control over where to place the widgets
