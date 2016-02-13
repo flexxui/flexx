@@ -850,10 +850,23 @@ def get_class_definition(name, base='Object', docstring=''):
     code.append('%s = function () {' % name)
     for line in docstring.splitlines():
         code.append('    // ' + line)
-    code.append('    if (this.__init__) {')
-    code.append('       this.__init__.apply(this, arguments);')
-    code.append('    }')
-    code.append('};')
+    more_code = """
+                    if ((typeof this === "undefined") ||
+                         (typeof window !== "undefined" && window === this) ||
+                         (typeof root !== "undefined" && root === this))
+                         {throw "Classes must be instantiated with new.";}
+                    for (var name in this) {
+                        if (typeof this[name] === 'function') {
+                            this[name] = this[name].bind(this);
+                        }
+                    }
+                    if (this.__init__) {
+                        this.__init__.apply(this, arguments);
+                    }
+                }
+    """
+    more_code = ' ' * 20 + more_code.strip()
+    code.extend([line[16:] for line in more_code.splitlines()])
     
     if base != 'Object':
         code.append('%s.prototype = Object.create(%s);' % (name, base))
