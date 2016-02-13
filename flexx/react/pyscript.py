@@ -66,7 +66,7 @@ class HasSignalsJS:
             func = self['_' + name + '_func']
             func._name = name
             creator = self['_create_' + func._signal_type]
-            signal = creator.call(self, func, func._upstream)
+            signal = creator(func, func._upstream)
             signal.flags = func.flags
             signal.signal_type = func._signal_type
             self._create_property(self, name, '_' + name + '_signal', signal)
@@ -248,6 +248,9 @@ def create_js_signals_class(cls, cls_name, base_class='HasSignals.prototype'):
             code = py2js(val._func, cls_name + '.prototype.' + funcname)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code)
+            # Mark to not bind the func
+            t = '%s.prototype.%s.nobind = true;\n'
+            funcs_code.append(t % (cls_name, funcname))
             # Add upstream signal names to the function object
             t = '%s.prototype.%s._upstream = %s;\n'
             funcs_code.append(t % (cls_name, funcname, reprs(val._upstream_given)))

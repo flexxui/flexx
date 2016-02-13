@@ -856,7 +856,8 @@ def get_class_definition(name, base='Object', docstring=''):
                          (typeof root !== "undefined" && root === this))
                          {throw "Classes must be instantiated with new.";}
                     for (var name in this) {
-                        if (typeof this[name] === 'function') {
+                        if (Object[name] === undefined &&
+                            typeof this[name] === 'function' && !this[name].nobind) {
                             this[name] = this[name].bind(this);
                         }
                     }
