@@ -615,7 +615,7 @@ class TestClasses:
             def __init__(self):
                pass
         code = py2js(MyClass13)
-        err = 'Classes must be instantiated with new.'
+        err = 'Class constructor is called as a function.'
         assert evaljs(code + 'try { var m = new MyClass13(); "ok"} catch (err) { err; }') == 'ok'
         assert evaljs(code + 'try { var m = MyClass13();} catch (err) { err; }') == err
         assert evaljs(code + 'try { MyClass13.apply(root);} catch (err) { err; }') == err
@@ -639,6 +639,31 @@ class TestClasses:
         assert evaljs(code + 'var m = new MyClass14(); var f = m.add2; f(); f(); m.a') == '5'
         assert evaljs(code + 'var m = new MyClass15(); var f = m.add3; f(); f(); m.a') == '7'
         assert evaljs(code + 'var m = new MyClass15(); var f2 = m.add2, f3 = m.add3; f2(); f3(); m.a') == '6'
+    
+    
+    def test_bound_funcs_in_methods(self):
+        class MyClass16:
+            def foo1(self):
+                self.a = 3
+                f = lambda i: self.a
+                return f()
+            
+            def foo2(self):
+                self.a = 3
+                def bar():
+                    return self.a
+                return bar()
+            
+            def foo3(self):
+                self.a = 3
+                def bar(self):
+                    return self.a
+                return bar()
+        
+        code = py2js(MyClass16)
+        assert evaljs(code + 'var m = new MyClass16(); m.foo1()') == '3'
+        assert evaljs(code + 'var m = new MyClass16(); m.foo2()') == '3'
+        assert evaljs(code + 'var m = new MyClass16(); try {m.foo3();} catch (err) {"ok"}') == 'ok'
 
 
 run_tests_if_main()

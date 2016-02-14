@@ -155,6 +155,18 @@ Further, `super()` works just as in Python 3.
         def __init__(self):
             super.__init__()
             self.x += 1
+        def add1(self):
+            self.x += 1
+    
+    # Methods are bound functions, like in Python
+    b = Bar()
+    setTimeout(b.add1, 1000)
+    
+    # Functions defined in methods (and that do not start with self or this)
+    # have ``this`` bound the the same object.
+    class Spam(Bar):
+        def add_later(self):
+            setTimeout(lambda ev: self.add1(), 1000)
 
 
 Exceptions
@@ -649,6 +661,12 @@ class Parser2(Parser1):
     def parse_FunctionDef(self, node, lambda_=False):
         # Common code for the FunctionDef and Lambda nodes.
         
+        # Bind if this function is inside a function, and does not have self
+        binder = ''  # code to add to the end
+        if len(self._stack) >= 1 and self._stack[-1][0] == 'function':
+            if not (node.arg_nodes and node.arg_nodes[0].name in ('self', 'this')):
+                binder = ').bind(this)'
+        
         # Init function definition
         code = []
         if not lambda_:
@@ -658,7 +676,8 @@ class Parser2(Parser1):
                 self._seen_func_names.add(node.name)
             code.append(self.lf('%s = ' % prefixed))
             #code.append('function %s (' % node.name)
-            code.append('function (')
+        if binder:
+            code.append('(function (')
         else:
             code.append('function (')
         
@@ -736,7 +755,7 @@ class Parser2(Parser1):
         
         # Wrap up
         if lambda_:
-            code.append('}')
+            code.append('}%s' % binder)
             ns = self.pop_stack()  # Should conly consist of arg names
             assert not set(ns).difference(argnames)
         else:
@@ -750,7 +769,7 @@ class Parser2(Parser1):
         
         self._indent -= 1
         if not lambda_:
-            code.append(self.lf('};\n'))
+            code.append(self.lf('}%s;\n' % binder))
         return pre_code + code
     
     def parse_Lambda(self, node):
@@ -854,7 +873,7 @@ def get_class_definition(name, base='Object', docstring=''):
                     if ((typeof this === "undefined") ||
                          (typeof window !== "undefined" && window === this) ||
                          (typeof root !== "undefined" && root === this))
-                         {throw "Classes must be instantiated with new.";}
+                         {throw "Class constructor is called as a function.";}
                     for (var name in this) {
                         if (Object[name] === undefined &&
                             typeof this[name] === 'function' && !this[name].nobind) {

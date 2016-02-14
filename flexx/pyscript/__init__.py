@@ -84,6 +84,11 @@ actually compare two lists or dicts, or even a structure of nested
 lists/dicts. Lists can be combined with the plus operator, and lists
 and strings can be repeated with the multiply (star) operator.
 
+Class methods are bound functions (i.e. ``this`` is fixed to the
+instance). A function that is defined in another function and does not
+have self/this as a first argument, is bound the the same instance as
+function in which it is defined.
+
 .. _pyscript-caveats:
 
 Caveats
@@ -99,8 +104,6 @@ plan to make heavy use of PyScript.
   undefined: ...``.
 * Accessing an attribute that does not exist will not raise an
   AttributeError but yield ``undefined``.
-* When storing a method in a new variable and then calling it 
-  (``foo = x.foo; foo()``), self/this is null.
 * Magic functions on classes (e.g. for operator overloading) do not work.
 * Calling an object that starts with a capital letter is assumed to be
   a class instantiation (using ``new``): PyScript classes *must* start
