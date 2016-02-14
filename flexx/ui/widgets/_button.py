@@ -57,9 +57,8 @@ class Button(Widget):
         def _create_node(self):
             self.p = window.phosphor.createWidget('button')
             node = self.p.node
-            that = self
-            node.addEventListener('mousedown', lambda ev: that.mouse_down._set(1), 0)
-            node.addEventListener('mouseup', lambda ev: that.mouse_down._set(0), 0)
+            node.addEventListener('mousedown', lambda ev: self.mouse_down._set(1), 0)
+            node.addEventListener('mouseup', lambda ev: self.mouse_down._set(0), 0)
         
         @react.connect('text')
         def _text_changed(self, text):

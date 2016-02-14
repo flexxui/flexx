@@ -100,11 +100,10 @@ class BokehWidget(Widget):
             self.node.appendChild(el)
             #eval(script)
             # Get plot from id in next event-loop iter
-            that = self
             def getplot():
-                that.plot._set(Bokeh.index[id])
-                that.plot().resize()
-                that.real_size._set(that.real_size())
+                self.plot._set(Bokeh.index[id])
+                self.plot().resize()
+                self.real_size._set(self.real_size())
             window.setTimeout(getplot, 10)
         
         @react.connect('real_size')
