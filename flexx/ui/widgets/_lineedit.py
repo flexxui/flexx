@@ -77,9 +77,8 @@ class LineEdit(Widget):
             self._autocomp.id = self.id
             self._node.appendChild(self._autocomp)
             
-            that = self
-            f1 = lambda ev: that.user_text._set(that._node.value)
-            f2 = lambda ev: that.submit._set(ev.which)
+            f1 = lambda ev: self.user_text._set(self._node.value)
+            f2 = lambda ev: self.submit._set(ev.which)
             self._node.addEventListener('input', f1, False)
             self._node.addEventListener('keydown', f2, False)
             #if IE10:

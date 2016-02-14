@@ -398,9 +398,8 @@ class Widget(Model):
                 if self.node.parentNode is not None:  # detachWidget not enough
                     self.node.parentNode.removeChild(self.node)
                 self.p.attach(el)
-                that = self
-                window.addEventListener('resize', lambda: (that.p.update(), 
-                                                           that._check_real_size()))
+                window.addEventListener('resize', lambda: (self.p.update(), 
+                                                           self._check_real_size()))
             if id == 'body':
                 self.node.classList.add('flx-main-widget')
         

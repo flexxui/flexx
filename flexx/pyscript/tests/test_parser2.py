@@ -609,7 +609,61 @@ class TestClasses:
         code = py2js(MyClass11) + py2js(MyClass12)
         assert evaljs(code + 'var m = new MyClass12(); m._res') == '122'
         assert evaljs(code + 'var m = new MyClass12(); m.m1()') == '100'
+    
+    def test_ensure_use_new(self):
+        class MyClass13:
+            def __init__(self):
+               pass
+        code = py2js(MyClass13)
+        err = 'Class constructor is called as a function.'
+        assert evaljs(code + 'try { var m = new MyClass13(); "ok"} catch (err) { err; }') == 'ok'
+        assert evaljs(code + 'try { var m = MyClass13();} catch (err) { err; }') == err
+        assert evaljs(code + 'try { MyClass13.apply(root);} catch (err) { err; }') == err
+        assert evaljs(code + 'var window = root;try { MyClass13.apply(window);} catch (err) { err; }') == err
         
+    
+    def test_bound_methods(self):
+        
+        class MyClass14:
+            def __init__(self):
+                self.a = 1
+            def add2(self):
+                self.a += 2
+        
+        class MyClass15(MyClass14):
+            def add3(self):
+                self.a += 3
+        
+        code = py2js(MyClass14) + py2js(MyClass15)
+        assert evaljs(code + 'var m = new MyClass14(); m.add2(); m.add2(); m.a') == '5'
+        assert evaljs(code + 'var m = new MyClass14(); var f = m.add2; f(); f(); m.a') == '5'
+        assert evaljs(code + 'var m = new MyClass15(); var f = m.add3; f(); f(); m.a') == '7'
+        assert evaljs(code + 'var m = new MyClass15(); var f2 = m.add2, f3 = m.add3; f2(); f3(); m.a') == '6'
+    
+    
+    def test_bound_funcs_in_methods(self):
+        class MyClass16:
+            def foo1(self):
+                self.a = 3
+                f = lambda i: self.a
+                return f()
+            
+            def foo2(self):
+                self.a = 3
+                def bar():
+                    return self.a
+                return bar()
+            
+            def foo3(self):
+                self.a = 3
+                def bar(self):
+                    return self.a
+                return bar()
+        
+        code = py2js(MyClass16)
+        assert evaljs(code + 'var m = new MyClass16(); m.foo1()') == '3'
+        assert evaljs(code + 'var m = new MyClass16(); m.foo2()') == '3'
+        assert evaljs(code + 'var m = new MyClass16(); try {m.foo3();} catch (err) {"ok"}') == 'ok'
 
 
 run_tests_if_main()

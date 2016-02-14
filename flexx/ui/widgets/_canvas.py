@@ -22,15 +22,14 @@ class CanvasWidget(Widget):
         
         def _init(self):
             super()._init()
-            that = self
-            _mouse_down = lambda ev: that.mouse_down._set(1)
-            _mouse_up = lambda ev: that.mouse_down._set(0)
-            _mouse_move = lambda ev: that.mouse_pos._set((ev.clientX, ev.clientY))
+            _mouse_down = lambda ev: self.mouse_down._set(1)
+            _mouse_up = lambda ev: self.mouse_down._set(0)
+            _mouse_move = lambda ev: self.mouse_pos._set((ev.clientX, ev.clientY))
             self.canvas.addEventListener('mousedown', _mouse_down, 0)
             self.canvas.addEventListener('mouseup', _mouse_up, 0)
             self.canvas.addEventListener('mousemove', _mouse_move, 0)
             # The canvas seems to need a bit of extra help to size at first
-            window.setTimeout(lambda ev=None: that._check_real_size(), 10)
+            window.setTimeout(lambda ev=None: self._check_real_size(), 10)
         
         def _create_node(self):
             self.p = window.phosphor.createWidget('div')
