@@ -21,7 +21,7 @@ also be used by themselves:
 For more information, see http://flexx.readthedocs.org.
 """
 
-__version__ = '0.2'
+__version__ = '0.3'
 
 
 # Assert compatibility

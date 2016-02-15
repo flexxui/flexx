@@ -26,11 +26,11 @@ from distutils.core import setup
 ## Function we need
 
 def get_version_and_doc(filename):
-    __version__, __doc__ = None, ''
+    NS = dict(__version__='', __doc__='')
     docStatus = 0  # Not started, in progress, done
     for line in open(filename, 'rb').read().decode().splitlines():
-        if (line.startswith('version_info') or line.startswith('__version__')):
-            exec(line.strip())
+        if line.startswith('__version__'):
+            exec(line.strip(), NS, NS)
         elif line.startswith('"""'):
             if docStatus == 0:
                 docStatus = 1
@@ -38,8 +38,10 @@ def get_version_and_doc(filename):
             elif docStatus == 1:
                 docStatus = 2
         if docStatus == 1:
-            __doc__ += line
-    return __version__, __doc__
+            NS['__doc__'] += line
+    if not NS['__version__']:
+        raise RuntimeError('Could not find __version__')
+    return NS['__version__'], NS['__doc__']
 
 
 def package_tree(pkgroot):
@@ -111,7 +113,7 @@ setup(
     packages=package_tree(name),
     package_dir={name: package_dir},
     package_data={'flexx': ['resources/*']},
-    entry_points={'console_scripts': ['flexx = flexx.__main__'], },
+    entry_points={'console_scripts': ['flexx = flexx.__main__:main'], },
     zip_safe=False,
     classifiers=[
         'Development Status :: 3 - Alpha',
