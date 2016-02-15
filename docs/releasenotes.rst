@@ -13,16 +13,18 @@ Roadmap
 Release notes
 -------------
 
-**v0.3** (upcoming)
+**v0.3** (15-02-2015)
 
 The most important changes with respect to the previous release are:
     
 - Flexx now works on Legacy Python (i.e. Python 2.7). The source code is
-  automatically translated upon installation.
+  automatically translated during installation.
 - Improvements to nested FlexLayout on Chrome
 - A command-line tool to stop and get info on running Flexx servers.
 - More tests
-- A new Canvas widget
+- A new Canvas widget.
+- PyScript uses bound functions for methods and functions without selt/this
+  as first arg.
 
 Also see the
 `overview of pull request <https://github.com/zoofIO/flexx/issues?q=is%3Apr+milestone%3Av0.3>`_
