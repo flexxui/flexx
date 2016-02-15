@@ -57,5 +57,6 @@ class CanvasWidget(Widget):
         def mouse_pos(self, pos=(0, 0)):
             """ The current position of the mouse inside this widget.
             """
-            offset = self.canvas.offsetLeft, self.canvas.offsetTop
+            rect = self.canvas.getBoundingClientRect()
+            offset = rect.left, rect.top
             return float(pos[0] - offset[0]), float(pos[1] - offset[1])
