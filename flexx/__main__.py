@@ -126,5 +126,10 @@ _cli_docs = CLI().get_global_help().splitlines()
 __doc__ += '\n'.join(['    ' + line for line in _cli_docs])
 
 
-if __name__ == '__main__':
+def main():
+    # Main entry point (see setup.py)
     CLI(sys.argv[1:])
+
+
+if __name__ == '__main__':
+    main()
