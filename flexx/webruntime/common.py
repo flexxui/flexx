@@ -15,7 +15,7 @@ import subprocess
 from ..util.icon import Icon
 
 
-class BaseRuntime(object):
+class BaseRuntime:
     """ Base class for all runtimes.
     """
 

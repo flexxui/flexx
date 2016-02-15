@@ -245,7 +245,7 @@ def export(cls, filename=None, single=True):
     logging.info('Exported app to %r' % filename)
 
 
-class ExporterWebSocketDummy(object):
+class ExporterWebSocketDummy:
     """ Object that can be used by an app inplace of the websocket to
     export apps to standalone HTML. The object tracks the commands send
     by the app, so that these can be re-played in the exported document.
