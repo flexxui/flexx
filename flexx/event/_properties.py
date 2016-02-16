@@ -9,6 +9,9 @@ import inspect
 class Property:
     """ A value that is gettable and settable.
     """
+    
+    _IS_PROP = True
+    
     def __init__(self, func):
         if not callable(func):
             raise ValueError('Property needs a callable')
@@ -37,13 +40,6 @@ class Property:
                     value2 = self._func(value)
             except Exception as err:
                 raise
-            
-                # if value is undefined:
-                #     return  # no need to update
-                # for signal in self._downstream_reconnect[:]:  # list may be modified
-                #     signal.connect(False)
-                # for signal in self._downstream:
-                #     signal._set_status(1, self)  # do not set status of *this* signal!
             finally:
                 self._is_being_set = False
             # Update value and emit event
@@ -62,9 +58,9 @@ class Property:
         try:
             return getattr(instance, private_name)
         except AttributeError:
-            self.set_default(instance)
+            self._set_default(instance)
     
-    def set_default(self, instance):
+    def _set_default(self, instance):
         private_name = '_' + self._name + '_prop'
         # Trigger default value
         self._is_being_set = True

@@ -2,6 +2,8 @@ import sys
 import inspect
 import weakref
 
+from ._properties import Property
+
 # todo: define better, or don't use at all?
 undefined = 'blaaaaa'
 
@@ -82,8 +84,8 @@ class ObjectFrame(object):
                     continue
                 val = getattr(ob.__class__, key)
                 # todo: look inside properties
-                if isinstance(val, Signal):
-                    private_name = '_' + key + '_signal'
+                if isinstance(val, Property):  # todo: also readonly
+                    private_name = '_' + key + '_prop'
                     if private_name in locals:
                         locals[key] = locals[private_name]
         return locals
@@ -160,6 +162,8 @@ class Handler:
         self._upstream_reconnect = []
         
         # Pending events for this handler
+        self._scheduled_update = False
+        self._need_connect = False
         self._pending = []
         
         # Frame and object
@@ -206,11 +210,13 @@ class Handler:
         else:
             return self._func()
     
-    def add_pending_event(self, ev):
+    def add_pending_event(self, ev, reconnect=False):
         """ Add an event object to be handled at the next event loop
         iteration. Called from HasEvents.dispatch().
         """
-        if not self._pending:
+        self._need_connect = self._need_connect or reconnect
+        if not self._scheduled_update:
+            self._scheduled_update = True
             loop.call_later(self.handle_now)  # register only once
         self._pending.append(ev)
     
@@ -220,6 +226,12 @@ class Handler:
         is scheduled for this handler, but it can also be called to
         force the handler to process pending events *now*.
         """
+        self._scheduled_update = False
+        # Connect?
+        if self._need_connect:
+            self._need_connect = False
+            self.connect(False)  # todo: this should not fail
+        # Handle events
         self._pending, events = [], self._pending
         if not events:
             pass
@@ -245,25 +257,24 @@ class Handler:
         This function is automatically called during initialization,
         and .... ???
         """
-        # todo: can we get rid of raise_on_fail?
-        raise_on_fail = True
+        # todo: can we not connect per event-path? Now we reconnect all signals if we need reconnect
         
         # First disconnect
         while len(self._upstream):
             ob, name = self._upstream.pop(0)
             ob._unregister_handler(name, self)
         while len(self._upstream_reconnect):  # len() for PyScript compat
-            ob, name = self._upstream.pop(0)
+            ob, name = self._upstream_reconnect.pop(0)
             ob._unregister_handler(name, self)
         
         # Resolve signals
         self._not_connected = self._resolve_signals()
         
-        # Subscribe (on a fail, the _upstream_reconnect can be non-empty)
+        # Subscribe (on a fail, the _upstream_reconnect can still be non-empty)
         for ob, name in self._upstream:
             ob._register_handler(name, self)
         for ob, name in self._upstream_reconnect:
-            ob._register_handler(name, self)  # todo: should invoke a reconnect
+            ob._register_handler_reconnect(name, self)  # todo: should invoke a reconnect
         
         # Fail?
         if self._not_connected:
@@ -292,6 +303,8 @@ class Handler:
         """ Seek a signal based on the name. Used by _resolve_signals.
         This bit is PyScript compatible (_resolve_signals is not).
         """
+        if fullname == 'sub.bar':
+            fullname = fullname
         # Done traversing name: add to list or fail
         if ob is undefined or len(path) == 0:
             if ob is undefined:
@@ -300,23 +313,22 @@ class Handler:
                 return 'Object "%s" is not on an HasEvents object.' % fullname
             self._upstream.append((ob, name))
             return None  # ok
-        # Get value if ob is a signal
-        if False:  #todo: name is a property or readonly hasattr(ob, '_IS_HANDLER'):
-            self._upstream_reconnect.append(ob)
-            try:
-                ob = ob()
-            except SignalValueError:
-                # we'll rebind when that signal gets a value
-                return 'Signal %r does not have all parts ready' % fullname
+        
         # Resolve name
         ob_name, path = path[0], path[1:]
-        if ob_name == '*' and isinstance(ob, (tuple, list)):
+        if getattr(getattr(ob.__class__, ob_name, None), '_IS_PROP', False):
+            # todo: make .__class__ work in PyScript
+            self._upstream_reconnect.append((ob, ob_name))
+            ob = getattr(ob, ob_name)
+        elif ob_name == '*' and isinstance(ob, (tuple, list)):
             for sub_ob in ob:
                 msg = self._seek_signal(fullname, path, sub_ob, name)
                 if msg:
                     return msg
             return None  # ok
-        return self._seek_signal(fullname, path, getattr(ob, ob_name, undefined), name)
+        else:
+            ob = getattr(ob, ob_name, undefined)
+        return self._seek_signal(fullname, path, ob, name)
     
     def _resolve_signals(self):
         """ Get signals from their string path. Return value to store
@@ -329,14 +341,18 @@ class Handler:
         
         for fullname in self._upstream_given:
             nameparts = fullname.split('.')
-            path, name = nameparts[:-1], nameparts[-1]
-            # Obtain first part of path from the frame that we have
-            if path:
-                f = self._frame
+            path, name = nameparts[:-1], nameparts[-1]  # path to HasEvents ob
+            # Obtain root object
+            ob = self._ob() if self._ob else None
+            if not path:
+                pass  # it must be an event on *our* object
+            elif ob is not None and hasattr(ob, path[0]):
+                pass  # what we're looking seems to be on our object
+            else: 
+                f = self._frame  # look in locals and globals
                 ob = f.f_locals.get(path[0], f.f_globals.get(path[0], undefined))
-            else:
-                ob = self._ob()
-            msg = self._seek_signal(fullname, path[1:], ob, name)
+                path = path[1:]
+            msg = self._seek_signal(fullname, path, ob, name)
             # todo: we can be connected to one signal and not to another, right?
             if msg:
                 self._upstream = []

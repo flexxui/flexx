@@ -26,8 +26,20 @@ class MyObject(event.HasEvents):
     
     def on_bar(self, *events):
         print('on_bar', events)
+    
+    @event.prop
+    def sub(self, ob=None):
+        return ob
+    
+    @event.connect('sub.bar')
+    def _handle_sub_bar(self, *events):
+        print('sub bar', events)
 
 h = MyObject(bar=5)
+h1 = MyObject(bar=11)
+h2 = MyObject(bar=12)
+
+h.sub = h1
 
 @event.connect('h.foo')
 def handle_foo(*events):

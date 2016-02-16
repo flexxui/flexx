@@ -76,6 +76,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
     
     def __init__(self, **initial_property_values):
         self._handlers = {}
+        self._handlers_reconnect = {}  # handlers to reconnect upon event
         
         # Instantiate handlers, its enough to reference them
         for name in self.__class__.__handlers__:
@@ -114,6 +115,8 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         on this object. This can be used to clean up any references
         when the object is no longer used.
         """
+        for name, handlers in self._handlers_reconnect.items():
+            handlers[:] = []
         for name, handlers in self._handlers.items():
             handlers[:] = []
         for name in self.__class__.__handlers__:
@@ -125,7 +128,16 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         they reconnect (dynamism).
         """
         handlers = self._handlers.setdefault(event_name, [])
-        if handler in handlers:
+        while handler in handlers:
+            handlers.remove(handler)
+        handlers.append(handler)
+    
+    def _register_handler_reconnect(self, event_name, handler):
+        """ Register that the given handler is reconnected when the
+        given event occurs. This is called from Handler objects.
+        """
+        handlers = self._handlers_reconnect.setdefault(event_name, [])
+        while handler in handlers:
             handlers.remove(handler)
         handlers.append(handler)
     
@@ -133,8 +145,11 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         """ Unregister a handler. This is called from Handler objects
         when they dispose or when they reconnect (dynamism).
         """
+        handlers = self._handlers_reconnect.setdefault(event_name, [])
+        while handler in handlers:
+            handlers.remove(handler)
         handlers = self._handlers.setdefault(event_name, [])
-        if handler in handlers:
+        while handler in handlers:
             handlers.remove(handler)
     
     def emit(self, event_name, ev):
@@ -149,9 +164,10 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         if not isinstance(ev, dict):
             raise ValueError('Event object must be a dict')
         ev = Dict(ev)
+        ev.type = event_name
+        # Dispatch reconnect handlers
+        for handler in self._handlers_reconnect.get(event_name, ()):
+            handler.add_pending_event(ev, True)
         # Dispatch registered handlers
-        handlers = self._handlers.get(event_name, None)
-        if handlers:
-            for handler in handlers:
-                handler.add_pending_event(ev)
-
+        for handler in self._handlers.get(event_name, ()):
+            handler.add_pending_event(ev)
