@@ -17,6 +17,7 @@ class Property:
             raise ValueError('Property needs a callable')
         self._func = func
         self._name = func.__name__  # updated by HasEvents meta class
+        self._is_being_set = False
         
         # Get whether function is a method
         try:
@@ -30,6 +31,8 @@ class Property:
     
     def __set__(self, instance, value):
         if isinstance is not None:
+            if self._is_being_set:
+                return
             private_name = '_' + self._name + '_prop'
             # Validate value
             self._is_being_set = True
@@ -61,6 +64,8 @@ class Property:
             self._set_default(instance)
     
     def _set_default(self, instance):
+        if self._is_being_set:
+            return
         private_name = '_' + self._name + '_prop'
         # Trigger default value
         self._is_being_set = True

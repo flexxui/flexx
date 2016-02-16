@@ -4,8 +4,6 @@ from flexx import event
 # from flexx import behold
 # from flexx import observe
 
-# todo: dynamism
-# todo: celcius / fahrenheit
 # todo: some form of propagation
 # todo: event order
 # todo: caching (streams)
@@ -52,3 +50,33 @@ def handle_bar(*events):
 with event.loop:
     h.emit('foo', dict(msg='he'))
     h.emit('foo', dict(msg='ho'))
+
+
+##
+
+class Temperature(event.HasEvents):
+    """ Wow, this works even easier as it did with signals!
+    """
+    
+    @event.prop
+    def C(self, t=0):
+        t = float(t)
+        self.F = t * 1.8 + 32
+        return t
+    
+    @event.prop
+    def F(self, t=0):
+        t = float(t)
+        self.C = (t - 32) / 1.8
+        return t
+    
+    @event.connect('C', 'F')
+    def on_temp_change(self, *events):
+        # This gets called once with two events when either C or F is changed.
+        print('temp changed!', events)
+
+t = Temperature2()
+
+with event.loop:
+    t.C = 10
+        
