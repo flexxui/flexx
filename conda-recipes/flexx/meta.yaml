@@ -1,0 +1,44 @@
+package:
+  name: flexx
+  version: "0.3"
+
+source:
+  fn: flexx-0.3.zip
+  url: https://pypi.python.org/packages/source/f/flexx/flexx-0.3.zip
+  #url: file://D:\dev\pylib\flexx\dist\flexx-0.3.zip
+  #md5: d4e7539bf06c130b70724198daa3e042
+
+build:
+  # noarch_python: True
+  # preserve_egg_dir: True
+  number: 2
+  entry_points:
+    - flexx = flexx.__main__:main
+
+requirements:
+  build:
+    - python
+    - setuptools
+
+  run:
+    - python
+    - tornado
+
+test:
+  # Python imports
+  imports:
+    - flexx
+    - flexx.app
+    - flexx.pyscript
+    - flexx.react
+    - flexx.ui
+    - flexx.webruntime
+
+about:
+  home: http://flexx.readthedocs.org
+  license: BSD License
+  summary: "Pure Python toolkit for creating GUI's using web technology."
+
+# See
+# http://docs.continuum.io/conda/build.html for
+# more information about meta.yaml
