@@ -55,17 +55,16 @@ def package_tree(pkgroot):
 
 
 def copy_for_legacy_python(src_dir, dest_dir):
-    if sys.argv[1:] not in (['install'], ['bdist_wheel'], ['bdist_wheel', 'upload']):
-        raise RuntimeError('Setup.py can only be used to "install" on Python 2.x')
     from translate_to_legacy import LegacyPythonTranslator
     # Dirs and files to explicitly not translate
-    ignore_dirs = ['__pycache__']
     skip = ['pyscript/tests/python_sample.py', 
             'pyscript/tests/python_sample2.py',
             'pyscript/tests/python_sample3.py']
-    # Make a copy of the flexx package
-    shutil.copytree(src_dir, dest_dir,
-                    ignore=lambda src, names: [n for n in names if n in ignore_dirs])
+    # Make a fresh copy of the flexx package
+    if os.path.isdir(dest_dir):
+        shutil.rmtree(dest_dir)
+    ignore = lambda src, names: [n for n in names if n == '__pycache__']
+    shutil.copytree(src_dir, dest_dir, ignore=ignore)
     # Translate in-place
     LegacyPythonTranslator.translate_dir(dest_dir, skip=skip)
 
@@ -90,18 +89,13 @@ extras_require['all'] = [i for ii in extras_require.values() for i in ii]
 if 'sdist' in sys.argv and sys.version_info[0] == 3:
     from flexx import ui
 
-# Additional modules to add for sdist
-py_modules = ['translate_to_legacy'] if ('sdist' in sys.argv ) else []
-
-# Get directory to install - convert for legacy py on Python 2
-package_dir = name
-package_dir_legacy = package_dir + '_legacy_py'
-if os.path.isdir(os.path.join(THIS_DIR, package_dir_legacy)):
-    shutil.rmtree(os.path.join(THIS_DIR, package_dir_legacy))
-if sys.version_info[0] == 2:
-    package_dir = package_dir_legacy
+# Support for legacy Python: we install a second package with the
+# translated code. We generate that code when we can. We use
+# "name_legacy" below in "packages", "package_dir", and "package_data".
+name_legacy = name + '_legacy'
+if os.path.isfile(os.path.join(THIS_DIR, 'translate_to_legacy.py')):
     copy_for_legacy_python(os.path.join(THIS_DIR, name),
-                           os.path.join(THIS_DIR, package_dir))
+                           os.path.join(THIS_DIR, name_legacy))
 
 ## Setup
 
@@ -120,10 +114,9 @@ setup(
     provides=[name],
     install_requires=[],  # react, pyscript and webruntime require nothing
     extras_require=extras_require,
-    packages=package_tree(name),
-    py_modules = py_modules,
-    package_dir={name: package_dir},
-    package_data={'flexx': ['resources/*']},
+    packages=package_tree(name) + package_tree(name_legacy),
+    package_dir={name: name, name_legacy: name_legacy},
+    package_data={name: ['resources/*'], name_legacy: ['resources/*']},
     entry_points={'console_scripts': ['flexx = flexx.__main__:main'], },
     zip_safe=False,
     classifiers=[
