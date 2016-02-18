@@ -21,7 +21,7 @@ also be used by themselves:
 For more information, see http://flexx.readthedocs.org.
 """
 
-__version__ = '0.3'
+__version__ = '0.3.1'
 
 
 # Assert compatibility and redirect to legacy version on Python 2.7
