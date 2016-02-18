@@ -86,7 +86,7 @@ extras_require['all'] = [i for ii in extras_require.values() for i in ii]
 
 # Import to trigger download of phosphorjs
 if 'sdist' in sys.argv and sys.version_info[0] == 3:
-    from flexx import ui
+    from flexx import ui  # noqa
 
 # Support for legacy Python: we install a second package with the
 # translated code. We generate that code when we can. We use
