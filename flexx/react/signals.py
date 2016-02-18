@@ -22,7 +22,7 @@ class SignalValueError(Exception):
     pass
 
 
-class ObjectFrame(object):
+class ObjectFrame:
     """ A proxy frame that gives access to the class instance (usually
     from HasSignals) as a frame, combined with the frame that the class
     was defined in.
@@ -62,7 +62,7 @@ class ObjectFrame(object):
         return ObjectFrame(self._ob(), self._frame.f_back)
 
 
-class Signal(object):
+class Signal:
     """ A Signal is an object that provides a value that changes over time.
     The current value can be obtained by calling the signal object or via
     the ``.value`` attribute.

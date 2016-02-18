@@ -19,7 +19,7 @@ def valid_app_name(name):
     return name and name[0] in T[:-10] and all([c in T for c in name])
 
 
-class AppManager(object):
+class AppManager:
     """ Manage apps, or more specifically, the session objects.
     
     There is one AppManager class (in ``flexx.model.manager``). It's

@@ -82,12 +82,8 @@ broken).
 Deep comparisons are supported (e.g. for ``==`` and ``in``), so you can
 actually compare two lists or dicts, or even a structure of nested
 lists/dicts. Lists can be combined with the plus operator, and lists
-and strings can be repeated with the multiply (star) operator.
-
-Class methods are bound functions (i.e. ``this`` is fixed to the
-instance). A function that is defined in another function and does not
-have self/this as a first argument, is bound the the same instance as
-function in which it is defined.
+and strings can be repeated with the multiply (star) operator. Class
+methods are bound functions.
 
 .. _pyscript-caveats:
 
@@ -194,6 +190,11 @@ Supported Python conveniences:
 * list concatenation using the plus operator, and list/str repeating
   using the star operator.
 * deep comparisons.
+* class methods are bound functions (i.e. ``this`` is fixed to the
+  instance).
+* functions that are defined in another function and that do not have
+  self/this as a first argument, are bound the the same instance as the
+  function in which it is defined.
 
 """
 

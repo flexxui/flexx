@@ -5,7 +5,7 @@ import os
 import shutil
 import fnmatch
 
-from make import ROOT_DIR
+from make import ROOT_DIR, NAME
 
 
 def clean():
@@ -24,3 +24,9 @@ def clean():
             os.remove(os.path.join(root, filename))
             count2 += 1
     print('removed %i .pyc files' % count2)
+    
+    for dir in ['dist', 'build', NAME+'.egg-info', 'htmlcov']:
+        dirname = os.path.join(ROOT_DIR, dir)
+        if os.path.isdir(dirname):
+            shutil.rmtree(dirname)
+            print('Removed directory %r' % dir)
