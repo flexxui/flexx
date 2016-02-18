@@ -35,7 +35,7 @@ def test_unit(rel_path='.'):
         sys.exit('Cannot do unit tests, pytest not installed')
     # Get path to test
     py2 = sys.version_info[0] == 2
-    rel_path = 'flexx_legacy_py/' + rel_path if py2 else 'flexx/' + rel_path
+    rel_path = 'flexx_legacy/' + rel_path if py2 else 'flexx/' + rel_path
     test_path = os.path.join(ROOT_DIR, rel_path)
     # Import flexx, from installed, or from ROOT_DIR
     if py2 or os.getenv('TEST_INSTALL', '').lower() in ('1', 'yes', 'true'):

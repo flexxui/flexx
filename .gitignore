@@ -6,7 +6,7 @@ __pycache__/
 exp/html_examples.txt
 flexx/resources/phosphor-all.*.js
 _flexx-notebooks
-flexx_legacy_py
+flexx_legacy
 _phosphor-all
 examples/ui/*.html
 

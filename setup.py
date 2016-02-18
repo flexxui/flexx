@@ -7,7 +7,9 @@ Release:
 * bump __version__
 * python setup.py register
 * python setup.py sdist bdist_wheel --universal upload
-* build conda packages?
+* update conda recipe (meta.yaml)
+* build and upload the (noarch) conda package
+* git tag
 
 """
 
@@ -52,19 +54,16 @@ def package_tree(pkgroot):
 
 
 def copy_for_legacy_python(src_dir, dest_dir):
-    if sys.argv[1:] != ['install']:
-        raise RuntimeError('Setup.py can only be used to "install" on Python 2.x')
     from translate_to_legacy import LegacyPythonTranslator
     # Dirs and files to explicitly not translate
-    ignore_dirs = ['__pycache__']
     skip = ['pyscript/tests/python_sample.py', 
             'pyscript/tests/python_sample2.py',
             'pyscript/tests/python_sample3.py']
-    # Make a copy of the flexx package
+    # Make a fresh copy of the flexx package
     if os.path.isdir(dest_dir):
         shutil.rmtree(dest_dir)
-    shutil.copytree(src_dir, dest_dir,
-                    ignore=lambda src, names: [n for n in names if n in ignore_dirs])
+    ignore = lambda src, names: [n for n in names if n == '__pycache__']
+    shutil.copytree(src_dir, dest_dir, ignore=ignore)
     # Translate in-place
     LegacyPythonTranslator.translate_dir(dest_dir, skip=skip)
 
@@ -85,13 +84,17 @@ extras_require = {'app': ['tornado']}
 extras_require['ui'] = extras_require['app']
 extras_require['all'] = [i for ii in extras_require.values() for i in ii]
 
-# Get directory to install
-package_dir = name
-if sys.version_info[0] == 2:
-    package_dir += '_legacy_py'
-    copy_for_legacy_python(os.path.join(THIS_DIR, name),
-                           os.path.join(THIS_DIR, package_dir))
+# Import to trigger download of phosphorjs
+if 'sdist' in sys.argv and sys.version_info[0] == 3:
+    from flexx import ui  # noqa
 
+# Support for legacy Python: we install a second package with the
+# translated code. We generate that code when we can. We use
+# "name_legacy" below in "packages", "package_dir", and "package_data".
+name_legacy = name + '_legacy'
+if os.path.isfile(os.path.join(THIS_DIR, 'translate_to_legacy.py')):
+    copy_for_legacy_python(os.path.join(THIS_DIR, name),
+                           os.path.join(THIS_DIR, name_legacy))
 
 ## Setup
 
@@ -110,9 +113,9 @@ setup(
     provides=[name],
     install_requires=[],  # react, pyscript and webruntime require nothing
     extras_require=extras_require,
-    packages=package_tree(name),
-    package_dir={name: package_dir},
-    package_data={'flexx': ['resources/*']},
+    packages=package_tree(name) + package_tree(name_legacy),
+    package_dir={name: name, name_legacy: name_legacy},
+    package_data={name: ['resources/*'], name_legacy: ['resources/*']},
     entry_points={'console_scripts': ['flexx = flexx.__main__:main'], },
     zip_safe=False,
     classifiers=[

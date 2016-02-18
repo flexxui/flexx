@@ -15,7 +15,7 @@ ON_PYPY = '__pypy__' in sys.builtin_module_names
 def runner(cls):
     t = app.launch(cls, 'firefox')
     t.test_init()
-    app.call_later(3, app.stop)
+    app.call_later(5, app.stop)
     app.run()
     if not (ON_TRAVIS and ON_PYPY):  # has intermittent fails on pypy3
         t.test_check()

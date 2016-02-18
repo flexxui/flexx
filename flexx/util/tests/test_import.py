@@ -18,7 +18,7 @@ if '__pypy__' in sys.builtin_module_names and os.getenv('TRAVIS', '') == 'true':
 # minimum that will be imported when importing flexx
 PROJECT_MODULE = flexx
 MIN_MODULES = ['flexx']
-PROJECT_NAME = PROJECT_MODULE.__name__
+PROJECT_NAME = 'flexx'
 
 ## Generic code
 
@@ -38,7 +38,12 @@ def loaded_modules(import_module, depth=None, all_modules=False):
     res = subprocess.check_output([sys.executable, '-c', code], cwd=project_dir,
                                   stderr=subprocess.STDOUT).decode()
     loaded_modules = [name.strip() for name in res.split(',')]
-
+    
+    # Tweaks for legacy Python
+    loaded_modules = [name.replace('flexx_legacy', 'flexx') for name in loaded_modules]
+    if 'flexx.sys' in loaded_modules:
+        loaded_modules.remove('flexx.sys')
+    
     if all_modules:
         return loaded_modules
 
