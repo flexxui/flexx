@@ -6,11 +6,10 @@ Release:
 
 * bump __version__
 * python setup.py register
-* python setup.py sdist upload
-* python setup.py bdist_wheel upload
-* python27 setup.py bdist_wheel upload
-* Update conda recipes
-* build conda packages?
+* python setup.py sdist bdist_wheel --universal upload
+* update conda recipe (meta.yaml)
+* build and upload the (noarch) conda package
+* git tag
 
 """
 
