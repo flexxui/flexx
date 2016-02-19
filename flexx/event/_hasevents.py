@@ -76,7 +76,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
     
     def __init__(self, **initial_property_values):
         self._handlers = {}
-        self._handlers_reconnect = {}  # handlers to reconnect upon event
+        # self._handlers_reconnect = {}  # handlers to reconnect upon event
         
         # Instantiate handlers, its enough to reference them
         for name in self.__class__.__handlers__:
@@ -115,8 +115,8 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         on this object. This can be used to clean up any references
         when the object is no longer used.
         """
-        for name, handlers in self._handlers_reconnect.items():
-            handlers[:] = []
+        # for name, handlers in self._handlers_reconnect.items():
+        #     handlers[:] = []
         for name, handlers in self._handlers.items():
             handlers[:] = []
         for name in self.__class__.__handlers__:
@@ -136,29 +136,10 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             handlers.append(entry)
         handlers.sort(key=lambda x: x[0]+'-'+x[1]._id)
     
-    def _register_handler_reconnect(self, event_name, handler):
-        """ Register that the given handler is reconnected when the
-        given event occurs. This is called from Handler objects.
-        """
-        event_name, _, label = event_name.partition(':')
-        handlers = self._handlers_reconnect.setdefault(event_name, [])
-        entry = label, handler
-        if entry not in handlers:
-            handlers.append(entry)
-        handlers.sort(key=lambda x: x[0]+'-'+x[1]._id)
-    
     def _unregister_handler(self, event_name, handler):
         """ Unregister a handler. This is called from Handler objects
         when they dispose or when they reconnect (dynamism).
         """
-        handlers = self._handlers_reconnect.setdefault(event_name, [])
-        topop = []
-        for i, entry in enumerate(handlers):
-            if handler in entry:
-                topop.append(i)
-        for i in reversed(topop):
-            handlers.pop(i)
-        
         handlers = self._handlers.setdefault(event_name, [])
         topop = []
         for i, entry in enumerate(handlers):
@@ -175,16 +156,8 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             ev (dict): the event object. This dict is turned into a Dict,
                 so that its elements can be accesses as attributes.
         """
-        # Normalize dict
         if not isinstance(ev, dict):
             raise ValueError('Event object must be a dict')
-        # Dispatch reconnect handlers
-        for label, handler in self._handlers_reconnect.get(event_name, ()):
-            ev = Dict(ev)
-            ev.type = event_name
-            ev.label = label
-            handler.add_pending_event(ev, True)
-        # Dispatch registered handlers
         for label, handler in self._handlers.get(event_name, ()):
             ev = Dict(ev)
             ev.type = event_name
