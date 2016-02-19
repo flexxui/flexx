@@ -141,6 +141,7 @@ class Handler:
     # todo: need any of this?
     _IS_HANDLER = True  # poor man's isinstance in JS (because class name mangling)
     _active = True
+    _count = 0
     
     def __init__(self, func, upstream, frame=None, ob=None):
         # Check and set func
@@ -148,6 +149,8 @@ class Handler:
             raise ValueError('Handler needs a callable')
         self._func = func
         self._name = func.__name__
+        Handler._count += 1
+        self._id = str(Handler._count)  # to ensure a consistent event order
         
         # Set docstring; this appears correct in sphinx docs
         self.__doc__ = '*%s*: %s' % (self.__class__.__name__,
@@ -164,7 +167,7 @@ class Handler:
         # Pending events for this handler
         self._scheduled_update = False
         self._need_connect = False
-        self._pending = []
+        self._pending = []  # (label, ev) tuples
         
         # Frame and object
         self._frame = frame or sys._getframe(1)
@@ -218,7 +221,7 @@ class Handler:
         if not self._scheduled_update:
             self._scheduled_update = True
             loop.call_later(self.handle_now)  # register only once
-        self._pending.append(ev)
+        self._pending.append((ev.label, ev))
     
     def handle_now(self):
         """ Invoke a call to the handler with all pending events. This
@@ -231,8 +234,12 @@ class Handler:
         if self._need_connect:
             self._need_connect = False
             self.connect(False)  # todo: this should not fail
-        # Handle events
+        # Event objects are shared between handlers, but each set its own label)
         self._pending, events = [], self._pending
+        for label, ev in events:
+            ev.label = label
+        events = [ev for label, ev in events]
+        # Handle events
         if not events:
             pass
         elif self._func_is_method and self._ob is not None:

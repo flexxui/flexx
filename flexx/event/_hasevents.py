@@ -122,35 +122,50 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         for name in self.__class__.__handlers__:
             getattr(self, name).disconnect(destroy)
     
+    # todo: rename connect?
     def _register_handler(self, event_name, handler):
         """ Register a handler for the given event name.
         This is called from Handler objects at initialization and when
         they reconnect (dynamism).
         """
+        event_name, _, label = event_name.partition(':')
+        label = label or handler._name
         handlers = self._handlers.setdefault(event_name, [])
-        while handler in handlers:
-            handlers.remove(handler)
-        handlers.append(handler)
+        entry = label, handler
+        if entry not in handlers:
+            handlers.append(entry)
+        handlers.sort(key=lambda x: x[0]+'-'+x[1]._id)
     
     def _register_handler_reconnect(self, event_name, handler):
         """ Register that the given handler is reconnected when the
         given event occurs. This is called from Handler objects.
         """
+        event_name, _, label = event_name.partition(':')
         handlers = self._handlers_reconnect.setdefault(event_name, [])
-        while handler in handlers:
-            handlers.remove(handler)
-        handlers.append(handler)
+        entry = label, handler
+        if entry not in handlers:
+            handlers.append(entry)
+        handlers.sort(key=lambda x: x[0]+'-'+x[1]._id)
     
     def _unregister_handler(self, event_name, handler):
         """ Unregister a handler. This is called from Handler objects
         when they dispose or when they reconnect (dynamism).
         """
         handlers = self._handlers_reconnect.setdefault(event_name, [])
-        while handler in handlers:
-            handlers.remove(handler)
+        topop = []
+        for i, entry in enumerate(handlers):
+            if handler in entry:
+                topop.append(i)
+        for i in reversed(topop):
+            handlers.pop(i)
+        
         handlers = self._handlers.setdefault(event_name, [])
-        while handler in handlers:
-            handlers.remove(handler)
+        topop = []
+        for i, entry in enumerate(handlers):
+            if handler in entry:
+                topop.append(i)
+        for i in reversed(topop):
+            handlers.pop(i)
     
     def emit(self, event_name, ev):
         """ Generate a new event and dispatch to all event handlers.
@@ -166,8 +181,10 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         ev = Dict(ev)
         ev.type = event_name
         # Dispatch reconnect handlers
-        for handler in self._handlers_reconnect.get(event_name, ()):
+        for label, handler in self._handlers_reconnect.get(event_name, ()):
+            ev.label = label
             handler.add_pending_event(ev, True)
         # Dispatch registered handlers
-        for handler in self._handlers.get(event_name, ()):
+        for label, handler in self._handlers.get(event_name, ()):
+            ev.label = label
             handler.add_pending_event(ev)

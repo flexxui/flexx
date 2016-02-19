@@ -39,9 +39,9 @@ h2 = MyObject(bar=12)
 
 h.sub = h1
 
-@event.connect('h.foo')
+@event.connect('h.foo:crap')
 def handle_foo(*events):
-    print('single func, handle foo', [ev.msg for ev in events])
+    print('single func, handle foo', [ev.label for ev in events])
 
 @event.connect('h.bar')
 def handle_bar(*events):
@@ -70,12 +70,12 @@ class Temperature(event.HasEvents):
         self.C = (t - 32) / 1.8
         return t
     
-    @event.connect('C', 'F')
+    @event.connect('C:c', 'F:f')
     def on_temp_change(self, *events):
         # This gets called once with two events when either C or F is changed.
         print('temp changed!', events)
 
-t = Temperature2()
+t = Temperature()
 
 with event.loop:
     t.C = 10
