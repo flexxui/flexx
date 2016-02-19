@@ -167,7 +167,7 @@ class Handler:
         # Pending events for this handler
         self._scheduled_update = False
         self._need_connect = False
-        self._pending = []  # (label, ev) tuples
+        self._pending = []  # pending events
         
         # Frame and object
         self._frame = frame or sys._getframe(1)
@@ -221,7 +221,7 @@ class Handler:
         if not self._scheduled_update:
             self._scheduled_update = True
             loop.call_later(self.handle_now)  # register only once
-        self._pending.append((ev.label, ev))
+        self._pending.append(ev)
     
     def handle_now(self):
         """ Invoke a call to the handler with all pending events. This
@@ -234,12 +234,8 @@ class Handler:
         if self._need_connect:
             self._need_connect = False
             self.connect(False)  # todo: this should not fail
-        # Event objects are shared between handlers, but each set its own label)
-        self._pending, events = [], self._pending
-        for label, ev in events:
-            ev.label = label
-        events = [ev for label, ev in events]
         # Handle events
+        self._pending, events = [], self._pending
         if not events:
             pass
         elif self._func_is_method and self._ob is not None:

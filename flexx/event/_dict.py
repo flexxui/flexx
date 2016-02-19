@@ -22,6 +22,8 @@ class Dict(_dict):
     __reserved_names__ = dir(_dict())  # Also from OrderedDict
     __pure_names__ = dir(dict())
     
+    __slots__ = []
+    
     def __repr__(self):
         return dict.__repr__(self)
     

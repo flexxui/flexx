@@ -178,13 +178,15 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # Normalize dict
         if not isinstance(ev, dict):
             raise ValueError('Event object must be a dict')
-        ev = Dict(ev)
-        ev.type = event_name
         # Dispatch reconnect handlers
         for label, handler in self._handlers_reconnect.get(event_name, ()):
+            ev = Dict(ev)
+            ev.type = event_name
             ev.label = label
             handler.add_pending_event(ev, True)
         # Dispatch registered handlers
         for label, handler in self._handlers.get(event_name, ()):
+            ev = Dict(ev)
+            ev.type = event_name
             ev.label = label
             handler.add_pending_event(ev)
