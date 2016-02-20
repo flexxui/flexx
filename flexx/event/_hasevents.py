@@ -84,6 +84,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # Instantiate props
         for name in self.__class__.__props__:
             getattr(self, name)  # triggers setting default value
+            self._handlers.setdefault(name, [])
         for name, value in initial_property_values.items():
             if name in self.__class__.__props__:
                 setattr(self, name, value)
@@ -140,7 +141,8 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         """ Unregister a handler. This is called from Handler objects
         when they dispose or when they reconnect (dynamism).
         """
-        handlers = self._handlers.setdefault(event_name, [])
+        event_name, _, label = event_name.partition(':')
+        handlers = self._handlers.get(event_name, [])
         topop = []
         for i, entry in enumerate(handlers):
             if handler in entry:
@@ -156,6 +158,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             ev (dict): the event object. This dict is turned into a Dict,
                 so that its elements can be accesses as attributes.
         """
+        event_name, _, label = event_name.partition(':')
         if not isinstance(ev, dict):
             raise ValueError('Event object must be a dict')
         for label, handler in self._handlers.get(event_name, ()):
@@ -163,3 +166,14 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             ev.type = event_name
             ev.label = label
             handler._add_pending_event(ev)  # friend class
+    
+    def get_event_types(self):
+        """ Get a list of the types of events that handlers are registered for.
+        """
+        return list(self._handlers.keys())
+        
+    def get_event_handlers(self, type):
+        """ Get a list of handlers for the given event type.
+        """
+        handlers = self._handlers.get(type, [])
+        return [h[1] for h in handlers]

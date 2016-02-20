@@ -21,6 +21,10 @@ class MyObject(event.HasEvents):
     @event.prop
     def bar(self, v=3):
         return float(v)
+        
+    @event.prop
+    def prop_without_connections(self, v=3):
+        return float(v)
     
     def on_bar(self, *events):
         print('on_bar', events)
