@@ -129,7 +129,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         they reconnect (dynamism).
         """
         event_name, _, label = event_name.partition(':')
-        label = label or handler._name
+        label = label or handler.name
         handlers = self._handlers.setdefault(event_name, [])
         entry = label, handler
         if entry not in handlers:
@@ -162,4 +162,4 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             ev = Dict(ev)
             ev.type = event_name
             ev.label = label
-            handler.add_pending_event(ev)
+            handler._add_pending_event(ev)  # friend class

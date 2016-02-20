@@ -141,7 +141,6 @@ class Handler:
     """
     # todo: need any of this?
     _IS_HANDLER = True  # poor man's isinstance in JS (because class name mangling)
-    _active = True
     _count = 0
     
     def __init__(self, func, event_names, frame=None, ob=None):
@@ -160,8 +159,8 @@ class Handler:
         # Check and set dependencies
         for s in event_names:
             assert isinstance(s, str) and len(s) > 0
-        self._connections = [Dict(fullname=s, name=s.split('.')[-1],
-                             upstream=[], upstream_reconnect=[]) for s in event_names]
+        self._connections = [Dict(fullname=s, name=s.split('.')[-1], upstream=[])
+                             for s in event_names]
         
         # Pending events for this handler
         self._scheduled_update = False
@@ -178,21 +177,12 @@ class Handler:
             self._func_is_method = False
         
         # Connecting
-        self._not_connected = 'No connection attempt yet.'
         self.connect()
 
     def __repr__(self):
-        conn = '(not connected)' if self.not_connected else '(connected)'
+        conn = '+'.join([str(len(c.upstream)) for c in self._connections])
         cls_name = self.__class__.__name__
-        return '<%s %r %s at 0x%x>' % (cls_name, self._name, conn, id(self))
-    
-    @property
-    def _self(self):
-        """ The HasSignals instance that this signal is associated with
-        (stored as a weak reference internally). None for plain signals.
-        """
-        if self._ob is not None:
-            return self._ob()
+        return '<%s %r with %s connections at 0x%x>' % (cls_name, self._name, conn, id(self))
     
     @property
     def name(self):
@@ -200,6 +190,13 @@ class Handler:
         of the function that this signal wraps.
         """
         return self._name
+    
+    @property
+    def connection_info(self):
+        """ A list of tuples (name, connection_names), where connection_names
+        is a tuple of names for the connections made for that xxxx
+        """
+        return [(c.fullname, tuple([u[1] for u in c.upstream])) for c in self._connections]
     
     ## Calling / handling
     
@@ -211,7 +208,7 @@ class Handler:
         else:
             return self._func()
     
-    def add_pending_event(self, ev):
+    def _add_pending_event(self, ev):
         """ Add an event object to be handled at the next event loop
         iteration. Called from HasEvents.dispatch().
         """
@@ -221,10 +218,11 @@ class Handler:
         self._pending.append(ev)
     
     def handle_now(self):
-        """ Invoke a call to the handler with all pending events. This
-        is normally called in a next event loop iteration when an event
-        is scheduled for this handler, but it can also be called to
-        force the handler to process pending events *now*.
+        """ Invoke a call to the handler function with all pending
+        events. This is normally called in a next event loop iteration
+        when an event is scheduled for this handler, but it can also
+        be called manually to force the handler to process pending
+        events *now*.
         """
         self._scheduled_update = False
         # Reconnect connections that need reconnecting (dynamism)
@@ -256,17 +254,29 @@ class Handler:
         fails, raises an error. Unless the event names represent a path
         with properties in it.
         """
-        for connection in self._connections:
+        for i, connection in enumerate(self._connections):
+            connection.index = i
             self._connect_to_event(connection)
     
+    def disconnect(self, destroy=True):
+        """ Disconnect this signal, unsubscribing it from the upstream
+        signals. If destroy is True (default), will also clear the
+        internal frame object, allowing unused objects to be deleted.
+        """
+        for connection in self._connections:
+            while len(connection.upstream):
+                ob, name = connection.upstream.pop(0)
+                ob._unregister_handler(name, self)
+        if destroy:
+            self._frame = None
+    
     def _connect_to_event(self, connection):
+        """ Connect one connection.
+        """
         # Disconnect
         while len(connection.upstream):
             ob, name = connection.upstream.pop(0)
-            ob._unregister_handler(connection.name, self)
-        while len(connection.upstream_reconnect):
-            ob, name = connection.upstream_reconnect.pop(0)
-            ob._unregister_handler(connection.name, self)
+            ob._unregister_handler(name, self)
         
         path = connection.fullname.split('.')[:-1]
         # Obtain root object
@@ -283,31 +293,12 @@ class Handler:
         self._seek_event_object(connection, path, ob)
         
         # Verify
-        if not (connection.upstream or connection.upstream_reconnect):
+        if not connection.upstream:
             raise RuntimeError('Could not connect to %r' % connection.fullname)
         
         # Connect
         for ob, name in connection.upstream:
             ob._register_handler(name, self)
-        for i, ob_name in enumerate(connection.upstream_reconnect):
-            ob, name = ob_name
-            name_label = name + ':reconnect_' + str(i)
-            ob._register_handler(name_label, self)
-    
-    # def disconnect(self, destroy=True):
-    #     """ Disconnect this signal, unsubscribing it from the upstream
-    #     signals. If destroy is True (default), will also clear the
-    #     internal frame object, allowing unused objects to be deleted.
-    #     """
-    #     # todo: rename to dispose?
-    #     # Disconnect upstream
-    #     while len(self._upstream):  # len() for PyScript compat
-    #         ob, name = self._upstream.pop(0)
-    #         ob._unregister_handler(name, self)
-    #     self._not_connected = 'Explicitly disconnected via disconnect()'
-    #     if destroy:
-    #         self._frame = None
-    # 
     
     def _seek_event_object(self, connection, path, ob):
         """ Seek an event object based on the name.
@@ -324,7 +315,8 @@ class Handler:
         obname, path = path[0], path[1:]
         if getattr(getattr(ob.__class__, obname, None), '_IS_PROP', False):
             # todo: make .__class__ work in PyScript
-            connection.upstream_reconnect.append((ob, obname))
+            name_label = obname + ':reconnect_' + str(connection.index)
+            connection.upstream.append((ob, name_label))
             ob = getattr(ob, obname)
         elif obname == '*' and isinstance(ob, (tuple, list)):
             for sub_ob in ob:
@@ -335,10 +327,3 @@ class Handler:
         else:
             ob = getattr(ob, obname, undefined)
         return self._seek_event_object(connection, path, ob)
-    
-    @property
-    def not_connected(self):
-        """ False when not all signals are connected. Otherwise this
-        is a string with a message why the signal is not connected.
-        """
-        return self._not_connected
