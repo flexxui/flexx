@@ -1,5 +1,151 @@
 """
-Naming in the context of events:
+The event module provides an simple event framework as well as a
+property system (and properties send events when they get changed).
+Together, these provide a simple yet powerful means to make different
+components of an application react to each-other and to user input.
+
+Event
+-----
+
+An event is something that has occurred, at a certain moment in time.
+Like a mouse pressed down or moved, or a property changing its value.
+In this framework, events are represented with dictionary objects that
+provide information about the event. We use a custom `Dict` class that
+inherits from `dict` but allows attribute access, e.g. ``ev.button`` as
+an alternative to ``ev['button']``.
+
+Emitter
+-------
+
+The EventEmitter class provides a base class for objects that need to
+have properties and/or emit events. E.g. a ``flexx.ui.Widget`` inherits from
+``flexx.app.Model``, which inherits from ``flexx.event.EventEmitter``.
+
+Events are emitted using the ``emitter.emit()`` method, which accepts a
+name for the type of the event, and a dict: e.g. 
+``emitter.emit('mouse_down', dict(button=1, x=103, y=211))``.
+
+As a user, you generally do not need to emit events in this way, but it
+happens implicitly, e.g. when setting a property, as we'll see below.
+
+Handler
+-------
+
+A handler is an object that can handle events. It wraps a function. Handlers
+can be created using the ``connect`` decorator:
+
+.. code-block:: python
+    
+    ob = @vent.EventEmitter()
+    
+    @event.connect('ob.foo')
+    def handle_foo(*events):
+        print(events)
+    
+    ob.emit('foo', dict(value=42))  # will invoke handle_foo()
+
+We can see a few things from this example. Firstly, the handler is
+connected via a *connection-string* that a path to the event. In this
+case, 'ob.foo' means it connects to the event-type 'foo' of the object
+'ob'. This connection-string can be longer, e.g.
+'path.to.an.emitter.event_type:label'. We cover labels further below.
+We also discuss some powerful mechanics related to connection-strings
+when we cover dynamism.
+
+We can also see that the handler function accepts ``*events`` argument.
+This is because handlers can be passed zero or more events. If a function
+is called manually (e.g. ``ob.handle_foo()``) it will have zero events.
+When called by the event system, it will have at least 1 event. The handler
+function is called in a next iteration of the event loop. If multiple
+events are emitted for this handler, the handler function is called
+just once. It is up to the programmer to determine whether all events
+need some form of processing, or if only one action is required. In
+general this is more efficient than having the handler function called
+each time that the event is emitted.
+
+Another feature of this system, is that a handler can connect to multiple
+events:
+
+.. code-block:: python
+    
+    ob = event.EventEmitter()
+    
+    @event.connect('ob.foo', 'ob.bar')
+    def handle_foo_and_bar(*events):
+        ...
+
+The recommended way to write apps is to write handlers as part of
+an EventEmitter subclass:
+
+.. code-block:: python
+
+    class MyObject(event.EventEmitter):
+       
+        @event.connect('foo')
+        def _handle_foo(self, **events):
+            ...
+
+Properties
+----------
+
+Properties can be created like this:
+
+.. code-block:: python
+
+    class MyObject(event.EventEmitter):
+       
+        @event.prop
+        def foo(self, v=0):
+            ''' This is a float indicating bla.
+            '''
+            return float(v)
+
+The function that is decorated should have one argument (the new value
+for the property), and it should have a default value. The function body
+is used to validate and normalize the provided input. In this case we
+just (try to) cast whatever input is given to a float. The docstring
+of the function will be the docstring of the property (and ends up
+correctly in Sphynx docs).
+
+
+Readonly
+--------
+
+A readonly is a property that can only be read. It can be set from code
+in the same class using .... 
+
+* maybe a 'set-foo' event, or
+* self.__class__.foo.set(self, value)?
+* self._set_readonly('foo', value)
+
+
+Event
+-----
+
+Uuuhm... the name is awkward. Emitter? But we also have that already.
+
+.. code-block:: python
+
+    class MyObject(event.EventEmitter):
+    
+        @event.event
+        def mouse_down(self, ev):
+            ''' Yay, users can read in the docs that this event exists, and
+            when it occurs!
+            '''
+            return dict(button=ev.button)
+        
+
+Labels
+------
+
+
+Dynamism
+--------
+
+
+Naming in the context of events
+-------------------------------
 
 * event: something that has occurred, represented by an event object (a Dict)
 * event emitter: an object that can emit events, of a class that
