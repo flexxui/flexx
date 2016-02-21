@@ -25,8 +25,8 @@ def new_type(name, *args, **kwargs):
     return type(name, *args, **kwargs)
 
 
-class HasEventsMeta(type):
-    """ Meta class for HasEvents
+class EventEmitterMeta(type):
+    """ Meta class for EventEmitter
     * Set the name of each handler
     * Sets __handlers__ attribute on the class
     """
@@ -35,7 +35,7 @@ class HasEventsMeta(type):
     
     def __init__(cls, name, bases, dct):
         
-        HasEventsMeta.CLASSES.append(cls)  # todo: dict by full qualified name?
+        EventEmitterMeta.CLASSES.append(cls)  # todo: dict by full qualified name?
         
         
         # Collect handlers defined on this class
@@ -68,15 +68,14 @@ class HasEventsMeta(type):
         type.__init__(cls, name, bases, dct)
 
 
-class HasEvents(with_metaclass(HasEventsMeta, object)):
+class EventEmitter(with_metaclass(EventEmitterMeta, object)):
     """ Base class for objects that have events and/or properties.
     """
     
-    _IS_HASSIGNALS = True
+    _IS_EVENTEMITTER = True
     
     def __init__(self, **initial_property_values):
         self._handlers = {}
-        # self._handlers_reconnect = {}  # handlers to reconnect upon event
         
         # Instantiate handlers, its enough to reference them
         for name in self.__class__.__handlers__:
@@ -124,46 +123,52 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             getattr(self, name).disconnect(destroy)
     
     # todo: rename connect?
-    def _register_handler(self, event_name, handler):
-        """ Register a handler for the given event name.
+    def _register_handler(self, type, handler):
+        # todo: include connection_string?
+        """ Register a handler for the given event type. The type
+        can include a label, e.g. 'mouse_down:foo'.
         This is called from Handler objects at initialization and when
         they reconnect (dynamism).
         """
-        event_name, _, label = event_name.partition(':')
+        type, _, label = type.partition(':')
         label = label or handler.name
-        handlers = self._handlers.setdefault(event_name, [])
+        handlers = self._handlers.setdefault(type, [])
         entry = label, handler
         if entry not in handlers:
             handlers.append(entry)
         handlers.sort(key=lambda x: x[0]+'-'+x[1]._id)
     
-    def _unregister_handler(self, event_name, handler):
+    def _unregister_handler(self, type, handler=None):
         """ Unregister a handler. This is called from Handler objects
         when they dispose or when they reconnect (dynamism).
         """
-        event_name, _, label = event_name.partition(':')
-        handlers = self._handlers.get(event_name, [])
+        type, _, label = type.partition(':')
+        handlers = self._handlers.get(type, ())
         topop = []
         for i, entry in enumerate(handlers):
-            if handler in entry:
+            # todo: this needs proper testing
+            if not ((label and label != entry[0]) or
+                    (handler and handler is not entry[1])):
                 topop.append(i)
         for i in reversed(topop):
             handlers.pop(i)
     
-    def emit(self, event_name, ev):
+    def emit(self, type, ev):
         """ Generate a new event and dispatch to all event handlers.
         
         Arguments:
-            name (str): the name of the event.
+            type (str): the name of the event.
             ev (dict): the event object. This dict is turned into a Dict,
                 so that its elements can be accesses as attributes.
         """
-        event_name, _, label = event_name.partition(':')
+        type, _, label = type.partition(':')
+        if label:
+            raise ValueError('The type given to emit() should not include a label.')
         if not isinstance(ev, dict):
             raise ValueError('Event object must be a dict')
-        for label, handler in self._handlers.get(event_name, ()):
+        for label, handler in self._handlers.get(type, ()):
             ev = Dict(ev)
-            ev.type = event_name
+            ev.type = type
             ev.label = label
             handler._add_pending_event(ev)  # friend class
     
@@ -175,5 +180,5 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
     def get_event_handlers(self, type):
         """ Get a list of handlers for the given event type.
         """
-        handlers = self._handlers.get(type, [])
+        handlers = self._handlers.get(type, ())
         return [h[1] for h in handlers]

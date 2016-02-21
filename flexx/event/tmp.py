@@ -8,7 +8,7 @@ from flexx import event
 # todo: event order
 # todo: caching (streams)
 
-class MyObject(event.HasEvents):
+class MyObject(event.EventEmitter):
     
     @event.connect('foo')
     def _handle_foo(self, *events):
@@ -58,7 +58,7 @@ with event.loop:
 
 ##
 
-class Temperature(event.HasEvents):
+class Temperature(event.EventEmitter):
     """ Wow, this works even easier as it did with signals!
     """
     

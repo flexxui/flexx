@@ -16,7 +16,7 @@ class Property:
         if not callable(func):
             raise ValueError('Property needs a callable')
         self._func = func
-        self._name = func.__name__  # updated by HasEvents meta class
+        self._name = func.__name__  # updated by EventEmitter meta class
         self._is_being_set = False
         
         # Get whether function is a method
@@ -97,7 +97,7 @@ class Event:
 
 
 
-# To apply at a HasEvents class
+# To apply at a EventEmitter class
 
 def prop(func):
     return Property(func)
