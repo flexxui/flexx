@@ -5,8 +5,6 @@ from flexx import event
 # from flexx import observe
 
 # todo: some form of propagation
-# todo: event order
-# todo: caching (streams)
 
 class MyObject(event.EventEmitter):
     
@@ -56,7 +54,7 @@ with event.loop:
     h.emit('foo', dict(msg='ho'))
 
 
-##
+## Two properties that depend on each-other
 
 class Temperature(event.EventEmitter):
     """ Wow, this works even easier as it did with signals!
@@ -84,3 +82,37 @@ t = Temperature()
 with event.loop:
     t.C = 10
         
+
+## Caching
+
+
+class CachingExample(event.EventEmitter):
+    """ Demonstrate the use of caching, an example use of tha analog
+    of "streams" in reactive programming. We use an "undocumented"
+    signal to make calculate_results push out its result. Which is
+    perfectly ok for internal use.
+    """
+    
+    def __init__(self):
+        super().__init__()
+    
+    @event.prop
+    def input(self, v=0):
+        return float(v)
+    
+    @event.connect('input')
+    def calculate_results(self, *events):
+        # This takes a while
+        import time
+        time.sleep(self.input)
+        if self.input > 0:
+            self.emit('result', dict(result=42*self.input))
+    
+    @event.connect('result')
+    def show_result(self, *events):
+        print('The result is', events[-1].result)
+
+c = CachingExample()
+event.loop.iter()
+
+# with event.loop: c.input = 3

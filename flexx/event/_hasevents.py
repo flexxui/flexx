@@ -68,6 +68,7 @@ class EventEmitterMeta(type):
         type.__init__(cls, name, bases, dct)
 
 
+# todo: rename to Emitter? Because `event.EventEmitter` seems so verbose
 class EventEmitter(with_metaclass(EventEmitterMeta, object)):
     """ Base class for objects that have events and/or properties.
     """

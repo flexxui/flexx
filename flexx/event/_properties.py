@@ -75,7 +75,7 @@ class Property:
             else:
                 value2 = self._func()
         except Exception as err:
-            raise  # we need a default
+            raise RuntimeError('Could not get default value for property %r' % self._name)
         finally:
             self._is_being_set = False
         # Update value and emit event
