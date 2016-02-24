@@ -111,6 +111,7 @@ class HandlerDescriptor:
         self._name = func.__name__  # updated by EventEmitter meta class
         self._connection_strings = connection_strings
         self._frame = frame
+        self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
     
     def __repr__(self):
         cls_name = self.__class__.__name__
@@ -154,8 +155,7 @@ class Handler:
         self._id = str(Handler._count)  # to ensure a consistent event order
         
         # Set docstring; this appears correct in sphinx docs
-        self.__doc__ = '*%s*: %s' % (self.__class__.__name__,
-                                     func.__doc__ or self._name)
+        self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
         
         # Check and set dependencies
         for s in connection_strings:

@@ -166,18 +166,31 @@ class EventEmitter(with_metaclass(EventEmitterMeta, object)):
         if label:
             raise ValueError('The type given to emit() should not include a label.')
         if not isinstance(ev, dict):
-            raise ValueError('Event object must be a dict')
+            raise ValueError('Event object (for %r) must be a dict' % type)
         for label, handler in self._handlers.get(type, ()):
             ev = Dict(ev)
             ev.type = type
             ev.label = label
             handler._add_pending_event(ev)  # friend class
     
+    def _set_prop(self, prop_name, value):
+        """ Set the value of a (readonly) property.
+        """
+        if not isinstance(prop_name, str):
+            raise ValueError("_set_prop's first arg must be str, not %s" %
+                             prop_name.__class__.__name__)
+        try:
+            readonly_descriptor = getattr(self.__class__, prop_name)
+        except AttributeError:
+            cname = self.__class__.__name__
+            raise AttributeError('%s object has no property %r' % (cname, prop_name))
+        readonly_descriptor._set(self, value)
+    
     def get_event_types(self):
         """ Get a list of the types of events that handlers are registered for.
         """
         return list(self._handlers.keys())
-        
+    
     def get_event_handlers(self, type):
         """ Get a list of handlers for the given event type.
         """

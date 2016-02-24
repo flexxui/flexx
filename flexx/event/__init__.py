@@ -36,7 +36,7 @@ can be created using the ``connect`` decorator:
 
 .. code-block:: python
     
-    ob = @vent.EventEmitter()
+    ob = @event.EventEmitter()
     
     @event.connect('ob.foo')
     def handle_foo(*events):
@@ -85,8 +85,15 @@ an EventEmitter subclass:
         def _handle_foo(self, **events):
             ...
 
+
+Event generators
+----------------
+
+Apart from using ``emit()`` there are certain attributes of ``EventEmitter``
+that help generate events or generate events automatically.
+
 Properties
-----------
+==========
 
 Properties can be created like this:
 
@@ -109,18 +116,26 @@ correctly in Sphynx docs).
 
 
 Readonly
---------
+========
 
-A readonly is a property that can only be read. It can be set from code
-in the same class using .... 
+A readonly is a property that can only be read. It can be set internally
+using ``HasEvents._set_prop()``.
 
-* maybe a 'set-foo' event, or
-* self.__class__.foo.set(self, value)?
-* self._set_readonly('foo', value)
+.. code-block:: python
 
+    class MyObject(event.EventEmitter):
+       
+        @event.readonly
+        def foo(self, v=0):
+            ''' This is a float indicating bla.
+            '''
+            return float(v)
+        
+        def _somewhere(self):
+            self._set_prop('foo', 42)
 
 Event
------
+=====
 
 Uuuhm... the name is awkward. Emitter? But we also have that already.
 
@@ -129,19 +144,33 @@ Uuuhm... the name is awkward. Emitter? But we also have that already.
     class MyObject(event.EventEmitter):
     
         @event.event
-        def mouse_down(self, ev):
+        def mouse_down(self, js_event):
             ''' Yay, users can read in the docs that this event exists, and
             when it occurs!
             '''
-            return dict(button=ev.button)
-        
+            return dict(button=js_event.button)
+
 
 Labels
 ------
 
+TODO
 
 Dynamism
 --------
+
+TODO
+
+Patterns
+--------
+
+TODO
+
+* signaling (most common)
+* pub sub
+* overloadable event handlers as in Qt
+* observer pattern
+* send events into an object without caring what event it can handle (ala PhosphorJS)
 
 
 Naming in the context of events
@@ -166,7 +195,7 @@ Naming in the context of events
 
 from ._dict import Dict
 from ._handler import connect, loop
-from ._properties import prop, readonly, event
+from ._properties import prop, readonly, emitter
 from ._hasevents import EventEmitter
 
 from ._hasevents import new_type, with_metaclass

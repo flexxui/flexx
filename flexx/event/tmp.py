@@ -5,6 +5,7 @@ from flexx import event
 # from flexx import observe
 
 # todo: some form of propagation
+# todo: conductor prop? Or can that be a readonly?
 
 class MyObject(event.EventEmitter):
     
@@ -54,7 +55,34 @@ with event.loop:
     h.emit('foo', dict(msg='ho'))
 
 
+## Readonly and emitter
+
+from flexx import event
+
+class Foo(event.EventEmitter):
+    
+    @event.readonly
+    def bar(self, v=42):
+        return float(v)
+    
+    def on_bar(self, *events):
+        print('bar changed!')
+    
+    @event.emitter
+    def spam(self, x):
+        return dict(value=x)
+    
+    def on_spam(self, *events):
+        for ev in events:
+            print('spam event:', ev)
+
+
+foo = Foo()
+
+
 ## Two properties that depend on each-other
+
+from flexx import event
 
 class Temperature(event.EventEmitter):
     """ Wow, this works even easier as it did with signals!
@@ -84,7 +112,7 @@ with event.loop:
         
 
 ## Caching
-
+from flexx import event
 
 class CachingExample(event.EventEmitter):
     """ Demonstrate the use of caching, an example use of tha analog
