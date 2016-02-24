@@ -13,7 +13,7 @@ Roadmap
 Release notes
 -------------
 
-**v0.3.1** (19-02-2015)
+**v0.3.1** (19-02-2016)
 
 A few small fixes, and improvements to distribution. The universal wheel
 on Pypi for v0.3 did not work on Python 2.7. Flexx now includes
@@ -23,7 +23,7 @@ Also see the
 `overview of pull request <https://github.com/zoofIO/flexx/issues?q=is%3Apr+milestone%3Av0.3.1>`_.
 
 
-**v0.3** (15-02-2015)
+**v0.3** (15-02-2016)
 
 The most important changes with respect to the previous release are:
     
