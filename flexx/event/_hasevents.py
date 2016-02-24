@@ -25,8 +25,8 @@ def new_type(name, *args, **kwargs):
     return type(name, *args, **kwargs)
 
 
-class EventEmitterMeta(type):
-    """ Meta class for EventEmitter
+class HasEventsMeta(type):
+    """ Meta class for HasEvents
     * Set the name of each handler
     * Sets __handlers__ attribute on the class
     """
@@ -35,7 +35,7 @@ class EventEmitterMeta(type):
     
     def __init__(cls, name, bases, dct):
         
-        EventEmitterMeta.CLASSES.append(cls)  # todo: dict by full qualified name?
+        HasEventsMeta.CLASSES.append(cls)  # todo: dict by full qualified name?
         
         
         # Collect handlers defined on this class
@@ -68,12 +68,11 @@ class EventEmitterMeta(type):
         type.__init__(cls, name, bases, dct)
 
 
-# todo: rename to Emitter? Because `event.EventEmitter` seems so verbose
-class EventEmitter(with_metaclass(EventEmitterMeta, object)):
+class HasEvents(with_metaclass(HasEventsMeta, object)):
     """ Base class for objects that have events and/or properties.
     """
     
-    _IS_EVENTEMITTER = True
+    _IS_HASEVENTS = True
     
     def __init__(self, **initial_property_values):
         self._handlers = {}

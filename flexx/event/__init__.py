@@ -17,9 +17,9 @@ an alternative to ``ev['button']``.
 Emitter
 -------
 
-The EventEmitter class provides a base class for objects that need to
+The HasEvents class provides a base class for objects that need to
 have properties and/or emit events. E.g. a ``flexx.ui.Widget`` inherits from
-``flexx.app.Model``, which inherits from ``flexx.event.EventEmitter``.
+``flexx.app.Model``, which inherits from ``flexx.event.HasEvents``.
 
 Events are emitted using the ``emitter.emit()`` method, which accepts a
 name for the type of the event, and a dict: e.g. 
@@ -36,7 +36,7 @@ can be created using the ``connect`` decorator:
 
 .. code-block:: python
     
-    ob = @event.EventEmitter()
+    ob = @event.HasEvents()
     
     @event.connect('ob.foo')
     def handle_foo(*events):
@@ -68,18 +68,18 @@ events:
 
 .. code-block:: python
     
-    ob = event.EventEmitter()
+    ob = event.HasEvents()
     
     @event.connect('ob.foo', 'ob.bar')
     def handle_foo_and_bar(*events):
         ...
 
 The recommended way to write apps is to write handlers as part of
-an EventEmitter subclass:
+an HasEvents subclass:
 
 .. code-block:: python
 
-    class MyObject(event.EventEmitter):
+    class MyObject(event.HasEvents):
        
         @event.connect('foo')
         def _handle_foo(self, **events):
@@ -89,7 +89,7 @@ an EventEmitter subclass:
 Event generators
 ----------------
 
-Apart from using ``emit()`` there are certain attributes of ``EventEmitter``
+Apart from using ``emit()`` there are certain attributes of ``HasEvents``
 that help generate events or generate events automatically.
 
 Properties
@@ -99,7 +99,7 @@ Properties can be created like this:
 
 .. code-block:: python
 
-    class MyObject(event.EventEmitter):
+    class MyObject(event.HasEvents):
        
         @event.prop
         def foo(self, v=0):
@@ -123,7 +123,7 @@ using ``HasEvents._set_prop()``.
 
 .. code-block:: python
 
-    class MyObject(event.EventEmitter):
+    class MyObject(event.HasEvents):
        
         @event.readonly
         def foo(self, v=0):
@@ -141,7 +141,7 @@ Uuuhm... the name is awkward. Emitter? But we also have that already.
 
 .. code-block:: python
 
-    class MyObject(event.EventEmitter):
+    class MyObject(event.HasEvents):
     
         @event.event
         def mouse_down(self, js_event):
@@ -178,7 +178,7 @@ Naming in the context of events
 
 * event: something that has occurred, represented by an event object (a Dict)
 * event emitter: an object that can emit events, of a class that
-  inherits from EventEmitter.
+  inherits from HasEvents.
 * handler: an object that can handle events, it wraps a handler function.
 * connection: generic term to indicate a connection between a handler
   and an emitter.
@@ -196,6 +196,6 @@ Naming in the context of events
 from ._dict import Dict
 from ._handler import connect, loop
 from ._properties import prop, readonly, emitter
-from ._hasevents import EventEmitter
+from ._hasevents import HasEvents
 
 from ._hasevents import new_type, with_metaclass

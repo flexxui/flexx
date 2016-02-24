@@ -7,7 +7,7 @@ from flexx import event
 # todo: some form of propagation
 # todo: conductor prop? Or can that be a readonly?
 
-class MyObject(event.EventEmitter):
+class MyObject(event.HasEvents):
     
     @event.connect('foo')
     def _handle_foo(self, *events):
@@ -59,7 +59,7 @@ with event.loop:
 
 from flexx import event
 
-class Foo(event.EventEmitter):
+class Foo(event.HasEvents):
     
     @event.readonly
     def bar(self, v=42):
@@ -84,7 +84,7 @@ foo = Foo()
 
 from flexx import event
 
-class Temperature(event.EventEmitter):
+class Temperature(event.HasEvents):
     """ Wow, this works even easier as it did with signals!
     """
     
@@ -114,11 +114,10 @@ with event.loop:
 ## Caching
 from flexx import event
 
-class CachingExample(event.EventEmitter):
+class CachingExample(event.HasEvents):
     """ Demonstrate the use of caching, an example use of tha analog
-    of "streams" in reactive programming. We use an "undocumented"
-    signal to make calculate_results push out its result. Which is
-    perfectly ok for internal use.
+    of "streams" in reactive programming. We use a readonly property
+    to cache the result. 
     """
     
     def __init__(self):
@@ -126,19 +125,28 @@ class CachingExample(event.EventEmitter):
     
     @event.prop
     def input(self, v=0):
+        """ The input for the calcualtions. There could be more inputs."""
         return float(v)
     
     @event.connect('input')
     def calculate_results(self, *events):
+        """ A long running calculation on the input. """
         # This takes a while
         import time
         time.sleep(self.input)
         if self.input > 0:
-            self.emit('result', dict(result=42*self.input))
+            self._set_prop('result', self.input + 0.1)
+    
+    @event.readonly
+    def result(self, v=None):
+        """ readonly prop to cache the result. """
+        return v
     
     @event.connect('result')
     def show_result(self, *events):
-        print('The result is', events[-1].result)
+        """ handler to show result. Can be called at any time. """
+        if self.result:
+            print('The result is', self.result)
 
 c = CachingExample()
 event.loop.iter()

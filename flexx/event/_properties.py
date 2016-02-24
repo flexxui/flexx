@@ -5,7 +5,7 @@ Definition of descriptors for generating events: prop, readonly and emitter.
 import inspect
 
 
-# Decorators to apply at a EventEmitter class
+# Decorators to apply at a HasEvents class
 
 def prop(func):
     return Property(func)
@@ -21,13 +21,13 @@ class EventGenerator:
     """ Base class for descriptors used for generating events.
     """
     
-    _IS_EVENT_GENERATOR = True
+    _IS_EVENTGENERATOR = True
 
     def __init__(self, func):
         if not callable(func):
             raise ValueError('%s needs a callable' % self.__class__.__name__)
         self._func = func
-        self._name = func.__name__  # updated by EventEmitter meta class
+        self._name = func.__name__  # updated by HasEvents meta class
         self._is_being_set = False
         self.__doc__ = '*%s*: %s' % (self.__class__.__name__.lower(),
                                      func.__doc__ or self._name)

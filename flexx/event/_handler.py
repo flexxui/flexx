@@ -62,7 +62,7 @@ def connect(*connection_strings):
 
 class ObjectFrame(object):
     """ A proxy frame that gives access to the class instance (usually
-    from EventEmitter) as a frame, combined with the frame that the class
+    from HasEvents) as a frame, combined with the frame that the class
     was defined in.
     """
     
@@ -108,7 +108,7 @@ class HandlerDescriptor:
         if not callable(func):
             raise ValueError('Handler needs a callable')
         self._func = func
-        self._name = func.__name__  # updated by EventEmitter meta class
+        self._name = func.__name__  # updated by HasEvents meta class
         self._connection_strings = connection_strings
         self._frame = frame
         self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
@@ -248,7 +248,7 @@ class Handler:
     ## Connecting
     
     def connect(self):
-        """ Connect to EventEmitter objects.
+        """ Connect to HasEvents objects.
         
         The event names that were provided as a string are resolved to
         get the corresponding HasEvent objects, and the current handler
@@ -311,7 +311,7 @@ class Handler:
         
         # Done traversing name: add to list or fail
         if ob is undefined or len(path) == 0:
-            if ob is undefined or not hasattr(ob, '_IS_EVENTEMITTER'):
+            if ob is undefined or not hasattr(ob, '_IS_HASEVENTS'):
                 return  # we cannot seek further
             connection.emitters.append((ob, connection.type))
             return  # found it
