@@ -130,7 +130,7 @@ class HasEvents:
     _IS_HASEVENTS = True
     
     def __init__(self, **initial_property_values):
-        self._handlers = {}
+        self.__handlers = {}
         
         # Detect our emitters and handlers
         handlers, emitters = {}, {}
@@ -143,9 +143,8 @@ class HasEvents:
             elif isinstance(val, HandlerDescriptor):
                 handlers[name] = val
             elif name.startswith('on_') and callable(val):
-                hh = self._handlers.setdefault(name[3:], [])
-                # todo: pass a dummy frame, otherwise this __init__ gets stuck?
-                Handler(val,[name[3:]], None, self)  # registers itself
+                hh = self.__handlers.setdefault(name[3:], [])
+                Handler(val,[name[3:]], self)  # registers itself
         
         self.__handlers__ = [name for name in sorted(handlers.keys())]
         self.__emitters__ = [name for name in sorted(emitters.keys())]
@@ -156,7 +155,7 @@ class HasEvents:
         # Instantiate emitters
         for name in self.__emitters__:
             getattr(self, name)  # trigger setting the default value for props
-            self._handlers.setdefault(name, [])
+            self.__handlers.setdefault(name, [])
         
         # Initialize given properties
         for name, value in initial_property_values.items():
@@ -173,12 +172,12 @@ class HasEvents:
         all references to subscribed handlers, disconnect all handlers
         defined on this object.
         """
-        for name, handlers in self._handlers.items():
+        for name, handlers in self.__handlers.items():
             for label, handler in handlers:
                 handler._clear_hasevents_refs(self)
             handlers[:] = []
         for name in self.__handlers__:
-            getattr(self, name).disconnect(destroy)
+            getattr(self, name).dispose()
     
     def _register_handler(self, type, handler):
         # todo: include connection_string?
@@ -189,7 +188,7 @@ class HasEvents:
         """
         type, _, label = type.partition(':')
         label = label or handler.name
-        handlers = self._handlers.setdefault(type, [])
+        handlers = self.__handlers.setdefault(type, [])
         entry = label, handler
         if entry not in handlers:
             handlers.append(entry)
@@ -200,14 +199,35 @@ class HasEvents:
         when they dispose or when they reconnect (dynamism).
         """
         type, _, label = type.partition(':')
-        handlers = self._handlers.get(type, ())
-        topop = []
-        for i, entry in enumerate(handlers):
+        handlers = self.__handlers.get(type, ())
+        for i in reversed(range(len(handlers))):
+            entry = handlers[i]
             if not ((label and label != entry[0]) or
                     (handler and handler is not entry[1])):
-                topop.append(i)
-        for i in reversed(topop):
-            handlers.pop(i)
+                handlers.pop(i)
+    
+    def connect(self, *connection_strings):
+        """ Decorator to connect a function to one or more events of this instance.
+        
+        Example:
+            
+            .. code-block:: py
+            
+                h = HasEvents()
+                
+                @h.connect('first_name', 'last_name')
+                def greet(*events):
+                    print('hello %s %s' % (h.first_name, h.last_name))
+        """
+        # todo: how to create event full_name?
+        
+        if (not connection_strings) or (connection_strings and
+                                        callable(connection_strings[0])):
+            raise ValueError('Connect decorator needs one or more event names.')
+        
+        def _connect(func):
+            return Handler(func, connection_strings, self)
+        return _connect
     
     def emit(self, type, ev):
         """ Generate a new event and dispatch to all event handlers.
@@ -222,7 +242,7 @@ class HasEvents:
             raise ValueError('The type given to emit() should not include a label.')
         if not isinstance(ev, dict):
             raise TypeError('Event object (for %r) must be a dict' % type)
-        for label, handler in self._handlers.get(type, ()):
+        for label, handler in self.__handlers.get(type, ()):
             ev = Dict(ev)
             ev.type = type
             ev.label = label
@@ -254,7 +274,7 @@ class HasEvents:
             is a property/emitter or for which any handlers are
             registered. Sorted alphabetically.
         """
-        return list(sorted(self._handlers.keys()))
+        return list(sorted(self.__handlers.keys()))
     
     def get_event_handlers(self, type):
         """ Get a list of handlers for the given event type.
@@ -271,5 +291,5 @@ class HasEvents:
         type, _, label = type.partition(':')
         if label:
             raise ValueError('The type given to get_event_handlers() should not include a label.')
-        handlers = self._handlers.get(type, ())
+        handlers = self.__handlers.get(type, ())
         return [h[1] for h in handlers]

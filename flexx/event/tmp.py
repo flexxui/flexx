@@ -42,11 +42,11 @@ h2 = MyObject(bar=12)
 
 h.sub = h1
 
-@event.connect('h.foo:crap')
+@h.connect('foo:crap')
 def handle_foo(*events):
     print('single func, handle foo', [ev.label for ev in events])
 
-@event.connect('h.bar')
+@h.connect('bar')
 def handle_bar(*events):
     print('keep track of bar', events)
 

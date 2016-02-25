@@ -1,8 +1,9 @@
 """ Tests for the bare HasEvents class.
 """
 
-import weakref
 import gc
+import sys
+import weakref
 
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
 
@@ -69,17 +70,17 @@ def test_get_event_handlers():
         def eggs(self, *events):
             pass
     foo = Foo()
-    @event.connect('foo.x')
+    @foo.connect('x')
     def bar(*events):
         pass
     
     # sorted by label name
     assert foo.get_event_handlers('x') == [bar, foo.eggs, foo.spam]
     
-    @event.connect('foo.x')
+    @foo.connect('x')
     def zz1(*events):
         pass
-    @event.connect('foo.x:a')
+    @foo.connect('x:a')
     def zz2(*events):
         pass
     
@@ -105,11 +106,15 @@ def test_collect_classes():
     assert Bar456 in event.HasEvents.CLASSES
 
 
+def test_connect():
+    pass
+    # todo: test here or in test_handler?
+
 def test_emit():
     
     h = event.HasEvents()
     events = []
-    @event.connect('h.foo', 'h.bar')
+    @h.connect('foo', 'bar')
     def handler(*evts):
         events.extend(evts)
     
@@ -141,18 +146,18 @@ def test_emit():
 def test_registering_handlers():
     h = event.HasEvents()
     
-    @event.connect('h.foo')
+    @h.connect('foo')
     def handler1(*evts):
         events.extend(evts)
-    @event.connect('h.foo')
+    @h.connect('foo')
     def handler2(*evts):
         events.extend(evts)
-    @event.connect('h.foo')
+    @h.connect('foo')
     def handler3(*evts):
         events.extend(evts)
-    handler1.disconnect()
-    handler2.disconnect()
-    handler3.disconnect()
+    handler1.dispose()
+    handler2.dispose()
+    handler3.dispose()
     
     # Checks before we start
     assert h.get_event_types() == ['foo']
@@ -194,21 +199,62 @@ def test_registering_handlers():
 
 ## Disposing ...
 
-def test_disposing_handler1():
+def test_disposing_method_handler1():
     """ handlers on object don't need cleaning. """ 
     
     class Foo(event.HasEvents):
         @event.connect('xx')
-        def handle_xx(self, **events):
+        def handle_xx(self, *events):
             pass
     
     foo = Foo()
+    assert foo.get_event_handlers('xx')
     foo_ref = weakref.ref(foo)
     
     del foo
     gc.collect()
     assert foo_ref() is None
 
+
+def test_disposing_method_handler2():
+    """ handlers on object don't need cleaning but pending events need purge. """ 
+    
+    class Foo(event.HasEvents):
+        @event.connect('xx')
+        def handle_xx(self, *events):
+            pass
+    
+    foo = Foo()
+    assert foo.get_event_handlers('xx')
+    foo.emit('xx', {})  # <---------
+    foo_ref = weakref.ref(foo)
+    
+    del foo
+    gc.collect()
+    assert foo_ref() is not None  # pending event
+    
+    event.loop.iter()
+    gc.collect()
+    assert foo_ref() is None
+
+
+def test_disposing_method_handler1():
+    """ can call dispose with handlers on object. """ 
+    
+    class Foo(event.HasEvents):
+        @event.connect('xx')
+        def handle_xx(self, *events):
+            pass
+    
+    foo = Foo()
+    assert foo.get_event_handlers('xx')
+    foo_ref = weakref.ref(foo)
+    foo.dispose()  # <----
+    
+    del foo
+    gc.collect()
+    assert foo_ref() is None
+    
 
 def test_disposing_handler2():
     """ handlers outside object need cleaning. """ 
@@ -217,12 +263,13 @@ def test_disposing_handler2():
         class Foo(event.HasEvents):
             pass
         foo = Foo()
-        @event.connect('foo.xx')
-        def handle_xx(**events):
+        @foo.connect('xx')
+        def handle_xx(*events):
             pass
         return foo
     
     foo = _()
+    assert foo.get_event_handlers('xx')
     foo_ref = weakref.ref(foo)
     
     del foo
@@ -236,30 +283,65 @@ def test_disposing_handler3():
     class Foo(event.HasEvents):
         pass
     foo = Foo()
-    @event.connect('foo.xx')
-    def handle_xx(**events):
-        pass
-    #event._handler.Handler(handle_xx, ['foo.xx'], None)
     
+    @foo.connect('xx')
+    def handle_xx(*events):
+        pass
     foo_ref = weakref.ref(foo)
-    skip('fails')
-    # todo: FAIL
+    assert foo.get_event_handlers('xx')
     
     del foo
     gc.collect()
-    # assert foo_ref() is not None
+    assert foo_ref() is not None  # the handler still has refs
+    
     foo_ref().dispose()
     gc.collect()
     assert foo_ref() is None
 
 
-def test_disposing_prop():
-    """ props on object don't need cleaning. """ 
+def test_disposing_handler4():
+    """ handlers outside object plus pending event need cleaning. """ 
+    
+    class Foo(event.HasEvents):
+        pass
+    foo = Foo()
+    
+    @foo.connect('xx')
+    def handle_xx(*events):
+        pass
+    foo_ref = weakref.ref(foo)
+    assert foo.get_event_handlers('xx')
+    
+    foo.emit('xx', {})  # <---------
+    
+    del foo
+    gc.collect()
+    assert foo_ref() is not None  # the handler still has refs
+    
+    foo_ref().dispose()
+    gc.collect()
+    assert foo_ref() is not None  # pending event hold a ref
+    
+    handle_xx.handle_now()
+    gc.collect()
+    assert foo_ref() is None
+
+
+def test_disposing_emitter():
+    """ Emitters on object don't need cleaning. """ 
     
     class Foo(event.HasEvents):
         @event.prop
         def bar(self, v=0):
             return v
+        
+        @event.readonly
+        def spam(self, v=0):
+            return v
+        
+        @event.emitter
+        def eggs(self, x):
+            return {}
     
     foo = Foo()
     foo_ref = weakref.ref(foo)

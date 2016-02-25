@@ -14,8 +14,8 @@ provide information about the event. We use a custom `Dict` class that
 inherits from `dict` but allows attribute access, e.g. ``ev.button`` as
 an alternative to ``ev['button']``.
 
-Emitter
--------
+The HasEvents class
+-------------------
 
 The HasEvents class provides a base class for objects that need to
 have properties and/or emit events. E.g. a ``flexx.ui.Widget`` inherits from
@@ -35,55 +35,54 @@ A handler is an object that can handle events. It wraps a function. Handlers
 can be created using the ``connect`` decorator:
 
 .. code-block:: python
+
+    class MyObject(event.HasEvents):
+       
+        @event.connect('foo')
+        def handle_foo(self, *events):
+            print(events)
     
-    ob = @event.HasEvents()
-    
-    @event.connect('ob.foo')
-    def handle_foo(*events):
-        print(events)
-    
+    ob = MyObject()
     ob.emit('foo', dict(value=42))  # will invoke handle_foo()
 
 We can see a few things from this example. Firstly, the handler is
 connected via a *connection-string* that a path to the event. In this
-case, 'ob.foo' means it connects to the event-type 'foo' of the object
-'ob'. This connection-string can be longer, e.g.
-'path.to.an.emitter.event_type:label'. We cover labels further below.
-We also discuss some powerful mechanics related to connection-strings
-when we cover dynamism.
+case, 'foo' means it connects to the event-type 'foo' of the object'.
+This connection-string can be longer, e.g. 'sub.subsub.event_type:label'.
+We cover labels further below. We also discuss some powerful mechanics
+related to connection-strings when we cover dynamism.
 
 We can also see that the handler function accepts ``*events`` argument.
 This is because handlers can be passed zero or more events. If a function
 is called manually (e.g. ``ob.handle_foo()``) it will have zero events.
 When called by the event system, it will have at least 1 event. The handler
 function is called in a next iteration of the event loop. If multiple
-events are emitted for this handler, the handler function is called
-just once. It is up to the programmer to determine whether all events
-need some form of processing, or if only one action is required. In
-general this is more efficient than having the handler function called
-each time that the event is emitted.
+events are emitted in a row, the handler function is called
+just once, but with multiple events. It is up to the programmer to
+determine whether all events need some form of processing, or if only
+one action is required. In general this is more efficient than having
+the handler function called each time that the event is emitted.
 
-Another feature of this system, is that a handler can connect to multiple
+Another feature of this system is that a handler can connect to multiple
 events:
-
-.. code-block:: python
-    
-    ob = event.HasEvents()
-    
-    @event.connect('ob.foo', 'ob.bar')
-    def handle_foo_and_bar(*events):
-        ...
-
-The recommended way to write apps is to write handlers as part of
-an HasEvents subclass:
 
 .. code-block:: python
 
     class MyObject(event.HasEvents):
        
-        @event.connect('foo')
-        def _handle_foo(self, **events):
-            ...
+        @event.connect('foo', 'bar')
+        def handle_foo_and_bar(self, *events):
+            print(events)
+
+Handlers do not have to be part of the subclass:
+
+.. code-block:: python
+
+    h = HasEvents()
+    
+    @h.connect('foo')
+    def handle_foo(self, *events):
+        ...
 
 
 Event generators
@@ -171,25 +170,6 @@ TODO
 * overloadable event handlers as in Qt
 * observer pattern
 * send events into an object without caring what event it can handle (ala PhosphorJS)
-
-
-Naming in the context of events
--------------------------------
-
-* event: something that has occurred, represented by an event object (a Dict)
-* event emitter: an object that can emit events, of a class that
-  inherits from HasEvents.
-* handler: an object that can handle events, it wraps a handler function.
-* connection: generic term to indicate a connection between a handler
-  and an emitter.
-* connection-string: a string used to connect a handler to an emitter.
-  E.g. 'path.to.emitter.event_type:label'.
-* type: a string name indicating the type of event, e.g. 'mouse_down'.
-  When type is an argument to a function, the label can also be included,
-  e.g. 'mouse_down:foo'.
-* label: a string name that can be specified for a connection. It can
-  be used to influence the order of event handling, to disconnect handlers,
-  and to help identify the source of an event inside a handler.
 
 """
 

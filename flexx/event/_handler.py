@@ -44,75 +44,30 @@ def connect(*connection_strings):
             def greet(*events):
                 print('hello %s %s' % (self.first_name, self.last_name))
     """
-    # todo: how to create event full_name?
-    
     if (not connection_strings) or (connection_strings and
                                     callable(connection_strings[0])):
         raise ValueError('Connect decorator needs one or more event names.')
     
     def _connect(func):
-        frame = sys._getframe(1)
-        if '__module__' in frame.f_locals:
-            return HandlerDescriptor(func, connection_strings, frame)
-        else:
-            return Handler(func, connection_strings, frame)
-        return s
+        return HandlerDescriptor(func, connection_strings)
     return _connect
 
-
-class ObjectFrame(object):
-    """ A proxy frame that gives access to the class instance (usually
-    from HasEvents) as a frame, combined with the frame that the class
-    was defined in.
-    """
-    
-    # We need to store the frame. If we stored the f_locals dict, it
-    # would not be up-to-date by the time we need it. I suspect that
-    # getattr(frame, 'f_locals') updates the dict.
-    
-    def __init__(self, ob, frame):
-        self._ob = weakref.ref(ob)
-        self._frame = frame
-    
-    @property
-    def f_locals(self):
-        locals = self._frame.f_locals.copy()
-        ob = self._ob()
-        if ob is not None:
-            locals.update(ob.__dict__)
-            # Handle signals. Not using __handles__; works on any class
-            for key in dir(ob.__class__):
-                if key.startswith('__'):
-                    continue
-                val = getattr(ob.__class__, key)
-                # todo: look inside properties
-                if isinstance(val, Property):  # todo: also readonly
-                    private_name = '_' + key + '_prop'
-                    if private_name in locals:
-                        locals[key] = locals[private_name]
-        return locals
-    
-    @property
-    def f_globals(self):
-        return self._frame.f_globals
-    
-    @property
-    def f_back(self):
-        return ObjectFrame(self._ob(), self._frame.f_back)
-
-
+# todo: would love a check to see when this is accidentally applied to a function
 class HandlerDescriptor:
     """ Class descriptor for handlers.
     """
-    def __init__(self, func, connection_strings, frame):
+    def __init__(self, func, connection_strings):
         if not callable(func):
             raise ValueError('Handler needs a callable')
         self._func = func
         self._name = func.__name__  # updated by HasEvents meta class
         self._connection_strings = connection_strings
-        self._frame = frame
         self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
-    
+        # Check
+        for s in connection_strings:
+            if not (isinstance(s, str) and len(s) > 0):
+                raise ValueError('Connection string must be nonempty strings.')
+        
     def __repr__(self):
         cls_name = self.__class__.__name__
         return '<%s for %s at 0x%x>' % (cls_name, self._name, id(self))
@@ -131,8 +86,7 @@ class HandlerDescriptor:
         try:
             return getattr(instance, private_name)
         except AttributeError:
-            frame = ObjectFrame(instance, self._frame.f_back)
-            new = Handler(self._func, self._connection_strings, frame, instance)
+            new = Handler(self._func, self._connection_strings, instance)
             setattr(instance, private_name, new)
             return new
 
@@ -140,12 +94,20 @@ class HandlerDescriptor:
 class Handler:
     """ Wrapper around a function object to connect it to one or more events.
     This class should not be instantiated directly; use the decorators instead.
+    
+    Arguments:
+        func (callable): function that handles the events.
+        connection_strings (list): the strings that represent the connections.
+        ob (HasEvents): the HasEvents object to use a a basis for the
+            connection. A weak reference to this object is stored. It
+            is passed a a first argument to the function in case its
+            first arg is self.
     """
     # todo: need any of this?
     _IS_HANDLER = True  # poor man's isinstance in JS (because class name mangling)
     _count = 0
     
-    def __init__(self, func, connection_strings, frame=None, ob=None):
+    def __init__(self, func, connection_strings, ob):
         # Check and set func
         if not callable(func):
             raise ValueError('Handler needs a callable')
@@ -159,7 +121,8 @@ class Handler:
         
         # Check and set dependencies
         for s in connection_strings:
-            assert isinstance(s, str) and len(s) > 0
+            if not (isinstance(s, str) and len(s) > 0):
+                raise ValueError('Connection string must be nonempty strings.')
         self._connections = [Dict(fullname=s, type=s.split('.')[-1], emitters=[])
                              for s in connection_strings]
         
@@ -167,9 +130,8 @@ class Handler:
         self._scheduled_update = False
         self._pending = []  # pending events
         
-        # Frame and object
-        self._frame = frame or sys._getframe(1)
-        self._ob = weakref.ref(ob) if (ob is not None) else None
+        # Store object using a weakref
+        self._ob = weakref.ref(ob)
         
         # Get whether function is a method
         try:
@@ -177,9 +139,10 @@ class Handler:
         except (TypeError, IndexError):
             self._func_is_method = False
         
-        # Connecting
-        self.connect()
-
+        # Connect
+        for index in range(len(self._connections)):
+            self._connect_to_event(index)
+    
     def __repr__(self):
         conn = '+'.join([str(len(c.emitters)) for c in self._connections])
         cls_name = self.__class__.__name__
@@ -247,40 +210,30 @@ class Handler:
     
     ## Connecting
     
-    def connect(self):
-        """ Connect to HasEvents objects.
+    def dispose(self):
+        """ Cleanup any references.
         
-        The event names that were provided as a string are resolved to
-        get the corresponding HasEvent objects, and the current handler
-        is subscribed to these events. If resolving the event names
-        fails, raises an error. Unless the event names represent a path
-        with properties in it.
-        """
-        for index in range(len(self._connections)):
-            self._connect_to_event(index)
-    
-    def disconnect(self, destroy=True):
-        """ Disconnect from any emitters.
-        If destroy is True (default), will also clear the
-        internal frame object, allowing unused objects to be deleted.
+        Disconnects all connections, and cancel all pending events.
         """
         for connection in self._connections:
             while len(connection.emitters):
                 ob, name = connection.emitters.pop(0)
                 ob._unregister_handler(name, self)
-        if destroy:
-            self._frame = None
+        self._pending[:] = []
     
     def _clear_hasevents_refs(self, ob):
-        """ Clear all references to the given HasEvents instance.
+        """ Clear all references to the given HasEvents instance. This is
+        called from a HasEvents' dispose() method. This handler remains
+        working, but wont receive events from that object anymore.
         """
         for connection in self._connections:
-            topop = []
-            for i in range(len(connection.emitters)):
+            for i in reversed(range(len(connection.emitters))):
                 if connection.emitters[i][0] is ob:
-                    topop.append(i)
-            for i in reversed(topop):
-                connection.emitters.pop(i)
+                    connection.emitters.pop(i)
+        
+        # Do not clear pending events. This handler is assumed to continue
+        # working, and should thus handle its pending events at some point,
+        # at which point it cannot hold any references to ob anymore.
     
     def _connect_to_event(self, index):
         """ Connect one connection.
@@ -293,18 +246,11 @@ class Handler:
             ob._unregister_handler(name, self)
         
         path = connection.fullname.split('.')[:-1]
-        # Obtain root object
-        ob = self._ob() if self._ob else None
-        if not path:
-            pass  # it must be an event on *our* object
-        elif ob is not None and hasattr(ob, path[0]):
-            pass  # what we're looking seems to be on our object
-        else: 
-            f = self._frame  # look in locals and globals
-            ob = f.f_locals.get(path[0], f.f_globals.get(path[0], undefined))
-            path = path[1:]
         
-        self._seek_event_object(index, path, ob)
+        # Obtain root object and setup connections
+        ob = self._ob()
+        if ob is not None:
+            self._seek_event_object(index, path, ob)
         
         # Verify
         if not connection.emitters:
