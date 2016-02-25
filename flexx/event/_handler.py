@@ -3,7 +3,7 @@ import inspect
 import weakref
 
 from ._dict import Dict
-from ._properties import Property
+from ._emitters import Property
 
 # todo: define better, or don't use at all?
 undefined = 'blaaaaa'
@@ -270,6 +270,17 @@ class Handler:
                 ob._unregister_handler(name, self)
         if destroy:
             self._frame = None
+    
+    def _clear_hasevents_refs(self, ob):
+        """ Clear all references to the given HasEvents instance.
+        """
+        for connection in self._connections:
+            topop = []
+            for i in range(len(connection.emitters)):
+                if connection.emitters[i][0] is ob:
+                    topop.append(i)
+            for i in reversed(topop):
+                connection.emitters.pop(i)
     
     def _connect_to_event(self, index):
         """ Connect one connection.

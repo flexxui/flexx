@@ -17,11 +17,11 @@ def emitter(func):
     return Emitter(func)
 
 
-class EventGenerator:
+class BaseEmitter:
     """ Base class for descriptors used for generating events.
     """
     
-    _IS_EVENTGENERATOR = True
+    _IS_BASEEMITTER = True
 
     def __init__(self, func):
         if not callable(func):
@@ -43,7 +43,7 @@ class EventGenerator:
         return '<%s for %s at 0x%x>' % (cls_name, self._name, id(self))
 
 
-class Property(EventGenerator):
+class Property(BaseEmitter):
     """ A value that is gettable and settable.
     """
     
@@ -118,8 +118,7 @@ class Readonly(Property):
         raise AttributeError("Can't set readonly property %r" % self._name)
 
 
-# todo: names ... arg
-class Emitter(EventGenerator):
+class Emitter(BaseEmitter):
     """ Placeholder for documentation and easy emitting of the event.
     """
     
