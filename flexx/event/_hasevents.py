@@ -219,15 +219,28 @@ class HasEvents:
                 def greet(*events):
                     print('hello %s %s' % (h.first_name, h.last_name))
         """
-        # todo: how to create event full_name?
-        
-        if (not connection_strings) or (connection_strings and
+        if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
-            raise ValueError('Connect decorator needs one or more event names.')
+            raise RuntimeError('Connect decorator needs one or more event strings.')
+        
+        func = None
+        if callable(connection_strings[0]):
+            func = connection_strings[0]
+            connection_strings = connection_strings[1:]
+        
+        for s in connection_strings:
+            if not (isinstance(s, str) and len(s) > 0):
+                raise ValueError('Connection string must be nonempty strings.')
         
         def _connect(func):
+            if not callable(func):
+                raise TypeError('connect() decotator requires a callable.')
             return Handler(func, connection_strings, self)
-        return _connect
+        
+        if func is not None:
+            return _connect(func)
+        else:
+            return _connect
     
     def emit(self, type, ev):
         """ Generate a new event and dispatch to all event handlers.

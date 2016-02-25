@@ -40,22 +40,41 @@ def connect(*connection_strings):
         
         .. code-block:: py
             
-            @event.connect('first_name', 'last_name')
-            def greet(*events):
-                print('hello %s %s' % (self.first_name, self.last_name))
+            class MyObject(event.HasEvents):
+                @event.connect('first_name', 'last_name')
+                def greet(self, *events):
+                    print('hello %s %s' % (self.first_name, self.last_name))
     """
-    if (not connection_strings) or (connection_strings and
+    if (not connection_strings) or (len(connection_strings) == 1 and
                                     callable(connection_strings[0])):
-        raise ValueError('Connect decorator needs one or more event names.')
+        raise RuntimeError('Connect decorator needs one or more event strings.')
+    
+    func = None
+    if callable(connection_strings[0]):
+        func = connection_strings[0]
+        connection_strings = connection_strings[1:]
+    
+    for s in connection_strings:
+        if not (isinstance(s, str) and len(s) > 0):
+            raise ValueError('Connection string must be nonempty strings.')
     
     def _connect(func):
+        if not callable(func):
+            raise TypeError('connect() decotator requires a callable.')
         return HandlerDescriptor(func, connection_strings)
+    
+    if func is not None:
+        return _connect(func)
+    else:
+        return _connect
+    
     return _connect
 
-# todo: would love a check to see when this is accidentally applied to a function
+
 class HandlerDescriptor:
     """ Class descriptor for handlers.
     """
+    
     def __init__(self, func, connection_strings):
         if not callable(func):
             raise ValueError('Handler needs a callable')
@@ -63,20 +82,16 @@ class HandlerDescriptor:
         self._name = func.__name__  # updated by HasEvents meta class
         self._connection_strings = connection_strings
         self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
-        # Check
-        for s in connection_strings:
-            if not (isinstance(s, str) and len(s) > 0):
-                raise ValueError('Connection string must be nonempty strings.')
-        
+    
     def __repr__(self):
         cls_name = self.__class__.__name__
-        return '<%s for %s at 0x%x>' % (cls_name, self._name, id(self))
+        return '<%s (this should be a class attribute) at 0x%x>' % (cls_name, id(self))
         
     def __set__(self, obj, value):
-        raise ValueError('Cannot overwrite handler %r.' % self._name)
+        raise AttributeError('Cannot overwrite handler %r.' % self._name)
     
     def __delete__(self, obj):
-        raise ValueError('Cannot delete handler %r.' % self._name)
+        raise AttributeError('Cannot delete handler %r.' % self._name)
     
     def __get__(self, instance, owner):
         if instance is None:
@@ -119,11 +134,8 @@ class Handler:
         # Set docstring; this appears correct in sphinx docs
         self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
         
-        # Check and set dependencies
-        for s in connection_strings:
-            if not (isinstance(s, str) and len(s) > 0):
-                raise ValueError('Connection string must be nonempty strings.')
-        self._connections = [Dict(fullname=s, type=s.split('.')[-1], emitters=[])
+        # Init connections
+        self._connections = [Dict(fullname=s, type=s.split('.')[-1], objects=[])
                              for s in connection_strings]
         
         # Pending events for this handler
@@ -144,7 +156,7 @@ class Handler:
             self._connect_to_event(index)
     
     def __repr__(self):
-        conn = '+'.join([str(len(c.emitters)) for c in self._connections])
+        conn = '+'.join([str(len(c.objects)) for c in self._connections])
         cls_name = self.__class__.__name__
         return '<%s %r with %s connections at 0x%x>' % (cls_name, self._name, conn, id(self))
     
@@ -160,7 +172,7 @@ class Handler:
         """ A list of tuples (name, connection_names), where connection_names
         is a tuple of names for the connections made for that xxxx
         """
-        return [(c.fullname, tuple([u[1] for u in c.emitters]))
+        return [(c.fullname, tuple([u[1] for u in c.objects]))
                 for c in self._connections]
     
     ## Calling / handling
@@ -216,8 +228,8 @@ class Handler:
         Disconnects all connections, and cancel all pending events.
         """
         for connection in self._connections:
-            while len(connection.emitters):
-                ob, name = connection.emitters.pop(0)
+            while len(connection.objects):
+                ob, name = connection.objects.pop(0)
                 ob._unregister_handler(name, self)
         self._pending[:] = []
     
@@ -227,9 +239,9 @@ class Handler:
         working, but wont receive events from that object anymore.
         """
         for connection in self._connections:
-            for i in reversed(range(len(connection.emitters))):
-                if connection.emitters[i][0] is ob:
-                    connection.emitters.pop(i)
+            for i in reversed(range(len(connection.objects))):
+                if connection.objects[i][0] is ob:
+                    connection.objects.pop(i)
         
         # Do not clear pending events. This handler is assumed to continue
         # working, and should thus handle its pending events at some point,
@@ -241,8 +253,8 @@ class Handler:
         connection = self._connections[index]
         
         # Disconnect
-        while len(connection.emitters):
-            ob, name = connection.emitters.pop(0)
+        while len(connection.objects):
+            ob, name = connection.objects.pop(0)
             ob._unregister_handler(name, self)
         
         path = connection.fullname.split('.')[:-1]
@@ -253,11 +265,11 @@ class Handler:
             self._seek_event_object(index, path, ob)
         
         # Verify
-        if not connection.emitters:
+        if not connection.objects:
             raise RuntimeError('Could not connect to %r' % connection.fullname)
         
         # Connect
-        for ob, type in connection.emitters:
+        for ob, type in connection.objects:
             ob._register_handler(type, self)
     
     def _seek_event_object(self, index, path, ob):
@@ -270,7 +282,7 @@ class Handler:
         if ob is undefined or len(path) == 0:
             if ob is undefined or not hasattr(ob, '_IS_HASEVENTS'):
                 return  # we cannot seek further
-            connection.emitters.append((ob, connection.type))
+            connection.objects.append((ob, connection.type))
             return  # found it
         
         # Resolve name
@@ -278,7 +290,7 @@ class Handler:
         if getattr(getattr(ob.__class__, obname, None), '_IS_PROP', False):
             # todo: make .__class__ work in PyScript
             name_label = obname + ':reconnect_' + str(index)
-            connection.emitters.append((ob, name_label))
+            connection.objects.append((ob, name_label))
             ob = getattr(ob, obname)
         elif obname == '*' and isinstance(ob, (tuple, list)):
             for sub_ob in ob:

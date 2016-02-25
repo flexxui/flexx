@@ -80,9 +80,15 @@ Handlers do not have to be part of the subclass:
 
     h = HasEvents()
     
-    @h.connect('foo')
-    def handle_foo(self, *events):
-        ...
+    # Using a decorator
+    @h.connect('foo', 'bar')
+    def handle_func1(self, *events):
+        print(events)
+    
+    # Explicit notation
+    def handle_func2(self, *events):
+        print(events)
+    h.connect(handle_func2, 'foo', 'bar')
 
 
 Event generators
