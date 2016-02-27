@@ -12,7 +12,7 @@ source:
 build:
   script: python setup.py install
   noarch_python: True
-  number: 1
+  number: 2
   entry_points:
     - flexx = flexx.__main__:main
 
