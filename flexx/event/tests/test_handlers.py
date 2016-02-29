@@ -244,6 +244,30 @@ def test_connecting():
         h.connect('x')(3)
 
 
+def test_exceptions():
+    h = event.HasEvents()
+    
+    @h.connect('foo')
+    def handle_foo(*events):
+        1/0
+    
+    h.emit('foo', {})
+    
+    sys.last_traceback = None
+    assert sys.last_traceback is None
+    
+    # No exception should be thrown here
+    event.loop.iter()
+    event.loop.iter()
+    
+    # But we should have prepared for PM debugging
+    assert sys.last_traceback
+    
+    # Its different for a direct call
+    with raises(ZeroDivisionError):
+        handle_foo()
+
+
 def test_dispose():
     
     h = event.HasEvents()

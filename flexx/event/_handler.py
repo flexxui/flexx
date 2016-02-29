@@ -1,4 +1,5 @@
 import sys
+import logging
 import inspect
 import weakref
 
@@ -212,12 +213,22 @@ class Handler:
             self._connect_to_event(index)
         # Handle events
         self._pending, events = [], self._pending
-        if not events:
-            pass
-        elif self._func_is_method and self._ob is not None:
-            return self._func(self._ob(), *events)
-        else:
-            return self._func(*events)
+        if events:
+            try:
+                if self._func_is_method and self._ob is not None:
+                    return self._func(self._ob(), *events)
+                else:
+                    return self._func(*events)
+            except Exception:
+                # Allow post-mortem debugging
+                type_, value, tb = sys.exc_info()
+                tb = tb.tb_next  # Skip *this* frame
+                sys.last_type = type_
+                sys.last_value = value
+                sys.last_traceback = tb
+                del tb  # Get rid of it in this namespace
+                # Show the exception
+                logging.exception(value)
     
     
     ## Connecting
