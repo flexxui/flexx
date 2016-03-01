@@ -244,7 +244,7 @@ class Handler:
         for connection in self._connections:
             while len(connection.objects):
                 ob, name = connection.objects.pop(0)
-                ob._unregister_handler(name, self)
+                ob.disconnect(name, self)
         self._pending[:] = []
     
     def _clear_hasevents_refs(self, ob):
@@ -269,7 +269,7 @@ class Handler:
         # Disconnect
         while len(connection.objects):
             ob, name = connection.objects.pop(0)
-            ob._unregister_handler(name, self)
+            ob.disconnect(name, self)
         
         path = connection.fullname.split('.')[:-1]
         

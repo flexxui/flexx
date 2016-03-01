@@ -173,8 +173,8 @@ Labels
 ------
 
 Labels are a feature that makes it possible to infuence the order by
-which event handlers are called, and provide a means to identify events
-inside a handler.
+which event handlers are called, and provide a means to disconnect
+specific (groups of) handlers.
 
 .. code-block:: python
     
@@ -196,6 +196,17 @@ the order in case a handler has multiple connections: a handler can be
 scheduled to handle its events due to another event, and a handler
 always handles all its pending events at once.
 
+The label can also be used in the ``disconnect()`` method:
+
+.. code-block:: python
+
+    @h.connect('foo:mylabel')
+    def handle_foo(*events):
+        ...
+    
+    ...
+    
+    h.disconnect('foo:mylabel')  # don't need reference to handle_foo
 
 
 Dynamism

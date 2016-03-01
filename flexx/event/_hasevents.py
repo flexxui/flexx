@@ -193,10 +193,18 @@ class HasEvents:
             handlers.append(entry)
         handlers.sort(key=lambda x: x[0]+'-'+x[1]._id)
     
-    def _unregister_handler(self, type, handler=None):
-        """ Unregister a handler. This is called from Handler objects
-        when they dispose or when they reconnect (dynamism).
+    def disconnect(self, type, handler=None):
+        """ Disconnect handlers. 
+        
+        Parameters:
+            type (str): the type for which to disconnectany handlers.
+                Can include the label to only disconnect handlers that
+                were registered with that label.
+            handler (optional): the handler object to disconnect. If given,
+               only this handler is removed.
         """
+        # This is called from Handler objects when they dispose and when
+        # they reconnect (dynamism).
         type, _, label = type.partition(':')
         handlers = self.__handlers.get(type, ())
         for i in reversed(range(len(handlers))):

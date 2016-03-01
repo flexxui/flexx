@@ -170,7 +170,7 @@ def test_registering_handlers():
     assert h.get_event_handlers('foo') == [handler2, handler1, handler3]
     
     # Unregestering one handler
-    h._unregister_handler('foo', handler2)
+    h.disconnect('foo', handler2)
     assert h.get_event_handlers('foo') == [handler1, handler3]
     
     # Reset
@@ -178,14 +178,14 @@ def test_registering_handlers():
     assert h.get_event_handlers('foo') == [handler2, handler1, handler3]
     
     # Unregestering one handler + invalid label -> no unregister
-    h._unregister_handler('foo:xx', handler2)
+    h.disconnect('foo:xx', handler2)
     assert h.get_event_handlers('foo') == [handler2, handler1, handler3]
     
     # Reset
     assert h.get_event_handlers('foo') == [handler2, handler1, handler3]
     
     # Unregestering one handler by label
-    h._unregister_handler('foo:a')
+    h.disconnect('foo:a')
     assert h.get_event_handlers('foo') == [handler1, handler3]
     
     # Reset
@@ -193,7 +193,7 @@ def test_registering_handlers():
     assert h.get_event_handlers('foo') == [handler2, handler1, handler3]
     
     # Unregestering by type
-    h._unregister_handler('foo')
+    h.disconnect('foo')
     assert h.get_event_handlers('foo') == []
 
 
