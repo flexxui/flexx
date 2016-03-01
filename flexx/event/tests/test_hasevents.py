@@ -127,8 +127,8 @@ def test_emit():
     for ev in events:
         assert isinstance(ev, dict)
         assert ev.source is h
-    assert len(events[0]) == 3
-    assert len(events[1]) == 5
+    assert len(events[0]) == 2
+    assert len(events[1]) == 4
     assert events[0].type == 'foo'
     assert events[1].type == 'bar'
     assert events[1].x == 1

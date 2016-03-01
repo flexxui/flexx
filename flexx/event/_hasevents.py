@@ -19,7 +19,7 @@ from ._emitters import BaseEmitter
 #   foo = Int(42, 'this is a property')
 
 
-# todo: delete this?
+# todo: delete this? mmm, I think we need this for the JS part ...
 # # From six.py
 # def with_metaclass(meta, *bases):
 #     """Create a base class with a metaclass."""
@@ -180,7 +180,6 @@ class HasEvents:
             getattr(self, name).dispose()
     
     def _register_handler(self, type, handler):
-        # todo: include connection_string?
         """ Register a handler for the given event type. The type
         can include a label, e.g. 'mouse_down:foo'.
         This is called from Handler objects at initialization and when
@@ -207,17 +206,22 @@ class HasEvents:
                 handlers.pop(i)
     
     def connect(self, *connection_strings):
-        """ Decorator to connect a function to one or more events of this instance.
+        """ Connect a function to one or more events of this instance. Can
+        also be used as a decorator.
         
         Example:
             
             .. code-block:: py
-            
+                
                 h = HasEvents()
                 
+                # Usage as a decorator
                 @h.connect('first_name', 'last_name')
                 def greet(*events):
                     print('hello %s %s' % (h.first_name, h.last_name))
+                
+                # Direct usage
+                h.connect(greet, 'first_name', 'last_name')
         """
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
@@ -253,14 +257,15 @@ class HasEvents:
         type, _, label = type.partition(':')
         if label:
             raise ValueError('The type given to emit() should not include a label.')
+        # Prepare event
         if not isinstance(ev, dict):
             raise TypeError('Event object (for %r) must be a dict' % type)
+        ev = Dict(ev)
+        ev.type = type
+        ev.source = self
+        # Push the event to the handlers (handlers use labels for dynamism)
         for label, handler in self.__handlers.get(type, ()):
-            ev = Dict(ev)
-            ev.type = type
-            ev.label = label
-            ev.source = self
-            handler._add_pending_event(ev)  # friend class
+            handler._add_pending_event(label, ev)  # friend class
     
     def _set_prop(self, prop_name, value):
         """ Set the value of a (readonly) property.

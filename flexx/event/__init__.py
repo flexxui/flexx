@@ -27,6 +27,10 @@ Events are emitted using the ``emitter.emit()`` method, which accepts a
 name for the type of the event, and a dict: e.g. 
 ``emitter.emit('mouse_down', dict(button=1, x=103, y=211))``.
 
+The HasEvents object will add two attributes to the event: ``source``,
+a reference to the HasEvents object itself, and ``type``, a string
+indicating the type of the event.
+
 As a user, you generally do not need to emit events in this way, but it
 happens implicitly, e.g. when setting a property, as we'll see below.
 
@@ -182,7 +186,7 @@ inside a handler.
         
         @event.connect('foo:aa')
         def my_foo_handler(*events):
-            # I want this one called first: 'aa' < 'given_f...'
+            # This one is called first: 'aa' < 'given_f...'
             ...
 
 When an event is emitted, the event is added to the pending events of
@@ -192,20 +196,6 @@ the order in case a handler has multiple connections: a handler can be
 scheduled to handle its events due to another event, and a handler
 always handles all its pending events at once.
 
-.. code-block:: python
-    
-    class MyObject(event.HasEvents):
-    
-        @event.connect('foo:x', 'bar:y')
-        def handler1(*events):
-            for ev in events:
-                if ev.label == 'x':
-                ...
-
-The label name is available as an attribute of the event. 
-This example is a bit silly, because you could just as well look at ev.type.
-An example with dynamism could make more sense. Or maybe having the label
-on the event is a feature we should drop?
 
 
 Dynamism

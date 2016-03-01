@@ -186,14 +186,14 @@ class Handler:
         else:
             return self._func()
     
-    def _add_pending_event(self, ev):
+    def _add_pending_event(self, label, ev):
         """ Add an event object to be handled at the next event loop
         iteration. Called from HasEvents.emit().
         """
         if not self._scheduled_update:
             self._scheduled_update = True
             loop.call_later(self.handle_now)  # register only once
-        self._pending.append(ev)
+        self._pending.append((label, ev))
     
     def handle_now(self):
         """ Invoke a call to the handler function with all pending
@@ -203,16 +203,19 @@ class Handler:
         events *now*.
         """
         self._scheduled_update = False
-        # Reconnect connections that need reconnecting (dynamism)
+        # Collect pending events and check what connections need to reconnect
+        events = []
         reconnect = []
-        for ev in self._pending:
-            if ev.label.startswith('reconnect_'):
+        for label, ev in self._pending:
+            events.append(ev)
+            if label.startswith('reconnect_'):
                 index = int(ev.label.split('_')[-1])
                 reconnect.append(index)
+        self._pending = []
+        # Reconnect (dynamism)
         for index in reconnect:
             self._connect_to_event(index)
         # Handle events
-        self._pending, events = [], self._pending
         if events:
             try:
                 if self._func_is_method and self._ob is not None:
