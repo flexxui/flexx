@@ -283,7 +283,7 @@ class HasEvents:
             value: the value to set.
         """
         if not isinstance(prop_name, str):
-            raise ValueError("_set_prop's first arg must be str, not %s" %
+            raise TypeError("_set_prop's first arg must be str, not %s" %
                              prop_name.__class__.__name__)
         try:
             readonly_descriptor = getattr(self.__class__, prop_name)

@@ -61,15 +61,13 @@ def connect(*connection_strings):
     
     def _connect(func):
         if not callable(func):
-            raise TypeError('connect() decotator requires a callable.')
+            raise TypeError('connect() decorator requires a callable.')
         return HandlerDescriptor(func, connection_strings)
     
     if func is not None:
         return _connect(func)
     else:
         return _connect
-    
-    return _connect
 
 
 class HandlerDescriptor:
@@ -77,8 +75,7 @@ class HandlerDescriptor:
     """
     
     def __init__(self, func, connection_strings):
-        if not callable(func):
-            raise ValueError('Handler needs a callable')
+        assert callable(func)  # HandlerDescriptor is not instantiated directly
         self._func = func
         self._name = func.__name__  # updated by HasEvents meta class
         self._connection_strings = connection_strings
@@ -125,8 +122,7 @@ class Handler:
     
     def __init__(self, func, connection_strings, ob):
         # Check and set func
-        if not callable(func):
-            raise ValueError('Handler needs a callable')
+        assert callable(func)
         self._func = func
         self._name = func.__name__
         Handler._count += 1

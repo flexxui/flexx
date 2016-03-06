@@ -1,4 +1,7 @@
 """ Tests for the bare handlers.
+
+Does not test dynamism currently, as we will test that extensively in
+test_both.
 """
 
 import gc
@@ -161,6 +164,10 @@ def test_method_handler_invoking():
         @event.connect('x1', 'x2')
         def handler(*events):
             called.append(len(events))
+        
+        @event.connect('x3')
+        def handler3(self, *events):
+            called.append(len(events))
     
     h = MyObject()
     handler = h.handler
@@ -182,7 +189,10 @@ def test_method_handler_invoking():
     handler()
     handler.handle_now()
     
-    assert called == [0, 1, 2, 2, 0]
+    h.handler3()
+    handler.handle_now()
+    
+    assert called == [0, 1, 2, 2, 0, 0]
 
 
 def test_func_handler_invoking():
@@ -242,6 +252,12 @@ def test_connecting():
         event.connect('x')(3)
     with raises(TypeError):  # connect() needs callable
         h.connect('x')(3)
+    
+    with raises(RuntimeError):  # cannot connect
+        h.xx = None
+        @h.connect('xx.foobar')
+        def foo(*events):
+            pass
 
 
 def test_exceptions():
@@ -268,13 +284,13 @@ def test_exceptions():
         handle_foo()
 
 
-def test_dispose():
+def test_dispose1():
     
     h = event.HasEvents()
     
     @h.connect('x1', 'x2')
     def handler(*events):
-        called.append(len(events))
+        pass
     
     handler_ref = weakref.ref(handler)
     del handler
@@ -282,6 +298,24 @@ def test_dispose():
     assert handler_ref() is not None  # h is holding on
     
     handler_ref().dispose()
+    gc.collect()
+    assert handler_ref() is None
+
+
+def test_dispose2():
+    
+    h = event.HasEvents()
+    
+    @h.connect('x1', 'x2')
+    def handler(*events):
+        pass
+    
+    handler_ref = weakref.ref(handler)
+    del handler
+    gc.collect()
+    assert handler_ref() is not None  # h is holding on
+    
+    h.dispose()  # <=== only this line is different from test_dispose1()
     gc.collect()
     assert handler_ref() is None
 

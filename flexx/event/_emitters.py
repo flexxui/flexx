@@ -32,7 +32,7 @@ def prop(func):
     docstring.
     """
     if not callable(func):
-        raise ValueError('prop decorator needs a callable')
+        raise TypeError('prop decorator needs a callable')
     return Property(func)
 
 
@@ -61,7 +61,7 @@ def readonly(func):
     docstring.
     """
     if not callable(func):
-        raise ValueError('readonly decorator needs a callable')
+        raise TypeError('readonly decorator needs a callable')
     return Readonly(func)
 
 
@@ -87,7 +87,7 @@ def emitter(func):
     
     """
     if not callable(func):
-        raise ValueError('emitter decorator needs a callable')
+        raise TypeError('emitter decorator needs a callable')
     return Emitter(func)
 
 
@@ -98,8 +98,7 @@ class BaseEmitter:
     _IS_BASEEMITTER = True
 
     def __init__(self, func):
-        if not callable(func):
-            raise ValueError('%s needs a callable' % self.__class__.__name__)
+        assert callable(func)
         self._func = func
         self._name = func.__name__  # updated by HasEvents meta class
         self._is_being_set = False
@@ -126,7 +125,7 @@ class Property(BaseEmitter):
     
     
     def __set__(self, instance, value):
-        if isinstance is not None:
+        if isinstance is not None:  # pragma: no cover
             return self._set(instance, value)
     
     def __delete__(self, instance):
@@ -163,7 +162,7 @@ class Property(BaseEmitter):
         instance.emit(self._name, dict(new_value=value2, old_value=old))
     
     def _set_default(self, instance):
-        if self._is_being_set:
+        if self._is_being_set:  # pragma: no cover - not sure if this can happen
             return
         private_name = '_' + self._name + self._SUFFIX
         # Trigger default value

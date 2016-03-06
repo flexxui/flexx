@@ -16,18 +16,38 @@ def test_property():
         @event.prop
         def foo(self, v=1.2):
             return float(v)
+        
+        @event.prop
+        def bar(v=1.3):
+            return float(v)
     
     m = MyObject()
     assert m.foo == 1.2
+    assert m.bar == 1.3
     
     m = MyObject(foo=3)
     assert m.foo == 3.0
     
     m.foo = 5.1
+    m.bar = 5.1
     assert m.foo == 5.1
+    assert m.bar == 5.1
     
     m.foo = '9.3'
     assert m.foo == 9.3
+    
+    m = MyObject(foo=3)
+    assert m.foo == 3.0
+    
+    # Hacky, but works
+    def foo():
+        pass
+    x = event.prop(foo)
+    assert 'foo' in repr(x)
+    
+    spam = lambda x:None
+    x = event.prop(spam)
+    assert '<lambda>' in repr(x)
     
     # fails
     
@@ -37,6 +57,20 @@ def test_property():
     with raises(ValueError):
         MyObject(foo='bla')
     
+    with raises(TypeError):
+        m._set_prop(3, 3)  # Propperty name must be a string
+        
+    with raises(AttributeError):
+        m._set_prop('spam', 3)  # MyObject has not spam property
+    
+    with raises(AttributeError):
+        MyObject(spam='bla')  # MyObject has not spam property
+    
+    with raises(TypeError):
+        event.prop(3)  # prop decorator needs callable
+    
+    with raises(AttributeError):
+        del m.foo  # cannot delete a property
     
     class MyObject2(event.HasEvents):
         
@@ -46,6 +80,51 @@ def test_property():
     
     with raises(RuntimeError):
         MyObject2()  # no default value for foo
+
+
+def test_prop_recursion():
+    class MyObject(event.HasEvents):
+        count = 0
+        
+        @event.prop
+        def foo(self, v=1):
+            v = float(v)
+            self.bar = v + 1
+            return v
+        
+        @event.prop
+        def bar(self, v=2):
+            v = float(v)
+            self.foo = v - 1
+            return v
+        
+        @event.connect('foo', 'bar')
+        def handle(self, *events):
+            self.count += 1
+    
+    m = MyObject()
+    event.loop.iter()
+    assert m.count == 1
+    assert m.foo == 1
+    assert m.bar== 2
+    
+    m = MyObject(foo=3)
+    event.loop.iter()
+    assert m.count == 1
+    assert m.foo == 3
+    assert m.bar== 4
+    
+    m.foo = 50
+    event.loop.iter()
+    assert m.count == 2
+    assert m.foo == 50
+    assert m.bar== 51
+    
+    m.bar = 50
+    event.loop.iter()
+    assert m.count == 3
+    assert m.foo == 49
+    assert m.bar== 50
 
 
 def test_readonly():
@@ -76,7 +155,12 @@ def test_readonly():
     with raises(AttributeError):
         MyObject(foo=3.2)
     
+    with raises(TypeError):
+        event.readonly(3)  # readonly decorator needs callable
     
+    with raises(AttributeError):
+        del m.foo  # cannot delete a readonly
+        
     class MyObject2(event.HasEvents):
         
         @event.readonly
@@ -95,24 +179,51 @@ def test_emitter():
         def foo(self, v):
             return dict(value=float(v))
         
+        @event.emitter
+        def bar(v):
+            return dict(value=float(v)+1)  # note plus 1
+        
         def on_foo(self, *events):
+            self.the_val = events[0].value  # so we can test it
+        
+        def on_bar(self, *events):
             self.the_val = events[0].value  # so we can test it
     
     m = MyObject()
     
+    the_vals = []
+    @m.connect('foo', 'bar')
+    def handle_foo(*events):
+        the_vals.append(events[0].value)
+    
     with event.loop:
         m.foo(3.2)
     assert m.the_val == 3.2
+    assert the_vals[-1] == 3.2
     
     with event.loop:
         m.foo('9.1')
     assert m.the_val == 9.1
+    assert the_vals[-1] == 9.1
+    
+    with event.loop:
+        m.bar(3.2)
+    assert m.the_val == 4.2
+    assert the_vals[-1] == 4.2
     
     # Fail
     
     with raises(ValueError):
         m.foo('bla')
     
+    with raises(TypeError):
+        event.emitter(3)  # emitter decorator needs callable
+    
+    with raises(AttributeError):
+        del m.foo  # cannot delete an emitter
+    
+    with raises(AttributeError):
+        m.foo = None  # cannot set an emitter
     
     class MyObject2(event.HasEvents):
         
