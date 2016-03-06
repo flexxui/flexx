@@ -1,22 +1,39 @@
-try:
+import re
+
+try:  # pragma: no cover
     from collections import OrderedDict as _dict
 except ImportError:
     _dict = dict
 
+
 def isidentifier(s):
-    return (hasattr(s, 'isalnum') and
-            s.isalnum() and s and 
-            (s[0].isalpha() or s[0] == '_'))
+    # http://stackoverflow.com/questions/2544972/
+    if not isinstance(s, str):
+        return False
+    return re.match(r'^\w+$', s, re.UNICODE) and re.match(r'^[0-9]', s) is None 
 
 
 class Dict(_dict):
-    """ A dict in which the keys can be get and set as if they were
-    attributes. Very convenient in combination with autocompletion.
+    """ A dict in which the items can be get/set as attributes.
     
-    This Dict still behaves as much as possible as a normal dict, and
-    keys can be anything that are otherwise valid keys. However, 
-    keys that are not valid identifiers or that are names of the dict
-    class (such as 'items' and 'copy') cannot be get/set as attributes.
+    This provides a lean way to represent structured data, and works
+    well in combination with autocompletion. Keys can be anything that
+    are otherwise valid keys, but keys that are not valid identifiers
+    or that are methods of the dict class (e.g. 'items' or 'copy')
+    cannot be get/set as attributes.
+    
+    Example:
+    
+        >> d = Dict(foo=3)
+        >> d.foo
+        3
+        >> d['foo'] = 4
+        >> d.foo
+        4
+        >> d.bar = 5
+        >> d.bar
+        5
+        
     """
     
     __reserved_names__ = dir(_dict())  # Also from OrderedDict
@@ -25,7 +42,18 @@ class Dict(_dict):
     __slots__ = []
     
     def __repr__(self):
-        return dict.__repr__(self)
+        identifier_items = []
+        nonidentifier_items = []
+        for key, val in self.items():
+            if isidentifier(key):
+                identifier_items.append('%s=%r' % (key, val))
+            else:
+                nonidentifier_items.append('(%r, %r)' % (key, val))
+        if nonidentifier_items:
+            return 'Dict([%s], %s)' % (', '.join(nonidentifier_items),
+                                       ', '.join(identifier_items))
+        else:
+            return 'Dict(%s)' % (', '.join(identifier_items))
     
     def __getattribute__(self, key):
         try:
