@@ -209,7 +209,7 @@ class Handler:
         for label, ev in self._pending:
             events.append(ev)
             if label.startswith('reconnect_'):
-                index = int(ev.label.split('_')[-1])
+                index = int(label.split('_')[-1])
                 reconnect.append(index)
         self._pending = []
         # Reconnect (dynamism)

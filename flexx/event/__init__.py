@@ -259,7 +259,7 @@ can be overloaded in subclasses to handle an event differently. In
 ``on_xx``. Doing so allows subclasses to re-implement the handler, and also
 call the original handler using ``super()``.
 
-Publisch-subscribe pattern
+Publish-subscribe pattern
 ==========================
 
 In pub-sub, publishers generate messages identified by a 'topic', and

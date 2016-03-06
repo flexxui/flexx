@@ -44,7 +44,7 @@ h.sub = h1
 
 @h.connect('foo:crap')
 def handle_foo(*events):
-    print('single func, handle foo', [ev.label for ev in events])
+    print('single func, handle foo', [ev.type for ev in events])
 
 @h.connect('bar')
 def handle_bar(*events):
@@ -66,7 +66,7 @@ class Foo(event.HasEvents):
         return float(v)
     
     def on_bar(self, *events):
-        print('bar changed!')
+        print('bar changed %i times' % len(events))
     
     @event.emitter
     def spam(self, x):
