@@ -11,16 +11,16 @@ See also http://brythonista.wordpress.com/2015/03/28
 
 # Measured results, in pystones/second, measured on 05-03-2016,
 # on Win 10, Intel i7-4710 HQ 2.5GHz
-RESULTS = [('CPython 3.4',          124863, 'blue'),
-           ('CPython 3.5',          137250, 'blue'),
-           ('Pypy4',               3927770, 'blue'),
-           ('Pypy3',               3739170, 'blue'),
-           ('PyScript on Firefox',  127957, 'orange'),
-           ('PyScript on Chrome',    79517, 'orange'),
-           ('PyScript on MS Edge',  128325, 'orange'),
-           ('Brython',                2982, 'magenta'),
-           ('Skulpt',                 2780, 'magenta'),
-           ('PypyJS',               268817, 'magenta'),
+RESULTS = [(124863, 'CPython 3.4', 'blue'),
+           (137250, 'CPython 3.5', 'blue'),
+           (3927770, 'Pypy4', 'blue'),
+           (3739170, 'Pypy3', 'blue'),
+           (127957, 'PyScript on Firefox', 'orange'),
+           (79517, 'PyScript on Chrome', 'orange'),
+           (128325, 'PyScript on MS Edge', 'orange'),
+           (2982, 'Brython', 'magenta'),
+           (2780, 'Skulpt', 'magenta'),
+           (268817, 'PypyJS', 'magenta'),
            ]
 
 import sys
@@ -44,11 +44,13 @@ def plot_results():
     plt.ion()
     
     data = list(reversed(RESULTS))
-    plt.figure(1); plt.clf()
+    plt.figure(1)
+    plt.clf()
     ax = plt.subplot(111)
-    ax.barh([i for i in range(len(data))], [x[1] for x in data], color=[x[2] for x in data])
+    ax.barh([i for i in range(len(data))], [x[0] for x in data],
+            color=[x[2] for x in data])
     ax.set_yticks([i+0.3 for i in range(len(data))])
-    ax.set_yticklabels([x[0] for x in data])
+    ax.set_yticklabels([x[1] for x in data])
     ax.set_xscale('log')
 
 
