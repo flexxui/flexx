@@ -106,6 +106,7 @@ class BaseEmitter:
                                      func.__doc__ or self._name)
         
         # Get whether function is a method
+        # todo: do we still use this?
         try:
             self._func_is_method = inspect.getargspec(func)[0][0] in ('self', 'this')
         except (TypeError, IndexError):
@@ -126,7 +127,7 @@ class Property(BaseEmitter):
     
     def __set__(self, instance, value):
         if isinstance is not None:  # pragma: no cover
-            return self._set(instance, value)
+            return instance._set_prop(self._name, value)
     
     def __delete__(self, instance):
         raise AttributeError('Cannot delete property %r.' % self._name)
@@ -136,32 +137,10 @@ class Property(BaseEmitter):
             return self
         
         private_name = '_' + self._name + self._SUFFIX
-        try:
-            return getattr(instance, private_name)
-        except AttributeError:
-            return self._set_default(instance)
-    
-    def _set(self, instance, value):
-        if self._is_being_set:
-            return
-        private_name = '_' + self._name + self._SUFFIX
-        # Validate value
-        self._is_being_set = True
-        try:
-            if self._func_is_method:
-                value2 = self._func(instance, value)
-            else:
-                value2 = self._func(value)
-        except Exception as err:
-            raise
-        finally:
-            self._is_being_set = False
-        # Update value and emit event
-        old = getattr(instance, private_name, None)
-        setattr(instance, private_name, value2)
-        instance.emit(self._name, dict(new_value=value2, old_value=old))
+        return getattr(instance, private_name)
     
     def _set_default(self, instance):
+        # todo: eek, _is_being_set should be a flag specific to instance and this prop
         if self._is_being_set:  # pragma: no cover - not sure if this can happen
             return
         private_name = '_' + self._name + self._SUFFIX
@@ -204,12 +183,6 @@ class Emitter(BaseEmitter):
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        
-        def emitter_func(value):
-            if self._func_is_method:
-                ev = self._func(instance, value)
-            else:
-                ev = self._func(value)
-            instance.emit(self._name, ev)
-        emitter_func.__doc__ = self.__doc__
-        return emitter_func
+        func = instance._get_emitter(self._name)
+        func.__doc__ = self.__doc__
+        return func

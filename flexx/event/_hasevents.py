@@ -7,8 +7,10 @@ import sys
 
 from ._dict import Dict
 from ._handler import HandlerDescriptor, Handler
-from ._emitters import BaseEmitter
+from ._emitters import BaseEmitter, Property
 
+def this_is_js():
+    return False
 
 # Reasons to want/need a metaclass:
 # * Keep track of subclasses (but can handle that in flexx.app.Model)
@@ -80,8 +82,179 @@ from ._emitters import BaseEmitter
 #         type.__init__(cls, name, bases, dct)
 
 
+class BaseHasEvents:
+    """ Base class for HasEvents that contains all the code that is
+    compliant with PyScript. From this class we inherit a HasEvents for
+    Python and a HasEvents for JS.
+    """
+    
+    def __init__(self):
+        self._he_handlers = {}
+        self._he_props_being_set = {}
+    
+    def dispose(self):
+        """ Use this to dispose of the object to prevent memory leaks.
+        
+        Make all subscribed handlers to forget about this object, clear
+        all references to subscribed handlers, disconnect all handlers
+        defined on this object.
+        """
+        for name, handlers in self._he_handlers.items():
+            for label, handler in handlers:
+                handler._clear_hasevents_refs(self)
+            handlers[:] = []
+        for name in self.__handlers__:
+            getattr(self, name).dispose()
+    
+    def _register_handler(self, type, handler):
+        """ Register a handler for the given event type. The type
+        can include a label, e.g. 'mouse_down:foo'.
+        This is called from Handler objects at initialization and when
+        they reconnect (dynamism).
+        """
+        type, _, label = type.partition(':')
+        label = label or handler.name
+        handlers = self._he_handlers.setdefault(type, [])
+        entry = label, handler
+        if entry not in handlers:
+            handlers.append(entry)
+        handlers.sort(key=lambda x: x[0]+'-'+x[1]._id)
+    
+    def disconnect(self, type, handler=None):
+        """ Disconnect handlers. 
+        
+        Parameters:
+            type (str): the type for which to disconnect any handlers.
+                Can include the label to only disconnect handlers that
+                were registered with that label.
+            handler (optional): the handler object to disconnect. If given,
+               only this handler is removed.
+        """
+        # This is called from Handler objects when they dispose and when
+        # they reconnect (dynamism).
+        type, _, label = type.partition(':')
+        handlers = self._he_handlers.get(type, ())
+        for i in reversed(range(len(handlers))):
+            entry = handlers[i]
+            if not ((label and label != entry[0]) or
+                    (handler and handler is not entry[1])):
+                handlers.pop(i)
+    
+    def emit(self, type, ev):
+        """ Generate a new event and dispatch to all event handlers.
+        
+        Arguments:
+            type (str): the type of the event. Should not include a label.
+            ev (dict): the event object. This dict is turned into a Dict,
+                so that its elements can be accesses as attributes.
+        """
+        type, _, label = type.partition(':')
+        if label:
+            raise ValueError('The type given to emit() should not include a label.')
+        # Prepare event
+        if not isinstance(ev, dict):
+            raise TypeError('Event object (for %r) must be a dict' % type)
+        ev = Dict(ev)
+        ev.type = type
+        ev.source = self
+        # Push the event to the handlers (handlers use labels for dynamism)
+        for label, handler in self._he_handlers.get(type, ()):
+            handler._add_pending_event(label, ev)  # friend class
+    
+    def _init_prop(self, prop_name):
+        """ Initialize a property.
+        """
+        # Prepare
+        private_name = '_' + prop_name + '_value'
+        func_name = '_' + prop_name + '_func'
+        # Trigger default value
+        func = getattr(self, func_name)
+        try:
+            value2 = func(self)
+        except Exception as err:
+            raise RuntimeError('Could not get default value for property %r:\n%s' % (prop_name, err))
+        # Update value and emit event
+        setattr(self, private_name, value2)
+        self.emit(prop_name, dict(new_value=value2, old_value=None))
+    
+    def _set_prop(self, prop_name, value):
+        """ Set the value of a (readonly) property.
+        
+        Parameters:
+            prop_name (str): the name of the property to set.
+            value: the value to set.
+        """
+        # Checks
+        if not isinstance(prop_name, str):
+            raise TypeError("_set_prop's first arg must be str, not %s" %
+                             prop_name.__class__)
+        if prop_name not in self.__properties__:
+            cname = self.__class__.__name__
+            raise AttributeError('%s object has no property %r' % (cname, prop_name))
+        if self._he_props_being_set.get(prop_name, False):
+            return
+        # Prepare
+        private_name = '_' + prop_name + '_value'
+        func_name = '_' + prop_name + '_func'
+        # Validate value
+        self._he_props_being_set[prop_name] = True
+        try:
+            func = getattr(self, func_name)
+            if this_is_js():
+                value2 = func.apply(self, [value])
+            else:
+                value2 = func(self, value)
+        finally:
+            self._he_props_being_set[prop_name] = False
+        # Update value and emit event
+        old = getattr(self, private_name, None)
+        setattr(self, private_name, value2)
+        self.emit(prop_name, dict(new_value=value2, old_value=old))
+    
+    def _get_emitter(self, emitter_name):
+        """" Get an emitter function.
+        """
+        func_name = '_' + emitter_name + '_func'
+        func = getattr(self, func_name)
+        def emitter_func(*args):
+            if this_is_js():
+                ev = func.apply(self, args)
+            else:
+                ev = func(self, *args)
+            self.emit(emitter_name, ev)
+        return emitter_func
+    
+    def get_event_types(self):
+        """ Get the known event types for this HasEvent object.
+        
+        Returns:
+            types (list): a list of event type names, for which there
+            is a property/emitter or for which any handlers are
+            registered. Sorted alphabetically.
+        """
+        return list(sorted(self._he_handlers.keys()))
+    
+    def get_event_handlers(self, type):
+        """ Get a list of handlers for the given event type.
+        
+        Parameters:
+            type (str): the type of event to get handlers for. Should not
+                include a label.
+        
+        Returns:
+            handlers (list): a list of handler objects. The order is
+            the order in which events are handled: alphabetically by
+            label.
+        """
+        type, _, label = type.partition(':')
+        if label:
+            raise ValueError('The type given to get_event_handlers() should not include a label.')
+        handlers = self._he_handlers.get(type, ())
+        return [h[1] for h in handlers]
+
+
 #class HasEvents(with_metaclass(HasEventsMeta, object)):
-class HasEvents:
+class HasEvents(BaseHasEvents):
     """ Base class for objects that have event emitters and or properties.
     
     Objects of this class can emit events through their ``emit()``
@@ -130,88 +303,46 @@ class HasEvents:
     _IS_HASEVENTS = True
     
     def __init__(self, **initial_property_values):
-        self.__handlers = {}
+        super().__init__()
         
         # Detect our emitters and handlers
-        handlers, emitters = {}, {}
+        handlers, emitters, properties = {}, {}, {}
         for name in dir(self.__class__):
             if name.startswith('__'):
                 continue
             val = getattr(self.__class__, name)
             if isinstance(val, BaseEmitter):
                 emitters[name] = val
+                setattr(self, '_' + name + '_func', val._func)
+                if isinstance(val, Property):
+                    properties[name] = val
             elif isinstance(val, HandlerDescriptor):
                 handlers[name] = val
             elif name.startswith('on_') and callable(val):
-                hh = self.__handlers.setdefault(name[3:], [])
+                hh = self._he_handlers.setdefault(name[3:], [])
                 Handler(val,[name[3:]], self)  # registers itself
         
+        # todo: maybe get rid of __emitters__?
         self.__handlers__ = [name for name in sorted(handlers.keys())]
         self.__emitters__ = [name for name in sorted(emitters.keys())]
+        self.__properties__ = [name for name in sorted(properties.keys())]
         
         # Instantiate handlers, its enough to reference them
         for name in self.__handlers__:
             getattr(self, name)
         # Instantiate emitters
         for name in self.__emitters__:
-            getattr(self, name)  # trigger setting the default value for props
-            self.__handlers.setdefault(name, [])
+            self._he_handlers.setdefault(name, [])
+        for name in self.__properties__:
+            self._init_prop(name)
         
         # Initialize given properties
         for name, value in initial_property_values.items():
-            if name in self.__emitters__:
+            if name in self.__properties__:
                 setattr(self, name, value)
             else:
                 cname = self.__class__.__name__
                 raise AttributeError('%s does not have a property %r' % (cname, name))
-    
-    def dispose(self):
-        """ Use this to dispose of the object to prevent memory leaks.
-        
-        Make all subscribed handlers to forget about this object, clear
-        all references to subscribed handlers, disconnect all handlers
-        defined on this object.
-        """
-        for name, handlers in self.__handlers.items():
-            for label, handler in handlers:
-                handler._clear_hasevents_refs(self)
-            handlers[:] = []
-        for name in self.__handlers__:
-            getattr(self, name).dispose()
-    
-    def _register_handler(self, type, handler):
-        """ Register a handler for the given event type. The type
-        can include a label, e.g. 'mouse_down:foo'.
-        This is called from Handler objects at initialization and when
-        they reconnect (dynamism).
-        """
-        type, _, label = type.partition(':')
-        label = label or handler.name
-        handlers = self.__handlers.setdefault(type, [])
-        entry = label, handler
-        if entry not in handlers:
-            handlers.append(entry)
-        handlers.sort(key=lambda x: x[0]+'-'+x[1]._id)
-    
-    def disconnect(self, type, handler=None):
-        """ Disconnect handlers. 
-        
-        Parameters:
-            type (str): the type for which to disconnectany handlers.
-                Can include the label to only disconnect handlers that
-                were registered with that label.
-            handler (optional): the handler object to disconnect. If given,
-               only this handler is removed.
-        """
-        # This is called from Handler objects when they dispose and when
-        # they reconnect (dynamism).
-        type, _, label = type.partition(':')
-        handlers = self.__handlers.get(type, ())
-        for i in reversed(range(len(handlers))):
-            entry = handlers[i]
-            if not ((label and label != entry[0]) or
-                    (handler and handler is not entry[1])):
-                handlers.pop(i)
     
     def connect(self, *connection_strings):
         """ Connect a function to one or more events of this instance. Can
@@ -253,69 +384,3 @@ class HasEvents:
             return _connect(func)
         else:
             return _connect
-    
-    def emit(self, type, ev):
-        """ Generate a new event and dispatch to all event handlers.
-        
-        Arguments:
-            type (str): the type of the event. Should not include a label.
-            ev (dict): the event object. This dict is turned into a Dict,
-                so that its elements can be accesses as attributes.
-        """
-        type, _, label = type.partition(':')
-        if label:
-            raise ValueError('The type given to emit() should not include a label.')
-        # Prepare event
-        if not isinstance(ev, dict):
-            raise TypeError('Event object (for %r) must be a dict' % type)
-        ev = Dict(ev)
-        ev.type = type
-        ev.source = self
-        # Push the event to the handlers (handlers use labels for dynamism)
-        for label, handler in self.__handlers.get(type, ()):
-            handler._add_pending_event(label, ev)  # friend class
-    
-    def _set_prop(self, prop_name, value):
-        """ Set the value of a (readonly) property.
-        
-        Parameters:
-            prop_name (str): the name of the property to set.
-            value: the value to set.
-        """
-        if not isinstance(prop_name, str):
-            raise TypeError("_set_prop's first arg must be str, not %s" %
-                             prop_name.__class__.__name__)
-        try:
-            readonly_descriptor = getattr(self.__class__, prop_name)
-        except AttributeError:
-            cname = self.__class__.__name__
-            raise AttributeError('%s object has no property %r' % (cname, prop_name))
-        readonly_descriptor._set(self, value)
-    
-    def get_event_types(self):
-        """ Get the known event types for this HasEvent object.
-        
-        Returns:
-            types (list): a list of event type names, for which there
-            is a property/emitter or for which any handlers are
-            registered. Sorted alphabetically.
-        """
-        return list(sorted(self.__handlers.keys()))
-    
-    def get_event_handlers(self, type):
-        """ Get a list of handlers for the given event type.
-        
-        Parameters:
-            type (str): the type of event to get handlers for. Should not
-                include a label.
-        
-        Returns:
-            handlers (list): a list of handler objects. The order is
-            the order in which events are handled: alphabetically by
-            label.
-        """
-        type, _, label = type.partition(':')
-        if label:
-            raise ValueError('The type given to get_event_handlers() should not include a label.')
-        handlers = self.__handlers.get(type, ())
-        return [h[1] for h in handlers]

@@ -167,7 +167,7 @@ class Handler:
     @property
     def connection_info(self):
         """ A list of tuples (name, connection_names), where connection_names
-        is a tuple of names for the connections made for that xxxx
+        is a tuple of names for the connections made for that xxxx todo: x
         """
         return [(c.fullname, tuple([u[1] for u in c.objects]))
                 for c in self._connections]

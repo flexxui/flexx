@@ -18,7 +18,7 @@ def test_property():
             return float(v)
         
         @event.prop
-        def bar(v=1.3):
+        def bar(self, v=1.3):
             return float(v)
     
     m = MyObject()
@@ -180,7 +180,7 @@ def test_emitter():
             return dict(value=float(v))
         
         @event.emitter
-        def bar(v):
+        def bar(self, v):
             return dict(value=float(v)+1)  # note plus 1
         
         def on_foo(self, *events):
