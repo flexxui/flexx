@@ -186,13 +186,13 @@ class Handler:
     
     ## Calling / handling
     
-    def __call__(self):
+    def __call__(self, *events):
         """ Call the handler function.
         """
         if self._func_is_method and self._ob is not None:
-            return self._func(self._ob())
+            return self._func(self._ob(), *events)
         else:
-            return self._func()
+            return self._func(*events)
     
     def _add_pending_event(self, label, ev):
         """ Add an event object to be handled at the next event loop
@@ -202,7 +202,7 @@ class Handler:
             # register only once
             self._scheduled_update = True
             if this_is_js():
-                window.setTimeout(self._handle_now_callback, 0)
+                setTimeout(self._handle_now_callback.bind(self), 0)
             else:
                 loop.call_later(self._handle_now_callback)
         self._pending.append((label, ev))
@@ -233,13 +233,10 @@ class Handler:
         # Handle events
         if events:
             try:
-                if self._func_is_method and self._ob is not None:
-                    return self._func(self._ob(), *events)
-                else:
-                    return self._func(*events)
+                self(*events)
             except Exception as err:
                 if this_is_js():
-                    window.console.log(err)
+                    console.log(err)
                 else:
                     # Allow post-mortem debugging
                     type_, value, tb = sys.exc_info()

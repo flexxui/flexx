@@ -19,6 +19,7 @@ reprs = json.dumps
 
 def py2js(*args, **kwargs):
     kwargs['inline_stdlib'] = False
+    kwargs['docstrings'] = False
     return py2js_(*args, **kwargs)
 
 
@@ -43,7 +44,7 @@ class HasEventsJS(BaseHasEvents):
             func = self['_' + name + '_func']
             self[name] = self.__create_Handler(func, name, func._connection_strings)
         # todo: turn on_xx into a handler
-        
+        # todo: connect method
         for name in self.__emitters__:
             func = self['_' + name + '_func']
             creator = self['__create_' + func._emitter_type]
@@ -54,7 +55,7 @@ class HasEventsJS(BaseHasEvents):
         def getter():
             return self[private_name]
         def setter(x):
-            self[private_name] = func.apply(self, [x])
+            self._set_prop(name, x)
         self[private_name] = func.apply(self, [])  # init
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
@@ -101,6 +102,7 @@ class HasEventsJS(BaseHasEvents):
         return handler
 
 
+# todo: can I turn this into one class instead of an inherited class?
 def patch_HasEventsJS(jscode):
     code = '\n'
     for name, val in sorted(Handler.__dict__.items()):
@@ -142,11 +144,11 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     
     for name, val in sorted(cls.__dict__.items()):
         name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix mangling
+        funcname = '_' + name + '_func'
         if isinstance(val, BaseEmitter):
             emitters.append(name)
             if isinstance(val, Property):
                 properties.append(name)
-            funcname = '_' + name + '_func'
             # Add function def
             code = py2js(val._func, cls_name + '.prototype.' + funcname)
             code = code.replace('super()', base_class)  # fix super
@@ -161,7 +163,6 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             funcs_code.append('')
         elif isinstance(val, HandlerDescriptor):
             handlers.append(name)
-            funcname = '_' + name + '_func'
             # Add function def
             code = py2js(val._func, cls_name + '.prototype.' + funcname)
             code = code.replace('super()', base_class)  # fix super
@@ -228,20 +229,14 @@ if __name__ == '__main__':
         
         @event.connect('foo')
         def handle_foo(self, *events):
-            #print(events[-1])
-            print('haha')
-        
-        # def blaa1(self):
-        #     pass
-        # 
-        # def blaa2(self):
-        #     pass
+            print(events)
+            #print('haha')
     
     code = ''
     code += py2js(BaseHasEvents)
     code += HasEventsJS.JSCODE
     code += create_js_hasevents_class(Tester, 'Tester')
-    code += 'var x = new Tester(); x.foo = 42.2; x.get_event_handlers("foo")'
+    code += 'var x = new Tester(); x.foo=32; x.handle_foo.handle_now()'
     nargs, function_deps, method_deps = get_std_info(code)
     code = get_partial_std_lib(function_deps, method_deps, []) + code
     
