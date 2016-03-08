@@ -157,19 +157,18 @@ class Handler:
         cls_name = self.__class__.__name__
         return '<%s %r with %s connections at 0x%x>' % (cls_name, self._name, conn, id(self))
     
-    @property
-    def name(self):
-        """ The name of this handler, usually corresponding to the name
+    def get_name(self):
+        """ Get the name of this handler, usually corresponding to the name
         of the function that this signal wraps.
         """
         return self._name
     
-    @property
-    def connection_info(self):
-        """ A list of tuples (name, connection_names), where connection_names
-        is a tuple of names for the connections made for that xxxx todo: x
+    def get_connection_info(self):
+        """ Get a list of tuples (name, connection_names), where
+        connection_names is a list of type names (including label) for
+        the made connections.
         """
-        return [(c.fullname, tuple([u[1] for u in c.objects]))
+        return [(c.fullname, [u[1] for u in c.objects])
                 for c in self._connections]
     
     ## Calling / handling

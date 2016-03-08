@@ -38,9 +38,9 @@ def test_method_handlers():
     assert isinstance(foo.handle1, event._handler.Handler)
     assert repr(foo.handle1)
     assert hasattr(foo.handle1, 'dispose')
-    assert foo.handle1.name == 'handle1'
-    assert foo.handle1.connection_info == [('x1', ('x1', ))]
-    assert foo.handle2.connection_info == [('x1', ('x1', )), ('x2', ('x2', ))]
+    assert foo.handle1.get_name() == 'handle1'
+    assert foo.handle1.get_connection_info() == [('x1', ['x1', ])]
+    assert foo.handle2.get_connection_info() == [('x1', ['x1', ]), ('x2', ['x2', ])]
     
     # Can't touch this
     with raises(AttributeError):
@@ -74,7 +74,7 @@ def test_method_handlers_nodecorator():
     assert isinstance(foo.handle1, event._handler.Handler)
     assert repr(foo.handle1)
     assert hasattr(foo.handle1, 'dispose')
-    assert foo.handle1.name == '_handle1'  # note the name ...
+    assert foo.handle1.get_name() == '_handle1'  # note the name ...
     
     # Can't touch this
     with raises(AttributeError):
@@ -110,9 +110,9 @@ def test_func_handlers():
     assert isinstance(handle1, event._handler.Handler)
     assert repr(handle1)
     assert hasattr(handle1, 'dispose')
-    assert handle1.name == 'handle1'
-    assert handle1.connection_info == [('x1', ('x1', ))]
-    assert handle2.connection_info == [('x1', ('x1', )), ('x2', ('x2', ))]
+    assert handle1.get_name() == 'handle1'
+    assert handle1.get_connection_info() == [('x1', ['x1', ])]
+    assert handle2.get_connection_info() == [('x1', ['x1', ]), ('x2', ['x2', ])]
 
 
 def test_func_handlers_nodecorator():
@@ -142,7 +142,7 @@ def test_func_handlers_nodecorator():
     assert isinstance(handle1, event._handler.Handler)
     assert repr(handle1)
     assert hasattr(handle1, 'dispose')
-    assert handle1.name == '_handle1'  # note the name
+    assert handle1.get_name() == '_handle1'  # note the name
 
 
 def test_func_handlers_with_method_decorator():

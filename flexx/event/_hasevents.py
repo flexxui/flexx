@@ -113,7 +113,7 @@ class BaseHasEvents:
         they reconnect (dynamism).
         """
         type, _, label = type.partition(':')
-        label = label or handler.name
+        label = label or handler._name
         handlers = self._he_handlers.setdefault(type, [])
         entry = label, handler
         if entry not in handlers:
