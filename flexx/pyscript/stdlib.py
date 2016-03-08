@@ -23,7 +23,7 @@ IMPORT_DOT = '__'
 
 
 def get_std_info(code):
-    """ Given the JS code for a std function or method. Determine the
+    """ Given the JS code for a std function or method, determine the
     number of arguments, function_deps and method_deps.
     """
     _, _, nargs = code.splitlines()[0].partition('nargs:')

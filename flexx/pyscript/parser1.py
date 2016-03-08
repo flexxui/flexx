@@ -470,7 +470,7 @@ class Parser1(Parser0):
         if imported:
             return self.use_imported_object(imported + '.' + node.attr)
         # Handle normally
-        return "%s.%s" % (base_name, node.attr)
+        return "%s.%s" % (base_name, self.NAME_MAP.get(node.attr, node.attr))
     
     ## Statements
     

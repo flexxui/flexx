@@ -88,6 +88,8 @@ class BaseHasEvents:
     Python and a HasEvents for JS.
     """
     
+    _IS_HASEVENTS = True
+    
     def __init__(self):
         self._he_handlers = {}
         self._he_props_being_set = {}
@@ -246,6 +248,8 @@ class BaseHasEvents:
             the order in which events are handled: alphabetically by
             label.
         """
+        if not type:
+            raise TypeError('get_event_handlers() missing "type" argument.')
         type, _, label = type.partition(':')
         if label:
             raise ValueError('The type given to get_event_handlers() should not include a label.')
@@ -299,8 +303,6 @@ class HasEvents(BaseHasEvents):
             print('foo was set %i times' % len(events))
     
     """
-    
-    _IS_HASEVENTS = True
     
     def __init__(self, **initial_property_values):
         super().__init__()

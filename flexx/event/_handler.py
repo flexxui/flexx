@@ -9,6 +9,8 @@ from ._emitters import Property
 # todo: define better, or don't use at all?
 undefined = 'blaaaaa'
 
+def this_is_js():
+    return False
 
 # todo: Silly event loop
 
@@ -126,18 +128,10 @@ class Handler:
         self._func = func
         self._name = func.__name__
         Handler._count += 1
-        self._id = str(Handler._count)  # to ensure a consistent event order
+        self._id = 'h%i' % Handler._count  # to ensure a consistent event order
         
         # Set docstring; this appears correct in sphinx docs
         self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
-        
-        # Init connections
-        self._connections = [Dict(fullname=s, type=s.split('.')[-1], objects=[])
-                             for s in connection_strings]
-        
-        # Pending events for this handler
-        self._scheduled_update = False
-        self._pending = []  # pending events
         
         # Store object using a weakref
         self._ob = weakref.ref(ob)
@@ -147,6 +141,25 @@ class Handler:
             self._func_is_method = inspect.getargspec(func)[0][0] in ('self', 'this')
         except (TypeError, IndexError):
             self._func_is_method = False
+        
+        self._init(connection_strings)
+    
+    
+    def _init(self, connection_strings):
+        """ Init of this handler that is compatible with PyScript.
+        """
+        # Init connections
+        self._connections = []
+        for s in connection_strings:
+            d = Dict()  # don't do Dict(foo=x) bc PyScript only supports that for dict
+            self._connections.append(d)
+            d.fullname = s
+            d.type = s.split('.')[-1]
+            d.objects = []
+        
+        # Pending events for this handler
+        self._scheduled_update = False
+        self._pending = []  # pending events
         
         # Connect
         for index in range(len(self._connections)):
@@ -186,9 +199,17 @@ class Handler:
         iteration. Called from HasEvents.emit().
         """
         if not self._scheduled_update:
+            # register only once
             self._scheduled_update = True
-            loop.call_later(self.handle_now)  # register only once
+            if this_is_js():
+                window.setTimeout(self._handle_now_callback, 0)
+            else:
+                loop.call_later(self._handle_now_callback)
         self._pending.append((label, ev))
+    
+    def _handle_now_callback(self):
+        self._scheduled_update = False
+        self.handle_now()
     
     def handle_now(self):
         """ Invoke a call to the handler function with all pending
@@ -197,7 +218,6 @@ class Handler:
         be called manually to force the handler to process pending
         events *now*.
         """
-        self._scheduled_update = False
         # Collect pending events and check what connections need to reconnect
         events = []
         reconnect = []
@@ -217,16 +237,19 @@ class Handler:
                     return self._func(self._ob(), *events)
                 else:
                     return self._func(*events)
-            except Exception:
-                # Allow post-mortem debugging
-                type_, value, tb = sys.exc_info()
-                tb = tb.tb_next  # Skip *this* frame
-                sys.last_type = type_
-                sys.last_value = value
-                sys.last_traceback = tb
-                del tb  # Get rid of it in this namespace
-                # Show the exception
-                logging.exception(value)
+            except Exception as err:
+                if this_is_js():
+                    window.console.log(err)
+                else:
+                    # Allow post-mortem debugging
+                    type_, value, tb = sys.exc_info()
+                    tb = tb.tb_next  # Skip *this* frame
+                    sys.last_type = type_
+                    sys.last_value = value
+                    sys.last_traceback = tb
+                    tb = None  # Get rid of it in this namespace
+                    # Show the exception
+                    logging.exception(value)
     
     
     ## Connecting
@@ -270,7 +293,7 @@ class Handler:
         
         # Obtain root object and setup connections
         ob = self._ob()
-        if ob is not None:
+        if not (ob is None or ob is undefined):  # todo: need undefined?
             self._seek_event_object(index, path, ob)
         
         # Verify
@@ -296,8 +319,9 @@ class Handler:
         
         # Resolve name
         obname, path = path[0], path[1:]
-        if getattr(getattr(ob.__class__, obname, None), '_IS_PROP', False):
-            # todo: make .__class__ work in PyScript
+        if obname in ob.__properties__:
+            #((this_is_js() and ob[obname+'']) or 
+            #     getattr(getattr(ob.__class__, obname, None), '_IS_PROP', False):
             name_label = obname + ':reconnect_' + str(index)
             connection.objects.append((ob, name_label))
             ob = getattr(ob, obname)
