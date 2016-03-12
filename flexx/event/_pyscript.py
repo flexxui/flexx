@@ -9,7 +9,7 @@ from flexx.pyscript.parser2 import get_class_definition
 
 from flexx.event._emitters import BaseEmitter, Property
 from flexx.event._handler import HandlerDescriptor, Handler
-from flexx.event._hasevents import BaseHasEvents
+from flexx.event._hasevents import HasEvents
 
 
 Object = Date = None  # fool pyflake
@@ -23,7 +23,7 @@ def py2js(*args, **kwargs):
     return py2js_(*args, **kwargs)
 
 
-class HasEventsJS(BaseHasEvents):
+class HasEventsJS:
     """ An implementation of the HasEvents class in PyScript. It has
     some boilerplate code to create handlers and emitters, but otherwise
     shares most of the code with the Python classes by transpiling their
@@ -36,9 +36,13 @@ class HasEventsJS(BaseHasEvents):
     """
     
     _HANDLER_COUNT = 0
+    _IS_HASEVENTS = True
     
     def __init__(self):
-        super().__init__()
+        
+        # Init some internal variables
+        self._he_handlers = {}
+        self._he_props_being_set = {}
         
         for name in self.__handlers__:
             func = self['_' + name + '_func']
@@ -56,7 +60,8 @@ class HasEventsJS(BaseHasEvents):
             return self[private_name]
         def setter(x):
             self._set_prop(name, x)
-        self[private_name] = func.apply(self, [])  # init
+        self[private_name] = value2 = func.apply(self, [])  # init
+        self.emit(name, dict(new_value=value2, old_value=None))
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
@@ -67,7 +72,8 @@ class HasEventsJS(BaseHasEvents):
             return self[private_name]
         def setter(x):
             raise ValueError('Readonly %s is not settable' % name)
-        self[private_name] = func.apply(self, [])  # init
+        self[private_name] = value2 = func.apply(self, [])  # init
+        self.emit(name, dict(new_value=value2, old_value=None))
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
@@ -103,18 +109,30 @@ class HasEventsJS(BaseHasEvents):
 
 
 # todo: can I turn this into one class instead of an inherited class?
-def patch_HasEventsJS(jscode):
+def get_HasEvents_js():
+    
+    # Start with our special JS version
+    jscode = py2js(HasEventsJS, 'HasEvents', docstrings=False)
+    # Add the Handler methods
     code = '\n'
     for name, val in sorted(Handler.__dict__.items()):
         if not name.startswith('__') and callable(val):
             code += py2js(val, 'handler.' + name, indent=1, docstrings=False)
             code += '\n'
     code = code.replace('new Dict()', '{}')
-    return jscode.replace('HANDLER_METHODS_HOOK', code)
+    jscode = jscode.replace('HANDLER_METHODS_HOOK', code)
+    # Add the methods from the Python HasEvents class
+    code = '\n'
+    for name, val in sorted(HasEvents.__dict__.items()):
+        if name.startswith('__') or not callable(val) or name in ['connect',]:
+            continue
+        code += py2js(val, 'HasEvents.prototype.' + name, docstrings=False)
+        code += '\n'
+    jscode += code
+    return jscode
 
 
-HasEventsJS.JSCODE = patch_HasEventsJS(py2js(HasEventsJS, 'HasEvents'))
-
+HasEventsJS.JSCODE = get_HasEvents_js()
 
 
 def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
@@ -233,13 +251,12 @@ if __name__ == '__main__':
             #print('haha')
     
     code = ''
-    code += py2js(BaseHasEvents)
     code += HasEventsJS.JSCODE
     code += create_js_hasevents_class(Tester, 'Tester')
     code += 'var x = new Tester(); x.foo=32; x.handle_foo.handle_now()'
     nargs, function_deps, method_deps = get_std_info(code)
     code = get_partial_std_lib(function_deps, method_deps, []) + code
     
-    #print(py2js(BaseHasEvents))
+    #print(py2js(HasEvents))
     print(evaljs(code))
     

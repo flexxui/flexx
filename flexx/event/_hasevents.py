@@ -82,17 +82,99 @@ def this_is_js():
 #         type.__init__(cls, name, bases, dct)
 
 
-class BaseHasEvents:
-    """ Base class for HasEvents that contains all the code that is
-    compliant with PyScript. From this class we inherit a HasEvents for
-    Python and a HasEvents for JS.
+#class HasEvents(with_metaclass(HasEventsMeta, object)):
+class HasEvents:
+    """ Base class for objects that have event emitters and or properties.
+    
+    Objects of this class can emit events through their ``emit()``
+    method. Handlers can connect to these objects (and they keep
+    references to the handlers).
+    
+    Dedicated handlers can be created by creating methods starting with 'on_'.
+    
+    Initial values of settable properties can be provided by passing them
+    as keyword arguments.
+    
+    
+    Example use:
+    
+    .. code-block:: python
+    
+        class MyObject(event.HasEvents):
+            
+            # Emitters
+            
+            @event.prop
+            def foo(self, v=0):
+                return float(v)
+            
+            event.emitter
+            def bar(self, v):
+                return dict(value=v)  # the event to emit
+            
+            # Handlers
+            
+            @event.connect
+            def handle_foo(self, *events):
+                print('foo was set to', events[-1].new_value)
+            
+            def on_bar(self, *events):
+                print('bar event was generated')
+        
+        ob = MyObject(foo=42)
+        
+        @event.connect('foo')
+        def another_foo handler(*events):
+            print('foo was set %i times' % len(events))
+    
     """
     
     _IS_HASEVENTS = True
     
-    def __init__(self):
+    def __init__(self, **initial_property_values):
+        
+        # Init some internal variables
         self._he_handlers = {}
         self._he_props_being_set = {}
+        
+        # Detect our emitters and handlers
+        handlers, emitters, properties = {}, {}, {}
+        for name in dir(self.__class__):
+            if name.startswith('__'):
+                continue
+            val = getattr(self.__class__, name)
+            if isinstance(val, BaseEmitter):
+                emitters[name] = val
+                setattr(self, '_' + name + '_func', val._func)
+                if isinstance(val, Property):
+                    properties[name] = val
+            elif isinstance(val, HandlerDescriptor):
+                handlers[name] = val
+            elif name.startswith('on_') and callable(val):
+                hh = self._he_handlers.setdefault(name[3:], [])
+                Handler(val,[name[3:]], self)  # registers itself
+        
+        # todo: maybe get rid of __emitters__?
+        self.__handlers__ = [name for name in sorted(handlers.keys())]
+        self.__emitters__ = [name for name in sorted(emitters.keys())]
+        self.__properties__ = [name for name in sorted(properties.keys())]
+        
+        # Instantiate handlers, its enough to reference them
+        for name in self.__handlers__:
+            getattr(self, name)
+        # Instantiate emitters
+        for name in self.__emitters__:
+            self._he_handlers.setdefault(name, [])
+        for name in self.__properties__:
+            self._init_prop(name)
+        
+        # Initialize given properties
+        for name, value in initial_property_values.items():
+            if name in self.__properties__:
+                setattr(self, name, value)
+            else:
+                cname = self.__class__.__name__
+                raise AttributeError('%s does not have a property %r' % (cname, name))
     
     def dispose(self):
         """ Use this to dispose of the object to prevent memory leaks.
@@ -259,96 +341,7 @@ class BaseHasEvents:
         handlers = self._he_handlers.get(type, ())
         return [h[1] for h in handlers]
 
-
-#class HasEvents(with_metaclass(HasEventsMeta, object)):
-class HasEvents(BaseHasEvents):
-    """ Base class for objects that have event emitters and or properties.
-    
-    Objects of this class can emit events through their ``emit()``
-    method. Handlers can connect to these objects (and they keep
-    references to the handlers).
-    
-    Dedicated handlers can be created by creating methods starting with 'on_'.
-    
-    Initial values of settable properties can be provided by passing them
-    as keyword arguments.
-    
-    
-    Example use:
-    
-    .. code-block:: python
-    
-        class MyObject(event.HasEvents):
-            
-            # Emitters
-            
-            @event.prop
-            def foo(self, v=0):
-                return float(v)
-            
-            event.emitter
-            def bar(self, v):
-                return dict(value=v)  # the event to emit
-            
-            # Handlers
-            
-            @event.connect
-            def handle_foo(self, *events):
-                print('foo was set to', events[-1].new_value)
-            
-            def on_bar(self, *events):
-                print('bar event was generated')
-        
-        ob = MyObject(foo=42)
-        
-        @event.connect('foo')
-        def another_foo handler(*events):
-            print('foo was set %i times' % len(events))
-    
-    """
-    
-    def __init__(self, **initial_property_values):
-        super().__init__()
-        
-        # Detect our emitters and handlers
-        handlers, emitters, properties = {}, {}, {}
-        for name in dir(self.__class__):
-            if name.startswith('__'):
-                continue
-            val = getattr(self.__class__, name)
-            if isinstance(val, BaseEmitter):
-                emitters[name] = val
-                setattr(self, '_' + name + '_func', val._func)
-                if isinstance(val, Property):
-                    properties[name] = val
-            elif isinstance(val, HandlerDescriptor):
-                handlers[name] = val
-            elif name.startswith('on_') and callable(val):
-                hh = self._he_handlers.setdefault(name[3:], [])
-                Handler(val,[name[3:]], self)  # registers itself
-        
-        # todo: maybe get rid of __emitters__?
-        self.__handlers__ = [name for name in sorted(handlers.keys())]
-        self.__emitters__ = [name for name in sorted(emitters.keys())]
-        self.__properties__ = [name for name in sorted(properties.keys())]
-        
-        # Instantiate handlers, its enough to reference them
-        for name in self.__handlers__:
-            getattr(self, name)
-        # Instantiate emitters
-        for name in self.__emitters__:
-            self._he_handlers.setdefault(name, [])
-        for name in self.__properties__:
-            self._init_prop(name)
-        
-        # Initialize given properties
-        for name, value in initial_property_values.items():
-            if name in self.__properties__:
-                setattr(self, name, value)
-            else:
-                cname = self.__class__.__name__
-                raise AttributeError('%s does not have a property %r' % (cname, name))
-    
+    # This method does *not* get transpiled
     def connect(self, *connection_strings):
         """ Connect a function to one or more events of this instance. Can
         also be used as a decorator.
