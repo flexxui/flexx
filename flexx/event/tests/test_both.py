@@ -24,11 +24,6 @@ from flexx.pyscript.stdlib import get_std_info, get_partial_std_lib
 import sys
 from math import isnan as isNaN
 
-# todo: --\
-# Test that multiple handlers get the same event object 
-# Test dynamism
-# undefined fix, necessary?
-# rename _pyscript to "js" or at least something public?
 
 def reduce_code(code):
     # On Windows we can pass up to 2**15 chars
@@ -575,8 +570,290 @@ def test_disconnect3(Person):
     return res1 + ['||'] + res2
 
 
-## Test 
+## Test handlers
+
+@run_in_both(Person, "[]")
+def test_event_object_persistence(Person):
+    res1 = []
+    res2 = []
+    
+    def func1(*events):
+        for ev in events:
+            res1.append(ev)
+    def func2(*events):
+        for ev in events:
+            res2.append(ev)
+    
+    name = Person()
+    handler1 = name.connect(func1, 'first_name', 'last_name')
+    handler2 = name.connect(func2, 'first_name', 'last_name')
+    
+    name.first_name = 'jane'
+    name.last_name = 'jansen'
+    handler1.handle_now()
+    handler2.handle_now()
+    
+    assert len(res1) == 2
+    assert len(res2) == 2
+    assert res1[0] is res2[0]
+    assert res1[1] is res2[1]
+    return []
+
+
+@run_in_both(Person, "['jane', 'jansen', 0, 0, 2]")
+def test_handler_calling(Person):
+    res1 = []
+    res2 = []
+    
+    def func1(*events):
+        res2.append(len(events))
+        for ev in events:
+            res1.append(ev.new_value)
+    
+    name = Person()
+    handler1 = name.connect(func1, 'first_name', 'last_name')
+    
+    assert len(res2) == 0
+    handler1()
+    assert len(res2) == 1
+    func1()
+    assert len(res2) == 2
+    name.first_name = 'jane'
+    name.last_name = 'jansen'
+    assert len(res2) == 2
+    handler1.handle_now()
+    assert len(res2) == 3
+    return res1 + res2
+
+
+@run_in_both(Person, "['jane', 'jansen', '||', 'jane', 'jansen', 'zz', 'xx', 'yy']")
+def test_handler_dispose(Person):
+    res1 = []
+    res2 = []
+    
+    def func1(*events):
+        for ev in events:
+            res1.append(ev.new_value)
+    def func2(*events):
+        for ev in events:
+            res2.append(ev.new_value)
+    
+    name = Person()
+    handler1 = name.connect(func1, 'first_name', 'last_name')
+    handler2 = name.connect(func2, 'first_name', 'last_name')
+    
+    name.first_name = 'jane'
+    name.last_name = 'jansen'
+    handler1.handle_now()
+    handler2.handle_now()
+    name.first_name = 'zz'  # event is pended, but discarted when disposed
+    handler1.dispose()
+    name.first_name = 'xx'
+    name.last_name = 'yy'
+    handler1.handle_now()
+    handler2.handle_now()
+    return res1 + ['||'] + res2
+
+
+@run_in_both(Person, "['_first_name_logger']")
+def test_handler_get_name(Person):
+    res1 = []
+    
+    def func1(*events):
+        for ev in events:
+            res1.append(ev.new_value)
+    
+    name = Person()
+    handler1 = name.connect(func1, 'first_name', 'last_name')
+    
+    res1.append(name._first_name_logger.get_name())
+    assert handler1.get_name()  # on JS we cannot know the name
+    
+    return res1
+
+
+@run_in_both(Person, "[['first_name', ['first_name']], ['last_name', ['last_name']]]")
+def test_handler_get_connection_info(Person):
+    res1 = []
+    
+    def func1(*events):
+        for ev in events:
+            res1.append(ev.new_value)
+    
+    name = Person()
+    handler1 = name.connect(func1, 'first_name', 'last_name')
+    
+    return handler1.get_connection_info()
+
+
+## Dynamism
+
+class Node(event.HasEvents):
+    
+    def __init__(self):
+        super().__init__()
+        self._r1 = []
+        self._r2 = []
+    
+    @event.prop
+    def val(self, v=0):
+        return int(v)
+    
+    @event.prop
+    def parent(self, v=None):
+        return v
+    
+    @event.prop
+    def children(self, v=()):
+        return tuple(v)
+    
+    @event.connect('parent.val')
+    def handle_parent_val(self, *events):
+        for ev in events:
+            if self.parent:
+                self._r1.append(self.parent.val)
+            else:
+                self._r1.append(None)
+    
+    @event.connect('children.*.val')
+    def handle_children_val(self, *events):
+        for ev in events:
+            if isinstance(ev.new_value, (int, float)):
+                self._r2.append(ev.new_value)
+            else:
+                self._r2.append('null')
+
+
+@run_in_both(Node, "[0, 0, 17, 18, 28, 29, null]")
+def test_dynamism1(Node):
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    n.parent = n1
+    n.val = 42
+    n.handle_parent_val.handle_now()
+    n1.val = 17
+    n2.val = 27
+    n.handle_parent_val.handle_now()
+    n1.val = 18
+    n2.val = 28
+    n.handle_parent_val.handle_now()
+    n.parent = n2
+    n.handle_parent_val.handle_now()
+    n1.val = 19
+    n2.val = 29
+    n.handle_parent_val.handle_now()
+    n.parent = None
+    n.handle_parent_val.handle_now()
+    n1.val = 11
+    n2.val = 21
+    n.handle_parent_val.handle_now()
+    return n._r1
+
+
+@run_in_both(Node, "[0, 17, 18, 28, 29, null]")
+def test_dynamism2(Node):
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    res = []
+    
+    def func(*events):
+        for ev in events:
+            if n.parent:
+                res.append(n.parent.val)
+            else:
+                res.append(None)
+    handler = n.connect(func, 'parent.val')
+    
+    n.parent = n1
+    n.val = 42
+    handler.handle_now()
+    n1.val = 17
+    n2.val = 27
+    handler.handle_now()
+    n1.val = 18
+    n2.val = 28
+    handler.handle_now()
+    n.parent = n2
+    handler.handle_now()
+    n1.val = 19
+    n2.val = 29
+    handler.handle_now()
+    n.parent = None
+    handler.handle_now()
+    n1.val = 11
+    n2.val = 21
+    handler.handle_now()
+    return res
+
+
+@run_in_both(Node, "['null', 'null', 17, 27, 18, 28, 'null', 29, 'null']")
+def test_dynamism3(Node):
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    n.children = n1, n2
+    n.val = 42
+    n.handle_children_val.handle_now()
+    n1.val = 17
+    n2.val = 27
+    n.handle_children_val.handle_now()
+    n1.val = 18
+    n2.val = 28
+    n.handle_children_val.handle_now()
+    n.children = (n2, )
+    n.handle_children_val.handle_now()
+    n1.val = 19
+    n2.val = 29
+    n.handle_children_val.handle_now()
+    n.children = ()
+    n.handle_children_val.handle_now()
+    n1.val = 11
+    n2.val = 21
+    n.handle_children_val.handle_now()
+    return n._r2
+
+
+@run_in_both(Node, "['null', 17, 27, 18, 28, 'null', 29, 'null']")
+def test_dynamism4(Node):
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    res = []
+    
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, int):
+                res.append(ev.new_value)
+            else:
+                res.append('null')
+    handler = n.connect(func, 'children.*.val')
+    
+    n.children = n1, n2
+    n.val = 42
+    handler.handle_now()
+    n1.val = 17
+    n2.val = 27
+    handler.handle_now()
+    n1.val = 18
+    n2.val = 28
+    handler.handle_now()
+    n.children = (n2, )
+    handler.handle_now()
+    n1.val = 19
+    n2.val = 29
+    handler.handle_now()
+    n.children = ()
+    handler.handle_now()
+    n1.val = 11
+    n2.val = 21
+    handler.handle_now()
+    return res
 
 
 run_tests_if_main()
-

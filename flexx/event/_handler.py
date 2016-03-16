@@ -6,8 +6,6 @@ import weakref
 from ._dict import Dict
 from ._emitters import Property
 
-# todo: define better, or don't use at all?
-undefined = 'blaaaaa'
 
 def this_is_js():
     return False
@@ -290,7 +288,7 @@ class Handler:
         
         # Obtain root object and setup connections
         ob = self._ob()
-        if not (ob is None or ob is undefined):  # todo: need undefined?
+        if ob is not None:
             self._seek_event_object(index, path, ob)
         
         # Verify
@@ -308,20 +306,20 @@ class Handler:
         connection = self._connections[index]
         
         # Done traversing name: add to list or fail
-        if ob is undefined or len(path) == 0:
-            if ob is undefined or not hasattr(ob, '_IS_HASEVENTS'):
+        if ob is None or len(path) == 0:
+            if ob is None or not hasattr(ob, '_IS_HASEVENTS'):
                 return  # we cannot seek further
             connection.objects.append((ob, connection.type))
             return  # found it
         
         # Resolve name
         obname, path = path[0], path[1:]
-        if obname in ob.__properties__:
+        if hasattr(ob, '_IS_HASEVENTS') and obname in ob.__properties__:
             #((this_is_js() and ob[obname+'']) or 
             #     getattr(getattr(ob.__class__, obname, None), '_IS_PROP', False):
             name_label = obname + ':reconnect_' + str(index)
             connection.objects.append((ob, name_label))
-            ob = getattr(ob, obname)
+            ob = getattr(ob, obname, None)
         elif obname == '*' and isinstance(ob, (tuple, list)):
             for sub_ob in ob:
                 msg = self._seek_event_object(index, path, sub_ob)
@@ -329,5 +327,5 @@ class Handler:
                     return msg
             return
         else:
-            ob = getattr(ob, obname, undefined)
+            ob = getattr(ob, obname, None)
         return self._seek_event_object(index, path, ob)

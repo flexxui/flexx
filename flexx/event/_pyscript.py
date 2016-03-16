@@ -4,7 +4,7 @@ Implementation of flexx.event in JS via PyScript.
 
 import json
 
-from flexx.pyscript import py2js as py2js_, undefined
+from flexx.pyscript import py2js as py2js_
 from flexx.pyscript.parser2 import get_class_definition
 
 from flexx.event._emitters import BaseEmitter, Property
