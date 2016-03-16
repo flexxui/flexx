@@ -138,28 +138,6 @@ class Property(BaseEmitter):
         
         private_name = '_' + self._name + self._SUFFIX
         return getattr(instance, private_name)
-    
-    def _set_default(self, instance):
-        # todo: eek, _is_being_set should be a flag specific to instance and this prop
-        if self._is_being_set:  # pragma: no cover - not sure if this can happen
-            return
-        private_name = '_' + self._name + self._SUFFIX
-        # Trigger default value
-        self._is_being_set = True
-        try:
-            if self._func_is_method:
-                value2 = self._func(instance)
-            else:
-                value2 = self._func()
-        except Exception as err:
-            raise RuntimeError('Could not get default value for property %r' % self._name)
-        finally:
-            self._is_being_set = False
-        # Update value and emit event
-        old = None
-        setattr(instance, private_name, value2)
-        instance.emit(self._name, dict(new_value=value2, old_value=old))
-        return value2
 
 
 class Readonly(Property):

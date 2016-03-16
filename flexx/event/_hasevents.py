@@ -186,7 +186,7 @@ class HasEvents:
         for name, handlers in self._he_handlers.items():
             for label, handler in handlers:
                 handler._clear_hasevents_refs(self)
-            handlers[:] = []
+            handlers.clear()
         for name in self.__handlers__:
             getattr(self, name).dispose()
     
@@ -262,7 +262,7 @@ class HasEvents:
             raise RuntimeError('Could not get default value for property %r:\n%s' % (prop_name, err))
         # Update value and emit event
         setattr(self, private_name, value2)
-        self.emit(prop_name, dict(new_value=value2, old_value=None))
+        self.emit(prop_name, dict(new_value=value2, old_value=value2))
     
     def _set_prop(self, prop_name, value):
         """ Set the value of a (readonly) property.
@@ -295,8 +295,9 @@ class HasEvents:
             self._he_props_being_set[prop_name] = False
         # Update value and emit event
         old = getattr(self, private_name, None)
-        setattr(self, private_name, value2)
-        self.emit(prop_name, dict(new_value=value2, old_value=old))
+        if value2 != old:
+            setattr(self, private_name, value2)
+            self.emit(prop_name, dict(new_value=value2, old_value=old))
     
     def _get_emitter(self, emitter_name):
         """" Get an emitter function.
@@ -362,7 +363,7 @@ class HasEvents:
         """
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
-            raise RuntimeError('Connect decorator needs one or more event strings.')
+            raise RuntimeError('Connect decorator needs one or more connection strings.')
         
         func = None
         if callable(connection_strings[0]):

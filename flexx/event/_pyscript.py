@@ -50,40 +50,53 @@ class HasEventsJS:
         # todo: turn on_xx into a handler
         # todo: connect method
         for name in self.__emitters__:
+            self._he_handlers.setdefault(name, [])
             func = self['_' + name + '_func']
             creator = self['__create_' + func._emitter_type]
-            creator(func, name)
+            creator(name)
     
-    def __create_Property(self, func, name):
+    def connect(self, func, *connection_strings):
+        # The JS version (no decorator functionality)
+        if not connection_strings:
+            raise RuntimeError('Connect decorator needs one or more connection strings.')
+        
+        for s in connection_strings:
+            if not (isinstance(s, str) and len(s) > 0):
+                raise ValueError('Connection string must be nonempty strings.')
+        
+        if not callable(func):
+            raise TypeError('connect() decotator requires a callable.')
+        return self.__create_Handler(func, func.name or 'anonymous', connection_strings)
+    
+    def __create_Property(self, name):
         private_name = '_' + name + '_value'
         def getter():
             return self[private_name]
         def setter(x):
             self._set_prop(name, x)
-        self[private_name] = value2 = func.apply(self, [])  # init
-        self.emit(name, dict(new_value=value2, old_value=None))
+        self[private_name] = value2 = self['_' + name + '_func']()  # init
+        self.emit(name, dict(new_value=value2, old_value=value2))
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
     
-    def __create_Readonly(self, func, name):
+    def __create_Readonly(self, name):
         private_name = '_' + name + '_value'
         def getter():
             return self[private_name]
         def setter(x):
-            raise ValueError('Readonly %s is not settable' % name)
-        self[private_name] = value2 = func.apply(self, [])  # init
-        self.emit(name, dict(new_value=value2, old_value=None))
+            raise AttributeError('Readonly %s is not settable' % name)
+        self[private_name] = value2 = self['_' + name + '_func']()  # init
+        self.emit(name, dict(new_value=value2, old_value=value2))
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
     
-    def __create_Emitter(self, func, name):
-        private_name = '_' + name + '_value'
+    def __create_Emitter(self, name):
         def getter():
-            return func.bind(self)
+            return self._get_emitter(name)
         def setter(x):
-            raise ValueError('Emitter %s is not settable' % name)
+            raise AttributeError('Emitter %s is not settable' % name)
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
@@ -112,12 +125,12 @@ class HasEventsJS:
 def get_HasEvents_js():
     
     # Start with our special JS version
-    jscode = py2js(HasEventsJS, 'HasEvents', docstrings=False)
+    jscode = py2js(HasEventsJS, 'HasEvents')
     # Add the Handler methods
     code = '\n'
     for name, val in sorted(Handler.__dict__.items()):
         if not name.startswith('__') and callable(val):
-            code += py2js(val, 'handler.' + name, indent=1, docstrings=False)
+            code += py2js(val, 'handler.' + name, indent=1)
             code += '\n'
     code = code.replace('new Dict()', '{}')
     jscode = jscode.replace('HANDLER_METHODS_HOOK', code)
@@ -126,7 +139,7 @@ def get_HasEvents_js():
     for name, val in sorted(HasEvents.__dict__.items()):
         if name.startswith('__') or not callable(val) or name in ['connect',]:
             continue
-        code += py2js(val, 'HasEvents.prototype.' + name, docstrings=False)
+        code += py2js(val, 'HasEvents.prototype.' + name)
         code += '\n'
     jscode += code
     return jscode
@@ -258,5 +271,6 @@ if __name__ == '__main__':
     code = get_partial_std_lib(function_deps, method_deps, []) + code
     
     #print(py2js(HasEvents))
-    print(evaljs(code))
+    # print(evaljs(code))
+    print(code)
     

@@ -7,8 +7,6 @@ from flexx.util.testing import run_tests_if_main, skipif, skip, raises
 from flexx import event
 
 
-# todo: test that we get an event for default value and also for initial value passed in init. Or not?
-
 def test_property():
     
     class MyObject(event.HasEvents):
@@ -58,7 +56,7 @@ def test_property():
         MyObject(foo='bla')
     
     with raises(TypeError):
-        m._set_prop(3, 3)  # Propperty name must be a string
+        m._set_prop(3, 3)  # Property name must be a string
         
     with raises(AttributeError):
         m._set_prop('spam', 3)  # MyObject has not spam property
@@ -126,6 +124,36 @@ def test_prop_recursion():
     assert m.foo == 49
     assert m.bar== 50
 
+
+def test_prop_init():
+    class MyObject(event.HasEvents):
+        
+        @event.prop
+        def foo(self, v=1):
+            return float(v)
+        
+        @event.connect('foo')
+        def foo_handler(self, *events):
+            pass
+    
+    m = MyObject()
+    assert len(m.foo_handler._pending) == 1
+    m.foo = 2
+    m.foo = 3
+    assert len(m.foo_handler._pending) == 3
+    m.foo = 3
+    assert len(m.foo_handler._pending) == 3
+    
+    # Specifying the value in the init will result
+    # in two events, one for the default and one for the initial value
+    m = MyObject(foo=9)
+    assert len(m.foo_handler._pending) == 2
+    m.foo = 2
+    m.foo = 3
+    assert len(m.foo_handler._pending) == 4
+    m.foo = 3
+    assert len(m.foo_handler._pending) == 4
+    
 
 def test_readonly():
     class MyObject(event.HasEvents):
