@@ -314,16 +314,12 @@ class Handler:
         # Resolve name
         obname, path = path[0], path[1:]
         if hasattr(ob, '_IS_HASEVENTS') and obname in ob.__properties__:
-            #((this_is_js() and ob[obname+'']) or 
-            #     getattr(getattr(ob.__class__, obname, None), '_IS_PROP', False):
             name_label = obname + ':reconnect_' + str(index)
             connection.objects.append((ob, name_label))
             ob = getattr(ob, obname, None)
         elif obname == '*' and isinstance(ob, (tuple, list)):
             for sub_ob in ob:
-                msg = self._seek_event_object(index, path, sub_ob)
-                if msg:
-                    return msg
+                self._seek_event_object(index, path, sub_ob)
             return
         else:
             ob = getattr(ob, obname, None)

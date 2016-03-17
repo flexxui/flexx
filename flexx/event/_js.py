@@ -143,7 +143,6 @@ def get_HasEvents_js():
         if not name.startswith('__') and callable(val):
             code += py2js(val, 'handler.' + name, indent=1)
             code += '\n'
-    code = code.replace('new Dict()', '{}')
     jscode = jscode.replace('HANDLER_METHODS_HOOK', code)
     # Add the methods from the Python HasEvents class
     code = '\n'
@@ -153,6 +152,8 @@ def get_HasEvents_js():
         code += py2js(val, 'HasEvents.prototype.' + name)
         code += '\n'
     jscode += code
+    # Almost done
+    jscode = jscode.replace('new Dict()', '{}').replace('new Dict(', '_pyfunc_dict(')
     return jscode
 
 

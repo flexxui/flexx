@@ -60,11 +60,11 @@ def run_in_both(cls, reference, extra_classes=()):
             code = reduce_code(code)
             jsresult = evaljs(code)
             jsresult = jsresult.replace('[ ', '[').replace(' ]', ']').replace('\n  ', ' ')
-            jsresult = jsresult.replace('"', "'")
+            jsresult = jsresult.replace('"', "'").split('!!!!')[-1]
             print('js:', jsresult)
             # Run in Python
             pyresult = reprs(func(cls))
-            pyresult = pyresult.replace('"', "'").replace("\\'", "'")
+            pyresult = pyresult.replace('"', "'").replace("\\'", "'").split('!!!!')[-1]
             print('py:', pyresult)
             #
             assert pyresult.lower() == reference
@@ -412,6 +412,21 @@ def test_emit(Person):
     return name.r1
 
 
+@run_in_both(Person, "['ok-label', 'ok-type']")
+def test_emit_fail(Person):
+    res = []
+    name = Person()
+    try:
+        name.emit('first_name:xx', dict(old_value='x1', new_value='y1'))
+    except ValueError:
+        res.append('ok-label')
+    try:
+        name.emit('first_name', 4)
+    except TypeError:
+        res.append('ok-type')
+    return res
+
+
 @run_in_both(Person, "[]")
 def test_dispose1(Person):
     name = Person()
@@ -570,6 +585,33 @@ def test_disconnect3(Person):
     return res1 + ['||'] + res2
 
 
+class InheritedPerson(Person):
+    
+    @event.prop
+    def foo2(self, v=3):
+        return int(v)
+    
+    @event.connect('foo2')
+    def _foo2_logger(self, *events):
+        for ev in events:
+            self.r1.append(ev.new_value)
+
+
+@run_in_both(InheritedPerson, "['john-john', 'john-jane', 3, 42]")
+def test_inheritance(InheritedPerson):
+    name = InheritedPerson()
+    
+    name.age = 42
+    name.first_name = 'jane'
+    name.foo2 = 42
+    
+    name._first_name_logger.handle_now()
+    name._foo2_logger.handle_now()
+    
+    return name.r1
+
+
+
 ## Test handlers
 
 @run_in_both(Person, "[]")
@@ -709,6 +751,75 @@ def test_handler_on_method(Simple1):
     for h in s.get_event_handlers('val'):
         h.handle_now()
     return s._r1
+
+
+class ConnectFail(event.HasEvents):
+    
+    @event.connect('foo.bar')
+    def failing_handler(self, *events):
+        pass
+
+@run_in_both(ConnectFail, "['ok']")
+def test_handler_connection_fail1(ConnectFail):
+    
+    try:
+        m = ConnectFail()
+    except RuntimeError:
+        return ['ok']
+    return ['fail']
+
+
+@run_in_both(Person, "['ok']")
+def test_handler_connection_fail2(Person):
+    
+    name = Person()
+    def handler(*events):
+        pass
+    
+    try:
+        name.connect(handler, 'foo.bar')
+    except RuntimeError:
+        return ['ok']
+    return ['fail']
+
+
+class HandlerFail(event.HasEvents):
+    
+    @event.prop
+    def foo(self, v=0):
+        return int(v)
+        
+    @event.connect('foo')
+    def failing_handler(self, *events):
+        raise IndexError('bla')
+
+
+@run_in_both(HandlerFail, "', 1, 1]")
+def test_handler_exception1(HandlerFail):
+    res = []
+    
+    m = HandlerFail()
+    def handler(*events):
+        raise IndexError('bla')
+    handler = m.connect(handler, 'foo')
+    
+    # Does not fail when triggered
+    m.foo = 3
+    m.foo = 42
+    m.failing_handler.handle_now()
+    handler.handle_now()
+    
+    # But calling directly fails
+    try:
+        m.failing_handler()
+    except IndexError:
+        res.append(1)
+    try:
+        handler()
+    except IndexError:
+        res.append(1)
+    
+    return ["!!!!"] + res  # trick to ditch stderr in JS
 
 
 ## Dynamism
@@ -882,3 +993,4 @@ def test_dynamism4(Node):
 
 
 run_tests_if_main()
+

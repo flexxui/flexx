@@ -240,10 +240,7 @@ class HasEvents:
         # Prepare event
         if not isinstance(ev, dict):
             raise TypeError('Event object (for %r) must be a dict' % type)
-        if this_is_js():
-            ev = dict(ev)
-        else:
-            ev = Dict(ev)
+        ev = Dict(ev)  # make copy and turn into nicer Dict on py
         ev.type = type
         ev.source = self
         # Push the event to the handlers (handlers use labels for dynamism)
