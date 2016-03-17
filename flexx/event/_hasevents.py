@@ -84,19 +84,16 @@ def this_is_js():
 
 #class HasEvents(with_metaclass(HasEventsMeta, object)):
 class HasEvents:
-    """ Base class for objects that have event emitters and or properties.
-    
-    Objects of this class can emit events through their ``emit()``
-    method. Handlers can connect to these objects (and they keep
-    references to the handlers).
-    
-    Dedicated handlers can be created by creating methods starting with 'on_'.
-    
+    """ Base class for objects that have properties and can emit events.
     Initial values of settable properties can be provided by passing them
     as keyword arguments.
     
-    
-    Example use:
+    Objects of this class can emit events through their ``emit()``
+    method. Subclasses can use the
+    :func:`prop <flexx.event.prop>` and :func:`readonly <flexx.event.readonly>`
+    decorator to create properties, and the
+    :func:`connect <flexx.event.connect>` decorator to create handlers.
+    Methods named ``on_foo`` are connected to the event "foo".
     
     .. code-block:: python
     
@@ -108,7 +105,7 @@ class HasEvents:
             def foo(self, v=0):
                 return float(v)
             
-            event.emitter
+            @event.emitter
             def bar(self, v):
                 return dict(value=v)  # the event to emit
             
@@ -123,7 +120,7 @@ class HasEvents:
         
         ob = MyObject(foo=42)
         
-        @event.connect('foo')
+        @ob.connect('foo')
         def another_foo handler(*events):
             print('foo was set %i times' % len(events))
     
@@ -131,7 +128,7 @@ class HasEvents:
     
     _IS_HASEVENTS = True
     
-    def __init__(self, **initial_property_values):
+    def __init__(self, **property_values):
         
         # Init some internal variables
         self._he_handlers = {}
@@ -171,7 +168,7 @@ class HasEvents:
             self._init_prop(name)
         
         # Initialize given properties
-        for name, value in initial_property_values.items():
+        for name, value in property_values.items():
             if name in self.__properties__:
                 setattr(self, name, value)
             else:
@@ -193,11 +190,10 @@ class HasEvents:
             getattr(self, name).dispose()
     
     def _register_handler(self, type, handler):
-        """ Register a handler for the given event type. The type
-        can include a label, e.g. 'mouse_down:foo'.
-        This is called from Handler objects at initialization and when
-        they reconnect (dynamism).
-        """
+        # Register a handler for the given event type. The type
+        # can include a label, e.g. 'mouse_down:foo'.
+        # This is called from Handler objects at initialization and when
+        # they reconnect (dynamism).
         type, _, label = type.partition(':')
         label = label or handler._name
         handlers = self._he_handlers.setdefault(type, [])
@@ -248,9 +244,7 @@ class HasEvents:
             handler._add_pending_event(label, ev)  # friend class
     
     def _init_prop(self, prop_name):
-        """ Initialize a property.
-        """
-        # Prepare
+        # Initialize a property
         private_name = '_' + prop_name + '_value'
         func_name = '_' + prop_name + '_func'
         # Trigger default value
@@ -299,8 +293,7 @@ class HasEvents:
             self.emit(prop_name, dict(new_value=value2, old_value=old))
     
     def _get_emitter(self, emitter_name):
-        """" Get an emitter function.
-        """
+        # Get an emitter function.
         func_name = '_' + emitter_name + '_func'
         func = getattr(self, func_name)
         def emitter_func(*args):
@@ -312,26 +305,22 @@ class HasEvents:
         return emitter_func
     
     def get_event_types(self):
-        """ Get the known event types for this HasEvent object.
-        
-        Returns:
-            types (list): a list of event type names, for which there
-            is a property/emitter or for which any handlers are
-            registered. Sorted alphabetically.
+        """ Get the known event types for this HasEvent object. Returns
+        a list of event type names, for which there is a
+        property/emitter or for which any handlers are registered.
+        Sorted alphabetically.
         """
         return list(sorted(self._he_handlers.keys()))
     
     def get_event_handlers(self, type):
-        """ Get a list of handlers for the given event type.
+        """ Get a list of handlers for the given event type. The order
+        is the order in which events are handled: alphabetically by
+        label.
         
         Parameters:
             type (str): the type of event to get handlers for. Should not
                 include a label.
         
-        Returns:
-            handlers (list): a list of handler objects. The order is
-            the order in which events are handled: alphabetically by
-            label.
         """
         if not type:
             raise TypeError('get_event_handlers() missing "type" argument.')
@@ -344,21 +333,21 @@ class HasEvents:
     # This method does *not* get transpiled
     def connect(self, *connection_strings):
         """ Connect a function to one or more events of this instance. Can
-        also be used as a decorator.
+        also be used as a decorator. See the
+        :func:`connect <flexx.event.connect>` decorator for more information.
         
-        Example:
+        .. code-block:: py
             
-            .. code-block:: py
-                
-                h = HasEvents()
-                
-                # Usage as a decorator
-                @h.connect('first_name', 'last_name')
-                def greet(*events):
-                    print('hello %s %s' % (h.first_name, h.last_name))
-                
-                # Direct usage
-                h.connect(greet, 'first_name', 'last_name')
+            h = HasEvents()
+            
+            # Usage as a decorator
+            @h.connect('first_name', 'last_name')
+            def greet(*events):
+                print('hello %s %s' % (h.first_name, h.last_name))
+            
+            # Direct usage
+            h.connect(greet, 'first_name', 'last_name')
+        
         """
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):

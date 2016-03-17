@@ -1,3 +1,7 @@
+"""
+Implementation of a dict class with attribute access.
+"""
+
 import re
 
 try:  # pragma: no cover
@@ -20,9 +24,11 @@ class Dict(_dict):
     well in combination with autocompletion. Keys can be anything that
     are otherwise valid keys, but keys that are not valid identifiers
     or that are methods of the dict class (e.g. 'items' or 'copy')
-    cannot be get/set as attributes.
+    can only be get/set in the classic way.
     
     Example:
+    
+    .. code-block:: python
     
         >> d = Dict(foo=3)
         >> d.foo

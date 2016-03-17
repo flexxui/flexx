@@ -1,3 +1,7 @@
+"""
+Implementation of handler class and corresponding descriptor.
+"""
+
 import sys
 import logging
 import inspect
@@ -13,16 +17,23 @@ def this_is_js():
 
 # Decorator to wrap a function in a Handler object
 def connect(*connection_strings):
-    """ Decorator to connect a handler to one or more events.
+    """ Decorator to turn a method of HasEvents into an event handler.
     
-    Example:
+    A method can be connected to multiple event types. Each connection
+    string represents an event type to connect to. Read more about
+    dynamism and labels for further information on the possibilities
+    of connection strings.
+    
+    Note that naming a method ``on_foo()`` will be automatically
+    connected to event "foo". To connect a regular function to an event,
+    use the :func:`HasEvents.connect() <flexx.event.HasEvents.connect>` method.
+    
+    .. code-block:: py
         
-        .. code-block:: py
-            
-            class MyObject(event.HasEvents):
-                @event.connect('first_name', 'last_name')
-                def greet(self, *events):
-                    print('hello %s %s' % (self.first_name, self.last_name))
+        class MyObject(event.HasEvents):
+            @event.connect('first_name', 'last_name')
+            def greet(self, *events):
+                print('hello %s %s' % (self.first_name, self.last_name))
     """
     if (not connection_strings) or (len(connection_strings) == 1 and
                                     callable(connection_strings[0])):

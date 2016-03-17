@@ -140,8 +140,6 @@ class Person(event.HasEvents):
         self._set_prop('full_name', self.first_name + ' ' + self.last_name)
 
 
-## Test prop
-
 @run_in_both(Person, "['', 'john doe', '', 'almar klein', '', 'jorik klein']")
 def test_name(Person):
     name = Person()
@@ -156,6 +154,13 @@ def test_name(Person):
     name.r4.append(name.full_name)
     return name.r4
 
+@run_in_both(Person, "[3, 'bar', [1, 2, 3]]")
+def test_class_attributes(Person):
+    name = Person()
+    return name._foo, name._bar, name.spam
+
+
+## Test prop
 
 @run_in_both(Person, "['john-john', 'john-jane']")
 def test_prop_init(Person):

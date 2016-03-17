@@ -1,48 +1,61 @@
 """
-The event module provides an simple event framework as well as a
-property system (and properties send events when they get changed).
-Together, these provide a simple yet powerful means to make different
-components of an application react to each-other and to user input.
+The event module provides a simple system for properties and events,
+to let different components of an application react to each-other and
+to user input.
+
+In short:
+
+* The :class:`HasEvents <flexx.event.HasEvents>` class provides objects
+  that have properties and can emit events.
+* There are three decorators to create :func:`properties <flexx.event.prop>`,
+  :func:`readonlies <flexx.event.readonly>` and 
+  :func:`emitters <flexx.event.emitter>`.
+* There is a decorator to :func:`connect <flexx.event.connect>` a method
+  to an event.
 
 
 Event
 -----
 
-An event is something that has occurred, at a certain moment in time,
-such as a mouse pressed down or a property changing its value. In this
-framework events are represented with dictionary objects that provide
-information about the event. We use a custom `Dict` class that inherits
-from `dict` but allows attribute access, e.g. ``ev.button`` as an
-alternative to ``ev['button']``.
+An event is something that has occurred at a certain moment in time,
+such as the mouse being pressed down or a property changing its value.
+In this framework events are represented with dictionary objects that
+provide information about the event (such as what button was pressed,
+or the new value of a property). A custom :class:`Dict <flexx.event.Dict>`
+class is used that inherits from ``dict`` but allows attribute access,
+e.g. ``ev.button`` as an alternative to ``ev['button']``.
 
 
 The HasEvents class
 -------------------
 
-The HasEvents class provides a base class for objects that need to
-have properties and/or emit events. E.g. a ``flexx.ui.Widget`` inherits from
-``flexx.app.Model``, which inherits from ``flexx.event.HasEvents``.
+The :class:`HasEvents <flexx.event.HasEvents>` class provides a base
+class for objects that have properties and/or emit events. E.g. a
+``flexx.ui.Widget`` inherits from ``flexx.app.Model``, which inherits
+from ``flexx.event.HasEvents``.
 
-Events are emitted using the ``emitter.emit()`` method, which accepts a
-name for the type of the event, and a dict: e.g. 
-``emitter.emit('mouse_down', dict(button=1, x=103, y=211))``.
+Events are emitted using the :func:`emit() <flexx.event.HasEvents.emit>`
+method, which accepts a name for the type of the event, and a dict:
+e.g. ``emitter.emit('mouse_down', dict(button=1, x=103, y=211))``.
 
 The HasEvents object will add two attributes to the event: ``source``,
 a reference to the HasEvents object itself, and ``type``, a string
 indicating the type of the event.
 
-As a user, you generally do not need to emit events in this way, but it
-happens implicitly, e.g. when setting a property, as we'll see below.
+As a user, you generally do not need to emit events explicitly; events are
+automatically emitted e.g. when setting a property.
 
 
 Handler
 -------
 
 A handler is an object that can handle events. Handlers can be created
-using the ``connect`` decorator:
+using the :func:`connect <flexx.event.connect>` decorator:
 
 .. code-block:: python
-
+    
+    from flexx import event
+    
     class MyObject(event.HasEvents):
        
         @event.connect('foo')
@@ -52,24 +65,22 @@ using the ``connect`` decorator:
     ob = MyObject()
     ob.emit('foo', dict(value=42))  # will invoke handle_foo()
 
-We can see a few things from this example. Firstly, the handler is
+This example demonstrates a few concepts. Firstly, the handler is
 connected via a *connection-string* that specifies the type of the
-event; in this case the handler is connected to the event-type 'foo'
+event; in this case the handler is connected to the event-type "foo"
 of the object. This connection-string can also be a path, e.g.
-'sub.subsub.event_type:label'. We cover labels further below. We also
-discuss some powerful mechanics related to connection-strings when we
-cover dynamism.
+"sub.subsub.event_type". This allows for some powerful mechanics, as
+discussed in the section on dynamism.
 
-We can also see that the handler function accepts ``*events`` argument.
-This is because handlers can be passed zero or more events. If a function
+One can also see that the handler function accepts ``*events`` argument.
+This is because handlers can be passed zero or more events. If a handler
 is called manually (e.g. ``ob.handle_foo()``) it will have zero events.
-When called by the event system, it will have at least 1 event. The handler
-function is called in a next iteration of the event loop. If multiple
-events are emitted in a row, the handler function is called
-just once, but with multiple events. It is up to the programmer to
-determine whether all events need some form of processing, or if only
-one action is required. In general this is more efficient than having
-the handler function called each time that the event is emitted.
+When called by the event system, it will have at least 1 event. When
+multiple events are emitted in a row, the handler function is called
+just once, with multiple events, in the next event loop iteration. It
+is up to the programmer to determine whether only one action is
+required, or whether all events need processing. In the latter case,
+just use ``for ev in events: ``.
 
 Another feature of this system is that a handler can connect to multiple
 events:
@@ -82,11 +93,12 @@ events:
         def handle_foo_and_bar(self, *events):
             print(events)
 
-Handlers do not have to be part of the subclass:
+To create a handler from a normal function, use the
+:func:`HasEvents.connect() <flexx.event.HasEvents.connect>` method:
 
 .. code-block:: python
 
-    h = HasEvents()
+    h = event.HasEvents()
     
     # Using a decorator
     @h.connect('foo', 'bar')
@@ -99,16 +111,28 @@ Handlers do not have to be part of the subclass:
     h.connect(handle_func2, 'foo', 'bar')
 
 
+Handlers can be implicitly created by prefixing a method with ``on_``:
+
+.. code-block:: python
+
+    class MyObject(event.HasEvents):
+       
+        def on_foo(self, *events):
+            # This gets connected to the "foo" event
+            print(events)
+
+
 Event emitters
 --------------
 
-Apart from using ``emit()`` there are certain attributes of ``HasEvents``
-that help generate events or generate events automatically.
+Apart from using :func:`emit() <flexx.event.HasEvents.emit>` there are
+certain attributes of ``HasEvents`` instances that generate events.
 
 Properties
 ==========
 
-Properties can be created like this:
+Settable properties can be created easiliy using the
+:func:`prop <flexx.event.prop>` decorator:
 
 .. code-block:: python
 
@@ -116,16 +140,16 @@ Properties can be created like this:
        
         @event.prop
         def foo(self, v=0):
-            ''' This is a float indicating bla.
+            ''' This is a float indicating bla bla ...
             '''
             return float(v)
 
 The function that is decorated should have one argument (the new value
-for the property), and it should have a default value. The function body
-is used to validate and normalize the provided input. In this case we
-just (try to) cast whatever input is given to a float. The docstring
-of the function will be the docstring of the property (and ends up
-correctly in Sphynx docs).
+for the property), and it should have a default value (representing the
+initial value of the property). The function body is used to validate
+and normalize the provided input. In this case the input is simply cast
+to a float. The docstring of the function will be the docstring of the
+property (e.g. for Sphynx docs).
 
 An alternative initial value for a property can be provided upon instantiation:
 
@@ -136,8 +160,10 @@ An alternative initial value for a property can be provided upon instantiation:
 Readonly
 ========
 
-A readonly is a property that can only be read. It can be set internally
-using ``HasEvents._set_prop()``.
+Readonly properties are created with the 
+:func:`readonly <flexx.event.readonly>` decorator. The value of a
+readonly property can be set internally using the
+:func:`_set_prop() <flexx.event.HasEvents._set_prop>` method:.
 
 .. code-block:: python
 
@@ -155,8 +181,9 @@ using ``HasEvents._set_prop()``.
 Emitter
 =======
 
-An emitter is an attribute that makes it easy to generate events. It also
-functions as a placeholder to document events on a class.
+Emitter attributes make it easy to generate events, and functions as a
+placeholder to document events on a class. They are created with the
+:func:`emitter <flexx.event.emitter>` decorator.
 
 .. code-block:: python
 
@@ -168,13 +195,18 @@ functions as a placeholder to document events on a class.
             '''
             return dict(button=js_event.button)
 
+Emitters can have any number of arguments and should return a dictionary,
+which will get emitted as an event, with the event type matching the name
+of the emitter.
+
 
 Labels
 ------
 
 Labels are a feature that makes it possible to infuence the order by
 which event handlers are called, and provide a means to disconnect
-specific (groups of) handlers.
+specific (groups of) handlers. The label is part of the connection
+string: 'foo.bar:label'.
 
 .. code-block:: python
     
@@ -196,7 +228,8 @@ the order in case a handler has multiple connections: a handler can be
 scheduled to handle its events due to another event, and a handler
 always handles all its pending events at once.
 
-The label can also be used in the ``disconnect()`` method:
+The label can also be used in the
+:func:`disconnect() <flexx.event.HasEvents.disconnect>` method:
 
 .. code-block:: python
 
@@ -212,14 +245,44 @@ The label can also be used in the ``disconnect()`` method:
 Dynamism
 --------
 
-TODO
+Dynamism is a concept that allows one to connect to events for which
+the source can change. For the following example, assume that ``Node``
+is a ``HasEvents`` subclass that has properties ``parent`` and
+``children``.
+
+.. code-block:: python
+    
+    main = Node()
+    main.parent = Node()
+    main.children = Node(), Node()
+    
+    @main.connect('parent.foo')
+    def parent_foo_handler(*events):
+        ...
+    
+    @main.connect('children.*.foo')
+    def children_foo_handler(*events):
+        ...
+
+The ``parent_foo_handler`` gets invoked when the "foo" event gets
+emitted on the parent of main, *and* when the parent of main changes.
+Similarly, the ``children_foo_handler`` gets invoked when any of the
+children emits its "foo" signal, or when the children property changes.
+
+The event system automatically reconnects handlers when necessary. This
+concept makes it very easy to connect to the right events without the
+need for a lot of boilerplate code.
+
+Note that the above example would also work if ``parent`` would be a
+regular attribute instead of a property, but the handler would not be
+automatically reconnected when it changes.
 
 
 Patterns
 --------
 
 This event system is quite flexible. It is designed to cover the needs
-of a variety of event/messaging mechanisms. In this section we discuss
+of a variety of event/messaging mechanisms. This section discusses
 how this system relates to some common patterns, and how these can be
 implemented.
 
@@ -227,20 +290,20 @@ Observer pattern
 ================
 
 The idea of the observer pattern is that observers keep track (the state
-of) of an object, and that object is agnostic about what its tracked by.
+of) of an object, and that object is agnostic about what it's tracked by.
 For example, in a music player, instead of writing code to update the
-window-title in the function that starts a song, there would be a
+window-title inside the function that starts a song, there would be a
 concept of a "current song", and the window would listen for changes to
-the current song, and update the title when it changes.
+the current song to update the title when it changes.
 
 In ``flexx.event``, a ``HasEvents`` object keeps track of its observers
 (handlers) and notifies them when there are changes. In our music player
-example, there would probably be a property or readonly "current_song",
-and a handler to take action when it changes.
+example, there would be a property "current_song", and a handler to
+take action when it changes.
 
 As is common in the observer pattern, the handlers keep track of the
 handlers that they observe. Therefore both handlers and ``HasEvents``
-objects have a ``dispose()`` method.
+objects have a ``dispose()`` method for cleaning up.
 
 Signals and slots
 =================
@@ -253,11 +316,11 @@ the handlers that connect to them.
 Overloadable event handlers
 ===========================
 
-In Qt, the "event system" consists of methods that handle an event, which
+In Qt, the "event system" consists of methods that handles an event, which
 can be overloaded in subclasses to handle an event differently. In
 ``flexx.event``, a handler can be implemented simply by naming a method
-``on_xx``. Doing so allows subclasses to re-implement the handler, and also
-call the original handler using ``super()``.
+``on_xx``. Doing so allows subclasses to re-implement the handler, and
+optionally call the original handler using ``super()``.
 
 Publish-subscribe pattern
 ==========================
@@ -273,7 +336,8 @@ topic. Subscribers are represented by handlers.
 """
 
 from ._dict import Dict
-from ._handler import connect, loop
+from ._loop import loop
+from ._handler import connect
 from ._emitters import prop, readonly, emitter
 from ._hasevents import HasEvents
 

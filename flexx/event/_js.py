@@ -28,8 +28,7 @@ class HasEventsJS:
     some boilerplate code to create handlers and emitters, but otherwise
     shares most of the code with the Python classes by transpiling their
     methods via PyScript. This ensures that the Python and JS
-    implementation of this event system have the same API and have the
-    same behavior.
+    implementation of this event system have the same API and behavior.
     
     The Python version of this class has a ``JSCODE`` attribute that
     contains the auto-generated JavaScript for this class.
@@ -163,9 +162,9 @@ HasEventsJS.JSCODE = get_HasEvents_js()
 def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     """ Create the JS equivalent of a subclass of the HasEvents class.
     
-    Given a Python class with handlers and emitters, this creates the
-    code for the JS version of this class. It also supports class
-    constants that are int/float/str, or a tuple/list thereof.
+    Given a Python class with handlers, properties and emitters, this
+    creates the code for the JS version of this class. It also supports
+    class constants that are int/float/str, or a tuple/list thereof.
     """
     
     assert cls_name != 'HasEvents'  # we need this special class above instead
@@ -256,32 +255,5 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
 
 
 if __name__ == '__main__':
-    from flexx import event
-    from flexx.pyscript import evaljs, get_full_std_lib
-    from flexx.pyscript.stdlib import get_std_info, get_partial_std_lib
-    
-    class Tester(event.HasEvents):
-        
-        # spam1 = 3
-        # spam2 = 'x', 'y'
-        
-        @event.prop
-        def foo(self, v=3):
-            return int(v) + 10
-        
-        @event.connect('foo')
-        def handle_foo(self, *events):
-            print(events)
-            #print('haha')
-    
-    code = ''
-    code += HasEventsJS.JSCODE
-    code += create_js_hasevents_class(Tester, 'Tester')
-    code += 'var x = new Tester(); x.foo=32; x.handle_foo.handle_now()'
-    nargs, function_deps, method_deps = get_std_info(code)
-    code = get_partial_std_lib(function_deps, method_deps, []) + code
-    
-    #print(py2js(HasEvents))
-    # print(evaljs(code))
-    print(code)
-    
+    # Testing ...
+    print(HasEventsJS.JSCODE)

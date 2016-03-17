@@ -1,5 +1,6 @@
 """
-Definition of descriptors for generating events: prop, readonly and emitter.
+Implementation of descriptors for generating events:
+prop, readonly and emitter.
 """
 
 import inspect
@@ -9,10 +10,8 @@ import inspect
 
 def prop(func):
     """ Decorator to define a settable propery. An event is emitted
-    when the property is set, which has values for 'old_value' and
-    'new_value'.
-    
-    Usage:
+    when the property is set, which has values for "old_value" and
+    "new_value".
     
     .. code-block:: python
     
@@ -20,6 +19,7 @@ def prop(func):
            
            @prop
            def foo(self, v=1):
+                ''' docstring goes here. '''
                 return float(v)
         
         m = MyObject(foo=2)
@@ -38,10 +38,9 @@ def prop(func):
 
 def readonly(func):
     """ Decorator to define a readonly property. An event is emitted
-    when the property is set, which has values for 'old_value' and
-    'new_value'.
-    
-    Usage:
+    when the property is set, which has values for "old_value" and
+    "new_value". To set a readonly property internally, use the
+    :func:`HasEvents._set_prop() <flexx.event.HasEvents._set_prop>` method.
     
     .. code-block:: python
     
@@ -52,13 +51,8 @@ def readonly(func):
                 return float(v)
         
         m = MyObject()
-        m._set_propt('bar', 2)  # only for internal use
+        m._set_prop('bar', 2)  # only for internal use
     
-    The method should have one argument, which should have a default
-    value, which represents the initial value of the property. The body
-    of the method is used to do verification and normalization of the
-    value being set. The method's docstring is used as the readonly's
-    docstring.
     """
     if not callable(func):
         raise TypeError('readonly decorator needs a callable')
@@ -66,9 +60,9 @@ def readonly(func):
 
 
 def emitter(func):
-    """ Decorator to define an emitter. An emitter is an attribute used
-    to emit events. It also functions as a placeholder for documentation
-    of the available events on a certain class.
+    """ Decorator to define an emitter. An emitter is an attribute that
+    makes it easy to emit specific events and functions as a placeholder
+    for documenting an event.
     
     .. code-block:: python
     
@@ -84,7 +78,6 @@ def emitter(func):
     The method can have any number of arguments, and should return a
     dictionary that represents the event to generate. The method's
     docstring is used as the emitter's docstring.
-    
     """
     if not callable(func):
         raise TypeError('emitter decorator needs a callable')
