@@ -212,7 +212,8 @@ FUNCTIONS['reversed'] = """function (iter) { // nargs: 1
 
 FUNCTIONS['sorted'] = """function (iter, key, reverse) { // nargs: 1 2 3
     if ((typeof iter==="object") && (!Array.isArray(iter))) {iter = Object.keys(iter);}
-    var comp = function (a, b) {return key(a) - key(b);};
+    var comp = function (a, b) {a = key(a); b = key(b);
+        if (a<b) {return -1;} if (a>b) {return 1;} return 0;};
     comp = Boolean(key) ? comp : undefined; 
     iter = iter.slice().sort(comp);
     if (reverse) iter.reverse();
@@ -329,7 +330,8 @@ METHODS['reverse'] = """function () { // nargs: 0
 
 METHODS['sort'] = """function (key, reverse) { // nargs: 0 1 2
     if (!Array.isArray(this)) return this.KEY.apply(this, arguments);
-    var comp = function (a, b) {return key(a) - key(b);};
+    var comp = function (a, b) {a = key(a); b = key(b);
+        if (a<b) {return -1;} if (a>b) {return 1;} return 0;};
     comp = Boolean(key) ? comp : undefined; 
     this.sort(comp);
     if (reverse) this.reverse();
