@@ -24,6 +24,9 @@ from flexx.pyscript.stdlib import get_std_info, get_partial_std_lib
 import sys
 from math import isnan as isNaN
 
+def this_is_js():
+    return False
+
 
 def reduce_code(code):
     # On Windows we can pass up to 2**15 chars
@@ -611,7 +614,6 @@ def test_inheritance(InheritedPerson):
     return name.r1
 
 
-
 ## Test handlers
 
 @run_in_both(Person, "[]")
@@ -751,6 +753,92 @@ def test_handler_on_method(Simple1):
     for h in s.get_event_handlers('val'):
         h.handle_now()
     return s._r1
+
+
+class Order1(event.HasEvents):
+    
+    def __init__(self):
+        super().__init__()
+        self.r = []
+    
+    @event.connect('foo')
+    def bbb(self, *events):
+        for ev in events:
+            self.r.append('b')
+    
+    @event.connect('foo')
+    def mmm(self, *events):
+        for ev in events:
+            self.r.append('m')
+    
+    @event.connect('foo:aaa')
+    def ppp(self, *events):
+        for ev in events:
+            self.r.append('p')
+    
+    @event.connect('foo:ddd')
+    def www(self, *events):
+        for ev in events:
+            self.r.append('w')
+
+@run_in_both(Order1, "['m', 'p', 'b', 'w']")
+def test_event_order1(Order1):
+    # Hah! we determine order simply by using handle_now()
+    m = Order1()
+    m.emit('foo', {})
+    
+    m.mmm.handle_now()
+    m.ppp.handle_now()
+    m.bbb.handle_now()
+    m.www.handle_now()
+    
+    return m.r
+
+@run_in_both(Order1, "['p', 'b', 'w', 'm']")
+def test_event_order2(Order1):
+    
+    # monkey patch JS event system
+    if this_is_js():
+        pending_funcs = []
+        def setTimeout(func):
+            pending_funcs.append(func)
+        root.setTimeout = setTimeout
+    
+    m = Order1()
+    m.emit('foo', {})
+    
+    if this_is_js():
+        for func in pending_funcs:
+            func()
+    else:
+        event.loop.iter()
+    
+    return m.r
+
+@run_in_both(Order1, "['p', 'b', '!', 'w', 'm']")
+def test_event_order3(Order1):
+    
+    # monkey patch JS event system
+    if this_is_js():
+        pending_funcs = []
+        def setTimeout(func):
+            pending_funcs.append(func)
+        root.setTimeout = setTimeout
+    
+    m = Order1()
+    def myfunc(*events):
+        for ev in events:
+            m.r.append('!')
+    m.connect(myfunc, 'foo:ccc')
+    m.emit('foo', {})
+    
+    if this_is_js():
+        for func in pending_funcs:
+            func()
+    else:
+        event.loop.iter()
+    
+    return m.r
 
 
 class ConnectFail(event.HasEvents):
@@ -992,5 +1080,32 @@ def test_dynamism4(Node):
     return res
 
 
-run_tests_if_main()
+@run_in_both(Node, "[17, 18, 19]")
+def test_dynamism5(Node):
+    # connection strings with static attributes - no reconnect
+    n = Node()
+    n1 = Node()
+    n.foo = n1
+    
+    res = []
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                res.append(ev.new_value)
+            else:
+                res.append('null')
+    handler = n.connect(func, 'foo.val')
+    
+    n.val = 42
+    handler.handle_now()
+    n1.val = 17
+    n1.val = 18
+    handler.handle_now()
+    n.foo = None  # no reconnect in this case
+    handler.handle_now()
+    n1.val = 19
+    handler.handle_now()
+    return res
 
+
+run_tests_if_main()

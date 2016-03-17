@@ -5,32 +5,10 @@ import weakref
 
 from ._dict import Dict
 from ._emitters import Property
-
+from ._loop import loop
 
 def this_is_js():
     return False
-
-# todo: Silly event loop
-
-class EventLoop:
-    def __init__(self):
-        self._pending_calls = []
-        
-    def call_later(self, func):
-        self._pending_calls.append(func)
-    
-    def iter(self):
-        while self._pending_calls:
-            func = self._pending_calls.pop(0)
-            func()
-    
-    def __enter__(self):
-        return self
-    
-    def __exit__(self, type, value, traceback):
-        self.iter()
-
-loop = EventLoop()
 
 
 # Decorator to wrap a function in a Handler object
