@@ -116,8 +116,7 @@ class Handler:
             is passed a a first argument to the function in case its
             first arg is self.
     """
-    # todo: need any of this?
-    _IS_HANDLER = True  # poor man's isinstance in JS (because class name mangling)
+    
     _count = 0
     
     def __init__(self, func, connection_strings, ob):

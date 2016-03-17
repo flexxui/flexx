@@ -106,10 +106,6 @@ def test_collect_classes():
     assert Bar456 in event.HasEvents.CLASSES
 
 
-def test_connect():
-    pass
-    # todo: test here or in test_handler?
-
 def test_emit():
     
     h = event.HasEvents()

@@ -104,13 +104,6 @@ class BaseEmitter:
         self._is_being_set = False
         self.__doc__ = '*%s*: %s' % (self.__class__.__name__.lower(),
                                      func.__doc__ or self._name)
-        
-        # Get whether function is a method
-        # todo: do we still use this?
-        try:
-            self._func_is_method = inspect.getargspec(func)[0][0] in ('self', 'this')
-        except (TypeError, IndexError):
-            self._func_is_method = False
     
     def __repr__(self):
         cls_name = self.__class__.__name__

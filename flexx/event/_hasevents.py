@@ -144,17 +144,18 @@ class HasEvents:
                 continue
             val = getattr(self.__class__, name)
             if isinstance(val, BaseEmitter):
-                emitters[name] = val
                 setattr(self, '_' + name + '_func', val._func)
                 if isinstance(val, Property):
                     properties[name] = val
+                else:
+                    emitters[name] = val
             elif isinstance(val, HandlerDescriptor):
                 handlers[name] = val
             elif name.startswith('on_') and callable(val):
                 hh = self._he_handlers.setdefault(name[3:], [])
                 Handler(val,[name[3:]], self)  # registers itself
         
-        # todo: maybe get rid of __emitters__?
+        # Store handlers, properties and emitters that we found
         self.__handlers__ = [name for name in sorted(handlers.keys())]
         self.__emitters__ = [name for name in sorted(emitters.keys())]
         self.__properties__ = [name for name in sorted(properties.keys())]
@@ -166,6 +167,7 @@ class HasEvents:
         for name in self.__emitters__:
             self._he_handlers.setdefault(name, [])
         for name in self.__properties__:
+            self._he_handlers.setdefault(name, [])
             self._init_prop(name)
         
         # Initialize given properties

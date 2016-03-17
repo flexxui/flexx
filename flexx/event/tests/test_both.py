@@ -17,7 +17,7 @@ single quotes.
 from flexx.util.testing import run_tests_if_main, raises
 
 from flexx import event
-from flexx.event._pyscript import create_js_hasevents_class, HasEventsJS, reprs
+from flexx.event._js import create_js_hasevents_class, HasEventsJS, reprs
 from flexx.pyscript.functions import py2js, evaljs, evalpy, js_rename
 from flexx.pyscript.stdlib import get_std_info, get_partial_std_lib
 
@@ -348,7 +348,7 @@ def test_hasevents_class_attributes(Person):
     return name._foo, name._bar, name.spam
 
 
-@run_in_both(Person, "['age', 'first_name', 'full_name', 'last_name', 'nchildren', 'yell']")
+@run_in_both(Person, "['yell']")
 def test_hasevents___emitters__(Person):
     name = Person()
     return name.__emitters__
@@ -686,6 +686,31 @@ def test_handler_get_connection_info(Person):
     return handler1.get_connection_info()
 
 
+class Simple1(event.HasEvents):
+    
+    def __init__(self):
+        super().__init__()
+        self._r1 = []
+    
+    @event.prop
+    def val(self, v=0):
+        return int(v)
+    
+    def on_val(self, *events):
+        for ev in events:
+            self._r1.append(ev.new_value)
+
+@run_in_both(Simple1, "[0, 7, 42]")
+def test_handler_on_method(Simple1):
+    
+    s = Simple1()
+    s.val = 7
+    s.val = 42
+    for h in s.get_event_handlers('val'):
+        h.handle_now()
+    return s._r1
+
+
 ## Dynamism
 
 class Node(event.HasEvents):
@@ -828,7 +853,7 @@ def test_dynamism4(Node):
     
     def func(*events):
         for ev in events:
-            if isinstance(ev.new_value, int):
+            if isinstance(ev.new_value, (float, int)):
                 res.append(ev.new_value)
             else:
                 res.append('null')

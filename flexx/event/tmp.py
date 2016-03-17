@@ -4,8 +4,6 @@ from flexx import event
 # from flexx import behold
 # from flexx import observe
 
-# todo: some form of propagation
-# todo: conductor prop? Or can that be a readonly?
 
 class MyObject(event.HasEvents):
     

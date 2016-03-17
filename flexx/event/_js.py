@@ -44,16 +44,27 @@ class HasEventsJS:
         self._he_handlers = {}
         self._he_props_being_set = {}
         
+        # Create a handler for methods that start with "on_"
+        for name in Object.keys(self):
+            if name.startswith('on_'):
+                val = self[name]
+                if callable(val):
+                    self.__create_Handler(val, name, [name[3:]])
+        # Create handlers
         for name in self.__handlers__:
             func = self['_' + name + '_func']
             self[name] = self.__create_Handler(func, name, func._connection_strings)
-        # todo: turn on_xx into a handler
-        # todo: connect method
-        for name in self.__emitters__:
+        # Create properties
+        for name in self.__properties__:
             self._he_handlers.setdefault(name, [])
             func = self['_' + name + '_func']
             creator = self['__create_' + func._emitter_type]
             creator(name)
+        # Create emitters
+        for name in self.__emitters__:
+            self._he_handlers.setdefault(name, [])
+            func = self['_' + name + '_func']
+            self.__create_Emitter(name)
     
     def connect(self, func, *connection_strings):
         # The JS version (no decorator functionality)
@@ -121,9 +132,9 @@ class HasEventsJS:
         return handler
 
 
-# todo: can I turn this into one class instead of an inherited class?
 def get_HasEvents_js():
-    
+    """ Get the final code for the JavaScript version of the HasEvents class.
+    """
     # Start with our special JS version
     jscode = py2js(HasEventsJS, 'HasEvents')
     # Add the Handler methods
@@ -156,12 +167,10 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     constants that are int/float/str, or a tuple/list thereof.
     """
     
-    # todo: use tmp name instead of xxx.yyy.prototype.funcname.zzzzzz
-    
     assert cls_name != 'HasEvents'  # we need this special class above instead
     
-    emitters = []
     handlers = []
+    emitters = []
     properties = []
     total_code = []
     funcs_code = []  # functions and emitters go below class constants
@@ -177,9 +186,10 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
         name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix mangling
         funcname = '_' + name + '_func'
         if isinstance(val, BaseEmitter):
-            emitters.append(name)
             if isinstance(val, Property):
                 properties.append(name)
+            else:
+                emitters.append(name)
             # Add function def
             code = py2js(val._func, cls_name + '.prototype.' + funcname)
             code = code.replace('super()', base_class)  # fix super
@@ -221,7 +231,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             const_code.append('%s.prototype.%s = JSON.parse(%s)' %
                               (cls_name, name, reprs(serialized)))
     
-    # Insert __emitters__ that we found
+    # Store handlers, properties and emitters that we found
     if base_class in ('Object', 'HasEvents.prototype'):
         t = '%s.prototype.__emitters__ = %s;'
         total_code.append(t % (cls_name, reprs(list(sorted(emitters)))))
