@@ -23,3 +23,6 @@ Classes
   
 .. autoclass:: flexx.event.Dict
     :members:
+
+.. autoclass:: flexx.event._loop.Loop
+    :members:
