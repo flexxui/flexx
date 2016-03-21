@@ -3,9 +3,6 @@ Implementation of descriptors for generating events:
 prop, readonly and emitter.
 """
 
-import inspect
-
-
 # Decorators to apply at a HasEvents class
 
 def prop(func):
@@ -108,7 +105,7 @@ class Property(BaseEmitter):
     """
     
     _IS_PROP = True
-    _SUFFIX  = '_value'
+    _SUFFIX = '_value'
     
     
     def __set__(self, instance, value):

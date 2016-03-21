@@ -3,8 +3,6 @@ Implements the HasEvents class; the core class via which events are
 generated and handled. It is the object that keeps track of handlers.
 """
 
-import sys
-
 from ._dict import Dict
 from ._handler import HandlerDescriptor, Handler
 from ._emitters import BaseEmitter, Property
@@ -149,8 +147,8 @@ class HasEvents:
             elif isinstance(val, HandlerDescriptor):
                 handlers[name] = val
             elif name.startswith('on_') and callable(val):
-                hh = self._he_handlers.setdefault(name[3:], [])
-                Handler(val,[name[3:]], self)  # registers itself
+                self._he_handlers.setdefault(name[3:], [])
+                Handler(val, [name[3:]], self)  # registers itself
         
         # Store handlers, properties and emitters that we found
         self.__handlers__ = [name for name in sorted(handlers.keys())]
@@ -252,7 +250,8 @@ class HasEvents:
         try:
             value2 = func(self)
         except Exception as err:
-            raise RuntimeError('Could not get default value for property %r:\n%s' % (prop_name, err))
+            raise RuntimeError('Could not get default value for property'
+                               '%r:\n%s' % (prop_name, err))
         # Update value and emit event
         setattr(self, private_name, value2)
         self.emit(prop_name, dict(new_value=value2, old_value=value2))
@@ -326,7 +325,8 @@ class HasEvents:
             raise TypeError('get_event_handlers() missing "type" argument.')
         type, _, label = type.partition(':')
         if label:
-            raise ValueError('The type given to get_event_handlers() should not include a label.')
+            raise ValueError('The type given to get_event_handlers() '
+                             'should not include a label.')
         handlers = self._he_handlers.get(type, ())
         return [h[1] for h in handlers]
 
@@ -351,7 +351,7 @@ class HasEvents:
         """
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
-            raise RuntimeError('Connect decorator needs one or more connection strings.')
+            raise RuntimeError('connect() needs one or more connection strings.')
         
         func = None
         if callable(connection_strings[0]):

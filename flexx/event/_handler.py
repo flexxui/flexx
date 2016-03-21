@@ -8,11 +8,13 @@ import inspect
 import weakref
 
 from ._dict import Dict
-from ._emitters import Property
 from ._loop import loop
+
 
 def this_is_js():
     return False
+
+console = setTimeout = None
 
 
 # Decorator to wrap a function in a Handler object
@@ -152,9 +154,9 @@ class Handler:
             self._connect_to_event(index)
     
     def __repr__(self):
-        conn = '+'.join([str(len(c.objects)) for c in self._connections])
-        cls_name = self.__class__.__name__
-        return '<%s %r with %s connections at 0x%x>' % (cls_name, self._name, conn, id(self))
+        c = '+'.join([str(len(c.objects)) for c in self._connections])
+        cname = self.__class__.__name__
+        return '<%s %r with %s connections at 0x%x>' % (cname, self._name, c, id(self))
     
     def get_name(self):
         """ Get the name of this handler, usually corresponding to the name

@@ -335,10 +335,10 @@ topic. Subscribers are represented by handlers.
 
 """
 
-from ._dict import Dict
-from ._loop import loop
-from ._handler import connect
-from ._emitters import prop, readonly, emitter
-from ._hasevents import HasEvents
+from ._dict import Dict  # noqa
+from ._loop import loop  # noqa
+from ._handler import connect  # noqa
+from ._emitters import prop, readonly, emitter  # noqa
+from ._hasevents import HasEvents  # noqa
 
 # from ._hasevents import new_type, with_metaclass

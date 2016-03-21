@@ -83,5 +83,5 @@ class Dict(_dict):
             self[key] = val
     
     def __dir__(self):
-       names = [k for k in self.keys() if isidentifier(k)]
-       return Dict.__reserved_names__ + names
+        names = [k for k in self.keys() if isidentifier(k)]
+        return Dict.__reserved_names__ + names

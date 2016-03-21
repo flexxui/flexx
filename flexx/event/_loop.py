@@ -73,7 +73,7 @@ class Loop:
         elif 'PyQt4.QtGui' in sys.modules:  # pragma: no cover
             self.integrate_pyqt4()
         elif 'PySide.QtGui' in sys.modules:  # pragma: no cover
-            self.integrate_pyside(QtCore, QtGui)
+            self.integrate_pyside()
         elif raise_on_fail:  # pragma: no cover
             raise RuntimeError('Could not integrate flexx.event loop')
     
@@ -93,7 +93,7 @@ class Loop:
     def integrate_pyside(self):  # pragma: no cover
         """ Integrate with PySide.
         """
-        from PyQt4 import QtCore, QtGui
+        from PySide import QtCore, QtGui
         self._integrate_qt(QtCore, QtGui)
     
     def _integrate_qt(self, QtCore, QtGui):  # pragma: no cover

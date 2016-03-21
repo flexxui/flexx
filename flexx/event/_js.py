@@ -68,7 +68,7 @@ class HasEventsJS:
     def connect(self, func, *connection_strings):
         # The JS version (no decorator functionality)
         if not connection_strings:
-            raise RuntimeError('Connect decorator needs one or more connection strings.')
+            raise RuntimeError('connect() needs one or more connection strings.')
         
         for s in connection_strings:
             if not (isinstance(s, str) and len(s) > 0):
@@ -118,10 +118,10 @@ class HasEventsJS:
             return func.apply(self, events)
         
         # Attach methods to the function object (this gets replaced)
-        HANDLER_METHODS_HOOK
+        HANDLER_METHODS_HOOK  # noqa
         
         # Init handler
-        that = this
+        that = self
         HasEvents.prototype._HANDLER_COUNT += 1
         handler._name = name
         handler._id = 'h' + str(HasEvents.prototype._HANDLER_COUNT)
@@ -146,7 +146,7 @@ def get_HasEvents_js():
     # Add the methods from the Python HasEvents class
     code = '\n'
     for name, val in sorted(HasEvents.__dict__.items()):
-        if name.startswith('__') or not callable(val) or name in ['connect',]:
+        if name.startswith('__') or not callable(val) or name in ['connect', ]:
             continue
         code += py2js(val, 'HasEvents.prototype.' + name)
         code += '\n'
