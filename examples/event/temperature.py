@@ -30,10 +30,10 @@ class Temperature(event.HasEvents):
 
 t = Temperature()
 
-with event.loop:
-    print('Water if freezing:')
-    t.C = 0
+print('Water if freezing:')
+t.C = 0
 
-with event.loop:
-    print('Average annual temp in California')
-    t.F = 59.4
+print('Average annual temp in California')
+t.F = 59.4
+
+event.loop.iter()
