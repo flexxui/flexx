@@ -183,7 +183,8 @@ class HasEvents:
         for name, handlers in self._he_handlers.items():
             for label, handler in handlers:
                 handler._clear_hasevents_refs(self)
-            handlers.clear()
+            while len(handlers):
+                handlers.pop()  # no list.clear on legacy py
         for name in self.__handlers__:
             getattr(self, name).dispose()
     

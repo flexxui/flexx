@@ -248,7 +248,8 @@ class Handler:
             while len(connection.objects):
                 ob, name = connection.objects.pop(0)
                 ob.disconnect(name, self)
-        self._pending.clear()
+        while len(self._pending):
+            self._pending.pop()  # no list.clear on legacy py
     
     def _clear_hasevents_refs(self, ob):
         """ Clear all references to the given HasEvents instance. This is
