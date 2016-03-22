@@ -85,8 +85,6 @@ class BaseEmitter:
     """ Base class for descriptors used for generating events.
     """
     
-    _IS_BASEEMITTER = True
-
     def __init__(self, func):
         assert callable(func)
         self._func = func
@@ -104,7 +102,6 @@ class Property(BaseEmitter):
     """ A value that is gettable and settable.
     """
     
-    _IS_PROP = True
     _SUFFIX = '_value'
     
     

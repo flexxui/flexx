@@ -14,15 +14,28 @@ Decorators
 .. autofunction:: flexx.event.emitter
 
 
-Classes
--------
+HasEvents
+---------
 
 .. autoclass:: flexx.event.HasEvents
     :members:
     :private-members:
-  
+
+Handler
+-------
+
+.. autoclass:: flexx.event.Handler
+    :members:
+
+Dict
+----
+
+
 .. autoclass:: flexx.event.Dict
     :members:
+
+loop
+----
 
 .. autoclass:: flexx.event._loop.Loop
     :members:

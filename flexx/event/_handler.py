@@ -19,7 +19,8 @@ console = setTimeout = None
 
 # Decorator to wrap a function in a Handler object
 def connect(*connection_strings):
-    """ Decorator to turn a method of HasEvents into an event handler.
+    """ Decorator to turn a method of HasEvents into an event
+    :class:`Handler <flexx.event.Handler>`.
     
     A method can be connected to multiple event types. Each connection
     string represents an event type to connect to. Read more about
@@ -97,7 +98,8 @@ class HandlerDescriptor:
 
 class Handler:
     """ Wrapper around a function object to connect it to one or more events.
-    This class should not be instantiated directly; use the decorators instead.
+    This class should not be instantiated directly; use ``event.connect`` or
+    ``HasEvents.connect`` instead.
     
     Arguments:
         func (callable): function that handles the events.

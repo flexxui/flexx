@@ -146,7 +146,7 @@ Settable properties can be created easiliy using the
 
 The function that is decorated should have one argument (the new value
 for the property), and it should have a default value (representing the
-initial value of the property). The function body is used to validate
+initial value). The function body is used to validate
 and normalize the provided input. In this case the input is simply cast
 to a float. The docstring of the function will be the docstring of the
 property (e.g. for Sphynx docs).
@@ -181,7 +181,7 @@ readonly property can be set internally using the
 Emitter
 =======
 
-Emitter attributes make it easy to generate events, and functions as a
+Emitter attributes make it easy to generate events, and function as a
 placeholder to document events on a class. They are created with the
 :func:`emitter <flexx.event.emitter>` decorator.
 
@@ -275,13 +275,13 @@ need for a lot of boilerplate code.
 
 Note that the above example would also work if ``parent`` would be a
 regular attribute instead of a property, but the handler would not be
-automatically reconnected when it changes.
+automatically reconnected when it changed.
 
 
 Patterns
 --------
 
-This event system is quite flexible. It is designed to cover the needs
+This event system is quite flexible and designed to cover the needs
 of a variety of event/messaging mechanisms. This section discusses
 how this system relates to some common patterns, and how these can be
 implemented.
@@ -337,7 +337,7 @@ topic. Subscribers are represented by handlers.
 
 from ._dict import Dict  # noqa
 from ._loop import loop  # noqa
-from ._handler import connect  # noqa
+from ._handler import Handler, connect  # noqa
 from ._emitters import prop, readonly, emitter  # noqa
 from ._hasevents import HasEvents  # noqa
 
