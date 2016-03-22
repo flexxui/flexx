@@ -136,8 +136,6 @@ def evaljs(jscode, whitespace=True):
     returns:
         result (str): the last result as a string.
     """
-    # Reduce length of code
-    jscode = jscode.replace('    ', '\t')
     
     # Call node
     cmd = [get_node_exe(), '--use_strict', '-p', '-e', jscode]

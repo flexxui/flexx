@@ -35,6 +35,7 @@ def reduce_code(code):
     if sys.platform.startswith('win') and len(code) > 2**15:
         code = code.replace('    ', '')
         code = code.replace('_pyfunc_', 'pf_').replace('_pymeth_', 'pm_')
+    code = code.replace('    ', '\t')
     return code
 
 

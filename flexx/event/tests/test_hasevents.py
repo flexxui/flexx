@@ -34,9 +34,10 @@ def test_basics():
     #
     foo = Foo()
     assert not foo.__handlers__
-    assert len(foo.__emitters__) == 3
-    assert 'a_prop' in foo.__emitters__
-    assert 'a_readonly' in foo.__emitters__
+    assert len(foo.__emitters__) == 1
+    assert len(foo.__properties__) == 2
+    assert 'a_prop' in foo.__properties__
+    assert 'a_readonly' in foo.__properties__
     assert 'a_emitter' in foo.__emitters__
     #
     assert foo.get_event_types() == ['a_emitter', 'a_prop', 'a_readonly']
