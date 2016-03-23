@@ -20,7 +20,7 @@ also be used by themselves:
 
 * :doc:`ui <ui/index>` - the widgets
 * :doc:`app <app/index>` - the event loop and server
-* :doc:`react <react/index>` - reactive programming (how information flows through your program)
+* :doc:`event <event/index>` - properties and events
 * :doc:`pyscript <pyscript/index>` - Python to JavaScript transpiler
 * :doc:`webruntime <webruntime/index>` - to launch a runtime
 
@@ -51,7 +51,7 @@ Contents
    
    ui/index
    app/index
-   react/index
+   event/index
    pyscript/index
    webruntime/index
    util

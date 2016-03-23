@@ -476,7 +476,7 @@ class Parser2(Parser1):
         
         elif sure_is_dict:  # Enumeration over an object (i.e. a dict)
             # Create dummy vars
-            d_seq = self.dummy('sequence')
+            d_seq = self.dummy('seq')
             code.append(self.lf('%s = %s;' % (d_seq, iter)))
             # The loop
             code += self.lf(), 'for (', target[0], ' in ', d_seq, ') {'
@@ -498,7 +498,7 @@ class Parser2(Parser1):
             # objects probably slightly less.
             
             # Create dummy vars
-            d_seq = self.dummy('sequence')
+            d_seq = self.dummy('seq')
             d_iter = self.dummy('iter')
             d_target = target[0] if (len(target) == 1) else self.dummy('target')
             
@@ -804,8 +804,8 @@ class Parser2(Parser1):
         
         # Define function that acts as class constructor
         code = []
-        for line in get_class_definition(node.name, base_class, 
-                                         self.pop_docstring(node)):
+        docstring = self.pop_docstring(node) if self._docstrings else ''
+        for line in get_class_definition(node.name, base_class, docstring):
             code.append(self.lf(line))
         
         # Body ...

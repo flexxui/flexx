@@ -260,6 +260,9 @@ class TestOtherBuildins:
         assert evalpy('for x in reversed(sorted([1, 9, 3, 2, 7, 8, 4])): print(x)') == '9\n8\n7\n4\n3\n2\n1'
         assert evalpy('for x in sorted([1, 9, 3, 2, 7, 8, 4], key=lambda a: -a): print(x)') == '9\n8\n7\n4\n3\n2\n1'
         assert evalpy('for x in sorted([1, 9, 3, 2, 7, 8, 4], reverse=True): print(x)') == '9\n8\n7\n4\n3\n2\n1'
+        
+        assert evalpy('for x in sorted(["bb", "aa", "mm", "dd"]): print(x)') == 'aa\nbb\ndd\nmm'
+        assert evalpy('for x in sorted(["bb", "aa", "mm", "dd"], key=lambda x: x): print(x)') == 'aa\nbb\ndd\nmm'
     
     def test_filter(self):
         assert list(filter(lambda x:x>0, [-1, -2, 1, 2])) == [1, 2]
@@ -323,6 +326,9 @@ class TestListMethods:
         assert evalpy('a=[3,1,4,2]; a.sort(reverse=True); a') == '[ 4, 3, 2, 1 ]'
         assert evalpy('a=[3,1,4,2]; a.sort(key=lambda x: -x); a') == '[ 4, 3, 2, 1 ]'
         assert evalpy('a=[3,1,4,2]; a.sort(key=lambda x: -x, reverse=True); a') == '[ 1, 2, 3, 4 ]'
+        
+        assert evalpy('a=["bb", "aa", "mm", "dd"]; a.sort(); a') == "[ 'aa', 'bb', 'dd', 'mm' ]"
+        assert evalpy('a=["bb", "aa", "mm", "dd"]; a.sort(key=lambda x: x); a') == "[ 'aa', 'bb', 'dd', 'mm' ]"
     
     def test_clear(self):
         assert evalpy('a=[3,1,4,2]; a.clear(); a') == '[]'

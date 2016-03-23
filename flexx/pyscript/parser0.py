@@ -135,6 +135,7 @@ class Parser0:
         'None'  : 'null',
         'unicode': 'str',  # legacy Py compat
         'unichr': 'chr',
+        'xrange': 'range',
     }
     
     BINARY_OP = {

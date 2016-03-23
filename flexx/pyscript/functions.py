@@ -136,8 +136,16 @@ def evaljs(jscode, whitespace=True):
     returns:
         result (str): the last result as a string.
     """
+    
     # Call node
-    res = subprocess.check_output([get_node_exe(), '--use_strict', '-p', '-e', jscode])
+    cmd = [get_node_exe(), '--use_strict', '-p', '-e', jscode]
+    try:
+        res = subprocess.check_output(cmd)
+    except Exception as err:
+        err = str(err)
+        err = err[:200] + '...' if len(err) > 200 else err
+        raise Exception(err)
+    
     # process
     res = res.decode().rstrip()
     if res.endswith('undefined'):

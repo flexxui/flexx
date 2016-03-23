@@ -23,7 +23,7 @@ IMPORT_DOT = '__'
 
 
 def get_std_info(code):
-    """ Given the JS code for a std function or method. Determine the
+    """ Given the JS code for a std function or method, determine the
     number of arguments, function_deps and method_deps.
     """
     _, _, nargs = code.splitlines()[0].partition('nargs:')
@@ -82,6 +82,8 @@ def get_full_std_lib(indent=0):
 ## ----- Functions
 
 ## Hardcore functions
+
+FUNCTIONS['this_is_js'] = """function () {return true;} // nargs: 0"""
 
 FUNCTIONS['hasattr'] = """function (ob, name) { // nargs: 2
     return (ob !== undefined) && (ob !== null) && (ob[name] !== undefined);
@@ -210,7 +212,8 @@ FUNCTIONS['reversed'] = """function (iter) { // nargs: 1
 
 FUNCTIONS['sorted'] = """function (iter, key, reverse) { // nargs: 1 2 3
     if ((typeof iter==="object") && (!Array.isArray(iter))) {iter = Object.keys(iter);}
-    var comp = function (a, b) {return key(a) - key(b);};
+    var comp = function (a, b) {a = key(a); b = key(b);
+        if (a<b) {return -1;} if (a>b) {return 1;} return 0;};
     comp = Boolean(key) ? comp : undefined; 
     iter = iter.slice().sort(comp);
     if (reverse) iter.reverse();
@@ -327,7 +330,8 @@ METHODS['reverse'] = """function () { // nargs: 0
 
 METHODS['sort'] = """function (key, reverse) { // nargs: 0 1 2
     if (!Array.isArray(this)) return this.KEY.apply(this, arguments);
-    var comp = function (a, b) {return key(a) - key(b);};
+    var comp = function (a, b) {a = key(a); b = key(b);
+        if (a<b) {return -1;} if (a>b) {return 1;} return 0;};
     comp = Boolean(key) ? comp : undefined; 
     this.sort(comp);
     if (reverse) this.reverse();
