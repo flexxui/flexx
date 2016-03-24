@@ -80,7 +80,7 @@ class Loop:
     def integrate_tornado(self):
         """ Integrate with tornado.
         """
-        import tornado
+        import tornado.ioloop
         loop = tornado.ioloop.IOLoop.instance()
         self._calllaterfunc = loop.add_callback
     

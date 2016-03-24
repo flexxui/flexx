@@ -48,7 +48,8 @@ class HasEventsJS:
             if name.startswith('on_'):
                 val = self[name]
                 if callable(val):
-                    self.__create_Handler(val, name, [name[3:]])
+                    self['_' + name + '_func'] = val
+                    self[name] = self.__create_Handler(val, name, [name[3:]])
         # Create handlers
         for name in self.__handlers__:
             func = self['_' + name + '_func']
@@ -77,6 +78,9 @@ class HasEventsJS:
         if not callable(func):
             raise TypeError('connect() decotator requires a callable.')
         return self.__create_Handler(func, func.name or 'anonymous', connection_strings)
+    
+    def __create_PyProperty(self, name):
+         self.__create_Property(name)
     
     def __create_Property(self, name):
         private_name = '_' + name + '_value'
@@ -165,6 +169,9 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     Given a Python class with handlers, properties and emitters, this
     creates the code for the JS version of this class. It also supports
     class constants that are int/float/str, or a tuple/list thereof.
+    The given class does not have to be a subclass of HasEvents.
+    
+    This more or less does what HasEventsMeta does, but for JS.
     """
     
     assert cls_name != 'HasEvents'  # we need this special class above instead
@@ -182,10 +189,18 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     prefix = '' if cls_name.count('.') else 'var '
     total_code[0] = prefix + total_code[0]
     
+    # Functions to ignore
+    special_funcs = []
+    if issubclass(cls, HasEvents):
+        special_funcs = ['_%s_func' % name for name in 
+                         (cls.__handlers__ + cls.__emitters__ + cls.__properties__)]
+    
     for name, val in sorted(cls.__dict__.items()):
         name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix mangling
         funcname = '_' + name + '_func'
-        if isinstance(val, BaseEmitter):
+        if name in special_funcs:
+            pass
+        elif isinstance(val, BaseEmitter):
             if isinstance(val, Property):
                 properties.append(name)
             else:
@@ -221,7 +236,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             funcs_code.append(code.rstrip())
             funcs_code.append('')
         elif name.startswith('__'):
-            pass  # we create our own __emitters__ list
+            pass  # we create our own __emitters__, etc.
         else:
             try:
                 serialized = json.dumps(val)
@@ -256,4 +271,13 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
 
 if __name__ == '__main__':
     # Testing ...
-    print(HasEventsJS.JSCODE)
+    from flexx import event
+    class Foo(HasEvents):
+        @event.prop
+        def foo(self, v=0):
+            return v
+        
+    #print(HasEventsJS.JSCODE)
+    print(create_js_hasevents_class(Foo, 'Foo'))
+    
+    

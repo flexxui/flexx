@@ -804,7 +804,8 @@ class Parser2(Parser1):
         
         # Define function that acts as class constructor
         code = []
-        docstring = self.pop_docstring(node) if self._docstrings else ''
+        docstring = self.pop_docstring(node) 
+        docstring = docstring if self._docstrings else ''
         for line in get_class_definition(node.name, base_class, docstring):
             code.append(self.lf(line))
         

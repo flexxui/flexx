@@ -53,10 +53,10 @@ def test_basics():
     #
     foo = Bar()
     assert not foo.__emitters__
-    #assert len(foo.__handlers__) == 2
-    assert len(foo.__handlers__) == 1
+    assert len(foo.__handlers__) == 2
+    #assert len(foo.__handlers__) == 1
     assert 'spam' in foo.__handlers__
-    #assert 'eggs' in foo.__handlers__
+    assert 'on_eggs' in foo.__handlers__
     #
     assert foo.get_event_types() == ['eggs', 'x']
     assert foo.get_event_handlers('x') == [foo.spam]
