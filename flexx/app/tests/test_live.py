@@ -38,6 +38,10 @@ class ModelA(app.Model):
         return str(v)
     
     def test_init(self):
+        
+        assert self.foo1 == 1
+        assert self.bar1 is None  # not yet initialized
+        
         self.call_js('set_result()')
     
     def test_check(self):
@@ -113,16 +117,54 @@ class ModelC(ModelB):
     
     class JS:
         
-        @event.prop
-        def bar2(self, v=0):
-            return int(v+2)
-        
-        @event.prop
-        def bar3(self, v=0):
-            return int(v+2)
-        
         def set_result(self):
             self.result = ' '.join(self.__properties__) + ' - ' + ' '.join(self.__proxy_properties__)
+
+
+class ModelD(ModelB):
+    # Test setting properties
+    
+    def test_init(self):
+        
+        assert self.foo2 == 2
+        self.foo2 = 10
+        assert self.foo2 == 12
+        
+        assert self.bar2 is None
+        self.bar2 = 10
+        assert self.bar2 is None 
+        
+        self.call_js('set_result()')
+    
+    def test_check(self):
+        
+        assert self.result == 'ok'
+        
+        assert self.foo2 == 12
+        assert self.foo3 == 12
+        assert self.bar2 == 12
+        assert self.bar3 == 12
+    
+    class JS:
+        
+        def _init(self):
+            super()._init()
+            print(self.foo3, self.bar3)
+            
+            assert self.foo3 is None
+            self.foo3 = 10
+            assert self.foo3 is None
+            
+            assert self.bar3 == 2
+            self.bar3 = 10
+            assert self.bar3 == 12
+        
+        def set_result(self):
+            assert self.foo2 == 12
+            # assert self.foo3 == 12  # this takes more cycles, hard to test
+            assert self.bar2 == 12
+            assert self.bar3 == 12
+            self.result = 'ok'
 
 ##
 
@@ -158,7 +200,7 @@ def test_apps():
 
 
 test_generated_javascript()
-runner(ModelC)
+runner(ModelD)
 # test_apps()
 # run_tests_if_main()
 #if __name__ == '__main__':

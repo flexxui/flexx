@@ -268,6 +268,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     
     def _init_prop(self, name):
         isproxy = name in self.__proxy_properties__
+        super()._init_prop(name)
         if not isproxy:
             super()._init_prop(name)
             value = getattr(self, name)
@@ -312,12 +313,12 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             
             self._linked_signals = {}  # use a list as a set
             
+            # Call HasEvents __init__, properties will be created and connected.
+            super().__init__()
+            
             # Call _init now. This gives subclasses a chance to init at a time
             # when the id is set, but *before* the handlers are connected.
             self._init()
-            
-            # Call HasEvents __init__, properties will be created and connected.
-            super().__init__()
         
         def _init(self):
             pass
@@ -345,8 +346,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         def _init_prop(self, name):
             isproxy = self.__proxy_properties__.indexOf(name) >= 0
+            super()._init_prop(name)
             if not isproxy:
-                super()._init_prop(name)
                 value = self[name]
                 txt = window.flexx.serializer.saves(value)
                 window.flexx.ws.send('SETPROP ' + [self.id, name, txt].join(' '))
