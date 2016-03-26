@@ -3,7 +3,7 @@
 
 import os
 import sys
-from flexx import app, react, webruntime
+from flexx import app, event, webruntime
 
 from flexx.util.testing import run_tests_if_main, raises, skip
 
@@ -21,59 +21,145 @@ def runner(cls):
         t.test_check()
 
 
-class BaseTesterApp(app.Model):
+class ModelA(app.Model):
     
+    @event.prop
+    def foo1(self, v=0):
+        return float(v+1)
     
-    @react.input
-    def input(v):
-        return v
+    @event.prop
+    def foo2(self, v=0):
+        return float(v+1)
+
+    @event.prop
+    def result(self, v=''):
+        if v:
+            app.stop()
+        return str(v)
     
-    @react.input
-    def output(v):
-        return v
+    def test_init(self):
+        self.call_js('set_result()')
     
-    @react.connect('output')
-    def _done(self, v):
-        self._result = v
-        #print('done', v)
-        app.stop()
+    def test_check(self):
+        assert self.foo1 == 1
+        assert self.foo2 == 1
+        #
+        assert self.bar1 == 1
+        assert self.bar2 == 1
+        #
+        assert self.result == '1 1 - 1 1'
+        print('A ok')
     
     class JS:
-        @react.connect('input')
-        def _handle_input(self, v):
-            #print('handle input', v)
-            self.output(v + 1)
+        
+        @event.prop
+        def bar1(self, v=0):
+            return int(v+1)
+        
+        @event.prop
+        def bar2(self, v=0):
+            return int(v+1)
+        
+        def set_result(self):
+            self.result = ' '.join([self.foo1, self.foo2, '-',
+                                    self.bar1, self.bar2])
 
-
-class TesterApp1(BaseTesterApp):
-    def test_init(self):
-        self.input(3)
-        self._result = None
+class ModelB(ModelA):
+    
+    @event.prop
+    def foo2(self, v=0):
+        return int(v+2)
+    
+    @event.prop
+    def foo3(self, v=0):
+        return int(v+2)
     
     def test_check(self):
-        assert self._result == 4
+        assert self.foo1 == 1
+        assert self.foo2 == 2
+        assert self.foo3 == 2
+        #
+        assert self.bar1 == 1
+        assert self.bar2 == 2
+        assert self.bar3 == 2
+        #
+        assert self.result == '1 2 2 - 1 2 2'
+        print('B ok')
+    
+    class JS:
+        
+        @event.prop
+        def bar2(self, v=0):
+            return int(v+2)
+        
+        @event.prop
+        def bar3(self, v=0):
+            return int(v+2)
+        
+        def set_result(self):
+            self.result = ' '.join([self.foo1, self.foo2, self.foo3, '-',
+                                    self.bar1, self.bar2, self.bar3])
 
 
-class TesterApp2(BaseTesterApp):
-    def test_init(self):
-        self.input('foo')
-        self._result = None
+class ModelC(ModelB):
+    # Test properties and proxy properties, no duplicates etc.
     
     def test_check(self):
-        assert self._result == 'foo1'
+        py_result = ' '.join(self.__properties__) + ' - ' + ' '.join(self.__proxy_properties__)
+        js_result = self.result
+        assert py_result == 'bar1 bar2 bar3 foo1 foo2 foo3 result - bar1 bar2 bar3'
+        assert js_result == 'bar1 bar2 bar3 foo1 foo2 foo3 result - foo1 foo2 foo3 result'
+        print('C ok')
+    
+    class JS:
+        
+        @event.prop
+        def bar2(self, v=0):
+            return int(v+2)
+        
+        @event.prop
+        def bar3(self, v=0):
+            return int(v+2)
+        
+        def set_result(self):
+            self.result = ' '.join(self.__properties__) + ' - ' + ' '.join(self.__proxy_properties__)
+
+##
+
+
+def test_generated_javascript():
+    # Test that there are no diplicate funcs etc.
+    
+    codeA, codeB = ModelA.JS.CODE, ModelB.JS.CODE
+    
+    assert codeA.count('_foo1_func = function') == 1
+    assert codeA.count('_foo2_func = function') == 1
+    assert codeA.count('_foo3_func = function') == 0
+    assert codeA.count('_bar1_func = function') == 1
+    assert codeA.count('_bar2_func = function') == 1
+    assert codeA.count('_bar3_func = function') == 0
+    
+    assert codeB.count('_foo1_func = function') == 0
+    assert codeB.count('_foo2_func = function') == 0  # proxy needs no new func
+    assert codeB.count('_foo3_func = function') == 1
+    assert codeB.count('_bar1_func = function') == 0
+    assert codeB.count('_bar2_func = function') == 1  # but real prop does
+    assert codeB.count('_bar3_func = function') == 1
 
 
 def test_apps():
     
-    # if os.getenv('TRAVIS', '') == 'true':
-        # skip('This live test is skipped on Travis for now.')
     if not webruntime.has_firefox():
         skip('This live test needs firefox.')
     
-    runner(TesterApp1)
-    runner(TesterApp2)
+    runner(ModelA)
+    runner(ModelB)
+    runner(ModelC)
 
 
-run_tests_if_main()
+test_generated_javascript()
+runner(ModelC)
+# test_apps()
+# run_tests_if_main()
 #if __name__ == '__main__':
 #    test_apps()

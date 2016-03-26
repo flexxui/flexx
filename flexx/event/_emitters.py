@@ -85,13 +85,13 @@ class BaseEmitter:
     """ Base class for descriptors used for generating events.
     """
     
-    def __init__(self, func):
+    def __init__(self, func, name=None, doc=None):
         assert callable(func)
         self._func = func
-        self._name = func.__name__  # updated by HasEvents meta class
+        self._name = name or func.__name__  # updated by HasEvents meta class
         self._is_being_set = False
         self.__doc__ = '*%s*: %s' % (self.__class__.__name__.lower(),
-                                     func.__doc__ or self._name)
+                                     doc or func.__doc__ or self._name)
     
     def __repr__(self):
         cls_name = self.__class__.__name__

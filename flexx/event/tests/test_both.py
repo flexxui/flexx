@@ -141,6 +141,12 @@ class Person(event.HasEvents):
         self._set_prop('full_name', self.first_name + ' ' + self.last_name)
 
 
+class PersonNoDefault(HasEvents):
+    @event.prop
+    def first_name(self, v):
+        return str(v)
+
+
 @run_in_both(Person, "['', 'john doe', '', 'almar klein', '', 'jorik klein']")
 def test_name(Person):
     name = Person()

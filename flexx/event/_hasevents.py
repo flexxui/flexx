@@ -41,36 +41,44 @@ class HasEventsMeta(type):
     """
     
     def __init__(cls, name, bases, dct):
-        
-        # Collect handlers defined on this class
-        handlers = {}
-        emitters = {}
-        properties = {}
-        for name in dir(cls):
-            if name.startswith('__'):
-                continue
-            val = getattr(cls, name)
-            if isinstance(val, Property):
-                properties[name] = val
-            elif isinstance(val, BaseEmitter):
-                emitters[name] = val
-            elif isinstance(val, HandlerDescriptor):
-                handlers[name] = val
-            elif name.startswith('on_'):
-                val = HandlerDescriptor(val, [name[3:]])
-                setattr(cls, name, val)
-                handlers[name] = val
-        # Finalize all found emitters
-        for collection in (handlers, emitters, properties):
-            for name, descriptor in collection.items():
-                descriptor._name = name
-                setattr(cls, '_' + name + '_func', descriptor._func)
-        # Cache prop names
-        cls.__handlers__ = [name for name in sorted(handlers.keys())]
-        cls.__emitters__ = [name for name in sorted(emitters.keys())]
-        cls.__properties__ = [name for name in sorted(properties.keys())]
-        # Proceed as normal
+        finalize_hasevents_class(cls)
         type.__init__(cls, name, bases, dct)
+
+def finalize_hasevents_class(cls):
+    """ Given a class, analyse its Properties, Readonlies, Emitters,
+    and Handlers, to set a list of __emitters__, __properties__, and
+    __handlers__. Also convert methods named on_foo to a handler of the
+    'foo' event, and create private methods corresponding to the
+    properties, emitters and handlers.
+    """
+    # Collect handlers defined on this class
+    handlers = {}
+    emitters = {}
+    properties = {}
+    for name in dir(cls):
+        if name.startswith('__'):
+            continue
+        val = getattr(cls, name)
+        if isinstance(val, Property):
+            properties[name] = val
+        elif isinstance(val, BaseEmitter):
+            emitters[name] = val
+        elif isinstance(val, HandlerDescriptor):
+            handlers[name] = val
+        elif name.startswith('on_'):
+            val = HandlerDescriptor(val, [name[3:]])
+            setattr(cls, name, val)
+            handlers[name] = val
+    # Finalize all found emitters
+    for collection in (handlers, emitters, properties):
+        for name, descriptor in collection.items():
+            descriptor._name = name
+            setattr(cls, '_' + name + '_func', descriptor._func)
+    # Cache prop names
+    cls.__handlers__ = [name for name in sorted(handlers.keys())]
+    cls.__emitters__ = [name for name in sorted(emitters.keys())]
+    cls.__properties__ = [name for name in sorted(properties.keys())]
+    return cls
 
 
 class HasEvents(with_metaclass(HasEventsMeta, object)):
@@ -212,15 +220,19 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             handler._add_pending_event(label, ev)  # friend class
     
     def _init_prop(self, prop_name):
+        # todo: use _he_props_being_set?
         # Initialize a property
         private_name = '_' + prop_name + '_value'
         func_name = '_' + prop_name + '_func'
         # Trigger default value
         func = getattr(self, func_name)
         try:
-            value2 = func()
-        except Exception as err:
-            raise RuntimeError('Could not get default value for property'
+            if this_is_js():
+                value2 = func.apply(self, [])
+            else:
+                value2 = func()
+        except Exception as err:  # unlikely to get error on JS
+            raise RuntimeError('Could not get default value for property '
                                '%r:\n%s' % (prop_name, err))
         # Update value and emit event
         setattr(self, private_name, value2)
@@ -247,8 +259,8 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         func_name = '_' + prop_name + '_func'
         # Validate value
         self._he_props_being_set[prop_name] = True
+        func = getattr(self, func_name)
         try:
-            func = getattr(self, func_name)
             if this_is_js():
                 value2 = func.apply(self, [value])
             else:

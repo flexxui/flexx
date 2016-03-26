@@ -7,7 +7,6 @@ import json
 import logging
 
 from .. import webruntime
-from .. import react
 
 from .model import Model
 from .session import manager
@@ -86,8 +85,8 @@ def call_later(delay, callback, *args, **kwargs):
 
 
 server._auto_stop = False
-@react.connect('manager.connections_changed')
-def _auto_closer(name):
+@manager.connect('connections_changed')
+def _auto_closer(*events):
     if not server._auto_stop:
         return
     for name in manager.get_app_names():

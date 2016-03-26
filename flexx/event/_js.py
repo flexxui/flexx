@@ -43,14 +43,8 @@ class HasEventsJS:
         self._he_handlers = {}
         self._he_props_being_set = {}
         
-        # Create a handler for methods that start with "on_"
-        for name in Object.keys(self):
-            if name.startswith('on_'):
-                val = self[name]
-                if callable(val):
-                    self['_' + name + '_func'] = val
-                    self[name] = self.__create_Handler(val, name, [name[3:]])
         # Create handlers
+        # Note that methods on_xxx are converted by the HasEvents meta class
         for name in self.__handlers__:
             func = self['_' + name + '_func']
             self[name] = self.__create_Handler(func, name, func._connection_strings)
@@ -88,11 +82,12 @@ class HasEventsJS:
             return self[private_name]
         def setter(x):
             self._set_prop(name, x)
-        self[private_name] = value2 = self['_' + name + '_func']()  # init
-        self.emit(name, dict(new_value=value2, old_value=value2))
+        # self[private_name] = value2 = self['_' + name + '_func']()  # init
+        # self.emit(name, dict(new_value=value2, old_value=value2))
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
+        self._init_prop(name)
     
     def __create_Readonly(self, name):
         private_name = '_' + name + '_value'
@@ -100,11 +95,12 @@ class HasEventsJS:
             return self[private_name]
         def setter(x):
             raise AttributeError('Readonly %s is not settable' % name)
-        self[private_name] = value2 = self['_' + name + '_func']()  # init
-        self.emit(name, dict(new_value=value2, old_value=value2))
+        # self[private_name] = value2 = self['_' + name + '_func']()  # init
+        # self.emit(name, dict(new_value=value2, old_value=value2))
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
+        self._init_prop(name)
     
     def __create_Emitter(self, name):
         def getter():
@@ -190,10 +186,9 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     total_code[0] = prefix + total_code[0]
     
     # Functions to ignore
-    special_funcs = []
-    if issubclass(cls, HasEvents):
-        special_funcs = ['_%s_func' % name for name in 
-                         (cls.__handlers__ + cls.__emitters__ + cls.__properties__)]
+    special_funcs = ['_%s_func' % name for name in 
+                     (cls.__handlers__ + cls.__emitters__ + cls.__properties__)]
+    OK_MAGICS = '__properties__', '__emitters__', '__handlers__', '__proxy_properties__'
     
     for name, val in sorted(cls.__dict__.items()):
         name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix mangling
@@ -235,6 +230,9 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             funcs_code.append('')
+        elif name in OK_MAGICS:
+            t = '%s.prototype.%s = %r;'
+            funcs_code.append(t % (cls_name, name, val))
         elif name.startswith('__'):
             pass  # we create our own __emitters__, etc.
         else:
@@ -245,22 +243,6 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
                                  'JSON compatible.\n%s' % str(err))
             const_code.append('%s.prototype.%s = JSON.parse(%s)' %
                               (cls_name, name, reprs(serialized)))
-    
-    # Store handlers, properties and emitters that we found
-    if base_class in ('Object', 'HasEvents.prototype'):
-        t = '%s.prototype.__emitters__ = %s;'
-        total_code.append(t % (cls_name, reprs(list(sorted(emitters)))))
-        t = '%s.prototype.__properties__ = %s;'
-        total_code.append(t % (cls_name, reprs(list(sorted(properties)))))
-        t = '%s.prototype.__handlers__ = %s;'
-        total_code.append(t % (cls_name, reprs(list(sorted(handlers)))))
-    else:
-        t = '%s.prototype.__emitters__ = %s.__emitters__.concat(%s).sort();'
-        total_code.append(t % (cls_name, base_class, reprs(emitters)))
-        t = '%s.prototype.__properties__ = %s.__properties__.concat(%s).sort();'
-        total_code.append(t % (cls_name, base_class, reprs(properties)))
-        t = '%s.prototype.__handlers__ = %s.__handlers__.concat(%s).sort();'
-        total_code.append(t % (cls_name, base_class, reprs(handlers)))
     
     total_code.append('')
     total_code.extend(const_code)
