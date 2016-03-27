@@ -10,7 +10,7 @@ import logging
 
 from .. import event
 from ..event._hasevents import with_metaclass, new_type, HasEventsMeta, finalize_hasevents_class
-from ..event._emitters import Property
+from ..event._emitters import Property, Emitter
 from ..event._js import create_js_hasevents_class, HasEventsJS
 from ..pyscript import py2js, js_rename, window
 
@@ -34,6 +34,12 @@ def get_instance_by_id(id):
 
 def stub_prop_func(self, v=None):
     return v
+
+def stub_emitter_func_py(self, *args):
+    raise RuntimeError('This emitter can only be called from JavaScript')
+
+def stub_emitter_func_js(self, *args):
+    raise RuntimeError('This emitter can only be called from Python')
 
 
 class ModelMeta(HasEventsMeta):
@@ -72,18 +78,20 @@ class ModelMeta(HasEventsMeta):
         cls.__proxy_properties__ = list(getattr(cls, '__proxy_properties__', []))
         
         # Create proxy properties on cls for each property on JS
-        if 'JS' in cls.__dict__:
-            for name, val in cls.JS.__dict__.items():
-                if isinstance(val, Property):
-                    if name in JS.__proxy_properties__ or name in cls.__proxy_properties__:
-                        pass  # This is a proxy, or we already have a proxy for it
-                    elif not hasattr(cls, name):
-                        cls.__proxy_properties__.append(name)
-                        p = val.__class__(stub_prop_func, name, val._func.__doc__)
-                        setattr(cls, name, p)
-                    else:
-                        logging.warn('JS property %r not proxied on %s, '
-                                     'as it would hide a Py attribute.' % (name, cls.__name__))
+        for name, val in cls.JS.__dict__.items():
+            if isinstance(val, Property):
+                if name in JS.__proxy_properties__ or name in cls.__proxy_properties__:
+                    pass  # This is a proxy, or we already have a proxy for it
+                elif not hasattr(cls, name):
+                    cls.__proxy_properties__.append(name)
+                    p = val.__class__(stub_prop_func, name, val._func.__doc__)
+                    setattr(cls, name, p)
+                else:
+                    logging.warn('JS property %r not proxied on %s, '
+                                    'as it would hide a Py attribute.' % (name, cls.__name__))
+            elif isinstance(val, Emitter) and not hasattr(cls, name):
+                p = val.__class__(stub_emitter_func_py, name, val._func.__doc__)
+                setattr(cls, name, p)
         
         # Create proxy properties on cls.JS for each property on cls
         for name, val in cls.__dict__.items():
@@ -97,6 +105,9 @@ class ModelMeta(HasEventsMeta):
                 else:
                     logging.warn('Py property %r not proxied on %s, '
                                  'as it would hide a JS attribute.' % (name, cls.__name__))
+            elif isinstance(val, Emitter) and not hasattr(cls, name):
+                p = val.__class__(stub_emitter_func_js, name, val._func.__doc__)
+                setattr(cls, name, p)
         
         # Finalize classes to update __properties__ (we may have added some)
         finalize_hasevents_class(cls)
