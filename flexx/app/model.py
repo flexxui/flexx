@@ -79,7 +79,7 @@ class ModelMeta(HasEventsMeta):
                         pass  # This is a proxy, or we already have a proxy for it
                     elif not hasattr(cls, name):
                         cls.__proxy_properties__.append(name)
-                        p = Property(stub_prop_func, name, val._func.__doc__)
+                        p = val.__class__(stub_prop_func, name, val._func.__doc__)
                         setattr(cls, name, p)
                     else:
                         logging.warn('JS property %r not proxied on %s, '
@@ -91,9 +91,8 @@ class ModelMeta(HasEventsMeta):
                 if name in JS.__proxy_properties__ or name in cls.__proxy_properties__:
                     pass  # This is a proxy, or we already have a proxy for it
                 elif not hasattr(cls.JS, name):
-                    # todo: readonlies?
                     JS.__proxy_properties__.append(name)
-                    p = Property(stub_prop_func, name, val._func.__doc__)
+                    p = val.__class__(stub_prop_func, name, val._func.__doc__)
                     setattr(cls.JS, name, p)
                 else:
                     logging.warn('Py property %r not proxied on %s, '
