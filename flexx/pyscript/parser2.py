@@ -892,6 +892,7 @@ def get_class_definition(name, base='Object', docstring=''):
     if base != 'Object':
         code.append('%s.prototype = Object.create(%s);' % (name, base))
     code.append('%s.prototype._base_class = %s;' % (name, base))
+    code.append('%s.prototype._class_name = %s;' % (name, reprs(name.split('.')[-1])))
     
     code.append('\n')
     return code

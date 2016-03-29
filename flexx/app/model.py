@@ -137,8 +137,6 @@ class ModelMeta(HasEventsMeta):
             code.append(c)
         # Add this class
         code.append(create_js_hasevents_class(cls.JS, cls_name, base_class))
-        # todo: class name handle at pyscript level?
-        code[-1] += '%s.prototype._class_name = "%s";\n' % (cls_name, cls.__name__)
         if cls.mro()[1] is event.HasEvents:
             code.append('flexx.serializer.add_reviver("Flexx-Model",'
                         ' flexx.classes.Model.prototype.__from_json__);\n')
