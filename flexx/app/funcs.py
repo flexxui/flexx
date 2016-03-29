@@ -8,6 +8,7 @@ import logging
 
 from .. import webruntime
 
+from . import model
 from .model import Model
 from .session import manager
 from .tornadoserver import server
@@ -82,6 +83,8 @@ def call_later(delay, callback, *args, **kwargs):
     call in the next event loop iteration.
     """
     server.call_later(delay, callback, *args, **kwargs)
+
+model.call_later = call_later  # Work around circular dependency
 
 
 server._auto_stop = False

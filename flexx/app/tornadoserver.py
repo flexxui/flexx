@@ -345,6 +345,8 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         """ Called when a new message is received from JS.
         
+        This handles one message per event loop iteration.
+        
         We now have a very basic protocol for receiving messages,
         we should at some point define a real formalized protocol.
         """

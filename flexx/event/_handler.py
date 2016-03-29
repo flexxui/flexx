@@ -94,6 +94,12 @@ class HandlerDescriptor:
             new = Handler(self._func, self._connection_strings, instance)
             setattr(instance, private_name, new)
             return new
+    
+    @property
+    def local_connection_strings(self):
+        """ List of connection strings that are local to the object.
+        """
+        return [s for s in self._connection_strings if '.' not in s]
 
 
 class Handler:

@@ -335,6 +335,17 @@ class Session(SessionAssets):
             ob = Model._instances.get(id, None)
             if ob is not None:
                 ob._set_prop_from_js(name, txt)
+        elif command.startswith('REG_EVENTS '):
+            _, id, txt = command.split(' ', 3)
+            ob = Model._instances.get(id, None)
+            if ob is not None:
+                ob._set_event_types_js(txt)
+        elif command.startswith('EVENT '):
+            # todo: dito
+            _, id, name, txt = command.split(' ', 3)
+            ob = Model._instances.get(id, None)
+            if ob is not None:
+                ob._emit_from_js(name, txt)
         else:
             logging.warn('Unknown command received from JS:\n%s' % command)
     

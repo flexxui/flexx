@@ -18,6 +18,8 @@ from .serialize import serializer
 
 reprs = json.dumps
 
+call_later = None  # reset in func.py to deal with circular dependency
+
 
 def get_model_classes():
     """ Get a list of all known Model subclasses.
@@ -142,6 +144,7 @@ class ModelMeta(HasEventsMeta):
                         ' flexx.classes.Model.prototype.__from_json__);\n')
         return '\n'.join(code)
 
+# todo: private methods, make sure the names are special enough, or use double underscores
 
 class Model(with_metaclass(ModelMeta, event.HasEvents)):
     """ Subclass of HasEvents representing Python-JavaScript object models
@@ -219,13 +222,27 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         self._session.register_model_class(self.__class__)
         
-        # Instantiate JavaScript version of this class
+        # Get initial event connection
         clsname = 'flexx.classes.' + self.__class__.__name__
-        cmd = 'flexx.instances.%s = new %s(%s);' % (self._id, clsname, reprs(self._id))
+        event_types_py, event_types_js = [], []
+        for handler_name in self.__handlers__:
+            descriptor = getattr(self.__class__, handler_name)
+            event_types_py.extend(descriptor.local_connection_strings)
+        for handler_name in self.JS.__handlers__:
+            descriptor = getattr(self.JS, handler_name)
+            event_types_js.extend(descriptor.local_connection_strings)
+        
+        self._event_types_js = event_types_js
+        self.__pending_events_from_js = []
+        
+        # Instantiate JavaScript version of this clas
+        cmd = 'flexx.instances.%s = new %s(%s, %s);' % (
+                self._id, clsname, reprs(self._id), serializer.saves(event_types_py))
         self._session._exec(cmd)
         
-        self._init()
+        # Initialize ourselves (i.e. initialize properties)
         super().__init__(**kwargs)
+        self._init()  # todo: if this comes last, we can get rid of it?
     
     def _init(self):
         """ Can be overloaded when creating a custom class.
@@ -287,20 +304,35 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 self._id, reprs(name), reprs(txt))
             self._session._exec(cmd)
     
-    def _link_js_signal(self, name, link=True):
-        """ Make a link between a JS signal and its proxy in Python.
-        This is done when a proxy signal is used as input for a signal
-        in Python.
-        """
-        # if self._session is None:
-        #     self._initial_signal_links.discart(name)
-        #     if link:
-        #         self._initial_signal_links.add(name)
-        # else:
-        link = 'true' if link else 'false'
-        cmd = 'flexx.instances.%s._link_js_signal(%s, %s);' % (self._id,
-                                                               reprs(name), link)
+    def _handlers_changed_hook(self):
+        types = [name for name in self._he_handlers.keys() if self._he_handlers[name]]
+        cmd = 'flexx.instances.%s._set_event_types_py(%s);' % (self._id, serializer.saves(types))
         self._session._exec(cmd)
+    
+    def _set_event_types_js(self, text):
+        self._event_types_js = serializer.loads(text)
+    
+    def _emit_from_js(self, type, text):
+        ev = serializer.loads(text)
+        if not self.__pending_events_from_js:
+            call_later(0.0001, self.__emit_pending_from_js)
+        self.__pending_events_from_js.append((type, ev))
+    
+    def __emit_pending_from_js(self):
+        # Tornado uses one new tornado-event to sends one JS event.
+        # This little mechanism is to collect JS events that were send
+        # together, so that we can make use of our ability to
+        # collectively handling events.
+        pending, self.__pending_events_from_js = self.__pending_events_from_js, []
+        for type, ev in pending:
+            self.emit(type, ev, True)
+    
+    def emit(self, type, ev, fromjs=False):
+        ev = super().emit(type, ev)
+        if not fromjs and type in self._event_types_js:
+            cmd = 'flexx.instances.%s._emit_from_py(%s, %r);' % (
+                self._id, serializer.saves(type), serializer.saves(ev))
+            self._session._exec(cmd)
     
     def call_js(self, call):
         cmd = 'flexx.instances.%s.%s;' % (self._id, call)
@@ -315,19 +347,21 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         def __from_json__(dct):
             return window.flexx.instances[dct.id]
         
-        def __init__(self, id):
+        def __init__(self, id, py_events=None):
             # Set id alias. In most browsers this shows up as the first element
             # of the object, which makes it easy to identify objects while
             # debugging. This attribute should *not* be used.
             self.__id = self._id = self.id = id
             
             self._linked_signals = {}  # use a list as a set
+            self._event_types_py = py_events if py_events else []
             
             # Call HasEvents __init__, properties will be created and connected.
             super().__init__()
             
             # Call _init now. This gives subclasses a chance to init at a time
             # when the id is set, but *before* the handlers are connected.
+            # todo: needed?
             self._init()
         
         def _init(self):
@@ -362,14 +396,24 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 txt = window.flexx.serializer.saves(value)
                 window.flexx.ws.send('SETPROP ' + [self.id, name, txt].join(' '))
         
-        def _link_js_signal(self, name, link):
-            if link:
-                self._linked_signals[name] = True
-                signal = self[name]
-                if signal._timestamp > 1:
-                    self._signal_changed(self[name])
-            elif self._linked_signals[name]:
-                del self._linked_signals[name]
+        def _handlers_changed_hook(self):
+            types = [name for name in self._he_handlers.keys() if len(self._he_handlers[name])]
+            text = window.flexx.serializer.saves(types)
+            window.flexx.ws.send('REG_EVENTS ' + [self.id, text].join(' '))
+        
+        def _set_event_types_py(self, event_types):
+            self._event_types_py = event_types
+        
+        def _emit_from_py(self, type, text):
+            ev = window.flexx.serializer.loads(text)
+            self.emit(type, ev, True)
+        
+        def emit(self, type, ev, frompy=False):
+            ev = super().emit(type, ev)
+            if not frompy and type in self._event_types_py:
+                txt = window.flexx.serializer.saves(ev)
+                window.flexx.ws.send('EVENT ' + [self.id, type, txt].join(' '))
+
 
 # Make model objects de-serializable
 serializer.add_reviver('Flexx-Model', Model.__from_json__)

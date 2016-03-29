@@ -165,6 +165,10 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         for name in self.__handlers__:
             getattr(self, name).dispose()
     
+    def _handlers_changed_hook(self):
+        # Called when the handlers changed, can be implemented in subclasses
+        pass
+    
     def _register_handler(self, type, handler):
         # Register a handler for the given event type. The type
         # can include a label, e.g. 'mouse_down:foo'.
@@ -177,6 +181,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         if entry not in handlers:
             handlers.append(entry)
         handlers.sort(key=lambda x: x[0]+'-'+x[1]._id)
+        self._handlers_changed_hook()
     
     def disconnect(self, type, handler=None):
         """ Disconnect handlers. 
@@ -197,6 +202,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             if not ((label and label != entry[0]) or
                     (handler and handler is not entry[1])):
                 handlers.pop(i)
+        self._handlers_changed_hook()
     
     def emit(self, type, ev):
         """ Generate a new event and dispatch to all event handlers.
@@ -218,6 +224,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # Push the event to the handlers (handlers use labels for dynamism)
         for label, handler in self._he_handlers.get(type, ()):
             handler._add_pending_event(label, ev)  # friend class
+        return ev
     
     def _init_prop(self, prop_name):
         # todo: use _he_props_being_set?

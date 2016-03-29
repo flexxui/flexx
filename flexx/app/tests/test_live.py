@@ -3,6 +3,7 @@
 
 import os
 import sys
+import tornado  # todo: should not be needed, let flexx.app integrate event.loop?
 from flexx import app, event, webruntime
 
 from flexx.util.testing import run_tests_if_main, raises, skip
@@ -32,10 +33,12 @@ class ModelA(app.Model):
         return float(v+1)
 
     @event.prop
-    def result(self, v=''):
+    def result(self, v=None):
         if v:
-            app.stop()
-        return str(v)
+            #app.stop()
+            print('stopping by ourselves', v)
+            app.call_later(0.5, app.stop)
+        return v
     
     def test_init(self):
         
@@ -166,6 +169,62 @@ class ModelD(ModelB):
             assert self.bar3 == 12
             self.result = 'ok'
 
+
+class ModelE(ModelA):
+    
+    def _init(self):
+        self.res1 = []
+        self.res2 = []
+    
+    @event.connect('foo')
+    def foo_handler(self, *events):
+        self.res1.append(len(events))
+        print('Py saw %i foo events' % len(events))
+    
+    @event.connect('bar')
+    def bar_handler(self, *events):
+        self.res2.append(len(events))
+        print('Py saw %i bar events' % len(events))
+    
+    def test_init(self):
+        app.call_later(0.2, self._emit_foo)
+        app.call_later(0.9, lambda:self.call_js('set_result()'))
+    
+    def _emit_foo(self):
+        self.emit('foo', {})
+        self.emit('foo', {})
+    
+    def test_check(self):
+        result_py = self.res1 + [''] + self.res2
+        result_js = self.result
+        print(result_py)
+        print(result_js)
+        assert result_py == [2, '', 2]
+        assert result_js == [2, '', 2]
+    
+    class JS:
+        
+        def _init(self):
+            self.res3 = []
+            self.res4 = []
+            
+            self.emit('bar', {})
+            self.emit('bar', {})
+        
+        @event.connect('foo')
+        def foo_handler(self, *events):
+            self.res3.append(len(events))
+            print('JS saw %i foo events' % len(events))
+        
+        @event.connect('bar')
+        def bar_handler(self, *events):
+            self.res4.append(len(events))
+            print('JS saw %i bar events' % len(events))
+        
+        def set_result(self):
+            self.result = self.res3 + [''] + self.res4
+
+
 ##
 
 
@@ -197,11 +256,10 @@ def test_apps():
     runner(ModelA)
     runner(ModelB)
     runner(ModelC)
+    runner(ModelD)
+    runner(ModelE)
 
 
-test_generated_javascript()
-runner(ModelD)
-# test_apps()
-# run_tests_if_main()
+run_tests_if_main()
 #if __name__ == '__main__':
 #    test_apps()
