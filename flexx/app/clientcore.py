@@ -82,14 +82,14 @@ class FlexxJS:
                 raise "FAIL: need websocket"
         # Open web socket in binary mode
         self.ws = ws = WebSocket(window.flexx.ws_url)
-        ws.binaryType = "arraybuffer"
+        #ws.binaryType = "arraybuffer"  # would need utf-decoding -> slow
         
         def on_ws_open(evt):
             window.console.info('Socket connected')
             ws.send('hiflexx ' + window.flexx_session_id)
         def on_ws_message(evt):
-            window.flexx.last_msg = evt.data or evt
-            msg = window.flexx.decodeUtf8(window.flexx.last_msg)
+            window.flexx.last_msg = msg = evt.data or evt
+            #msg = window.flexx.decodeUtf8(msg)
             window.flexx.command(msg)
         def on_ws_close(evt):
             self.ws = None
