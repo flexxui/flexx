@@ -50,7 +50,7 @@ class Serializer:
                 except AttributeError:
                     raise TypeError('Cannot serialize object to JSON: %r' % obj)
             else:  # JS - pragma: no cover
-                if (val is not None) and val.__json__:
+                if (val is not None) and val.__json__ is not undefined:
                     return val.__json__()
                 return val
         

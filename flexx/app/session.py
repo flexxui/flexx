@@ -329,19 +329,19 @@ class Session(SessionAssets):
             print(command[5:].strip())
         elif command.startswith('INFO '):
             logging.info('JS - ' + command[5:].strip())
-        elif command.startswith('SETPROP '):
+        elif command.startswith('SET_PROP '):
             # todo: seems weird to deal with here. implement by registring some handler?
+            # Should be better when we implement a more formal protocol
             _, id, name, txt = command.split(' ', 3)
             ob = Model._instances.get(id, None)
             if ob is not None:
                 ob._set_prop_from_js(name, txt)
-        elif command.startswith('REG_EVENTS '):
+        elif command.startswith('SET_EVENT_TYPES '):
             _, id, txt = command.split(' ', 3)
             ob = Model._instances.get(id, None)
             if ob is not None:
                 ob._set_event_types_js(txt)
         elif command.startswith('EVENT '):
-            # todo: dito
             _, id, name, txt = command.split(' ', 3)
             ob = Model._instances.get(id, None)
             if ob is not None:

@@ -213,7 +213,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
                 so that its elements can be accesses as attributes.
         """
         type, _, label = type.partition(':')
-        if label:
+        if len(label):
             raise ValueError('The type given to emit() should not include a label.')
         # Prepare event
         if not isinstance(ev, dict):
@@ -313,7 +313,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         if not type:
             raise TypeError('get_event_handlers() missing "type" argument.')
         type, _, label = type.partition(':')
-        if label:
+        if len(label):
             raise ValueError('The type given to get_event_handlers() '
                              'should not include a label.')
         handlers = self._he_handlers.get(type, ())

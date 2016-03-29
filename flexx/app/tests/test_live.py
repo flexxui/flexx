@@ -262,5 +262,7 @@ def test_apps():
     runner(ModelE)
 
 
-runner(ModelE)
-#run_tests_if_main()
+# NOTE: beware future self: if running this in Pyzo, turn off GUI integration!
+
+#runner(ModelE)
+run_tests_if_main()

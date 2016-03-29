@@ -83,8 +83,6 @@ def get_full_std_lib(indent=0):
 
 ## Hardcore functions
 
-FUNCTIONS['this_is_js'] = """function () {return true;} // nargs: 0"""
-
 FUNCTIONS['hasattr'] = """function (ob, name) { // nargs: 2
     return (ob !== undefined) && (ob !== null) && (ob[name] !== undefined);
 }"""

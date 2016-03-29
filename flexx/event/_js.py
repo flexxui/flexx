@@ -62,11 +62,11 @@ class HasEventsJS:
     
     def connect(self, func, *connection_strings):
         # The JS version (no decorator functionality)
-        if not connection_strings:
+        if len(connection_strings):
             raise RuntimeError('connect() needs one or more connection strings.')
         
         for s in connection_strings:
-            if not (isinstance(s, str) and len(s) > 0):
+            if not (isinstance(s, str) and len(s)):
                 raise ValueError('Connection string must be nonempty strings.')
         
         if not callable(func):
@@ -181,7 +181,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     err = ('Objects on JS HasEvents classes can only be int, float, str, '
            'or a list/tuple thereof. Not %s -> %r.')
     
-    total_code.extend(get_class_definition(cls_name, base_class))
+    total_code.append('\n'.join(get_class_definition(cls_name, base_class)).rstrip())
     prefix = '' if cls_name.count('.') else 'var '
     total_code[0] = prefix + total_code[0]
     
@@ -231,8 +231,8 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             funcs_code.append(code.rstrip())
             funcs_code.append('')
         elif name in OK_MAGICS:
-            t = '%s.prototype.%s = %r;'
-            funcs_code.append(t % (cls_name, name, val))
+            t = '%s.prototype.%s = %s;'
+            const_code.append(t % (cls_name, name, reprs(val)))
         elif name.startswith('__'):
             pass  # we create our own __emitters__, etc.
         else:
@@ -244,10 +244,13 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             const_code.append('%s.prototype.%s = JSON.parse(%s)' %
                               (cls_name, name, reprs(serialized)))
     
+    if const_code:
+        total_code.append('')
+        total_code.extend(const_code)
+    if funcs_code:
+        total_code.append('')
+        total_code.extend(funcs_code)
     total_code.append('')
-    total_code.extend(const_code)
-    total_code.append('')
-    total_code.extend(funcs_code)
     return '\n'.join(total_code)
 
 

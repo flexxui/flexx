@@ -227,7 +227,7 @@ class Handler:
         for index in reconnect:
             self._connect_to_event(index)
         # Handle events
-        if events:
+        if len(events):
             try:
                 self(*events)
             except Exception as err:
@@ -305,7 +305,7 @@ class Handler:
         connection = self._connections[index]
         
         # Done traversing name: add to list or fail
-        if ob is None or len(path) == 0:
+        if ob is None or not len(path):
             if ob is None or not hasattr(ob, '_IS_HASEVENTS'):
                 return  # we cannot seek further
             connection.objects.append((ob, connection.type))

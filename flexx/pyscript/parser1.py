@@ -175,6 +175,14 @@ from . import stdlib
 from .parser0 import Parser0, JSError, unify, reprs  # noqa
 
 
+# Define buildin stuff for which we know that it returns a bool or int
+_bool_funcs = 'hasattr', 'contains', 'all', 'any', 'equals', 'truthy'
+_bool_meths = ('count', 'isalnum', 'isalpha', 'isidentifier', 'islower',
+               'isnumeric', 'isspace', 'istitle', 'isupper', 'startswith')
+returning_bool = tuple([stdlib.FUNCTION_PREFIX + x + '(' for x in _bool_funcs] +
+                       [stdlib.METHOD_PREFIX + x + '.' for x in _bool_meths])
+
+
 class Parser1(Parser0):
     """ Parser that add basic functionality like assignments,
     operations, function calls, and indexing.
@@ -317,8 +325,11 @@ class Parser1(Parser0):
         eq_name = stdlib.FUNCTION_PREFIX + 'equals'
         test = ''.join(self.parse(node))
         if (((name + '(') in test) or test.endswith('.length') or test.isnumeric() or 
+                                      test.startswith('!') or
                                       test == 'true' or test == 'false' or
-                                      test.count('==') or test.count(eq_name)):
+                                      test.count('==') or test.count(eq_name) or
+                                      test == '"this_is_js()"' or
+                                      test.startswith(returning_bool)):
             return unify(test)
         else:
             return self.use_std_function('truthy', [test])

@@ -132,7 +132,7 @@ class ModelMeta(HasEventsMeta):
         if cls.mro()[1] is event.HasEvents:
             c = py2js(serializer.__class__, 'flexx.Serializer', inline_stdlib=False)
             code.append(c)
-            code.append('flexx.serializer = new flexx.Serializer();')
+            code.append('flexx.serializer = new flexx.Serializer();\n\n')
             c = js_rename(HasEventsJS.JSCODE, 'HasEvents', 'flexx.classes.HasEvents')
             code.append(c)
         # Add this class
@@ -373,6 +373,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         def _set_prop(self, name, value, frompy=False):
             isproxy = self.__proxy_properties__.indexOf(name) >= 0
             
+            # Note: there is quite a bit of _pyfunc_truthy in the ifs here
+            
             if window.flexx.ws is None:
                 # Exported or in an nbviewer;
                 # assume the value needs no checking or normalization
@@ -385,7 +387,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 if not isproxy:  # if not a proxy, use normalized value
                     value = self[name]
                 txt = window.flexx.serializer.saves(value)
-                window.flexx.ws.send('SETPROP ' + [self.id, name, txt].join(' '))
+                window.flexx.ws.send('SET_PROP ' + [self.id, name, txt].join(' '))
         
         def _init_prop(self, name):
             isproxy = self.__proxy_properties__.indexOf(name) >= 0
@@ -393,12 +395,12 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             if not isproxy:
                 value = self[name]
                 txt = window.flexx.serializer.saves(value)
-                window.flexx.ws.send('SETPROP ' + [self.id, name, txt].join(' '))
+                window.flexx.ws.send('SET_PROP ' + [self.id, name, txt].join(' '))
         
         def _handlers_changed_hook(self):
             types = [name for name in self._he_handlers.keys() if len(self._he_handlers[name])]
             text = window.flexx.serializer.saves(types)
-            window.flexx.ws.send('REG_EVENTS ' + [self.id, text].join(' '))
+            window.flexx.ws.send('SET_EVENT_TYPES ' + [self.id, text].join(' '))
         
         def _set_event_types_py(self, event_types):
             self.__event_types_py = event_types
