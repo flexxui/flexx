@@ -144,7 +144,7 @@ class ModelMeta(HasEventsMeta):
                         ' flexx.classes.Model.prototype.__from_json__);\n')
         return '\n'.join(code)
 
-# todo: private methods, make sure the names are special enough, or use double underscores
+
 
 class Model(with_metaclass(ModelMeta, event.HasEvents)):
     """ Subclass of HasEvents representing Python-JavaScript object models
@@ -219,11 +219,9 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             from .session import manager
             session = manager.get_default_session()
         self._session = session
-        
         self._session.register_model_class(self.__class__)
         
-        # Get initial event connection
-        clsname = 'flexx.classes.' + self.__class__.__name__
+        # Get initial event connections
         event_types_py, event_types_js = [], []
         for handler_name in self.__handlers__:
             descriptor = getattr(self.__class__, handler_name)
@@ -232,10 +230,12 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             descriptor = getattr(self.JS, handler_name)
             event_types_js.extend(descriptor.local_connection_strings)
         
-        self._event_types_js = event_types_js
+        # Further initialization of attributes
+        self.__event_types_js = event_types_js
         self.__pending_events_from_js = []
         
-        # Instantiate JavaScript version of this clas
+        # Instantiate JavaScript version of this class
+        clsname = 'flexx.classes.' + self.__class__.__name__
         cmd = 'flexx.instances.%s = new %s(%s, %s);' % (
                 self._id, clsname, reprs(self._id), serializer.saves(event_types_py))
         self._session._exec(cmd)
@@ -310,12 +310,13 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         self._session._exec(cmd)
     
     def _set_event_types_js(self, text):
-        self._event_types_js = serializer.loads(text)
+        # Called from session.py
+        self.__event_types_js = serializer.loads(text)
     
     def _emit_from_js(self, type, text):
         ev = serializer.loads(text)
         if not self.__pending_events_from_js:
-            call_later(0.0001, self.__emit_pending_from_js)
+            call_later(0.01, self.__emit_pending_from_js)
         self.__pending_events_from_js.append((type, ev))
     
     def __emit_pending_from_js(self):
@@ -329,12 +330,13 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     
     def emit(self, type, ev, fromjs=False):
         ev = super().emit(type, ev)
-        if not fromjs and type in self._event_types_js:
+        if not fromjs and type in self.__event_types_js:
             cmd = 'flexx.instances.%s._emit_from_py(%s, %r);' % (
                 self._id, serializer.saves(type), serializer.saves(ev))
             self._session._exec(cmd)
     
     def call_js(self, call):
+        # Not documented; not sure if we keep it. Handy for debugging though
         cmd = 'flexx.instances.%s.%s;' % (self._id, call)
         self._session._exec(cmd)
     
@@ -353,8 +355,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             # debugging. This attribute should *not* be used.
             self.__id = self._id = self.id = id
             
-            self._linked_signals = {}  # use a list as a set
-            self._event_types_py = py_events if py_events else []
+            self.__event_types_py = py_events if py_events else []
             
             # Call HasEvents __init__, properties will be created and connected.
             super().__init__()
@@ -402,7 +403,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             window.flexx.ws.send('REG_EVENTS ' + [self.id, text].join(' '))
         
         def _set_event_types_py(self, event_types):
-            self._event_types_py = event_types
+            self.__event_types_py = event_types
         
         def _emit_from_py(self, type, text):
             ev = window.flexx.serializer.loads(text)
@@ -410,7 +411,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         def emit(self, type, ev, frompy=False):
             ev = super().emit(type, ev)
-            if not frompy and type in self._event_types_py:
+            if not frompy and type in self.__event_types_py:
                 txt = window.flexx.serializer.saves(ev)
                 window.flexx.ws.send('EVENT ' + [self.id, type, txt].join(' '))
 

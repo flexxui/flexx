@@ -13,6 +13,10 @@ from .model import Model
 from .session import manager
 from .tornadoserver import server
 
+# Make event system use of Tornado
+from ..event import _loop
+_loop.loop.integrate_tornado()
+
 
 reprs = json.dumps
 

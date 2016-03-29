@@ -2,8 +2,9 @@
 """
 
 import os
+import time
 import sys
-import tornado  # todo: should not be needed, let flexx.app integrate event.loop?
+
 from flexx import app, event, webruntime
 
 from flexx.util.testing import run_tests_if_main, raises, skip
@@ -14,12 +15,13 @@ ON_PYPY = '__pypy__' in sys.builtin_module_names
 
 
 def runner(cls):
-    t = app.launch(cls, 'firefox')
+    t = app.launch(cls, 'firefox')  # fails somehow with XUL
     t.test_init()
     app.call_later(5, app.stop)
     app.run()
     if not (ON_TRAVIS and ON_PYPY):  # has intermittent fails on pypy3
         t.test_check()
+    t.session.close()
 
 
 class ModelA(app.Model):
@@ -260,6 +262,5 @@ def test_apps():
     runner(ModelE)
 
 
-run_tests_if_main()
-#if __name__ == '__main__':
-#    test_apps()
+runner(ModelE)
+#run_tests_if_main()
