@@ -13,24 +13,23 @@ Interactive example:
 
 .. UIExample:: 100
 
-    from flexx import app, ui, react
+    from flexx import app, ui, event
     
     class Example(ui.GroupWidget):
         def init(self):
-            self.title('A silly panel')
+            self.title = 'A silly panel'
             with ui.VBox():
                 ui.ProgressBar(value=0.2)
                 self.but = ui.Button(text='click me')
         
         class JS:
-            @react.connect('but.mouse_down')
-            def _change_group_title(self, down):
-                if down:
-                    self.title(self.title() + '-')
+            @event.connect('but.mouse_down')
+            def _change_group_title(self, *events):
+                self.title = self.title + '-'
 
 """
 
-from ... import react
+from ... import event
 from ...pyscript import window
 from . import Widget
 
@@ -63,6 +62,6 @@ class GroupWidget(Widget):
             self._legend = window.document.createElement('legend')
             self.p.node.appendChild(self._legend)
         
-        @react.connect('title')
-        def _title_changed(self, title):
-            self._legend.innerHTML = title
+        @event.connect('title')
+        def _title_changed(self, *events):
+            self._legend.innerHTML = self.title

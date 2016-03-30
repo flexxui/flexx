@@ -2,7 +2,7 @@ import time
 import logging
 
 import flexx
-from flexx import app, ui, react
+from flexx import app, ui, event
 
 import faulthandler
 faulthandler.enable()
@@ -176,15 +176,10 @@ class MyApp(ui.Widget):
     
     class JS:
         
-        @react.connect('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')
-        def _stacked_current(a, b, c):
-            if a:
-                self.stack.current(self.a)
-            if b:
-                self.stack.current(self.b)
-            if c:
-                self.stack.current(self.c)
-                
+        @event.connect('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')
+        def _stacked_current(self, *events):
+            ob = events[-1].source
+            self.stack.current = ob
 
 # app.serve(MyApp)
 a = app.launch(MyApp, 'firefox')

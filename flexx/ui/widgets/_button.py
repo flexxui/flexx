@@ -11,7 +11,7 @@ Example with interaction:
 
 .. UIExample:: 50
     
-    from flexx import app, ui, react
+    from flexx import app, ui, event
     
     class Example(ui.Widget):
     
@@ -20,16 +20,15 @@ Example with interaction:
         
         class JS:
         
-            @react.connect('b1.mouse_down')
-            def _on_mouse_down(down):
+            @event.connect('b1.mouse_down')
+            def _on_mouse_down(self, *events):
                 self._click_count = self._click_count or 0
-                if down:
-                    self._click_count += 1
-                    self.b1.text("I've been clicked %i times" % self._click_count)
+                self._click_count += 1
+                self.b1.text = "I've been clicked %i times" % self._click_count
 
 """
 
-from ... import react
+from ... import event
 from ...pyscript import window
 from . import Widget
 
@@ -43,13 +42,13 @@ class Button(Widget):
     
     """
     
-    @react.input
-    def text(v=''):
+    @event.prop
+    def text(self, v=''):
         """ The text on the button.
         """
-        # todo: use react.check_str() or something?
+        # todo: use event.check_str() or something?
         if not isinstance(v, str):
-            raise ValueError('Text input must be a string.')
+            raise ValueError('Text property must be a string.')
         return v
     
     class JS:
@@ -57,15 +56,32 @@ class Button(Widget):
         def _create_node(self):
             self.p = window.phosphor.createWidget('button')
             node = self.p.node
-            node.addEventListener('mousedown', lambda ev: self.mouse_down._set(1), 0)
-            node.addEventListener('mouseup', lambda ev: self.mouse_down._set(0), 0)
+            node.addEventListener('mousedown', self.mouse_down, 0)
+            node.addEventListener('mouseup', self.mouse_up, 0)
         
-        @react.connect('text')
-        def _text_changed(self, text):
-            self.node.innerHTML = text
-    
-        @react.source
-        def mouse_down(v=False):
-            """ True when the mouse is currently pressed down.
+        @event.connect('text')
+        def _text_changed(self, *events):
+            self.node.innerHTML = events[-1].new_value
+        
+        # todo: docs on the mouse event
+        @event.emitter
+        def mouse_down(self, e):
+            """ Event emitted when the mouse is pressed down.
             """
-            return bool(v)
+            return self._create_mouse_event(e)
+        
+        @event.emitter
+        def mouse_up(self, e):
+            """ Event emitted when the mouse is pressed up.
+            """
+            return self._create_mouse_event(e)
+        
+        def _create_mouse_event(self, e):
+            # todo: which vs button? see also lineedit
+            modifiers = [n for n in ('alt', 'shift', 'ctrl', 'meta') if e[n]]
+            return dict(x=e.clientX, y=e.clientY,
+                        pageX=e.pageX, pageY=e.pageY,
+                        button=e.button+1, buttons=[b+1 for b in e.buttons],
+                        modifiers=modifiers,
+                        )
+

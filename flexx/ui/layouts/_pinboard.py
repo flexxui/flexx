@@ -15,7 +15,7 @@ Example:
 
 """
 
-from ... import react
+from ... import event
 from ...pyscript import window
 from . import Layout
 
@@ -40,16 +40,16 @@ class PinboardLayout(Layout):
         def _create_node(self):
             self.p = window.phosphor.panel.Panel()
         
-        @react.connect('children.*.pos')
-        def __pos_changed(self, *poses):
-            for child in self.children():
-                pos = child.pos()
+        @event.connect('children.*.pos')
+        def __pos_changed(self, *events):
+            for child in self.children:
+                pos = child.pos
                 st = child.node.style
                 st.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
                 st.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
         
-        @react.connect('children.*.size')
-        def __size_changed(self, *sizes):
-            for child in self.children():
-                size = child.size()
+        @event.connect('children.*.size')
+        def __size_changed(self, *events):
+            for child in self.children:
+                size = child.size
                 child._set_size('', size[0], size[1])

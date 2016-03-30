@@ -3,7 +3,7 @@ Example:
 
 .. UIExample:: 200
     
-    from flexx import ui, react
+    from flexx import ui, event
 
     class Example(ui.Widget):
         def init(self):
@@ -20,14 +20,13 @@ Example:
         
         class JS:
             
-            @react.connect('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')
-            def _stacked_current(a, b, c):
-                if a: self.stack.current(self.a)
-                if b: self.stack.current(self.b)
-                if c: self.stack.current(self.c)
+            @event.connect('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')
+            def _stacked_current(self, *events):
+                ob = events[-1].source
+                self.stack.current = ob
 """
 
-from ... import react
+from ... import event
 from ...pyscript import window
 from . import Widget, Layout
 
@@ -36,8 +35,8 @@ class StackedPanel(Layout):
     """ A panel which shows only one of its children at a time.
     """
     
-    @react.input
-    def current(v=None):
+    @event.prop
+    def current(self, v=None):
         """ The currently shown widget.
         """
         if not isinstance(v, Widget):
@@ -50,8 +49,9 @@ class StackedPanel(Layout):
         def _create_node(self):
             self.p = window.phosphor.stackedpanel.StackedPanel()
         
-        @react.connect('current')
-        def __set_current_widget(self, widget):
+        @event.connect('current')
+        def __set_current_widget(self, *events):
+            widget = events[-1].new_value
             for i in range(self.p.childCount()):
                 self.p.childAt(i).hide()
             widget.p.show()

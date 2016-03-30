@@ -35,7 +35,7 @@ The GridPanel is deprecated for the time being.
                                        size=(100, 100))
 """
 
-from ... import react
+from ... import event
 from ...pyscript import window, Infinity
 from . import Layout
 from ._form import BaseTableLayout
@@ -59,14 +59,14 @@ class GridPanel(Layout):
     def init(self):
         raise NotImplementedError('The GridPanel is (temporarily) deprecated.')
     
-    @react.input
-    def spacing(v=5):
+    @event.prop
+    def spacing(self, v=5):
         """ The space between two child elements. """
         return float(v)
     
     # todo: allow specifying flex, minSize etc. using an array of dicts?
-    # @react.input
-    # def col_specs(v=None):
+    # @event.prop
+    # def col_specs(self, v=None):
     #     """ The specification for the columns. If None, uses the 
     #     """
     #     return v
@@ -87,15 +87,15 @@ class GridPanel(Layout):
         def _create_node(self):
             self.p = window.phosphor.gridpanel.GridPanel()
         
-        @react.connect('children.*.pos', 'children.*.flex', 'children.*.size')
-        def __update_positions(self):
+        @event.connect('children.*.pos', 'children.*.flex', 'children.*.size')
+        def __update_positions(self, *events):
             self._child_limits_changed()
         
         def _child_limits_changed(self):
             # Set position of all children and get how large our grid is
             max_row, max_col = 0, 0
-            for child in self.children():
-                x, y = child.pos()
+            for child in self.children:
+                x, y = child.pos
                 window.phosphor.gridpanel.GridPanel.setColumn(child.p, x)
                 window.phosphor.gridpanel.GridPanel.setRow(child.p, y)
                 max_col = max(max_col, x)
@@ -106,18 +106,18 @@ class GridPanel(Layout):
                          'sizeBasis': 0} for i in range(max_col+1)]
             rowSpecs = [{'stretch': 0, 'minSize': 0, 'maxSize': Infinity,
                          'sizeBasis': 0} for i in range(max_row+1)]
-            for child in self.children():
-                x, y = child.pos()
+            for child in self.children:
+                x, y = child.pos
                 limits = child.p.sizeLimits
                 colSpecs[x].minSize = max(colSpecs[x].minSize, limits.minWidth)
                 colSpecs[x].maxSize = min(colSpecs[x].maxSize, limits.maxWidth)
-                colSpecs[x].sizeBasis = max(colSpecs[x].sizeBasis, child.size()[0])
-                colSpecs[x].stretch = max(colSpecs[x].stretch, child.flex()[0])
+                colSpecs[x].sizeBasis = max(colSpecs[x].sizeBasis, child.size[0])
+                colSpecs[x].stretch = max(colSpecs[x].stretch, child.flex[0])
                 
                 rowSpecs[y].minSize = max(rowSpecs[y].minSize, limits.minHeight)
                 rowSpecs[y].maxSize = min(rowSpecs[y].maxSize, limits.maxHeight)
-                rowSpecs[y].sizeBasis = max(rowSpecs[y].sizeBasis, child.size()[1])
-                rowSpecs[y].stretch = max(rowSpecs[y].stretch, child.flex()[1])
+                rowSpecs[y].sizeBasis = max(rowSpecs[y].sizeBasis, child.size[1])
+                rowSpecs[y].stretch = max(rowSpecs[y].stretch, child.flex[1])
             
             # Assign
             self.p._columnSpecs = colSpecs
@@ -126,8 +126,9 @@ class GridPanel(Layout):
             self.p.columnSpecs = [Spec(i) for i in colSpecs]
             self.p.rowSpecs = [Spec(i) for i in rowSpecs]
         
-        @react.connect('spacing')
-        def __spacing_changed(self, spacing):
+        @event.connect('spacing')
+        def __spacing_changed(self, *events):
+            spacing = events[-1].new_value
             self.p.rowSpacing = spacing
             self.p.columnSpacing = spacing
 

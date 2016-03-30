@@ -11,7 +11,7 @@
 
 import threading
 
-from .. import react
+from .. import event
 from ..app import Model
 from ..pyscript import undefined, window
 
@@ -92,7 +92,7 @@ class Widget(Model):
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
         """
-        if self.container():
+        if self.container:
             return "<i>This widget is already shown in this notebook</i>"
         
         container_id = self.id + '_container'
@@ -111,11 +111,12 @@ class Widget(Model):
         """
         pass
     
+    # todo: renamed
     def disconnect_signals(self, *args):
         """ Overloaded version of disconnect_signals() that will also
         disconnect the signals of any child widgets.
         """
-        children = self.children()
+        children = self.children
         Model.disconnect_signals(self, *args)
         for child in children:
             child.disconnect_signals(*args)
@@ -133,15 +134,15 @@ class Widget(Model):
         #if value is None:
         #    self.update()
     
-    @react.input
-    def title(v=''):
+    @event.prop
+    def title(self, v=''):
         """ The title of this widget. This is used to mark the widget
         in e.g. a tab layout or form layout.
         """
         return str(v)
     
-    @react.input
-    def style(v=''):
+    @event.prop
+    def style(self, v=''):
         """ CSS style options for this widget object. e.g. 
         ``"background: #f00; color: #0f0;"``. If the given value is a
         dict, its key-value pairs are converted to a CSS style string.
@@ -154,8 +155,8 @@ class Widget(Model):
     
     ## Size, and positioning
     
-    @react.input
-    def flex(v=0):
+    @event.prop
+    def flex(self, v=0):
         """ How much space this widget takes (relative to the other
         widgets) when contained in a flexible layout such as BoxLayout,
         BoxPanel, FormLayout or GridPanel. A flex of 0 means to take
@@ -166,8 +167,8 @@ class Widget(Model):
             v = v, v
         return _check_two_scalars('flex', v)
     
-    @react.input
-    def pos(v=(0, 0)):
+    @event.prop
+    def pos(self, v=(0, 0)):
         """ The position of the widget when it in a layout that allows
         positioning, this can be an arbitrary position (e.g. in
         PinBoardLayout) or the selection of column and row in a
@@ -175,8 +176,8 @@ class Widget(Model):
         """
         return _check_two_scalars('pos', v)
     
-    @react.input
-    def size(v=(0, 0)):
+    @event.prop
+    def size(self, v=(0, 0)):
         """ The size of the widget when it is in a layout that allows
         explicit sizing, or the base-size in a BoxPanel or GridPanel.
         A value <= 0 is interpreted as auto-size.
@@ -187,15 +188,15 @@ class Widget(Model):
     
     ## Parenting
     
-    @react.input
-    def container(v=''):
+    @event.prop
+    def container(self, v=''):
         """ The id of the DOM element that contains this widget if
         parent is None. Use 'body' to make this widget the root.
         """
         return str(v)
     
-    @react.nosync
-    @react.input
+    # todo: !!@react.nosync
+    @event.prop
     def parent(self, new_parent=None):
         """ The parent widget, or None if it has no parent.
         """
@@ -222,18 +223,18 @@ class Widget(Model):
             return new_parent
         
         if old_parent is not None and old_parent is not undefined:
-            children = list(old_parent.children())
+            children = list(old_parent.children)
             while self in children:
                 children.remove(self)
             old_parent.children._set(children)
         if new_parent is not None:
-            children = list(new_parent.children())
+            children = list(new_parent.children)
             children.append(self)
-            new_parent.children._set(children)
+            new_parent._set_prop('children', children)
         
         return new_parent
     
-    @react.input
+    @event.prop
     def children(self, new_children=()):
         """ The child widgets of this widget.
         """
@@ -247,9 +248,9 @@ class Widget(Model):
         if old_children is not undefined:
             for child in old_children:
                 if child not in new_children:
-                    child.parent(None)
+                    child.parent = None
         for child in new_children:
-            child.parent(self)
+            child.parent = self
         
         return tuple(new_children)
     
@@ -307,13 +308,15 @@ class Widget(Model):
         def _create_node(self):
             self.p = window.phosphor.panel.Panel()
         
-        @react.connect('style')
-        def style_changed(self, style):
+        # todo: rare case where we emitted a new signal
+        @event.connect('style')
+        def style_changed(self, *events):
             """ Emits when the style signal changes, and provides a dict with
             the changed style atributes.
             """
             # self.node.style = style  # forbidden in strict mode,
             # plus it clears all previously set style
+            style = events[-1].new_value
             d = {}
             for part in style.split(';'):
                 if ':' in part:
@@ -323,9 +326,11 @@ class Widget(Model):
                     d[key] = val
             return d
         
-        @react.connect('style_changed')
-        def __check_size_limits_changed(self, style):
+        @event.connect('style_changed')  # todo: fix
+        def __check_size_limits_changed(self, *events):
             size_limits_keys = 'min-width', 'min-height', 'max-width', 'max-height'
+            
+            style = '????????'
             
             size_limits_changed = False
             for key in size_limits_keys:
@@ -339,18 +344,19 @@ class Widget(Model):
                 for k, v in zip(size_limits_keys, values):
                     self.node.style[k] = v
                 # Allow parent to re-layout
-                parent = self.parent()
+                parent = self.parent
                 if parent:
                     parent.p.fit()  # i.e. p.processMessage(p.MsgFitRequest)
 
-        @react.connect('title')
-        def __title_changed(self, title):
-            self.p.title.text = title  # All Phosphor widgets have a title
+        @event.connect('title')
+        def __title_changed(self, *events):
+            # All Phosphor widgets have a title
+            self.p.title.text = events[-1].new_value
         
         ## Size 
         
-        @react.source
-        def real_size(v=(0, 0)):
+        @event.readonly
+        def real_size(self, v=(0, 0)):
             """ The actual current size of the widget. Flexx tries to
             keep this value up-to-date, but when in a layout like
             BoxLayout, a change in a Button's text can change the size
@@ -358,15 +364,15 @@ class Widget(Model):
             """
             return v[0], v[1]
         
-        @react.connect('parent', 'container')
-        def __update_real_size(self, p, c):
+        @event.connect('parent', 'container')
+        def __update_real_size(self, *events):
             self._check_real_size()
         
         def _check_real_size(self):
             """ Check whether the current size has changed.
             """
             n = self.node
-            cursize = self.real_size()
+            cursize = self.real_size
             if cursize[0] != n.clientWidth or cursize[1] !=n.clientHeight:
                 self.real_size._set([n.clientWidth, n.clientHeight])
         
@@ -386,10 +392,11 @@ class Widget(Model):
         
         ## Parenting
         
-        @react.connect('container')
-        def __container_changed(self, id):
+        @event.connect('container')
+        def __container_changed(self, *events):
+            id = events[-1].new_value
             self.node.classList.remove('flx-main-widget')
-            if self.parent():
+            if self.parent:
                 return 
             if id:
                 el = window.document.getElementById(id)
@@ -403,8 +410,8 @@ class Widget(Model):
             if id == 'body':
                 self.node.classList.add('flx-main-widget')
         
-        @react.nosync
-        @react.input
+        # todo: !!@react.nosync
+        @event.prop
         def parent(self, new_parent=None):
             old_parent = self.parent._value
             
@@ -417,19 +424,19 @@ class Widget(Model):
                 return new_parent
             
             if old_parent is not None:
-                children = list(old_parent.children())
+                children = list(old_parent.children)
                 while self in children:
                     children.remove(self)
                 old_parent.children._set(children)
             if new_parent is not None:
-                children = list(new_parent.children())
+                children = list(new_parent.children)
                 children.append(self)
                 new_parent.children._set(children)
             
             return new_parent
         
-        @react.input
-        def children(self, new_children):  # note: no default value
+        @event.prop
+        def children(self, new_children=()):
             old_children = self.children._value
             
             # todo: PyScript support deep comparisons
@@ -449,15 +456,16 @@ class Widget(Model):
             if old_children is not undefined:
                 for child in old_children:
                     if child not in new_children:
-                        child.parent(None)
+                        child.parent = None
             for child in new_children:
-                child.parent(self)
+                child.parent = self
             
             return tuple(new_children)
         
-        @react.connect('children')
-        def __children_changed(self, new_children):
-            old_children = self.children.last_value
+        @event.connect('children')
+        def __children_changed(self, *events):
+            new_children = events[-1].new_value
+            old_children = events[0].old_value
             if not old_children:
                 old_children = []
             
@@ -487,9 +495,9 @@ class Widget(Model):
     
         ## Special
         
-        @react.connect('children')
-        def __update_css(self, children):
-            
+        @event.connect('children')
+        def __update_css(self, *events):
+            children = events[-1].new_value
             if 'flx-Layout' not in self.node.className:
                 # Ok, no layout, so maybe we need to take care of CSS.
                 # If we have a child that is a hbox/vbox, we need to be a

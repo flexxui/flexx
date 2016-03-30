@@ -5,7 +5,7 @@ Simple example:
     
     import numpy as np
     from bokeh.plotting import figure 
-    from flexx import app, ui, react
+    from flexx import app, ui, event
     
     x = np.linspace(0, 6, 50)
     
@@ -27,7 +27,7 @@ Simple example:
 
 import os
 
-from ... import react
+from ... import event
 from ...pyscript import window
 from . import Widget
 
@@ -60,9 +60,9 @@ class BokehWidget(Widget):
                 filename = os.path.join(res, x, modname + x)
                 self.session.add_global_asset(modname + x, filename)
 
-    @react.nosync
-    @react.input
-    def plot(plot):
+    # todo: !!@react.nosync
+    @event.prop
+    def plot(self, plot=None):
         """ The Bokeh plot object to display. In JS, this signal
         provides the corresponding backbone model.
         """
@@ -75,8 +75,9 @@ class BokehWidget(Widget):
         plot.responsive = False  # Flexx handles responsiveness
         return plot
     
-    @react.connect('plot')
-    def plot_components(plot):
+    # todo: signal!!
+    @event.connect('plot')
+    def plot_components(self, *events):
         from bokeh.embed import components
         script, div = components(plot)
         script = '\n'.join(script.strip().split('\n')[1:-1])
@@ -84,14 +85,14 @@ class BokehWidget(Widget):
     
     class JS:
         
-        @react.nosync
-        @react.input
-        def plot(plot=None):
+        # todo: !!@react.nosync
+        @event.prop
+        def plot(self, plot=None):
             return plot
         
-        @react.connect('plot_components')
-        def __set_plot_components(self, script_div_id):
-            script, div, id = script_div_id
+        @event.connect('plot_components')
+        def __set_plot_components(self, *events):
+            script, div, id = events[-1].new_value
             # Embed div
             self.node.innerHTML = div
             # "exec" code
@@ -101,15 +102,15 @@ class BokehWidget(Widget):
             #eval(script)
             # Get plot from id in next event-loop iter
             def getplot():
-                self.plot._set(Bokeh.index[id])
-                self.plot().resize()
-                self.real_size._set(self.real_size())
+                self.plot = Bokeh.index[id]
+                self.plot.resize()
+                self.real_size._set(self.real_size)
             window.setTimeout(getplot, 10)
         
-        @react.connect('real_size')
-        def __resize_plot(self, size):
-            if self.plot() and self.parent() and self.plot().resize_width_height:
-                cstyle = window.getComputedStyle(self.parent().node)
+        @event.connect('real_size')
+        def __resize_plot(self, *events):
+            if self.plot and self.parent and self.plot.resize_width_height:
+                cstyle = window.getComputedStyle(self.parent.node)
                 use_x = cstyle['overflow-x'] not in ('auto', 'scroll')
                 use_y = cstyle['overflow-y'] not in ('auto', 'scroll')
                 self.plot().resize_width_height(use_x, use_y)

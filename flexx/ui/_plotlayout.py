@@ -4,7 +4,7 @@ Example:
 
 .. UIExample:: 300
 
-    from flexx import app, ui, react
+    from flexx import app, ui, event
     
     class Example(ui.Widget):
         def init(self):
@@ -20,16 +20,18 @@ Example:
         
         class JS:
             
-            @react.connect('slider1.value', 'slider2.value')
-            def __update_plot(e, n):
+            @event.connect('slider1.value', 'slider2.value')
+            def __update_plot(self, *events):
+                e, n = self.slider1.value, self.slider2.value
                 xx = range(n+1)
-                self.layout._plot.xdata(xx)
-                self.layout._plot.ydata([x**e for x in xx])
+                self.layout._plot.xdata = xx
+                self.layout._plot.ydata = [x**e for x in xx]
             
-            @react.connect('layout._plot.ydata')
-            def __update_max(yy):
+            @event.connect('layout._plot.ydata')
+            def __update_max(self, *events):
+                yy = events[-1].new_value
                 if yy:
-                    self.progress.value(max(yy))
+                    self.progress.value = max(yy)
 
 """
 
@@ -64,14 +66,14 @@ class PlotLayout(Layout):
         the given name.
         """
         # Take stretch out
-        stretch = self._left.children()[-1]
-        stretch.parent(None)
+        stretch = self._left.children[-1]
+        stretch.parent = None
         
         # Add group of widgets
         panel = GroupWidget(title=name, parent=self._left, flex=0)
         vbox = VBox(parent=panel)
         for widget in args:
-            widget.parent(vbox)
+            widget.parent = vbox
         
         # Put stretch back in
-        stretch.parent(self._left)
+        stretch.parent = self._left

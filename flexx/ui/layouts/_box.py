@@ -78,7 +78,7 @@ Interactive example:
 
 .. UIExample:: 200
     
-    from flexx import ui, react
+    from flexx import ui, event
     
     class Example(ui.HBox):
         def init(self):
@@ -89,25 +89,25 @@ Interactive example:
         
         class JS:
             
-            @react.connect('b1.mouse_down')
-            def _to_horizontal(self, down):
-                if down: self.orientation('h')
+            @event.connect('b1.mouse_down')
+            def _to_horizontal(self, *events):
+                self.orientation = 'h'
             
-            @react.connect('b2.mouse_down')
-            def _to_vertical(self, down):
-                if down: self.orientation('v')
+            @event.connect('b2.mouse_down')
+            def _to_vertical(self, *events):
+                self.orientation = 'v'
             
-            @react.connect('b3.mouse_down')
-            def _to_horizontal_rev(self, down):
-                if down: self.orientation('hr')
+            @event.connect('b3.mouse_down')
+            def _to_horizontal_rev(self, *events):
+                self.orientation = 'hr'
             
-            @react.connect('b4.mouse_down')
-            def _to_vertical_r(self, down):
-                if down: self.orientation('vr')
+            @event.connect('b4.mouse_down')
+            def _to_vertical_r(self, *events):
+                self.orientation = 'vr'
 
 """
 
-from ... import react
+from ... import event
 from ...pyscript import window
 from . import Layout
 
@@ -116,12 +116,12 @@ class BaseBoxLayout(Layout):
     """ Base class for BoxLayout and BoxPanel.
     """
     
-    @react.input
-    def spacing(v=5):
+    @event.prop
+    def spacing(self, v=5):
         """ The space between two child elements (in pixels)"""
         return float(v)
     
-    @react.input
+    @event.prop
     def orientation(self, v=None):
         """ The orientation of the child widgets. 'h' or 'v'. Default
         horizontal. The items can also be reversed using 'hr' and 'vr'.
@@ -212,8 +212,8 @@ class BoxLayout(BaseBoxLayout):
     }
     """
     
-    @react.input
-    def padding(v=1):
+    @event.prop
+    def padding(self, v=1):
         """ The empty space around the layout (in pixels). """
         return float(v)
     
@@ -222,59 +222,64 @@ class BoxLayout(BaseBoxLayout):
         def _create_node(self):
             self.p = window.phosphor.panel.Panel()
         
-        @react.connect('orientation', 'children.*.flex')
-        def __set_flexes(self, ori, *flexes):
+        @event.connect('orientation', 'children.*.flex')
+        def __set_flexes(self, *events):
+            ori = self.orientation
             i = 0 if ori in (0, 'h', 'hr') else 1
-            for widget in self.children():
-                self._applyBoxStyle(widget.node, 'flex-grow', widget.flex()[i])
-            for widget in self.children():
+            for widget in self.children:
+                self._applyBoxStyle(widget.node, 'flex-grow', widget.flex[i])
+            for widget in self.children:
                 widget._check_real_size()
         
-        @react.connect('spacing', 'orientation', 'children')
-        def __spacing_changed(self, spacing, ori, children):
+        @event.connect('spacing', 'orientation', 'children')
+        def __spacing_changed(self, *events):
+            ori = self.orientation
+            children_events = [ev for ev in events if ev.type == 'children']
+            old_children = children_events[0].old_value if children_events else []
+            children = self.children
             # Reset
-            for child in self.children.value:
+            for child in children:
                 child.node.style['margin-top'] = ''
                 child.node.style['margin-left'] = ''
-            if self.children.last_value:
-                for child in self.children.last_value:
-                    child.node.style['margin-top'] = ''
-                    child.node.style['margin-left'] = ''
+            for child in old_children:
+                child.node.style['margin-top'] = ''
+                child.node.style['margin-left'] = ''
             # Set
             margin = 'margin-top' if ori in (1, 'v', 'vr') else 'margin-left'
             if children.length:
                 if ori in ('vr', 'hr'):
                     children[-1].node.style[margin] = '0px'
                     for child in children[:-1]:
-                        child.node.style[margin] = spacing + 'px'
+                        child.node.style[margin] = self.spacing + 'px'
                 else:
                     children[0].node.style[margin] = '0px'
                     for child in children[1:]:
-                        child.node.style[margin] = spacing + 'px'
-            for widget in self.children():
+                        child.node.style[margin] = self.spacing + 'px'
+            for widget in children:
                 widget._check_real_size()
         
-        @react.connect('padding')
-        def __padding_changed(self, margin):
-            self.node.style['padding'] = margin + 'px'
-            for widget in self.children():
+        @event.connect('padding')
+        def __padding_changed(self, *events):
+            self.node.style['padding'] = self.padding + 'px'
+            for widget in self.children:
                 widget._check_real_size()
         
-        @react.connect('orientation')
-        def __orientation_changed(self, orientation):
+        @event.connect('orientation')
+        def __orientation_changed(self, *events):
+            ori = self.orientation
             for name in ('hbox', 'vbox', 'hboxr', 'vboxr'):
                 self.node.classList.remove('flx-'+name)
-            if orientation == 0 or orientation == 'h':
+            if ori == 0 or ori == 'h':
                 self.node.classList.add('flx-hbox')
-            elif orientation == 1 or orientation == 'v':
+            elif ori == 1 or ori == 'v':
                 self.node.classList.add('flx-vbox')
-            elif orientation == 'hr':
+            elif ori == 'hr':
                 self.node.classList.add('flx-hboxr')
-            elif orientation == 'vr':
+            elif ori == 'vr':
                 self.node.classList.add('flx-vboxr')
             else:
-                raise ValueError('Invalid box orientation: ' + orientation)
-            for widget in self.children():
+                raise ValueError('Invalid box orientation: ' + ori)
+            for widget in self.children:
                 widget._check_real_size()
         
         def _applyBoxStyle(self, e, sty, value):
@@ -310,26 +315,27 @@ class BoxPanel(BaseBoxLayout):
         def _create_node(self):
             self.p = window.phosphor.boxpanel.BoxPanel()
         
-        @react.connect('orientation', 'children.*.flex')
-        def __set_flexes(self, ori, *flexes):
-            i = 0 if ori in (0, 'h', 'hr') else 1
-            for widget in self.children():
-                window.phosphor.boxpanel.BoxPanel.setStretch(widget.p, widget.flex()[i])
+        @event.connect('orientation', 'children.*.flex')
+        def __set_flexes(self, *events):
+            i = 0 if self.orientation in (0, 'h', 'hr') else 1
+            for widget in self.children:
+                window.phosphor.boxpanel.BoxPanel.setStretch(widget.p, widget.flex[i])
                 window.phosphor.boxpanel.BoxPanel.setSizeBasis(widget.p, 100)
         
-        @react.connect('spacing')
-        def __spacing_changed(self, spacing):
-            self.p.spacing = spacing
+        @event.connect('spacing')
+        def __spacing_changed(self, *events):
+            self.p.spacing = events[-1].new_value
         
-        @react.connect('orientation')
-        def __orientation_changed(self, orientation):
-            if orientation == 0 or orientation == 'h':
+        @event.connect('orientation')
+        def __orientation_changed(self, *events):
+            ori = self.orientation
+            if ori == 0 or ori == 'h':
                 self.p.direction = window.phosphor.boxpanel.BoxPanel.LeftToRight
-            elif orientation == 1 or orientation == 'v':
+            elif ori == 1 or ori == 'v':
                 self.p.direction = window.phosphor.boxpanel.BoxPanel.TopToBottom
-            elif orientation == 'hr':
+            elif ori == 'hr':
                 self.p.direction = window.phosphor.boxpanel.BoxPanel.RightToLeft
-            elif orientation == 'vr':
+            elif ori == 'vr':
                 self.p.direction = window.phosphor.boxpanel.BoxPanel.BottomToTop
             else:
-                raise ValueError('Invalid boxpanel orientation: ' + orientation)
+                raise ValueError('Invalid boxpanel orientation: ' + ori)
