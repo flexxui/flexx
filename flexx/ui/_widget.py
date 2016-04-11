@@ -81,13 +81,18 @@ class Widget(Model):
         # todo: can I make widgets not need the session immediately?
         # The fact that session and app need each-other is a bit awkward?
         
-        with self:
-            self.init()
+        # with self:
+        #     self.init()
         
         # Signal dependencies may have been added during init(), also in JS
-        self.connect_signals(False)
-        cmd = 'flexx.instances.%s.connect_signals(false);' % self._id
-        self._session._exec(cmd)
+        #self.connect_signals(False)
+        #cmd = 'flexx.instances.%s.connect_signals(false);' % self._id
+        #self._session._exec(cmd)
+    
+    def _init(self):
+        # This gets called during __init__
+        with self:
+            self.init()
     
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
@@ -97,7 +102,7 @@ class Widget(Model):
         
         container_id = self.id + '_container'
         def set_cointainer_id():
-            self.container._set(container_id)
+            self._set_prop('container', container_id)
         # Set container id, this gets applied in the next event loop
         # iteration, so by the time it gets called in JS, the div that
         # we define below will have been created.
@@ -195,65 +200,6 @@ class Widget(Model):
         """
         return str(v)
     
-    # todo: !!@react.nosync
-    @event.prop
-    def parent(self, new_parent=None):
-        """ The parent widget, or None if it has no parent.
-        """
-        # A note on how we do parenting: The parent and children signals
-        # are mutually dependent; changing either will also change the
-        # other (though on another widget). To prevent an infinite loop
-        # we use the feature that we can set other signals directly
-        # from the input function: while we are inside this function,
-        # the signal is "locked". In JS we perform the exact same trick.
-        # To sync Python and JS, we only sync the children signal,
-        # otherwise we'd create a loop. We use the ``nosync``
-        # decorator. In the end, we can set the parent and children
-        # signal, and the other signal is updated immediately. This
-        # works in JS and Py.
-        
-        old_parent = self.parent._value  # has not been set yet
-        
-        if new_parent is old_parent:
-            return undefined
-        if not (new_parent is None or isinstance(new_parent, Widget)):
-            raise ValueError('parent must be a widget or None')
-        
-        if old_parent is undefined:
-            return new_parent
-        
-        if old_parent is not None and old_parent is not undefined:
-            children = list(old_parent.children)
-            while self in children:
-                children.remove(self)
-            old_parent.children._set(children)
-        if new_parent is not None:
-            children = list(new_parent.children)
-            children.append(self)
-            new_parent._set_prop('children', children)
-        
-        return new_parent
-    
-    @event.prop
-    def children(self, new_children=()):
-        """ The child widgets of this widget.
-        """
-        old_children = self.children._value
-        
-        if new_children == old_children:
-            return undefined
-        if not all([isinstance(w, Widget) for w in new_children]):
-            raise ValueError('All children must be widget objects.')
-        
-        if old_children is not undefined:
-            for child in old_children:
-                if child not in new_children:
-                    child.parent = None
-        for child in new_children:
-            child.parent = self
-        
-        return tuple(new_children)
-    
     CSS = """
     
     .flx-container {
@@ -304,6 +250,12 @@ class Widget(Model):
                 raise RuntimeError('Error while determining class names')
             
             super()._init()
+        
+        def _init_for_real(self):
+            # todo: this sucks
+            set_children = self.children if self.children else []
+            super()._init_for_real()
+            self.children = set_children
         
         def _create_node(self):
             self.p = window.phosphor.panel.Panel()
@@ -374,7 +326,7 @@ class Widget(Model):
             n = self.node
             cursize = self.real_size
             if cursize[0] != n.clientWidth or cursize[1] !=n.clientHeight:
-                self.real_size._set([n.clientWidth, n.clientHeight])
+                self._set_prop('real_size', [n.clientWidth, n.clientHeight])
         
         # NOTE: this is how we would handle signals for min_size and max_size
         
@@ -413,52 +365,43 @@ class Widget(Model):
         # todo: !!@react.nosync
         @event.prop
         def parent(self, new_parent=None):
-            old_parent = self.parent._value
+            old_parent = self.parent or None
             
             if new_parent is old_parent:
-                return undefined
-            if not (new_parent is None or new_parent.__signals__):
-                raise ValueError('parent must be a widget or None')
-                
-            if old_parent is undefined:
                 return new_parent
+            if not (new_parent is None or isinstance(new_parent, flexx.classes.Widget)):
+                raise ValueError('parent must be a Widget or None')
             
             if old_parent is not None:
-                children = list(old_parent.children)
+                children = list(old_parent.children if old_parent.children else [])
                 while self in children:
                     children.remove(self)
-                old_parent.children._set(children)
+                old_parent.children = children
             if new_parent is not None:
-                children = list(new_parent.children)
+                children = list(new_parent.children if new_parent.children else [])
                 children.append(self)
-                new_parent.children._set(children)
+                new_parent.children = children
             
             return new_parent
         
         @event.prop
         def children(self, new_children=()):
-            old_children = self.children._value
+            old_children = self.children if self.children else []
             
-            # todo: PyScript support deep comparisons
-            #if new_children == old_children:
-            #    return undefined
-            if (old_children is not undefined and
-                    len(new_children) == len(old_children)):
-                for i in range(len(new_children)):
-                    if new_children[i] != old_children[i]:
-                        break
-                else:
-                    return undefined
-            
-            if not all([bool(w.__signals__) for w in new_children]):
+            if len(new_children) == len(old_children):
+                if all([(c1 is c2) for c1, c2 in zip(old_children, new_children)]):
+                    return new_children  # No need to do anything
+            if not all([isinstance(w, flexx.classes.Widget) for w in new_children]):
                 raise ValueError('All children must be widget objects.')
             
-            if old_children is not undefined:
-                for child in old_children:
-                    if child not in new_children:
-                        child.parent = None
+            for child in old_children:
+                if child not in new_children:
+                    child.parent = None
+                    #self._remove_child(child)
             for child in new_children:
-                child.parent = self
+                if child not in old_children:
+                    child.parent = self
+                    #self._add_child(child)
             
             return tuple(new_children)
         
@@ -466,8 +409,6 @@ class Widget(Model):
         def __children_changed(self, *events):
             new_children = events[-1].new_value
             old_children = events[0].old_value
-            if not old_children:
-                old_children = []
             
             i_ok = 0
             for i in range(min(len(new_children), len(old_children))):
@@ -484,7 +425,7 @@ class Widget(Model):
             """ Add the DOM element.
             Called right after the child widget is added. """
             self.p.addChild(widget.p)
-            
+        
         def _remove_child(self, widget):
             """ Remove the DOM element.
             Called right after the child widget is removed.

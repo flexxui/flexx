@@ -56,7 +56,7 @@ class Button(Widget):
         def _create_node(self):
             self.p = window.phosphor.createWidget('button')
             node = self.p.node
-            node.addEventListener('mousedown', self.mouse_down, 0)
+            node.addEventListener('mousedown', self.mouse_down.bind(this), 0)
             node.addEventListener('mouseup', self.mouse_up, 0)
         
         @event.connect('text')

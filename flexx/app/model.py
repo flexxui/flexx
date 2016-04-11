@@ -68,7 +68,8 @@ class ModelMeta(HasEventsMeta):
                     JS.__init__ = c.JS.__init__
                 for name, val in c.JS.__dict__.items():
                     if not name.startswith('__'):
-                        setattr(JS, name, val)
+                        bettername = name.replace('_JS__', '_' + c.__name__ + '__')
+                        setattr(JS, bettername, val)
                     elif name in OK_MAGICS:
                         setattr(JS, name, val)
         
@@ -239,9 +240,22 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         self._session._exec(cmd)
         
         # Initialize ourselves (i.e. initialize properties)
+        # We do this now, because in the widget.init() we are going to
+        # define child widgets, that we connect to; the connecting must take
+        # place *after* this.
+        # todo: but this sucks, because then we cannot create handlers in this init!
+        self._init()
+        
+        # Finish initialization of JS side
+        cmd = 'flexx.instances.%s._init_for_real();' % self._id
+        self._session._exec(cmd)
+        
         super().__init__(**kwargs)
-        self._init()  # todo: if this comes last, we can get rid of it?
     
+    def __repr__(self):
+        clsname = self.__class__.__name__
+        return "<%s object '%s' at 0x%x>" % (clsname, self._id, id(self))
+        
     def _init(self):
         """ Can be overloaded when creating a custom class.
         """
@@ -259,13 +273,15 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         return self._session
     
     def __setattr__(self, name, value):
-        # Sync attributes that are Model instances
+        # Sync attributes that are Model instances, and not properties
         event.HasEvents.__setattr__(self, name, value)
         if isinstance(value, Model):
-            txt = serializer.saves(value)
-            cmd = 'flexx.instances.%s.%s = flexx.serializer.loads(%s);' % (
-                self._id, name, reprs(txt))
-            self._session._exec(cmd)
+            if not (name in self.__properties__ or
+                    (name.endswith('_value') and name[1:-6] in self.__properties__)):
+                txt = serializer.saves(value)
+                cmd = 'flexx.instances.%s.%s = flexx.serializer.loads(%s);' % (
+                    self._id, name, reprs(txt))
+                self._session._exec(cmd)
     
     def _set_prop_from_js(self, name, text):
         """ Notes on synchronizing:
@@ -328,7 +344,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     
     def emit(self, type, ev, fromjs=False):
         ev = super().emit(type, ev)
-        if not fromjs and type in self.__event_types_js:
+        isprop = type in self.__properties__  # are emitted via their proxies
+        if not fromjs and not isprop and type in self.__event_types_js:
             cmd = 'flexx.instances.%s._emit_from_py(%s, %r);' % (
                 self._id, serializer.saves(type), serializer.saves(ev))
             self._session._exec(cmd)
@@ -355,13 +372,11 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             
             self.__event_types_py = py_events if py_events else []
             
+        
+        def _init_for_real(self):
             # Call HasEvents __init__, properties will be created and connected.
             super().__init__()
-            
-            # Call _init now. This gives subclasses a chance to init at a time
-            # when the id is set, but *before* the handlers are connected.
-            # todo: needed?
-            self._init()
+            self._init()  # Custom init comes last, when everything is done
         
         def _init(self):
             pass
@@ -411,7 +426,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         def emit(self, type, ev, frompy=False):
             ev = super().emit(type, ev)
-            if not frompy and type in self.__event_types_py:
+            isprop = self.__properties__.indexOf(type) >= 0
+            if not frompy and not isprop and type in self.__event_types_py:
                 txt = window.flexx.serializer.saves(ev)
                 window.flexx.ws.send('EVENT ' + [self.id, type, txt].join(' '))
 

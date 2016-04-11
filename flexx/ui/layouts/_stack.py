@@ -35,17 +35,17 @@ class StackedPanel(Layout):
     """ A panel which shows only one of its children at a time.
     """
     
-    @event.prop
-    def current(self, v=None):
-        """ The currently shown widget.
-        """
-        if not isinstance(v, Widget):
-            raise ValueError('The StackedPanel\'s current widget should be a Widget.')
-        return v
-    
     
     class JS:
         
+        @event.prop
+        def current(self, v=None):
+            """ The currently shown widget.
+            """
+            if not (v is None or isinstance(v, flexx.classes.Widget)):
+                raise ValueError('The StackedPanel\'s current widget should be a Widget.')
+            return v
+            
         def _create_node(self):
             self.p = window.phosphor.stackedpanel.StackedPanel()
         
@@ -54,4 +54,6 @@ class StackedPanel(Layout):
             widget = events[-1].new_value
             for i in range(self.p.childCount()):
                 self.p.childAt(i).hide()
-            widget.p.show()
+            if widget is not None:
+                widget.p.show()
+                

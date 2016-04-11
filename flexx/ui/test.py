@@ -9,16 +9,16 @@ faulthandler.enable()
 #logging.log
 
 
+TEST = 12
+
 class MyApp(ui.Widget):
     
     #_config = ui.App.Config(title='Flexx test app', size=(400, 300),
     #                        )#icon='https://assets-cdn.github.com/favicon.ico')
                
     def init(self):
-        
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 6
         
         if TEST == 0:
             ui.Button(text='Hola', flex=1)
@@ -163,23 +163,24 @@ class MyApp(ui.Widget):
         
         if TEST == 12:
             with ui.HBox():
-                with ui.VBox():
+                with ui.VBox() as self.vbox:
                     self.buta = ui.Button(text='red')
                     self.butb = ui.Button(text='green')
                     self.butc = ui.Button(text='blue')
                 with ui.StackedPanel(flex=1) as self.stack:
-                        self.a = ui.Widget(style='background:#a00;')
-                        self.b = ui.Widget(style='background:#0a0;')
-                        self.c = ui.Widget(style='background:#00a;')
+                        self.buta.w = ui.Widget(style='background:#a00;')
+                        self.butb.w = ui.Widget(style='background:#0a0;')
+                        self.butc.w = ui.Widget(style='background:#00a;')
         #self.win = ui.Window(self, 'A new window!')
 
     
     class JS:
-        
-        @event.connect('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')
-        def _stacked_current(self, *events):
-            ob = events[-1].source
-            self.stack.current = ob
+        if TEST== 12:
+            @event.connect('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')
+            def _stacked_current(self, *events):
+                ob = events[-1].source.w
+                self.stack.current = ob
+
 
 # app.serve(MyApp)
 a = app.launch(MyApp, 'firefox')
