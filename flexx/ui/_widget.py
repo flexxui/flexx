@@ -89,10 +89,6 @@ class Widget(Model):
         #cmd = 'flexx.instances.%s.connect_signals(false);' % self._id
         #self._session._exec(cmd)
     
-    def _init(self):
-        # This gets called during __init__
-        with self:
-            self.init()
     
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
@@ -222,6 +218,8 @@ class Widget(Model):
     class JS:
         
         def _init(self):
+            super()._init()
+            
             self._create_node()
             self.node = self.p.node
             
@@ -248,14 +246,12 @@ class Widget(Model):
                     break
             else:
                 raise RuntimeError('Error while determining class names')
-            
-            super()._init()
         
-        def _init_for_real(self):
-            # todo: this sucks
-            set_children = self.children if self.children else []
-            super()._init_for_real()
-            self.children = set_children
+        # def _init_for_real(self):
+        #     # todo: this sucks
+        #     set_children = self.children if self.children else []
+        #     super()._init_for_real()
+        #     self.children = set_children
         
         def _create_node(self):
             self.p = window.phosphor.panel.Panel()

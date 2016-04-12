@@ -205,6 +205,9 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     
     def __init__(self, session=None, is_app=False, **kwargs):
         
+        # Init HasEvents, but delay initialization of handlers
+        super().__init__(_init_handlers=False, **kwargs)
+        
         # Param "is_app" is not used, but we "take" the argument so it
         # is not mistaken for a property value.
         
@@ -239,25 +242,35 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 self._id, clsname, reprs(self._id), serializer.saves(event_types_py))
         self._session._exec(cmd)
         
-        # Initialize ourselves (i.e. initialize properties)
-        # We do this now, because in the widget.init() we are going to
-        # define child widgets, that we connect to; the connecting must take
-        # place *after* this.
-        # todo: but this sucks, because then we cannot create handlers in this init!
-        self._init()
+        # Initialize the model further, e.g. Widgets can create
+        # subwidgets etc. This is done here, at the point where the
+        # properties are initialized, but the handlers not yet. Handlers
+        # are initialized after this, so that they can connect to newly
+        # created sub Models. This class implements a stub contect manager.
+        with self:
+            self.init()
         
-        # Finish initialization of JS side
-        cmd = 'flexx.instances.%s._init_for_real();' % self._id
+        # Finish initialization, here and in JS. Important to schedule
+        # JS before we init ourselves, because of prop initialization.
+        cmd = 'flexx.instances.%s._init_handlers();' % self._id
         self._session._exec(cmd)
-        
-        super().__init__(**kwargs)
+        self._init_handlers()
     
+    def __enter__(self):
+        pass
+    
+    def __exit__(self, type, value, traceback):
+        pass
+        
     def __repr__(self):
         clsname = self.__class__.__name__
         return "<%s object '%s' at 0x%x>" % (clsname, self._id, id(self))
         
-    def _init(self):
-        """ Can be overloaded when creating a custom class.
+    def init(self):
+        """ Can be overloaded when creating a custom class to do
+        initialization, such as creating sub models. This function is
+        called with this object as a context manager (the default
+        context is a stub).
         """
         pass
     
@@ -296,10 +309,11 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     def _set_prop(self, name, value, fromjs=False):
         isproxy = name in self.__proxy_properties__
         
+        shouldsend = True
         if fromjs or not isproxy:  # Only not set if isproxy and not from js
-            super()._set_prop(name, value)
+            shouldsend = super()._set_prop(name, value)
         
-        if not (fromjs and isproxy):  # only not send if fromjs and isproxy
+        if shouldsend and not (fromjs and isproxy):  # only not send if fromjs and isproxy
             if not isproxy:  # if not a proxy, use normalized value
                 value = getattr(self, name)
             txt = serializer.saves(value)
@@ -365,6 +379,10 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             return window.flexx.instances[dct.id]
         
         def __init__(self, id, py_events=None):
+            
+            # Init HasEvents, but delay initialization of handlers
+            super().__init__(False)
+            
             # Set id alias. In most browsers this shows up as the first element
             # of the object, which makes it easy to identify objects while
             # debugging. This attribute should *not* be used.
@@ -372,12 +390,11 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             
             self.__event_types_py = py_events if py_events else []
             
-        
-        def _init_for_real(self):
-            # Call HasEvents __init__, properties will be created and connected.
-            super().__init__()
-            self._init()  # Custom init comes last, when everything is done
-        
+            # Initialize when properties are initialized, but before handlers
+            # are initialized. These are initialized by a call from Python.
+            self._init()
+            # todo: rename init()
+            
         def _init(self):
             pass
         
@@ -395,10 +412,11 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 # assume the value needs no checking or normalization
                 return super()._set_prop(name, value)
             
+            shouldsend = True
             if frompy or not isproxy:  # Only not set if isproxy and not frompy
-                super()._set_prop(name, value)
+                shouldsend = super()._set_prop(name, value)
             
-            if not (frompy and isproxy):  # only not send if frompy and isproxy
+            if shouldsend and not (frompy and isproxy):  # only not send if frompy and isproxy
                 if not isproxy:  # if not a proxy, use normalized value
                     value = self[name]
                 txt = window.flexx.serializer.saves(value)

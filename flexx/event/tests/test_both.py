@@ -141,7 +141,7 @@ class Person(event.HasEvents):
         self._set_prop('full_name', self.first_name + ' ' + self.last_name)
 
 
-class PersonNoDefault(HasEvents):
+class PersonNoDefault(event.HasEvents):
     @event.prop
     def first_name(self, v):
         return str(v)

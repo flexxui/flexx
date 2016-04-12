@@ -37,17 +37,12 @@ class HasEventsJS:
     _HANDLER_COUNT = 0
     _IS_HASEVENTS = True
     
-    def __init__(self):
+    def __init__(self, init_handlers=True):
         
         # Init some internal variables
         self._he_handlers = {}
         self._he_props_being_set = {}
         
-        # Create handlers
-        # Note that methods on_xxx are converted by the HasEvents meta class
-        for name in self.__handlers__:
-            func = self['_' + name + '_func']
-            self[name] = self.__create_Handler(func, name, func._connection_strings)
         # Create properties
         for name in self.__properties__:
             self._he_handlers.setdefault(name, [])
@@ -59,11 +54,29 @@ class HasEventsJS:
             self._he_handlers.setdefault(name, [])
             func = self['_' + name + '_func']
             self.__create_Emitter(name)
+        
+        # Init handlers and properties now, or later?
+        self.__init_handlers_info = {}
+        if init_handlers:
+            self._init_handlers()
     
-    def connect(self, func, *connection_strings):
+    def __init_handlers(self, init_handlers_info):
+        # Create handlers
+        # Note that methods on_xxx are converted by the HasEvents meta class
+        for name in self.__handlers__:
+            func = self['_' + name + '_func']
+            self[name] = self.__create_Handler(func, name, func._connection_strings)
+        # Initialize properties to their defaults
+        for name in self.__properties__:
+            self._init_prop(name)
+        for name, value in init_handlers_info.items():
+            self._set_prop(name, value)
+    
+    def __connect(self, func, *connection_strings):
         # The JS version (no decorator functionality)
-        if len(connection_strings):
-            raise RuntimeError('connect() needs one or more connection strings.')
+        
+        if len(connection_strings) == 0:
+            raise RuntimeError('connect() (js) needs one or more connection strings.')
         
         for s in connection_strings:
             if not (isinstance(s, str) and len(s)):
@@ -82,12 +95,9 @@ class HasEventsJS:
             return self[private_name]
         def setter(x):
             self._set_prop(name, x)
-        # self[private_name] = value2 = self['_' + name + '_func']()  # init
-        # self.emit(name, dict(new_value=value2, old_value=value2))
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
-        self._init_prop(name)
     
     def __create_Readonly(self, name):
         private_name = '_' + name + '_value'
@@ -95,12 +105,9 @@ class HasEventsJS:
             return self[private_name]
         def setter(x):
             raise AttributeError('Readonly %s is not settable' % name)
-        # self[private_name] = value2 = self['_' + name + '_func']()  # init
-        # self.emit(name, dict(new_value=value2, old_value=value2))
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
-        self._init_prop(name)
     
     def __create_Emitter(self, name):
         def getter():
@@ -146,7 +153,7 @@ def get_HasEvents_js():
     # Add the methods from the Python HasEvents class
     code = '\n'
     for name, val in sorted(HasEvents.__dict__.items()):
-        if name.startswith('__') or not callable(val) or name in ['connect', ]:
+        if name.startswith(('__', '_HasEvents__')) or  not callable(val):
             continue
         code += py2js(val, 'HasEvents.prototype.' + name)
         code += '\n'

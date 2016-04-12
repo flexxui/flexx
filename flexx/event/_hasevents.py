@@ -129,21 +129,40 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
     def __init__(self, **property_values):
         
         # Init some internal variables
+        # todo: no need to call he anymore, just use double underscore?
         self._he_handlers = {}
         self._he_props_being_set = {}
-        
-        # Instantiate handlers, its enough to reference them
-        for name in self.__handlers__:
-            getattr(self, name)
+       
         # Instantiate emitters
         for name in self.__emitters__:
             self._he_handlers.setdefault(name, [])
         for name in self.__properties__:
             self._he_handlers.setdefault(name, [])
-            self._init_prop(name)
         
-        # Initialize given properties
-        for name, value in property_values.items():
+        # Init handlers and properties now, or later? --> feature for subclasses
+        self.__init_handlers_info = property_values
+        if property_values.pop('_init_handlers', True):
+            self._init_handlers()
+    
+    def _init_handlers(self):
+        """ Initialize handlers and properties. You should only do this once,
+        and only when using the object is initialized with init_handlers=False.
+        """
+        if self.__init_handlers_info is None:
+            raise RuntimeError('Cannot initialize handlers twice')
+        init_handlers_info = self.__init_handlers_info
+        self.__init_handlers_info = None
+        self.__init_handlers(init_handlers_info)  # calls Python or JS version
+    
+    def __init_handlers(self, init_handlers_info):
+        # Instantiate handlers, its enough to reference them
+        for name in self.__handlers__:
+            getattr(self, name)
+        # Initiaslize properties to their defaults
+        for name in self.__properties__:
+            self._init_prop(name)
+        # Initialize properties to their given values
+        for name, value in init_handlers_info.items():
             if name in self.__properties__:
                 setattr(self, name, value)
             else:
@@ -276,9 +295,12 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             self._he_props_being_set[prop_name] = False
         # Update value and emit event
         old = getattr(self, private_name, None)
-        if value2 != old:
+        if self.__init_handlers_info is not None:
+            self.__init_handlers_info[prop_name] = value2
+        elif value2 != old:
             setattr(self, private_name, value2)
             self.emit(prop_name, dict(new_value=value2, old_value=old))
+            return True
     
     def _get_emitter(self, emitter_name):
         # Get an emitter function.
@@ -338,6 +360,9 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             h.connect(greet, 'first_name', 'last_name')
         
         """
+        return self.__connect(*connection_strings)  # calls Py or JS version
+    
+    def __connect(self, *connection_strings):
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
             raise RuntimeError('connect() needs one or more connection strings.')
