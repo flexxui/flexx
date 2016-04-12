@@ -54,6 +54,25 @@ class Widget(Model):
     
     """
     
+    CSS = """
+    
+    .flx-container {
+        min-height: 10px; /* splitter sets its own minsize if contained */
+    }
+    
+    .flx-Widget {
+        box-sizing: border-box;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+    
+    .flx-main-widget {
+       width: 100%;
+       height: 100%;
+    }
+    
+    """
+    
     def __init__(self, **kwargs):
         
         # Apply default parent?
@@ -77,18 +96,6 @@ class Widget(Model):
         
         # All widgets need phosphor
         self._session.use_global_asset('phosphor-all.js', before='flexx-ui.css')
-        
-        # todo: can I make widgets not need the session immediately?
-        # The fact that session and app need each-other is a bit awkward?
-        
-        # with self:
-        #     self.init()
-        
-        # Signal dependencies may have been added during init(), also in JS
-        #self.connect_signals(False)
-        #cmd = 'flexx.instances.%s.connect_signals(false);' % self._id
-        #self._session._exec(cmd)
-    
     
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
@@ -104,23 +111,23 @@ class Widget(Model):
         # we define below will have been created.
         from ..app import call_later
         call_later(0.1, set_cointainer_id)  # todo: always do calls in next iter
+        # todo: no need for call_later anymore, since events are always later!
         return "<div class='flx-container' id=%s />" % container_id
     
     def init(self):
-        """ Overload this to initialize a cusom widget. Inside, this
+        """ Overload this to initialize a cusom widget. When called, this
         widget is the current parent.
         """
         pass
     
-    # todo: renamed
-    def disconnect_signals(self, *args):
-        """ Overloaded version of disconnect_signals() that will also
-        disconnect the signals of any child widgets.
+    def dispose(self):
+        """ Overloaded version of dispose() that will also
+        dispose any child widgets.
         """
         children = self.children
-        Model.disconnect_signals(self, *args)
+        super().dispose()
         for child in children:
-            child.disconnect_signals(*args)
+            child.dispose()
     
     def __enter__(self):
         # Note that __exit__ is guaranteed to be called, so there is
@@ -132,8 +139,6 @@ class Widget(Model):
     def __exit__(self, type, value, traceback):
         default_parents = _get_default_parents()
         assert self is default_parents.pop(-1)
-        #if value is None:
-        #    self.update()
     
     @event.prop
     def title(self, v=''):
@@ -153,8 +158,6 @@ class Widget(Model):
         if isinstance(v, dict):
             v = '; '.join('%s: s%' % (k, v) for k, v in v.items())
         return str(v)
-    
-    ## Size, and positioning
     
     @event.prop
     def flex(self, v=0):
@@ -187,8 +190,6 @@ class Widget(Model):
     
     # Also see real_size defined in JS
     
-    ## Parenting
-    
     @event.prop
     def container(self, v=''):
         """ The id of the DOM element that contains this widget if
@@ -196,24 +197,6 @@ class Widget(Model):
         """
         return str(v)
     
-    CSS = """
-    
-    .flx-container {
-        min-height: 10px; /* splitter sets its own minsize if contained */
-    }
-    
-    .flx-Widget {
-        box-sizing: border-box;
-        white-space: nowrap;
-        overflow: hidden;
-    }
-    
-    .flx-main-widget {
-       width: 100%;
-       height: 100%;
-    }
-    
-    """
     
     class JS:
         
@@ -234,9 +217,6 @@ class Widget(Model):
                     return False
             window.phosphor.messaging.installMessageFilter(self.p, SizeNotifier())
             
-            #flexx.get('body').appendChild(this.node)
-            # todo: allow setting a placeholder DOM element, or any widget parent
-            
             # Derive css class name
             cls_name = self._class_name
             for i in range(32):  # i.e. a safe while-loop
@@ -250,33 +230,31 @@ class Widget(Model):
             else:
                 raise RuntimeError('Error while determining class names')
         
-        # todo: rare case where we emitted a new signal
         @event.connect('style')
-        def style_changed(self, *events):
+        def __style_changed(self, *events):
             """ Emits when the style signal changes, and provides a dict with
             the changed style atributes.
             """
             # self.node.style = style  # forbidden in strict mode,
             # plus it clears all previously set style
-            style = events[-1].new_value
+            
+            # Set style elements, keep track in a dict
             d = {}
-            for part in style.split(';'):
-                if ':' in part:
-                    key, val = part.split(':')
-                    key, val = key.trim(), val.trim()
-                    self.node.style[key] = val
-                    d[key] = val
-            return d
-        
-        @event.connect('style_changed')  # todo: fix
-        def __check_size_limits_changed(self, *events):
+            for ev in events:
+                style = ev.new_value
+                if style:
+                    for part in style.split(';'):
+                        if ':' in part:
+                            key, val = part.split(':')
+                            key, val = key.trim(), val.trim()
+                            self.node.style[key] = val
+                            d[key] = val
+            
+            # Did we change style related to sizing?
             size_limits_keys = 'min-width', 'min-height', 'max-width', 'max-height'
-            
-            style = '????????'
-            
             size_limits_changed = False
             for key in size_limits_keys:
-                if key in style:
+                if key in d:
                     size_limits_changed = True
             
             if size_limits_changed:
@@ -318,9 +296,9 @@ class Widget(Model):
             if cursize[0] != n.clientWidth or cursize[1] !=n.clientHeight:
                 self._set_prop('real_size', [n.clientWidth, n.clientHeight])
         
-        # NOTE: this is how we would handle signals for min_size and max_size
-        
         def _set_size(self, prefix, w, h):
+            """ Method to allow setting size (via style). Used by some layouts.
+            """
             size = w, h
             for i in range(2):
                 if size[i] <= 0 or size is None or size is undefined:
@@ -352,9 +330,12 @@ class Widget(Model):
             if id == 'body':
                 self.node.classList.add('flx-main-widget')
         
-        # todo: !!@react.nosync
         @event.prop
         def parent(self, new_parent=None):
+            """ The parent widget, or None if it has no parent. Setting
+            this property will update the "children" property of the
+            old and new parent.
+            """
             old_parent = self.parent or None
             
             if new_parent is old_parent:
@@ -376,6 +357,10 @@ class Widget(Model):
         
         @event.prop
         def children(self, new_children=()):
+            """ The child widgets of this widget. Setting this property
+            will update the "parent" property of the old and new
+            children.
+            """
             old_children = self.children if self.children else []
             
             if len(new_children) == len(old_children):
@@ -387,16 +372,18 @@ class Widget(Model):
             for child in old_children:
                 if child not in new_children:
                     child.parent = None
-                    #self._remove_child(child)
             for child in new_children:
                 if child not in old_children:
                     child.parent = self
-                    #self._add_child(child)
             
             return tuple(new_children)
         
         @event.connect('children')
         def __children_changed(self, *events):
+            """ Hook to let layouts take action to make children 
+            work well.
+            """
+            # todo: need this? Or should layouts just connect to "children" themselves?
             new_children = events[-1].new_value
             old_children = events[0].old_value
             
@@ -422,8 +409,6 @@ class Widget(Model):
             """
             widget.p.parent = None
         
-        # todo: destroy with self.p.dispose()
-    
         ## Special
         
         @event.connect('children')
