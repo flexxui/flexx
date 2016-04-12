@@ -219,7 +219,7 @@ class BoxLayout(BaseBoxLayout):
     
     class JS:
     
-        def _create_node(self):
+        def init(self):
             self.p = window.phosphor.panel.Panel()
         
         @event.connect('orientation', 'children.*.flex')
@@ -312,7 +312,7 @@ class BoxPanel(BaseBoxLayout):
     
     class JS:
         
-        def _create_node(self):
+        def init(self):
             self.p = window.phosphor.boxpanel.BoxPanel()
         
         @event.connect('orientation', 'children.*.flex')

@@ -43,7 +43,7 @@ class GroupWidget(Widget):
     
     class JS:
         
-        def _create_node(self):
+        def init(self):
             # class FieldsetPanel(phosphor.panel.Panel):
             #      def createNode():
             #          return document.createElement('fieldset')

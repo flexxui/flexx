@@ -21,7 +21,7 @@ from . import Layout
 #     """ A widget containing tabs.
 #     """
 #     
-#     def _create_node(self):
+#     def init(self):
 #         self.p = window.phosphor.tabs.TabBar()
 # 
 #     def _add_child(self, widget):
@@ -106,7 +106,7 @@ class TabPanel(Layout):
     
     class JS:
         
-        def _create_node(self):
+        def init(self):
             self.p = window.phosphor.tabs.TabPanel()
         
         # def _add_child(self, widget):

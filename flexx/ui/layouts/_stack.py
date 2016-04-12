@@ -38,6 +38,9 @@ class StackedPanel(Layout):
     
     class JS:
         
+        def init(self):
+            self.p = window.phosphor.stackedpanel.StackedPanel()
+        
         @event.prop
         def current(self, v=None):
             """ The currently shown widget.
@@ -45,9 +48,6 @@ class StackedPanel(Layout):
             if not (v is None or isinstance(v, flexx.classes.Widget)):
                 raise ValueError('The StackedPanel\'s current widget should be a Widget.')
             return v
-            
-        def _create_node(self):
-            self.p = window.phosphor.stackedpanel.StackedPanel()
         
         @event.connect('current')
         def __set_current_widget(self, *events):

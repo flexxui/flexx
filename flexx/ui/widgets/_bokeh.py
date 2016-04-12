@@ -44,8 +44,8 @@ class BokehWidget(Widget):
     }
     """
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def init(self, *args, **kwargs):
+        super().init(*args, **kwargs)
         
         # Handle client dependencies
         import bokeh

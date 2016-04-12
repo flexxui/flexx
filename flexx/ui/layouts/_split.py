@@ -51,7 +51,7 @@ class SplitPanel(Layout):
     
     class JS:
         
-        def _create_node(self):
+        def init(self):
             self.p = window.phosphor.splitpanel.SplitPanel()
         
         @event.connect('orientation')

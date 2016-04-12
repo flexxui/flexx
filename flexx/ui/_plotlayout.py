@@ -43,9 +43,6 @@ class PlotLayout(Layout):
     """ Experimental high-level layout for a plot with widgets on the side.
     """
     
-    # def __init__(self, *args, **kwargs):
-    #     Layout.__init__(self, *args, **kwargs)
-    
     def init(self):
         self._box = HBox(parent=self)
         with self._box:

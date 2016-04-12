@@ -73,8 +73,8 @@ class GridPanel(Layout):
     
     class JS:
         
-        def _init(self):
-            super()._init()
+        def init(self):
+            self.p = window.phosphor.gridpanel.GridPanel()
             
             that = self
             class LayoutNotifier:
@@ -83,9 +83,6 @@ class GridPanel(Layout):
                         that._child_limits_changed()
                     return False
             window.phosphor.messaging.installMessageFilter(self.p, LayoutNotifier())
-        
-        def _create_node(self):
-            self.p = window.phosphor.gridpanel.GridPanel()
         
         @event.connect('children.*.pos', 'children.*.flex', 'children.*.size')
         def __update_positions(self, *events):

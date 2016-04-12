@@ -62,7 +62,7 @@ class Slider(Widget):
     
     class JS:
     
-        def _create_node(self):
+        def init(self):
             self.p = window.phosphor.createWidget('input')
             self.p.node.type = 'range'
             f = lambda ev: self.user_value._set(self.node.value)

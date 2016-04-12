@@ -392,10 +392,11 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             
             # Initialize when properties are initialized, but before handlers
             # are initialized. These are initialized by a call from Python.
-            self._init()
-            # todo: rename init()
+            self.init()
             
-        def _init(self):
+        def init(self):
+            """ Can be overloaded by subclasses to initialize the model.
+            """
             pass
         
         def _set_prop_from_py(self, name, text):

@@ -217,24 +217,27 @@ class Widget(Model):
     
     class JS:
         
-        def _init(self):
-            super()._init()
+        def __init__(self):
+            super().__init__()
             
-            self._create_node()
+            # Get phosphor widget that is set in init()
+            if not self.p:
+                self.p = window.phosphor.panel.Panel()
             self.node = self.p.node
             
+            # Keep track of size
             that = self
             class SizeNotifier:
                 def filterMessage(handler, msg):
                     if msg._type == 'resize':
                         that._check_real_size()
                     return False
-            if self.p:
-                window.phosphor.messaging.installMessageFilter(self.p, SizeNotifier())
+            window.phosphor.messaging.installMessageFilter(self.p, SizeNotifier())
             
             #flexx.get('body').appendChild(this.node)
             # todo: allow setting a placeholder DOM element, or any widget parent
             
+            # Derive css class name
             cls_name = self._class_name
             for i in range(32):  # i.e. a safe while-loop
                 self.node.classList.add('flx-' + cls_name)
@@ -246,15 +249,6 @@ class Widget(Model):
                     break
             else:
                 raise RuntimeError('Error while determining class names')
-        
-        # def _init_for_real(self):
-        #     # todo: this sucks
-        #     set_children = self.children if self.children else []
-        #     super()._init_for_real()
-        #     self.children = set_children
-        
-        def _create_node(self):
-            self.p = window.phosphor.panel.Panel()
         
         # todo: rare case where we emitted a new signal
         @event.connect('style')

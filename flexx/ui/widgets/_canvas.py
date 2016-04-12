@@ -20,8 +20,15 @@ class CanvasWidget(Widget):
     
     class JS:
         
-        def _init(self):
-            super()._init()
+        def init(self):
+            
+            self.p = window.phosphor.createWidget('div')
+            self.canvas = window.document.createElement('canvas')
+            self.p.node.appendChild(self.canvas)
+            # Set position to absolute so that the canvas is not going
+            # to be forcing a size on the container div.
+            self.canvas.style.position = 'absolute'
+            
             # _mouse_down = lambda ev: self.mouse_down._set(1)
             # _mouse_up = lambda ev: self.mouse_down._set(0)
             # _mouse_move = lambda ev: self.mouse_pos._set((ev.clientX, ev.clientY))
@@ -30,14 +37,6 @@ class CanvasWidget(Widget):
             # self.canvas.addEventListener('mousemove', _mouse_move, 0)
             # The canvas seems to need a bit of extra help to size at first
             window.setTimeout(lambda ev=None: self._check_real_size(), 10)
-        
-        def _create_node(self):
-            self.p = window.phosphor.createWidget('div')
-            self.canvas = window.document.createElement('canvas')
-            self.p.node.appendChild(self.canvas)
-            # Set position to absolute so that the canvas is not going
-            # to be forcing a size on the container div.
-            self.canvas.style.position = 'absolute'
         
         @event.connect('real_size')
         def _update_canvas_size(self, *events):

@@ -53,7 +53,7 @@ class Button(Widget):
     
     class JS:
         
-        def _create_node(self):
+        def init(self):
             self.p = window.phosphor.createWidget('button')
             node = self.p.node
             node.addEventListener('mousedown', self.mouse_down.bind(this), 0)

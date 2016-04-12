@@ -60,7 +60,7 @@ class Label(Widget):
     
     class JS:
         
-        def _js_create_node(self):
+        def init(self):
             self.p = window.phosphor.createWidget('div')
         
         @event.connect('text')
