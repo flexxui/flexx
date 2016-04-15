@@ -170,7 +170,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # Initialize properties to their given values
         for name, value in init_handlers_info.items():
             if name in self.__properties__:
-                setattr(self, name, value)
+                setattr(self, name, value)  # setattr, not _set_prop, for readonlies
             else:
                 cname = self.__class__.__name__
                 raise AttributeError('%s does not have a property %r' % (cname, name))

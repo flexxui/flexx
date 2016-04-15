@@ -231,4 +231,4 @@ class FormLayout(BaseTableLayout):
         def __update_titles(self, *events):
             for widget in self.children:
                 if hasattr(widget, '_title_elem'):
-                    widget._title_elem.innerHTML = widget.title()
+                    widget._title_elem.innerHTML = widget.title

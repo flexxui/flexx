@@ -52,7 +52,7 @@ class Example(ui.Widget):
             amp, freq, phase = self.amp.value, self.freq.value, self.phase.value
             # Get reference to line glyph, can this be done easier?
             glyph = None
-            plot = self.plot2.plot()
+            plot = self.plot2.plot
             if plot:
                 for ren in plot.renderers.values():
                     if ren.glyph:
@@ -65,5 +65,5 @@ class Example(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Example)
+    m = app.launch(Example, 'firefox')
     app.run()

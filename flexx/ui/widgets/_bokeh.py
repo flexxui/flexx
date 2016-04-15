@@ -59,9 +59,8 @@ class BokehWidget(Widget):
             for x in ('css', 'js'):
                 filename = os.path.join(res, x, modname + x)
                 self.session.add_global_asset(modname + x, filename)
-
-    # @event.nosync
-    @event.prop
+    
+    @event.prop(sync=False)
     def plot(self, plot=None):
         """ The Bokeh plot object to display. In JS, this signal
         provides the corresponding backbone model.
@@ -87,8 +86,7 @@ class BokehWidget(Widget):
     
     class JS:
         
-        # @event.nosync
-        @event.prop
+        @event.prop(sync=False)
         def plot(self, plot=None):
             return plot
         
@@ -115,4 +113,4 @@ class BokehWidget(Widget):
                 cstyle = window.getComputedStyle(self.parent.node)
                 use_x = cstyle['overflow-x'] not in ('auto', 'scroll')
                 use_y = cstyle['overflow-y'] not in ('auto', 'scroll')
-                self.plot().resize_width_height(use_x, use_y)
+                self.plot.resize_width_height(use_x, use_y)

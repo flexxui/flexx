@@ -85,6 +85,8 @@ class ModelMeta(HasEventsMeta):
             if isinstance(val, Property):
                 if name in JS.__proxy_properties__ or name in cls.__proxy_properties__:
                     pass  # This is a proxy, or we already have a proxy for it
+                elif not val._flags.get('sync', True):
+                    pass  # prop that should not be synced
                 elif not hasattr(cls, name):
                     cls.__proxy_properties__.append(name)
                     p = val.__class__(stub_prop_func, name, val._func.__doc__)
@@ -101,6 +103,8 @@ class ModelMeta(HasEventsMeta):
             if isinstance(val, Property):
                 if name in JS.__proxy_properties__ or name in cls.__proxy_properties__:
                     pass  # This is a proxy, or we already have a proxy for it
+                elif not val._flags.get('sync', True):
+                    pass  # prop that should not be synced
                 elif not hasattr(cls.JS, name):
                     JS.__proxy_properties__.append(name)
                     p = val.__class__(stub_prop_func, name, val._func.__doc__)
@@ -285,6 +289,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         """
         return self._session
     
+    # todo: limit this to within init()?
     def __setattr__(self, name, value):
         # Sync attributes that are Model instances, and not properties
         event.HasEvents.__setattr__(self, name, value)
@@ -309,9 +314,9 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     def _set_prop(self, name, value, fromjs=False):
         isproxy = name in self.__proxy_properties__
         
-        shouldsend = True
+        shouldsend = self.__emitter_flags__[name].get('sync', True)
         if fromjs or not isproxy:  # Only not set if isproxy and not from js
-            shouldsend = super()._set_prop(name, value)
+            shouldsend = super()._set_prop(name, value) and shouldsend
         
         if shouldsend and not (fromjs and isproxy):  # only not send if fromjs and isproxy
             if not isproxy:  # if not a proxy, use normalized value
@@ -393,7 +398,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             # Initialize when properties are initialized, but before handlers
             # are initialized. These are initialized by a call from Python.
             self.init()
-            
+        
         def init(self):
             """ Can be overloaded by subclasses to initialize the model.
             """
@@ -413,9 +418,9 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 # assume the value needs no checking or normalization
                 return super()._set_prop(name, value)
             
-            shouldsend = True
+            shouldsend = self.__emitter_flags__[name].get('sync', True)
             if frompy or not isproxy:  # Only not set if isproxy and not frompy
-                shouldsend = super()._set_prop(name, value)
+                shouldsend = super()._set_prop(name, value) and shouldsend
             
             if shouldsend and not (frompy and isproxy):  # only not send if frompy and isproxy
                 if not isproxy:  # if not a proxy, use normalized value
