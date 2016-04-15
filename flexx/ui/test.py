@@ -9,7 +9,7 @@ faulthandler.enable()
 #logging.log
 
 
-TEST = 12
+TEST = 0
 
 class MyApp(ui.Widget):
     
@@ -21,7 +21,7 @@ class MyApp(ui.Widget):
         
         
         if TEST == 0:
-            ui.Button(text='Hola', flex=1)
+            self.b = ui.Button(text='Hola', flex=1)
             
         if TEST == 1:
             with ui.BoxPanel(flex=1) as self.hbox1:

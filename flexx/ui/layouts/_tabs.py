@@ -108,7 +108,3 @@ class TabPanel(Layout):
         
         def init(self):
             self.p = window.phosphor.tabs.TabPanel()
-        
-        # def _add_child(self, widget):
-        #     widget.p.title.text = widget.title
-        #     self.p.stack.addChild(widget.p)

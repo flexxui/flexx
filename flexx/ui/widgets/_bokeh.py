@@ -60,7 +60,7 @@ class BokehWidget(Widget):
                 filename = os.path.join(res, x, modname + x)
                 self.session.add_global_asset(modname + x, filename)
 
-    # todo: !!@react.nosync
+    # @event.nosync
     @event.prop
     def plot(self, plot=None):
         """ The Bokeh plot object to display. In JS, this signal
@@ -70,39 +70,41 @@ class BokehWidget(Widget):
             from bokeh.models import Plot
         except ImportError:
             from bokeh.models import PlotObject as Plot
+        if plot is None:
+            return None
         if not isinstance(plot, Plot):
             raise ValueError('Plot must be a Bokeh plot object.')
         plot.responsive = False  # Flexx handles responsiveness
+        self._plot_components(plot)
         return plot
     
-    # todo: signal!!
-    @event.connect('plot')
-    def plot_components(self, *events):
+    @event.emitter
+    def _plot_components(self, plot):
         from bokeh.embed import components
         script, div = components(plot)
         script = '\n'.join(script.strip().split('\n')[1:-1])
-        return script, div, plot.ref['id']
+        return dict(script=script, div=div, id=plot.ref['id'])
     
     class JS:
         
-        # todo: !!@react.nosync
+        # @event.nosync
         @event.prop
         def plot(self, plot=None):
             return plot
         
-        @event.connect('plot_components')
+        @event.connect('_plot_components')
         def __set_plot_components(self, *events):
-            script, div, id = events[-1].new_value
+            ev = events[-1]
             # Embed div
-            self.node.innerHTML = div
+            self.node.innerHTML = ev.div
             # "exec" code
             el = window.document.createElement('script')
-            el.innerHTML = script 
+            el.innerHTML = ev.script 
             self.node.appendChild(el)
             #eval(script)
             # Get plot from id in next event-loop iter
             def getplot():
-                self.plot = Bokeh.index[id]
+                self.plot = Bokeh.index[ev.id]
                 self.plot.resize()
                 self.real_size._set(self.real_size)
             window.setTimeout(getplot, 10)

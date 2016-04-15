@@ -8,7 +8,7 @@ This app can be exported to a standalone HTML document.
 """
 
 
-from flexx import app, ui, react
+from flexx import app, ui, event
 
 # Raw data obtained from 
 # http://www.knmi.nl/klimatologie/maandgegevens/datafiles/mndgeg_290_tg.txt
@@ -137,10 +137,12 @@ class Twente(ui.Widget):
         months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 
                   'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'total']
         
-        @react.connect('month.value', 'smoothing.value')
-        def _update_plot(self, month, smoothing):
-            self.month_label.text('Month (%s)' % self.months[month])
-            self.smoothing_label.text('Smoothing (%i)' % smoothing)
+        @event.connect('month.value', 'smoothing.value')
+        def _update_plot(self, *events):
+            month = self.month.value
+            smoothing = self.smoothing.value
+            self.month_label.text = 'Month (%s)' % self.months[month]
+            self.smoothing_label.txt = 'Smoothing (%i)' % smoothing
             
             yy1 = self.data[month]
             yy2 = []
@@ -157,10 +159,10 @@ class Twente(ui.Widget):
                 else:
                     yy2.append(val / n)
             
-            self.plot.ydata(yy2)
+            self.plot.ydata = yy2
 
 if __name__ == '__main__':
-    m = app.launch(Twente, runtime='browser', title='Temperature 1951 - 2014',
+    m = app.launch(Twente, runtime='xul', title='Temperature 1951 - 2014',
                    size=(900, 400))
-    m.style('background:#eee;')  # more desktop-like
+    m.style = 'background:#eee;'  # more desktop-like
     app.run()

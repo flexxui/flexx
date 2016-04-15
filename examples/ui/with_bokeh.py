@@ -7,7 +7,7 @@ import numpy as np
 
 from bokeh.plotting import figure
 
-from flexx import app, ui, react
+from flexx import app, ui, event
 
 src = 'https://github.com/zoofIO/flexx/blob/master/examples/ui/with_bokeh.py'
 
@@ -47,8 +47,9 @@ class Example(ui.Widget):
     
     class JS:
         
-        @react.connect('amp.value', 'freq.value', 'phase.value')
-        def _update_sine(self, amp, freq, phase):
+        @event.connect('amp.value', 'freq.value', 'phase.value')
+        def _update_sine(self, *events):
+            amp, freq, phase = self.amp.value, self.freq.value, self.phase.value
             # Get reference to line glyph, can this be done easier?
             glyph = None
             plot = self.plot2.plot()

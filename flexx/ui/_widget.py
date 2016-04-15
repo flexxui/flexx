@@ -380,10 +380,10 @@ class Widget(Model):
         
         @event.connect('children')
         def __children_changed(self, *events):
-            """ Hook to let layouts take action to make children 
-            work well.
+            """ Hook to make child widgets appear in the right order in a 
+            layout. Widget provides a default implementation. Layouts should
+            overload _add_child() and _remove_child().
             """
-            # todo: need this? Or should layouts just connect to "children" themselves?
             new_children = events[-1].new_value
             old_children = events[0].old_value
             

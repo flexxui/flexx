@@ -38,6 +38,7 @@ class CanvasWidget(Widget):
             # The canvas seems to need a bit of extra help to size at first
             window.setTimeout(lambda ev=None: self._check_real_size(), 10)
         
+        # todo: rename size -> user_size, and real_size -> size
         @event.connect('real_size')
         def _update_canvas_size(self, *events):
             size = self.real_size

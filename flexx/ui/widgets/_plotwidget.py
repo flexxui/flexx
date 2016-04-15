@@ -119,6 +119,7 @@ class PlotWidget(CanvasWidget):
     class JS:
         
         def init(self):
+            super().init()
             self._context = self.canvas.getContext('2d')
             
             # create tick units
