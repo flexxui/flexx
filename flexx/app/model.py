@@ -391,6 +391,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             # Set id alias. In most browsers this shows up as the first element
             # of the object, which makes it easy to identify objects while
             # debugging. This attribute should *not* be used.
+            assert id
             self.__id = self._id = self.id = id
             
             self.__event_types_py = py_events if py_events else []

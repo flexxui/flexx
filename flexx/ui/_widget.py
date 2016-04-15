@@ -200,8 +200,8 @@ class Widget(Model):
     
     class JS:
         
-        def __init__(self):
-            super().__init__()
+        def __init__(self, *args):
+            super().__init__(*args)
             
             # Get phosphor widget that is set in init()
             if not self.p:
