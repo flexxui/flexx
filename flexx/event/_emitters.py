@@ -5,7 +5,7 @@ prop, readonly and emitter.
 
 # Decorators to apply at a HasEvents class
 
-def prop(func):
+def prop(func=None, **flags):
     """ Decorator to define a settable propery. An event is emitted
     when the property is set, which has values for "old_value" and
     "new_value".
@@ -28,12 +28,14 @@ def prop(func):
     value being set. The method's docstring is used as the property's
     docstring.
     """
-    if not callable(func):
-        raise TypeError('prop decorator needs a callable')
-    return Property(func)
+    def _prop(func):
+        if not callable(func):
+            raise TypeError('prop decorator needs a callable')
+        return Property(func, flags=flags)
+    return _prop if func is None else _prop(func)
 
 
-def readonly(func):
+def readonly(func=None, **flags):
     """ Decorator to define a readonly property. An event is emitted
     when the property is set, which has values for "old_value" and
     "new_value". To set a readonly property internally, use the
@@ -51,12 +53,14 @@ def readonly(func):
         m._set_prop('bar', 2)  # only for internal use
     
     """
-    if not callable(func):
-        raise TypeError('readonly decorator needs a callable')
-    return Readonly(func)
+    def _readonly(func):
+        if not callable(func):
+            raise TypeError('readonly decorator needs a callable')
+        return Readonly(func, flags=flags)
+    return _readonly if func is None else _readonly(func)
 
 
-def emitter(func):
+def emitter(func=None, **flags):
     """ Decorator to define an emitter. An emitter is an attribute that
     makes it easy to emit specific events and functions as a placeholder
     for documenting an event.
@@ -76,20 +80,22 @@ def emitter(func):
     dictionary that represents the event to generate. The method's
     docstring is used as the emitter's docstring.
     """
-    if not callable(func):
-        raise TypeError('emitter decorator needs a callable')
-    return Emitter(func)
+    def _emitter(func):
+        if not callable(func):
+            raise TypeError('emitter decorator needs a callable')
+        return Emitter(func, flags=flags)
+    return _emitter if func is None else _emitter(func)
 
 
 class BaseEmitter:
     """ Base class for descriptors used for generating events.
     """
     
-    def __init__(self, func, name=None, doc=None):
+    def __init__(self, func, name=None, doc=None, flags=None):
         assert callable(func)
         self._func = func
         self._name = name or func.__name__  # updated by HasEvents meta class
-        self._is_being_set = False
+        self._flags = flags or {}
         self.__doc__ = '*%s*: %s' % (self.__class__.__name__.lower(),
                                      doc or func.__doc__ or self._name)
     

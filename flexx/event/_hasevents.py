@@ -74,6 +74,12 @@ def finalize_hasevents_class(cls):
         for name, descriptor in collection.items():
             descriptor._name = name
             setattr(cls, '_' + name + '_func', descriptor._func)
+    # Apply flags
+    flags = {}
+    for collection in (emitters, properties):
+        for name, descriptor in collection.items():
+            flags[name] = descriptor._flags
+    cls.__emitter_flags__ = flags
     # Cache prop names
     cls.__handlers__ = [name for name in sorted(handlers.keys())]
     cls.__emitters__ = [name for name in sorted(emitters.keys())]
