@@ -235,7 +235,8 @@ FUNCTIONS['map'] = """function (func, iter) { // nargs: 2
 FUNCTIONS['truthy'] = """function (v) {
     if (v === null || typeof v !== "object") {return v;}
     else if (v.length !== undefined) {return v.length ? v : false;}
-    else if (v.byteLength !== undefined) {return v.byteLength ? v : false;} 
+    else if (v.byteLength !== undefined) {return v.byteLength ? v : false;}
+    else if (v.constructor !== Object) {return true;}
     else {return Object.getOwnPropertyNames(v).length ? v : false;}
 }"""
 
