@@ -435,12 +435,14 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             if not isproxy:
                 value = self[name]
                 txt = window.flexx.serializer.saves(value)
-                window.flexx.ws.send('SET_PROP ' + [self.id, name, txt].join(' '))
+                if window.flexx.ws:
+                    window.flexx.ws.send('SET_PROP ' + [self.id, name, txt].join(' '))
         
         def _handlers_changed_hook(self):
             types = [name for name in self._he_handlers.keys() if len(self._he_handlers[name])]
             text = window.flexx.serializer.saves(types)
-            window.flexx.ws.send('SET_EVENT_TYPES ' + [self.id, text].join(' '))
+            if window.flexx.ws:
+                window.flexx.ws.send('SET_EVENT_TYPES ' + [self.id, text].join(' '))
         
         def _set_event_types_py(self, event_types):
             self.__event_types_py = event_types
@@ -452,9 +454,11 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         def emit(self, type, ev, frompy=False):
             ev = super().emit(type, ev)
             isprop = self.__properties__.indexOf(type) >= 0
+            
             if not frompy and not isprop and type in self.__event_types_py:
                 txt = window.flexx.serializer.saves(ev)
-                window.flexx.ws.send('EVENT ' + [self.id, type, txt].join(' '))
+                if window.flexx.ws:
+                    window.flexx.ws.send('EVENT ' + [self.id, type, txt].join(' '))
 
 
 # Make model objects de-serializable
