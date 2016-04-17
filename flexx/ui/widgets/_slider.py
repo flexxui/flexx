@@ -23,7 +23,7 @@ Interactive example:
         class JS:
             @event.connect('slider.value')
             def _change_label(self, *events):
-                self.label.text = 'x'.repeat(events[-1].new_value)
+                self.label.text = 'x' * events[-1].new_value
 """
 
 from ...pyscript import undefined, window
@@ -39,11 +39,6 @@ class Slider(Widget):
     """
     
     CSS = ".flx-Slider {min-height: 30px;}"
-    
-    @event.prop
-    def value(self, v=0):
-        """ The current slider value (settable)."""
-        return float(v)
     
     @event.prop
     def step(self, v=0.01):
@@ -65,31 +60,36 @@ class Slider(Widget):
         def init(self):
             self.p = window.phosphor.createWidget('input')
             self.p.node.type = 'range'
-            f = lambda ev: self.user_value._set(self.node.value)
+            f = lambda ev: self._set_prop('user_value', self.node.value)
             self.p.node.addEventListener('input', f, False)
             #if IE10:
             #   this.node.addEventListener('change', f, False)
             
+        @event.prop
+        def value(self, v=0):
+            """ The current slider value (settable)."""
+            return float(v)
+            
         @event.readonly
-        def user_value(self, v=''):
+        def user_value(self, v=None):
             """ The slider value set by the user (updates on user interaction). """
-            if v is not undefined:
+            if v is not None:
                 v = float(v)
                 self.value = v
             return v
         
         @event.connect('value')
-        def _value_changed(self, *events):
+        def __value_changed(self, *events):
             self.node.value = events[-1].new_value
         
         @event.connect('step')
-        def _step_changed(self, *events):
+        def __step_changed(self, *events):
             self.node.step= events[-1].new_value
         
         @event.connect('min')
-        def _min_changed(self, *events):
+        def __min_changed(self, *events):
             self.node.min = events[-1].new_value
         
         @event.connect('max')
-        def _max_changed(self, *events):
+        def __max_changed(self, *events):
             self.node.max = events[-1].new_value
