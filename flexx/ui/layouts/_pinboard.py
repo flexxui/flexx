@@ -48,8 +48,8 @@ class PinboardLayout(Layout):
                 st.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
                 st.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
         
-        @event.connect('children.*.size')
+        @event.connect('children.*.base_size')
         def __size_changed(self, *events):
             for child in self.children:
-                size = child.size
+                size = child.base_size
                 child._set_size('', size[0], size[1])

@@ -41,6 +41,12 @@ def _get_default_parents():
     return _default_parents_per_thread.setdefault(tid, [])
 
 
+# todo: the Python version of widgets are not stored now, causing cleanup
+# at the wrong moment. Even when orphaned, the object may have a reference
+# at the JS side, and could be added to the tree later. -> cleanup when
+# disposed, not earlier.
+
+
 class Widget(Model):
     """ Base widget class.
     
@@ -181,14 +187,14 @@ class Widget(Model):
         return _check_two_scalars('pos', v)
     
     @event.prop
-    def size(self, v=(0, 0)):
-        """ The size of the widget when it is in a layout that allows
-        explicit sizing, or the base-size in a BoxPanel or GridPanel.
-        A value <= 0 is interpreted as auto-size.
+    def base_size(self, v=(0, 0)):
+        """ The given size of the widget when it is in a layout that
+        allows explicit sizing, or the base-size in a BoxPanel or
+        GridPanel. A value <= 0 is interpreted as auto-size.
         """
-        return _check_two_scalars('size', v)
+        return _check_two_scalars('base_size', v)
     
-    # Also see real_size defined in JS
+    # Also see size readonly defined in JS
     
     @event.prop
     def container(self, v=''):
@@ -276,25 +282,27 @@ class Widget(Model):
         ## Size 
         
         @event.readonly
-        def real_size(self, v=(0, 0)):
-            """ The actual current size of the widget. Flexx tries to
+        def size(self, v=(0, 0)):
+            """ The actual size of the widget. Flexx tries to
             keep this value up-to-date, but when in a layout like
             BoxLayout, a change in a Button's text can change the size
             of sibling widgets.
             """
             return v[0], v[1]
         
-        @event.connect('parent', 'container')
-        def __update_real_size(self, *events):
-            self._check_real_size()
+        @event.connect('container', 'parent', 'children')
+        def __update_size(self, *events):
+            # Check size in *next* event loop iter to give the DOM a
+            # chance to settle
+            window.setTimeout(self._check_real_size, 0)
         
         def _check_real_size(self):
             """ Check whether the current size has changed.
             """
             n = self.node
-            cursize = self.real_size
+            cursize = self.size
             if cursize[0] != n.clientWidth or cursize[1] !=n.clientHeight:
-                self._set_prop('real_size', [n.clientWidth, n.clientHeight])
+                self._set_prop('size', [n.clientWidth, n.clientHeight])
         
         def _set_size(self, prefix, w, h):
             """ Method to allow setting size (via style). Used by some layouts.

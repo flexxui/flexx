@@ -23,7 +23,7 @@ Example with interaction:
             @event.connect('b1.mouse_down')
             def _on_mouse_down(self, *events):
                 self._click_count = self._click_count or 0
-                self._click_count += 1
+                self._click_count += len(events)
                 self.b1.text = "I've been clicked %i times" % self._click_count
 
 """
@@ -60,7 +60,7 @@ class Button(Widget):
             node.addEventListener('mouseup', self.mouse_up, 0)
         
         @event.connect('text')
-        def _text_changed(self, *events):
+        def __text_changed(self, *events):
             self.node.innerHTML = events[-1].new_value
         
         # todo: docs on the mouse event

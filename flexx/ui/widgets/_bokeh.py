@@ -104,10 +104,10 @@ class BokehWidget(Widget):
             def getplot():
                 self.plot = Bokeh.index[ev.id]
                 self.plot.resize()
-                self.real_size._set(self.real_size)
+                #self.real_size._set(self.real_size) ???
             window.setTimeout(getplot, 10)
         
-        @event.connect('real_size')
+        @event.connect('size')
         def __resize_plot(self, *events):
             if self.plot and self.parent and self.plot.resize_width_height:
                 cstyle = window.getComputedStyle(self.parent.node)

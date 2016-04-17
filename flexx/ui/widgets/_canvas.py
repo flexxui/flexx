@@ -35,13 +35,10 @@ class CanvasWidget(Widget):
             # self.canvas.addEventListener('mousedown', _mouse_down, 0)
             # self.canvas.addEventListener('mouseup', _mouse_up, 0)
             # self.canvas.addEventListener('mousemove', _mouse_move, 0)
-            # The canvas seems to need a bit of extra help to size at first
-            window.setTimeout(lambda ev=None: self._check_real_size(), 10)
         
-        # todo: rename size -> user_size, and real_size -> size
-        @event.connect('real_size')
+        @event.connect('size')
         def _update_canvas_size(self, *events):
-            size = self.real_size
+            size = events[-1].new_value
             if size[0] or size[1]:
                 self.canvas.width = size[0]
                 self.canvas.height = size[1]

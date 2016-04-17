@@ -33,7 +33,7 @@ Interactive example:
                     ui.Label(text='Phase:')
                     self.slider2 = ui.Slider(min=0, max=6, value=0, flex=1)
                 self.plot = ui.PlotWidget(flex=1, xdata=time, xlabel='time',
-                                            ylabel='amplitude', title='a sinusoid')
+                                          ylabel='amplitude', title='a sinusoid')
         
         class JS:
             
@@ -130,7 +130,7 @@ class PlotWidget(CanvasWidget):
         
         @event.connect('xdata', 'ydata', 'yrange', 'line_color', 'line_width',
                        'marker_color', 'marker_size', 'xlabel', 'ylabel',
-                       'title', 'real_size')
+                       'title', 'size')
         def _update_plot(self, *events):
             
             xx, yy = self.xdata, self.ydata

@@ -32,7 +32,7 @@ The GridPanel is deprecated for the time being.
                     self.a = ui.Widget(style='background:#a00;', pos=(0, 0))
                     self.b = ui.Widget(style='background:#0a0;', pos=(1, 0))
                     self.c = ui.Widget(style='background:#00a;', pos=(1, 1),
-                                       size=(100, 100))
+                                       base_size=(100, 100))
 """
 
 from ... import event
@@ -84,7 +84,7 @@ class GridPanel(Layout):
                     return False
             window.phosphor.messaging.installMessageFilter(self.p, LayoutNotifier())
         
-        @event.connect('children.*.pos', 'children.*.flex', 'children.*.size')
+        @event.connect('children.*.pos', 'children.*.flex', 'children.*.base_size')
         def __update_positions(self, *events):
             self._child_limits_changed()
         
@@ -108,12 +108,12 @@ class GridPanel(Layout):
                 limits = child.p.sizeLimits
                 colSpecs[x].minSize = max(colSpecs[x].minSize, limits.minWidth)
                 colSpecs[x].maxSize = min(colSpecs[x].maxSize, limits.maxWidth)
-                colSpecs[x].sizeBasis = max(colSpecs[x].sizeBasis, child.size[0])
+                colSpecs[x].sizeBasis = max(colSpecs[x].sizeBasis, child.base_size[0])
                 colSpecs[x].stretch = max(colSpecs[x].stretch, child.flex[0])
                 
                 rowSpecs[y].minSize = max(rowSpecs[y].minSize, limits.minHeight)
                 rowSpecs[y].maxSize = min(rowSpecs[y].maxSize, limits.maxHeight)
-                rowSpecs[y].sizeBasis = max(rowSpecs[y].sizeBasis, child.size[1])
+                rowSpecs[y].sizeBasis = max(rowSpecs[y].sizeBasis, child.base_size[1])
                 rowSpecs[y].stretch = max(rowSpecs[y].stretch, child.flex[1])
             
             # Assign
