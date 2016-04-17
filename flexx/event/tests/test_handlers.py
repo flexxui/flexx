@@ -224,6 +224,18 @@ def test_func_handler_invoking():
     assert called == [0, 1, 2, 2, 0]
 
 
+def test_method_handler_invoking_other():
+    
+    h = event.HasEvents()
+    
+    with raises(RuntimeError):
+        class Foo(event.HasEvents):
+            
+            @h.connect('x1')
+            def handler(self, *events):
+                self.was_invoked = True
+
+
 def test_connecting():
     
     # We've done all the normal connections. We test mosly fails here

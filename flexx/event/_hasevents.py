@@ -65,6 +65,9 @@ def finalize_hasevents_class(cls):
             emitters[name] = val
         elif isinstance(val, HandlerDescriptor):
             handlers[name] = val
+        elif isinstance(val, Handler):
+            raise RuntimeError('Class methods can only be made handlers using '
+                               '@event.connect() (handler %r)' % name)
         elif name.startswith('on_'):
             val = HandlerDescriptor(val, [name[3:]])
             setattr(cls, name, val)
