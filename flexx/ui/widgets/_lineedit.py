@@ -78,40 +78,37 @@ class LineEdit(Widget):
             self._node.appendChild(self._autocomp)
             
             f1 = lambda ev: self._set_prop('user_text', self._node.value)
-            f2 = lambda ev: self._set_prop('submit',ev.which)
+            f2 = lambda ev: self.submit() if ev.which == 13 else None
             self._node.addEventListener('input', f1, False)
             self._node.addEventListener('keydown', f2, False)
             #if IE10:
             #    this.node.addEventListener('change', f1, False)
             
         @event.readonly
-        def user_text(self, v=''):
+        def user_text(self, v=None):
             """ The text set by the user (updates on each keystroke). """
-            if v is not undefined:
+            if v is not None:
                 v = str(v)
                 self.text = v
             return v
         
-        @event.prop
-        def submit(self, key=None):
-            """ The user strikes the enter or return key. """
-            if key == 13:
-                return True
-            elif key is None:
-                return False  # init the value
-            return undefined
+        @event.emitter
+        def submit(self):
+            """ Event emitted when the user strikes the enter or return key.
+            """
+            return {}
         
         @event.connect('text')
-        def _text_changed(self, *events):
+        def __text_changed(self, *events):
             self._node.value = self.text
         
         @event.connect('placeholder_text')
-        def _placeholder_text_changed(self, *events):
+        def __placeholder_text_changed(self, *events):
             self._node.placeholder = self.placeholder_text
         
         # todo: this works in Firefox but not in Xul
         @event.connect('autocomp')
-        def _autocomp_changed(self, *events):
+        def __autocomp_changed(self, *events):
             autocomp = self.autocomp
             # Clear
             for op in self._autocomp:

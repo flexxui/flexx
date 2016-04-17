@@ -2,16 +2,15 @@
 Simple chat web app in less than 80 lines.
 """
 
-from flexx import app, ui, react
-
-nsamples = 16
+from flexx import app, ui, event
 
 
-@react.input
-def message_relay(msg):
-    """ One global signal to relay messages to all participants.
+class Relay(event.HasEvents):
+    """ Global object to relay messages to all participants.
     """
-    return msg + '<br />'
+    @event.emitter
+    def new_message(self, msg):
+        return dict(msg = msg + '<br />')
 
 
 class MessageBox(ui.Label):
@@ -35,7 +34,7 @@ class ChatRoom(ui.Widget):
             ui.Widget(flex=1)
             with ui.VBox():
                 self.name = ui.LineEdit(placeholder_text='your name')
-                self.people = ui.Label(flex=1, size=(250, 0))
+                self.people = ui.Label(flex=1, base_size=(250, 0))
             with ui.VBox():
                 self.messages = MessageBox(flex=1)
                 with ui.HBox():
@@ -43,36 +42,37 @@ class ChatRoom(ui.Widget):
                     self.ok = ui.Button(text='Send')
             ui.Widget(flex=1)
         
+        # Pipe messages send by the relay into this app
+        relay.connect(lambda *events: [self.emit('new_message', ev) for ev in events],
+                      'new_message')
+        
         self._update_participants()
     
     def _update_participants(self):
         if not self.session.status:
             return  # and dont't invoke a new call
         proxies = app.manager.get_connections(self.__class__.__name__)
-        names = [p.app.name.text() for p in proxies]
+        names = [p.app.name.text for p in proxies]
         text = '<br />%i persons in this chat:<br /><br />' % len(names)
         text += '<br />'.join([name or 'anonymous' for name in sorted(names)])
-        self.people.text(text)
+        self.people.text = text
         app.call_later(3, self._update_participants)
     
-    @react.connect('ok.mouse_down', 'message.submit')
-    def _send_message(self, down, submit):
-        text = self.message.text()
+    @event.connect('ok.mouse_down', 'message.submit')
+    def _send_message(self, *events):
+        text = self.message.text
         if text:
-            name = self.name.text() or 'anonymous'
-            message_relay('<i>%s</i>: %s' % (name, text))
-            self.message.text('')
+            name = self.name.text or 'anonymous'
+            relay.new_message('<i>%s</i>: %s' % (name, text))
+            self.message.text = ''
     
-    @react.connect('message_relay')
-    def new_text(self, text):
-        return text  # proxy to pass total_text to JS
-    
-    class JS:
-        
-        @react.connect('new_text')
-        def _update_total_text(self, text):
-            self.messages.text(self.messages.text() + text)
+    @event.connect('new_message')
+    def _update_total_text(self, *events):
+        self.messages.text += ''.join([ev.msg for ev in events])
 
+
+# Create global relay
+relay = Relay()
 
 if __name__ == '__main__':
     # m = app.launch(ChatRoom)  # for use during development

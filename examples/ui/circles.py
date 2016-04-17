@@ -20,6 +20,7 @@ class Circle(ui.Label):
     """
 
 class App(ui.Widget):
+    
     def init(self):
         self._circles = []
         
@@ -39,7 +40,7 @@ class App(ui.Widget):
         for i, circle in enumerate(self._circles):
             x = math.sin(i*0.2 + t)*0.3 + 0.5
             y = math.cos(i*0.2 + t)*0.3 + 0.5
-            circle.pos((x, y))
+            circle.pos =  x, y
         app.call_later(0.03, self.tick)
 
 if __name__ == '__main__':

@@ -27,7 +27,7 @@ import sys
 import platform
 from test import pystone
 
-from flexx import app, react, pyscript
+from flexx import app, event, pyscript
 
 # Backend selection
 BACKEND = 'xul'
@@ -152,12 +152,11 @@ def bench_str():
 
 class Benchmarker(app.Model):
     
-    def _init(self):
+    def init(self):
         self.session.add_asset('pystone.js', jscode.encode())
     
-    @react.source
-    def run_js_tests(v):
-        return v
+    def run_js_benchmark(self):
+        self.call_js('_benchmark()')
     
     def benchmark(self):
         print('\n==== Python %s %s =====\n' % (platform.python_implementation(), 
@@ -167,7 +166,7 @@ class Benchmarker(app.Model):
         bench_str()
         
         # Trigger benchmark in JS
-        self.run_js_tests._set(1)
+        self.run_js_benchmark()
     
     class JS:
         
@@ -175,7 +174,6 @@ class Benchmarker(app.Model):
         convolve = convolve
         bench_str = bench_str
         
-        @react.connect('run_js_tests')
         def _benchmark(self):
             print()
             print('==== PyScript on %s =====' % self.BACKEND)

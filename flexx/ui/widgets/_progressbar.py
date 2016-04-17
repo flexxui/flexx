@@ -61,9 +61,9 @@ class ProgressBar(Widget):
             self.p = window.phosphor.createWidget('progress')
     
         @event.connect('value')
-        def _value_changed(self, *events):
+        def __value_changed(self, *events):
             self.node.value = events[-1].new_value
         
         @event.connect('max')
-        def _max_changed(self, *events):
+        def __max_changed(self, *events):
             self.node.max = events[-1].new_value
