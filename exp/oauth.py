@@ -32,7 +32,9 @@ in Flexx we do have sessions (i.e. corresponding to a websocket connection).
 # todo: does Tornado automatically handle refreshing of the token?
 # todo: can I generalize this, so that developer specifies all info in a dict?
 # todo: prepend cookies with project/app id? Cookies are already per-url
+# todo: allow end-user to select an authentication method
 
+import os
 
 # Dict that google gave me
 info2 = {"client_id":"515650829929-ilthmjde5nkccn1saa0mt06b69tc5gdl.apps.googleusercontent.com",
@@ -49,7 +51,7 @@ info2['key'] = info2['client_id']
 # This is the secret key by which this "app" is registered, should not be in source
 info2['secret'] = info2['client_secret']
 # For tornado to store its cookies in a good way, should not be in source
-info2['cookie_secret'] = "32oETzKXQAFlexxx5gEmGeJJFuYh7EQnp2XdTP1oVo"
+info2['cookie_secret'] = "32oETzKXQAFlexx5gEmGeJJFuYh7EQnp2XdTP1oVo"
 
 info2['userinfo_uri'] = "https://www.googleapis.com/oauth2/v1/userinfo"
 
@@ -90,7 +92,7 @@ class MainHandler(BaseHandler):
 ## We can provide a few common cases, users can provide one too
 
 # Define Mixin classes that can provide 
-from tornado.auth import urllib_parse, functools, AuthError, escape
+from tornado.auth import urllib_parse, urlparse, functools, AuthError, escape
 
 class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
     """Google authentication using OAuth2.
@@ -131,10 +133,89 @@ class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
         """
         user = yield self.oauth2_request(self._OAUTH_USERINFO_URL, access_token=access_token)
         return user
-        
+    
+    @tornado.gen.coroutine
+    def redirect_for_user_info(self, redirect_uri):
+        # scope: profile, email
+        yield self.authorize_redirect(
+            redirect_uri=redirect_uri,
+            client_id=self.settings[self._OAUTH_SETTINGS_KEY]['key'],
+            scope=['profile'],  # add email etc. here
+            response_type='code',
+            extra_params={'approval_prompt': 'auto'})
 
+
+class GithubAuth2Mixin(tornado.auth.OAuth2Mixin):
+    """Google authentication using OAuth2.
+    """
+    _OAUTH_AUTHORIZE_URL = "https://github.com/login/oauth/authorize"
+    _OAUTH_ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token"
+    _OAUTH_USERINFO_URL = "https://api.github.com/user"
+    _OAUTH_NO_CALLBACKS = False
+    _OAUTH_SETTINGS_KEY = 'github_oauth'
+
+    @tornado.auth._auth_return_future
+    def get_authenticated_user(self, redirect_uri, code, callback):
+        http = self.get_auth_http_client()
+        body = urllib_parse.urlencode({
+            "redirect_uri": redirect_uri,
+            "code": code,
+            "client_id": self.settings[self._OAUTH_SETTINGS_KEY]['key'],
+            "client_secret": self.settings[self._OAUTH_SETTINGS_KEY]['secret'],
+            # state?
+        })
+
+        http.fetch(self._OAUTH_ACCESS_TOKEN_URL,
+                   functools.partial(self._on_access_token, callback),
+                   method="POST", headers={'Content-Type': 'application/x-www-form-urlencoded'}, body=body)
+
+    def _on_access_token(self, future, response):
+        """Callback function for the exchange to the access token."""
+        if response.error:
+            future.set_exception(AuthError('Google auth error: %s' % str(response)))
+            return
+
+        args = urlparse.parse_qs(escape.native_str(response.body))
+        access = {
+            "access_token": args["access_token"][-1],
+            "token_type": args.get("token_type")[-1],
+            #"scope": args.get("scope")[-1],
+        }
+        future.set_result(access)
+    
+    #@tornado.auth._auth_return_future
+    @tornado.gen.coroutine
+    def get_user(self, access_token=None):
+        """ Gives pictire, id, locale, gender, name, link, family_name, given_name.
+        """
+        user = yield self.oauth2_request(self._OAUTH_USERINFO_URL, access_token=access_token,
+            )
+        
+        d = {}
+        d['source'] = 'github'
+        d['original'] = user
+        d['name'] = user['name']
+        d['picture'] = user['avatar_url']
+        print('email', user['email'])
+        return d
+    
+    @tornado.gen.coroutine
+    def redirect_for_user_info(self, redirect_uri):
+        # todo: scope settable?
+        # scope: '' for public info, 'user:email' for email
+        yield self.authorize_redirect(
+            redirect_uri=redirect_uri,
+            client_id=self.settings[self._OAUTH_SETTINGS_KEY]['key'],
+            scope=[''],  # '' is public data only. user:email does not seem to provide email? or maybe ai need different API url
+            )  # state?
+    
+    
 
 ## We implement this common handling logic
+
+tornado.httpclient.AsyncHTTPClient.configure(
+    None, defaults=dict(user_agent="Flexx"))
+
 
 class BaseAuthHandler(BaseHandler):
     
@@ -153,22 +234,23 @@ class BaseAuthHandler(BaseHandler):
         """
         url = self.request.full_url().split('?')[0]
         print('auth handler GET at ', url)
-        if url.endswith('new'):
+        if url.endswith('/new'):
             self.clear_cookie("user")
             self.clear_cookie("access")
             self.application._the_user_info = None
             self.redirect(url.rsplit('/', 1)[0])
         elif self.get_current_user():
             # We have a user, no need to login
-            print('logged in ..')
+            print('logged in ..', self.get_current_user())
             self.redirect('/')
         elif self.get_secure_cookie_dict("access"):
             # We have access, but no user yet
             access = self.get_secure_cookie_dict("access")
             print('get user info ..')
             try:
-                user = yield self.get_user(access["access_token"])
+                user = yield self.get_user(access_token=access["access_token"])
             except tornado.auth.AuthError:
+                raise
                 logging.warn('Failed to get user info via OAuth, re-authenticating...')
                 self.clear_cookie('access')
                 self.redirect(url)
@@ -190,60 +272,7 @@ class BaseAuthHandler(BaseHandler):
         else:
             # We start from scratch, ask OAuth provider for a token
             print('authorize redirect ..')
-            yield self.authorize_redirect(
-                redirect_uri=url,
-                client_id=info2['client_id'],
-                scope=['profile'],  # add email etc. here
-                response_type='code',
-                extra_params={'approval_prompt': 'auto'})
-
-
-# class AuthHandler(BaseHandler, tornado.auth.GoogleOAuth2Mixin):
-#     
-#     @tornado.gen.coroutine
-#     def get(self):
-#         """ The steps below are generally performed in bottom-to top order,
-#         but sometimes only the top (few) are needed, e.g. we already have
-#         an access token, and only need the corresponding user name.
-#         """
-#         if self.get_current_user():
-#             # We have a user, no need to login
-#             print('logged in ..')
-#             self.redirect('/')
-#         elif self.get_secure_cookie_dict("access"):
-#             # We have access, but no user yet
-#             access = self.get_secure_cookie_dict("access")
-#             print('get user info ..')
-#             try:
-#                 user = yield self.oauth2_request(
-#                     "https://www.googleapis.com/oauth2/v1/userinfo",
-#                     access_token=access["access_token"])
-#             except tornado.auth.AuthError:
-#                 logging.warn('Failed to get user info via OAuth, re-authenticating...')
-#                 self.clear_cookie('access')
-#                 self.redirect('http://localhost:9000/login')
-#                 # todo: this is where we could try use the refresh token
-#                 return
-#             #self.set_secure_cookie_dict("user", user)
-#             self.application._the_user_info = user
-#             self.redirect('http://localhost:9000/login')
-#         elif self.get_argument('code', False):
-#             # We get here once the authorize_redirect() has succeeded
-#             print('get authenticated user ..')
-#             access = yield self.get_authenticated_user(
-#                 redirect_uri='http://localhost:9000/login', # must match
-#                 code = self.get_argument('code'))
-#             self.set_secure_cookie_dict("access", access)
-#             self.redirect('http://localhost:9000/login')
-#         else:
-#             # We start from scratch, ask OAuth provider for a token
-#             print('authorize redirect ..')
-#             yield self.authorize_redirect(
-#                 redirect_uri='http://localhost:9000/login',
-#                 client_id=info2['client_id'],
-#                 scope=['profile'],  # add email etc. here
-#                 response_type='code',
-#                 extra_params={'approval_prompt': 'auto'})
+            yield self.redirect_for_user_info(url)
 
 
 application = tornado.web.Application([
@@ -258,12 +287,20 @@ application = tornado.web.Application([
 class GoogleAuthHandler(BaseAuthHandler, GoogleOAuth2Mixin):
     pass
 
+class GithubAuthHandler(BaseAuthHandler, GithubAuth2Mixin):
+    pass
+
+github_info = {'key': 'a79399b9c185a75909c1',
+               'secret': os.getenv('FLEXX_GITHUB_SECRET')}
+
 #application.settings['app_name'] = 'flexxample'
 application.settings['cookie_secret'] = info2['cookie_secret']
 application.settings['google_oauth'] = info2
-application.add_handlers(".*$", [(r"/login/?(.*)", GoogleAuthHandler)])
+application.settings['github_oauth'] = github_info
+
+application.add_handlers(".*$", [(r"/login/?(.*)", GithubAuthHandler)])
 
 
 if __name__ == '__main__':
-    application.listen(9000)
+    application.listen(8080)
     tornado.ioloop.IOLoop.instance().start()
