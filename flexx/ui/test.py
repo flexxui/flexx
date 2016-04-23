@@ -10,7 +10,7 @@ faulthandler.enable()
 
 
 
-TEST = 0
+TEST = 12
 
 class MyApp(ui.Widget):
     
@@ -173,7 +173,7 @@ class MyApp(ui.Widget):
   
     class JS:
         if TEST== 12:
-            @event.connect('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')
+            @event.connect('buta.mouse_click', 'butb.mouse_down', 'butc.mouse_up')
             def _stacked_current(self, *events):
                 ob = events[-1].source.w
                 self.stack.current = ob

@@ -265,6 +265,10 @@ class Widget(Model):
                 self.p = window.phosphor.panel.Panel()
             self.node = self.p.node
             
+            # Connect same standard events
+            self.node.addEventListener('mousedown', self.mouse_down, 0)
+            self.node.addEventListener('mouseup', self.mouse_up, 0)
+            
             # Keep track of size
             that = self
             class SizeNotifier:
@@ -419,6 +423,44 @@ class Widget(Model):
             Called right after the child widget is removed.
             """
             widget.p.parent = None
+        
+        ## Events
+        
+        # todo: move?, key?, focus, enter, leave ...
+        
+        @event.emitter
+        def mouse_down(self, e):
+            """ Event emitted when the mouse is pressed down.
+            
+            A mouse event has the following attributes:
+            * x: the x location, in pixels, relative to this widget
+            * y: the y location, in pixels, relative to this widget
+            * pageX: the x location relative to the page
+            * pageY: the y location relative to the page
+            * button: what button the event is about, 1, 2, 3 are left, middle,
+              right, respectively.
+            * buttons: what buttons where pressed at the time of the event.
+            * modifiers, list of strings "alt", "shift", "ctrl", "meta" for
+              modifier keys pressed down at the time of the event.
+            """
+            return self._create_mouse_event(e)
+        
+        @event.emitter
+        def mouse_up(self, e):
+            """ Event emitted when the mouse is pressed up.
+            
+            See mouse_down() for a description of the event object.
+            """
+            return self._create_mouse_event(e)
+        
+        def _create_mouse_event(self, e):
+            # note: our button has a value as in JS "which"
+            modifiers = [n for n in ('alt', 'shift', 'ctrl', 'meta') if e[n]]
+            return dict(x=e.clientX, y=e.clientY,
+                        pageX=e.pageX, pageY=e.pageY,
+                        button=e.button+1, buttons=[b+1 for b in e.buttons],
+                        modifiers=modifiers,
+                        )
         
         ## Special
         

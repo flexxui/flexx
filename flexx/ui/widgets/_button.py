@@ -20,8 +20,8 @@ Example with interaction:
         
         class JS:
         
-            @event.connect('b1.mouse_down')
-            def _on_mouse_down(self, *events):
+            @event.connect('b1.mouse_click')
+            def _on_mouse_click(self, *events):
                 self._click_count = self._click_count or 0
                 self._click_count += len(events)
                 self.b1.text = "I've been clicked %i times" % self._click_count
@@ -52,33 +52,19 @@ class Button(Widget):
         
         def init(self):
             self.p = window.phosphor.createWidget('button')
-            node = self.p.node
-            node.addEventListener('mousedown', self.mouse_down.bind(this), 0)
-            node.addEventListener('mouseup', self.mouse_up, 0)
+            self.p.node.addEventListener('click', self.mouse_click, 0)
+        
+        @event.emitter
+        def mouse_click(self, e):
+            """ Event emitted when the mouse is clicked.
+            
+            See mouse_down() for a description of the event object.
+            """
+            return self._create_mouse_event(e)
         
         @event.connect('text')
         def __text_changed(self, *events):
             self.node.innerHTML = events[-1].new_value
         
-        # todo: docs on the mouse event
-        @event.emitter
-        def mouse_down(self, e):
-            """ Event emitted when the mouse is pressed down.
-            """
-            return self._create_mouse_event(e)
         
-        @event.emitter
-        def mouse_up(self, e):
-            """ Event emitted when the mouse is pressed up.
-            """
-            return self._create_mouse_event(e)
-        
-        def _create_mouse_event(self, e):
-            # todo: which vs button? see also lineedit
-            modifiers = [n for n in ('alt', 'shift', 'ctrl', 'meta') if e[n]]
-            return dict(x=e.clientX, y=e.clientY,
-                        pageX=e.pageX, pageY=e.pageY,
-                        button=e.button+1, buttons=[b+1 for b in e.buttons],
-                        modifiers=modifiers,
-                        )
 

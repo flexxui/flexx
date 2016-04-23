@@ -29,12 +29,7 @@ class CanvasWidget(Widget):
             # to be forcing a size on the container div.
             self.canvas.style.position = 'absolute'
             
-            # _mouse_down = lambda ev: self.mouse_down._set(1)
-            # _mouse_up = lambda ev: self.mouse_down._set(0)
-            # _mouse_move = lambda ev: self.mouse_pos._set((ev.clientX, ev.clientY))
-            # self.canvas.addEventListener('mousedown', _mouse_down, 0)
-            # self.canvas.addEventListener('mouseup', _mouse_up, 0)
-            # self.canvas.addEventListener('mousemove', _mouse_move, 0)
+            self.canvas.addEventListener('mousemove', self.mouse_move, 0)
         
         @event.connect('size')
         def _update_canvas_size(self, *events):
@@ -45,18 +40,13 @@ class CanvasWidget(Widget):
                 self.canvas.style.width = size[0] + 'px'
                 self.canvas.style.height = size[1] + 'px'
         
-        # todo: handle in widget???
+        # todo: define in widget?
         @event.emitter
-        def mouse_down(v=False):
-            """ True when the mouse is currently pressed down.
-            """
-            return {}
-        
-        @event.emitter
-        def mouse_move(self, pos=(0, 0)):
+        def mouse_move(self, e):
             """ The current position of the mouse inside this widget.
             """
-            return {}
+            ev = self._create_mouse_event(e)
             rect = self.canvas.getBoundingClientRect()
             offset = rect.left, rect.top
-            return float(pos[0] - offset[0]), float(pos[1] - offset[1])
+            ev.pos = float(pos[0] - offset[0]), float(pos[1] - offset[1])
+            return ev
