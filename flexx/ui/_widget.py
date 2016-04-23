@@ -34,14 +34,6 @@ def _get_default_parents():
     return _default_parents_per_thread.setdefault(tid, [])
 
 
-# todo: the Python version of widgets are not stored now, causing cleanup
-# at the wrong moment. Even when orphaned, the object may have a reference
-# at the JS side, and could be added to the tree later. -> cleanup when
-# disposed, not earlier.
-# Maybe we just need to make sure that paren-children are stored in Python,
-# if you orphan a widget and did not keep a ref. Maybe thats intended, and the
-# ref should be deleted in JS too...
-
 
 class Widget(Model):
     """ Base widget class.

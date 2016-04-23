@@ -49,7 +49,6 @@ class PlotLayout(Layout):
             with VBox():
                 self._left = VBox(flex=0)
             with VBox(flex=0):
-                # todo: somehow the plotWidget just takes all available space
                 #self._plot = PlotWidget(flex=1)
                 self._plot = PlotWidget(flex=0, 
                                         style='min-width:640px; min-height:480px;')

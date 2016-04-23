@@ -279,7 +279,16 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     def __repr__(self):
         clsname = self.__class__.__name__
         return "<%s object '%s' at 0x%x>" % (clsname, self._id, id(self))
-        
+    
+    def dispose(self):
+        """ Overloaded version of dispose() that removes the global
+        reference of the JS version of the object.
+        """
+        if self.session.status:
+            cmd = 'flexx.instances.%s = "disposed";' % self._id
+            self._session._exec(cmd)
+        super().dispose()
+    
     def init(self):
         """ Can be overloaded when creating a custom class to do
         initialization, such as creating sub models. This function is
