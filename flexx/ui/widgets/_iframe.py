@@ -23,7 +23,7 @@ class IFrame(Widget):
     
     CSS = '.flx-IFrame {border: none;}'
     
-    @event.prop
+    @event.prop(both=True)
     def url(self, v=''):
         """ The url to show. 'http://' is automatically prepended if the url
         does not have '://' in it.

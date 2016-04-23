@@ -43,13 +43,13 @@ class ProgressBar(Widget):
     
     CSS = ".flx-ProgressBar {min-height: 10px;}"
     
-    @event.prop
+    @event.prop(both=True)
     def value(self, v=0):
         """ The progress value.
         """
         return float(v)
     
-    @event.prop
+    @event.prop(both=True)
     def max(self, v=1):
         """ The maximum progress value.
         """

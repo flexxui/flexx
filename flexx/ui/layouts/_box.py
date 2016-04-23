@@ -116,12 +116,12 @@ class BaseBoxLayout(Layout):
     """ Base class for BoxLayout and BoxPanel.
     """
     
-    @event.prop
+    @event.prop(both=True)
     def spacing(self, v=5):
         """ The space between two child elements (in pixels)"""
         return float(v)
     
-    @event.prop
+    @event.prop(both=True)
     def orientation(self, v=None):
         """ The orientation of the child widgets. 'h' or 'v'. Default
         horizontal. The items can also be reversed using 'hr' and 'vr'.
@@ -212,13 +212,15 @@ class BoxLayout(BaseBoxLayout):
     }
     """
     
-    @event.prop
+    @event.prop(both=True)
     def padding(self, v=1):
         """ The empty space around the layout (in pixels). """
         return float(v)
     
     class JS:
-    
+        
+        _DEFAULT_ORIENTATION = 'h'
+        
         def init(self):
             self.p = window.phosphor.panel.Panel()
         
@@ -291,12 +293,18 @@ class HBox(BoxLayout):
     """ BoxLayout with default horizontal layout.
     """
     _DEFAULT_ORIENTATION = 'h'
-
+    
+    class JS:
+        _DEFAULT_ORIENTATION = 'h'
 
 class VBox(BoxLayout):
     """ BoxLayout with default vertical layout.
     """
     _DEFAULT_ORIENTATION = 'v'
+    
+    class JS:
+        _DEFAULT_ORIENTATION = 'v'
+
 
 
 class BoxPanel(BaseBoxLayout):
@@ -311,6 +319,8 @@ class BoxPanel(BaseBoxLayout):
     _DEFAULT_ORIENTATION = 'h'
     
     class JS:
+        
+        _DEFAULT_ORIENTATION = 'h'
         
         def init(self):
             self.p = window.phosphor.boxpanel.BoxPanel()

@@ -40,19 +40,24 @@ class Slider(Widget):
     
     CSS = ".flx-Slider {min-height: 30px;}"
     
-    @event.prop
+    @event.prop(both=True)
     def step(self, v=0.01):
         """ The step size for the slider."""
         return float(v)
     
-    @event.prop
+    @event.prop(both=True)
     def min(self, v=0):
         """ The minimal slider value."""
         return float(v)
     
-    @event.prop
+    @event.prop(both=True)
     def max(self, v=1):
         """ The maximum slider value."""
+        return float(v)
+    
+    @event.prop(both=True)
+    def value(self, v=0):
+        """ The current slider value (settable)."""
         return float(v)
     
     class JS:
@@ -64,12 +69,7 @@ class Slider(Widget):
             self.p.node.addEventListener('input', f, False)
             #if IE10:
             #   this.node.addEventListener('change', f, False)
-            
-        @event.prop
-        def value(self, v=0):
-            """ The current slider value (settable)."""
-            return float(v)
-            
+        
         @event.readonly
         def user_value(self, v=None):
             """ The slider value set by the user (updates on user interaction). """

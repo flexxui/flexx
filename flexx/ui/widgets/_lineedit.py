@@ -44,17 +44,17 @@ class LineEdit(Widget):
     }
     """
     
-    @event.prop
+    @event.prop(both=True)
     def text(self, v=''):
         """ The current text."""
         return str(v)
     
-    @event.prop
+    @event.prop(both=True)
     def placeholder_text(self, v=''):
         """ The placeholder text (shown when the text is an empty string)."""
         return str(v)
     
-    @event.prop
+    @event.prop(both=True)
     def autocomp(self, v=()):
         """ A tuple/list of strings for autocompletion. Might not work
         in all browsers.

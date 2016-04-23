@@ -35,7 +35,7 @@ class SplitPanel(Layout):
     
     _DEFAULT_ORIENTATION = 'h'
     
-    @event.prop
+    @event.prop(both=True)
     def orientation(self, v=None):
         """ The orientation of the child widgets. 'h' or 'v'. Default
         horizontal.
@@ -50,6 +50,8 @@ class SplitPanel(Layout):
         return v
     
     class JS:
+        
+        _DEFAULT_ORIENTATION = 'h'
         
         def init(self):
             self.p = window.phosphor.splitpanel.SplitPanel()

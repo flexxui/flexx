@@ -42,14 +42,11 @@ class Button(Widget):
     
     """
     
-    @event.prop
+    @event.prop(both=True)
     def text(self, v=''):
         """ The text on the button.
         """
-        # todo: use event.check_str() or something?
-        if not isinstance(v, str):
-            raise ValueError('Text property must be a string.')
-        return v
+        return str(v)
     
     class JS:
         

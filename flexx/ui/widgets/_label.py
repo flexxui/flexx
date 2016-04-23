@@ -44,17 +44,17 @@ class Label(Widget):
             -ms-user-select: text;
         }"""
     
-    @event.prop
+    @event.prop(both=True)
     def text(self, v=''):
         """ The text on the label.
         """
-        if not isinstance(v, str):
-            raise ValueError('Text property must be a string.')
-        return v
+        return str(v)
     
-    @event.prop
+    @event.prop(both=True)
     def wrap(self, v=False):
-        """ Whether the content is allowed to be wrapped on multiple lines.
+        """ Whether the content is allowed to be wrapped on multiple
+        lines. Set to 0/False for no wrap, 1/True for word-wrap, 2 for
+        character wrap.
         """
         return {0: 0, 1: 1, 2: 2}.get(v, int(bool(v)))
     

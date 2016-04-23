@@ -27,7 +27,7 @@ Example:
 """
 
 from ... import event
-from ...pyscript import window
+from ...pyscript import window, this_is_js
 from . import Widget, Layout
 
 
@@ -35,19 +35,23 @@ class StackedPanel(Layout):
     """ A panel which shows only one of its children at a time.
     """
     
+    @event.prop
+    def current(self, v=None):
+        """ The currently shown widget.
+        """
+        if this_is_js():  # todo: cant we do better with classes?
+            if not (v is None or isinstance(v, flexx.classes.Widget)):
+                raise ValueError('The StackedPanel\'s current widget should be a Widget.')
+        else:
+            if not (v is None or isinstance(v, Widget)):
+                raise ValueError('The StackedPanel\'s current widget should be a Widget.')
+        
+        return v
     
     class JS:
         
         def init(self):
             self.p = window.phosphor.stackedpanel.StackedPanel()
-        
-        @event.prop
-        def current(self, v=None):
-            """ The currently shown widget.
-            """
-            if not (v is None or isinstance(v, flexx.classes.Widget)):
-                raise ValueError('The StackedPanel\'s current widget should be a Widget.')
-            return v
         
         @event.connect('current')
         def __set_current_widget(self, *events):

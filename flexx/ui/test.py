@@ -10,7 +10,7 @@ faulthandler.enable()
 
 
 
-TEST = 12
+TEST = 0
 
 class MyApp(ui.Widget):
     
@@ -38,7 +38,7 @@ class MyApp(ui.Widget):
                     
                     with ui.VBox(flex=1) as self.vbox:
                         
-                        ui.Label(text='Flex 0 0 0', flex=0)
+                        ui.Label(text='Flex 0 0 0 kjasn kdjnas kdjna skdjn askdn aksdn aksdn kasjnd aksnd kasdn aksdjn kasjnd aksjnd aksdnj aksj n', flex=0)
                         with ui.HBox(flex=0) as self.hbox1:
                             self.b1 = ui.Button(text='Hola', flex=0)
                             self.b2 = ui.Button(text='Hello world', flex=0)

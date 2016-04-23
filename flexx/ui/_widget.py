@@ -16,14 +16,6 @@ from ..app import Model
 from ..pyscript import undefined, window, this_is_js
 
 
-def _check_two_scalars(name, v):
-    if not (isinstance(v, (list, tuple)) and
-            isinstance(v[0], (int, float)) and
-            isinstance(v[1], (int, float))):
-        raise ValueError('%s must be a tuple of two scalars.' % name)
-    return float(v[0]), float(v[1])
-
-
 # Keep track of stack of default parents when using widgets
 # as context managers. Have one list for each thread.
 
@@ -154,14 +146,14 @@ class Widget(Model):
         default_parents = _get_default_parents()
         assert self is default_parents.pop(-1)
     
-    @event.prop
+    @event.prop(both=True)
     def title(self, v=''):
         """ The title of this widget. This is used to mark the widget
         in e.g. a tab layout or form layout.
         """
         return str(v)
     
-    @event.prop
+    @event.prop(both=True)
     def style(self, v=''):
         """ CSS style options for this widget object. e.g. 
         ``"background: #f00; color: #0f0;"``. If the given value is a
@@ -170,10 +162,11 @@ class Widget(Model):
         instances of a class.
         """
         if isinstance(v, dict):
-            v = '; '.join('%s: s%' % (k, v) for k, v in v.items())
+            v = ['%s: %s' % (k, v) for k, v in v.items()]
+            v = '; '.join(v)
         return str(v)
     
-    @event.prop
+    @event.prop(both=True)
     def flex(self, v=0):
         """ How much space this widget takes (relative to the other
         widgets) when contained in a flexible layout such as BoxLayout,
@@ -183,28 +176,28 @@ class Widget(Model):
         """
         if isinstance(v, (int, float)):
             v = v, v
-        return _check_two_scalars('flex', v)
+        return float(v[0]), float(v[1])
     
-    @event.prop
+    @event.prop(both=True)
     def pos(self, v=(0, 0)):
         """ The position of the widget when it in a layout that allows
         positioning, this can be an arbitrary position (e.g. in
         PinBoardLayout) or the selection of column and row in a
         GridPanel.
         """
-        return _check_two_scalars('pos', v)
+        return float(v[0]), float(v[1])
     
-    @event.prop
+    @event.prop(both=True)
     def base_size(self, v=(0, 0)):
         """ The given size of the widget when it is in a layout that
         allows explicit sizing, or the base-size in a BoxPanel or
         GridPanel. A value <= 0 is interpreted as auto-size.
         """
-        return _check_two_scalars('base_size', v)
+        return float(v[0]), float(v[1])
     
     # Also see size readonly defined in JS
     
-    @event.prop
+    @event.prop(both=True)
     def container(self, v=''):
         """ The id of the DOM element that contains this widget if
         parent is None. Use 'body' to make this widget the root.
