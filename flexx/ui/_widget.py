@@ -13,7 +13,8 @@ import threading
 
 from .. import event
 from ..app import Model
-from ..pyscript import undefined, window
+from ..pyscript import undefined, window, this_is_js
+
 
 def _check_two_scalars(name, v):
     if not (isinstance(v, (list, tuple)) and
@@ -99,6 +100,10 @@ class Widget(Model):
         # Set container if this widget represents the main app
         if kwargs.get('is_app', False):
             kwargs['container'] = 'body'
+        
+        # Need to prepare parent and children because they are mutually dependent
+        self._parent_value = None
+        self._children_value = ()
         
         # Init - pass signal values via kwargs
         Model.__init__(self, **kwargs)
@@ -206,10 +211,73 @@ class Widget(Model):
         """
         return str(v)
     
+    # The parent is not synced; we need to sync either parent or children
+    # to communicate the parenting structure, otherwise we end up in endless
+    # loops. We use the children for this, because it contains ordering
+    # information which cannot be communicated by the parent prop alone.
+    
+    @event.prop(both=True, sync=False)
+    def parent(self, new_parent=None):
+        """ The parent widget, or None if it has no parent. Setting
+        this property will update the "children" property of the
+        old and new parent.
+        """
+        old_parent = self.parent  # or None
+        
+        if new_parent is old_parent:
+            return new_parent
+        if this_is_js():  # todo: cant we do better with classes?
+            if not (new_parent is None or isinstance(new_parent, flexx.classes.Widget)):
+                raise ValueError('parent must be a Widget or None')
+        else:
+            if not (new_parent is None or isinstance(new_parent, Widget)):
+                raise ValueError('parent must be a Widget or None')
+        
+        if old_parent is not None:
+            children = list(old_parent.children if old_parent.children else [])
+            while self in children:
+                children.remove(self)
+            old_parent.children = children
+        if new_parent is not None:
+            children = list(new_parent.children if new_parent.children else [])
+            children.append(self)
+            new_parent.children = children
+        
+        return new_parent
+    
+    @event.prop(both=True)
+    def children(self, new_children=()):
+        """ The child widgets of this widget. Setting this property
+        will update the "parent" property of the old and new
+        children.
+        """
+        old_children = self.children# if self.children else []
+        
+        if len(new_children) == len(old_children):
+            if all([(c1 is c2) for c1, c2 in zip(old_children, new_children)]):
+                return new_children  # No need to do anything
+        if this_is_js():
+            if not all([isinstance(w, flexx.classes.Widget) for w in new_children]):
+                raise ValueError('All children must be widget objects.')
+        else:
+            if not all([isinstance(w, Widget) for w in new_children]):
+                raise ValueError('All children must be widget objects.')
+        
+        for child in old_children:
+            if child not in new_children:
+                child.parent = None
+        for child in new_children:
+            if child not in old_children:
+                child.parent = self
+        
+        return tuple(new_children)
     
     class JS:
         
         def __init__(self, *args):
+            # Need to prepare parent and children because they are mutually dependent
+            self._parent_value = None
+            self._children_value = []
             super().__init__(*args)
             
             # Get phosphor widget that is set in init()
@@ -340,54 +408,6 @@ class Widget(Model):
                                                            self._check_real_size()))
             if id == 'body':
                 self.node.classList.add('flx-main-widget')
-        
-        @event.prop
-        def parent(self, new_parent=None):
-            """ The parent widget, or None if it has no parent. Setting
-            this property will update the "children" property of the
-            old and new parent.
-            """
-            old_parent = self.parent or None
-            
-            if new_parent is old_parent:
-                return new_parent
-            if not (new_parent is None or isinstance(new_parent, flexx.classes.Widget)):
-                raise ValueError('parent must be a Widget or None')
-            
-            if old_parent is not None:
-                children = list(old_parent.children if old_parent.children else [])
-                while self in children:
-                    children.remove(self)
-                old_parent.children = children
-            if new_parent is not None:
-                children = list(new_parent.children if new_parent.children else [])
-                children.append(self)
-                new_parent.children = children
-            
-            return new_parent
-        
-        @event.prop
-        def children(self, new_children=()):
-            """ The child widgets of this widget. Setting this property
-            will update the "parent" property of the old and new
-            children.
-            """
-            old_children = self.children if self.children else []
-            
-            if len(new_children) == len(old_children):
-                if all([(c1 is c2) for c1, c2 in zip(old_children, new_children)]):
-                    return new_children  # No need to do anything
-            if not all([isinstance(w, flexx.classes.Widget) for w in new_children]):
-                raise ValueError('All children must be widget objects.')
-            
-            for child in old_children:
-                if child not in new_children:
-                    child.parent = None
-            for child in new_children:
-                if child not in old_children:
-                    child.parent = self
-            
-            return tuple(new_children)
         
         @event.connect('children')
         def __children_changed(self, *events):

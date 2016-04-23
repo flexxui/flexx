@@ -9,7 +9,8 @@ faulthandler.enable()
 #logging.log
 
 
-TEST = 0
+
+TEST = 12
 
 class MyApp(ui.Widget):
     
@@ -25,15 +26,11 @@ class MyApp(ui.Widget):
             
         if TEST == 1:
             with ui.BoxPanel(flex=1) as self.hbox1:
-                # self.b1 = ui.Widget(flex=1, style='background: #a22;', min_size=(100, 100), max_size=(500,0))
-                # self.b2 = ui.Widget(flex=0, style='background: #2a2;', min_size=(100, 0), max_size=(500,0))
-                # self.b3 = ui.Widget(flex=0, style='background: #22a;', min_size=(100, 0), max_size=(500,0))
-                # self.b4 = ui.Widget(flex=1, style='background: #aaa;', min_size=(100, 0), max_size=(500,0))
                 self.b1 = ui.Widget(flex=1, style='background: #a22; min-width:100px; max-width:500px')
                 self.b2 = ui.Widget(flex=0, style='background: #2a2; min-width:100px; max-width:500px')
                 self.b3 = ui.Widget(flex=0, style='background: #22a; min-width:100px; max-width:500px')
                 self.b4 = ui.Widget(flex=1, style='background: #aaa; min-width:100px; max-width:500px')
-        
+             
         if TEST == 2:
             with self:
                 with ui.HBox():
@@ -173,7 +170,7 @@ class MyApp(ui.Widget):
                         self.butc.w = ui.Widget(style='background:#00a;')
         #self.win = ui.Window(self, 'A new window!')
 
-    
+  
     class JS:
         if TEST== 12:
             @event.connect('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')

@@ -270,4 +270,10 @@ window = JSConstant('window')  # noqa
 # the same exact object, without having dependencies.
 undefined = sys._undefined = getattr(sys, '_undefined', JSConstant('undefined'))  # noqa
 
+def this_is_js():
+    """ Function available in both JS and Py that returns whether the code is running
+    on Python or JavaScript.
+    """
+    return False
+
 del sys, JSConstant

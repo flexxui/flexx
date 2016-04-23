@@ -31,7 +31,11 @@ def get_instance_by_id(id):
     """ Get instance of Model class corresponding to the given id,
     or None if it does not exist.
     """
-    return Model._instances.get(id, None)
+    try:
+        return Model._instances[id]
+    except KeyError:
+        logging.warn('Model instance %r does not exist in Python (anymore).' % id)
+        return None  # Could we revive it? ... probably not a good idea
 
 
 def stub_prop_func(self, v=None):
@@ -85,6 +89,9 @@ class ModelMeta(HasEventsMeta):
             if isinstance(val, Property):
                 if name in JS.__proxy_properties__ or name in cls.__proxy_properties__:
                     pass  # This is a proxy, or we already have a proxy for it
+                elif val._flags.get('both', False):
+                    raise RuntimeError("Prop %r with flag 'both' should not be "
+                                       "defined on JS class." % name)
                 elif not val._flags.get('sync', True):
                     pass  # prop that should not be synced
                 elif not hasattr(cls, name):
@@ -103,6 +110,9 @@ class ModelMeta(HasEventsMeta):
             if isinstance(val, Property):
                 if name in JS.__proxy_properties__ or name in cls.__proxy_properties__:
                     pass  # This is a proxy, or we already have a proxy for it
+                elif val._flags.get('both', False):
+                    setattr(cls.JS, name, val)  # copy the property
+                    cls.JS.__properties__.append(name)
                 elif not val._flags.get('sync', True):
                     pass  # prop that should not be synced
                 elif not hasattr(cls.JS, name):
@@ -313,8 +323,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     
     def _set_prop(self, name, value, fromjs=False):
         isproxy = name in self.__proxy_properties__
-        
         shouldsend = self.__emitter_flags__[name].get('sync', True)
+        
         if fromjs or not isproxy:  # Only not set if isproxy and not from js
             shouldsend = super()._set_prop(name, value) and shouldsend
         
@@ -328,8 +338,12 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     
     def _init_prop(self, name):
         isproxy = name in self.__proxy_properties__
+        isboth = self.__emitter_flags__[name].get('both', False)
+        shouldsend = self.__emitter_flags__[name].get('sync', True)
+        
         super()._init_prop(name)
-        if not isproxy:
+        
+        if shouldsend and not (isproxy or isboth):
             super()._init_prop(name)
             value = getattr(self, name)
             txt = serializer.saves(value)
@@ -410,20 +424,27 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             self._set_prop(name, value, True)
         
         def _set_prop(self, name, value, frompy=False):
+            # This method differs from the Python version in that
+            # we *do not* sync to Py when the setting originated from py and
+            # it is a "both" property; this is our eventual synchronicity.
+            
             isproxy = self.__proxy_properties__.indexOf(name) >= 0
+            isboth = self.__emitter_flags__[name].get('both', False)
+            shouldsend = self.__emitter_flags__[name].get('sync', True)
             
             # Note: there is quite a bit of _pyfunc_truthy in the ifs here
-            
             if window.flexx.ws is None:
-                # Exported or in an nbviewer;
-                # assume the value needs no checking or normalization
-                return super()._set_prop(name, value)
+                if not isproxy:
+                    super()._set_prop(name, value)
+                else:
+                    window.console.warn("Cannot set prop '%s' because its validated "
+                                        "in Py, but there is no websocket." % name)
+                return
             
-            shouldsend = self.__emitter_flags__[name].get('sync', True)
             if frompy or not isproxy:  # Only not set if isproxy and not frompy
                 shouldsend = super()._set_prop(name, value) and shouldsend
             
-            if shouldsend and not (frompy and isproxy):  # only not send if frompy and isproxy
+            if shouldsend and not (frompy and (isproxy or isboth)):
                 if not isproxy:  # if not a proxy, use normalized value
                     value = self[name]
                 txt = window.flexx.serializer.saves(value)
@@ -431,8 +452,12 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         def _init_prop(self, name):
             isproxy = self.__proxy_properties__.indexOf(name) >= 0
+            isboth = self.__emitter_flags__[name].get('both', False)
+            shouldsend = self.__emitter_flags__[name].get('sync', True)
+            
             super()._init_prop(name)
-            if not isproxy:
+            
+            if shouldsend and not (isproxy or isboth):
                 value = self[name]
                 txt = window.flexx.serializer.saves(value)
                 if window.flexx.ws:
