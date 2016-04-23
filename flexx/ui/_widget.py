@@ -102,14 +102,17 @@ class Widget(Model):
             return "<i>This widget is already shown in this notebook</i>"
         
         container_id = self.id + '_container'
-        def set_cointainer_id():
-            self._set_prop('container', container_id)
-        # Set container id, this gets applied in the next event loop
-        # iteration, so by the time it gets called in JS, the div that
-        # we define below will have been created.
-        from ..app import call_later
-        call_later(0.1, set_cointainer_id)  # todo: always do calls in next iter
-        # todo: no need for call_later anymore, since events are always later!
+        
+        self._set_prop('container', container_id)
+        
+        # todo: no need for call_later anymore, right?
+        # def set_cointainer_id():
+        #     self._set_prop('container', container_id)
+        # # Set container id, this gets applied in the next event loop
+        # # iteration, so by the time it gets called in JS, the div that
+        # # we define below will have been created.
+        # from ..app import call_later
+        # call_later(0.1, set_cointainer_id)  # todo: always do calls in next iter
         return "<div class='flx-container' id=%s />" % container_id
     
     def init(self):
@@ -211,12 +214,8 @@ class Widget(Model):
         
         if new_parent is old_parent:
             return new_parent
-        if this_is_js():  # todo: cant we do better with classes?
-            if not (new_parent is None or isinstance(new_parent, flexx.classes.Widget)):
-                raise ValueError('parent must be a Widget or None')
-        else:
-            if not (new_parent is None or isinstance(new_parent, Widget)):
-                raise ValueError('parent must be a Widget or None')
+        if not (new_parent is None or isinstance(new_parent, Widget)):
+            raise ValueError('parent must be a Widget or None')
         
         if old_parent is not None:
             children = list(old_parent.children if old_parent.children else [])
@@ -241,12 +240,8 @@ class Widget(Model):
         if len(new_children) == len(old_children):
             if all([(c1 is c2) for c1, c2 in zip(old_children, new_children)]):
                 return new_children  # No need to do anything
-        if this_is_js():
-            if not all([isinstance(w, flexx.classes.Widget) for w in new_children]):
-                raise ValueError('All children must be widget objects.')
-        else:
-            if not all([isinstance(w, Widget) for w in new_children]):
-                raise ValueError('All children must be widget objects.')
+        if not all([isinstance(w, Widget) for w in new_children]):
+            raise ValueError('All children must be widget objects.')
         
         for child in old_children:
             if child not in new_children:

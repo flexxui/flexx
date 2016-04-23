@@ -12,7 +12,7 @@ from .. import event
 from ..event._hasevents import with_metaclass, new_type, HasEventsMeta, finalize_hasevents_class
 from ..event._emitters import Property, Emitter
 from ..event._js import create_js_hasevents_class, HasEventsJS
-from ..pyscript import py2js, js_rename, window
+from ..pyscript import py2js, js_rename, window, Parser
 
 from .serialize import serializer
 
@@ -59,7 +59,9 @@ class ModelMeta(HasEventsMeta):
     def __init__(cls, name, bases, dct):
         HasEventsMeta.__init__(cls, name, bases, dct)
         
+        # Register this class and make PyScript convert the name
         ModelMeta.CLASSES.append(cls)
+        Parser.NAME_MAP[name] = 'flexx.classes.%s' % name
         
         OK_MAGICS = '__init__', '__json__', '__from_json__'
         

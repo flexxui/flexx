@@ -39,13 +39,8 @@ class StackedPanel(Layout):
     def current(self, v=None):
         """ The currently shown widget.
         """
-        if this_is_js():  # todo: cant we do better with classes?
-            if not (v is None or isinstance(v, flexx.classes.Widget)):
-                raise ValueError('The StackedPanel\'s current widget should be a Widget.')
-        else:
-            if not (v is None or isinstance(v, Widget)):
-                raise ValueError('The StackedPanel\'s current widget should be a Widget.')
-        
+        if not (v is None or isinstance(v, Widget)):
+            raise ValueError('The StackedPanel\'s current widget should be a Widget.')
         return v
     
     class JS:
