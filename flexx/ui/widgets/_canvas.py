@@ -40,13 +40,11 @@ class CanvasWidget(Widget):
                 self.canvas.style.width = size[0] + 'px'
                 self.canvas.style.height = size[1] + 'px'
         
-        # todo: define in widget?
+        # todo: define mouse_move in widget?
+        # todo: mouse capturing (is a pain)
         @event.emitter
         def mouse_move(self, e):
-            """ The current position of the mouse inside this widget.
+            """ Event fired when the mouse is moved inside the canvas.
+            See mouse_down for details.
             """
-            ev = self._create_mouse_event(e)
-            rect = self.canvas.getBoundingClientRect()
-            offset = rect.left, rect.top
-            ev.pos = float(pos[0] - offset[0]), float(pos[1] - offset[1])
-            return ev
+            return self._create_mouse_event(e)

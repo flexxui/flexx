@@ -100,12 +100,6 @@ class PlotWidget(CanvasWidget):
         """ The size of the marker, in pixels. """
         return float(v)
     
-    #todo: label should perhaps be on Widhet
-    @event.prop(both=True)
-    def title(self, v=''):
-        """ The label to show above the plot. """
-        return str(v)
-    
     @event.prop(both=True)
     def xlabel(self, v=''):
         """ The label to show on the x-axis. """

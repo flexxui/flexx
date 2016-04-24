@@ -436,7 +436,7 @@ class Widget(Model):
         
         ## Events
         
-        # todo: move?,focus, enter, leave ...
+        # todo: events: mouse_move?,focus, enter, leave ...
         
         @event.emitter
         def mouse_down(self, e):
@@ -467,8 +467,11 @@ class Widget(Model):
             # note: our button has a value as in JS "which"
             modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
                          if e[n.lower()+'Key']]
-            return dict(x=e.clientX, y=e.clientY,
-                        pageX=e.pageX, pageY=e.pageY,
+            pos = e.clientX, e.clientY
+            rect = self.node.getBoundingClientRect()
+            offset = rect.left, rect.top
+            x, y = float(pos[0] - offset[0]), float(pos[1] - offset[1])
+            return dict(x=x, y=y, pageX=e.pageX, pageY=e.pageY,
                         button=e.button+1, buttons=[b+1 for b in e.buttons],
                         modifiers=modifiers,
                         )
