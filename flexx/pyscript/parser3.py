@@ -208,9 +208,6 @@ class Parser3(Parser2):
     code, like ``self``, ``print()``, ``len()``, list methods, etc.
     """
     
-    NAME_MAP = {'self': 'this', '__class__': 'constructor.prototype'}
-    NAME_MAP.update(Parser2.NAME_MAP)
-    
     def function_this_is_js(self, node):
         if len(node.arg_nodes) != 0:
             raise JSError('this_is_js() expects zero arguments.')

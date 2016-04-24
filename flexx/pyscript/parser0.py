@@ -136,6 +136,11 @@ class Parser0:
         'unicode': 'str',  # legacy Py compat
         'unichr': 'chr',
         'xrange': 'range',
+        'self': 'this',
+    }
+    
+    ATTRIBUTE_MAP = {
+        '__class__': 'constructor.prototype',
     }
     
     BINARY_OP = {
