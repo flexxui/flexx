@@ -190,6 +190,13 @@ class Widget(Model):
         """
         return float(v[0]), float(v[1])
     
+    @event.prop(both=True)
+    def tabindex(self, v=-1):
+        """ The index used to determine widget order when the user
+        iterates through the widgets using tab.
+        """
+        return int(v)
+    
     # Also see size readonly defined in JS
     
     @event.prop(both=True)
@@ -268,6 +275,9 @@ class Widget(Model):
             # Connect same standard events
             self.node.addEventListener('mousedown', self.mouse_down, 0)
             self.node.addEventListener('mouseup', self.mouse_up, 0)
+            self.node.addEventListener('keydown', self.key_down, 0)
+            self.node.addEventListener('keyup', self.key_up, 0)
+            self.node.addEventListener('keypress', self.key_press, 0)
             
             # Keep track of size
             that = self
@@ -426,7 +436,7 @@ class Widget(Model):
         
         ## Events
         
-        # todo: move?, key?, focus, enter, leave ...
+        # todo: move?,focus, enter, leave ...
         
         @event.emitter
         def mouse_down(self, e):
@@ -440,7 +450,7 @@ class Widget(Model):
             * button: what button the event is about, 1, 2, 3 are left, middle,
               right, respectively.
             * buttons: what buttons where pressed at the time of the event.
-            * modifiers, list of strings "alt", "shift", "ctrl", "meta" for
+            * modifiers: list of strings "Alt", "Shift", "Ctrl", "Meta" for
               modifier keys pressed down at the time of the event.
             """
             return self._create_mouse_event(e)
@@ -455,14 +465,68 @@ class Widget(Model):
         
         def _create_mouse_event(self, e):
             # note: our button has a value as in JS "which"
-            modifiers = [n for n in ('alt', 'shift', 'ctrl', 'meta') if e[n]]
+            modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
+                         if e[n.lower()+'Key']]
             return dict(x=e.clientX, y=e.clientY,
                         pageX=e.pageX, pageY=e.pageY,
                         button=e.button+1, buttons=[b+1 for b in e.buttons],
                         modifiers=modifiers,
                         )
         
+        @event.emitter
+        def key_down(self, e):
+            """ Event emitted when a key is pressed down while
+            this widget has focus..
+            
+            A key event has the following attributes:
+            * key: the character corresponding to the key being pressed, or
+              a key name like "Escape", "Alt", "Enter" otherwise.
+            * modifiers: list of strings "Alt", "Shift", "Ctrl", "Meta" for
+              modifier keys pressed down at the time of the event.
+            """
+            return self._create_key_event(e)
+        
+        @event.emitter
+        def key_up(self, e):
+            """ Event emitted when a key is released while
+            this widget has focus. See key_down for details.
+            """
+            return self._create_key_event(e)
+        
+        @event.emitter
+        def key_press(self, e):
+            """Event emitted when a key is pressed down. This event
+            does not handle the pressing of modifier keys. See key_down
+            for details.
+            """
+            return self._create_key_event(e)
+        
+        def _create_key_event(self, e):
+            # https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent
+            # key: chrome 51, ff 23, ie 9
+            # code: chrome ok, ff 32, ie no
+            modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
+                         if e[n.lower()+'Key']]
+            key = e.key
+            if not key and e.code:  # Chrome < v51
+                key = e.code
+                if key.startswith('Key'):
+                    key = key[3:]
+                    if 'Shift' not in modifiers:
+                        key = key.lower()
+                elif key.startswith('Digit'):
+                    key = key[5:]
+            # todo: handle Safari and older browsers via keyCode
+            key = {'Esc': 'Escape', 'Del': 'Delete'}.get(key, key)  # IE
+            return dict(key=key, modifiers=modifiers)
+        
         ## Special
+        
+        @event.connect('tabindex')
+        def __update_tabindex(self, *events):
+            # Note that this also makes the widget able to get focus, and this
+            # able to do key events.
+            self.node.tabIndex = events[-1].new_value
         
         @event.connect('children')
         def __update_css(self, *events):
@@ -481,3 +545,6 @@ class Widget(Model):
                     elif 'flx-vbox' in subClassName:
                         self.node.style['display'] = 'flex'
                         self.node.style['flex-flow'] = 'column'
+
+ 
+    

@@ -10,7 +10,7 @@ faulthandler.enable()
 
 
 
-TEST = 12
+TEST = 1
 
 class MyApp(ui.Widget):
     
@@ -27,7 +27,7 @@ class MyApp(ui.Widget):
         if TEST == 1:
             with ui.BoxPanel(flex=1) as self.hbox1:
                 self.b1 = ui.Widget(flex=1, style='background: #a22; min-width:100px; max-width:500px')
-                self.b2 = ui.Widget(flex=0, style='background: #2a2; min-width:100px; max-width:500px')
+                self.b2 = ui.Button(flex=0, style='background: #2a2; min-width:100px; max-width:500px')
                 self.b3 = ui.Widget(flex=0, style='background: #22a; min-width:100px; max-width:500px')
                 self.b4 = ui.Widget(flex=1, style='background: #aaa; min-width:100px; max-width:500px')
              
@@ -177,6 +177,13 @@ class MyApp(ui.Widget):
             def _stacked_current(self, *events):
                 ob = events[-1].source.w
                 self.stack.current = ob
+        
+        if TEST== 1:
+            @event.connect('b1.key_down', 'b2.key_up', 'b3.key_press')
+            def _listen_keys(self, *events):
+                ob = events[-1].source
+                ev = events[-1]
+                print('Key pressed on ' + ob.id + '. key: ' + ev.button + ev.modifiers)
 
 
 # app.serve(MyApp)
