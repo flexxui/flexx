@@ -228,8 +228,8 @@ class Session(SessionAssets):
         self._creation_time = time.time()
     
     def __repr__(self):
-        s = self.status.lower()
-        return '<Session for %r (%s) at 0x%x>' % (self.app_name, s, id(self))
+        s = self.status
+        return '<Session for %r (%i) at 0x%x>' % (self.app_name, s, id(self))
     
     @property
     def app_name(self):
