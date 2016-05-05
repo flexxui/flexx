@@ -147,7 +147,7 @@ def get_HasEvents_js():
     code = '\n'
     for name, val in sorted(Handler.__dict__.items()):
         if not name.startswith('__') and callable(val):
-            code += py2js(val, 'handler.' + name, indent=1)
+            code += py2js(val, 'handler.' + name, indent=1)[4:]
             code += '\n'
     jscode = jscode.replace('HANDLER_METHODS_HOOK', code)
     # Add the methods from the Python HasEvents class
@@ -270,7 +270,8 @@ if __name__ == '__main__':
         def foo(self, v=0):
             return v
         
-    #print(HasEventsJS.JSCODE)
-    print(create_js_hasevents_class(Foo, 'Foo'))
+    print(HasEventsJS.JSCODE)
+    print(len(HasEventsJS.JSCODE))
+    #print(create_js_hasevents_class(Foo, 'Foo'))
     
     

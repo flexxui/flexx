@@ -447,7 +447,7 @@ class Parser2(Parser1):
         
         # Prepare variable to detect else
         if node.else_nodes:
-            else_dummy = self.dummy('else')
+            else_dummy = self.dummy('els')
             code.append(self.lf('%s = true;' % else_dummy))
         
         # Declare iteration variables if necessary
@@ -499,8 +499,8 @@ class Parser2(Parser1):
             
             # Create dummy vars
             d_seq = self.dummy('seq')
-            d_iter = self.dummy('iter')
-            d_target = target[0] if (len(target) == 1) else self.dummy('target')
+            d_iter = self.dummy('itr')
+            d_target = target[0] if (len(target) == 1) else self.dummy('tgt')
             
             # Ensure our iterable is indeed iterable
             code.append(self._make_iterable(iter, d_seq))
@@ -564,7 +564,7 @@ class Parser2(Parser1):
         
         # Prepare variable to detect else
         if node.else_nodes:
-            else_dummy = self.dummy('else')
+            else_dummy = self.dummy('els')
             code.append(self.lf('%s = true;' % else_dummy))
         
         # The loop itself
