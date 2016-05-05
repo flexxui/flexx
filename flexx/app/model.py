@@ -251,6 +251,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         # Further initialization of attributes
         self.__event_types_js = event_types_js
         self.__pending_events_from_js = []
+        self.__pending_props_from_js = []
         
         # Instantiate JavaScript version of this class
         clsname = 'flexx.classes.' + self.__class__.__name__
@@ -330,7 +331,17 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         functions as the reference+
         """
         value = serializer.loads(text)
-        self._set_prop(name, value, True)
+        #self._set_prop(name, value, True)
+        if not self.__pending_props_from_js:
+            call_later(0.01, self.__set_prop_from_js_pending)
+        self.__pending_props_from_js.append((name, value))
+    
+    def __set_prop_from_js_pending(self):
+        # Collect near-simultaneous prop settings in one handler call,
+        # see __emit_from_js_pending
+        pending, self.__pending_props_from_js = self.__pending_props_from_js, []
+        for name, value in pending:
+            self._set_prop(name, value, True)
     
     def _set_prop(self, name, value, fromjs=False):
         # This method differs from the JS version in that
@@ -359,10 +370,12 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         isboth = self.__emitter_flags__[name].get('both', False)
         shouldsend = self.__emitter_flags__[name].get('sync', True)
         
+        if isproxy:
+            return  # init occurs by setting from JS
+        
         super()._init_prop(name)
         
         if shouldsend and not (isproxy or isboth):
-            super()._init_prop(name)
             value = getattr(self, name)
             txt = serializer.saves(value)
             cmd = 'flexx.instances.%s._set_prop_from_py(%s, %s);' % (
@@ -381,10 +394,10 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     def _emit_from_js(self, type, text):
         ev = serializer.loads(text)
         if not self.__pending_events_from_js:
-            call_later(0.01, self.__emit_pending_from_js)
+            call_later(0.01, self.__emit_from_js_pending)
         self.__pending_events_from_js.append((type, ev))
     
-    def __emit_pending_from_js(self):
+    def __emit_from_js_pending(self):
         # Tornado uses one new tornado-event to sends one JS event.
         # This little mechanism is to collect JS events that were send
         # together, so that we can make use of our ability to
@@ -469,6 +482,9 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             isproxy = self.__proxy_properties__.indexOf(name) >= 0
             isboth = self.__emitter_flags__[name].get('both', False)
             shouldsend = self.__emitter_flags__[name].get('sync', True)
+            
+            if isproxy:
+                return  # init occurs by setting from py
             
             super()._init_prop(name)
             

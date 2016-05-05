@@ -167,7 +167,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # Instantiate handlers, its enough to reference them
         for name in self.__handlers__:
             getattr(self, name)
-        # Initiaslize properties to their defaults
+        # Initialize properties to their defaults
         for name in self.__properties__:
             self._init_prop(name)
         # Initialize properties to their given values
@@ -303,13 +303,17 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         finally:
             self._he_props_being_set[prop_name] = False
         # Update value and emit event
-        old = getattr(self, private_name, None)
+        old = getattr(self, private_name, value2)
         if self.__init_handlers_info is not None:
             self.__init_handlers_info[prop_name] = value2
         elif value2 != old:
             setattr(self, private_name, value2)
             self.emit(prop_name, dict(new_value=value2, old_value=old))
             return True
+        elif not hasattr(self, private_name):
+            # This set is really an init, used in flexx.app proxy props
+            setattr(self, private_name, value2)
+            self.emit(prop_name, dict(new_value=value2, old_value=old))
     
     def _get_emitter(self, emitter_name):
         # Get an emitter function.
