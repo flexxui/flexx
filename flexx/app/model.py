@@ -333,13 +333,20 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         self._set_prop(name, value, True)
     
     def _set_prop(self, name, value, fromjs=False):
+        # This method differs from the JS version in that
+        # we *do not* sync to JS when the setting originated from JS and
+        # it is a "both" property; this is our eventual synchronicity.
+        # Python is the "end point", otherwise we can get "jitter" in the 
+        # client when a prop is changed multiple times in a fast way
+        # (which is probably less of a problem on the server side).
+        
         isproxy = name in self.__proxy_properties__
         shouldsend = self.__emitter_flags__[name].get('sync', True)
         
         if fromjs or not isproxy:  # Only not set if isproxy and not from js
             shouldsend = super()._set_prop(name, value) and shouldsend
         
-        if shouldsend and not (fromjs and isproxy):  # only not send if fromjs and isproxy
+        if shouldsend and not (fromjs and (isproxy or isboth)):
             if not isproxy:  # if not a proxy, use normalized value
                 value = getattr(self, name)
             txt = serializer.saves(value)
@@ -435,9 +442,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             self._set_prop(name, value, True)
         
         def _set_prop(self, name, value, frompy=False):
-            # This method differs from the Python version in that
-            # we *do not* sync to Py when the setting originated from py and
-            # it is a "both" property; this is our eventual synchronicity.
             
             isproxy = self.__proxy_properties__.indexOf(name) >= 0
             isboth = self.__emitter_flags__[name].get('both', False)
@@ -455,7 +459,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             if frompy or not isproxy:  # Only not set if isproxy and not frompy
                 shouldsend = super()._set_prop(name, value) and shouldsend
             
-            if shouldsend and not (frompy and (isproxy or isboth)):
+            if shouldsend and not (frompy and isproxy):
                 if not isproxy:  # if not a proxy, use normalized value
                     value = self[name]
                 txt = window.flexx.serializer.saves(value)
