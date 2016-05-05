@@ -369,6 +369,16 @@ class Parser2(Parser1):
             # used inside a PyScript file for the compiling.
             return []
         
+        # Shortcut for this_is_js() cases, discarting the else to reduce code
+        if (True and isinstance(node.test_node, ast.Call) and
+                     isinstance(node.test_node.func_node, ast.Name) and
+                     node.test_node.func_node.name == 'this_is_js'):
+            code = [self.lf('{ /* if this_is_js() */')]
+            for stmt in node.body_nodes:
+                code += self.parse(stmt)
+            code.append(self.lf('}'))
+            return code
+        
         code = [self.lf('if (')]  # first part (popped in elif parsing)
         code.append(self._wrap_truthy(node.test_node))
         code.append(') {')

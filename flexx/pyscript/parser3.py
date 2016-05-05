@@ -209,6 +209,9 @@ class Parser3(Parser2):
     """
     
     def function_this_is_js(self, node):
+        # Note that we handle this_is_js() shortcuts in the if-statement
+        # directly. This replacement with a string is when this_is_js()
+        # is used outside an if statement.
         if len(node.arg_nodes) != 0:
             raise JSError('this_is_js() expects zero arguments.')
         return ('"this_is_js()"')

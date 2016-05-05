@@ -33,6 +33,10 @@ class TestConrolFlow:
         assert evalpy('4 if False else 5') == '5'
         assert evalpy('3+1 if 0+2/1 else 4+1') == '4'
         assert evalpy('3+1 if 4/2-2 else 4+1') == '5'
+        
+        # If with this_is_js()
+        assert '5' in py2js('if this_is_js_xx(): 4\nelse: 5')
+        assert '5' not in py2js('if this_is_js(): 4\nelse: 5')
     
     def test_for(self):
         
