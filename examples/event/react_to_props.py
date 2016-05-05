@@ -6,7 +6,7 @@ in properties.
 from flexx import event
 
 
-class MyModel(app.Model):
+class MyModel(event.HasEvents):
     
     @event.prop
     def foo(self, v=0):
