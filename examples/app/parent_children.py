@@ -1,7 +1,13 @@
 """
 This example demonstrates a parent-children relationship for nodes,
-that gets correctly synced between Python and JS. This is basically a
+that gets synced between Python and JS. This is basically a
 stripped-down version of what is used in the Widget class.
+
+The idea is to implement the "parent" and "children" properties using
+the "both" flag, so that the same implementation is used in Python and
+JavaScript. Then we disable syncing of parent, so that the syncing
+happens via the children property only, otherwiser we end up with
+infinite loops.
 """
 
 from flexx import event, app
@@ -64,7 +70,7 @@ class Node(app.Model):
             print('parent of %s changed to %s in JS' % (self._id, parent_id))
 
 
-n1 = app.launch(Node, 'firefox')
+n1 = app.launch(Node, 'xul')
 n2 = Node(session=n1.session)
 n3 = Node(session=n1.session)
 
