@@ -83,6 +83,22 @@ def get_full_std_lib(indent=0):
 
 ## Hardcore functions
 
+FUNCTIONS['instantiate'] = """function (ob, args) { // nargs: 2
+    if ((typeof ob === "undefined") ||
+            (typeof window !== "undefined" && window === ob) ||
+            (typeof global !== "undefined" && global === ob))
+            {throw "Class constructor is called as a function.";}
+    for (var name in ob) {
+        if (Object[name] === undefined &&
+            typeof ob[name] === 'function' && !ob[name].nobind) {
+            ob[name] = ob[name].bind(ob);
+        }
+    }
+    if (ob.__init__) {
+        ob.__init__.apply(ob, args);
+    }
+}"""
+
 FUNCTIONS['hasattr'] = """function (ob, name) { // nargs: 2
     return (ob !== undefined) && (ob !== null) && (ob[name] !== undefined);
 }"""

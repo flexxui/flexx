@@ -213,6 +213,7 @@ Globals and nonlocal
 """
 
 from . import commonast as ast
+from . import stdlib
 from .parser1 import Parser1, JSError, unify, reprs  # noqa
 
 
@@ -818,6 +819,7 @@ class Parser2(Parser1):
         docstring = docstring if self._docstrings else ''
         for line in get_class_definition(node.name, base_class, docstring):
             code.append(self.lf(line))
+        self.use_std_function('instantiate', [])
         
         # Body ...
         self.vars.add(node.name)
@@ -880,24 +882,8 @@ def get_class_definition(name, base='Object', docstring=''):
     code.append('%s = function () {' % name)
     for line in docstring.splitlines():
         code.append('    // ' + line)
-    more_code = """
-                    if ((typeof this === "undefined") ||
-                         (typeof window !== "undefined" && window === this) ||
-                         (typeof root !== "undefined" && root === this))
-                         {throw "Class constructor is called as a function.";}
-                    for (var name in this) {
-                        if (Object[name] === undefined &&
-                            typeof this[name] === 'function' && !this[name].nobind) {
-                            this[name] = this[name].bind(this);
-                        }
-                    }
-                    if (this.__init__) {
-                        this.__init__.apply(this, arguments);
-                    }
-                }
-    """
-    more_code = ' ' * 20 + more_code.strip()
-    code.extend([line[16:] for line in more_code.splitlines()])
+    code.append('    %sinstantiate(this, arguments);' % stdlib.FUNCTION_PREFIX)
+    code.append('}')
     
     if base != 'Object':
         code.append('%s.prototype = Object.create(%s);' % (name, base))
