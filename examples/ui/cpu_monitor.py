@@ -13,8 +13,6 @@ from flexx import app, ui, event
 nsamples = 16
 
 
-# todo: check connections drop ok, also for chat
-
 class Relay(event.HasEvents):
     
     def __init__(self):
