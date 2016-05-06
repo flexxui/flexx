@@ -2,7 +2,7 @@
 This example demonstrates a simple drawing app. Useful for testing
 canvas and its mouse events.
 """
-from flexx import app, ui, event
+from flexx import app, ui
 
 
 class Drawing(ui.CanvasWidget):

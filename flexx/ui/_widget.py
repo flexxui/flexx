@@ -13,7 +13,7 @@ import threading
 
 from .. import event
 from ..app import Model, call_later
-from ..pyscript import undefined, window, this_is_js
+from ..pyscript import undefined, window
 
 
 # Keep track of stack of default parents when using widgets
@@ -570,6 +570,3 @@ class Widget(Model):
                     elif 'flx-vbox' in subClassName:
                         self.node.style['display'] = 'flex'
                         self.node.style['flex-flow'] = 'column'
-
- 
-    

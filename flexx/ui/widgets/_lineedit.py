@@ -30,7 +30,7 @@ Interactive example:
 """
 
 from ... import event
-from ...pyscript import window, undefined
+from ...pyscript import window
 from . import Widget
 
 

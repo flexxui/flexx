@@ -27,7 +27,7 @@ import sys
 import platform
 from test import pystone
 
-from flexx import app, event, pyscript
+from flexx import app, pyscript
 
 # Backend selection
 BACKEND = 'xul'

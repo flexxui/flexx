@@ -33,10 +33,10 @@ class Relay(event.HasEvents):
     
     @event.emitter
     def system_info(self):
-        return dict(cpu = psutil.cpu_percent(),
-                    mem = psutil.virtual_memory().percent,
-                    sessions = self._n_connections,
-                    total_sessions = app.manager.total_sessions,
+        return dict(cpu=psutil.cpu_percent(),
+                    mem=psutil.virtual_memory().percent,
+                    sessions=self._n_connections,
+                    total_sessions=app.manager.total_sessions,
                     )
         
     def refresh(self):
@@ -64,11 +64,11 @@ class Monitor(ui.Widget):
                 ui.Widget(flex=1)
         
         # Relay global info into this app
-        relay.connect(self._push_info, 'system_info:'+self.id)
+        relay.connect(self._push_info, 'system_info:' + self.id)
     
     def _push_info(self, *events):
         if not self.session.status:
-            return relay.disconnect('system_info:'+self.id)
+            return relay.disconnect('system_info:' + self.id)
         self.emit('system_info', events[-1])
     
     @event.connect('button.mouse_down')

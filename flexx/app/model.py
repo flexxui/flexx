@@ -3,13 +3,13 @@ Base class for objects that live in both Python and JS.
 This basically implements the syncing of properties and events.
 """
 
-import sys
 import json
 import weakref
 import logging
 
 from .. import event
-from ..event._hasevents import with_metaclass, new_type, HasEventsMeta, finalize_hasevents_class
+from ..event._hasevents import (with_metaclass, new_type, HasEventsMeta,
+                                finalize_hasevents_class)
 from ..event._emitters import Property, Emitter
 from ..event._js import create_js_hasevents_class, HasEventsJS
 from ..pyscript import py2js, js_rename, window, Parser
@@ -101,8 +101,8 @@ class ModelMeta(HasEventsMeta):
                     p = val.__class__(stub_prop_func, name, val._func.__doc__)
                     setattr(cls, name, p)
                 else:
-                    logging.warn('JS property %r not proxied on %s, '
-                                    'as it would hide a Py attribute.' % (name, cls.__name__))
+                    logging.warn('JS property %r not proxied on %s, as it would '
+                                 'hide a Py attribute.' % (name, cls.__name__))
             elif isinstance(val, Emitter) and not hasattr(cls, name):
                 p = val.__class__(stub_emitter_func_py, name, val._func.__doc__)
                 setattr(cls, name, p)
@@ -122,8 +122,8 @@ class ModelMeta(HasEventsMeta):
                     p = val.__class__(stub_prop_func, name, val._func.__doc__)
                     setattr(cls.JS, name, p)
                 else:
-                    logging.warn('Py property %r not proxied on %s, '
-                                 'as it would hide a JS attribute.' % (name, cls.__name__))
+                    logging.warn('Py property %r not proxied on %s, as it would '
+                                 'hide a JS attribute.' % (name, cls.__name__))
             elif isinstance(val, Emitter) and not hasattr(cls, name):
                 p = val.__class__(stub_emitter_func_js, name, val._func.__doc__)
                 setattr(cls, name, p)
@@ -360,8 +360,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         if fromjs or not isproxy:  # Only not set if isproxy and not from js
             shouldsend = super()._set_prop(name, value, _initial) and shouldsend
         
-        if shouldsend and not (fromjs and (isproxy or isboth)):
         #if shouldsend and not (fromjs and isproxy):
+        if shouldsend and not (fromjs and (isproxy or isboth)):
             if not isproxy:  # if not a proxy, use normalized value
                 value = getattr(self, name)
             txt = serializer.saves(value)
@@ -372,7 +372,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     def _handlers_changed_hook(self):
         handlers = self._HasEvents__handlers
         types = [name for name in handlers.keys() if handlers[name]]
-        cmd = 'flexx.instances.%s._set_event_types_py(%s);' % (self._id, serializer.saves(types))
+        txt = serializer.saves(types)
+        cmd = 'flexx.instances.%s._set_event_types_py(%s);' % (self._id, txt)
         self._session._exec(cmd)
     
     def _set_event_types_js(self, text):

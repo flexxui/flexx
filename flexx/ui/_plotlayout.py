@@ -68,4 +68,3 @@ class PlotLayout(Layout):
         vbox = VBox(parent=panel)
         for widget in args:
             widget.parent = vbox
-        

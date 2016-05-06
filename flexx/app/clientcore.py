@@ -36,7 +36,7 @@ class FlexxJS:
             # browser
             window.addEventListener('load', self.init, False)
             window.addEventListener('beforeunload', self.exit, False)
-        window.flexx = this;
+        window.flexx = self
     
     def _set_window_as_global(self):  # https://github.com/nodejs/node/pull/1838
         """ global.window = global;

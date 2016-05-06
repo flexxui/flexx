@@ -65,6 +65,3 @@ class Button(Widget):
         @event.connect('text')
         def __text_changed(self, *events):
             self.node.innerHTML = events[-1].new_value
-        
-        
-

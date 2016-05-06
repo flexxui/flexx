@@ -90,7 +90,7 @@ class HasEventsJS:
         return self.__create_Handler(func, func.name or 'anonymous', connection_strings)
     
     def __create_PyProperty(self, name):
-         self.__create_Property(name)
+        self.__create_Property(name)
     
     def __create_Property(self, name):
         private_name = '_' + name + '_value'
@@ -156,7 +156,7 @@ def get_HasEvents_js():
     # Add the methods from the Python HasEvents class
     code = '\n'
     for name, val in sorted(HasEvents.__dict__.items()):
-        if name.startswith(('__', '_HasEvents__')) or  not callable(val):
+        if name.startswith(('__', '_HasEvents__')) or not callable(val):
             continue
         code += py2js(val, 'HasEvents.prototype.' + name)
         code += '\n'
@@ -282,5 +282,3 @@ if __name__ == '__main__':
     print(HasEventsJS.JSCODE)
     print(len(HasEventsJS.JSCODE))
     #print(create_js_hasevents_class(Foo, 'Foo'))
-    
-    

@@ -98,4 +98,3 @@ var flexx = new FlexxJS();\n\n
 
 assets.create_module_assets('flexx.app',
                             js=_JS_TEMPLATE % (_get_full_std_lib(), FlexxJS))
-                            

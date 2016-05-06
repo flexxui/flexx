@@ -10,7 +10,7 @@ class Relay(event.HasEvents):
     """
     @event.emitter
     def new_message(self, msg):
-        return dict(msg = msg + '<br />')
+        return dict(msg=msg + '<br />')
 
 
 class MessageBox(ui.Label):
@@ -43,17 +43,17 @@ class ChatRoom(ui.Widget):
             ui.Widget(flex=1)
         
         # Pipe messages send by the relay into this app
-        relay.connect(self._push_info, 'new_message:'+self.id)
+        relay.connect(self._push_info, 'new_message:' + self.id)
         
         self._update_participants()
     
     def _push_info(self, *events):
         if self.session.status:
-           self.emit('new_message', events[-1])
+            self.emit('new_message', events[-1])
     
     def _update_participants(self):
         if not self.session.status:
-            relay.disconnect('new_message:'+self.id)
+            relay.disconnect('new_message:' + self.id)
             return  # and dont't invoke a new call
         proxies = app.manager.get_connections(self.__class__.__name__)
         names = [p.app.name.text for p in proxies]

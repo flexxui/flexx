@@ -8,6 +8,7 @@ import numpy as np
 from bokeh.plotting import figure
 
 from flexx import app, ui, event
+from flexx.pyscript import window
 
 src = 'https://github.com/zoofIO/flexx/blob/master/examples/ui/with_bokeh.py'
 

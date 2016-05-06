@@ -27,7 +27,7 @@ Example:
 """
 
 from ... import event
-from ...pyscript import window, this_is_js
+from ...pyscript import window
 from . import Widget, Layout
 
 
@@ -55,4 +55,3 @@ class StackedPanel(Layout):
                 self.p.childAt(i).hide()
             if widget is not None:
                 widget.p.show()
-                
