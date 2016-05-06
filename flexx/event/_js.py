@@ -12,7 +12,7 @@ from flexx.event._handler import HandlerDescriptor, Handler
 from flexx.event._hasevents import HasEvents
 
 
-Object = Date = None  # fool pyflake
+Object = Date = undefined = None  # fool pyflake
 
 reprs = json.dumps
 
@@ -40,37 +40,40 @@ class HasEventsJS:
     def __init__(self, init_handlers=True):
         
         # Init some internal variables
-        self._he_handlers = {}
-        self._he_props_being_set = {}
+        self.__handlers = {}
+        self.__props_being_set = {}
+        self.__initial_pending_events = []
         
         # Create properties
         for name in self.__properties__:
-            self._he_handlers.setdefault(name, [])
+            self.__handlers.setdefault(name, [])
             func = self['_' + name + '_func']
-            creator = self['__create_' + func._emitter_type]
+            creator = self['__create_' + func.emitter_type]
             creator(name)
+            if func.default is not undefined:
+                self._set_prop(name, func.default)
+            else:
+                self['_' + name + '_value'] = None  # need *something*
+        
         # Create emitters
         for name in self.__emitters__:
-            self._he_handlers.setdefault(name, [])
+            self.__handlers.setdefault(name, [])
             func = self['_' + name + '_func']
             self.__create_Emitter(name)
         
         # Init handlers and properties now, or later?
-        self.__init_handlers_info = {}
         if init_handlers:
             self._init_handlers()
     
-    def __init_handlers(self, init_handlers_info):
+    def __init_handlers(self, initial_pending_events):
         # Create handlers
         # Note that methods on_xxx are converted by the HasEvents meta class
         for name in self.__handlers__:
             func = self['_' + name + '_func']
             self[name] = self.__create_Handler(func, name, func._connection_strings)
-        # Initialize properties to their defaults
-        for name in self.__properties__:
-            self._init_prop(name)
-        for name, value in init_handlers_info.items():
-            self._set_prop(name, value)
+        # Emit events for properties
+        for ev in initial_pending_events:
+            self._emit(ev)
     
     def __connect(self, func, *connection_strings):
         # The JS version (no decorator functionality)
@@ -215,8 +218,13 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             # Mark to not bind the func
             t = '%s.prototype.%s.nobind = true;'
             funcs_code.append(t % (cls_name, funcname))
+            # Has default val?
+            if isinstance(val, Property) and val._defaults:
+                default_val = json.dumps(val._defaults[0])
+                t = '%s.prototype.%s.default = %s;'
+                funcs_code.append(t % (cls_name, funcname, default_val))
             # Add type of emitter
-            t = '%s.prototype.%s._emitter_type = %s;'
+            t = '%s.prototype.%s.emitter_type = %s;'
             emitter_type = val.__class__.__name__
             funcs_code.append(t % (cls_name, funcname, reprs(emitter_type)))
             funcs_code.append('')
@@ -249,8 +257,9 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             except Exception as err:  # pragma: no cover
                 raise ValueError('Attributes on JS HasEvents class must be '
                                  'JSON compatible.\n%s' % str(err))
-            const_code.append('%s.prototype.%s = JSON.parse(%s)' %
-                              (cls_name, name, reprs(serialized)))
+            #const_code.append('%s.prototype.%s = JSON.parse(%s)' %
+            #                  (cls_name, name, reprs(serialized)))
+            const_code.append('%s.prototype.%s = %s;' % (cls_name, name, serialized))
     
     if const_code:
         total_code.append('')

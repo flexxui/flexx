@@ -3,6 +3,9 @@ Implementation of descriptors for generating events:
 prop, readonly and emitter.
 """
 
+import inspect
+
+
 # Decorators to apply at a HasEvents class
 
 def prop(func=None, **flags):
@@ -110,6 +113,9 @@ class Property(BaseEmitter):
     
     _SUFFIX = '_value'
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._defaults = inspect.getargspec(self._func).defaults
     
     def __set__(self, instance, value):
         if isinstance is not None:  # pragma: no cover
