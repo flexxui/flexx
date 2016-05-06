@@ -365,7 +365,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             self._session._exec(cmd)
     
     def _handlers_changed_hook(self):
-        types = [name for name in self._he_handlers.keys() if self._he_handlers[name]]
+        handlers = self._HasEvents__handlers
+        types = [name for name in handlers.keys() if handlers[name]]
         cmd = 'flexx.instances.%s._set_event_types_py(%s);' % (self._id, serializer.saves(types))
         self._session._exec(cmd)
     
@@ -463,7 +464,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 window.flexx.ws.send('SET_PROP ' + [self.id, name, txt].join(' '))
         
         def _handlers_changed_hook(self):
-            types = [name for name in self._he_handlers.keys() if len(self._he_handlers[name])]
+            handlers = self.__handlers
+            types = [name for name in handlers.keys() if len(handlers[name])]
             text = window.flexx.serializer.saves(types)
             if window.flexx.ws:
                 window.flexx.ws.send('SET_EVENT_TYPES ' + [self.id, text].join(' '))

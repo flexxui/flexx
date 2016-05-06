@@ -158,7 +158,8 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
                 setattr(self, private_name, None)  # need *something*
         for name, value in property_values.items():
             if name in self.__properties__:
-                self._set_prop(name, value)
+                #self._set_prop(name, value)
+                setattr(self, name, value)  # should raises error whith readonly
             else:
                 cname = self.__class__.__name__
                 raise AttributeError('%s does not have a property %r' % (cname, name))
