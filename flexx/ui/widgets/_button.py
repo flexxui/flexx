@@ -51,8 +51,8 @@ class Button(Widget):
     class JS:
         
         def init(self):
-            self.p = window.phosphor.createWidget('button')
-            self.p.node.addEventListener('click', self.mouse_click, 0)
+            self.phosphor = window.phosphor.createWidget('button')
+            self.phosphor.node.addEventListener('click', self.mouse_click, 0)
         
         @event.emitter
         def mouse_click(self, e):

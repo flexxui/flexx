@@ -22,9 +22,9 @@ class CanvasWidget(Widget):
         
         def init(self):
             
-            self.p = window.phosphor.createWidget('div')
+            self.phosphor = window.phosphor.createWidget('div')
             self.canvas = window.document.createElement('canvas')
-            self.p.node.appendChild(self.canvas)
+            self.phosphor.node.appendChild(self.canvas)
             # Set position to absolute so that the canvas is not going
             # to be forcing a size on the container div.
             self.canvas.style.position = 'absolute'

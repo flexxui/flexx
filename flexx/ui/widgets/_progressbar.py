@@ -19,7 +19,7 @@ Interactive example:
             with ui.HBox():
                 self.b1 = ui.Button(flex=0, text='Less')
                 self.b2 = ui.Button(flex=0, text='More')
-                self.p = ui.ProgressBar(flex=1, value=0.1)
+                self.prog = ui.ProgressBar(flex=1, value=0.1)
         
         class JS:
             
@@ -27,9 +27,9 @@ Interactive example:
             def _change_progress(self, *events):
                 for ev in events:
                     if ev.source is self.b1:
-                        self.p.value -= 0.1
+                        self.prog.value -= 0.1
                     else:
-                        self.p.value += 0.1
+                        self.prog.value += 0.1
 """
 
 from ... import event
@@ -58,7 +58,7 @@ class ProgressBar(Widget):
     class JS:
     
         def init(self):
-            self.p = window.phosphor.createWidget('progress')
+            self.phosphor = window.phosphor.createWidget('progress')
     
         @event.connect('value')
         def __value_changed(self, *events):

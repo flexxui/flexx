@@ -74,7 +74,7 @@ class GridPanel(Layout):
     class JS:
         
         def init(self):
-            self.p = window.phosphor.gridpanel.GridPanel()
+            self.phosphor = window.phosphor.gridpanel.GridPanel()
             
             that = self
             class LayoutNotifier:
@@ -82,7 +82,8 @@ class GridPanel(Layout):
                     if msg._type == 'layout-request':
                         that._child_limits_changed()
                     return False
-            window.phosphor.messaging.installMessageFilter(self.p, LayoutNotifier())
+            window.phosphor.messaging.installMessageFilter(self.phosphor,
+                                                           LayoutNotifier())
         
         @event.connect('children.*.pos', 'children.*.flex', 'children.*.base_size')
         def __update_positions(self, *events):
@@ -93,8 +94,8 @@ class GridPanel(Layout):
             max_row, max_col = 0, 0
             for child in self.children:
                 x, y = child.pos
-                window.phosphor.gridpanel.GridPanel.setColumn(child.p, x)
-                window.phosphor.gridpanel.GridPanel.setRow(child.p, y)
+                window.phosphor.gridpanel.GridPanel.setColumn(child.phosphor, x)
+                window.phosphor.gridpanel.GridPanel.setRow(child.phosphor, y)
                 max_col = max(max_col, x)
                 max_row = max(max_row, y)
             
@@ -105,7 +106,7 @@ class GridPanel(Layout):
                          'sizeBasis': 0} for i in range(max_row+1)]
             for child in self.children:
                 x, y = child.pos
-                limits = child.p.sizeLimits
+                limits = child.phosphor.sizeLimits
                 colSpecs[x].minSize = max(colSpecs[x].minSize, limits.minWidth)
                 colSpecs[x].maxSize = min(colSpecs[x].maxSize, limits.maxWidth)
                 colSpecs[x].sizeBasis = max(colSpecs[x].sizeBasis, child.base_size[0])
@@ -117,17 +118,17 @@ class GridPanel(Layout):
                 rowSpecs[y].stretch = max(rowSpecs[y].stretch, child.flex[1])
             
             # Assign
-            self.p._columnSpecs = colSpecs
-            self.p._rowSpecs = rowSpecs
+            self.phosphor._columnSpecs = colSpecs
+            self.phosphor._rowSpecs = rowSpecs
             Spec = window.phosphor.gridpanel.Spec
-            self.p.columnSpecs = [Spec(i) for i in colSpecs]
-            self.p.rowSpecs = [Spec(i) for i in rowSpecs]
+            self.phosphor.columnSpecs = [Spec(i) for i in colSpecs]
+            self.phosphor.rowSpecs = [Spec(i) for i in rowSpecs]
         
         @event.connect('spacing')
         def __spacing_changed(self, *events):
             spacing = events[-1].new_value
-            self.p.rowSpacing = spacing
-            self.p.columnSpacing = spacing
+            self.phosphor.rowSpacing = spacing
+            self.phosphor.columnSpacing = spacing
 
 
 class GridLayout(BaseTableLayout):  # note the othe GridLayout!

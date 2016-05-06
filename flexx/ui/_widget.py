@@ -290,9 +290,9 @@ class Widget(Model):
             super().__init__(*args)
             
             # Get phosphor widget that is set in init()
-            if not self.p:
-                self.p = window.phosphor.panel.Panel()
-            self.node = self.p.node
+            if not self.phosphor:
+                self.phosphor = window.phosphor.panel.Panel()
+            self.node = self.phosphor.node
             
             # Connect same standard events
             self.node.addEventListener('mousedown', self.mouse_down, 0)
@@ -308,7 +308,7 @@ class Widget(Model):
                     if msg._type == 'resize':
                         that._check_real_size()
                     return False
-            window.phosphor.messaging.installMessageFilter(self.p, SizeNotifier())
+            window.phosphor.messaging.installMessageFilter(self.phosphor, SizeNotifier())
             
             # Derive css class name
             cls_name = self._class_name
@@ -353,18 +353,18 @@ class Widget(Model):
             if size_limits_changed:
                 # Clear phosphor's limit cache (no need for getComputedStyle())
                 values = [self.node.style[k] for k in size_limits_keys]
-                # todo: do I need a variant of self.p.clearSizeLimits()?
+                # todo: do I need a variant of self.phosphor.clearSizeLimits()?
                 for k, v in zip(size_limits_keys, values):
                     self.node.style[k] = v
                 # Allow parent to re-layout
                 parent = self.parent
                 if parent:
-                    parent.p.fit()  # i.e. p.processMessage(p.MsgFitRequest)
+                    parent.phosphor.fit()  # i.e. p.processMessage(p.MsgFitRequest)
 
         @event.connect('title')
         def __title_changed(self, *events):
             # All Phosphor widgets have a title
-            self.p.title.text = events[-1].new_value
+            self.phosphor.title.text = events[-1].new_value
         
         ## Size 
         
@@ -415,12 +415,12 @@ class Widget(Model):
                 return 
             if id:
                 el = window.document.getElementById(id)
-                if self.p.isAttached:
-                    self.p.detach()
+                if self.phosphor.isAttached:
+                    self.phosphor.detach()
                 if self.node.parentNode is not None:  # detachWidget not enough
                     self.node.parentNode.removeChild(self.node)
-                self.p.attach(el)
-                window.addEventListener('resize', lambda: (self.p.update(), 
+                self.phosphor.attach(el)
+                window.addEventListener('resize', lambda: (self.phosphor.update(), 
                                                            self._check_real_size()))
             if id == 'body':
                 self.node.classList.add('flx-main-widget')
@@ -440,6 +440,8 @@ class Widget(Model):
                     break
                 i_ok = i
             
+            if new_children:
+                print('adding children on ', self.id, [c.id for c in new_children])
             for child in old_children[i_ok:]:
                 self._remove_child(child)
             for child in new_children[i_ok:]:
@@ -448,13 +450,13 @@ class Widget(Model):
         def _add_child(self, widget):
             """ Add the DOM element.
             Called right after the child widget is added. """
-            self.p.addChild(widget.p)
+            self.phosphor.addChild(widget.phosphor)
         
         def _remove_child(self, widget):
             """ Remove the DOM element.
             Called right after the child widget is removed.
             """
-            widget.p.parent = None
+            widget.phosphor.parent = None
         
         ## Events
         

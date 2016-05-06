@@ -22,7 +22,7 @@ from . import Layout
 #     """
 #     
 #     def init(self):
-#         self.p = window.phosphor.tabs.TabBar()
+#         self.phosphor = window.phosphor.tabs.TabBar()
 # 
 #     def _add_child(self, widget):
 #         raise ValueError('A TabBar cannot have children.')
@@ -107,4 +107,4 @@ class TabPanel(Layout):
     class JS:
         
         def init(self):
-            self.p = window.phosphor.tabs.TabPanel()
+            self.phosphor = window.phosphor.tabs.TabPanel()

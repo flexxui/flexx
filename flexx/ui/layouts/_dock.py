@@ -64,8 +64,8 @@ class DockPanel(Layout):
     class JS:
         
         def init(self):
-            self.p = window.phosphor.dockpanel.DockPanel()
+            self.phosphor = window.phosphor.dockpanel.DockPanel()
         
         def _add_child(self, widget):
-            self.p.insertRight(widget.p)
+            self.phosphor.insertRight(widget.phosphor)
             # todo: phosphor allows fine-grained control over where to place the widgets

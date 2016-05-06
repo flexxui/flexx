@@ -61,7 +61,7 @@ class Label(Widget):
     class JS:
         
         def init(self):
-            self.p = window.phosphor.createWidget('div')
+            self.phosphor = window.phosphor.createWidget('div')
         
         @event.connect('text')
         def _text_changed(self, *events):

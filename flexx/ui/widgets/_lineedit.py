@@ -64,12 +64,12 @@ class LineEdit(Widget):
     class JS:
     
         def init(self):
-            self.p = window.phosphor.createWidget('div')
-            self.p.node.innerHTML = '<input type="text", list="%s" />' % self.id
-            self._node = self.p.node.childNodes[0]
+            self.phosphor = window.phosphor.createWidget('div')
+            self.phosphor.node.innerHTML = '<input type="text", list="%s" />' % self.id
+            self._node = self.phosphor.node.childNodes[0]
             
-            # self.p = window.phosphor.createWidget('input')
-            # self.node = self.p.node
+            # self.phosphor = window.phosphor.createWidget('input')
+            # self.node = self.phosphor.node
             # self.node.type = 'text'
             # self.node.list = self.id
             

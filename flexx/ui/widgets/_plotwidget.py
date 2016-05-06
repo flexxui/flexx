@@ -39,7 +39,7 @@ Interactive example:
             
             @event.connect('slider1.value', 'slider2.value')
             def __update_amplitude(self, *events):
-                freq, phase = self.freq, self.phase
+                freq, phase = self.slider1.value, self.slider2.value
                 ydata = []
                 for x in self.plot.xdata:
                     ydata.append(window.Math.sin(freq*x*2*window.Math.PI+phase))
