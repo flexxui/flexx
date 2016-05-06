@@ -43,16 +43,21 @@ class ChatRoom(ui.Widget):
             ui.Widget(flex=1)
         
         # Pipe messages send by the relay into this app
-        relay.connect(lambda *events: [self.emit('new_message', ev) for ev in events],
-                      'new_message')
+        relay.connect(self._push_info, 'new_message:'+self.id)
         
         self._update_participants()
     
+    def _push_info(self, *events):
+        if self.session.status:
+           self.emit('new_message', events[-1])
+    
     def _update_participants(self):
         if not self.session.status:
+            relay.disconnect('new_message:'+self.id)
             return  # and dont't invoke a new call
         proxies = app.manager.get_connections(self.__class__.__name__)
         names = [p.app.name.text for p in proxies]
+        del proxies
         text = '<br />%i persons in this chat:<br /><br />' % len(names)
         text += '<br />'.join([name or 'anonymous' for name in sorted(names)])
         self.people.text = text
@@ -66,9 +71,11 @@ class ChatRoom(ui.Widget):
             relay.new_message('<i>%s</i>: %s' % (name, text))
             self.message.text = ''
     
-    @event.connect('new_message')
-    def _update_total_text(self, *events):
-        self.messages.text += ''.join([ev.msg for ev in events])
+    class JS:
+        
+        @event.connect('new_message')
+        def _update_total_text(self, *events):
+            self.messages.text += ''.join([ev.msg for ev in events])
 
 
 # Create global relay

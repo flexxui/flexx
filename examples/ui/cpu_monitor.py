@@ -64,7 +64,12 @@ class Monitor(ui.Widget):
                 ui.Widget(flex=1)
         
         # Relay global info into this app
-        relay.connect(lambda *events: self.emit('system_info', events[-1]), 'system_info')
+        relay.connect(self._push_info, 'system_info:'+self.id)
+    
+    def _push_info(self, *events):
+        if not self.session.status:
+            return relay.disconnect('system_info:'+self.id)
+        self.emit('system_info', events[-1])
     
     @event.connect('button.mouse_down')
     def _do_work(self, *events):
