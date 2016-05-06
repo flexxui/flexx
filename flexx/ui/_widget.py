@@ -12,7 +12,7 @@
 import threading
 
 from .. import event
-from ..app import Model
+from ..app import Model, call_later
 from ..pyscript import undefined, window, this_is_js
 
 
@@ -33,6 +33,29 @@ def _get_default_parents():
     # Get list of parents for this thread
     return _default_parents_per_thread.setdefault(tid, [])
 
+
+
+class LiveKeeper:
+    """ This little utility keeps objects alive for a set period of
+    time. This is used to prevent Widget objects from being cleaned up
+    by the garbadge collector when they are only referenced by the
+    "children" property of their parent. Due to synchronization, the
+    children property can "jitter", causing references of objects to
+    be lost.
+    """
+    
+    def __init__(self):
+        self._objects = {}
+    
+    def keep(self, ob, timeout=5.0):
+        i = id(ob)
+        self._objects[i] = ob
+        call_later(timeout, self.clear, i)
+    
+    def clear(self, i):
+        self._objects.pop(i, None)
+
+liveKeeper = LiveKeeper()
 
 
 class Widget(Model):
@@ -84,10 +107,6 @@ class Widget(Model):
         # Set container if this widget represents the main app
         if kwargs.get('is_app', False):
             kwargs['container'] = 'body'
-        
-        # Need to prepare parent and children because they are mutually dependent
-        self._parent_value = None
-        self._children_value = ()
         
         # Init - pass signal values via kwargs
         Model.__init__(self, **kwargs)
@@ -242,7 +261,9 @@ class Widget(Model):
         will update the "parent" property of the old and new
         children.
         """
-        old_children = self.children# if self.children else []
+        old_children = self.children
+        if not old_children:  # Can be None during initialization
+            old_children = []
         
         if len(new_children) == len(old_children):
             if all([(c1 is c2) for c1, c2 in zip(old_children, new_children)]):
@@ -256,15 +277,16 @@ class Widget(Model):
         for child in new_children:
             if child not in old_children:
                 child.parent = self
-        
         return tuple(new_children)
+    
+    @event.connect('parent:aaa')
+    def __keep_alive(self, *events):
+        liveKeeper.keep(self)
+    
     
     class JS:
         
         def __init__(self, *args):
-            # Need to prepare parent and children because they are mutually dependent
-            self._parent_value = None
-            self._children_value = []
             super().__init__(*args)
             
             # Get phosphor widget that is set in init()

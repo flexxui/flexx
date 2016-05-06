@@ -269,7 +269,9 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         with self:
             self.init()
         
+        # Initialize handlers for Python and for JS
         self._init_handlers()
+        self._session._exec('flexx.instances.%s._init_handlers();' % self._id)
     
     def __enter__(self):
         pass
@@ -326,7 +328,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         Properties are synced, following the principle of eventual
         synchronicity (props may become out of sync, but should become
         equal after a certain time). The side on which the property is defined
-        functions as the reference+
+        functions as the reference, or JS for both-props.
         """
         value = serializer.loads(text)
         #self._set_prop(name, value, True)
@@ -339,9 +341,9 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         # see __emit_from_js_pending
         pending, self.__pending_props_from_js = self.__pending_props_from_js, []
         for name, value in pending:
-            self._set_prop(name, value, True)
+            self._set_prop(name, value, False, True)
     
-    def _set_prop(self, name, value, fromjs=False):
+    def _set_prop(self, name, value, _initial=False, fromjs=False):
         # This method differs from the JS version in that
         # we *do not* sync to JS when the setting originated from JS and
         # it is a "both" property; this is our eventual synchronicity.
@@ -352,11 +354,14 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         isproxy = name in self.__proxy_properties__
         isboth = self.__emitter_flags__[name].get('both', False)
         shouldsend = self.__emitter_flags__[name].get('sync', True)
+        if isboth:
+            shouldsend = shouldsend and not _initial
         
         if fromjs or not isproxy:  # Only not set if isproxy and not from js
-            shouldsend = super()._set_prop(name, value) and shouldsend
+            shouldsend = super()._set_prop(name, value, _initial) and shouldsend
         
         if shouldsend and not (fromjs and (isproxy or isboth)):
+        #if shouldsend and not (fromjs and isproxy):
             if not isproxy:  # if not a proxy, use normalized value
                 value = getattr(self, name)
             txt = serializer.saves(value)
@@ -428,7 +433,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             # are initialized.
             self.init()
             
-            self._init_handlers()
+            # self._init_handlers() -> called from py after pys init is done
         
         def init(self):
             """ Can be overloaded by subclasses to initialize the model.
@@ -437,26 +442,29 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         def _set_prop_from_py(self, name, text):
             value = window.flexx.serializer.loads(text)
-            self._set_prop(name, value, True)
+            self._set_prop(name, value, False, True)
         
-        def _set_prop(self, name, value, frompy=False):
+        def _set_prop(self, name, value, _initial=False, frompy=False):
             
             isproxy = self.__proxy_properties__.indexOf(name) >= 0
             isboth = self.__emitter_flags__[name].get('both', False)
             shouldsend = self.__emitter_flags__[name].get('sync', True)
+            if isboth:
+                shouldsend = shouldsend and not _initial
             
             # Note: there is quite a bit of _pyfunc_truthy in the ifs here
             if window.flexx.ws is None:
                 if not isproxy:
-                    super()._set_prop(name, value)
+                    super()._set_prop(name, value, _initial)
                 else:
                     window.console.warn("Cannot set prop '%s' because its validated "
                                         "in Py, but there is no websocket." % name)
                 return
             
             if frompy or not isproxy:  # Only not set if isproxy and not frompy
-                shouldsend = super()._set_prop(name, value) and shouldsend
+                shouldsend = super()._set_prop(name, value, _initial) and shouldsend
             
+            #if shouldsend and not (frompy and (isproxy or isboth)):
             if shouldsend and not (frompy and isproxy):
                 if not isproxy:  # if not a proxy, use normalized value
                     value = self[name]

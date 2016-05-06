@@ -15,12 +15,6 @@ from flexx import event, app
 
 class Node(app.Model):
     
-    def init(self):
-        super().init()
-        # Because of inter-dependence, we need to prepare an initial value
-        self._parent_value = None
-        self._children_value = ()
-    
     @event.prop(both=True, sync=False)
     def parent(self, new_parent=None):
         old_parent = self.parent
@@ -40,6 +34,8 @@ class Node(app.Model):
     @event.prop(both=True)
     def children(self, new_children=()):
         old_children = self.children
+        if not old_children:  # Can be None during initialization
+            old_children = []
         
         for child in old_children:
             if child not in new_children:
@@ -57,12 +53,6 @@ class Node(app.Model):
     
     
     class JS:
-        
-        def init(self):
-            super().init()
-            # Because of inter-dependence, we need to prepare an initial value
-            self._parent_value = None
-            self._children_value = ()
         
         def on_parent(self, *events):
             parent = events[-1].new_value

@@ -150,12 +150,11 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # Initialize properties with default and given values (does not emit yet)
         for name in self.__properties__:
             self.__handlers.setdefault(name, [])
-            private_name = '_' + name + '_value'
+            setattr(self, '_' + name + '_value', None)  # need *something*
+        for name in self.__properties__:
             dd = getattr(self.__class__, name)._defaults
             if dd:
-                self._set_prop(name, dd[0])
-            else:
-                setattr(self, private_name, None)  # need *something*
+                self._set_prop(name, dd[0], True)
         for name, value in property_values.items():
             if name in self.__properties__:
                 #self._set_prop(name, value)
@@ -269,7 +268,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         for label, handler in self.__handlers.get(ev.type, ()):
             handler._add_pending_event(label, ev)  # friend class
     
-    def _set_prop(self, prop_name, value):
+    def _set_prop(self, prop_name, value, _initial=False):
         """ Set the value of a (readonly) property.
         
         Parameters:

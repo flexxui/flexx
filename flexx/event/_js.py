@@ -47,13 +47,13 @@ class HasEventsJS:
         # Create properties
         for name in self.__properties__:
             self.__handlers.setdefault(name, [])
+            self['_' + name + '_value'] = None  # need *something*
+        for name in self.__properties__:
             func = self['_' + name + '_func']
             creator = self['__create_' + func.emitter_type]
             creator(name)
             if func.default is not undefined:
-                self._set_prop(name, func.default)
-            else:
-                self['_' + name + '_value'] = None  # need *something*
+                self._set_prop(name, func.default, True)
         
         # Create emitters
         for name in self.__emitters__:

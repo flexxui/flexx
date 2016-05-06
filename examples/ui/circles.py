@@ -35,6 +35,8 @@ class App(ui.Widget):
         # todo: animate in JS!
     
     def tick(self):
+        if not self.session.status:
+            return
         import time
         t = time.time()
         for i, circle in enumerate(self._circles):
