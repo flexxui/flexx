@@ -38,7 +38,7 @@ def get_instance_by_id(id):
         return None  # Could we revive it? ... probably not a good idea
 
 
-def stub_prop_func(self, v=None):
+def stub_prop_func(self, v):
     return v
 
 def stub_emitter_func_py(self, *args):
@@ -221,9 +221,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     
     def __init__(self, session=None, is_app=False, **kwargs):
         
-        # Init HasEvents, but delay initialization of handlers
-        super().__init__(_init_handlers=False, **kwargs)
-        
         # Param "is_app" is not used, but we "take" the argument so it
         # is not mistaken for a property value.
         
@@ -259,6 +256,11 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 self._id, clsname, reprs(self._id), serializer.saves(event_types_py))
         self._session._exec(cmd)
         
+        # Init HasEvents, but delay initialization of handlers
+        # We init after producing the JS command to create the corresponding
+        # object, so that subsequent commands work ok
+        super().__init__(_init_handlers=False, **kwargs)
+        
         # Initialize the model further, e.g. Widgets can create
         # subwidgets etc. This is done here, at the point where the
         # properties are initialized, but the handlers not yet. Handlers
@@ -267,10 +269,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         with self:
             self.init()
         
-        # Finish initialization, here and in JS. Important to schedule
-        # JS before we init ourselves, because of prop initialization.
-        cmd = 'flexx.instances.%s._init_handlers();' % self._id
-        self._session._exec(cmd)
         self._init_handlers()
     
     def __enter__(self):
@@ -352,6 +350,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         # (which is probably less of a problem on the server side).
         
         isproxy = name in self.__proxy_properties__
+        isboth = self.__emitter_flags__[name].get('both', False)
         shouldsend = self.__emitter_flags__[name].get('sync', True)
         
         if fromjs or not isproxy:  # Only not set if isproxy and not from js
@@ -360,23 +359,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         if shouldsend and not (fromjs and (isproxy or isboth)):
             if not isproxy:  # if not a proxy, use normalized value
                 value = getattr(self, name)
-            txt = serializer.saves(value)
-            cmd = 'flexx.instances.%s._set_prop_from_py(%s, %s);' % (
-                self._id, reprs(name), reprs(txt))
-            self._session._exec(cmd)
-    
-    def _init_prop(self, name):
-        isproxy = name in self.__proxy_properties__
-        isboth = self.__emitter_flags__[name].get('both', False)
-        shouldsend = self.__emitter_flags__[name].get('sync', True)
-        
-        if isproxy:
-            return  # init occurs by setting from JS
-        
-        super()._init_prop(name)
-        
-        if shouldsend and not (isproxy or isboth):
-            value = getattr(self, name)
             txt = serializer.saves(value)
             cmd = 'flexx.instances.%s._set_prop_from_py(%s, %s);' % (
                 self._id, reprs(name), reprs(txt))
@@ -430,9 +412,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         def __init__(self, id, py_events=None):
             
-            # Init HasEvents, but delay initialization of handlers
-            super().__init__(False)
-            
             # Set id alias. In most browsers this shows up as the first element
             # of the object, which makes it easy to identify objects while
             # debugging. This attribute should *not* be used.
@@ -441,9 +420,14 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             
             self.__event_types_py = py_events if py_events else []
             
+            # Init HasEvents, but delay initialization of handlers
+            super().__init__(False)
+            
             # Initialize when properties are initialized, but before handlers
-            # are initialized. These are initialized by a call from Python.
+            # are initialized.
             self.init()
+            
+            self._init_handlers()
         
         def init(self):
             """ Can be overloaded by subclasses to initialize the model.
@@ -477,22 +461,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                     value = self[name]
                 txt = window.flexx.serializer.saves(value)
                 window.flexx.ws.send('SET_PROP ' + [self.id, name, txt].join(' '))
-        
-        def _init_prop(self, name):
-            isproxy = self.__proxy_properties__.indexOf(name) >= 0
-            isboth = self.__emitter_flags__[name].get('both', False)
-            shouldsend = self.__emitter_flags__[name].get('sync', True)
-            
-            if isproxy:
-                return  # init occurs by setting from py
-            
-            super()._init_prop(name)
-            
-            if shouldsend and not (isproxy or isboth):
-                value = self[name]
-                txt = window.flexx.serializer.saves(value)
-                if window.flexx.ws:
-                    window.flexx.ws.send('SET_PROP ' + [self.id, name, txt].join(' '))
         
         def _handlers_changed_hook(self):
             types = [name for name in self._he_handlers.keys() if len(self._he_handlers[name])]

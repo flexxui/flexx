@@ -14,7 +14,7 @@ class MyModel1(app.Model):
     # Has a prop on Py, react in JS
     
     @event.prop
-    def foo(self, v=0):
+    def foo(self, v=0.0):
         return float(v)
     
     class JS:
@@ -22,12 +22,12 @@ class MyModel1(app.Model):
         @event.connect('foo')
         def react_to_foo_a(self, *events):
             for ev in events:
-                print('A: foo changed from %f to %f' % (ev.old_value,
+                print('A: foo changed from %s to %s' % (ev.old_value,
                                                         ev.new_value))
         
         @event.connect('foo')
         def react_to_foo_b(self, *events):
-            print('B: foo changed from %f to %f' % (events[0].old_value, 
+            print('B: foo changed from %s to %s' % (events[0].old_value, 
                                                     events[-1].new_value))
 
 
@@ -37,18 +37,18 @@ class MyModel2(app.Model):
     @event.connect('foo')
     def react_to_bar_a(self, *events):
         for ev in events:
-            print('A: foo changed from %f to %f' % (ev.old_value,
+            print('A: foo changed from %s to %s' % (ev.old_value,
                                                     ev.new_value))
     
     @event.connect('foo')
     def react_to_bar_b(self, *events):
-        print('B: foo changed from %f to %f' % (events[0].old_value, 
+        print('B: foo changed from %s to %s' % (events[0].old_value, 
                                                 events[-1].new_value))
     
     class JS:
         
         @event.prop
-        def foo(self, v=0):
+        def foo(self, v=0.0):
             return float(v)
         
 

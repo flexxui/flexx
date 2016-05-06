@@ -152,8 +152,8 @@ class ModelD(ModelB):
     
     class JS:
         
-        def _init(self):
-            super()._init()
+        def init(self):
+            super().init()
             print(self.foo3, self.bar3)
             
             assert self.foo3 is None
@@ -174,7 +174,7 @@ class ModelD(ModelB):
 
 class ModelE(ModelA):
     
-    def _init(self):
+    def init(self):
         self.res1 = []
         self.res2 = []
     
@@ -206,7 +206,7 @@ class ModelE(ModelA):
     
     class JS:
         
-        def _init(self):
+        def init(self):
             self.res3 = []
             self.res4 = []
             
@@ -264,5 +264,5 @@ def test_apps():
 
 # NOTE: beware future self: if running this in Pyzo, turn off GUI integration!
 
-#runner(ModelE)
+# runner(ModelD)
 run_tests_if_main()
