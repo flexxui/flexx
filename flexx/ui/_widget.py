@@ -62,12 +62,11 @@ class Widget(Model):
     """ Base widget class.
     
     When *subclassing* a Widget to create a compound widget (a widget
-    that serves as a container for other widgets), use the ``init()``
-    method to initialize child widgets. This method is called while
-    the widget is the current widget.
-    
-    When subclassing to create a custom widget use the ``_init()``
-    method both for the Python and JS version of the class.
+    that acts as a container for other widgets), use the ``init()``
+    method to initialize the child widgets. This method is called while
+    the widget is the current widget. Similarly, the ``init()`` method
+    of the JS part of a subclass can be used to initialize the Widget
+    (e.g. create the Phosphor widget and HTML DOM elements).
     
     """
     
@@ -281,6 +280,8 @@ class Widget(Model):
     
     @event.connect('parent:aaa')
     def __keep_alive(self, *events):
+        # When the parent changes, we prevent the widget from being deleted
+        # for a few seconds, to it will survive parent-children "jitter".
         liveKeeper.keep(self)
     
     
@@ -308,7 +309,8 @@ class Widget(Model):
                     if msg._type == 'resize':
                         that._check_real_size()
                     return False
-            window.phosphor.messaging.installMessageFilter(self.phosphor, SizeNotifier())
+            window.phosphor.messaging.installMessageFilter(self.phosphor,
+                                                           SizeNotifier())
             
             # Derive css class name
             cls_name = self._class_name
@@ -448,13 +450,14 @@ class Widget(Model):
                 self._add_child(child)
         
         def _add_child(self, widget):
-            """ Add the DOM element.
-            Called right after the child widget is added. """
+            """ Add the DOM element. Called right after the child widget
+            is added. Overloadable by layouts.
+            """
             self.phosphor.addChild(widget.phosphor)
         
         def _remove_child(self, widget):
-            """ Remove the DOM element.
-            Called right after the child widget is removed.
+            """ Remove the DOM element. Called right after the child
+            widget is removed. Overloadable by layouts.
             """
             widget.phosphor.parent = None
         
@@ -507,7 +510,7 @@ class Widget(Model):
             
             A key event has the following attributes:
             * key: the character corresponding to the key being pressed, or
-              a key name like "Escape", "Alt", "Enter" otherwise.
+              a key name like "Escape", "Alt", "Enter".
             * modifiers: list of strings "Alt", "Shift", "Ctrl", "Meta" for
               modifier keys pressed down at the time of the event.
             """
@@ -522,9 +525,9 @@ class Widget(Model):
         
         @event.emitter
         def key_press(self, e):
-            """Event emitted when a key is pressed down. This event
-            does not handle the pressing of modifier keys. See key_down
-            for details.
+            """ Event emitted when a key is pressed down. This event
+            does not fire for the pressing of a modifier keys. See
+            key_down for details.
             """
             return self._create_key_event(e)
         

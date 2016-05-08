@@ -13,11 +13,14 @@ from flexx.util.testing import run_tests_if_main, raises, skip
 ON_TRAVIS = os.getenv('TRAVIS', '') == 'true'
 ON_PYPY = '__pypy__' in sys.builtin_module_names
 
+TIMEOUT1 = 5.0
+TIMEOUT2 = 1.0
+
 
 def runner(cls):
     t = app.launch(cls, 'firefox')  # fails somehow with XUL
     t.test_init()
-    app.call_later(5, app.stop)
+    app.call_later(TIMEOUT1, app.stop)
     app.run()
     if not (ON_TRAVIS and ON_PYPY):  # has intermittent fails on pypy3
         t.test_check()
@@ -39,7 +42,7 @@ class ModelA(app.Model):
         if v:
             #app.stop()
             print('stopping by ourselves', v)
-            app.call_later(0.5, app.stop)
+            app.call_later(TIMEOUT2, app.stop)
         return v
     
     def test_init(self):

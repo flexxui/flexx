@@ -97,18 +97,18 @@ def test_py2js_on_class():
             pass
     
     # normal
-    jscode = py2js(Foo1)
+    jscode = py2js(Foo1, inline_stdlib=False)
     assert jscode.startswith('var Foo1')
     assert jscode.pycode.startswith('class Foo1')
     
     # renamed
-    jscode = py2js(Foo1, 'Bar')
+    jscode = py2js(Foo1, 'Bar', inline_stdlib=False)
     assert jscode.pycode.startswith('class Foo')
     assert 'Foo' not in jscode
     assert jscode.startswith('var Bar')
     
     # renamed 2
-    jscode = py2js(Foo1, 'Bar.bla')
+    jscode = py2js(Foo1, 'Bar.bla', inline_stdlib=False)
     assert jscode.pycode.startswith('class Foo')
     assert 'Foo' not in jscode
     assert not 'var Bar.bla' in jscode

@@ -1,6 +1,68 @@
 """
-Base class for objects that live in both Python and JS.
-This basically implements the syncing of properties and events.
+Base class for objects that live in both Python and JS. This basically
+implements the syncing of properties and events.
+
+Developer info:
+
+Events are transparently handled accross the language barrier. Both sides
+keep each-other informed for what events there are registered handlers, and
+only those events are "synchronised". That way, a mouse move event does
+not result in a lot of messages send to Python (unless there is a mouse move
+handler in Python).
+
+The Model class provides three ways for adding properties:
+
+* a property defined at the Python side
+* a property defined at the JS side
+* a property defined at both sides (defined as part of Python class,
+  but with flag `both=True`)
+
+In the first two cases, a corresponding proxy property is created for
+the other side. The property is settable at both ends (unless its a
+readonly), but the property is validated where it is defined; the proxy
+sends the new value to the other side, where validation takes places,
+after which the normalized value is send back and set. The event for
+setting a property is emitted by the properties directly, i.e. events
+for properties are not "synchronised", but occur on both sides because
+properties are synchronised.
+
+In the situation where the `both` flag is used, validation occurs on
+both sides. Such a property is directly validated and "applied" at the
+side where it is set, and the value is synchronised to the other side,
+where its again validated and set.
+
+Properties are eventually synchronous. This means that they may become
+out of sync, e.g. when set nearly at the same time in both JS and
+Python, but will become equal after a certain time. In the first two
+cases eventual synchronicity is naturally occuring because there is a
+clear "reference" side. In the third case eventual synchronicity is
+implemented by making Python the end-point: setting a property at the
+JS side will also set it to the Python side, and setting a property at
+the Python side will set the property in JS, which will set (again) in
+Python. Note that setting a property with the same value will not cause
+an event to be emitted.
+
+The Python side was chosen as the end-point because at this side any
+jitter from quickly updating properties generally has little side-effects,
+while on the JS side you will see it occuring even for a slider. There
+means to avoid jitter, but this complicates the code. We could add it
+if it's found to be necessarty at a later time.
+
+Properties can be explicitly marked to not sync. This can be used e.g.
+in cases where it does not make sense to have the property value
+available at the other side.
+
+Most of the logic for determining when the setting-of-a-property must
+be synchronised to the other ends is implemented in the ``_set_prop()``
+methods.
+
+Initialization of properties was a pain to get right. Without going
+into too much detail, the ``init()`` method on both the Python and JS
+side provide a means for subclasses to do initialization at a time when
+the property values have their initial values, but handlers are not yet
+initialized and events are not yet emitted. Therefore additional
+attributes and handlers can be created here.
+
 """
 
 import json
@@ -162,15 +224,24 @@ class ModelMeta(HasEventsMeta):
 
 
 class Model(with_metaclass(ModelMeta, event.HasEvents)):
-    """ Subclass of HasEvents representing Python-JavaScript object models
+    """ Subclass of HasEvents representing Python-JavaScript object models.
     
     Each instance of this class has a corresponding object in
-    JavaScript. Properties are present on both sides, and events are
+    JavaScript. Properties are synchronized, and events are
     transparently handled accross the language barrier.
     
     The JS version of this class is defined by the contained ``JS``
     class. One can define methods, properties, handlers, and (json
     serializable) constants on the JS class.
+    
+    When a Model instance is assigned as an attribute to the Python
+    instance (inside the init() method), the corresponding attribute
+    will also be present at the JavaScript side.
+    
+    The ``init()`` method on both the Python and JS side can be used
+    to do initialization at a time when properties have their initial
+    values, but handlers are not yet initialized and events are not yet
+    emitted.
     
     Parameters:
         session (Session, None): the session object that connects this
@@ -183,8 +254,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     Notes:
         This class provides the base object for all widget classes in
         ``flexx.ui``. However, one can also create subclasses that have
-        nothing to do with user interfaces or DOM elements. You could e.g.
-        use it to calculate pi on nodejs.
+        nothing to do with user interfaces or DOM elements. 
     
     Example:
     
@@ -193,7 +263,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             class MyModel(Model):
                 
                 def a_python_method(self):
-                ...
+                    ...
                 
                 class JS:
                     
@@ -273,6 +343,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         self._init_handlers()
         self._session._exec('flexx.instances.%s._init_handlers();' % self._id)
     
+    # Can be used as a context manager, but is a no-op for base Model class.
     def __enter__(self):
         pass
     
@@ -324,12 +395,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 self._session._exec(cmd)
     
     def _set_prop_from_js(self, name, text):
-        """ Notes on synchronizing:
-        Properties are synced, following the principle of eventual
-        synchronicity (props may become out of sync, but should become
-        equal after a certain time). The side on which the property is defined
-        functions as the reference, or JS for both-props.
-        """
         value = serializer.loads(text)
         #self._set_prop(name, value, True)
         if not self.__pending_props_from_js:
@@ -347,9 +412,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         # This method differs from the JS version in that
         # we *do not* sync to JS when the setting originated from JS and
         # it is a "both" property; this is our eventual synchronicity.
-        # Python is the "end point", otherwise we can get "jitter" in the 
-        # client when a prop is changed multiple times in a fast way
-        # (which is probably less of a problem on the server side).
+        # Python is the "end point".
         
         isproxy = name in self.__proxy_properties__
         isboth = self.__emitter_flags__[name].get('both', False)

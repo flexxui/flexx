@@ -182,7 +182,7 @@ def test_name_ev(Person):
     name._first_name_logger.handle_now()
     res.extend(name.r1)
     res.append('x')
-    assert name.first_name is 'john'
+    assert name.first_name == 'john'
     
     name = Person()
     name.first_name = 'jane'

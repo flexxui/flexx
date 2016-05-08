@@ -99,6 +99,8 @@ def js_rename(jscode, cur_name, new_name):
                             '%s = function' % (new_name), 1)
     jscode = jscode.replace('%s.prototype' % cur_name, 
                             '%s.prototype' % new_name)
+    jscode = jscode.replace('_class_name = "%s"' % cur_name, 
+                            '_class_name = "%s"' % new_name)
     if '.' in new_name:
         jscode = jscode.replace('var %s;\n' % cur_name, '', 1)
     else:
