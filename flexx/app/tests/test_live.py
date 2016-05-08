@@ -24,7 +24,8 @@ def runner(cls):
     app.run()
     if not (ON_TRAVIS and ON_PYPY):  # has intermittent fails on pypy3
         t.test_check()
-    t.session.close()
+    if not ON_TRAVIS:
+        t.session.close()
 
 
 class ModelA(app.Model):
