@@ -13,7 +13,7 @@ from flexx.util.testing import run_tests_if_main, raises, skip
 ON_TRAVIS = os.getenv('TRAVIS', '') == 'true'
 ON_PYPY = '__pypy__' in sys.builtin_module_names
 
-TIMEOUT1 = 5.0
+TIMEOUT1 = 10.0 if ON_TRAVIS else 3.0
 TIMEOUT2 = 1.0
 
 
