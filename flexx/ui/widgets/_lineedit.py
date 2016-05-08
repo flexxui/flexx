@@ -11,7 +11,7 @@ Interactive example:
 
 .. UIExample:: 100
 
-    from flexx import app, ui, react
+    from flexx import app, ui, event
     
     class Example(ui.Widget):
     
@@ -24,13 +24,13 @@ Interactive example:
                 self.label = ui.Label(flex=1)
         
         class JS:
-            @react.connect('line.text')
-            def _change_label(self, value):
-                self.label.text(value)
+            @event.connect('line.text')
+            def _change_label(self, *events):
+                self.label.text = events[-1].new_value
 """
 
-from ... import react
-from ...pyscript import window, undefined
+from ... import event
+from ...pyscript import window
 from . import Widget
 
 
@@ -44,18 +44,18 @@ class LineEdit(Widget):
     }
     """
     
-    @react.input
-    def text(v=''):
+    @event.prop(both=True)
+    def text(self, v=''):
         """ The current text."""
         return str(v)
     
-    @react.input
-    def placeholder_text(v=''):
+    @event.prop(both=True)
+    def placeholder_text(self, v=''):
         """ The placeholder text (shown when the text is an empty string)."""
         return str(v)
     
-    @react.input
-    def autocomp(v=()):
+    @event.prop(both=True)
+    def autocomp(self, v=()):
         """ A tuple/list of strings for autocompletion. Might not work
         in all browsers.
         """
@@ -63,13 +63,13 @@ class LineEdit(Widget):
     
     class JS:
     
-        def _create_node(self):
-            self.p = window.phosphor.createWidget('div')
-            self.p.node.innerHTML = '<input type="text", list="%s" />' % self.id
-            self._node = self.p.node.childNodes[0]
+        def init(self):
+            self.phosphor = window.phosphor.createWidget('div')
+            self.phosphor.node.innerHTML = '<input type="text", list="%s" />' % self.id
+            self._node = self.phosphor.node.childNodes[0]
             
-            # self.p = window.phosphor.createWidget('input')
-            # self.node = self.p.node
+            # self.phosphor = window.phosphor.createWidget('input')
+            # self.node = self.phosphor.node
             # self.node.type = 'text'
             # self.node.list = self.id
             
@@ -77,41 +77,39 @@ class LineEdit(Widget):
             self._autocomp.id = self.id
             self._node.appendChild(self._autocomp)
             
-            f1 = lambda ev: self.user_text._set(self._node.value)
-            f2 = lambda ev: self.submit._set(ev.which)
+            f1 = lambda ev: self._set_prop('user_text', self._node.value)
+            f2 = lambda ev: self.submit() if ev.which == 13 else None
             self._node.addEventListener('input', f1, False)
             self._node.addEventListener('keydown', f2, False)
             #if IE10:
             #    this.node.addEventListener('change', f1, False)
             
-        @react.source
-        def user_text(self, v):
+        @event.readonly
+        def user_text(self, v=None):
             """ The text set by the user (updates on each keystroke). """
-            if v is not undefined:
+            if v is not None:
                 v = str(v)
-                self.text(v)
+                self.text = v
             return v
         
-        @react.source
-        def submit(self, key=None):
-            """ The user strikes the enter or return key. """
-            if key == 13:
-                return True
-            elif key is None:
-                return False  # init the value
-            return undefined
+        @event.emitter
+        def submit(self):
+            """ Event emitted when the user strikes the enter or return key.
+            """
+            return {}
         
-        @react.connect('text')
-        def _text_changed(self, text):
-            self._node.value = text
+        @event.connect('text')
+        def __text_changed(self, *events):
+            self._node.value = self.text
         
-        @react.connect('placeholder_text')
-        def _placeholder_text_changed(self, text):
-            self._node.placeholder = text
+        @event.connect('placeholder_text')
+        def __placeholder_text_changed(self, *events):
+            self._node.placeholder = self.placeholder_text
         
         # todo: this works in Firefox but not in Xul
-        @react.connect('autocomp')
-        def _autocomp_changed(self, autocomp):
+        @event.connect('autocomp')
+        def __autocomp_changed(self, *events):
+            autocomp = self.autocomp
             # Clear
             for op in self._autocomp:
                 self._autocomp.removeChild(op)

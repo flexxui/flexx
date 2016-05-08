@@ -213,6 +213,7 @@ Globals and nonlocal
 """
 
 from . import commonast as ast
+from . import stdlib
 from .parser1 import Parser1, JSError, unify, reprs  # noqa
 
 
@@ -369,6 +370,16 @@ class Parser2(Parser1):
             # used inside a PyScript file for the compiling.
             return []
         
+        # Shortcut for this_is_js() cases, discarting the else to reduce code
+        if (True and isinstance(node.test_node, ast.Call) and
+                     isinstance(node.test_node.func_node, ast.Name) and
+                     node.test_node.func_node.name == 'this_is_js'):
+            code = [self.lf('{ /* if this_is_js() */')]
+            for stmt in node.body_nodes:
+                code += self.parse(stmt)
+            code.append(self.lf('}'))
+            return code
+        
         code = [self.lf('if (')]  # first part (popped in elif parsing)
         code.append(self._wrap_truthy(node.test_node))
         code.append(') {')
@@ -447,7 +458,7 @@ class Parser2(Parser1):
         
         # Prepare variable to detect else
         if node.else_nodes:
-            else_dummy = self.dummy('else')
+            else_dummy = self.dummy('els')
             code.append(self.lf('%s = true;' % else_dummy))
         
         # Declare iteration variables if necessary
@@ -499,8 +510,8 @@ class Parser2(Parser1):
             
             # Create dummy vars
             d_seq = self.dummy('seq')
-            d_iter = self.dummy('iter')
-            d_target = target[0] if (len(target) == 1) else self.dummy('target')
+            d_iter = self.dummy('itr')
+            d_target = target[0] if (len(target) == 1) else self.dummy('tgt')
             
             # Ensure our iterable is indeed iterable
             code.append(self._make_iterable(iter, d_seq))
@@ -564,7 +575,7 @@ class Parser2(Parser1):
         
         # Prepare variable to detect else
         if node.else_nodes:
-            else_dummy = self.dummy('else')
+            else_dummy = self.dummy('els')
             code.append(self.lf('%s = true;' % else_dummy))
         
         # The loop itself
@@ -804,9 +815,11 @@ class Parser2(Parser1):
         
         # Define function that acts as class constructor
         code = []
-        docstring = self.pop_docstring(node) if self._docstrings else ''
+        docstring = self.pop_docstring(node) 
+        docstring = docstring if self._docstrings else ''
         for line in get_class_definition(node.name, base_class, docstring):
             code.append(self.lf(line))
+        self.use_std_function('instantiate', [])
         
         # Body ...
         self.vars.add(node.name)
@@ -869,28 +882,13 @@ def get_class_definition(name, base='Object', docstring=''):
     code.append('%s = function () {' % name)
     for line in docstring.splitlines():
         code.append('    // ' + line)
-    more_code = """
-                    if ((typeof this === "undefined") ||
-                         (typeof window !== "undefined" && window === this) ||
-                         (typeof root !== "undefined" && root === this))
-                         {throw "Class constructor is called as a function.";}
-                    for (var name in this) {
-                        if (Object[name] === undefined &&
-                            typeof this[name] === 'function' && !this[name].nobind) {
-                            this[name] = this[name].bind(this);
-                        }
-                    }
-                    if (this.__init__) {
-                        this.__init__.apply(this, arguments);
-                    }
-                }
-    """
-    more_code = ' ' * 20 + more_code.strip()
-    code.extend([line[16:] for line in more_code.splitlines()])
+    code.append('    %sinstantiate(this, arguments);' % stdlib.FUNCTION_PREFIX)
+    code.append('}')
     
     if base != 'Object':
         code.append('%s.prototype = Object.create(%s);' % (name, base))
     code.append('%s.prototype._base_class = %s;' % (name, base))
+    code.append('%s.prototype._class_name = %s;' % (name, reprs(name.split('.')[-1])))
     
-    code.append('\n')
+    code.append('')
     return code

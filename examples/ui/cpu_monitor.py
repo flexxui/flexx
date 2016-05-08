@@ -8,29 +8,42 @@ import os
 import time
 import psutil
 
-from flexx import app, ui, react
+from flexx import app, ui, event
 
 nsamples = 16
 
 
-@react.source
-def global_cpu_usage(usage):
-    return float(usage)
-
-@react.source
-def global_mem_usage(usage):
-    return float(usage)
-
-def refresh():
-    global_cpu_usage._set(psutil.cpu_percent())
-    global_mem_usage._set(psutil.virtual_memory().percent)
-    app.call_later(1, refresh)
-
-refresh()
+class Relay(event.HasEvents):
+    
+    def __init__(self):
+        super().__init__()
+        app.manager.connect(self._set_n_connections, 'connections_changed')
+        self._set_n_connections()
+        self.refresh()
+    
+    def _set_n_connections(self, *events):
+        n = 0
+        for name in app.manager.get_app_names():
+            proxies = app.manager.get_connections(name)
+            n += len(proxies)
+        self._n_connections = n
+        self.system_info()
+    
+    @event.emitter
+    def system_info(self):
+        return dict(cpu=psutil.cpu_percent(),
+                    mem=psutil.virtual_memory().percent,
+                    sessions=self._n_connections,
+                    total_sessions=app.manager.total_sessions,
+                    )
+        
+    def refresh(self):
+        self.system_info()
+        app.call_later(1, self.refresh)
 
 
 @app.serve
-class CPUMonitor(ui.Widget):
+class Monitor(ui.Widget):
     
     def init(self):
         with ui.HBox():
@@ -47,69 +60,64 @@ class CPUMonitor(ui.Widget):
                                               xdata=[], yrange=(0, 100), 
                                               ylabel='Mem usage (%)')
                 ui.Widget(flex=1)
+        
+        # Relay global info into this app
+        relay.connect(self._push_info, 'system_info:' + self.id)
     
-    @react.connect('global_cpu_usage')
-    def cpu_usage(self, v):
-        return float(v)
+    def _push_info(self, *events):
+        if not self.session.status:
+            return relay.disconnect('system_info:' + self.id)
+        self.emit('system_info', events[-1])
     
-    @react.connect('global_mem_usage')
-    def mem_usage(self, v):
-        return float(v)
-    
-    @react.connect('button.mouse_down')
-    def _do_work(self, down):
-        if down:
-            etime = time.time() + 1.0
-            while time.time() < etime:
-                pass
-    
-    @react.connect('app.manager.connections_changed')
-    def number_of_connections(name):
-        n = 0
-        for name in app.manager.get_app_names():
-            proxies = app.manager.get_connections(name)
-            n += len(proxies)
-        return n, app.manager.total_sessions
+    @event.connect('button.mouse_down')
+    def _do_work(self, *events):
+        etime = time.time() + len(events)
+        while time.time() < etime:
+            pass
     
     class JS:
         cpu_count = psutil.cpu_count()
         nsamples = nsamples
         
-        def _init(self):
-            super()._init()
+        def init(self):
+            super().init()
             import time
             self.start_time = time.time()
         
-        @react.connect('number_of_connections')
-        def _update_info(self, n):
-            self.info.text('There are %i connected clients.<br />' % n[0] +
-                           'And in total we served %i connections.<br />' % n[1])
-        
-        @react.connect('cpu_usage')
-        def _update_cpu_usage(self, v):
+        @event.connect('system_info')
+        def _update_info(self, *events):
+            ev = events[-1]
+            
+            # Set connections
+            n = ev.sessions, ev.total_sessions
+            self.info.text = ('There are %i connected clients.<br />' % n[0] +
+                              'And in total we served %i connections.<br />' % n[1])
+            
+            # Prepare plots
             import time
-            times = self.cpu_plot.xdata()
-            usage = self.cpu_plot.ydata()
+            times = self.cpu_plot.xdata
             times.append(time.time() - self.start_time)
-            usage.append(v)
             times = times[-self.nsamples:]
+            self.cpu_plot.xdata = times
+            self.mem_plot.xdata = times
+            
+            # cpu data
+            usage = self.cpu_plot.ydata
+            usage.append(ev.cpu)
             usage = usage[-self.nsamples:]
-            self.cpu_plot.xdata(times)
-            self.cpu_plot.ydata(usage)
-        
-        @react.connect('mem_usage')
-        def _update_mem_usage(self, v):
-            import time
-            times = self.mem_plot.xdata()
-            usage = self.mem_plot.ydata()
-            times.append(time.time() - self.start_time)
-            usage.append(v)
-            times = times[-self.nsamples:]
+            self.cpu_plot.ydata = usage
+            
+            # mem data
+            usage = self.mem_plot.ydata
+            usage.append(ev.mem)
             usage = usage[-self.nsamples:]
-            self.mem_plot.xdata(times)
-            self.mem_plot.ydata(usage)
+            self.mem_plot.ydata = usage
+
+
+# Create global relay
+relay = Relay()
 
 
 if __name__ == '__main__':
-    # m = app.launch(CPUMonitor)  # for use during development
+    # m = app.launch(Monitor)  # for use during development
     app.start()

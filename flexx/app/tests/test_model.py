@@ -3,141 +3,82 @@
 
 from flexx.util.testing import run_tests_if_main, raises
 
-from flexx.app.model import Model, JSSignal, PySignal
-from flexx import react
+from flexx.app.model import Model
+from flexx import event
 
 
 class Foo1(Model):
     
-    @react.input
-    def title(v=''):
+    @event.prop
+    def title(self, v=''):
         return v
     
     class JS:
         
-        @react.input
-        def blue(v=0):
+        @event.prop
+        def blue(self, v=0):
             return v
-
 
 class Foo2(Foo1):
     
-    @react.connect('title')
-    def title_len(v):
-        return len(v)
-    
     class JS:
         
-        @react.connect('blue')
-        def red(v):
-            return v + 1
+        @event.prop
+        def red(self, v=0):
+            return v
 
 
 class Foo3(Foo2):
     py_attr = 42
     
-    @react.input
-    def js_attr(v=0):
+    @event.prop
+    def js_attr(self, v=0):
         return v
     
     class JS:
         js_attr = 42
         
-        @react.input
-        def py_attr(v=0):
+        @event.prop
+        def py_attr(self, v=0):
             return v
-
 
 class Foo4(Foo3):
     
-    @react.input
-    def title(v='a'):
-        return v
+    @event.prop
+    def title(self, v=''):
+        return v + 'x'
     
     class JS:
         
-        @react.connect('blue')
-        def red(v):
-            return v + 2
+        @event.prop
+        def red(self, v=0):
+            return v+1
 
 
-
-def test_signal_pairing1():
+def test_pairing1():
     
-    assert isinstance(Foo2.title, react.Signal)
-    assert isinstance(Foo2.blue, react.Signal)
+    assert isinstance(Foo1.title, event._emitters.Property)
+    assert isinstance(Foo1.blue, event._emitters.Property)
     
-    assert isinstance(Foo2.JS.title, react.Signal)
-    assert isinstance(Foo2.JS.blue, react.Signal)
-    
-    assert not isinstance(Foo2.title, JSSignal)
-    assert isinstance(Foo2.blue, JSSignal)
-    
-    assert isinstance(Foo2.JS.title, PySignal)
-    assert not isinstance(Foo2.JS.blue, PySignal)
+    assert isinstance(Foo1.JS.title, event._emitters.Property)
+    assert isinstance(Foo1.JS.blue, event._emitters.Property)
 
 
-def test_signal_pairing2():
-    
-    assert isinstance(Foo2.title, react.Signal)
-    assert isinstance(Foo2.title_len, react.Signal)
-    assert isinstance(Foo2.blue, react.Signal)
-    assert isinstance(Foo2.red, react.Signal)
-    
-    assert isinstance(Foo2.JS.title, react.Signal)
-    assert isinstance(Foo2.JS.title_len, react.Signal)
-    assert isinstance(Foo2.JS.blue, react.Signal)
-    assert isinstance(Foo2.JS.red, react.Signal)
-    
-    assert not isinstance(Foo2.title, JSSignal)
-    assert not isinstance(Foo2.title_len, JSSignal)
-    assert isinstance(Foo2.blue, JSSignal)
-    assert isinstance(Foo2.red, JSSignal)
-    
-    assert isinstance(Foo2.JS.title, PySignal)
-    assert isinstance(Foo2.JS.title_len, PySignal)
-    assert not isinstance(Foo2.JS.blue, PySignal)
-    assert not isinstance(Foo2.JS.red, PySignal)
-
-
-def test_signal_pairing4():
-    # This is basically a double-check on test_signal_pairing2
-    assert isinstance(Foo4.title, react.Signal)
-    assert isinstance(Foo4.title_len, react.Signal)
-    assert isinstance(Foo4.blue, react.Signal)
-    assert isinstance(Foo4.red, react.Signal)
-    
-    assert isinstance(Foo4.JS.title, react.Signal)
-    assert isinstance(Foo4.JS.title_len, react.Signal)
-    assert isinstance(Foo4.JS.blue, react.Signal)
-    assert isinstance(Foo4.JS.red, react.Signal)
-    
-    assert not isinstance(Foo4.title, JSSignal)
-    assert not isinstance(Foo4.title_len, JSSignal)
-    assert isinstance(Foo4.blue, JSSignal)
-    assert isinstance(Foo4.red, JSSignal)
-    
-    assert isinstance(Foo4.JS.title, PySignal)
-    assert isinstance(Foo4.JS.title_len, PySignal)
-    assert not isinstance(Foo4.JS.blue, PySignal)
-    assert not isinstance(Foo4.JS.red, PySignal)
-
-
-def test_signal_no_clashes():
+def test_no_clashes():
     
     # Attributes that already exist are not overwritten
     assert Foo3.py_attr == 42
     assert Foo3.JS.js_attr == 42
     
-    assert isinstance(Foo3.js_attr, react.Signal)
-    assert isinstance(Foo3.JS.py_attr, react.Signal)
+    assert isinstance(Foo3.js_attr, event._emitters.Property)
+    assert isinstance(Foo3.JS.py_attr, event._emitters.Property)
     
     # Double check in subclass
     assert Foo4.py_attr == 42
     assert Foo4.JS.js_attr == 42
     
-    assert isinstance(Foo4.js_attr, react.Signal)
-    assert isinstance(Foo4.JS.py_attr, react.Signal)
+    assert isinstance(Foo4.js_attr, event._emitters.Property)
+    assert isinstance(Foo4.JS.py_attr, event._emitters.Property)
 
 
 def test_overloading():

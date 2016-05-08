@@ -4,7 +4,7 @@ The client's core Flexx engine, implemented in PyScript.
 
 from ..pyscript import py2js, undefined, window
 
-flexx_session_id = location = root = module = typeof = None  # fool PyFlakes
+flexx_session_id = location = require = module = typeof = None  # fool PyFlakes
 
 
 @py2js(inline_stdlib=False)
@@ -26,7 +26,7 @@ class FlexxJS:
         self.instances = {}
         if typeof(window) is 'undefined' and typeof(module) is 'object':
             # nodejs (call exit on exit and ctrl-c
-            root.window = root  # create alias
+            self._set_window_as_global()  # create alias
             self.nodejs = True
             window.setTimeout(self.init, 1)  # ms
             window.process.on('exit', self.exit, False)
@@ -36,6 +36,11 @@ class FlexxJS:
             # browser
             window.addEventListener('load', self.init, False)
             window.addEventListener('beforeunload', self.exit, False)
+        window.flexx = self
+    
+    def _set_window_as_global(self):  # https://github.com/nodejs/node/pull/1838
+        """ global.window = global;
+        """
     
     def init(self):
         """ Called after document is loaded. """
@@ -70,8 +75,7 @@ class FlexxJS:
         # Check WebSocket support
         if self.nodejs:
             try:
-                WebSocket = window.require('ws')  # does not work on Windows?
-                #WebSocket = window.require('websocket').client
+                WebSocket = require('ws')
             except Exception:
                 # Better error message
                 raise "FAIL: you need to 'npm install -g ws' (or 'websocket')."
@@ -82,14 +86,14 @@ class FlexxJS:
                 raise "FAIL: need websocket"
         # Open web socket in binary mode
         self.ws = ws = WebSocket(window.flexx.ws_url)
-        ws.binaryType = "arraybuffer"
+        #ws.binaryType = "arraybuffer"  # would need utf-decoding -> slow
         
         def on_ws_open(evt):
             window.console.info('Socket connected')
-            ws.send('hiflexx ' + window.flexx_session_id)
+            ws.send('hiflexx ' + flexx_session_id)
         def on_ws_message(evt):
-            window.flexx.last_msg = evt.data or evt
-            msg = window.flexx.decodeUtf8(window.flexx.last_msg)
+            window.flexx.last_msg = msg = evt.data or evt
+            #msg = window.flexx.decodeUtf8(msg)
             window.flexx.command(msg)
         def on_ws_close(evt):
             self.ws = None

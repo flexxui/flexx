@@ -7,11 +7,15 @@ import json
 import logging
 
 from .. import webruntime
-from .. import react
 
+from . import model
 from .model import Model
 from .session import manager
 from .tornadoserver import server
+
+# Make event system use of Tornado
+from ..event import _loop
+_loop.loop.integrate_tornado()
 
 
 reprs = json.dumps
@@ -84,10 +88,12 @@ def call_later(delay, callback, *args, **kwargs):
     """
     server.call_later(delay, callback, *args, **kwargs)
 
+model.call_later = call_later  # Work around circular dependency
+
 
 server._auto_stop = False
-@react.connect('manager.connections_changed')
-def _auto_closer(name):
+@manager.connect('connections_changed')
+def _auto_closer(*events):
     if not server._auto_stop:
         return
     for name in manager.get_app_names():

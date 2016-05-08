@@ -136,6 +136,11 @@ class Parser0:
         'unicode': 'str',  # legacy Py compat
         'unichr': 'chr',
         'xrange': 'range',
+        'self': 'this',
+    }
+    
+    ATTRIBUTE_MAP = {
+        '__class__': 'constructor.prototype',
     }
     
     BINARY_OP = {
@@ -339,7 +344,7 @@ class Parser0:
         """ Get a unique name. The name is added to vars.
         """
         self._dummy_counter += 1
-        name = 'dummy%i_%s' % (self._dummy_counter, name)
+        name = 'stub%i_%s' % (self._dummy_counter, name)
         self.vars.add(name)
         return name
     

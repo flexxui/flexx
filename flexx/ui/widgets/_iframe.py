@@ -9,7 +9,7 @@ Example:
         ui.IFrame(url='flexx.readthedocs.org')
 """
 
-from ... import react
+from ... import event
 from ...pyscript import window
 from . import Widget
 
@@ -23,8 +23,8 @@ class IFrame(Widget):
     
     CSS = '.flx-IFrame {border: none;}'
     
-    @react.input
-    def url(v=''):
+    @event.prop(both=True)
+    def url(self, v=''):
         """ The url to show. 'http://' is automatically prepended if the url
         does not have '://' in it.
         """
@@ -35,10 +35,9 @@ class IFrame(Widget):
     
     class JS:
         
-        def _create_node(self):
-            self.p = window.phosphor.createWidget('iframe')
+        def init(self):
+            self.phosphor = window.phosphor.createWidget('iframe')
         
-        @react.connect('url')
-        def _update_url(self, url):
-            print('set', url)
-            self.node.src = url
+        @event.connect('url')
+        def _update_url(self, *events):
+            self.node.src = self.url

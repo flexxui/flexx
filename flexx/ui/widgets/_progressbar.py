@@ -11,7 +11,7 @@ Interactive example:
 
 .. UIExample:: 100
 
-    from flexx import app, ui, react
+    from flexx import app, ui, event
     
     class Example(ui.Widget):
     
@@ -19,19 +19,20 @@ Interactive example:
             with ui.HBox():
                 self.b1 = ui.Button(flex=0, text='Less')
                 self.b2 = ui.Button(flex=0, text='More')
-                self.p = ui.ProgressBar(flex=1, value=0.1)
+                self.prog = ui.ProgressBar(flex=1, value=0.1)
         
         class JS:
             
-            @react.connect('b1.mouse_down', 'b2.mouse_down')
-            def _change_progress(self, b1, b2):
-                if b1:
-                    self.p.value(self.p.value()-0.1)
-                if b2:
-                    self.p.value(self.p.value()+0.1)
+            @event.connect('b1.mouse_down', 'b2.mouse_down')
+            def _change_progress(self, *events):
+                for ev in events:
+                    if ev.source is self.b1:
+                        self.prog.value -= 0.1
+                    else:
+                        self.prog.value += 0.1
 """
 
-from ... import react
+from ... import event
 from ...pyscript import window
 from . import Widget
 
@@ -42,27 +43,27 @@ class ProgressBar(Widget):
     
     CSS = ".flx-ProgressBar {min-height: 10px;}"
     
-    @react.input
-    def value(v=0):
+    @event.prop(both=True)
+    def value(self, v=0):
         """ The progress value.
         """
         return float(v)
     
-    @react.input
-    def max(v=1):
+    @event.prop(both=True)
+    def max(self, v=1):
         """ The maximum progress value.
         """
         return float(v)
     
     class JS:
     
-        def _create_node(self):
-            self.p = window.phosphor.createWidget('progress')
+        def init(self):
+            self.phosphor = window.phosphor.createWidget('progress')
     
-        @react.connect('value')
-        def _value_changed(self, value):
-            self.node.value = value
+        @event.connect('value')
+        def __value_changed(self, *events):
+            self.node.value = events[-1].new_value
         
-        @react.connect('max')
-        def _max_changed(self, max_value):
-            self.node.max = max_value
+        @event.connect('max')
+        def __max_changed(self, *events):
+            self.node.max = events[-1].new_value

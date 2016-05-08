@@ -14,7 +14,7 @@ Example:
                 ui.Widget(flex=1)
 """
 
-from ... import react
+from ... import event
 from ...pyscript import window, undefined
 from . import Layout
 
@@ -112,8 +112,8 @@ class BaseTableLayout(Layout):
                     self._apply_cell_layout(row, col, vflexes[i], hflexes[j],
                                             cum_vflex, cum_hflex)
         
-        @react.connect('real_size')
-        def _adapt_to_size_change(self, size):
+        @event.connect('size')
+        def _adapt_to_size_change(self, *events):
             """ This function adapts the height (in percent) of the flexible rows
             of a layout. This is needed because the percent-height applies to the
             total height of the table. This function is called whenever the
@@ -124,8 +124,7 @@ class BaseTableLayout(Layout):
             table = self.node  # or event.target
             #print('heigh changed', event.heightChanged, event.owner.__id)
             
-            if not self.real_size.last_value or (self.real_size.value[1] !=
-                                                 self.real_size.last_value[1]):
+            if events[-1].new_value[1] != events[0].old_value[1]:
                 
                 # Set one flex row to max, so that non-flex rows have their
                 # minimum size. The table can already have been stretched
@@ -175,8 +174,8 @@ class FormLayout(BaseTableLayout):
     
     class JS:
         
-        def _create_node(self):
-            self.p = window.phosphor.createWidget('table')
+        def init(self):
+            self.phosphor = window.phosphor.createWidget('table')
         
         def _apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):
             AUTOFLEX = 729
@@ -205,14 +204,14 @@ class FormLayout(BaseTableLayout):
             td.classList.add('title')
             row.appendChild(td)
             widget._title_elem = td
-            td.innerHTML = widget.title()
+            td.innerHTML = widget.title
             # Create element for widget
             td = window.document.createElement("td")
             row.appendChild(td)
             td.appendChild(widget.node)
             #
             widget.node.hflex = 1
-            widget.node.vflex = widget.flex()[1]
+            widget.node.vflex = widget.flex[1]
             self._apply_table_layout()
         
         def _remove_child(self, widget):
@@ -221,14 +220,14 @@ class FormLayout(BaseTableLayout):
             if widget._title_elem:
                 del widget._title_elem
         
-        @react.connect('children.*.flex')
-        def __update_flexes(self, *flexes):
-            for widget in self.children():
-                widget.node.vflex = widget.flex()[1]
+        @event.connect('children.*.flex')
+        def __update_flexes(self, *events):
+            for widget in self.children:
+                widget.node.vflex = widget.flex[1]
             self._apply_table_layout()
         
-        @react.connect('children.*.title')
-        def __update_titles(self, *titles):
-            for widget in self.children():
+        @event.connect('children.*.title')
+        def __update_titles(self, *events):
+            for widget in self.children:
                 if hasattr(widget, '_title_elem'):
-                    widget._title_elem.innerHTML = widget.title()
+                    widget._title_elem.innerHTML = widget.title

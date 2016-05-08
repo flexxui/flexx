@@ -21,6 +21,9 @@ from .assetstore import assets
 # todo: threading, or even multi-process
 #executor = ThreadPoolExecutor(4)
 
+# Use a binary websocket or not?
+BINARY = False
+
 
 class AbstractServer:
     """ This is an attempt to generalize the server, so that in the
@@ -345,6 +348,8 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         """ Called when a new message is received from JS.
         
+        This handles one message per event loop iteration.
+        
         We now have a very basic protocol for receiving messages,
         we should at some point define a real formalized protocol.
         """
@@ -360,7 +365,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
                 except Exception as err:
                     self.close(1003, "Could not launch app: %r" % err)
                     raise
-                self.write_message("PRINT Flexx server says hi", binary=True)
+                self.write_message("PRINT Flexx server says hi", binary=BINARY)
         else:
             self._session._receive_command(message)
     
@@ -396,7 +401,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     # --- methods
     
     def command(self, cmd):
-        self.write_message(cmd, binary=True)
+        self.write_message(cmd, binary=BINARY)
     
     def close(self, *args):
         try:

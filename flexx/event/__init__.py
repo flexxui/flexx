@@ -145,7 +145,7 @@ Settable properties can be created easiliy using the
             return float(v)
 
 The function that is decorated should have one argument (the new value
-for the property), and it should have a default value (representing the
+for the property), which can have a default value (representing the
 initial value). The function body is used to validate
 and normalize the provided input. In this case the input is simply cast
 to a float. The docstring of the function will be the docstring of the

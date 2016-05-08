@@ -83,7 +83,21 @@ def get_full_std_lib(indent=0):
 
 ## Hardcore functions
 
-FUNCTIONS['this_is_js'] = """function () {return true;} // nargs: 0"""
+FUNCTIONS['instantiate'] = """function (ob, args) { // nargs: 2
+    if ((typeof ob === "undefined") ||
+            (typeof window !== "undefined" && window === ob) ||
+            (typeof global !== "undefined" && global === ob))
+            {throw "Class constructor is called as a function.";}
+    for (var name in ob) {
+        if (Object[name] === undefined &&
+            typeof ob[name] === 'function' && !ob[name].nobind) {
+            ob[name] = ob[name].bind(ob);
+        }
+    }
+    if (ob.__init__) {
+        ob.__init__.apply(ob, args);
+    }
+}"""
 
 FUNCTIONS['hasattr'] = """function (ob, name) { // nargs: 2
     return (ob !== undefined) && (ob !== null) && (ob[name] !== undefined);
@@ -237,7 +251,8 @@ FUNCTIONS['map'] = """function (func, iter) { // nargs: 2
 FUNCTIONS['truthy'] = """function (v) {
     if (v === null || typeof v !== "object") {return v;}
     else if (v.length !== undefined) {return v.length ? v : false;}
-    else if (v.byteLength !== undefined) {return v.byteLength ? v : false;} 
+    else if (v.byteLength !== undefined) {return v.byteLength ? v : false;}
+    else if (v.constructor !== Object) {return true;}
     else {return Object.getOwnPropertyNames(v).length ? v : false;}
 }"""
 

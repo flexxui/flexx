@@ -3,7 +3,7 @@ Example:
 
 .. UIExample:: 200
     
-    from flexx import ui, react
+    from flexx import ui, event
 
     class Example(ui.Widget):
         def init(self):
@@ -14,20 +14,19 @@ Example:
                     self.butc = ui.Button(text='blue')
                     ui.Widget(flex=1)  # space filler
                 with ui.StackedPanel(flex=1) as self.stack:
-                    self.a = ui.Widget(style='background:#a00;')
-                    self.b = ui.Widget(style='background:#0a0;')
-                    self.c = ui.Widget(style='background:#00a;')
+                    self.buta.w = ui.Widget(style='background:#a00;')
+                    self.butb.w = ui.Widget(style='background:#0a0;')
+                    self.butc.w = ui.Widget(style='background:#00a;')
         
         class JS:
             
-            @react.connect('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')
-            def _stacked_current(a, b, c):
-                if a: self.stack.current(self.a)
-                if b: self.stack.current(self.b)
-                if c: self.stack.current(self.c)
+            @event.connect('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')
+            def _stacked_current(self, *events):
+                button = events[-1].source
+                self.stack.current = button.w
 """
 
-from ... import react
+from ... import event
 from ...pyscript import window
 from . import Widget, Layout
 
@@ -36,22 +35,23 @@ class StackedPanel(Layout):
     """ A panel which shows only one of its children at a time.
     """
     
-    @react.input
-    def current(v=None):
+    @event.prop(both=True)
+    def current(self, v=None):
         """ The currently shown widget.
         """
-        if not isinstance(v, Widget):
+        if not (v is None or isinstance(v, Widget)):
             raise ValueError('The StackedPanel\'s current widget should be a Widget.')
         return v
     
-    
     class JS:
         
-        def _create_node(self):
-            self.p = window.phosphor.stackedpanel.StackedPanel()
+        def init(self):
+            self.phosphor = window.phosphor.stackedpanel.StackedPanel()
         
-        @react.connect('current')
-        def __set_current_widget(self, widget):
-            for i in range(self.p.childCount()):
-                self.p.childAt(i).hide()
-            widget.p.show()
+        @event.connect('current')
+        def __set_current_widget(self, *events):
+            widget = events[-1].new_value
+            for i in range(self.phosphor.childCount()):
+                self.phosphor.childAt(i).hide()
+            if widget is not None:
+                widget.phosphor.show()

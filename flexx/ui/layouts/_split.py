@@ -19,7 +19,7 @@ Example:
                     ui.Label(text='purple', style='background:#f7f;')
 """
 
-from ... import react
+from ... import event
 from ...pyscript import window
 from . import Layout
 
@@ -35,7 +35,7 @@ class SplitPanel(Layout):
     
     _DEFAULT_ORIENTATION = 'h'
     
-    @react.input
+    @event.prop(both=True)
     def orientation(self, v=None):
         """ The orientation of the child widgets. 'h' or 'v'. Default
         horizontal.
@@ -51,14 +51,18 @@ class SplitPanel(Layout):
     
     class JS:
         
-        def _create_node(self):
-            self.p = window.phosphor.splitpanel.SplitPanel()
+        _DEFAULT_ORIENTATION = 'h'
         
-        @react.connect('orientation')
-        def __orientation_changed(self, orientation):
-            if orientation == 0 or orientation == 'h':
-                self.p.orientation = window.phosphor.splitpanel.SplitPanel.Horizontal
-            elif orientation == 1 or orientation == 'v':
-                self.p.orientation = window.phosphor.splitpanel.SplitPanel.Vertical
+        def init(self):
+            self.phosphor = window.phosphor.splitpanel.SplitPanel()
+        
+        @event.connect('orientation')
+        def __orientation_changed(self, *events):
+            ori = self.orientation
+            NS = window.phosphor.splitpanel.SplitPanel
+            if ori == 0 or ori == 'h':
+                self.phosphor.orientation = NS.Horizontal
+            elif ori == 1 or ori == 'v':
+                self.phosphor.orientation = NS.Vertical
             else:
-                raise ValueError('Invalid splitter orientation: ' + orientation)
+                raise ValueError('Invalid splitter orientation: ' + ori)

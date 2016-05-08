@@ -10,7 +10,7 @@ from flexx import app, ui
 class DatePicker(ui.Widget):
     
     class JS:
-        def _create_node(self):
+        def init(self):
             self.p = phosphor.createWidget('input')  # noqa
             self._make_picker(self.p.node)
         

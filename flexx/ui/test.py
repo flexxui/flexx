@@ -2,12 +2,15 @@ import time
 import logging
 
 import flexx
-from flexx import app, ui, react
+from flexx import app, ui, event
 
 import faulthandler
 faulthandler.enable()
 #logging.log
 
+
+
+TEST = 1
 
 class MyApp(ui.Widget):
     
@@ -15,25 +18,19 @@ class MyApp(ui.Widget):
     #                        )#icon='https://assets-cdn.github.com/favicon.ico')
                
     def init(self):
-        
         #self.b0 = ui.Button(self, 'This is behind the box layout')
         
-        TEST = 6
         
         if TEST == 0:
-            ui.Button(text='Hola', flex=1)
+            self.b = ui.Button(text='Hola', flex=1)
             
         if TEST == 1:
             with ui.BoxPanel(flex=1) as self.hbox1:
-                # self.b1 = ui.Widget(flex=1, style='background: #a22;', min_size=(100, 100), max_size=(500,0))
-                # self.b2 = ui.Widget(flex=0, style='background: #2a2;', min_size=(100, 0), max_size=(500,0))
-                # self.b3 = ui.Widget(flex=0, style='background: #22a;', min_size=(100, 0), max_size=(500,0))
-                # self.b4 = ui.Widget(flex=1, style='background: #aaa;', min_size=(100, 0), max_size=(500,0))
                 self.b1 = ui.Widget(flex=1, style='background: #a22; min-width:100px; max-width:500px')
-                self.b2 = ui.Widget(flex=0, style='background: #2a2; min-width:100px; max-width:500px')
+                self.b2 = ui.Button(flex=0, style='background: #2a2; min-width:100px; max-width:500px')
                 self.b3 = ui.Widget(flex=0, style='background: #22a; min-width:100px; max-width:500px')
                 self.b4 = ui.Widget(flex=1, style='background: #aaa; min-width:100px; max-width:500px')
-        
+             
         if TEST == 2:
             with self:
                 with ui.HBox():
@@ -41,7 +38,7 @@ class MyApp(ui.Widget):
                     
                     with ui.VBox(flex=1) as self.vbox:
                         
-                        ui.Label(text='Flex 0 0 0', flex=0)
+                        ui.Label(text='Flex 0 0 0 kjasn kdjnas kdjna skdjn askdn aksdn aksdn kasjnd aksnd kasdn aksdjn kasjnd aksjnd aksdnj aksj n', flex=0)
                         with ui.HBox(flex=0) as self.hbox1:
                             self.b1 = ui.Button(text='Hola', flex=0)
                             self.b2 = ui.Button(text='Hello world', flex=0)
@@ -163,28 +160,31 @@ class MyApp(ui.Widget):
         
         if TEST == 12:
             with ui.HBox():
-                with ui.VBox():
+                with ui.VBox() as self.vbox:
                     self.buta = ui.Button(text='red')
                     self.butb = ui.Button(text='green')
                     self.butc = ui.Button(text='blue')
                 with ui.StackedPanel(flex=1) as self.stack:
-                        self.a = ui.Widget(style='background:#a00;')
-                        self.b = ui.Widget(style='background:#0a0;')
-                        self.c = ui.Widget(style='background:#00a;')
+                        self.buta.w = ui.Widget(style='background:#a00;')
+                        self.butb.w = ui.Widget(style='background:#0a0;')
+                        self.butc.w = ui.Widget(style='background:#00a;')
         #self.win = ui.Window(self, 'A new window!')
 
-    
+  
     class JS:
+        if TEST== 12:
+            @event.connect('buta.mouse_click', 'butb.mouse_down', 'butc.mouse_up')
+            def _stacked_current(self, *events):
+                ob = events[-1].source.w
+                self.stack.current = ob
         
-        @react.connect('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')
-        def _stacked_current(a, b, c):
-            if a:
-                self.stack.current(self.a)
-            if b:
-                self.stack.current(self.b)
-            if c:
-                self.stack.current(self.c)
-                
+        if TEST== 1:
+            @event.connect('b1.key_down', 'b2.key_up', 'b3.key_press')
+            def _listen_keys(self, *events):
+                ob = events[-1].source
+                ev = events[-1]
+                print('Key pressed on ' + ob.id + '. key: ' + ev.button + ev.modifiers)
+
 
 # app.serve(MyApp)
 a = app.launch(MyApp, 'firefox')

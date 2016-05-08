@@ -11,7 +11,7 @@ Example with interaction:
 
 .. UIExample:: 50
     
-    from flexx import app, ui, react
+    from flexx import app, ui, event
     
     class Example(ui.Widget):
     
@@ -20,16 +20,15 @@ Example with interaction:
         
         class JS:
         
-            @react.connect('b1.mouse_down')
-            def _on_mouse_down(down):
+            @event.connect('b1.mouse_click')
+            def _on_mouse_click(self, *events):
                 self._click_count = self._click_count or 0
-                if down:
-                    self._click_count += 1
-                    self.b1.text("I've been clicked %i times" % self._click_count)
+                self._click_count += len(events)
+                self.b1.text = "I've been clicked %i times" % self._click_count
 
 """
 
-from ... import react
+from ... import event
 from ...pyscript import window
 from . import Widget
 
@@ -43,29 +42,26 @@ class Button(Widget):
     
     """
     
-    @react.input
-    def text(v=''):
+    @event.prop(both=True)
+    def text(self, v=''):
         """ The text on the button.
         """
-        # todo: use react.check_str() or something?
-        if not isinstance(v, str):
-            raise ValueError('Text input must be a string.')
-        return v
+        return str(v)
     
     class JS:
         
-        def _create_node(self):
-            self.p = window.phosphor.createWidget('button')
-            node = self.p.node
-            node.addEventListener('mousedown', lambda ev: self.mouse_down._set(1), 0)
-            node.addEventListener('mouseup', lambda ev: self.mouse_down._set(0), 0)
+        def init(self):
+            self.phosphor = window.phosphor.createWidget('button')
+            self.phosphor.node.addEventListener('click', self.mouse_click, 0)
         
-        @react.connect('text')
-        def _text_changed(self, text):
-            self.node.innerHTML = text
-    
-        @react.source
-        def mouse_down(v=False):
-            """ True when the mouse is currently pressed down.
+        @event.emitter
+        def mouse_click(self, e):
+            """ Event emitted when the mouse is clicked.
+            
+            See mouse_down() for a description of the event object.
             """
-            return bool(v)
+            return self._create_mouse_event(e)
+        
+        @event.connect('text')
+        def __text_changed(self, *events):
+            self.node.innerHTML = events[-1].new_value

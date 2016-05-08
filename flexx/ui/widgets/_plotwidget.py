@@ -20,7 +20,7 @@ Interactive example:
 
 .. UIExample:: 300
     
-    from flexx import app, ui, react
+    from flexx import app, ui, event
     from flexx.pyscript import window
     
     class Example(ui.Widget):
@@ -33,20 +33,21 @@ Interactive example:
                     ui.Label(text='Phase:')
                     self.slider2 = ui.Slider(min=0, max=6, value=0, flex=1)
                 self.plot = ui.PlotWidget(flex=1, xdata=time, xlabel='time',
-                                            ylabel='amplitude', title='a sinusoid')
+                                          ylabel='amplitude', title='a sinusoid')
         
         class JS:
             
-            @react.connect('slider1.value', 'slider2.value')
-            def __update_amplitude(self, freq, phase):
+            @event.connect('slider1.value', 'slider2.value')
+            def __update_amplitude(self, *events):
+                freq, phase = self.slider1.value, self.slider2.value
                 ydata = []
-                for x in self.plot.xdata():
+                for x in self.plot.xdata:
                     ydata.append(window.Math.sin(freq*x*2*window.Math.PI+phase))
-                self.plot.ydata(ydata)
+                self.plot.ydata = ydata
 """
 
 from ...pyscript import window
-from ... import react
+from ... import event
 from ._canvas import CanvasWidget
 
 
@@ -57,17 +58,17 @@ class PlotWidget(CanvasWidget):
     
     CSS = ".flx-PlotWidget {min-width: 300px; min-height: 200px;}"
     
-    @react.input
+    @event.prop(both=True)
     def xdata(self, v=()):
         """ A list of values for the x-axis. """
         return [float(f) for f in v]
     
-    @react.input
+    @event.prop(both=True)
     def ydata(self, v=()):
         """ A list of values for the y-axis. """
         return [float(f) for f in v]
     
-    @react.input
+    @event.prop(both=True)
     def yrange(self, v=None):
         """ The range for the y-axis. If None (default) it is determined
         from the data. """
@@ -76,49 +77,43 @@ class PlotWidget(CanvasWidget):
             assert len(v) == 2
         return v
     
-    @react.input
+    @event.prop(both=True)
     def line_color(self, v='blue'):
         """ The color of the line. If this is the empty string, the
         line is not shown. """
         return str(v)
     
     # todo: allow setting alpha as #rrggbbaa and #rgba
-    @react.input
+    @event.prop(both=True)
     def marker_color(self, v='blue'):
         """ The color of the marker. If this is the empty string, the
         line is not shown. """
         return str(v)
     
-    @react.input
+    @event.prop(both=True)
     def line_width(self, v=2):
         """ The width of the line, in pixels. """
         return float(v)
     
-    @react.input
+    @event.prop(both=True)
     def marker_size(self, v=6):
         """ The size of the marker, in pixels. """
         return float(v)
     
-    #todo: label should perhaps be on Widhet
-    @react.input
-    def title(self, v=''):
-        """ The label to show above the plot. """
-        return str(v)
-    
-    @react.input
+    @event.prop(both=True)
     def xlabel(self, v=''):
         """ The label to show on the x-axis. """
         return str(v)
     
-    @react.input
+    @event.prop(both=True)
     def ylabel(self, v=''):
         """ The label to show on the y-axis. """
         return str(v)
     
     class JS:
         
-        def _create_node(self):
-            super()._create_node()
+        def init(self):
+            super().init()
             self._context = self.canvas.getContext('2d')
             
             # create tick units
@@ -127,13 +122,17 @@ class PlotWidget(CanvasWidget):
                 for i in [10, 20, 25, 50]:
                     self._tick_units.append(i*10**e)
         
-        @react.connect('xdata', 'ydata', 'yrange',
-                       'line_color', 'line_width',
-                       'marker_color', 'marker_size',
-                       'title', 'xlabel', 'ylabel',
-                       'real_size')
-        def _update_plot(self, xx, yy, yrange, lc, lw, mc, ms, title, xlabel, ylabel):
+        @event.connect('xdata', 'ydata', 'yrange', 'line_color', 'line_width',
+                       'marker_color', 'marker_size', 'xlabel', 'ylabel',
+                       'title', 'size')
+        def _update_plot(self, *events):
             
+            xx, yy = self.xdata, self.ydata
+            yrange = self.yrange
+            lc, lw = self.line_color, self.line_width
+            mc, ms = self.marker_color, self.marker_size
+            title, xlabel, ylabel = self.title, self.xlabel, self.ylabel
+             
             # Prepare
             ctx = self._context
             w, h = self.node.clientWidth, self.node.clientHeight

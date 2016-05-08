@@ -76,8 +76,10 @@ def test_property():
         def foo(self, v):
             return float(v)
     
-    with raises(RuntimeError):
-        MyObject2()  # no default value for foo
+    #with raises(RuntimeError):
+    #    MyObject2()  # no default value for foo
+    ob = MyObject2()
+    assert ob.foo is None
 
 
 def test_prop_recursion():
@@ -195,8 +197,10 @@ def test_readonly():
         def foo(self, v):
             return float(v)
     
-    with raises(RuntimeError):
-        MyObject2()  # no default value for foo
+    #with raises(RuntimeError):
+    #    MyObject2()  # no default value for foo
+    ob = MyObject2()
+    assert ob.foo is None
 
 
 def test_emitter():

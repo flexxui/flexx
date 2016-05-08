@@ -11,7 +11,7 @@ Interactive example:
 
 .. UIExample:: 100
 
-    from flexx import app, ui, react
+    from flexx import app, ui, event
     
     class Example(ui.Widget):
     
@@ -21,13 +21,13 @@ Interactive example:
                 self.label = ui.Label(flex=1)
         
         class JS:
-            @react.connect('slider.value')
-            def _change_label(self, value):
-                self.label.text('x'.repeat(value))
+            @event.connect('slider.value')
+            def _change_label(self, *events):
+                self.label.text = 'x' * events[-1].new_value
 """
 
-from ...pyscript import undefined, window
-from ... import react
+from ...pyscript import window
+from ... import event
 from . import Widget
 
 
@@ -40,56 +40,56 @@ class Slider(Widget):
     
     CSS = ".flx-Slider {min-height: 30px;}"
     
-    @react.input
-    def value(v=0):
-        """ The current slider value (settable)."""
-        return float(v)
-    
-    @react.input
-    def step(v=0.01):
+    @event.prop(both=True)
+    def step(self, v=0.01):
         """ The step size for the slider."""
         return float(v)
     
-    @react.input
-    def min(v=0):
+    @event.prop(both=True)
+    def min(self, v=0):
         """ The minimal slider value."""
         return float(v)
     
-    @react.input
-    def max(v=1):
+    @event.prop(both=True)
+    def max(self, v=1):
         """ The maximum slider value."""
+        return float(v)
+    
+    @event.prop(both=True)
+    def value(self, v=0):
+        """ The current slider value (settable)."""
         return float(v)
     
     class JS:
     
-        def _create_node(self):
-            self.p = window.phosphor.createWidget('input')
-            self.p.node.type = 'range'
-            f = lambda ev: self.user_value._set(self.node.value)
-            self.p.node.addEventListener('input', f, False)
+        def init(self):
+            self.phosphor = window.phosphor.createWidget('input')
+            self.phosphor.node.type = 'range'
+            f = lambda ev: self._set_prop('user_value', self.node.value)
+            self.phosphor.node.addEventListener('input', f, False)
             #if IE10:
             #   this.node.addEventListener('change', f, False)
-            
-        @react.source
-        def user_value(self, v):
+        
+        @event.readonly
+        def user_value(self, v=None):
             """ The slider value set by the user (updates on user interaction). """
-            if v is not undefined:
+            if v is not None:
                 v = float(v)
-                self.value(v)
+                self.value = v
             return v
         
-        @react.connect('value')
-        def _value_changed(self, value):
-            self.node.value = value
+        @event.connect('value')
+        def __value_changed(self, *events):
+            self.node.value = events[-1].new_value
         
-        @react.connect('step')
-        def _step_changed(self, step):
-            self.node.step= step
+        @event.connect('step')
+        def __step_changed(self, *events):
+            self.node.step= events[-1].new_value
         
-        @react.connect('min')
-        def _min_changed(self, min_value):
-            self.node.min = min_value
+        @event.connect('min')
+        def __min_changed(self, *events):
+            self.node.min = events[-1].new_value
         
-        @react.connect('max')
-        def _max_changed(self, max_value):
-            self.node.max = max_value
+        @event.connect('max')
+        def __max_changed(self, *events):
+            self.node.max = events[-1].new_value

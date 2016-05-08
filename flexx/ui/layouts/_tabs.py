@@ -21,8 +21,8 @@ from . import Layout
 #     """ A widget containing tabs.
 #     """
 #     
-#     def _create_node(self):
-#         self.p = window.phosphor.tabs.TabBar()
+#     def init(self):
+#         self.phosphor = window.phosphor.tabs.TabBar()
 # 
 #     def _add_child(self, widget):
 #         raise ValueError('A TabBar cannot have children.')
@@ -106,9 +106,5 @@ class TabPanel(Layout):
     
     class JS:
         
-        def _create_node(self):
-            self.p = window.phosphor.tabs.TabPanel()
-        
-        # def _add_child(self, widget):
-        #     widget.p.title.text = widget.title()
-        #     self.p.stack.addChild(widget.p)
+        def init(self):
+            self.phosphor = window.phosphor.tabs.TabPanel()

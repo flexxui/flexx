@@ -141,6 +141,21 @@ class Person(event.HasEvents):
         self._set_prop('full_name', self.first_name + ' ' + self.last_name)
 
 
+class PersonNoDefault(event.HasEvents):
+    def __init__(self):
+        self.r1 = []
+        super().__init__()
+    
+    @event.prop
+    def first_name(self, v):
+        return str(v)
+    
+    @event.connect('first_name')
+    def _first_name_logger(self, *events):
+        for ev in events:
+            self.r1.append(ev.old_value + '-' + ev.new_value)
+
+
 @run_in_both(Person, "['', 'john doe', '', 'almar klein', '', 'jorik klein']")
 def test_name(Person):
     name = Person()
@@ -160,6 +175,39 @@ def test_class_attributes(Person):
     name = Person()
     return name._foo, name._bar, name.spam
 
+@run_in_both(Person, "['john-john', 'x', 'john-john', 'john-jane', 'jane-john']")
+def test_name_ev(Person):
+    res = []
+    name = Person()
+    name._first_name_logger.handle_now()
+    res.extend(name.r1)
+    res.append('x')
+    assert name.first_name == 'john'
+    
+    name = Person()
+    name.first_name = 'jane'
+    name.first_name = 'john'
+    name._first_name_logger.handle_now()
+    res.extend(name.r1)
+    
+    return res
+
+@run_in_both(PersonNoDefault, "['x', 'jane-jane', 'jane-john']")
+def test_name_ev_nodefault(PersonNoDefault):
+    res = []
+    name = PersonNoDefault()
+    name._first_name_logger.handle_now()
+    res.extend(name.r1)
+    res.append('x')
+    assert name.first_name is None
+    
+    name = PersonNoDefault()
+    name.first_name = 'jane'
+    name.first_name = 'john'
+    name._first_name_logger.handle_now()
+    res.extend(name.r1)
+    
+    return res
 
 ## Test prop
 

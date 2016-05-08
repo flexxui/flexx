@@ -5,10 +5,8 @@ Definition of App class and the app manager.
 import time
 import logging
 
-from .. import react
-from ..react.hassignals import new_type
-
-from .model import Model
+from .. import event
+from .model import Model, new_type
 from .assetstore import SessionAssets
 
 
@@ -19,7 +17,7 @@ def valid_app_name(name):
     return name and name[0] in T[:-10] and all([c in T for c in name])
 
 
-class AppManager:
+class AppManager(event.HasEvents):
     """ Manage apps, or more specifically, the session objects.
     
     There is one AppManager class (in ``flexx.model.manager``). It's
@@ -30,6 +28,7 @@ class AppManager:
     total_sessions = 0  # Keep track how many sessesions we've served in total
     
     def __init__(self):
+        super().__init__()
         # name -> (ModelClass, pending, connected) - lists contain proxies
         self._proxies = {'__default__': (None, [], [])}
         self._last_check_time = time.time()
@@ -142,7 +141,7 @@ class AppManager:
         session._set_ws(ws)
         connected.append(session)
         AppManager.total_sessions += 1
-        self.connections_changed._set(session.app_name)
+        self.connections_changed(session.app_name)
         return session  # For the ws
     
     def disconnect_client(self, session):
@@ -158,7 +157,7 @@ class AppManager:
         except ValueError:
             pass
         session.close()
-        self.connections_changed._set(session.app_name)
+        self.connections_changed(session.app_name)
     
     def has_app_name(self, name):
         """ Returns True if name is a registered appliciation name
@@ -188,12 +187,12 @@ class AppManager:
         cls, pending, connected = self._proxies[name]
         return list(connected)
     
-    @react.source
+    @event.emitter
     def connections_changed(self, name):
-        """ Emits the name of the app for which a connection is added
-        or removed.
+        """ Emits an event with the name of the app for which a
+        connection is added or removed.
         """
-        return str(name)
+        return {name: str(name)}
 
 
 # Create global app manager object
@@ -229,8 +228,8 @@ class Session(SessionAssets):
         self._creation_time = time.time()
     
     def __repr__(self):
-        s = self.status.lower()
-        return '<Session for %r (%s) at 0x%x>' % (self.app_name, s, id(self))
+        s = self.status
+        return '<Session for %r (%i) at 0x%x>' % (self.app_name, s, id(self))
     
     @property
     def app_name(self):
@@ -288,7 +287,7 @@ class Session(SessionAssets):
         if self._runtime:
             self._runtime.close()
         if self._model:
-            self._model.disconnect_signals()
+            self._model.dispose()
             self._model = None  # break circular reference
     
     @property
@@ -330,12 +329,23 @@ class Session(SessionAssets):
             print(command[5:].strip())
         elif command.startswith('INFO '):
             logging.info('JS - ' + command[5:].strip())
-        elif command.startswith('SIGNAL '):
+        elif command.startswith('SET_PROP '):
             # todo: seems weird to deal with here. implement by registring some handler?
-            _, id, esid, signal_name, txt = command.split(' ', 4)
+            # Should be better when we implement a more formal protocol
+            _, id, name, txt = command.split(' ', 3)
             ob = Model._instances.get(id, None)
             if ob is not None:
-                ob._set_signal_from_js(signal_name, txt, esid)
+                ob._set_prop_from_js(name, txt)
+        elif command.startswith('SET_EVENT_TYPES '):
+            _, id, txt = command.split(' ', 3)
+            ob = Model._instances.get(id, None)
+            if ob is not None:
+                ob._set_event_types_js(txt)
+        elif command.startswith('EVENT '):
+            _, id, name, txt = command.split(' ', 3)
+            ob = Model._instances.get(id, None)
+            if ob is not None:
+                ob._emit_from_js(name, txt)
         else:
             logging.warn('Unknown command received from JS:\n%s' % command)
     
