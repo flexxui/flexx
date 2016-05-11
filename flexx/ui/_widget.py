@@ -295,12 +295,7 @@ class Widget(Model):
                 self.phosphor = window.phosphor.panel.Panel()
             self.node = self.phosphor.node
             
-            # Connect same standard events
-            self.node.addEventListener('mousedown', self.mouse_down, 0)
-            self.node.addEventListener('mouseup', self.mouse_up, 0)
-            self.node.addEventListener('keydown', self.key_down, 0)
-            self.node.addEventListener('keyup', self.key_up, 0)
-            self.node.addEventListener('keypress', self.key_press, 0)
+            self._init_events()
             
             # Keep track of size
             that = self
@@ -442,8 +437,6 @@ class Widget(Model):
                     break
                 i_ok = i
             
-            if new_children:
-                print('adding children on ', self.id, [c.id for c in new_children])
             for child in old_children[i_ok:]:
                 self._remove_child(child)
             for child in new_children[i_ok:]:
@@ -463,19 +456,74 @@ class Widget(Model):
         
         ## Events
         
-        # todo: events: mouse_move?,focus, enter, leave ...
+        # todo: events: focus, enter, leave ... ?
+        
+        def _init_events(self):
+            # Connect some standard events
+            self.node.addEventListener('mousedown', self.mouse_down, 0)
+            self.node.addEventListener('wheel', self.mouse_wheel, 0)
+            self.node.addEventListener('keydown', self.key_down, 0)
+            self.node.addEventListener('keyup', self.key_up, 0)
+            self.node.addEventListener('keypress', self.key_press, 0)
+            
+            # Disable context menu so we can handle RMB clicks
+            _context_menu = lambda ev: ev.preventDefault() and False
+            self.node.addEventListener('contextmenu', _context_menu, 0)
+            
+            # Implement mouse capturing. When a mouse is pressed down on
+            # a widget, it "captures" the mouse, and will continue to receive 
+            # move and up events, even if the mouse is not over the widget.
+            
+            self._capture_flag = None
+            
+            def capture(e):
+                # On FF, capture so we get events when outside browser viewport
+                if self.node.setCapture:  
+                    self.node.setCapture()
+                self._capture_flag = 2
+                window.document.addEventListener("mousemove", mouse_event_outside, True)
+                window.document.addEventListener("mouseup", mouse_event_outside, True)
+            
+            def release():
+                self._capture_flag = 1
+                window.document.removeEventListener("mousemove", mouse_event_outside, True)
+                window.document.removeEventListener("mouseup", mouse_event_outside, True)
+            
+            def mouse_event_inside(e):
+                if self._capture_flag == 1:
+                    self._capture_flag = 0
+                elif not self._capture_flag:
+                    if e.type == 'mousemove':
+                        self.mouse_move(e)
+                    elif e.type == 'mouseup':
+                        self.mouse_up(e)
+            
+            def mouse_event_outside(e):
+                if self._capture_flag:  # Should actually always be 0
+                    e = window.event if window.event else e
+                    if e.type == 'mousemove':
+                        self.mouse_move(e)
+                    elif e.type == 'mouseup':
+                        release()
+                        self.mouse_up(e)
+            
+            # Setup capturing and releasing
+            self.node.addEventListener('mousedown', capture, True)
+            self.node.addEventListener("losecapture", release)
+            # Subscribe to normal mouse events
+            self.node.addEventListener("mousemove", mouse_event_inside, False)
+            self.node.addEventListener("mouseup", mouse_event_inside, False)
         
         @event.emitter
         def mouse_down(self, e):
             """ Event emitted when the mouse is pressed down.
             
             A mouse event has the following attributes:
-            * x: the x location, in pixels, relative to this widget
-            * y: the y location, in pixels, relative to this widget
-            * pageX: the x location relative to the page
-            * pageY: the y location relative to the page
-            * button: what button the event is about, 1, 2, 3 are left, middle,
-              right, respectively.
+            
+            * pos: the mouse position, in pixels, relative to this widget
+            * page_pos: the mouse position relative to the page
+            * button: what button the event is about, 1, 2, 3 are left, right,
+              middle, respectively. 0 indicates no button.
             * buttons: what buttons where pressed at the time of the event.
             * modifiers: list of strings "Alt", "Shift", "Ctrl", "Meta" for
               modifier keys pressed down at the time of the event.
@@ -488,27 +536,62 @@ class Widget(Model):
             
             See mouse_down() for a description of the event object.
             """
-            return self._create_mouse_event(e)
+            ev = self._create_mouse_event(e)
+            return ev
+        
+        @event.emitter
+        def mouse_move(self, e):
+            """ Event fired when the mouse is moved inside the canvas.
+            See mouse_down for details.
+            """
+            
+            ev = self._create_mouse_event(e)
+            ev.button = 0
+            return ev
+        
+        @event.emitter
+        def mouse_wheel(self, e):
+            """ Event emitted when the mouse wheel is used.
+            
+            See mouse_down() for a description of the event object.
+            Additional event attributes:
+            
+            * hscroll: amount of scrolling in horizontal direction
+            * vscroll: amount of scrolling in vertical direction
+            """
+            # Note: wheel event gets generated also for parent widgets
+            # I think this makes sense, but there might be cases
+            # where we want to prevent propagation.
+            ev = self._create_mouse_event(e)
+            ev.button = 0
+            ev.hscroll = e.deltaX * [1, 16, 600][e.deltaMode]
+            ev.vscroll = e.deltaY * [1, 16, 600][e.deltaMode]
+            return ev
         
         def _create_mouse_event(self, e):
             # note: our button has a value as in JS "which"
             modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
                          if e[n.lower()+'Key']]
+            # Fix position
             pos = e.clientX, e.clientY
             rect = self.node.getBoundingClientRect()
             offset = rect.left, rect.top
-            x, y = float(pos[0] - offset[0]), float(pos[1] - offset[1])
-            return dict(x=x, y=y, pageX=e.pageX, pageY=e.pageY,
-                        button=e.button+1, buttons=[b+1 for b in e.buttons],
+            pos = float(pos[0] - offset[0]), float(pos[1] - offset[1])
+            # Fix buttons
+            buttons_mask = reversed([c for c in e.buttons.toString(2)]).join('')
+            buttons = [i+1 for i in range(5) if buttons_mask[i] == '1']
+            button = {0:1, 1:3, 2:2, 3:4, 4:5}[e.button]
+            # Create event dict
+            return dict(pos=pos, page_pos=(e.pageX, e.pageY),
+                        button=button, buttons=buttons,
                         modifiers=modifiers,
                         )
         
         @event.emitter
         def key_down(self, e):
-            """ Event emitted when a key is pressed down while
-            this widget has focus..
+            """ Event emitted when a key is pressed down while this
+            widget has focus. A key event has the following attributes:
             
-            A key event has the following attributes:
             * key: the character corresponding to the key being pressed, or
               a key name like "Escape", "Alt", "Enter".
             * modifiers: list of strings "Alt", "Shift", "Ctrl", "Meta" for
