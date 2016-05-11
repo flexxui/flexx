@@ -9,30 +9,9 @@
 
 """
 
-import threading
-
 from .. import event
-from ..app import Model, call_later
+from ..app import Model, call_later, get_active_model
 from ..pyscript import undefined, window
-
-
-# Keep track of stack of default parents when using widgets
-# as context managers. Have one list for each thread.
-
-_default_parents_per_thread = {}  # dict of threadid -> list
-
-def _get_default_parents():
-    """ Get list that represents the stack of default parents.
-    Each thread has its own stack.
-    """
-    # Get thread id
-    if hasattr(threading, 'current_thread'):
-        tid = id(threading.current_thread())
-    else:
-        tid = id(threading.currentThread())
-    # Get list of parents for this thread
-    return _default_parents_per_thread.setdefault(tid, [])
-
 
 
 class LiveKeeper:
@@ -91,12 +70,12 @@ class Widget(Model):
     
     def __init__(self, **kwargs):
         
-        # Apply default parent?
+        # Handle parent
         parent = kwargs.pop('parent', None)
         if parent is None:
-            default_parents = _get_default_parents()
-            if default_parents:
-                parent = default_parents[-1]
+            active_model = get_active_model()
+            if isinstance(active_model, Widget):
+                parent = active_model
         kwargs['parent'] = parent
         
         # Use parent session unless session was given
@@ -147,17 +126,6 @@ class Widget(Model):
         super().dispose()
         for child in children:
             child.dispose()
-    
-    def __enter__(self):
-        # Note that __exit__ is guaranteed to be called, so there is
-        # no need to use weak refs for items stored in default_parents
-        default_parents = _get_default_parents()
-        default_parents.append(self)
-        return self
-    
-    def __exit__(self, type, value, traceback):
-        default_parents = _get_default_parents()
-        assert self is default_parents.pop(-1)
     
     @event.prop(both=True)
     def title(self, v=''):

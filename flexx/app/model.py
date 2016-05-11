@@ -68,6 +68,7 @@ attributes and handlers can be created here.
 import json
 import weakref
 import logging
+import threading
 
 from .. import event
 from ..event._hasevents import (with_metaclass, new_type, HasEventsMeta,
@@ -98,6 +99,36 @@ def get_instance_by_id(id):
     except KeyError:
         logging.warn('Model instance %r does not exist in Python (anymore).' % id)
         return None  # Could we revive it? ... probably not a good idea
+
+
+# Keep track of a stack of "active" models for use within context
+# managers. We have one list for each thread. Note that we should limit
+# its use to context managers, and execution should never be handed back
+# to the Tornado event loop while inside a context.
+_active_models_per_thread = {}  # dict of threadid -> list
+
+def _get_active_models():
+    """ Get list that represents the stack of "active" models.
+    Each thread has its own stack. Should only be used inside a Model
+    context manager.
+    """
+    # Get thread id
+    if hasattr(threading, 'current_thread'):
+        tid = id(threading.current_thread())
+    else:
+        tid = id(threading.currentThread())
+    # Get list of parents for this thread
+    return _active_models_per_thread.setdefault(tid, [])
+
+
+def get_active_model():
+    """ If the execution is now in a Model context manager, return the
+    corresponding object, and None otherwise. Can be used by subclasses
+    to implement parenting-like behaviour using the with-statement.
+    """
+    models = _get_active_models()
+    if models:
+        return models[-1]
 
 
 def stub_prop_func(self, v):
@@ -243,6 +274,10 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     values, but handlers are not yet initialized and events are not yet
     emitted.
     
+    Models can be used as a context manager to make new Model objects
+    created inside such a context to share the same session. The ``init()``
+    method is invoked in the context of the object itself.
+    
     Parameters:
         session (Session, None): the session object that connects this
             instance to a JS client.
@@ -301,6 +336,10 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         # Init session
         if session is None:
+            active_model = get_active_model()
+            if active_model is not None:
+                session = active_model.session
+        if session is None:
             from .session import manager
             session = manager.get_default_session()
         self._session = session
@@ -343,13 +382,25 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         self._init_handlers()
         self._session._exec('flexx.instances.%s._init_handlers();' % self._id)
     
-    # Can be used as a context manager, but is a no-op for base Model class.
     def __enter__(self):
-        pass
+        # Note that __exit__ is guaranteed to be called, so there is
+        # no need to use weak refs for items stored in active_models
+        active_models = _get_active_models()
+        active_models.append(self)
+        call_later(0, self.__check_not_active)
+        return self
     
     def __exit__(self, type, value, traceback):
-        pass
-        
+        active_models = _get_active_models()
+        assert self is active_models.pop(-1)
+    
+    def __check_not_active(self):
+        active_models = _get_active_models()
+        if self in active_models:
+            raise RuntimeError('It seems that the event loop is processing '
+                               'events while a Model is active. This has a '
+                               'high risk on race conditions.')
+    
     def __repr__(self):
         clsname = self.__class__.__name__
         return "<%s object '%s' at 0x%x>" % (clsname, self._id, id(self))

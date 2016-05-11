@@ -3,7 +3,10 @@
 
 from flexx.util.testing import run_tests_if_main, raises
 
-from flexx.app.model import Model
+import sys
+import tornado
+
+from flexx.app.model import Model, _get_active_models
 from flexx import event
 
 
@@ -98,6 +101,30 @@ def test_no_duplicate_code():
     assert '_red_func' not in Foo1.JS.CODE
     assert '_red_func' in Foo2.JS.CODE
     assert '_red_func' in Foo4.JS.CODE
+
+
+def test_active_models():
+    
+    # Test that by default there are no active models
+    m = Model()
+    assert not _get_active_models()
+    
+    # Test that model is active in its context
+    with m:
+        assert _get_active_models() == [m]
+    
+    # Can do this
+    app = tornado.ioloop.IOLoop.instance()
+    app.run_sync(lambda x=None: None)
+    
+    # Test that we prevent going back to Tornado in context
+    sys.last_type = None
+    with m:
+        assert _get_active_models() == [m]
+        # This raises error, but gets caught by Tornado
+        app.run_sync(lambda x=None: None)
+    assert sys.last_type is RuntimeError
+    assert 'risk on race conditions' in str(sys.last_value)
 
 
 run_tests_if_main()
