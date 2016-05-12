@@ -541,9 +541,9 @@ class Widget(Model):
             modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
                          if e[n.lower()+'Key']]
             # Fix position
-            pos = e.clientX, e.clientY
-            rect = self.node.getBoundingClientRect()
-            offset = rect.left, rect.top
+            pos = e.offsetX, e.offsetY
+            # rect = self.node.getBoundingClientRect()
+            offset = 0, 0  # rect.left, rect.top
             pos = float(pos[0] - offset[0]), float(pos[1] - offset[1])
             # Fix buttons
             buttons_mask = reversed([c for c in e.buttons.toString(2)]).join('')
