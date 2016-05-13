@@ -50,7 +50,7 @@ class Main(ui.Widget):
     
     CSS = """
     .flx-Widget { background: #aaf;}
-    .flx-Drawing {background: #fff;}
+    .flx-Drawing {background: #fff; border: 5px solid #000;}
     """
     
     def init(self):
@@ -63,6 +63,6 @@ class Main(ui.Widget):
                 ui.Widget(flex=1)
             ui.Widget(flex=1)
 
-
-m = app.launch(Main, 'xul')
-app.run()
+if __name__ == '__main__':
+    m = app.launch(Main, 'xul')
+    app.start()

@@ -354,10 +354,10 @@ class Widget(Model):
             """
             return v[0], v[1]
         
-        @event.connect('container', 'parent', 'children')
+        @event.connect('container', 'parent.size', 'children')
         def __update_size(self, *events):
             # Check size in *next* event loop iter to give the DOM a
-            # chance to settle
+            # chance to settle.
             window.setTimeout(self._check_real_size, 0)
         
         def _check_real_size(self):
@@ -555,9 +555,9 @@ class Widget(Model):
             modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
                          if e[n.lower()+'Key']]
             # Fix position
-            pos = e.offsetX, e.offsetY
-            # rect = self.node.getBoundingClientRect()
-            offset = 0, 0  # rect.left, rect.top
+            pos = e.clientX, e.clientY
+            rect = self.node.getBoundingClientRect()
+            offset = rect.left, rect.top
             pos = float(pos[0] - offset[0]), float(pos[1] - offset[1])
             # Fix buttons
             buttons_mask = reversed([c for c in e.buttons.toString(2)]).join('')
