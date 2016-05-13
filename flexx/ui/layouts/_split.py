@@ -53,8 +53,9 @@ class SplitPanel(Layout):
         
         _DEFAULT_ORIENTATION = 'h'
         
-        def init(self):
+        def _init_phosphor_and_node(self):
             self.phosphor = window.phosphor.splitpanel.SplitPanel()
+            self.node = self.phosphor.node
         
         @event.connect('orientation')
         def __orientation_changed(self, *events):

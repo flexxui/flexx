@@ -11,22 +11,37 @@ class Drawing(ui.CanvasWidget):
         
         def init(self):
             super().init()
-            self.ctx = self.canvas.getContext('2d')
+            self.ctx = self.node.getContext('2d')
+            self._last_ev = None
         
         def on_mouse_move(self, *events):
             for ev in events:
-                self.ctx.fillStyle = '#ff0'
-                self.ctx.fillRect(ev.x-2, ev.y-2, 4, 4)
+                last_ev = self._last_ev
+                if 1 in ev.buttons and last_ev is not None:
+                    self.ctx.beginPath()
+                    self.ctx.strokeStyle = '#080'
+                    self.ctx.lineWidth = 3
+                    self.ctx.lineCap = 'round'
+                    self.ctx.moveTo(*last_ev.pos)
+                    self.ctx.lineTo(*ev.pos)
+                    self.ctx.stroke()
+                    self._last_ev = ev
         
         def on_mouse_down(self, *events):
             for ev in events:
+                self.ctx.beginPath()
                 self.ctx.fillStyle = '#f00'
-                self.ctx.fillRect(ev.x-10, ev.y-10, 20, 20)
+                self.ctx.arc(ev.pos[0], ev.pos[1], 3, 0, 6.2831)
+                self.ctx.fill()
+                self._last_ev = ev
         
         def on_mouse_up(self, *events):
             for ev in events:
+                self.ctx.beginPath()
                 self.ctx.fillStyle = '#00f'
-                self.ctx.fillRect(ev.x-10, ev.y-10, 20, 20)
+                self.ctx.arc(ev.pos[0], ev.pos[1], 3, 0, 6.2831)
+                self.ctx.fill()
+            self._last_ev = None
 
 
 class Main(ui.Widget):
@@ -35,7 +50,7 @@ class Main(ui.Widget):
     
     CSS = """
     .flx-Widget { background: #aaf;}
-    .flx-Drawing {background: #fff;}
+    .flx-Drawing {background: #fff; border: 5px solid #000;}
     """
     
     def init(self):
@@ -48,6 +63,6 @@ class Main(ui.Widget):
                 ui.Widget(flex=1)
             ui.Widget(flex=1)
 
-
-m = app.launch(Main, 'xul')
-app.run()
+if __name__ == '__main__':
+    m = app.launch(Main, 'xul')
+    app.start()

@@ -49,7 +49,8 @@ class ChatRoom(ui.Widget):
     
     def _push_info(self, *events):
         if self.session.status:
-            self.emit('new_message', events[-1])
+            for ev in events:
+                self.emit('new_message', ev)
     
     def _update_participants(self):
         if not self.session.status:

@@ -61,8 +61,11 @@ class Node(app.Model):
 
 
 n1 = app.launch(Node, 'xul')
-n2 = Node(session=n1.session)
-n3 = Node(session=n1.session)
+
+# Create other nodes in context of n1, so they share the same session
+with n1:
+    n2 = Node()
+    n3 = Node()
 
 # This is intended to be run interactively (e.g. in Pyzo), so that you
 # change the parent-children relationships dynamically.

@@ -73,8 +73,9 @@ class GridPanel(Layout):
     
     class JS:
         
-        def init(self):
+        def _init_phosphor_and_node(self):
             self.phosphor = window.phosphor.gridpanel.GridPanel()
+            self.node = self.phosphor.node
             
             that = self
             class LayoutNotifier:

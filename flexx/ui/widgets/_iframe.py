@@ -35,8 +35,9 @@ class IFrame(Widget):
     
     class JS:
         
-        def init(self):
+        def _init_phosphor_and_node(self):
             self.phosphor = window.phosphor.createWidget('iframe')
+            self.node = self.phosphor.node
         
         @event.connect('url')
         def _update_url(self, *events):

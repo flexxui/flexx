@@ -60,8 +60,9 @@ class Label(Widget):
     
     class JS:
         
-        def init(self):
+        def _init_phosphor_and_node(self):
             self.phosphor = window.phosphor.createWidget('div')
+            self.node = self.phosphor.node
         
         @event.connect('text')
         def _text_changed(self, *events):

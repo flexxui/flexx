@@ -79,7 +79,8 @@ Overview of classes:
 """
 
 from .session import manager, Session  # noqa
-from .model import Model, get_instance_by_id, get_model_classes  # noqa
+from .model import Model, get_active_model  # noqa
+from .model import get_instance_by_id, get_model_classes  # noqa
 from .funcs import run, start, stop, call_later  # noqa
 from .funcs import init_notebook, serve, launch, export  # noqa
 from .assetstore import assets  # noqa

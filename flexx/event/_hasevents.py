@@ -305,7 +305,14 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             return True
         # Otherwise only set if value has changed
         old = getattr(self, private_name)
-        if value2 != old:
+        if this_is_js():
+            is_equal = old == value2
+        elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):
+            import numpy as np
+            is_equal = np.array_equal(old, value2)
+        else:
+            is_equal = type(old) == type(value2) and old == value2
+        if not is_equal:
             setattr(self, private_name, value2)
             self.emit(prop_name, dict(new_value=value2, old_value=old))
             return True

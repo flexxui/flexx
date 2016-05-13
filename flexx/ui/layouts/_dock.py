@@ -63,8 +63,9 @@ class DockPanel(Layout):
     
     class JS:
         
-        def init(self):
+        def _init_phosphor_and_node(self):
             self.phosphor = window.phosphor.dockpanel.DockPanel()
+            self.node = self.phosphor.node
         
         def _add_child(self, widget):
             self.phosphor.insertRight(widget.phosphor)

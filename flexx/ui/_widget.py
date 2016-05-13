@@ -9,30 +9,9 @@
 
 """
 
-import threading
-
 from .. import event
-from ..app import Model, call_later
+from ..app import Model, call_later, get_active_model
 from ..pyscript import undefined, window
-
-
-# Keep track of stack of default parents when using widgets
-# as context managers. Have one list for each thread.
-
-_default_parents_per_thread = {}  # dict of threadid -> list
-
-def _get_default_parents():
-    """ Get list that represents the stack of default parents.
-    Each thread has its own stack.
-    """
-    # Get thread id
-    if hasattr(threading, 'current_thread'):
-        tid = id(threading.current_thread())
-    else:
-        tid = id(threading.currentThread())
-    # Get list of parents for this thread
-    return _default_parents_per_thread.setdefault(tid, [])
-
 
 
 class LiveKeeper:
@@ -91,12 +70,12 @@ class Widget(Model):
     
     def __init__(self, **kwargs):
         
-        # Apply default parent?
+        # Handle parent
         parent = kwargs.pop('parent', None)
         if parent is None:
-            default_parents = _get_default_parents()
-            if default_parents:
-                parent = default_parents[-1]
+            active_model = get_active_model()
+            if isinstance(active_model, Widget):
+                parent = active_model
         kwargs['parent'] = parent
         
         # Use parent session unless session was given
@@ -147,17 +126,6 @@ class Widget(Model):
         super().dispose()
         for child in children:
             child.dispose()
-    
-    def __enter__(self):
-        # Note that __exit__ is guaranteed to be called, so there is
-        # no need to use weak refs for items stored in default_parents
-        default_parents = _get_default_parents()
-        default_parents.append(self)
-        return self
-    
-    def __exit__(self, type, value, traceback):
-        default_parents = _get_default_parents()
-        assert self is default_parents.pop(-1)
     
     @event.prop(both=True)
     def title(self, v=''):
@@ -290,17 +258,13 @@ class Widget(Model):
         def __init__(self, *args):
             super().__init__(*args)
             
-            # Get phosphor widget that is set in init()
-            if not self.phosphor:
-                self.phosphor = window.phosphor.panel.Panel()
-            self.node = self.phosphor.node
+            # Let widget create Phoshor and DOM nodes
+            self._init_phosphor_and_node()
+            # Set outernode. Usually, but not always equal to self.node
+            self.outernode = self.phosphor.node
             
-            # Connect same standard events
-            self.node.addEventListener('mousedown', self.mouse_down, 0)
-            self.node.addEventListener('mouseup', self.mouse_up, 0)
-            self.node.addEventListener('keydown', self.key_down, 0)
-            self.node.addEventListener('keyup', self.key_up, 0)
-            self.node.addEventListener('keypress', self.key_press, 0)
+            # Setup JS events to enter Flexx' event system
+            self._init_events()
             
             # Keep track of size
             that = self
@@ -315,7 +279,7 @@ class Widget(Model):
             # Derive css class name
             cls_name = self._class_name
             for i in range(32):  # i.e. a safe while-loop
-                self.node.classList.add('flx-' + cls_name)
+                self.outernode.classList.add('flx-' + cls_name)
                 cls = window.flexx.classes[cls_name]
                 if not cls:
                     break
@@ -325,6 +289,12 @@ class Widget(Model):
             else:
                 raise RuntimeError('Error while determining class names')
         
+        def _init_phosphor_and_node(self):
+            """ Overload this in sub widgets.
+            """
+            self.phosphor = window.phosphor.panel.Panel()
+            self.node = self.phosphor.node
+        
         @event.connect('style')
         def __style_changed(self, *events):
             """ Emits when the style signal changes, and provides a dict with
@@ -332,6 +302,11 @@ class Widget(Model):
             """
             # self.node.style = style  # forbidden in strict mode,
             # plus it clears all previously set style
+            
+            # Note that styling is applied to the outer node, just like
+            # the styling defined via the CSS attribute. In most cases
+            # the inner and outer node are the same, but not always
+            # (e.g. CanvasWidget).
             
             # Set style elements, keep track in a dict
             d = {}
@@ -342,7 +317,7 @@ class Widget(Model):
                         if ':' in part:
                             key, val = part.split(':')
                             key, val = key.trim(), val.trim()
-                            self.node.style[key] = val
+                            self.outernode.style[key] = val
                             d[key] = val
             
             # Did we change style related to sizing?
@@ -354,10 +329,10 @@ class Widget(Model):
             
             if size_limits_changed:
                 # Clear phosphor's limit cache (no need for getComputedStyle())
-                values = [self.node.style[k] for k in size_limits_keys]
+                values = [self.outernode.style[k] for k in size_limits_keys]
                 # todo: do I need a variant of self.phosphor.clearSizeLimits()?
                 for k, v in zip(size_limits_keys, values):
-                    self.node.style[k] = v
+                    self.outernode.style[k] = v
                 # Allow parent to re-layout
                 parent = self.parent
                 if parent:
@@ -379,18 +354,18 @@ class Widget(Model):
             """
             return v[0], v[1]
         
-        @event.connect('container', 'parent', 'children')
+        @event.connect('container', 'parent.size', 'children')
         def __update_size(self, *events):
             # Check size in *next* event loop iter to give the DOM a
-            # chance to settle
+            # chance to settle.
             window.setTimeout(self._check_real_size, 0)
         
         def _check_real_size(self):
             """ Check whether the current size has changed.
             """
-            n = self.node
+            n = self.outernode
             cursize = self.size
-            if cursize[0] != n.clientWidth or cursize[1] !=n.clientHeight:
+            if cursize[0] != n.clientWidth or cursize[1] != n.clientHeight:
                 self._set_prop('size', [n.clientWidth, n.clientHeight])
         
         def _set_size(self, prefix, w, h):
@@ -404,28 +379,28 @@ class Widget(Model):
                     size[i] = size[i] + 'px'
                 else:
                     size[i] = size[i] * 100 + '%'
-            self.node.style[prefix + 'width'] = size[0]
-            self.node.style[prefix + 'height'] = size[1]
+            self.outernode.style[prefix + 'width'] = size[0]
+            self.outernode.style[prefix + 'height'] = size[1]
         
         ## Parenting
         
         @event.connect('container')
         def __container_changed(self, *events):
             id = events[-1].new_value
-            self.node.classList.remove('flx-main-widget')
+            self.outernode.classList.remove('flx-main-widget')
             if self.parent:
                 return 
             if id:
                 el = window.document.getElementById(id)
                 if self.phosphor.isAttached:
                     self.phosphor.detach()
-                if self.node.parentNode is not None:  # detachWidget not enough
-                    self.node.parentNode.removeChild(self.node)
+                if self.outernode.parentNode is not None:  # detachWidget not enough
+                    self.outernode.parentNode.removeChild(self.outernode)
                 self.phosphor.attach(el)
                 window.addEventListener('resize', lambda: (self.phosphor.update(), 
                                                            self._check_real_size()))
             if id == 'body':
-                self.node.classList.add('flx-main-widget')
+                self.outernode.classList.add('flx-main-widget')
         
         @event.connect('children')
         def __children_changed(self, *events):
@@ -442,8 +417,6 @@ class Widget(Model):
                     break
                 i_ok = i
             
-            if new_children:
-                print('adding children on ', self.id, [c.id for c in new_children])
             for child in old_children[i_ok:]:
                 self._remove_child(child)
             for child in new_children[i_ok:]:
@@ -463,19 +436,76 @@ class Widget(Model):
         
         ## Events
         
-        # todo: events: mouse_move?,focus, enter, leave ...
+        # todo: events: focus, enter, leave ... ?
+        
+        CAPTURE_MOUSE = False
+        
+        def _init_events(self):
+            # Connect some standard events
+            self.node.addEventListener('mousedown', self.mouse_down, 0)
+            self.node.addEventListener('wheel', self.mouse_wheel, 0)
+            self.node.addEventListener('keydown', self.key_down, 0)
+            self.node.addEventListener('keyup', self.key_up, 0)
+            self.node.addEventListener('keypress', self.key_press, 0)
+            
+            # Disable context menu so we can handle RMB clicks
+            _context_menu = lambda ev: ev.preventDefault() and False
+            self.node.addEventListener('contextmenu', _context_menu, 0)
+            
+            # Implement mouse capturing. When a mouse is pressed down on
+            # a widget, it "captures" the mouse, and will continue to receive 
+            # move and up events, even if the mouse is not over the widget.
+            
+            self._capture_flag = None
+            
+            def capture(e):
+                # On FF, capture so we get events when outside browser viewport
+                if self.CAPTURE_MOUSE and self.node.setCapture:  
+                    self.node.setCapture()
+                self._capture_flag = 2
+                window.document.addEventListener("mousemove", mouse_outside, True)
+                window.document.addEventListener("mouseup", mouse_outside, True)
+            
+            def release():
+                self._capture_flag = 1
+                window.document.removeEventListener("mousemove", mouse_outside, True)
+                window.document.removeEventListener("mouseup", mouse_outside, True)
+            
+            def mouse_inside(e):
+                if self._capture_flag == 1:
+                    self._capture_flag = 0
+                elif not self._capture_flag:
+                    if e.type == 'mousemove':
+                        self.mouse_move(e)
+                    elif e.type == 'mouseup':
+                        self.mouse_up(e)
+            
+            def mouse_outside(e):
+                if self._capture_flag:  # Should actually always be 0
+                    e = window.event if window.event else e
+                    if e.type == 'mousemove':
+                        self.mouse_move(e)
+                    elif e.type == 'mouseup':
+                        release()
+                        self.mouse_up(e)
+            
+            # Setup capturing and releasing
+            self.node.addEventListener('mousedown', capture, True)
+            self.node.addEventListener("losecapture", release)
+            # Subscribe to normal mouse events
+            self.node.addEventListener("mousemove", mouse_inside, False)
+            self.node.addEventListener("mouseup", mouse_inside, False)
         
         @event.emitter
         def mouse_down(self, e):
             """ Event emitted when the mouse is pressed down.
             
             A mouse event has the following attributes:
-            * x: the x location, in pixels, relative to this widget
-            * y: the y location, in pixels, relative to this widget
-            * pageX: the x location relative to the page
-            * pageY: the y location relative to the page
-            * button: what button the event is about, 1, 2, 3 are left, middle,
-              right, respectively.
+            
+            * pos: the mouse position, in pixels, relative to this widget
+            * page_pos: the mouse position relative to the page
+            * button: what button the event is about, 1, 2, 3 are left, right,
+              middle, respectively. 0 indicates no button.
             * buttons: what buttons where pressed at the time of the event.
             * modifiers: list of strings "Alt", "Shift", "Ctrl", "Meta" for
               modifier keys pressed down at the time of the event.
@@ -488,27 +518,62 @@ class Widget(Model):
             
             See mouse_down() for a description of the event object.
             """
-            return self._create_mouse_event(e)
+            ev = self._create_mouse_event(e)
+            return ev
+        
+        @event.emitter
+        def mouse_move(self, e):
+            """ Event fired when the mouse is moved inside the canvas.
+            See mouse_down for details.
+            """
+            
+            ev = self._create_mouse_event(e)
+            ev.button = 0
+            return ev
+        
+        @event.emitter
+        def mouse_wheel(self, e):
+            """ Event emitted when the mouse wheel is used.
+            
+            See mouse_down() for a description of the event object.
+            Additional event attributes:
+            
+            * hscroll: amount of scrolling in horizontal direction
+            * vscroll: amount of scrolling in vertical direction
+            """
+            # Note: wheel event gets generated also for parent widgets
+            # I think this makes sense, but there might be cases
+            # where we want to prevent propagation.
+            ev = self._create_mouse_event(e)
+            ev.button = 0
+            ev.hscroll = e.deltaX * [1, 16, 600][e.deltaMode]
+            ev.vscroll = e.deltaY * [1, 16, 600][e.deltaMode]
+            return ev
         
         def _create_mouse_event(self, e):
             # note: our button has a value as in JS "which"
             modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
                          if e[n.lower()+'Key']]
+            # Fix position
             pos = e.clientX, e.clientY
             rect = self.node.getBoundingClientRect()
             offset = rect.left, rect.top
-            x, y = float(pos[0] - offset[0]), float(pos[1] - offset[1])
-            return dict(x=x, y=y, pageX=e.pageX, pageY=e.pageY,
-                        button=e.button+1, buttons=[b+1 for b in e.buttons],
+            pos = float(pos[0] - offset[0]), float(pos[1] - offset[1])
+            # Fix buttons
+            buttons_mask = reversed([c for c in e.buttons.toString(2)]).join('')
+            buttons = [i+1 for i in range(5) if buttons_mask[i] == '1']
+            button = {0: 1, 1: 3, 2: 2, 3: 4, 4: 5}[e.button]
+            # Create event dict
+            return dict(pos=pos, page_pos=(e.pageX, e.pageY),
+                        button=button, buttons=buttons,
                         modifiers=modifiers,
                         )
         
         @event.emitter
         def key_down(self, e):
-            """ Event emitted when a key is pressed down while
-            this widget has focus..
+            """ Event emitted when a key is pressed down while this
+            widget has focus. A key event has the following attributes:
             
-            A key event has the following attributes:
             * key: the character corresponding to the key being pressed, or
               a key name like "Escape", "Alt", "Enter".
             * modifiers: list of strings "Alt", "Shift", "Ctrl", "Meta" for
@@ -561,17 +626,17 @@ class Widget(Model):
         @event.connect('children')
         def __update_css(self, *events):
             children = events[-1].new_value
-            if 'flx-Layout' not in self.node.className:
+            if 'flx-Layout' not in self.outernode.className:
                 # Ok, no layout, so maybe we need to take care of CSS.
                 # If we have a child that is a hbox/vbox, we need to be a
                 # flex container.
-                self.node.style['display'] = ''
-                self.node.style['flex-flow'] = ''
+                self.outernode.style['display'] = ''
+                self.outernode.style['flex-flow'] = ''
                 if len(children) == 1:
-                    subClassName = children[0].node.className
+                    subClassName = children[0].outernode.className
                     if 'flx-hbox' in subClassName:
-                        self.node.style['display'] = 'flex'
-                        self.node.style['flex-flow'] = 'row'
+                        self.outernode.style['display'] = 'flex'
+                        self.outernode.style['flex-flow'] = 'row'
                     elif 'flx-vbox' in subClassName:
-                        self.node.style['display'] = 'flex'
-                        self.node.style['flex-flow'] = 'column'
+                        self.outernode.style['display'] = 'flex'
+                        self.outernode.style['flex-flow'] = 'column'

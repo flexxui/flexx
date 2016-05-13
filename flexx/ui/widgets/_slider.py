@@ -61,12 +61,14 @@ class Slider(Widget):
         return float(v)
     
     class JS:
-    
-        def init(self):
+        
+        def _init_phosphor_and_node(self):
             self.phosphor = window.phosphor.createWidget('input')
-            self.phosphor.node.type = 'range'
+            self.node = self.phosphor.node
+            
+            self.node.type = 'range'
             f = lambda ev: self._set_prop('user_value', self.node.value)
-            self.phosphor.node.addEventListener('input', f, False)
+            self.node.addEventListener('input', f, False)
             #if IE10:
             #   this.node.addEventListener('change', f, False)
         

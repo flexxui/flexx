@@ -43,7 +43,7 @@ class GroupWidget(Widget):
     
     class JS:
         
-        def init(self):
+        def _init_phosphor_and_node(self):
             # class FieldsetPanel(phosphor.panel.Panel):
             #      def createNode():
             #          return document.createElement('fieldset')
@@ -61,6 +61,8 @@ class GroupWidget(Widget):
             #self.phosphor = phosphor.createWidget('fieldset')
             self._legend = window.document.createElement('legend')
             self.phosphor.node.appendChild(self._legend)
+            
+            self.node = self.phosphor.node
         
         @event.connect('title')
         def _title_changed(self, *events):

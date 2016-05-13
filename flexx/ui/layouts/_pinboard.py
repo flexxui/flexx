@@ -37,14 +37,15 @@ class PinboardLayout(Layout):
     """
     
     class JS:
-        def init(self):
+        def _init_phosphor_and_node(self):
             self.phosphor = window.phosphor.panel.Panel()
+            self.node = self.phosphor.node
         
         @event.connect('children.*.pos')
         def __pos_changed(self, *events):
             for child in self.children:
                 pos = child.pos
-                st = child.node.style
+                st = child.outernode.style
                 st.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
                 st.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
         

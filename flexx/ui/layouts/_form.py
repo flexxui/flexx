@@ -174,8 +174,9 @@ class FormLayout(BaseTableLayout):
     
     class JS:
         
-        def init(self):
+        def _init_phosphor_and_node(self):
             self.phosphor = window.phosphor.createWidget('table')
+            self.node = self.phosphor.node
         
         def _apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):
             AUTOFLEX = 729
@@ -208,14 +209,14 @@ class FormLayout(BaseTableLayout):
             # Create element for widget
             td = window.document.createElement("td")
             row.appendChild(td)
-            td.appendChild(widget.node)
+            td.appendChild(widget.outernode)
             #
-            widget.node.hflex = 1
-            widget.node.vflex = widget.flex[1]
+            widget.outernode.hflex = 1
+            widget.outernode.vflex = widget.flex[1]
             self._apply_table_layout()
         
         def _remove_child(self, widget):
-            row = widget.node.parentNode.parentNode
+            row = widget.outernode.parentNode.parentNode
             self.node.removeChild(row)
             if widget._title_elem:
                 del widget._title_elem
@@ -223,7 +224,7 @@ class FormLayout(BaseTableLayout):
         @event.connect('children.*.flex')
         def __update_flexes(self, *events):
             for widget in self.children:
-                widget.node.vflex = widget.flex[1]
+                widget.outernode.vflex = widget.flex[1]
             self._apply_table_layout()
         
         @event.connect('children.*.title')

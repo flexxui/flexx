@@ -63,27 +63,37 @@ class LineEdit(Widget):
     
     class JS:
     
-        def init(self):
-            self.phosphor = window.phosphor.createWidget('div')
-            self.phosphor.node.innerHTML = '<input type="text", list="%s" />' % self.id
-            self._node = self.phosphor.node.childNodes[0]
+        def _init_phosphor_and_node(self):
             
             # self.phosphor = window.phosphor.createWidget('input')
             # self.node = self.phosphor.node
-            # self.node.type = 'text'
-            # self.node.list = self.id
+            # self.node.type = 'text'  
+            # self.node.list = self.id  -> readonly!
+            
+            # Some hacking to create an element with custom HTML
+            # todo: Maybe we can make createWidget accept HTML instead
+            ori = window.phosphor.widget.Widget.createNode
+            def _():
+                d = window.document.createElement('div')
+                d.innerHTML = '<input type="text", list="%s" />' % self.id
+                return d.childNodes[0]
+            window.phosphor.widget.Widget.createNode = _
+            self.phosphor = window.phosphor.widget.Widget()
+            window.phosphor.widget.Widget.createNode = ori
+            
+            self.node = self.phosphor.node
             
             self._autocomp = window.document.createElement('datalist')
             self._autocomp.id = self.id
-            self._node.appendChild(self._autocomp)
+            self.node.appendChild(self._autocomp)
             
-            f1 = lambda ev: self._set_prop('user_text', self._node.value)
+            f1 = lambda ev: self._set_prop('user_text', self.node.value)
             f2 = lambda ev: self.submit() if ev.which == 13 else None
-            self._node.addEventListener('input', f1, False)
-            self._node.addEventListener('keydown', f2, False)
+            self.node.addEventListener('input', f1, False)
+            self.node.addEventListener('keydown', f2, False)
             #if IE10:
             #    this.node.addEventListener('change', f1, False)
-            
+        
         @event.readonly
         def user_text(self, v=None):
             """ The text set by the user (updates on each keystroke). """
@@ -100,11 +110,11 @@ class LineEdit(Widget):
         
         @event.connect('text')
         def __text_changed(self, *events):
-            self._node.value = self.text
+            self.node.value = self.text
         
         @event.connect('placeholder_text')
         def __placeholder_text_changed(self, *events):
-            self._node.placeholder = self.placeholder_text
+            self.node.placeholder = self.placeholder_text
         
         # todo: this works in Firefox but not in Xul
         @event.connect('autocomp')
