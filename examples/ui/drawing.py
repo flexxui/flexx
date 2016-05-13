@@ -11,7 +11,7 @@ class Drawing(ui.CanvasWidget):
         
         def init(self):
             super().init()
-            self.ctx = self.canvas.getContext('2d')
+            self.ctx = self.node.getContext('2d')
             self._last_ev = None
         
         def on_mouse_move(self, *events):

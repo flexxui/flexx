@@ -45,8 +45,9 @@ class StackedPanel(Layout):
     
     class JS:
         
-        def init(self):
+        def _init_phosphor_and_node(self):
             self.phosphor = window.phosphor.stackedpanel.StackedPanel()
+            self.node = self.phosphor.node
         
         @event.connect('current')
         def __set_current_widget(self, *events):

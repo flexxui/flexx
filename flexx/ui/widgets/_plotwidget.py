@@ -114,7 +114,7 @@ class PlotWidget(CanvasWidget):
         
         def init(self):
             super().init()
-            self._context = self.canvas.getContext('2d')
+            self._context = self.node.getContext('2d')
             
             # create tick units
             self._tick_units = []

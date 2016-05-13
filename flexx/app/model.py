@@ -372,13 +372,13 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         # Initialize the model further, e.g. Widgets can create
         # subwidgets etc. This is done here, at the point where the
-        # properties are initialized, but the handlers not yet. Handlers
-        # are initialized after this, so that they can connect to newly
-        # created sub Models. This class implements a stub contect manager.
+        # properties are initialized, but the handlers not yet.
         with self:
             self.init()
+        self._session._exec('flexx.instances.%s.init();' % self._id)
         
-        # Initialize handlers for Python and for JS
+        # Initialize handlers for Python and for JS. Done after init()
+        # so that they can connect to newly created sub Models.
         self._init_handlers()
         self._session._exec('flexx.instances.%s._init_handlers();' % self._id)
     
@@ -544,11 +544,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             # Init HasEvents, but delay initialization of handlers
             super().__init__(False)
             
-            # Initialize when properties are initialized, but before handlers
-            # are initialized.
-            self.init()
-            
-            # self._init_handlers() -> called from py after pys init is done
+            # self.init() -> called from py
+            # self._init_handlers() -> called from py
         
         def init(self):
             """ Can be overloaded by subclasses to initialize the model.

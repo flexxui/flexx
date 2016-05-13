@@ -92,24 +92,27 @@ class ColabPainting(ui.Widget):
     
     class JS:
         
+        def init(self):
+            super().init()
+            self._ctx = self.canvas.node.getContext('2d')
+        
         @event.connect('color')
         def _update_color(self, *events):
             self.canvas.style = 'border: 10px solid ' + events[-1].new_value
         
         @event.connect('new_dot')
         def _paint_dot(self, *events):
-            ctx = self.canvas.canvas.getContext('2d')
             for ev in events:
                 # Slowly hide old paint
-                ctx.globalAlpha = 0.01
-                ctx.fillStyle = '#fff'
-                ctx.fillRect(0, 0, 400, 400)
+                self._ctx.globalAlpha = 0.01
+                self._ctx.fillStyle = '#fff'
+                self._ctx.fillRect(0, 0, 400, 400)
                 # Add new dot
-                ctx.globalAlpha = 0.8
-                ctx.beginPath()
-                ctx.fillStyle = ev.color
-                ctx.arc(ev.pos[0], ev.pos[1], 5, 0, 6.2831)
-                ctx.fill()
+                self._ctx.globalAlpha = 0.8
+                self._ctx.beginPath()
+                self._ctx.fillStyle = ev.color
+                self._ctx.arc(ev.pos[0], ev.pos[1], 5, 0, 6.2831)
+                self._ctx.fill()
 
 
 # Create global relay

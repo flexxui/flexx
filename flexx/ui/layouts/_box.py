@@ -221,15 +221,12 @@ class BoxLayout(BaseBoxLayout):
         
         _DEFAULT_ORIENTATION = 'h'
         
-        def init(self):
-            self.phosphor = window.phosphor.panel.Panel()
-        
         @event.connect('orientation', 'children.*.flex')
         def __set_flexes(self, *events):
             ori = self.orientation
             i = 0 if ori in (0, 'h', 'hr') else 1
             for widget in self.children:
-                self._applyBoxStyle(widget.node, 'flex-grow', widget.flex[i])
+                self._applyBoxStyle(widget.outernode, 'flex-grow', widget.flex[i])
             for widget in self.children:
                 widget._check_real_size()
         
@@ -241,28 +238,28 @@ class BoxLayout(BaseBoxLayout):
             children = self.children
             # Reset
             for child in children:
-                child.node.style['margin-top'] = ''
-                child.node.style['margin-left'] = ''
+                child.outernode.style['margin-top'] = ''
+                child.outernode.style['margin-left'] = ''
             for child in old_children:
-                child.node.style['margin-top'] = ''
-                child.node.style['margin-left'] = ''
+                child.outernode.style['margin-top'] = ''
+                child.outernode.style['margin-left'] = ''
             # Set
             margin = 'margin-top' if ori in (1, 'v', 'vr') else 'margin-left'
             if children.length:
                 if ori in ('vr', 'hr'):
-                    children[-1].node.style[margin] = '0px'
+                    children[-1].outernode.style[margin] = '0px'
                     for child in children[:-1]:
-                        child.node.style[margin] = self.spacing + 'px'
+                        child.outernode.style[margin] = self.spacing + 'px'
                 else:
-                    children[0].node.style[margin] = '0px'
+                    children[0].outernode.style[margin] = '0px'
                     for child in children[1:]:
-                        child.node.style[margin] = self.spacing + 'px'
+                        child.outernode.style[margin] = self.spacing + 'px'
             for widget in children:
                 widget._check_real_size()
         
         @event.connect('padding')
         def __padding_changed(self, *events):
-            self.node.style['padding'] = self.padding + 'px'
+            self.outernode.style['padding'] = self.padding + 'px'
             for widget in self.children:
                 widget._check_real_size()
         
@@ -270,15 +267,15 @@ class BoxLayout(BaseBoxLayout):
         def __orientation_changed(self, *events):
             ori = self.orientation
             for name in ('hbox', 'vbox', 'hboxr', 'vboxr'):
-                self.node.classList.remove('flx-'+name)
+                self.outernode.classList.remove('flx-'+name)
             if ori == 0 or ori == 'h':
-                self.node.classList.add('flx-hbox')
+                self.outernode.classList.add('flx-hbox')
             elif ori == 1 or ori == 'v':
-                self.node.classList.add('flx-vbox')
+                self.outernode.classList.add('flx-vbox')
             elif ori == 'hr':
-                self.node.classList.add('flx-hboxr')
+                self.outernode.classList.add('flx-hboxr')
             elif ori == 'vr':
-                self.node.classList.add('flx-vboxr')
+                self.outernode.classList.add('flx-vboxr')
             else:
                 raise ValueError('Invalid box orientation: ' + ori)
             for widget in self.children:
@@ -322,8 +319,9 @@ class BoxPanel(BaseBoxLayout):
         
         _DEFAULT_ORIENTATION = 'h'
         
-        def init(self):
+        def _init_phosphor_and_node(self):
             self.phosphor = window.phosphor.boxpanel.BoxPanel()
+            self.node = self.phosphor.node
         
         @event.connect('orientation', 'children.*.flex')
         def __set_flexes(self, *events):

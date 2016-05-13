@@ -258,11 +258,12 @@ class Widget(Model):
         def __init__(self, *args):
             super().__init__(*args)
             
-            # Get phosphor widget that is set in init()
-            if not self.phosphor:
-                self.phosphor = window.phosphor.panel.Panel()
-            self.node = self.phosphor.node
+            # Let widget create Phoshor and DOM nodes
+            self._init_phosphor_and_node()
+            # Set outernode. Usually, but not always equal to self.node
+            self.outernode = self.phosphor.node
             
+            # Setup JS events to enter Flexx' event system
             self._init_events()
             
             # Keep track of size
@@ -278,7 +279,7 @@ class Widget(Model):
             # Derive css class name
             cls_name = self._class_name
             for i in range(32):  # i.e. a safe while-loop
-                self.node.classList.add('flx-' + cls_name)
+                self.outernode.classList.add('flx-' + cls_name)
                 cls = window.flexx.classes[cls_name]
                 if not cls:
                     break
@@ -288,6 +289,12 @@ class Widget(Model):
             else:
                 raise RuntimeError('Error while determining class names')
         
+        def _init_phosphor_and_node(self):
+            """ Overload this in sub widgets.
+            """
+            self.phosphor = window.phosphor.panel.Panel()
+            self.node = self.phosphor.node
+        
         @event.connect('style')
         def __style_changed(self, *events):
             """ Emits when the style signal changes, and provides a dict with
@@ -295,6 +302,11 @@ class Widget(Model):
             """
             # self.node.style = style  # forbidden in strict mode,
             # plus it clears all previously set style
+            
+            # Note that styling is applied to the outer node, just like
+            # the styling defined via the CSS attribute. In most cases
+            # the inner and outer node are the same, but not always
+            # (e.g. CanvasWidget).
             
             # Set style elements, keep track in a dict
             d = {}
@@ -305,7 +317,7 @@ class Widget(Model):
                         if ':' in part:
                             key, val = part.split(':')
                             key, val = key.trim(), val.trim()
-                            self.node.style[key] = val
+                            self.outernode.style[key] = val
                             d[key] = val
             
             # Did we change style related to sizing?
@@ -317,10 +329,10 @@ class Widget(Model):
             
             if size_limits_changed:
                 # Clear phosphor's limit cache (no need for getComputedStyle())
-                values = [self.node.style[k] for k in size_limits_keys]
+                values = [self.outernode.style[k] for k in size_limits_keys]
                 # todo: do I need a variant of self.phosphor.clearSizeLimits()?
                 for k, v in zip(size_limits_keys, values):
-                    self.node.style[k] = v
+                    self.outernode.style[k] = v
                 # Allow parent to re-layout
                 parent = self.parent
                 if parent:
@@ -351,9 +363,9 @@ class Widget(Model):
         def _check_real_size(self):
             """ Check whether the current size has changed.
             """
-            n = self.node
+            n = self.outernode
             cursize = self.size
-            if cursize[0] != n.clientWidth or cursize[1] !=n.clientHeight:
+            if cursize[0] != n.clientWidth or cursize[1] != n.clientHeight:
                 self._set_prop('size', [n.clientWidth, n.clientHeight])
         
         def _set_size(self, prefix, w, h):
@@ -367,28 +379,28 @@ class Widget(Model):
                     size[i] = size[i] + 'px'
                 else:
                     size[i] = size[i] * 100 + '%'
-            self.node.style[prefix + 'width'] = size[0]
-            self.node.style[prefix + 'height'] = size[1]
+            self.outernode.style[prefix + 'width'] = size[0]
+            self.outernode.style[prefix + 'height'] = size[1]
         
         ## Parenting
         
         @event.connect('container')
         def __container_changed(self, *events):
             id = events[-1].new_value
-            self.node.classList.remove('flx-main-widget')
+            self.outernode.classList.remove('flx-main-widget')
             if self.parent:
                 return 
             if id:
                 el = window.document.getElementById(id)
                 if self.phosphor.isAttached:
                     self.phosphor.detach()
-                if self.node.parentNode is not None:  # detachWidget not enough
-                    self.node.parentNode.removeChild(self.node)
+                if self.outernode.parentNode is not None:  # detachWidget not enough
+                    self.outernode.parentNode.removeChild(self.outernode)
                 self.phosphor.attach(el)
                 window.addEventListener('resize', lambda: (self.phosphor.update(), 
                                                            self._check_real_size()))
             if id == 'body':
-                self.node.classList.add('flx-main-widget')
+                self.outernode.classList.add('flx-main-widget')
         
         @event.connect('children')
         def __children_changed(self, *events):
@@ -426,6 +438,8 @@ class Widget(Model):
         
         # todo: events: focus, enter, leave ... ?
         
+        CAPTURE_MOUSE = False
+        
         def _init_events(self):
             # Connect some standard events
             self.node.addEventListener('mousedown', self.mouse_down, 0)
@@ -446,7 +460,7 @@ class Widget(Model):
             
             def capture(e):
                 # On FF, capture so we get events when outside browser viewport
-                if self.node.setCapture:  
+                if self.CAPTURE_MOUSE and self.node.setCapture:  
                     self.node.setCapture()
                 self._capture_flag = 2
                 window.document.addEventListener("mousemove", mouse_event_outside, True)
@@ -612,17 +626,17 @@ class Widget(Model):
         @event.connect('children')
         def __update_css(self, *events):
             children = events[-1].new_value
-            if 'flx-Layout' not in self.node.className:
+            if 'flx-Layout' not in self.outernode.className:
                 # Ok, no layout, so maybe we need to take care of CSS.
                 # If we have a child that is a hbox/vbox, we need to be a
                 # flex container.
-                self.node.style['display'] = ''
-                self.node.style['flex-flow'] = ''
+                self.outernode.style['display'] = ''
+                self.outernode.style['flex-flow'] = ''
                 if len(children) == 1:
-                    subClassName = children[0].node.className
+                    subClassName = children[0].outernode.className
                     if 'flx-hbox' in subClassName:
-                        self.node.style['display'] = 'flex'
-                        self.node.style['flex-flow'] = 'row'
+                        self.outernode.style['display'] = 'flex'
+                        self.outernode.style['flex-flow'] = 'row'
                     elif 'flx-vbox' in subClassName:
-                        self.node.style['display'] = 'flex'
-                        self.node.style['flex-flow'] = 'column'
+                        self.outernode.style['display'] = 'flex'
+                        self.outernode.style['flex-flow'] = 'column'

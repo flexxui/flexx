@@ -20,21 +20,23 @@ class CanvasWidget(Widget):
     
     class JS:
         
-        def init(self):
+        CAPTURE_MOUSE = True
+        
+        def _init_phosphor_and_node(self):
             
             self.phosphor = window.phosphor.createWidget('div')
-            self.canvas = window.document.createElement('canvas')
-            self.phosphor.node.appendChild(self.canvas)
+            self.node = window.document.createElement('canvas')
+            
+            self.phosphor.node.appendChild(self.node)
             # Set position to absolute so that the canvas is not going
             # to be forcing a size on the container div.
-            self.canvas.style.position = 'absolute'
+            self.node.style.position = 'absolute'
         
         @event.connect('size')
         def _update_canvas_size(self, *events):
             size = events[-1].new_value
             if size[0] or size[1]:
-                self.canvas.width = size[0]
-                self.canvas.height = size[1]
-                self.canvas.style.width = size[0] + 'px'
-                self.canvas.style.height = size[1] + 'px'
-
+                self.node.width = size[0]
+                self.node.height = size[1]
+                self.node.style.width = size[0] + 'px'
+                self.node.style.height = size[1] + 'px'
