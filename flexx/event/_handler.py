@@ -137,7 +137,7 @@ class Handler:
             self._func_is_method = inspect.getargspec(func)[0][0] in ('self', 'this')
         except (TypeError, IndexError):
             self._func_is_method = False
-        if hasattr(func, '__self__'):
+        if getattr(func, '__self__', None) is not None:
             self._func_is_method = False  # already bound
         
         self._init(connection_strings)
