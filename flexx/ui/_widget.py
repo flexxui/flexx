@@ -463,15 +463,15 @@ class Widget(Model):
                 if self.CAPTURE_MOUSE and self.node.setCapture:  
                     self.node.setCapture()
                 self._capture_flag = 2
-                window.document.addEventListener("mousemove", mouse_event_outside, True)
-                window.document.addEventListener("mouseup", mouse_event_outside, True)
+                window.document.addEventListener("mousemove", mouse_outside, True)
+                window.document.addEventListener("mouseup", mouse_outside, True)
             
             def release():
                 self._capture_flag = 1
-                window.document.removeEventListener("mousemove", mouse_event_outside, True)
-                window.document.removeEventListener("mouseup", mouse_event_outside, True)
+                window.document.removeEventListener("mousemove", mouse_outside, True)
+                window.document.removeEventListener("mouseup", mouse_outside, True)
             
-            def mouse_event_inside(e):
+            def mouse_inside(e):
                 if self._capture_flag == 1:
                     self._capture_flag = 0
                 elif not self._capture_flag:
@@ -480,7 +480,7 @@ class Widget(Model):
                     elif e.type == 'mouseup':
                         self.mouse_up(e)
             
-            def mouse_event_outside(e):
+            def mouse_outside(e):
                 if self._capture_flag:  # Should actually always be 0
                     e = window.event if window.event else e
                     if e.type == 'mousemove':
@@ -493,8 +493,8 @@ class Widget(Model):
             self.node.addEventListener('mousedown', capture, True)
             self.node.addEventListener("losecapture", release)
             # Subscribe to normal mouse events
-            self.node.addEventListener("mousemove", mouse_event_inside, False)
-            self.node.addEventListener("mouseup", mouse_event_inside, False)
+            self.node.addEventListener("mousemove", mouse_inside, False)
+            self.node.addEventListener("mouseup", mouse_inside, False)
         
         @event.emitter
         def mouse_down(self, e):
@@ -562,7 +562,7 @@ class Widget(Model):
             # Fix buttons
             buttons_mask = reversed([c for c in e.buttons.toString(2)]).join('')
             buttons = [i+1 for i in range(5) if buttons_mask[i] == '1']
-            button = {0:1, 1:3, 2:2, 3:4, 4:5}[e.button]
+            button = {0: 1, 1: 3, 2: 2, 3: 4, 4: 5}[e.button]
             # Create event dict
             return dict(pos=pos, page_pos=(e.pageX, e.pageY),
                         button=button, buttons=buttons,

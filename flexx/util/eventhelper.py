@@ -39,9 +39,10 @@ def event_helper(dir, ignore=()):
         for i, line in enumerate(text.splitlines()):
             
             for prop in props:
-                t = '.%s('  % prop
+                t = '.%s(' % prop
                 if t in line:
-                    print('Old use of prop %s in File "%s", line %i' % (prop, filename, i+1))
+                    print('Old use of prop %s in File "%s", line %i' %
+                          (prop, filename, i+1))
     
     # Check correct use of handlers
     for filename in iter_filenames(dir, ignore):
@@ -53,12 +54,10 @@ def event_helper(dir, ignore=()):
                     continue  # without setting prevline
                 if '*events' not in line:
                     funcname = line.strip().split('def ')[1].split('(')[0].strip()
-                    print('Suspicious handler %s in File "%s", line %i' % (funcname, filename, i+1))
+                    print('Suspicious handler %s in File "%s", line %i' %
+                          (funcname, filename, i+1))
             prevline = line
 
 
 if __name__ == '__main__':
     event_helper(r'd:\dev\pylib\arbiter\arbiter\viz', ['transform.py'])
-    
-    
-    
