@@ -49,6 +49,8 @@ def event_helper(dir, ignore=()):
         prevline = ''
         for i, line in enumerate(text.splitlines()):
             if prevline.strip().startswith('@event.connect'):
+                if 'def' not in line:
+                    continue  # without setting prevline
                 if '*events' not in line:
                     funcname = line.strip().split('def ')[1].split('(')[0].strip()
                     print('Suspicious handler %s in File "%s", line %i' % (funcname, filename, i+1))
