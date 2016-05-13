@@ -3,7 +3,7 @@
 
 from flexx.util.testing import run_tests_if_main, raises
 
-import sys
+import logging
 import tornado
 
 from flexx.app.model import Model, _get_active_models
@@ -117,14 +117,25 @@ def test_active_models():
     app = tornado.ioloop.IOLoop.instance()
     app.run_sync(lambda x=None: None)
     
+    
+    class PMHandler(logging.Handler):
+        def emit(self, record):
+            if record.exc_info:
+                self.last_type, self.last_value, self.last_traceback = record.exc_info
+            return record
+    
+    handler = PMHandler()
+    root_logger = logging.getLogger()
+    root_logger.addHandler(handler)
+    
     # Test that we prevent going back to Tornado in context
-    sys.last_type = None
+    handler.last_type = None
     with m:
         assert _get_active_models() == [m]
         # This raises error, but gets caught by Tornado
         app.run_sync(lambda x=None: None)
-    assert sys.last_type is RuntimeError
-    assert 'risk on race conditions' in str(sys.last_value)
+    assert handler.last_type is RuntimeError
+    assert 'risk on race conditions' in str(handler.last_value)
 
 
 run_tests_if_main()

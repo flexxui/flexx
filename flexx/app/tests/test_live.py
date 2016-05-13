@@ -159,9 +159,9 @@ class ModelD(ModelB):
             super().init()
             print(self.foo3, self.bar3)
             
-            assert self.foo3 is None
+            assert self.foo3 == 2
             self.foo3 = 10
-            assert self.foo3 is None
+            assert self.foo3 == 2
             
             assert self.bar3 == 2
             self.bar3 = 10
@@ -193,7 +193,7 @@ class ModelE(ModelA):
     
     def test_init(self):
         app.call_later(0.2, self._emit_foo)
-        app.call_later(0.9, lambda:self.call_js('set_result()'))
+        app.call_later(0.3, lambda:self.call_js('set_result()'))
     
     def _emit_foo(self):
         self.emit('foo', {})
@@ -272,5 +272,5 @@ def test_apps():
 
 # NOTE: beware future self: if running this in Pyzo, turn off GUI integration!
 
-# runner(ModelD)
+# runner(ModelE)
 run_tests_if_main()
