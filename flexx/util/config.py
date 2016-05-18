@@ -6,15 +6,21 @@ import sys
 import logging
 
 if sys.version_info[0] == 2:  # pragma: no cover
-    import ConfigParser as configparser
+    from ConfigParser import ConfigParser as _ConfigParser
+    from StringIO import StringIO
+    
+    class ConfigParser(_ConfigParser):
+        def read_string(self, string, source):
+            return self.readfp(StringIO(string), source)
+
 else:
-    import configparser
+    from configparser import ConfigParser
 
 
 def as_bool(value):
     if isinstance(value, bool):
         return value
-    elif isinstance(value, str) and value.lower() in BOOLEAN_STATES:
+    elif isinstance(value, basestring) and value.lower() in BOOLEAN_STATES:
         return BOOLEAN_STATES[value.lower()]
     else:
         raise ValueError('Cannot make a bool of %r' % value)
@@ -23,7 +29,7 @@ def get_tuple_validator(subvalidator):
     def validator(value):
         if isinstance(value, (tuple, list)):
             value2 = tuple(value)
-        elif isinstance(value, str):
+        elif isinstance(value, basestring):
             value2 = tuple([s.strip() for s in value.strip('()[]').split(',')])
         else:
             raise ValueError('Cannot make a tuple of %r' % value)
@@ -37,7 +43,9 @@ BOOLEAN_STATES = {'1': True, 'yes': True, 'true': True, 'on': True,
 TYPEMAP = {float:float, int:int, bool:as_bool}
 if sys.version_info[0] == 2:  # pragma: no cover
     TYPEMAP[basestring] = unicode
+    TYPEMAP[str] = unicode
 else:
+    basestring = str
     TYPEMAP[str] = str
 
 INSTANCE_DOCS = """ Configuration object for {name}
@@ -170,7 +178,7 @@ class Config(object):
         
         # Load from sources
         for source in sources:
-            if not isinstance(source, str):
+            if not isinstance(source, basestring):
                 raise ValueError('Sources should be strings or filenames.')
             text = ''
             if '\n' in source:
@@ -243,7 +251,7 @@ class Config(object):
     
     def __getitem__(self, name):
         # Case insensitive get
-        if not isinstance(name, str):
+        if not isinstance(name, basestring):
             raise TypeError('Config only allows subscripting by name strings.')
         if name.lower() in self._opt_values:
             return self._opt_values[name.lower()][-1][1]
@@ -258,7 +266,7 @@ class Config(object):
     
     def __setitem__(self, name, value):
         # Case insensitve set
-        if not isinstance(name, str):
+        if not isinstance(name, basestring):
             raise TypeError('Config only allows subscripting by name strings.')
         if name.lower() in self._opt_values:
             return self._set('set', name, value)
@@ -288,7 +296,8 @@ class Config(object):
         name_section = '[%s]\n' % self._name
         if name_section not in s:
             s = name_section + s
-        parser = configparser.ConfigParser()
+        s += '\n'
+        parser = ConfigParser()
         parser.read_string(s, filename)
         if parser.has_section(self._name):
             for name in self._options:
@@ -303,7 +312,7 @@ def is_valid_name(n):
 
 def isidentifier(s):
     # http://stackoverflow.com/questions/2544972/
-    if not isinstance(s, str):
+    if not isinstance(s, basestring):  # noqa
         return False
     return re.match(r'^\w+$', s, re.UNICODE) and re.match(r'^[0-9]', s) is None 
 
@@ -354,7 +363,7 @@ def appdata_dir(appname=None, roaming=False):
 
 if __name__ == '__main__':
     
-    c = Config('test', 
+    c = Config('test',
                foo=(3, int, 'foo yeah'),
                spam=(2.1, float, 'a float!'))
     
