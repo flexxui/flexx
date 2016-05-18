@@ -32,4 +32,9 @@ if sys.version_info[0] == 2:  # pragma: no cover
     if type(b'') == type(''):  # noqa - will be str and unicode after conversion
         sys.modules[__name__] = __import__(__name__ + '_legacy')
 
-del sys
+from flexx.util.config import Config
+config = Config('flexx', '~appdata/.flexx.cfg',
+                dummy=(0, int, 'Flexx does not have any config options yet')
+                )
+
+del sys, Config

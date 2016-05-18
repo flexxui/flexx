@@ -40,10 +40,10 @@ def get_tuple_validator(subvalidator):
 BOOLEAN_STATES = {'1': True, 'yes': True, 'true': True, 'on': True,
                   '0': False, 'no': False, 'false': False, 'off': False}
 
-TYPEMAP = {float:float, int:int, bool:as_bool}
+TYPEMAP = {float: float, int: int, bool: as_bool}
 if sys.version_info[0] == 2:  # pragma: no cover
-    TYPEMAP[basestring] = unicode
-    TYPEMAP[str] = unicode
+    TYPEMAP[basestring] = unicode  # noqa
+    TYPEMAP[str] = unicode  # noqa
 else:
     basestring = str
     TYPEMAP[str] = str
@@ -193,7 +193,7 @@ class Config(object):
                         text = open(filename, 'rb').read().decode()
                     except Exception as err:
                         logging.warn('Could not read config from %r:\n%s' %
-                                    (filename, str(err)))
+                                     (filename, str(err)))
             if text:
                 try:
                     self._load_from_string(text, source)
@@ -366,4 +366,3 @@ if __name__ == '__main__':
     c = Config('test',
                foo=(3, int, 'foo yeah'),
                spam=(2.1, float, 'a float!'))
-    
