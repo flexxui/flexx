@@ -187,7 +187,7 @@ class MyApp(ui.Widget):
 
 
 # app.serve(MyApp)
-a = app.launch(MyApp, 'firefox')
+a = app.launch(MyApp)
 app.start()
 # app.b1.set_text('asdasd')
 

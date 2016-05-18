@@ -1,5 +1,7 @@
 from .util.config import Config
 
 config = Config('flexx', '~appdata/.flexx.cfg',
-                dummy=(0, int, 'Flexx does not have any config options yet')
-                )
+    hostname=('localhost', str, 'The default port to serve apps.'),
+    port=(0, int, 'The default port to serve apps. Zero means auto-select.'),
+    webruntime=('', str, 'The default web runtime to use. Default is xul/browser.')
+    )
