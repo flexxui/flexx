@@ -224,6 +224,27 @@ def test_read_file():
         c = Config('testconfig', 3)
 
 
+def test_read_file_later():
+    
+    filename1 = os.path.join(tempfile.gettempdir(), 'flexx_config_test1.cfg')
+    with open(filename1, 'wb') as f:
+        f.write(SAMPLE1.encode())
+    filename2 = os.path.join(tempfile.gettempdir(), 'flexx_config_test2.cfg')
+    with open(filename2, 'wb') as f:
+        f.write(SAMPLE2.encode())
+    
+    c = Config('testconfig', filename1,
+               foo=(False, bool, ''), bar=(1, int, ''), 
+               spam=(0.0, float, ''), eggs=('', str, ''))
+    
+    assert c.bar == 3  # from filename1
+    c.eggs = 'haha'
+    
+    c.load_from_file(filename2)
+    assert c.bar == 4  # from filename2
+    assert c.eggs == 'haha'  # from what we set - takes precedense
+
+
 def test_access():
     
     c = Config('testconfig', foo=(1, int, ''), BAR=(1, int, ''))
@@ -273,9 +294,9 @@ def test_repr_and_str():
     # Test first line of summary
     assert 'aaa' in summary1
     assert '2' in summary1
-    assert 'default' in summary1
-    assert not 'set' in summary1
-    assert not 'string' in summary1
+    assert 'default' in summary
+    assert not 'set' in summary
+    assert not 'string' in summary
     
     # set some
     c.bar = 2
@@ -283,11 +304,11 @@ def test_repr_and_str():
     summary1 = summary.splitlines()[0]
     
     # Continue
-    assert 'default' in summary1
-    assert 'set' in summary1
+    assert 'default' in summary
+    assert 'set' in summary
     
-    assert summary.count('default') == 3  # once in header and once for each opt
-    assert summary.count('set') == 2  # once in header and once for one opt
+    assert summary.count('default') == 2  # once for each opt
+    assert summary.count('set') == 1  # once for one opt
     
     # Again, now with a file
     c = Config('aaa', filename1, foo=(False, bool, ''), bar=(1, int, ''))
@@ -297,10 +318,10 @@ def test_repr_and_str():
     # Test first line of summary
     assert 'aaa' in summary1
     assert '2' in summary1
-    assert 'default' in summary1
-    assert filename1 in summary1
-    assert not 'set' in summary1
-    assert not 'string' in summary1
+    assert 'default' in summary
+    assert filename1 in summary
+    assert not 'set' in summary
+    assert not 'string' in summary
     
     # Again, now with a string
     c = Config('aaa', SAMPLE1, foo=(False, bool, ''), bar=(1, int, ''))
@@ -310,12 +331,11 @@ def test_repr_and_str():
     # Test first line of summary
     assert 'aaa' in summary1
     assert '2' in summary1
-    assert 'default' in summary1
-    assert filename1 not in summary1
-    assert not 'set' in summary1
-    assert 'string' in summary1
-    
-    
+    assert 'default' in summary
+    assert filename1 not in summary
+    assert not 'set' in summary
+    assert 'string' in summary
+
 
 def test_set_from_cmdline():
     

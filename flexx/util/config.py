@@ -37,6 +37,9 @@ def get_tuple_validator(subvalidator):
     return validator
 
 
+# Sources that take preference over "file" and "string" sources
+PREF_SOURCES = 'environ', 'argv', 'set'
+
 BOOLEAN_STATES = {'1': True, 'yes': True, 'true': True, 'on': True,
                   '0': False, 'no': False, 'false': False, 'off': False}
 
@@ -121,9 +124,6 @@ class Config(object):
             raise ValueError('Config name must be an alphanumeric string, '
                              'starting with a letter.')
         
-        # Sources used
-        self._sources = ['default']
-        
         # The option names (unmodified case)
         self._options = []
         
@@ -180,25 +180,10 @@ class Config(object):
         for source in sources:
             if not isinstance(source, basestring):
                 raise ValueError('Sources should be strings or filenames.')
-            text = ''
             if '\n' in source:
-                text, source = source, 'string'
+                self.load_from_string(source)
             else:
-                source = source.replace('~appdata/', appdata_dir() + '/')
-                source = source.replace('~appdata\\', appdata_dir() + '\\')
-                source = os.path.expanduser(source)
-                if os.path.isfile(source):
-                    filename , source = source, 'file: ' + source
-                    try:
-                        text = open(filename, 'rb').read().decode()
-                    except Exception as err:
-                        logging.warn('Could not read config from %r:\n%s' %
-                                     (filename, str(err)))
-            if text:
-                try:
-                    self._load_from_string(text, source)
-                except Exception as err:
-                    logging.warn(str(err))
+                self.load_from_file(source)
         
         # Load from environ
         for name in self._opt_values:
@@ -224,8 +209,8 @@ class Config(object):
         # Return a string representing a summary of the options and
         # how they were set from different sources.
         lines = []
-        lines.append('Config %r with %i options with sources: %s' %
-                     (self._name, len(self._options), ', '.join(self._sources)))
+        lines.append('Config %r with %i options.' %
+                     (self._name, len(self._options)))
         lines.append('')
         for name in self._options:
             lname = name.lower()
@@ -284,13 +269,47 @@ class Config(object):
         s = self._opt_values[name.lower()]
         if s and s[-1][0] == source:
             s[-1] = source, real_value
+        elif s not in PREF_SOURCES:
+            for i in range(len(s)):
+                if s[i][0] in PREF_SOURCES:
+                    break
+            else:
+                i = len(s)
+            s.insert(i, (source, real_value))
         else:
             s.append((source, real_value))
-        # Update
-        if self._sources[-1] != source:
-            self._sources.append(source)
     
-    def _load_from_string(self, s, filename='<string>'):
+    def load_from_file(self, filename):
+        """ Load config options from a file, as if it was given as a
+        source during initialization. This means that options set via
+        argv, environ or directly will not be influenced.
+        """
+        # Expand special prefix
+        filename = filename.replace('~appdata/', appdata_dir() + '/')
+        filename = filename.replace('~appdata\\', appdata_dir() + '\\')
+        filename = os.path.expanduser(filename)
+        # Proceed if is an actual file
+        if os.path.isfile(filename):
+            text = None
+            try:
+                text = open(filename, 'rb').read().decode()
+            except Exception as err:
+                logging.warn('Could not read config from %r:\n%s' %
+                             (filename, str(err)))
+                return
+            self.load_from_string(text, filename)
+    
+    def load_from_string(self, text, filename='<string>'):
+        """ Load config options from a string, as if it was given as a
+        source during initialization. This means that options set via
+        argv, environ or directly will not be influenced.
+        """
+        try:
+            self._load_from_string(text, filename)
+        except Exception as err:
+            logging.warn(str(err))
+    
+    def _load_from_string(self, s, filename):
         # Create default section, so that users can work with sectionless
         # files (as is common in an .ini file)
         name_section = '[%s]\n' % self._name
@@ -363,6 +382,7 @@ def appdata_dir(appname=None, roaming=False):
 
 if __name__ == '__main__':
     
+    sys.argv.append('--test-foo=8')
     c = Config('test',
                foo=(3, int, 'foo yeah'),
                spam=(2.1, float, 'a float!'))
