@@ -7,9 +7,12 @@ import sys
 import hashlib
 import warnings
 import subprocess
+import importlib.util
 
 from sphinx.util.compat import Directive
 from docutils import nodes
+
+from flexx import app
 
 THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 ROOT_DIR = os.path.dirname(os.path.dirname(THIS_DIR))
@@ -21,8 +24,6 @@ if not os.path.isdir(HTML_DIR + '/ui'):
 if not os.path.isdir(HTML_DIR + '/ui/examples'):
     os.mkdir(HTML_DIR + '/ui/examples')
 
-# Make us find the modules that we write
-sys.path.insert(0, HTML_DIR + '/ui/examples')
 
 SIMPLE_CODE_T = """
 from flexx import app, ui
@@ -35,6 +36,83 @@ class App(ui.Widget):
 
 class uiexample(nodes.raw): pass
 
+
+def create_ui_example(filename, to_root, height=300):
+    """ Given a filename, export the containing app to HTML, return
+    generated HTML. Needs to be done via filename, not direct code, so
+    that PyScript can obtain source.
+    """
+    code = open(filename, 'rb').read().decode()
+    fname = os.path.split(filename)[1]
+    filename_parts = 'ui', 'examples', fname[:-3] + '.html'
+    filename_abs = os.path.join(HTML_DIR, *filename_parts)
+    filename_rel = to_root + '/' + '/'.join(filename_parts)
+    
+    # Import
+    try:
+        spec = importlib.util.spec_from_file_location("example", filename)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+    except Exception as err:
+        err_text = str(err)
+        msg = 'Example not generated. <pre>%s</pre>' % err_text
+        if os.environ.get('READTHEDOCS', False):
+            msg = 'This example is not build on read-the-docs. <pre>%s</pre>' % err_text
+        open(filename_abs, 'wt', encoding='utf-8').write(msg)
+        warnings.warn('Could not import ui example: %s' % err_text)
+        return get_html(filename_rel, 60)
+    
+    # Get class name
+    line1 = code.splitlines()[0]
+    class_name = None
+    if 'class App' in code:
+        class_name = 'App'
+    elif 'class MyApp' in code:
+        class_name = 'MyApp'
+    elif 'class Example' in code:
+        class_name = 'Example'
+    elif line1.startswith('# doc-export:'):
+        class_name = line1.split(':', 1)[1].strip()
+    #
+    if class_name:
+        assert class_name.isidentifier()
+    else:
+        msg = 'Could not determine app widget class in:<pre>%s</pre>' % code
+        warnings.warn(msg)
+        open(filename_abs, 'wt', encoding='utf-8').write(msg)
+        return get_html(filename_rel, height)
+    
+    # Export
+    try:
+        app.export(m.__dict__[class_name], filename_abs, False)
+    except Exception as err:
+        err_text = str(err)
+        msg = 'Example not generated. <pre>%s</pre>' % err_text
+        open(filename_abs, 'wt', encoding='utf-8').write(msg.replace('\\n', '<br />'))
+        raise RuntimeError('Could not export ui example: %s\n%s' % (err_text, code) )
+        #print('Could not create ui example: %s\n%s' % (err_text, code) )
+    
+    return get_html(filename_rel, height)
+
+
+def get_html(filename_rel, height):
+    """ Get the html to embed the given page into another page using an iframe.
+    """
+    # Styles
+    astyle = 'font-size:small; float:right;'
+    dstyle = 'width: 500px; height: %ipx; align: center; resize:both; overflow: hidden; box-shadow: 5px 5px 5px #777;'
+    istyle = 'width: 100%; height: 100%; border: 2px solid #094;'
+    
+    # Show app in iframe, wrapped in a resizable div
+    html = ''
+    html += "<a target='new' href='%s' style='%s'>open in new tab</a>" % (filename_rel, astyle)
+    html += "<div style='%s'>" % dstyle % height
+    html += "<iframe src='%s' style='%s'>iframe not supported</iframe>" % (filename_rel, istyle)
+    html += "</div>"
+    
+    return html
+
+
 def visit_uiexample_html(self, node):
     global should_export_flexx_deps
     
@@ -44,7 +122,6 @@ def visit_uiexample_html(self, node):
     
     # Get code
     code = ori_code = node.code.strip() + '\n'
-    ori_code = '\n'.join([' '*8 + x for x in ori_code.splitlines()])  # for reporting
     
     # Is this a simple example?
     if 'import' not in code:
@@ -53,52 +130,15 @@ def visit_uiexample_html(self, node):
     # Get id and filename
     this_id = hashlib.md5(code.encode('utf-8')).hexdigest()
     fname = 'example%s.html' % this_id
-    filename_html = os.path.join(HTML_DIR, 'ui', 'examples', fname)
     filename_py = os.path.join(HTML_DIR, 'ui', 'examples', 'example%s.py' % this_id)
     
-    # Compose code
-    code += '\n\n'
-    if 'class MyApp' in code:
-        code += 'App = MyApp\n'
-    elif 'class Example' in code:
-        code += 'App = Example\n'
-    if not 'app' in code:
-        code += 'from flexx import app\n'
-    code += 'app.export(App, %r, False)\n' % filename_html
+    # Write Python file
+    with open(filename_py, 'wb') as f:
+        f.write(code.encode())
     
-    # Write filename so Python can find the source
-    open(filename_py, 'wt', encoding='utf-8').write(code)
-    
-    try:
-        __import__('example%s' % this_id)  # import to exec
-    except ImportError as err:
-        err_text = str(err)
-        msg = 'Example not generated. <pre>%s</pre>' % err_text
-        if os.environ.get('READTHEDOCS', False):
-            node.height = 60
-            msg = 'This example is not build on read-the-docs. <pre>%s</pre>' % err_text
-        open(filename_html, 'wt', encoding='utf-8').write(msg)
-        warnings.warn('Ui example dependency not met: %s' % err_text)
-    except Exception as err:
-        err_text = str(err)
-        msg = 'Example not generated. <pre>%s</pre>' % err_text
-        open(filename_html, 'wt', encoding='utf-8').write(msg.replace('\\n', '<br />'))
-        raise RuntimeError('Could not create ui example: %s\n%s' % (err_text, ori_code) )
-        #print('Could not create ui example: %s\n%s' % (err_text, ori_code) )
-    
-    rel_path = '../ui/examples/' + fname
-    
-    # Styles
-    astyle = 'font-size:small; float:right;'
-    dstyle = 'width: 500px; height: %ipx; align: center; resize:both; overflow: hidden; box-shadow: 5px 5px 5px #777;'
-    istyle = 'width: 100%; height: 100%; border: 2px solid #094;'
-    
-    # Show app in iframe, wrapped in a resizable div
-    self.body.append("<a target='new' href='%s' style='%s'>open in new tab</a>" % (rel_path, astyle))
-    self.body.append("<div style='%s'>" % dstyle % node.height)
-    self.body.append("<iframe src='%s' style='%s'>iframe not supported</iframe>" % (rel_path, istyle))
-    self.body.append("</div>")
-    self.body.append("<br />")
+    # Get html file
+    html = create_ui_example(filename_py, '..', node.height)
+    self.body.append(html + '<br />')
 
 
 def depart_uiexample_html(self, node):

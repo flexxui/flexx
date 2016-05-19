@@ -1,3 +1,4 @@
+# doc-export: Boxes
 """
 Example that puts BoxPanel and BoxLayout side-by-side. You can see how
 BoxLayout takes the natural size of content into account, making it
@@ -8,7 +9,7 @@ main panels in this example) the BoxPanel is more appropriate.
 from flexx import ui, app
 
 
-class Example(ui.Widget):
+class Boxes(ui.Widget):
     
     def init(self):
         
@@ -56,5 +57,5 @@ class Example(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Example)
+    m = app.launch(Boxes)
     app.run()

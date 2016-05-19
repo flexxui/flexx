@@ -1,3 +1,4 @@
+# doc-export: Twente
 # flake8: noqa
 """
 Examample data-viz app. It shows real temperature data from the region

@@ -1,3 +1,4 @@
+# doc-export: Dock
 """
 Dock widgets are cool!
 """

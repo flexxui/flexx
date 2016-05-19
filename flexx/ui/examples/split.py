@@ -1,3 +1,4 @@
+# doc-export: Split
 """
 Splitter widgets are cool!
 """

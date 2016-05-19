@@ -1,3 +1,4 @@
+# doc-export: Form
 """
 Simple example that shows two forms, one which is stretched, and one
 in which we use a dummy Widget to fill up space so that the form is

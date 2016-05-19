@@ -1,6 +1,7 @@
+# doc-export: Example
 """ 
-Example demonstrating a Bokeh plot in Flexx, using a Phosphor dock panel
-layout. Includes client-side interaction with sliders.
+Example demonstrating a Bokeh plot in Flexx. Includes client-side
+interaction with sliders.
 """
 
 import numpy as np
@@ -31,7 +32,7 @@ class Example(ui.Widget):
     
     def init(self):
         
-        with ui.DockPanel():
+        with ui.SplitPanel():
             self.plot1 = ui.BokehWidget(plot=p1, title='Scatter')
             with ui.VBox(title='Sine'):
                 with ui.FormLayout():
@@ -41,10 +42,6 @@ class Example(ui.Widget):
                 with ui.Widget(style='overflow-y:auto;', flex=1):
                     self.plot2 = ui.BokehWidget(plot=p2)
                     self.plot3 = ui.BokehWidget(plot=p3)
-            # Add some colorful panels just for fun
-            ui.Label(title='Info', text='Source is <a href="%s">%s</a>' % (src, src))
-            ui.Widget(style='background:#0a0;', title='green')
-            ui.Widget(style='background:#00a;', title='blue')
     
     class JS:
         
