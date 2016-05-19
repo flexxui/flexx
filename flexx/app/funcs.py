@@ -7,6 +7,7 @@ import json
 import logging
 
 from .. import webruntime
+from .. import config
 
 from . import model
 from .model import Model
@@ -34,9 +35,9 @@ def _server_open(host=None, port=None):
             raise RuntimeError('Already hosting')
     # Handle defaults
     if host is None:
-        host = os.getenv('FLEXX_HOSTNAME', 'localhost')
+        host = config.hostname
     if port is None:
-        port = os.getenv('FLEXX_PORT', None)
+        port = config.port
     # Start hosting
     server.open(host, port)
     server._is_hosting = True
@@ -50,8 +51,8 @@ def start(host=None, port=None):
     environments (e.g. Spyder, IEP, Jupyter notebook), so the caller
     should take into account that the function may return immediately.
     
-    The host and port can also be specified using environment variables
-    FLEXX_HOSTNAME and FLEXX_PORT.
+    If not given, the host and port specified by the config are used, e.g.
+    from environment variables FLEXX_HOSTNAME and FLEXX_PORT.
     
     Arguments:
         host (str): The hostname to serve on. Default 'localhost'. This
@@ -174,7 +175,7 @@ def serve(cls):
     return cls
 
 
-def launch(cls, runtime='xul', **runtime_kwargs):
+def launch(cls, runtime=None, **runtime_kwargs):
     """ Launch the given Model class as a desktop app in the given runtime.
     
     Arguments:

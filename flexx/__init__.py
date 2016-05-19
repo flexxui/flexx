@@ -26,10 +26,16 @@ __version__ = '0.3.1'
 
 # Assert compatibility and redirect to legacy version on Python 2.7
 import sys
+ok = True
 if sys.version_info[0] == 2:  # pragma: no cover
     if sys.version_info < (2, 7):
         raise RuntimeError('Flexx needs at least Python 2.7')
     if type(b'') == type(''):  # noqa - will be str and unicode after conversion
         sys.modules[__name__] = __import__(__name__ + '_legacy')
+        ok = False
 
-del sys
+# Import config object
+if ok:
+    from ._config import config  # noqa
+
+del sys, ok

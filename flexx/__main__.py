@@ -1,6 +1,8 @@
 """
 Flexx has a command line interface to perform some simple tasks.
-Invoke it via ``python -m flexx``.
+Invoke it via ``python -m flexx``. Additional command line arguments
+can be provided to configure Flexx, see 
+:func:`configuring flexx <flexx.config>`.
 
 .. code-block:: none
 

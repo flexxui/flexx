@@ -54,9 +54,9 @@ Contents
    event/index
    pyscript/index
    webruntime/index
-   util
+   util/index
    
-   cli
+   cli_and_config
    releasenotes
 
 

@@ -36,6 +36,8 @@ Memory considerations
 
 """
 
+from .. import config
+
 from .common import BaseRuntime, DesktopRuntime  # noqa
 from .xul import XulRuntime, has_firefox
 from .nodewebkit import NodeWebkitRuntime
@@ -77,6 +79,8 @@ def launch(url, runtime=None, **kwargs):
     """
     
     # Select default runtime if not given
+    if not runtime:
+        runtime = config.webruntime
     if not runtime:
         runtime = 'xul' if has_firefox() else 'browser'
     

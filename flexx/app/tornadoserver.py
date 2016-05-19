@@ -71,7 +71,7 @@ class TornadoServer(AbstractServer):
                                              (r"/(.*)", MainHandler), ])
         
         # Start server (find free port number if port not given)
-        if port is not None:
+        if port:
             port = int(port)
             self._app.listen(port, host)
         else:

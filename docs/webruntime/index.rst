@@ -1,6 +1,6 @@
--------------------------------
-Reference for flexx.webbruntime
--------------------------------
+------------------------------
+Reference for flexx.webruntime
+------------------------------
 
 .. automodule:: flexx.webruntime
 
