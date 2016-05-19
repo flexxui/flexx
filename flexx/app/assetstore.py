@@ -225,7 +225,7 @@ class AssetStore:
         """
         modname = cls.__module__
         for name in self._module_names:
-            if modname_startswith(modname, name):
+            if modname_startswith(modname, name) and not 'examples' in modname:
                 return name
     
     def create_module_assets(self, module_name, css='', js=''):

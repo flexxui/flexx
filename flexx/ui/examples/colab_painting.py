@@ -26,7 +26,6 @@ class Relay(event.HasEvents):
         return dict(pos=pos, color=color)
 
 
-@app.serve
 class ColabPainting(ui.Widget):
     """ Web app for colaborative painting.
     """
@@ -119,5 +118,6 @@ class ColabPainting(ui.Widget):
 relay = Relay()
 
 if __name__ == '__main__':
+    app.serve(ColabPainting)
     m = app.launch(ColabPainting)  # for use during development
     app.start()

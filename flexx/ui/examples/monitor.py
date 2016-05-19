@@ -42,7 +42,6 @@ class Relay(event.HasEvents):
         app.call_later(1, self.refresh)
 
 
-@app.serve
 class Monitor(ui.Widget):
     
     def init(self):
@@ -119,5 +118,6 @@ relay = Relay()
 
 
 if __name__ == '__main__':
+    app.serve(Monitor)
     # m = app.launch(Monitor)  # for use during development
     app.start()

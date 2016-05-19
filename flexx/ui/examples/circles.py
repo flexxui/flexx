@@ -19,7 +19,7 @@ class Circle(ui.Label):
     }
     """
 
-class App(ui.Widget):
+class Circles(ui.Widget):
     
     def init(self):
         self._circles = []
@@ -45,6 +45,7 @@ class App(ui.Widget):
             circle.pos = x, y
         app.call_later(0.03, self.tick)
 
+
 if __name__ == '__main__':
-    m = app.launch(App)
+    m = app.launch(Circles)
     app.run()
