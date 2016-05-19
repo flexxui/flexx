@@ -51,6 +51,7 @@ class Editor(ui.CanvasWidget):
             
             # Use trick to get HiDPI text:
             # http://www.html5rocks.com/en/tutorials/canvas/hidpi/
+            # todo: this can change at runtime (e.g. browser zoom)
             self.dpratio = window.devicePixelRatio or 1
             self.bsratio = (self.ctx.webkitBackingStorePixelRatio or
                             self.ctx.mozBackingStorePixelRatio or
@@ -138,8 +139,9 @@ class Editor(ui.CanvasWidget):
             ratio = self.dpratio / self.bsratio
             self.node.width = w * ratio
             self.node.height = h * ratio
+            ctx.scale(ratio, ratio)
             
-            ctx.clearRect(0, 0, w*ratio, h*ratio)
+            ctx.clearRect(0, 0, w, h)
             ctx.font = "%ipx DejaVu Sans Mono" % self.font_size
             
             cw = ctx.measureText('x').width
@@ -147,11 +149,11 @@ class Editor(ui.CanvasWidget):
             line_delta = ch + 2
             
             # Hoe many chars fit  in the viewport?
-            nw = int(w*ratio / cw) - 3
-            nh = int(h*ratio / ch)
+            nw = int(w / cw) - 3
+            nh = int(h / ch)
             
             ctx.fillStyle = '#eef'
-            ctx.fillRect(0, 0, w*ratio, h*ratio)
+            ctx.fillRect(0, 0, w, h)
             
             import time
             t0 = time.time()
@@ -180,10 +182,9 @@ class Editor(ui.CanvasWidget):
                     part, line = line[:nw], line[nw:]
                     ypos += line_delta
                     ctx.fillText(part, xpos, ypos)
-                if ypos > h*ratio:
+                if ypos > h:
                     break  # we may break earlier if we had multi-line bocks
             
-            ctx.scale(ratio, ratio)
             #print(time.time() - t0)
             
 
