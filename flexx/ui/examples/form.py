@@ -21,7 +21,7 @@ class Form(ui.Widget):
                 self.b4 = ui.Button(title='Name:', text='Hola')
                 self.b5 = ui.Button(title='Age:', text='Hello world')
                 self.b6 = ui.Button(title='Favorite color:', text='Foo bar')
-                ui.Widget(flex=1) # Add a flexer
+                ui.Widget(flex=1)  # Add a flexer
 
 
 if __name__ == '__main__':
