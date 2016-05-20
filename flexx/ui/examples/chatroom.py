@@ -24,7 +24,6 @@ class MessageBox(ui.Label):
     """
 
 
-@app.serve
 class ChatRoom(ui.Widget):
     """ Despite the name, this represents one connection to the chat room.
     """
@@ -83,5 +82,6 @@ class ChatRoom(ui.Widget):
 relay = Relay()
 
 if __name__ == '__main__':
+    app.serve(ChatRoom)
     # m = app.launch(ChatRoom)  # for use during development
     app.start()

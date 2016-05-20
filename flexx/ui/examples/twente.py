@@ -1,3 +1,4 @@
+# doc-export: Twente
 # flake8: noqa
 """
 Examample data-viz app. It shows real temperature data from the region
@@ -108,7 +109,6 @@ def parse_data(raw_data):
 years, data = parse_data(raw_data)
 
 
-@app.serve
 class Twente(ui.Widget):
     
     def init(self):
@@ -160,6 +160,7 @@ class Twente(ui.Widget):
                     yy2.append(val / n)
             
             self.plot.ydata = yy2
+
 
 if __name__ == '__main__':
     m = app.launch(Twente, runtime='xul', title='Temperature 1951 - 2014',

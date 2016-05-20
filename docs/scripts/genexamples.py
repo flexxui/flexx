@@ -4,14 +4,23 @@
 import os
 import json
 from types import ModuleType
+import flexx
 from flexx import ui, app
 from urllib.request import urlopen
+
+from uiexample import create_ui_example
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 DOC_DIR = os.path.abspath(os.path.join(THIS_DIR, '..'))
-EXAMPLES_DIR = os.path.abspath(os.path.join(DOC_DIR, '..', 'examples'))
-OUTPUT_DIR = os.path.join(DOC_DIR, 'examples')
+FLEXX_DIR = os.path.dirname(flexx.__file__)
+
+# Get list of (submodule, dirname) tuples
+EXAMPLES_DIRS = []
+for dname in os.listdir(FLEXX_DIR):
+    dirname = os.path.join(FLEXX_DIR, dname, 'examples')
+    if os.path.isdir(dirname):
+        EXAMPLES_DIRS.append((dname, dirname))
 
 created_files = []
 
@@ -31,35 +40,34 @@ def main():
     
     # Collect examples
     examples = {}
-    for sub in os.listdir(EXAMPLES_DIR):
-        dirname = os.path.join(EXAMPLES_DIR, sub)
-        if os.path.isdir(dirname):
-            examples[sub] = {}
-            for fname in os.listdir(dirname):
-                filename = os.path.join(dirname, fname)
-                if os.path.isfile(filename) and fname.endswith('.py'):
-                    # Create example content
-                    code = open(filename, 'rt', encoding='utf-8').read()
-                    text = ':orphan:\n\n'  # avoid toctree warning
-                    text += '.. _%s:\n\n' % fname
-                    text += '%s\n%s\n\n' % (fname, '=' * len(fname))
-                    text += '.. code-block:: py\n    :linenos:\n\n'
-                    text += '\n    ' + code.replace('\n', '\n    ').rstrip() + '\n'
-                    examples[sub][fname] = text
-            if not examples[sub]:
-                del examples[sub]
+    for sub, dirname in EXAMPLES_DIRS:
+        examples[sub] = {}
+        for fname in os.listdir(dirname):
+            filename = os.path.join(dirname, fname)
+            if os.path.isfile(filename) and fname.endswith('.py') and fname[0] != '_':
+                # Create example content
+                code = open(filename, 'rt', encoding='utf-8').read()
+                text = ':orphan:\n\n'  # avoid toctree warning
+                text += '.. _%s:\n\n' % fname
+                text += '%s\n%s\n\n' % (fname, '=' * len(fname))
+                if sub == 'ui' and code.startswith('# doc-export:'):
+                    code = code.split('\n', 1)[1].lstrip()
+                    html = create_ui_example(filename, '../..')
+                    text +=  '.. raw:: html\n\n    ' + html + '\n\n'
+                text += '.. code-block:: py\n    :linenos:\n\n'
+                text += '\n    ' + code.replace('\n', '\n    ').rstrip() + '\n'
+                
+                examples[sub][fname] = text
+        if not examples[sub]:
+            del examples[sub]
     
-    # Write all examples
-    created_files.append(OUTPUT_DIR)
-    if not os.path.isdir(OUTPUT_DIR):
-        os.mkdir(OUTPUT_DIR)
-    for sub in list(examples.keys()):
-        dirname = os.path.join(OUTPUT_DIR, sub)
-        created_files.append(dirname)
-        if not os.path.isdir(dirname):
-            os.mkdir(dirname)
+        # Write all examples
+        output_dir = os.path.join(DOC_DIR, sub, 'examples')
+        created_files.append(output_dir)
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
         for name in examples[sub]:
-            filename = os.path.join(dirname, name + '.rst')
+            filename = os.path.join(output_dir, name[:-3] + '_src.rst')
             created_files.append(filename)
             open(filename, 'wt', encoding='utf-8').write(examples[sub][name])
     
@@ -78,7 +86,7 @@ def main():
     better_names = {'pyscript': 'PyScript'}
     
     # Create example pages per submodule
-    for sub in examples:
+    for sub, _ in EXAMPLES_DIRS:
         dirname = os.path.join(DOC_DIR, sub)
         if os.path.isdir(dirname):
             docs = better_names.get(sub, sub.capitalize()) + ' examples'
