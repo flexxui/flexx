@@ -36,9 +36,10 @@ def get_tuple_validator(subvalidator):
         return tuple([subvalidator(x) for x in value2])
     return validator
 
+def stack_sorter(key):
+    # Implement ordering, files and strings go at spot 1
+    return dict(default=0, environ=2, argv=3, set=4).get(key[0], 1)
 
-# Sources that take preference over "file" and "string" sources
-PREF_SOURCES = 'environ', 'argv', 'set'
 
 BOOLEAN_STATES = {'1': True, 'yes': True, 'true': True, 'on': True,
                   '0': False, 'no': False, 'false': False, 'off': False}
@@ -53,12 +54,17 @@ else:
 
 INSTANCE_DOCS = """ Configuration object for {name}
     
-    The options below can be set via a .ini or .cfg file, environment
-    variables, command-line arguments, or by modifying the config object
-    in Python, e.g:
+    The options below can be set from different sources, and are
+    evaluated in the following order:
     
-    * Environment variable ``{NAME}_FOO=3``. 
-    * Command line argument ``--{name}-foo=3``.
+    * From the default value.
+    * From .cfg or .ini file, or a string in cfg format.
+    * From environment variables, e.g. ``{NAME}_FOO=3``.
+    * From command-line arguments, e.g. ``--{name}-foo=3``.
+    * From setting the config option directly, e.g. ``config.foo = 3``.
+    
+    Use ``print(config)`` to get a summary of the current values and
+    from which sources they were set.
     
     Parameters:
     """
@@ -127,14 +133,17 @@ class Config(object):
         # The option names (unmodified case)
         self._options = []
         
-        # Where the values are stored, we keep a "history", lowercase keys
+        # Where the values are stored, we keep a stack, lowercase keys
         self._opt_values = {}  # name -> list of (source, value) tuples
         
-        # Map of option names to validator functions, lowercase keys
+        # Map of lowercase option names to validator functions
         self._opt_validators = {}
         
-        # Map of option names to type names, for better reporting
+        # Map of lowercase option names to type names, for better reporting
         self._opt_typenames = {}
+        
+        # Map of lowercase option names to docstrings
+        self._opt_docs = {}
         
         # Parse options
         option_docs = ['']
@@ -163,6 +172,7 @@ class Config(object):
             self._opt_typenames[lname] = typename
             self._opt_validators[lname] = (get_tuple_validator(TYPEMAP[typ])
                                            if istuple else TYPEMAP[typ])
+            self._opt_docs[lname] = doc
             self._opt_values[lname] = []
         
         # Overwrite docstring
@@ -211,12 +221,14 @@ class Config(object):
         lines = []
         lines.append('Config %r with %i options.' %
                      (self._name, len(self._options)))
-        lines.append('')
         for name in self._options:
             lname = name.lower()
-            lines.append('Option %s (%s):' % (name, self._opt_typenames[lname]))
+            lines.append('\nOption %s (%s) - %s' % (name,
+                                                  self._opt_typenames[lname],
+                                                  self._opt_docs[lname]))
             for source, val in self._opt_values[lname]:
-                lines.append('  %r from %s' % (val, source))
+                lines.append('    %r from %s' % (val, source))
+            lines[-1] = ' -> ' + lines[-1][4:]  # Mark current value
         return '\n'.join(lines)
     
     def __len__(self):
@@ -266,18 +278,12 @@ class Config(object):
         except Exception:
             args = name, self._opt_typenames[name.lower()], value
             raise ValueError('Cannot set option %s (%s) from %r' % args)
-        s = self._opt_values[name.lower()]
-        if s and s[-1][0] == source:
-            s[-1] = source, real_value
-        elif s not in PREF_SOURCES:
-            for i in range(len(s)):
-                if s[i][0] in PREF_SOURCES:
-                    break
-            else:
-                i = len(s)
-            s.insert(i, (source, real_value))
+        stack = self._opt_values[name.lower()]
+        if stack and stack[-1][0] == source:
+            stack[-1] = source, real_value
         else:
-            s.append((source, real_value))
+            stack.append((source, real_value))
+            stack.sort(key=stack_sorter)
     
     def load_from_file(self, filename):
         """ Load config options from a file, as if it was given as a
