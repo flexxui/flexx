@@ -233,16 +233,21 @@ def test_read_file_later():
     with open(filename2, 'wb') as f:
         f.write(SAMPLE2.encode())
     
+    os.environ['TESTCONFIG_SPAM'] = '100'
     c = Config('testconfig', filename1,
                foo=(False, bool, ''), bar=(1, int, ''), 
                spam=(0.0, float, ''), eggs=('', str, ''))
+    del os.environ['TESTCONFIG_SPAM']
     
     assert c.bar == 3  # from filename1
+    assert c.spam == 100
     c.eggs = 'haha'
+    c.spam = 10
     
     c.load_from_file(filename2)
     assert c.bar == 4  # from filename2
     assert c.eggs == 'haha'  # from what we set - takes precedense
+    assert c.spam == 10  # from what we set - precedense over env var
 
 
 def test_access():
@@ -385,6 +390,36 @@ def test_set_from_env():
     c = Config(name, SAMPLE1, foo=(False, bool, ''), bar=(1, int, ''))
     del os.environ[name.upper() + '-' + 'bar']
     assert c.bar == 3  # should use underscore
+
+
+def test_order():
+    
+    filename1 = os.path.join(tempfile.gettempdir(), 'flexx_config_test1.cfg')
+    with open(filename1, 'wb') as f:
+        f.write(SAMPLE1.encode())
+    filename2 = os.path.join(tempfile.gettempdir(), 'flexx_config_test2.cfg')
+    with open(filename2, 'wb') as f:
+        f.write(SAMPLE2.encode())
+    
+    old_argv = sys.argv
+    os.environ['TESTCONFIG_BAR'] = '5'
+    sys.argv = '', '--testconfig-bar=6'
+    
+    try:
+        c = Config('testconfig', filename1, filename2,
+                   bar=(2, int, ''))
+    finally:
+        del os.environ['TESTCONFIG_BAR']
+        sys.argv = old_argv
+    
+    c.bar = 7
+    
+    s = str(c)
+    indices1 = [s.index(' %i '%i) for i in [2, 3, 4, 5, 6, 7]]
+    indices2 = [s.rindex(' %i '%i) for i in [2, 3, 4, 5, 6, 7]]
+    indices3 = list(sorted(indices1))
+    assert indices1 == indices3
+    assert indices2 == indices3
 
 
 def test_docstring():
