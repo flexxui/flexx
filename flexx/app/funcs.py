@@ -4,12 +4,11 @@ Functional API for flexx.app
 
 import os
 import json
-import logging
 
 from .. import webruntime
 from .. import config
 
-from . import model
+from . import model, logger
 from .model import Model
 from .session import manager
 from .tornadoserver import server
@@ -64,6 +63,7 @@ def start(host=None, port=None):
     # Get server up
     _server_open(host, port)
     # Start event loop
+    logger.info('Starting Flexx event loop.')
     server.start()
 
 
@@ -102,7 +102,7 @@ def _auto_closer(*events):
         if proxies:
             return
     else:
-        logging.info('Stopping Flexx event loop.')
+        logger.info('Stopping Flexx event loop.')
         server.stop()
 
 
@@ -249,7 +249,7 @@ def export(cls, filename=None, single=True):
         filename = os.path.expanduser(filename)
     with open(filename, 'wb') as f:
         f.write(html.encode())
-    logging.info('Exported app to %r' % filename)
+    logger.info('Exported app to %r' % filename)
 
 
 class ExporterWebSocketDummy:

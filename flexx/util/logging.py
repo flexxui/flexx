@@ -28,14 +28,14 @@ class _Formatter(logging.Formatter):
     """Formatter that optionally prepends caller """
     
     def __init__(self):
-        super().__init__('%(name)s (%(levelname)s): %(message)s')
+        super().__init__('%(levelname)s %(name)s: %(message)s')
         self.prepend_caller = False
     
     def format(self, record):
         out = logging.Formatter.format(self, record)
         if self.prepend_caller:
-            part1, part2 = out.split(' ', 1)
-            out = part1 + ' ' + record.funcName + '() ' + part2
+            part1, part2 = out.split(':', 1)
+            out = part1 + ' ' + record.funcName + '():' + part2
         return out
 
 

@@ -198,6 +198,10 @@ Supported Python conveniences:
 
 """
 
+import logging
+logger = logging.getLogger(__name__)
+del logging
+
 # NOTE: The code for the parser is quite long, especially if you want
 # to document it well. Therefore it is split in multiple modules, which
 # are simply numbered 0, 1, 2, etc. Here in the __init__, we define

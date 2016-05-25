@@ -23,11 +23,12 @@ import json
 import time
 import random
 import hashlib
-import logging
 from urllib.request import urlopen
 from collections import OrderedDict
 
 from .model import Model, get_model_classes
+from . import logger
+
 
 INDEX = """<!doctype html>
 <html>
@@ -344,7 +345,7 @@ class SessionAssets:
             suffix = fname.split('.')[-1].upper()
             code = self._store.load_asset(fname).decode()
             self._send_command('DEFINE-%s %s' % (suffix, code))
-            #logging.warn('Adding asset %r but the page was already "served".' % fname)
+            #logger.warn('Adding asset %r but the page was already "served".' % fname)
         
         if before:
             index = self._asset_names.index(before)
@@ -416,7 +417,7 @@ class SessionAssets:
             raise RuntimeError('Cannot have multiple Model classes with the '
                                'same name: %r' % same_name)
         
-        logging.info('Registering Model class %r' % cls.__name__)
+        logger.debug('Registering Model class %r' % cls.__name__)
         self._known_classes.add(cls)
         
         # Check if cls is covered by our assets
@@ -432,7 +433,7 @@ class SessionAssets:
             self._extra_model_classes.append(cls)
         else:
             # Define class dynamically - assuming we're a session subclass ...
-            logging.warn('Dynamically defining class %r' % cls)
+            logger.debug('Dynamically defining class %r' % cls)
             js, css = cls.JS.CODE, cls.CSS
             self._send_command('DEFINE-JS ' + js)
             if css.strip():
@@ -565,7 +566,7 @@ def get_random_string(length=24, allowed_chars=None):
         srandom = random.SystemRandom()
     except NotImplementedError:
         srandom = random
-        logging.warn('Falling back to less secure Mersenne Twister random string.')
+        logger.warn('Falling back to less secure Mersenne Twister random string.')
         bogus = "%s%s%s" % (random.getstate(), time.time(), 'sdkhfbsdkfbsdbhf')
         random.seed(hashlib.sha256(bogus.encode()).digest())
 

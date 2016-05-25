@@ -8,6 +8,7 @@ import sys
 from ._dict import Dict
 from ._handler import HandlerDescriptor, Handler
 from ._emitters import BaseEmitter, Property
+from . import logger
 
 def this_is_js():
     return False
@@ -192,6 +193,8 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         all references to subscribed handlers, disconnect all handlers
         defined on this object.
         """
+        if not this_is_js():
+            logger.debug('Disposing HasEvents instance %r' % self)
         for name, handlers in self.__handlers.items():
             for label, handler in handlers:
                 handler._clear_hasevents_refs(self)

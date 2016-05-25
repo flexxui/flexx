@@ -3,12 +3,11 @@ Definition of App class and the app manager.
 """
 
 import time
-import logging
 
 from .. import event
 from .model import Model, new_type
 from .assetstore import SessionAssets
-
+from . import logger
 
 # todo: thread safety
 
@@ -49,7 +48,7 @@ class AppManager(event.HasEvents):
         pending, connected = [], []
         if name in self._proxies and cls is not self._proxies[name][0]:
             oldCls, pending, connected = self._proxies[name]
-            logging.warn('Re-registering app class %r' % name)
+            logger.warn('Re-registering app class %r' % name)
             #raise ValueError('App with name %r already registered' % name)
         self._proxies[name] = cls, pending, connected
     
@@ -83,10 +82,10 @@ class AppManager(event.HasEvents):
                     pending.remove(s)
                 count += len(to_remove)
             if count:
-                logging.warn('Cleared %i old pending sessions' % count)
+                logger.warn('Cleared %i old pending sessions' % count)
         
         except Exception as err:
-            logging.error('Error when clearing old pending sessions: %s' % str(err))
+            logger.error('Error when clearing old pending sessions: %s' % str(err))
     
     def create_session(self, name):
         """ Create a session for the app with the given name.
@@ -119,13 +118,12 @@ class AppManager(event.HasEvents):
         # will be communicated, so it connects to the correct session.
         pending.append(session)
         
-        logging.debug('Instantiate app client %s' % session.app_name)
+        logger.debug('Instantiate app client %s' % session.app_name)
         return session
     
     def connect_client(self, ws, name, app_id):
         """ Connect a client to a session that was previously created.
         """
-        logging.debug('connecting %s %s' %(name, app_id))
         cls, pending, connected = self._proxies[name]
         
         # Search for the session with the specific id
@@ -138,6 +136,7 @@ class AppManager(event.HasEvents):
     
         # Add app to connected, set ws
         assert session.status == Session.STATUS.PENDING
+        logger.info('New session %s %s' %(name, app_id))
         session._set_ws(ws)
         connected.append(session)
         AppManager.total_sessions += 1
@@ -156,6 +155,7 @@ class AppManager(event.HasEvents):
             connected.remove(session)
         except ValueError:
             pass
+        logger.info('Session closed %s %s' %(session.app_name, session.id))
         session.close()
         self.connections_changed(session.app_name)
     
@@ -314,7 +314,7 @@ class Session(SessionAssets):
             self._pending_commands.append(command)
         else:
             #raise RuntimeError('Cannot send commands; app is closed')
-            logging.warn('Cannot send commands; app is closed')
+            logger.warn('Cannot send commands; app is closed')
     
     def _receive_command(self, command):
         """ Received a command from JS.
@@ -322,13 +322,13 @@ class Session(SessionAssets):
         if command.startswith('RET '):
             print(command[4:])  # Return value
         elif command.startswith('ERROR '):
-            logging.error('JS - ' + command[6:].strip())
+            logger.error('JS - ' + command[6:].strip())
         elif command.startswith('WARN '):
-            logging.warn('JS - ' + command[5:].strip())
+            logger.warn('JS - ' + command[5:].strip())
         elif command.startswith('PRINT '):
             print(command[5:].strip())
         elif command.startswith('INFO '):
-            logging.info('JS - ' + command[5:].strip())
+            logger.info('JS - ' + command[5:].strip())
         elif command.startswith('SET_PROP '):
             # todo: seems weird to deal with here. implement by registring some handler?
             # Should be better when we implement a more formal protocol
@@ -347,7 +347,7 @@ class Session(SessionAssets):
             if ob is not None:
                 ob._emit_from_js(name, txt)
         else:
-            logging.warn('Unknown command received from JS:\n%s' % command)
+            logger.warn('Unknown command received from JS:\n%s' % command)
     
     def _exec(self, code):
         """ Like eval, but without returning the result value.

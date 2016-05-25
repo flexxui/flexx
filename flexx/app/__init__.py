@@ -78,6 +78,10 @@ Overview of classes:
 
 """
 
+import logging
+logger = logging.getLogger(__name__)
+del logging
+
 from .session import manager, Session  # noqa
 from .model import Model, get_active_model  # noqa
 from .model import get_instance_by_id, get_model_classes  # noqa

@@ -4,8 +4,8 @@ event loop such as tornado or Qt.
 """
 
 import sys
-import logging
 
+from . import logger
 
 # todo: maybe this can be the base class for the tornado loop that we use in flexx.app
 
@@ -44,7 +44,7 @@ class Loop:
             try:
                 func()
             except Exception as err:
-                logging.exception(err)
+                logger.exception(err)
     
     def __enter__(self):
         return self
@@ -83,18 +83,21 @@ class Loop:
         import tornado.ioloop
         loop = tornado.ioloop.IOLoop.instance()
         self._calllaterfunc = loop.add_callback
+        logger.debug('Flexx event loop integrated with Tornado')
     
     def integrate_pyqt4(self):  # pragma: no cover
         """ Integrate with PyQt4.
         """
         from PyQt4 import QtCore, QtGui
         self._integrate_qt(QtCore, QtGui)
+        logger.debug('Flexx event loop integrated with PyQt4')
     
     def integrate_pyside(self):  # pragma: no cover
         """ Integrate with PySide.
         """
         from PySide import QtCore, QtGui
         self._integrate_qt(QtCore, QtGui)
+        logger.debug('Flexx event loop integrated with PySide')
     
     def _integrate_qt(self, QtCore, QtGui):  # pragma: no cover
         from queue import Queue, Empty
