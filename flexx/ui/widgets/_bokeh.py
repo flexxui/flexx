@@ -36,6 +36,11 @@ Bokeh = None  # fool flakes
 
 class BokehWidget(Widget):
     """ A widget that shows a Bokeh plot object.
+    
+    In Bokeh 0.12 and up, the plot's ``responsive`` property is set to
+    ``box`` unless it was set to something else than ``fixed``. Other
+    responsive modes are 'width_ar', 'height_ar' and 'box_ar`, which
+    all keep aspect ratio while being responsive in a certain direction.
     """
     
     CSS = """
@@ -61,7 +66,7 @@ class BokehWidget(Widget):
     
     @event.prop(sync=False)
     def plot(self, plot=None):
-        """ The Bokeh plot object to display. In JS, this signal
+        """ The Bokeh plot object to display. In JS, this prop
         provides the corresponding backbone model.
         """
         try:
@@ -72,7 +77,8 @@ class BokehWidget(Widget):
             return None
         if not isinstance(plot, Plot):
             raise ValueError('Plot must be a Bokeh plot object.')
-        plot.responsive = False  # Flexx handles responsiveness
+        if plot.responsive == 'fixed':
+            plot.responsive = 'box'  # Fixed is default, but silly in this context
         self._plot_components(plot)
         return plot
     
@@ -102,14 +108,18 @@ class BokehWidget(Widget):
             # Get plot from id in next event-loop iter
             def getplot():
                 self.plot = Bokeh.index[ev.id]
-                self.plot.resize()
+                self.plot.model.document.resize()
                 #self.real_size._set(self.real_size) ???
             window.setTimeout(getplot, 10)
         
         @event.connect('size')
         def __resize_plot(self, *events):
-            if self.plot and self.parent and self.plot.resize_width_height:
-                cstyle = window.getComputedStyle(self.parent.node)
-                use_x = cstyle['overflow-x'] not in ('auto', 'scroll')
-                use_y = cstyle['overflow-y'] not in ('auto', 'scroll')
-                self.plot.resize_width_height(use_x, use_y)
+            if self.plot and self.parent:
+                if self.plot.resize_width_height:
+                    # Bokeh <= 0.11
+                    cstyle = window.getComputedStyle(self.parent.node)
+                    use_x = cstyle['overflow-x'] not in ('auto', 'scroll')
+                    use_y = cstyle['overflow-y'] not in ('auto', 'scroll')
+                    self.plot.resize_width_height(use_x, use_y)
+                else:
+                    self.plot.model.document.resize()
