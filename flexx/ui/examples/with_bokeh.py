@@ -23,9 +23,9 @@ p1.scatter(x, y, alpha=0.1, nonselection_alpha=0.1)
 
 # Plot2
 t = np.linspace(0, 6.5, 100)
-p2 = figure(tools=TOOLS)
+p2 = figure(tools=TOOLS, responsive='width_ar')
 p2.line(t, np.sin(t))
-p3 = figure(tools=TOOLS)
+p3 = figure(tools=TOOLS, responsive='width_ar')
 p3.line(t, np.cos(t))
 
 class Example(ui.Widget):
@@ -64,4 +64,4 @@ class Example(ui.Widget):
 
 if __name__ == '__main__':
     m = app.launch(Example, 'firefox')
-    app.run()
+    app.start()
