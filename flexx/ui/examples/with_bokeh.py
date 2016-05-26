@@ -52,9 +52,9 @@ class Example(ui.Widget):
             ds = None
             plot = self.plot2.plot
             if plot:
-                for ren in plot.renderers.values():
-                    if ren.model.data_source:
-                        ds = ren.model.data_source
+                for ren in plot.model.renderers.values():
+                    if ren.data_source:
+                        ds = ren.data_source
                         break
             # Update
             if ds:
