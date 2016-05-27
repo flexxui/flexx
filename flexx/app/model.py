@@ -67,7 +67,6 @@ attributes and handlers can be created here.
 
 import json
 import weakref
-import logging
 import threading
 
 from .. import event
@@ -78,6 +77,7 @@ from ..event._js import create_js_hasevents_class, HasEventsJS
 from ..pyscript import py2js, js_rename, window, Parser
 
 from .serialize import serializer
+from . import logger
 
 reprs = json.dumps
 
@@ -97,7 +97,7 @@ def get_instance_by_id(id):
     try:
         return Model._instances[id]
     except KeyError:
-        logging.warn('Model instance %r does not exist in Python (anymore).' % id)
+        logger.warn('Model instance %r does not exist in Python (anymore).' % id)
         return None  # Could we revive it? ... probably not a good idea
 
 
@@ -194,8 +194,8 @@ class ModelMeta(HasEventsMeta):
                     p = val.__class__(stub_prop_func, name, val._func.__doc__)
                     setattr(cls, name, p)
                 else:
-                    logging.warn('JS property %r not proxied on %s, as it would '
-                                 'hide a Py attribute.' % (name, cls.__name__))
+                    logger.warn('JS property %r not proxied on %s, as it would '
+                                'hide a Py attribute.' % (name, cls.__name__))
             elif isinstance(val, Emitter) and not hasattr(cls, name):
                 p = val.__class__(stub_emitter_func_py, name, val._func.__doc__)
                 setattr(cls, name, p)
@@ -215,8 +215,8 @@ class ModelMeta(HasEventsMeta):
                     p = val.__class__(stub_prop_func, name, val._func.__doc__)
                     setattr(cls.JS, name, p)
                 else:
-                    logging.warn('Py property %r not proxied on %s, as it would '
-                                 'hide a JS attribute.' % (name, cls.__name__))
+                    logger.warn('Py property %r not proxied on %s, as it would '
+                                'hide a JS attribute.' % (name, cls.__name__))
             elif isinstance(val, Emitter) and not hasattr(cls, name):
                 p = val.__class__(stub_emitter_func_js, name, val._func.__doc__)
                 setattr(cls, name, p)
@@ -470,6 +470,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         shouldsend = self.__emitter_flags__[name].get('sync', True)
         if isboth:
             shouldsend = shouldsend and not _initial
+        
+        logger.debug('Setting prop %r on %s, fromjs=%s' % (name, self.id, fromjs))
         
         if fromjs or not isproxy:  # Only not set if isproxy and not from js
             shouldsend = super()._set_prop(name, value, _initial) and shouldsend

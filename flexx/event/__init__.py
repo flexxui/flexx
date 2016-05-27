@@ -335,6 +335,10 @@ topic. Subscribers are represented by handlers.
 
 """
 
+import logging
+logger = logging.getLogger(__name__)
+del logging
+
 from ._dict import Dict  # noqa
 from ._loop import loop  # noqa
 from ._handler import Handler, connect  # noqa

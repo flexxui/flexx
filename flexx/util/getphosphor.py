@@ -5,7 +5,7 @@ resource of Phosphor.
 """
 
 import os
-import logging
+from .logging import logger
 from urllib.request import urlopen
 
 # todo: maybe this should be more generic; download a variety of JS libs (e.g. react)
@@ -38,12 +38,12 @@ def _fetch_file(url):
     """ Fetches a file from the internet. Retry a few times before
     giving up on failure.
     """
-    logging.warn('Downloading %s' % url)
+    logger.info('Downloading %s' % url)
     for tries in range(4):
         try:
             return urlopen(url, timeout=5.0).read()
         except Exception as e:
-            logging.warn('Error while fetching file: %s' % str(e))
+            logger.warn('Error while fetching file: %s' % str(e))
     raise IOError('Unable to download %r. Perhaps there is a no internet '
                   'connection? If there is, please report this problem.' % url)
 

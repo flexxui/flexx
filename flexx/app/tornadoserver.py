@@ -5,7 +5,6 @@ can be generalized.
 
 import json
 import time
-import logging
 import traceback
 from urllib.parse import urlparse
 # from concurrent.futures import ThreadPoolExecutor
@@ -17,6 +16,7 @@ from tornado import gen
 
 from .session import manager, valid_app_name
 from .assetstore import assets
+from . import logger
 
 # todo: threading, or even multi-process
 #executor = ThreadPoolExecutor(4)
@@ -87,7 +87,7 @@ class TornadoServer(AbstractServer):
         
         # Notify address, so its easy to e.g. copy and paste in the browser
         self.serving_at = self._app.serving_at = host, port
-        print('Serving apps at http://%s:%i/' % (host, port))
+        logger.info('Serving apps at http://%s:%i/' % (host, port))
     
     def start(self):
         if not getattr(self._loop, '_running', False):
@@ -97,7 +97,7 @@ class TornadoServer(AbstractServer):
         """ Stop the server. Thread-safe.
         """
         # todo: explicitly close all websocket connections
-        print('Stopping server')
+        logger.debug('Stopping Tornado server')
         self._loop.add_callback(self._loop.stop)
     
     def call_later(self, delay, callback, *args, **kwargs):
@@ -131,11 +131,12 @@ class MainHandler(tornado.web.RequestHandler):
     """
     def initialize(self, **kwargs):
         # kwargs == dict set as third arg in url spec
-        # print('init request')
         pass
     
     @gen.coroutine
     def get(self, path=None):
+        
+        logger.debug('Incoming request at %s' % path)
         
         # Analyze path to derive components
         # app_name - class name of the app, must be a valid identifier
@@ -259,7 +260,7 @@ class MainHandler(tornado.web.RequestHandler):
             super().write_error(status_code, **kwargs)
     
     def on_finish(self):
-        pass  # print('finish request')
+        pass
 
 
 
@@ -297,7 +298,7 @@ class MessageCounter:
             T = self._mps[-1][0] - self._mps[0][0] + self._collect_interval
         else:
             n, T = 0, self._collect_interval
-        logging.debug('Websocket messages per second: %1.1f' % (n / T))
+        logger.debug('Websocket messages per second: %1.1f' % (n / T))
         
         if not self._stop:
             server.call_later(self._notify_interval, self._notify)
@@ -335,7 +336,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             path = path.decode()
         self.app_name = path.strip('/')
         
-        print('new ws connection', path)
+        logger.debug('New websocket connection %s' % path)
         if manager.has_app_name(self.app_name):
             if tornado.version_info < (4, ):
                 tornado.ioloop.IOLoop.current().add_callback(self.pinger)
@@ -374,7 +375,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         """
         self.close_code = code = self.close_code or 0
         reason = self.close_reason or self.known_reasons.get(code, '')
-        print('detected close: %s (%i)' % (reason, code))
+        logger.debug('Websocket closed: %s (%i)' % (reason, code))
         self._mps_counter.stop()
         if self._session is not None:
             manager.disconnect_client(self._session)
@@ -389,13 +390,14 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             self.ping(b'x')
             yield gen.sleep(2)
             if time.time() - self._pongtime > 20:
+                logger.warn('Closing connection due to lack of pong')
                 self.close(1000, 'Conection timed out (no pong).')
                 return
     
     def on_pong(self, data):
         """ Called when our ping is returned.
         """
-        logging.debug('pong')
+        #logger.debug('pong')
         self._pongtime = time.time()
     
     # --- methods
@@ -426,5 +428,5 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         elif host == incoming_host:
             return True
         else:
-            print('Connection refused from %s' % origin)
+            logger.info('Connection refused from %s' % origin)
             return False

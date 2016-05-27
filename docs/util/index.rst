@@ -11,6 +11,7 @@ any of the other submodules.
     :maxdepth: 1
     
     config
+    logging
     png
     ico
     

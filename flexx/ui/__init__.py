@@ -65,6 +65,10 @@ To lean about the individual widgets, check the
 :doc:`list of widget classes <api>`.
 """
 
+import logging
+logger = logging.getLogger(__name__)
+del logging
+
 # We follow the convention of having one module per widget class (or a
 # small set of closely related classes). In order not to pollute this
 # namespace, we prefix the module names with an underscrore.

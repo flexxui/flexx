@@ -5,6 +5,7 @@ getting into an infinite loop.
 
 from flexx import event
 
+
 class Temperature(event.HasEvents):
     """ Temperature object with a settable prop for both Celcius and
     Fahrenheit.

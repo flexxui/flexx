@@ -3,12 +3,12 @@ Implementation of handler class and corresponding descriptor.
 """
 
 import sys
-import logging
 import inspect
 import weakref
 
 from ._dict import Dict
 from ._loop import loop
+from . import logger
 
 
 def this_is_js():
@@ -230,6 +230,9 @@ class Handler:
             self._connect_to_event(index)
         # Handle events
         if len(events):
+            if not this_is_js():
+                logger.debug('Handler %s is processing %i events' %
+                            (self._name, len(events)))
             try:
                 self(*events)
             except Exception as err:
@@ -244,7 +247,7 @@ class Handler:
                     sys.last_traceback = tb
                     tb = None  # Get rid of it in this namespace
                     # Show the exception
-                    logging.exception(value)
+                    logger.exception(value)
     
     
     ## Connecting
@@ -254,6 +257,8 @@ class Handler:
         
         Disconnects all connections, and cancel all pending events.
         """
+        if not this_is_js():
+            logger.debug('Disposing Handler %r ' % self)
         for connection in self._connections:
             while len(connection.objects):
                 ob, name = connection.objects.pop(0)

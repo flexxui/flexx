@@ -37,5 +37,7 @@ if sys.version_info[0] == 2:  # pragma: no cover
 # Import config object
 if ok:
     from ._config import config  # noqa
-
+    from .util.logging import set_log_level  # noqa
+    set_log_level(config.log_level)
+    
 del sys, ok
