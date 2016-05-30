@@ -3,7 +3,7 @@
 
 from .. import Widget  # noqa
 
-from ._button import Button  # noqa
+from ._button import BaseButton, Button, ToggleButton, RadioButton, CheckBox  # noqa
 from ._slider import Slider  # noqa
 from ._lineedit import LineEdit  # noqa
 from ._label import Label  # noqa
