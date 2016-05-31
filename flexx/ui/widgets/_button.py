@@ -61,9 +61,8 @@ from ...pyscript import window
 from . import Widget
 
 
-
 class BaseButton(Widget):
-    """ Abstract bytton class.
+    """ Abstract button class.
     """
     
     CSS = """
@@ -169,7 +168,7 @@ class RadioButton(BaseButton):
         @event.connect('parent')
         def __update_group(self, *events):
             if self.parent:
-                self.node.name = parent.id
+                self.node.name = self.parent.id
         
         @event.connect('text')
         def __text_changed(self, *events):

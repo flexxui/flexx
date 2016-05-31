@@ -14,3 +14,4 @@ from ._iframe import IFrame  # noqa
 from ._bokeh import BokehWidget  # noqa
 from ._canvas import CanvasWidget  # noqa
 from ._color import ColorSelectWidget  # noqa
+from ._media import ImageWidget, VideoWidget, YoutubeWidget  # noqa
