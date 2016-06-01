@@ -51,7 +51,7 @@ class LineEdit(Widget):
     
     @event.prop(both=True)
     def password_mode(self, v=False):
-        """ Whether the inser tex text should be hidden or not.
+        """ Whether the insered text should be hidden or not.
         """
         return bool(v)
     

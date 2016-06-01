@@ -86,8 +86,8 @@ class BaseButton(Widget):
     
     @event.prop(both=True)
     def checked(self, v=False):
-        """ Whether the button is checked. Applicable for CheckBox and
-        RadioButton.
+        """ Whether the button is checked. Applicable for CheckBox,
+        RadioButton and ToggleButton.
         """
         return bool(v)
     
