@@ -3,7 +3,7 @@
 
 from .. import Widget  # noqa
 
-from ._button import Button  # noqa
+from ._button import BaseButton, Button, ToggleButton, RadioButton, CheckBox  # noqa
 from ._slider import Slider  # noqa
 from ._lineedit import LineEdit  # noqa
 from ._label import Label  # noqa
@@ -13,3 +13,5 @@ from ._plotwidget import PlotWidget  # noqa
 from ._iframe import IFrame  # noqa
 from ._bokeh import BokehWidget  # noqa
 from ._canvas import CanvasWidget  # noqa
+from ._color import ColorSelectWidget  # noqa
+from ._media import ImageWidget, VideoWidget, YoutubeWidget  # noqa

@@ -50,6 +50,12 @@ class LineEdit(Widget):
         return str(v)
     
     @event.prop(both=True)
+    def password_mode(self, v=False):
+        """ Whether the insered text should be hidden or not.
+        """
+        return bool(v)
+    
+    @event.prop(both=True)
     def placeholder_text(self, v=''):
         """ The placeholder text (shown when the text is an empty string)."""
         return str(v)
@@ -111,6 +117,10 @@ class LineEdit(Widget):
         @event.connect('text')
         def __text_changed(self, *events):
             self.node.value = self.text
+        
+        @event.connect('password_mode')
+        def __password_mode_changed(self, *events):
+            self.node.type = ['text', 'password'][int(bool(self.password_mode))]
         
         @event.connect('placeholder_text')
         def __placeholder_text_changed(self, *events):
