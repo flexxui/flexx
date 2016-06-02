@@ -212,10 +212,12 @@ del logging
 # demonstrating the features defined in that module. In the docs these
 # docstrings are combined into one complete guide.
 
-from .parser0 import Parser0, JSError  # noqa
-from .parser1 import Parser1  # noqa
-from .parser2 import Parser2  # noqa
-from .parser3 import Parser3  # noqa
+# flake8: noqa
+
+from .parser0 import Parser0, JSError
+from .parser1 import Parser1
+from .parser2 import Parser2
+from .parser3 import Parser3
 
 
 class BasicParser(Parser2):
@@ -253,7 +255,7 @@ class Parser(Parser3):
     pass
 
 
-from .functions import py2js, evaljs, evalpy, script2js, js_rename, get_full_std_lib  # noqa
+from .functions import py2js, evaljs, evalpy, script2js, js_rename, get_full_std_lib
 
 # Create stubs
 
@@ -265,14 +267,10 @@ class JSConstant:
     def __repr__(self):  # pragma: no cover
         return self._name
 
-Infinity = float('inf')  # noqa
-NaN = float('nan')  # noqa
-
-window = JSConstant('window')  # noqa
-
-# We'll be using "undefined" in flexx.react as well, and want to use
-# the same exact object, without having dependencies.
-undefined = sys._undefined = getattr(sys, '_undefined', JSConstant('undefined'))  # noqa
+Infinity = float('inf')
+NaN = float('nan')
+window = JSConstant('window')
+undefined = JSConstant('undefined')
 
 def this_is_js():
     """ Function available in both JS and Py that returns whether the code is running
