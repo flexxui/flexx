@@ -82,13 +82,14 @@ import logging
 logger = logging.getLogger(__name__)
 del logging
 
-from .session import manager, Session  # noqa
-from .model import Model, get_active_model  # noqa
-from .model import get_instance_by_id, get_model_classes  # noqa
-from .funcs import run, start, stop, call_later  # noqa
-from .funcs import init_notebook, serve, launch, export  # noqa
-from .assetstore import assets  # noqa
-from .clientcore import FlexxJS  # noqa
+# flake8: noqa
+from .session import manager, Session
+from .model import Model, get_active_model
+from .model import get_instance_by_id, get_model_classes
+from .funcs import run, start, stop, call_later
+from .funcs import init_notebook, serve, launch, export
+from .assetstore import assets
+from .clientcore import FlexxJS
 
 from ..pyscript.stdlib import get_full_std_lib as _get_full_std_lib
 
