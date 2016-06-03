@@ -44,7 +44,7 @@ class Editor(ui.CanvasWidget):
     
     class JS:
         
-        lines = TEXT.splitlines()
+        TEXT = TEXT
         
         def init(self):
             self.ctx = self.node.getContext('2d')#, {'alpha': False})
@@ -59,20 +59,26 @@ class Editor(ui.CanvasWidget):
                             self.ctx.oBackingStorePixelRatio or
                             self.ctx.backingStorePixelRatio or 1)
             
-            self._nsublines1 = 1
-            self._nsublines2 = 1
+            
+            # Prepare blocks. Normally these would be provided by a document
+            blocks = self.TEXT.splitlines()
+            self.blocks = []
+            for block in blocks:
+                self.blocks.append(dict(text=block, height=0, tokens=[]))
         
         @event.prop
         def vscroll(self, v=0):
-            """ Indicates the line number for the start of the viewport.
+            """ Indicates the block number for the start of the viewport.
+            The fractional portion of this number indicates the amount of
+            scrolling to the next 
             """
-            return int(v)
+            return float(v)
         
-        @event.prop
-        def _sub_vscroll(self, v=0):
-            # The additional steps in case the current line is split over
-            # multiple lines
-            return int(v)
+        # @event.prop
+        # def _sub_vscroll(self, v=0):
+        #     # The additional steps in case the current block is split over
+        #     # multiple lines
+        #     return int(v)
         
         @event.connect('mouse_wheel')
         def _handle_wheel(self, *events):
@@ -82,18 +88,17 @@ class Editor(ui.CanvasWidget):
                     s += 1 if ev.vscroll < 0 else -1
                     self.font_size = max(5, min(s, 30))
                 elif not ev.modifiers:
-                    v1 = self.vscroll
-                    v2 = self._sub_vscroll
-                    v2 += 1 if ev.vscroll > 0 else -1
-                    if v2 >= self._nsublines2:
-                        self._sub_vscroll = 0
+                    v1 = int(self.vscroll)
+                    v2 = self.vscroll % 1
+                    v2_delta = self._line_height / self.blocks[v1].height
+                    v2 += v2_delta if ev.vscroll > 0 else -v2_delta
+                    if v2 >= 1:
                         v1 += 1
-                    elif v2 < 0:
+                        v2 = 0
+                    elif v2 < 0 and v1 > 0:
                         v1 -= 1
-                        self._sub_vscroll = self._nsublines1 - 1
-                    else:
-                        self._sub_vscroll = v2
-                    self.vscroll = min(len(self.lines), max(0, v1))
+                        v2 = 1 - self._line_height / self.blocks[v1].height
+                    self.vscroll = min(len(self.blocks)+0.999, max(0, v1+v2))
         
         def _measure_text_height(self):
             # Inspired by http://stackoverflow.com/a/1135363/2271927
@@ -112,14 +117,14 @@ class Editor(ui.CanvasWidget):
             last = False
             r = height
             
-            # Find the last line with a non-white pixel
+            # Find the last row with a non-white pixel
             while r > 0 and last == False:
                 r -= 1
                 for c in range(width):
                     if data[r * width * 4 + c * 4 + 3] > 0:
                         last = r
                         break
-            # Find first line with a non-white pixel
+            # Find first row with a non-white pixel
             while r > 0:
                 r -= 1
                 for c in range(width):
@@ -146,7 +151,7 @@ class Editor(ui.CanvasWidget):
             
             cw = ctx.measureText('x').width
             ch = self._measure_text_height()
-            line_delta = ch + 2
+            self._line_height = line_height = ch + 2
             
             # Hoe many chars fit  in the viewport?
             nw = int(w / cw) - 3
@@ -159,28 +164,32 @@ class Editor(ui.CanvasWidget):
             t0 = time.time()
             
             ctx.fillStyle = '#000'
-            linenr_start = self.vscroll
-            linenr_end = min(len(self.lines), linenr_start + nh)
+            blocknr_start = int(self.vscroll)
+            blocknr_end = min(len(self.blocks), blocknr_start + nh)
             
             # Set scroll info
-            print('scroll', self.vscroll)
-            self._nsublines1 = self._nsublines2 = 1
-            if linenr_start < len(self.lines):
-                self._nsublines2 = max(1, int(len(self.lines[linenr_start]) / nw))
-                if linenr_start > 0:
-                    self._nsublines1 = max(1, int(len(self.lines[linenr_start-1]) / nw))
+            if blocknr_start < len(self.blocks):
+                nlines = max(1, int(len(self.blocks[blocknr_start].text) / nw))
+                self.blocks[blocknr_start].height = nlines * line_height
+            if blocknr_start > 0:
+                nlines = max(1, int(len(self.blocks[blocknr_start-1].text) / nw))
+                self.blocks[blocknr_start-1].height = nlines * line_height
             
-            ypos = - self._sub_vscroll * line_delta
+            # Init offset
+            subscroll = self.vscroll % 1
+            ypos = - subscroll * self.blocks[blocknr_start].height
             xpos = 3 * cw
-            for linenr in range(linenr_start, linenr_end):
-                ctx.fillText(linenr + '', 0, ypos)
-                line = self.lines[linenr]
+            
+            # Draw blocks ...
+            for blocknr in range(blocknr_start, blocknr_end):
+                ctx.fillText(blocknr + '', 0, ypos)
+                block = self.blocks[blocknr].text
                 nsublines = 0
-                if len(line) == 0:
-                    ypos += line_delta
-                while len(line) > 0:
-                    part, line = line[:nw], line[nw:]
-                    ypos += line_delta
+                if len(block) == 0:
+                    ypos += line_height
+                while len(block) > 0:
+                    part, block = block[:nw], block[nw:]
+                    ypos += line_height
                     ctx.fillText(part, xpos, ypos)
                 if ypos > h:
                     break  # we may break earlier if we had multi-line bocks
