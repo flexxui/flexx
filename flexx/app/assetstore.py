@@ -426,6 +426,12 @@ class SessionAssets:
             # cls is present in a module, add corresponding asset (overwrite ok)
             fname = module_name.replace('.', '-')
             if (fname + '.js') not in self._asset_names:
+                if self._served:
+                    # Assume that intent is to use module; do not load dynamically
+                    t = ('Trying to use class %s that is defined in module %r, '
+                         'but that module is not loaded. Use '
+                         'session.register_model_class(%s) to preload it.')
+                    raise RuntimeError(t % (cls.__name__, module_name, cls.__name__))
                 self.use_global_asset(fname + '.css')
                 self.use_global_asset(fname + '.js')
         elif not self._served:
