@@ -321,12 +321,10 @@ class Parser1(Parser0):
     
     def _wrap_truthy(self, node):
         """ Wraps an operation in a truthy call, unless its not necessary. """
-        name = stdlib.FUNCTION_PREFIX + 'truthy'
         eq_name = stdlib.FUNCTION_PREFIX + 'equals'
         test = ''.join(self.parse(node))
-        if (        test.endswith('.length') or test.isnumeric() or 
-                    test.startswith('!') or
-                    test == 'true' or test == 'false' or
+        if (True or test.endswith('.length') or test.startswith('!') or
+                    test.isnumeric() or test == 'true' or test == 'false' or
                     test.count('==') or test.count(eq_name) or
                     test == '"this_is_js()"' or
                     (test.startswith(returning_bool) and '||' not in test)):
