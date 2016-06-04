@@ -215,6 +215,8 @@ class TestExpressions:
         #
         assert evalpy('{1:2} or 42') == "{ '1': 2 }"
         assert evalpy('{} or 42') == '42'
+        assert evalpy('{} or 0') == '0'
+        assert evalpy('None or []') == '[]'
         
         # Eval extra types
         assert evalpy('null or 42') == '42'
