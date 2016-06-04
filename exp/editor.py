@@ -34,7 +34,9 @@ class Editor(ui.CanvasWidget):
 
 een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn een superlange regel sdfksbd fkjsdbf ksdfbn 
 
-""" * 100
+asd1
+asd2
+""".strip() * 2
 
 class Editor(ui.CanvasWidget):
     
@@ -68,9 +70,10 @@ class Editor(ui.CanvasWidget):
         
         @event.prop
         def vscroll(self, v=0):
-            """ Indicates the block number for the start of the viewport.
-            The fractional portion of this number indicates the amount of
-            scrolling to the next 
+            """ Indicates the block number for the start of the
+            viewport. The fractional portion of this number indicates
+            the amount of scrolling to the next block, relative to the
+            height of the current block.
             """
             return float(v)
         
@@ -79,6 +82,10 @@ class Editor(ui.CanvasWidget):
         #     # The additional steps in case the current block is split over
         #     # multiple lines
         #     return int(v)
+        
+        def _get_height_of_block(self, blocknr):
+            # todo: calculate on the fly?
+            return max(self._line_height, self.blocks[blocknr].height)
         
         @event.connect('mouse_wheel')
         def _handle_wheel(self, *events):
@@ -90,15 +97,16 @@ class Editor(ui.CanvasWidget):
                 elif not ev.modifiers:
                     v1 = int(self.vscroll)
                     v2 = self.vscroll % 1
-                    v2_delta = self._line_height / self.blocks[v1].height
+                    v2_delta = self._line_height / self._get_height_of_block(v1)
                     v2 += v2_delta if ev.vscroll > 0 else -v2_delta
                     if v2 >= 1:
                         v1 += 1
                         v2 = 0
                     elif v2 < 0 and v1 > 0:
+                        v2_delta = self._line_height / self._get_height_of_block(v1-1)
                         v1 -= 1
-                        v2 = 1 - self._line_height / self.blocks[v1].height
-                    self.vscroll = min(len(self.blocks)+0.999, max(0, v1+v2))
+                        v2 = 1 - v2_delta
+                    self.vscroll = min(len(self.blocks)-v2_delta, max(0, v1+v2))
         
         def _measure_text_height(self):
             # Inspired by http://stackoverflow.com/a/1135363/2271927
@@ -153,8 +161,10 @@ class Editor(ui.CanvasWidget):
             ch = self._measure_text_height()
             self._line_height = line_height = ch + 2
             
+            scroll_bar_width = 10
+            
             # Hoe many chars fit  in the viewport?
-            nw = int(w / cw) - 3
+            nw = int((w-scroll_bar_width) / cw) - 3
             nh = int(h / ch)
             
             ctx.fillStyle = '#eef'
@@ -177,24 +187,43 @@ class Editor(ui.CanvasWidget):
             
             # Init offset
             subscroll = self.vscroll % 1
-            ypos = - subscroll * self.blocks[blocknr_start].height
+            ypos = line_height - subscroll * self.blocks[blocknr_start].height
             xpos = 3 * cw
             
             # Draw blocks ...
             for blocknr in range(blocknr_start, blocknr_end):
-                ctx.fillText(blocknr + '', 0, ypos)
                 block = self.blocks[blocknr].text
-                nsublines = 0
+                ctx.fillText(blocknr + 1 + '', 0, ypos)
                 if len(block) == 0:
                     ypos += line_height
+                part = ''
                 while len(block) > 0:
                     part, block = block[:nw], block[nw:]
-                    ypos += line_height
                     ctx.fillText(part, xpos, ypos)
+                    ypos += line_height
+                # show lf ctx.fillRect(xpos+len(part)*cw + 2, ypos-line_height*1.5, 3, 3)
                 if ypos > h:
                     break  # we may break earlier if we had multi-line bocks
             
+            self._draw_scrollbar(scroll_bar_width)
             #print(time.time() - t0)
+        
+        def _draw_scrollbar(self, width):
+            ctx = self.ctx
+            w, h = self.size
+            
+            # todo: ensure len(blocks) is always >= 1
+            #height = h * h / (self._line_height * len(self.blocks))
+            height = h / len(self.blocks) ** 0.5
+            height = max(5, height)
+            start = (self.vscroll / len(self.blocks)) * (h - height)
+            
+            ctx.fillStyle = '#afa'
+            ctx.fillRect(w-width, 0, width, h)
+            
+            ctx.fillStyle = '#4f4'
+            ctx.fillRect(w-width, start, width, height)
+            
             
 
 if __name__ == '__main__':
