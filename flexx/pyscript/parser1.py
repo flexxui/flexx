@@ -321,22 +321,24 @@ class Parser1(Parser0):
     
     def _wrap_truthy(self, node):
         """ Wraps an operation in a truthy call, unless its not necessary. """
-        name = stdlib.FUNCTION_PREFIX + 'truthy'
         eq_name = stdlib.FUNCTION_PREFIX + 'equals'
         test = ''.join(self.parse(node))
-        if (((name + '(') in test) or test.endswith('.length') or test.isnumeric() or 
-                                      test.startswith('!') or
-                                      test == 'true' or test == 'false' or
-                                      test.count('==') or test.count(eq_name) or
-                                      test == '"this_is_js()"' or
-                                      test.startswith(returning_bool)):
+        if (False or test.endswith('.length') or test.startswith('!') or
+                     test.isnumeric() or test == 'true' or test == 'false' or
+                     test.count('==') or test.count(eq_name) or
+                     test == '"this_is_js()"' or
+                     (test.startswith(returning_bool) and '||' not in test)):
             return unify(test)
         else:
             return self.use_std_function('truthy', [test])
     
     def parse_BoolOp(self, node):
         op = ' %s ' % self.BOOL_OP[node.op]
-        values = [unify(self._wrap_truthy(val)) for val in node.value_nodes]
+        if node.op.lower() == 'or':  # allow foo = bar or []
+            values = [unify(self._wrap_truthy(val)) for val in node.value_nodes[:-1]]
+            values += [unify(self.parse(node.value_nodes[-1]))]
+        else:
+            values = [unify(self._wrap_truthy(val)) for val in node.value_nodes]
         return op.join(values)
     
     def parse_Compare(self, node):
