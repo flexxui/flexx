@@ -5,7 +5,7 @@ This example demonstrates a simple drawing app. Useful for testing
 canvas and its mouse events.
 """
 
-from flexx import app, ui
+from flexx import app, ui, event
 
 
 class Drawing(ui.CanvasWidget):
@@ -21,7 +21,8 @@ class Drawing(ui.CanvasWidget):
             self.ctx = self.node.getContext('2d')
             self._last_ev = None
         
-        def on_mouse_move(self, *events):
+        @event.connect('mouse_move')
+        def on_move(self, *events):
             for ev in events:
                 last_ev = self._last_ev
                 if 1 in ev.buttons and last_ev is not None:
@@ -34,7 +35,8 @@ class Drawing(ui.CanvasWidget):
                     self.ctx.stroke()
                     self._last_ev = ev
         
-        def on_mouse_down(self, *events):
+        @event.connect('mouse_down')
+        def on_down(self, *events):
             for ev in events:
                 self.ctx.beginPath()
                 self.ctx.fillStyle = '#f00'
@@ -42,7 +44,8 @@ class Drawing(ui.CanvasWidget):
                 self.ctx.fill()
                 self._last_ev = ev
         
-        def on_mouse_up(self, *events):
+        @event.connect('mouse_up')
+        def on_up(self, *events):
             for ev in events:
                 self.ctx.beginPath()
                 self.ctx.fillStyle = '#00f'

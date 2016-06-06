@@ -50,13 +50,15 @@ def run_in_both(cls, reference, extra_classes=()):
         def runner():
             # Run in JS
             code = HasEventsJS.JSCODE
-            for c in cls.mro()[1:]:
-                if c is event.HasEvents:
-                    break
-                code += create_js_hasevents_class(c, c.__name__, c.__bases__[0].__name__+'.prototype')
             for c in extra_classes:
                 code += create_js_hasevents_class(c, c.__name__)
-            code += create_js_hasevents_class(cls, cls.__name__, cls.__bases__[0].__name__+'.prototype')
+            this_classes = []
+            for c in cls.mro():
+                if c is event.HasEvents:
+                    break
+                this_classes.append(c)
+            for c in reversed(this_classes):
+                code += create_js_hasevents_class(c, c.__name__, c.__bases__[0].__name__+'.prototype')
             code += py2js(func, 'test', inline_stdlib=False)
             code += 'test(%s);' % cls.__name__
             nargs, function_deps, method_deps = get_std_info(code)
@@ -642,29 +644,31 @@ def test_disconnect3(Person):
     return res1 + ['||'] + res2
 
 
-class InheritedPerson(Person):
+class InheritedPerson1(PersonNoDefault):
     
     @event.prop
-    def foo2(self, v=3):
-        return int(v)
+    def first_name(self, v='Ernie'):
+        return str(v) + '.'
     
-    @event.connect('foo2')
-    def _foo2_logger(self, *events):
-        for ev in events:
-            self.r1.append(ev.new_value)
+    @event.connect('first_name')
+    def _first_name_logger(self, *events):
+        super()._first_name_logger(*events)
+        self.r1.append('X' + str(len(events)))
 
-
-@run_in_both(InheritedPerson, "['john-john', 'john-jane', 3, 42]")
-def test_inheritance(InheritedPerson):
-    name = InheritedPerson()
+class InheritedPerson2(InheritedPerson1):
     
-    name.age = 42
+    @event.connect('first_name')
+    def _first_name_logger(self, *events):
+        super()._first_name_logger(*events)
+        self.r1.append('Y' + str(len(events)))
+
+@run_in_both(InheritedPerson2, "['ernie.-ernie.', 'ernie.-jane.', 'x2', 'y2']")
+def test_inheritance(InheritedPerson2):
+    # property behavior can be overloaded, and handlers can be overloaded.
+    # super can be used, and works for at least two levels
+    name = InheritedPerson2()
     name.first_name = 'jane'
-    name.foo2 = 42
-    
     name._first_name_logger.handle_now()
-    name._foo2_logger.handle_now()
-    
     return name.r1
 
 
@@ -794,7 +798,8 @@ class Simple1(event.HasEvents):
     def val(self, v=0):
         return int(v)
     
-    def on_val(self, *events):
+    @event.connect('val')
+    def on_val(self, *events):  # on_xx used to make implicit handler, but no more
         for ev in events:
             self._r1.append(ev.new_value)
 

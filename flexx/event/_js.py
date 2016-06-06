@@ -67,9 +67,8 @@ class HasEventsJS:
     
     def __init_handlers(self, initial_pending_events):
         # Create handlers
-        # Note that methods on_xxx are converted by the HasEvents meta class
         for name in self.__handlers__:
-            func = self['_' + name + '_func']
+            func = self[name]
             self[name] = self.__create_Handler(func, name, func._connection_strings)
         # Emit events for properties
         for ev in initial_pending_events:
@@ -203,10 +202,10 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     
     for name, val in sorted(cls.__dict__.items()):
         name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix mangling
-        funcname = '_' + name + '_func'
         if name in special_funcs:
             pass
         elif isinstance(val, BaseEmitter):
+            funcname = '_' + name + '_func'
             if isinstance(val, Property):
                 properties.append(name)
             else:
@@ -229,6 +228,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             funcs_code.append(t % (cls_name, funcname, reprs(emitter_type)))
             funcs_code.append('')
         elif isinstance(val, HandlerDescriptor):
+            funcname = name  # funcname is simply name, so that super() works
             handlers.append(name)
             # Add function def
             code = py2js(val._func, cls_name + '.prototype.' + funcname)

@@ -76,14 +76,14 @@ One can also see that the handler function accepts ``*events`` argument.
 This is because handlers can be passed zero or more events. If a handler
 is called manually (e.g. ``ob.handle_foo()``) it will have zero events.
 When called by the event system, it will have at least 1 event. When
-multiple events are emitted in a row, the handler function is called
+e.g. a property is set twice, the handler function is called
 just once, with multiple events, in the next event loop iteration. It
 is up to the programmer to determine whether only one action is
 required, or whether all events need processing. In the latter case,
 just use ``for ev in events: ``.
 
-Another feature of this system is that a handler can connect to multiple
-events:
+Another useful feature of this system is that a handler can connect to
+multiple events at once:
 
 .. code-block:: python
 
@@ -111,17 +111,6 @@ To create a handler from a normal function, use the
     h.connect(handle_func2, 'foo', 'bar')
 
 
-Handlers can be implicitly created by prefixing a method with ``on_``:
-
-.. code-block:: python
-
-    class MyObject(event.HasEvents):
-       
-        def on_foo(self, *events):
-            # This gets connected to the "foo" event
-            print(events)
-
-
 Event emitters
 --------------
 
@@ -144,12 +133,12 @@ Settable properties can be created easiliy using the
             '''
             return float(v)
 
-The function that is decorated should have one argument (the new value
-for the property), which can have a default value (representing the
-initial value). The function body is used to validate
-and normalize the provided input. In this case the input is simply cast
-to a float. The docstring of the function will be the docstring of the
-property (e.g. for Sphynx docs).
+The function that is decorated is essentially the setter function, and
+should have one argument (the new value for the property), which can
+have a default value (representing the initial value). The function
+body is used to validate and normalize the provided input. In this case
+the input is simply cast to a float. The docstring of the function will
+be the docstring of the property (e.g. for Sphynx docs).
 
 An alternative initial value for a property can be provided upon instantiation:
 
@@ -267,7 +256,7 @@ is a ``HasEvents`` subclass that has properties ``parent`` and
 The ``parent_foo_handler`` gets invoked when the "foo" event gets
 emitted on the parent of main, *and* when the parent of main changes.
 Similarly, the ``children_foo_handler`` gets invoked when any of the
-children emits its "foo" signal, or when the children property changes.
+children emits its "foo" event, or when the children property changes.
 
 The event system automatically reconnects handlers when necessary. This
 concept makes it very easy to connect to the right events without the
@@ -318,9 +307,8 @@ Overloadable event handlers
 
 In Qt, the "event system" consists of methods that handles an event, which
 can be overloaded in subclasses to handle an event differently. In
-``flexx.event``, a handler can be implemented simply by naming a method
-``on_xx``. Doing so allows subclasses to re-implement the handler, and
-optionally call the original handler using ``super()``.
+``flexx.event``, handlers can similarly be re-implemented in subclasses,
+and these can call the original handler using ``super()`` if needed.
 
 Publish-subscribe pattern
 ==========================

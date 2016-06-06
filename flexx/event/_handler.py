@@ -74,8 +74,8 @@ class HandlerDescriptor:
         self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
     
     def __repr__(self):
-        cls_name = self.__class__.__name__
-        return '<%s (this should be a class attribute) at 0x%x>' % (cls_name, id(self))
+        t = '<%s %r(this should be a class attribute) at 0x%x>'
+        return t % (self.__class__.__name__, self._name, id(self))
         
     def __set__(self, obj, value):
         raise AttributeError('Cannot overwrite handler %r.' % self._name)
@@ -89,11 +89,17 @@ class HandlerDescriptor:
         
         private_name = '_' + self._name + '_handler'
         try:
-            return getattr(instance, private_name)
+            handler = getattr(instance, private_name)
         except AttributeError:
-            new = Handler(self._func, self._connection_strings, instance)
-            setattr(instance, private_name, new)
-            return new
+            handler = Handler(self._func, self._connection_strings, instance)
+            setattr(instance, private_name, handler)
+        
+        # Make the handler use *our* func one time. In most situations
+        # this is the same function that the handler has, but not when
+        # using super(); i.e. this allows a handler to call the same
+        # handler of its super class.
+        handler._use_once(self._func)
+        return handler
     
     @property
     def local_connection_strings(self):
@@ -122,6 +128,7 @@ class Handler:
         # Check and set func
         assert callable(func)
         self._func = func
+        self._func_once = func
         self._name = func.__name__
         Handler._count += 1
         self._id = 'h%i' % Handler._count  # to ensure a consistent event order
@@ -170,7 +177,7 @@ class Handler:
     
     def get_name(self):
         """ Get the name of this handler, usually corresponding to the name
-        of the function that this signal wraps.
+        of the function that this handler wraps.
         """
         return self._name
     
@@ -184,13 +191,19 @@ class Handler:
     
     ## Calling / handling
     
+    def _use_once(self, func):
+        self._func_once = func
+    
     def __call__(self, *events):
         """ Call the handler function.
         """
+        func = self._func_once
         if self._func_is_method and self._ob is not None:
-            return self._func(self._ob(), *events)
+            res = func(self._ob(), *events)
         else:
-            return self._func(*events)
+            res = func(*events)
+        self._func_once = self._func
+        return res
     
     def _add_pending_event(self, label, ev):
         """ Add an event object to be handled at the next event loop
@@ -306,8 +319,7 @@ class Handler:
             ob._register_handler(type, self)
     
     def _seek_event_object(self, index, path, ob):
-        """ Seek an event object based on the name.
-        This bit is PyScript compatible (_resolve_signals is not).
+        """ Seek an event object based on the name (PyScript compatible).
         """
         connection = self._connections[index]
         

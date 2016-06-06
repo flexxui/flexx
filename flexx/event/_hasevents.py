@@ -38,7 +38,7 @@ def new_type(name, *args, **kwargs):
 class HasEventsMeta(type):
     """ Meta class for HasEvents
     * Set the name of each handler and emitter.
-    * Sets __handlers__, __emitters, __signals__ attribute on the class.
+    * Sets __handlers__, __emitters, __properties__ attribute on the class.
     """
     
     def __init__(cls, name, bases, dct):
@@ -69,10 +69,6 @@ def finalize_hasevents_class(cls):
         elif isinstance(val, Handler):
             raise RuntimeError('Class methods can only be made handlers using '
                                '@event.connect() (handler %r)' % name)
-        elif name.startswith('on_'):
-            val = HandlerDescriptor(val, [name[3:]])
-            setattr(cls, name, val)
-            handlers[name] = val
     # Finalize all found emitters
     for collection in (handlers, emitters, properties):
         for name, descriptor in collection.items():
@@ -119,12 +115,14 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             
             # Handlers
             
-            @event.connect
+            @event.connect('foo')
             def handle_foo(self, *events):
                 print('foo was set to', events[-1].new_value)
             
+            @event.connect('bar')
             def on_bar(self, *events):
-                print('bar event was generated')
+                for ev in events:
+                    print('bar event was generated')
         
         ob = MyObject(foo=42)
         

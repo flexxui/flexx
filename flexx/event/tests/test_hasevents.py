@@ -48,6 +48,7 @@ def test_basics():
         @event.connect('x')
         def spam(self, *events):
             pass
+        @event.connect('eggs')
         def on_eggs(self, *events):
             pass
     #
