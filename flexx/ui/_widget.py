@@ -88,7 +88,7 @@ class Widget(Model):
 
         # Init - pass signal values via kwargs
         Model.__init__(self, **kwargs)
-
+        
         # All widgets need phosphor
         self._session.use_global_asset('phosphor-all.js', before='flexx-ui.css')
 

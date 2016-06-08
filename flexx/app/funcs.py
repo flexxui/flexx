@@ -3,6 +3,7 @@ Functional API for flexx.app
 """
 
 import os
+import sys
 import json
 
 from .. import webruntime
@@ -131,12 +132,44 @@ def _auto_closer(*events):
 ## App functions
 
 
+
+def _deprecated_init_interactive(runtime=None, **runtime_kwargs):
+    """ Initialize Flexx for use in interactive mode.
+    
+    This would need a bit of code in the Widget class to automatically
+    use the default app as the parent if no parent is set. But
+    autosetting parents seems wrong, and explicitly setting parents (as
+    in hello_world1.py) seems like not too much work, and for more ease,
+    one can use a notebook. Keeping this as a reference, for now.
+    """
+    
+    session = manager.create_default_session()
+    
+    # Insert container widget
+    if 'flexx.ui' in sys.modules:
+        from .. import ui
+        session._set_app(ui.Widget(is_app=True))
+    
+    # Launch web runtime, the server will wait for the connection
+    _server_open()
+    host, port = server.serving_at
+    if runtime == 'nodejs':
+        all_js = session.get_js_only()
+        url = '%s:%i/%s/' % (host, port, session.app_name)
+        session._runtime = launch('http://' + url, runtime=runtime, code=all_js)
+    else:
+        url = '%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id)
+        session._runtime = launch('http://' + url, runtime=runtime, **runtime_kwargs)
+
+
 def init_notebook():
     """ Initialize the Jupyter notebook by injecting the necessary CSS
-    and JS into the browser.
+    and JS into the browser. Note that any Flexx-based libraries that
+    you plan to use should probably be imported *before* calling this.
     """
     
     from IPython.display import display, Javascript, HTML
+    # from .. import ui  # noqa - make ui assets available
     
     # todo: ideally you don't want user interactions done this way:
     # they result in spamming of JavaScript "objects" and when nbconverting,
@@ -144,21 +177,24 @@ def init_notebook():
     def my_send_command(command):
         display(Javascript('flexx.command(%s);' % reprs(command)))
     
-    # Create default session and monkey-patch it
-    # Not very pretty, but this keeps notebook logic confined to this module/function.
+    # Get session or create new, check if we already initialized notebook
     session = manager.get_default_session()
+    if session is None:
+        session = manager.create_default_session()
     if hasattr(session, '_original_send_command'):
         display(HTML("<i>Flexx already loaded</i>"))
         return  # Don't inject twice
-    else:
-        session._original_send_command = session._send_command
-        session._send_command = my_send_command
-        try:
-            session.use_global_asset('phosphor-all.js')
-            session.use_global_asset('flexx-ui.css')
-            session.use_global_asset('flexx-ui.js')
-        except IndexError:
-            pass  # Ok if it fails; assets can be loaded dynamically.
+    
+    # Monkey-patch it. Not very pretty, but this keeps notebook logic
+    # confined to this module/function.
+    session._original_send_command = session._send_command
+    session._send_command = my_send_command
+    try:
+        session.use_global_asset('phosphor-all.js')
+        session.use_global_asset('flexx-ui.css')
+        session.use_global_asset('flexx-ui.js')
+    except IndexError as err:
+        pass  # Ok if it fails; assets can be loaded dynamically.
     
     # Open server - we only use websocket for JS-to-Py communication
     init()
@@ -175,6 +211,9 @@ def init_notebook():
     t += '\n\n<style>%s</style>\n' % extra_css
     t += "<script>flexx.ws_url='%s'; " % url
     t += "flexx.is_notebook=true; flexx.init();</script>"
+    
+    # Note: the Widget._repr_html_() method is responsible for making
+    # the widget show up in the notebook output area.
     
     display(HTML(t))
 
