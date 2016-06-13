@@ -97,6 +97,20 @@ def test_get_event_handlers():
         foo.get_event_handlers('x:a')
 
 
+def test_that_methods_starting_with_on_are_not_autoconverted():
+    # There is also a warning, but seems a bit of a fuzz to test
+    class Foo(event.HasEvents):
+        def on_foo(self, *events):
+            pass
+        @event.connect('bar')
+        def on_bar(self, *events):
+            pass
+    
+    foo = Foo()
+    assert isinstance(foo.on_bar, event.Handler)
+    assert not isinstance(foo.on_foo, event.Handler)
+
+
 def test_collect_classes():
     skip('we did not go the metaclass way')  # Not if we don't use the meta class
     class Foo123(event.HasEvents):
