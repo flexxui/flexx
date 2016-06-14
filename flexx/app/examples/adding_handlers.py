@@ -36,7 +36,7 @@ class MyAPIHandler(tornado.web.RequestHandler):
     def get(self, path):
         # self.request.path -> full path
         # path -> the regexp group specified in add_handlers
-        self.write('echo ' +  path)
+        self.write('echo ' + path)
 
 
 # Get a ref to the tornado.web.Application object
