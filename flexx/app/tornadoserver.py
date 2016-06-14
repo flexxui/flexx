@@ -49,6 +49,11 @@ class AbstractServer:
     def call_later(self, delay, callback, *args, **kwargs):
         """ Call a function in a later event loop iteration. """
         raise NotImplementedError()
+    
+    @property
+    def native(self):
+        """ Get the native server object (e.g. the Tornado Application). """
+        return self._native
 
 
 class TornadoServer(AbstractServer):
@@ -56,29 +61,29 @@ class TornadoServer(AbstractServer):
     """
     
     def __init__(self):
-        self._app = None
+        self._native = None
         self._loop = tornado.ioloop.IOLoop.instance()
     
     def open(self, host, port):
         
         # Check that its not already running
-        if self._app is not None:
+        if self._native is not None:
             # return
             raise RuntimeError('flexx server is already hosting.')
         
         # Create server
-        self._app = tornado.web.Application([(r"/(.*)/ws", WSHandler), 
-                                             (r"/(.*)", MainHandler), ])
+        self._native = tornado.web.Application([(r"/(.*)/ws", WSHandler), 
+                                                (r"/(.*)", MainHandler), ])
         
         # Start server (find free port number if port not given)
         if port:
             port = int(port)
-            self._app.listen(port, host)
+            self._native.listen(port, host)
         else:
             for i in range(100):
                 port = port_hash('flexx%i' % i)
                 try:
-                    self._app.listen(port, host)
+                    self._native.listen(port, host)
                     break
                 except OSError:
                     pass  # address already in use
@@ -86,7 +91,7 @@ class TornadoServer(AbstractServer):
                 raise RuntimeError('Could not bind to free address')    
         
         # Notify address, so its easy to e.g. copy and paste in the browser
-        self.serving_at = self._app.serving_at = host, port
+        self.serving_at = self._native.serving_at = host, port
         logger.info('Serving apps at http://%s:%i/' % (host, port))
     
     def start(self):
