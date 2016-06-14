@@ -23,7 +23,7 @@ reprs = json.dumps
 ## Main loop functions
 
 
-def init(*args, host=None, port=None):
+def init(**kwargs):
     """ Initialize (bind) the server and return the server object.
     
     As a user, you typically do not need this function, as it is
@@ -44,6 +44,9 @@ def init(*args, host=None, port=None):
             hashed to an ephemeral port number. By default
             ``flexx.config.hostname`` is used.
     """
+    def _getargs(host=None, port=None):
+        return host, port
+    host, port = _getargs(**kwargs)
     # If already hosting, return or error
     if getattr(server, '_is_hosting', False):
         if host is None and port is None:
