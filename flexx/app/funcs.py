@@ -22,10 +22,31 @@ reprs = json.dumps
 
 ## Main loop functions
 
-def _server_open(host=None, port=None):
-    """ Server.open() but with handling of defaults, and checking if
-    already serving.
+
+def init(**kwargs):
+    """ Initialize (bind) the server and return the server object.
+    
+    As a user, you typically do not need this function, as it is
+    automatically called by start() and run(). If called without
+    arguments, this function can safely be called multiple times.
+    
+    The returned server object is a small wrapper around a native server
+    object (available through ``server_object.native``). For now this
+    is always a Tornado Application, but in the future other types of
+    servers (e.g. Flask) may be supported.
+    
+    Arguments:
+        args: currently unused. Arguments may be added at a later time (e.g.
+            to chose between different server backends).
+        host (str): The hostname to serve on. By default
+            ``flexx.config.hostname`` is used.
+        port (int, str): The port number. If a string is given, it is
+            hashed to an ephemeral port number. By default
+            ``flexx.config.hostname`` is used.
     """
+    def _getargs(host=None, port=None):
+        return host, port
+    host, port = _getargs(**kwargs)
     # If already hosting, return or error
     if getattr(server, '_is_hosting', False):
         if host is None and port is None:
@@ -40,6 +61,7 @@ def _server_open(host=None, port=None):
     # Start hosting
     server.open(host, port)
     server._is_hosting = True
+    return server
 
 
 def start(host=None, port=None):
@@ -54,14 +76,14 @@ def start(host=None, port=None):
     from environment variables FLEXX_HOSTNAME and FLEXX_PORT.
     
     Arguments:
-        host (str): The hostname to serve on. Default 'localhost'. This
-            parameter is ignored if the server was already running.
+        host (str): The hostname to serve on. By default
+            ``flexx.config.hostname`` is used.
         port (int, str): The port number. If a string is given, it is
-            hashed to an ephemeral port number. If not given or None,
-            will try a series of ports until one is found that is free.
+            hashed to an ephemeral port number. By default
+            ``flexx.config.hostname`` is used.
     """
     # Get server up
-    _server_open(host, port)
+    init(host=host, port=port)
     # Start event loop
     logger.info('Starting Flexx event loop.')
     server.start()
@@ -139,7 +161,7 @@ def init_notebook():
             pass  # Ok if it fails; assets can be loaded dynamically.
     
     # Open server - we only use websocket for JS-to-Py communication
-    _server_open()
+    init()
     host, port = server.serving_at
     asset_elements = session.get_assets_as_html()
     
@@ -197,7 +219,7 @@ def launch(cls, runtime=None, **runtime_kwargs):
     session = manager.create_session(cls.__name__)
     
     # Launch web runtime, the server will wait for the connection
-    _server_open()
+    init()
     host, port = server.serving_at
     if runtime == 'nodejs':
         all_js = session.get_js_only()
