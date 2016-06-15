@@ -198,7 +198,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     special_funcs = ['_%s_func' % name for name in 
                      (cls.__handlers__ + cls.__emitters__ + cls.__properties__)]
     OK_MAGICS = ('__properties__', '__emitters__', '__handlers__',
-                 '__proxy_properties__', '__emitter_flags__')
+                 '__local_properties__', '__emitter_flags__')
     
     for name, val in sorted(cls.__dict__.items()):
         name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix mangling

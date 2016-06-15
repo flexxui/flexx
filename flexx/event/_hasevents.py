@@ -48,8 +48,7 @@ class HasEventsMeta(type):
 def finalize_hasevents_class(cls):
     """ Given a class, analyse its Properties, Readonlies, Emitters,
     and Handlers, to set a list of __emitters__, __properties__, and
-    __handlers__. Also convert methods named on_foo to a handler of the
-    'foo' event, and create private methods corresponding to the
+    __handlers__. Also create private methods corresponding to the
     properties, emitters and handlers.
     """
     # Collect handlers defined on this class
