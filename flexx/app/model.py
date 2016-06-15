@@ -236,29 +236,39 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     """ Subclass of HasEvents representing Python-JavaScript object models.
     
     Each instance of this class has a corresponding object in
-    JavaScript. Properties are synchronized, and events are
-    transparently handled accross the language barrier.
+    JavaScript. Events are transparently handled accross the language
+    barrier. To avoid unnecessary communication, only events for which
+    there are handlers at the other side are synchronized.
     
     The JS version of this class is defined by the contained ``JS``
     class. One can define methods, properties, handlers, and (json
     serializable) constants on the JS class.
     
-    When a Model instance is assigned as an attribute to the Python
-    instance (inside the init() method), the corresponding attribute
-    will also be present at the JavaScript side.
+    One can also make use of a contained ``Both`` class to define things
+    that will be present in both Python and JS. This is intended primarily
+    for defining properties, which can be set on both ends, and which get
+    automatically synchronised.
     
     The ``init()`` method on both the Python and JS side can be used
     to do initialization at a time when properties have their initial
     values, but handlers are not yet initialized and events are not yet
-    emitted.
+    emitted. When a Model instance is assigned as an attribute to the Python
+    instance (inside the init() method), the corresponding attribute
+    will also be present at the JavaScript side.
     
     Models can be used as a context manager to make new Model objects
     created inside such a context to share the same session. The ``init()``
     method is invoked in the context of the object itself.
     
+    The typical way to use a model is do define properties (preferably
+    in the Both "subclass") and events, and react to these by writing
+    handlers at the side where the action should be taken. See the example
+    below or many of the examples of the Flexx documentation.
+    
     Parameters:
         session (Session, None): the session object that connects this
-            instance to a JS client.
+            instance to a JS client. If not given, will use the session
+            of a currently active model (i.e. as a context manager).
         is_app (bool): whether this object is the main app object. Set
             by Flexx internally. Not used by the Model class, but can
             be used by subclasses.
@@ -275,14 +285,21 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
             class MyModel(Model):
                 
-                def a_python_method(self):
+                @event.connect('foo')
+                def handle_changes_to_foo_in_python(self, *events):
                     ...
+                
+                class Both:
+                
+                    @event.prop
+                    def foo(self, v=0):
+                        return float(v)
                 
                 class JS:
                     
-                    FOO = [1, 2, 3]
+                    BAR = [1, 2, 3]
                     
-                    def a_js_method(this):
+                    def handle_changes_to_foo_in_js(self, *events):
                         ...
     """
     
