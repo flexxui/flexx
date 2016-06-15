@@ -59,17 +59,19 @@ class GridPanel(Layout):
     def init(self):
         raise NotImplementedError('The GridPanel is (temporarily) deprecated.')
     
-    @event.prop(both=True)
-    def spacing(self, v=5):
-        """ The space between two child elements. """
-        return float(v)
-    
-    # todo: allow specifying flex, minSize etc. using an array of dicts?
-    # @event.prop(both=True)
-    # def col_specs(self, v=None):
-    #     """ The specification for the columns. If None, uses the 
-    #     """
-    #     return v
+    class Both:
+            
+        @event.prop
+        def spacing(self, v=5):
+            """ The space between two child elements. """
+            return float(v)
+        
+        # todo: allow specifying flex, minSize etc. using an array of dicts?
+        # @event.prop
+        # def col_specs(self, v=None):
+        #     """ The specification for the columns. If None, uses the 
+        #     """
+        #     return v
     
     class JS:
         

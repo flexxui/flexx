@@ -58,57 +58,59 @@ class PlotWidget(CanvasWidget):
     
     CSS = ".flx-PlotWidget {min-width: 300px; min-height: 200px;}"
     
-    @event.prop(both=True)
-    def xdata(self, v=()):
-        """ A list of values for the x-axis. """
-        return [float(f) for f in v]
-    
-    @event.prop(both=True)
-    def ydata(self, v=()):
-        """ A list of values for the y-axis. """
-        return [float(f) for f in v]
-    
-    @event.prop(both=True)
-    def yrange(self, v=None):
-        """ The range for the y-axis. If None (default) it is determined
-        from the data. """
-        if v is not None:
-            v = tuple([float(f) for f in v])
-            assert len(v) == 2
-        return v
-    
-    @event.prop(both=True)
-    def line_color(self, v='blue'):
-        """ The color of the line. If this is the empty string, the
-        line is not shown. """
-        return str(v)
-    
-    # todo: allow setting alpha as #rrggbbaa and #rgba
-    @event.prop(both=True)
-    def marker_color(self, v='blue'):
-        """ The color of the marker. If this is the empty string, the
-        line is not shown. """
-        return str(v)
-    
-    @event.prop(both=True)
-    def line_width(self, v=2):
-        """ The width of the line, in pixels. """
-        return float(v)
-    
-    @event.prop(both=True)
-    def marker_size(self, v=6):
-        """ The size of the marker, in pixels. """
-        return float(v)
-    
-    @event.prop(both=True)
-    def xlabel(self, v=''):
-        """ The label to show on the x-axis. """
-        return str(v)
-    
-    @event.prop(both=True)
-    def ylabel(self, v=''):
-        """ The label to show on the y-axis. """
-        return str(v)
+    class Both:
+            
+        @event.prop
+        def xdata(self, v=()):
+            """ A list of values for the x-axis. """
+            return [float(f) for f in v]
+        
+        @event.prop
+        def ydata(self, v=()):
+            """ A list of values for the y-axis. """
+            return [float(f) for f in v]
+        
+        @event.prop
+        def yrange(self, v=None):
+            """ The range for the y-axis. If None (default) it is determined
+            from the data. """
+            if v is not None:
+                v = tuple([float(f) for f in v])
+                assert len(v) == 2
+            return v
+        
+        @event.prop
+        def line_color(self, v='blue'):
+            """ The color of the line. If this is the empty string, the
+            line is not shown. """
+            return str(v)
+        
+        # todo: allow setting alpha as #rrggbbaa and #rgba
+        @event.prop
+        def marker_color(self, v='blue'):
+            """ The color of the marker. If this is the empty string, the
+            line is not shown. """
+            return str(v)
+        
+        @event.prop
+        def line_width(self, v=2):
+            """ The width of the line, in pixels. """
+            return float(v)
+        
+        @event.prop
+        def marker_size(self, v=6):
+            """ The size of the marker, in pixels. """
+            return float(v)
+        
+        @event.prop
+        def xlabel(self, v=''):
+            """ The label to show on the x-axis. """
+            return str(v)
+        
+        @event.prop
+        def ylabel(self, v=''):
+            """ The label to show on the y-axis. """
+            return str(v)
     
     class JS:
         

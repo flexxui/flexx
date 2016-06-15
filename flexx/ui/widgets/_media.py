@@ -49,27 +49,29 @@ class ImageWidget(Widget):
     """ Display an image using a url.
     """
     
-    @event.prop(both=True)
-    def source(self, v=''):
-        """ The source of the image, This can be anything that an HTML
-        img element supports. Also supported are images on the server,
-        these will be added as assets so the client can request them.
-        """
-        if not this_is_js():
-            # Is it an image on the server that we need to serve up?
-            if v.endswith(('.png', '.jpg', '.svg', '.gif')):
-                if os.path.isfile(v):
-                    fname = self.id + os.path.splitext(v)[1]
-                    app.assets.add_asset(fname, v)
-                    return fname
-        return str(v)
-    
-    @event.prop(both=True)
-    def stretch(self, v=False):
-        """ Whether the image should stretch to fill all available
-        space, or maintain its aspect ratio (default).
-        """
-        return bool(v)
+    class Both:
+            
+        @event.prop
+        def source(self, v=''):
+            """ The source of the image, This can be anything that an HTML
+            img element supports. Also supported are images on the server,
+            these will be added as assets so the client can request them.
+            """
+            if not this_is_js():
+                # Is it an image on the server that we need to serve up?
+                if v.endswith(('.png', '.jpg', '.svg', '.gif')):
+                    if os.path.isfile(v):
+                        fname = self.id + os.path.splitext(v)[1]
+                        app.assets.add_asset(fname, v)
+                        return fname
+            return str(v)
+        
+        @event.prop
+        def stretch(self, v=False):
+            """ Whether the image should stretch to fill all available
+            space, or maintain its aspect ratio (default).
+            """
+            return bool(v)
     
     class JS:
         
@@ -101,12 +103,14 @@ class VideoWidget(Widget):
     """ A widget to display a video from a url.
     """
     
-    @event.prop(both=True)
-    def source(self, v=''):
-        """ The source of the video. This must be a url of a resource
-        on the web.
-        """
-        return str(v)
+    class Both:
+            
+        @event.prop
+        def source(self, v=''):
+            """ The source of the video. This must be a url of a resource
+            on the web.
+            """
+            return str(v)
     
     class JS:
         
@@ -130,11 +134,13 @@ class YoutubeWidget(Widget):
     """ A widget to display a Youtube video.
     """
     
-    @event.prop(both=True)
-    def source(self, v='oHg5SJYRHA0'):
-        """ The source of the video represented as the Youtube id.
-        """
-        return str(v)
+    class Both:
+            
+        @event.prop
+        def source(self, v='oHg5SJYRHA0'):
+            """ The source of the video represented as the Youtube id.
+            """
+            return str(v)
     
     class JS:
         

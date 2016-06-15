@@ -64,7 +64,7 @@ class BokehWidget(Widget):
                 filename = os.path.join(res, x, modname + x)
                 self.session.add_global_asset(modname + x, filename)
     
-    @event.prop(sync=False)
+    @event.prop
     def plot(self, plot=None):
         """ The Bokeh plot object to display. In JS, this prop
         provides the corresponding backbone model.
@@ -91,7 +91,7 @@ class BokehWidget(Widget):
     
     class JS:
         
-        @event.prop(sync=False)
+        @event.prop
         def plot(self, plot=None):
             return plot
         

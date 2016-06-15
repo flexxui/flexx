@@ -35,19 +35,21 @@ class SplitPanel(Layout):
     
     _DEFAULT_ORIENTATION = 'h'
     
-    @event.prop(both=True)
-    def orientation(self, v=None):
-        """ The orientation of the child widgets. 'h' or 'v'. Default
-        horizontal.
-        """
-        if v is None:
-            v = self._DEFAULT_ORIENTATION
-        if isinstance(v, str):
-            v = v.lower()
-        v = {'horizontal': 'h', 'vertical': 'v', 0: 'h', 1: 'v'}.get(v, v)
-        if v not in ('h', 'v'):
-            raise ValueError('Unknown value for splitter orientation %r' % v)
-        return v
+    class Both:
+    
+        @event.prop
+        def orientation(self, v=None):
+            """ The orientation of the child widgets. 'h' or 'v'. Default
+            horizontal.
+            """
+            if v is None:
+                v = self._DEFAULT_ORIENTATION
+            if isinstance(v, str):
+                v = v.lower()
+            v = {'horizontal': 'h', 'vertical': 'v', 0: 'h', 1: 'v'}.get(v, v)
+            if v not in ('h', 'v'):
+                raise ValueError('Unknown value for splitter orientation %r' % v)
+            return v
     
     class JS:
         
