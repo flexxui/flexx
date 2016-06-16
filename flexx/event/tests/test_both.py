@@ -536,6 +536,28 @@ def test_connect2(Person):
     return res
 
 
+@run_in_both(Person, "['jane', 'jansen', 'johnny', 1]")
+def test_connect3(Person):
+    res = []
+    res2 = []
+    def func(*events):
+        res2.append(1)
+        for ev in events:
+            res.append(ev.new_value)
+    
+    name = Person()
+    handler = name.connect('first_name', 'last_name', func)  # func can also come last
+    assert handler is not func
+    
+    name.first_name = 'jane'
+    name.last_name = 'jansen'
+    name.first_name = 'jane'
+    name.first_name = 'johnny'
+    handler.handle_now()
+    res.append(len(res2))
+    return res
+
+
 @run_in_both(Person, "['jane', 'jansen', '||', 'jane', 'jansen']")
 def test_disconnect_dispose(Person):
     res1 = []

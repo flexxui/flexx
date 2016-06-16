@@ -74,18 +74,28 @@ class HasEventsJS:
         for ev in initial_pending_events:
             self._emit(ev)
     
-    def __connect(self, func, *connection_strings):
+    def __connect(self, *connection_strings):
         # The JS version (no decorator functionality)
         
-        if len(connection_strings) == 0:
-            raise RuntimeError('connect() (js) needs one or more connection strings.')
+        if len(connection_strings) < 2:
+            raise RuntimeError('connect() (js) needs a function and one or ' +
+                               'more connection strings.')
         
+        # Get callable
+        if callable(connection_strings[0]):
+            func = connection_strings[0]
+            connection_strings = connection_strings[1:]
+        elif callable(connection_strings[-1]):
+            func = connection_strings[-1]
+            connection_strings = connection_strings[:-1]
+        else:
+            raise TypeError('connect() decorator requires a callable.')
+        
+        # Verify connection strings
         for s in connection_strings:
             if not (isinstance(s, str) and len(s)):
                 raise ValueError('Connection string must be nonempty strings.')
         
-        if not callable(func):
-            raise TypeError('connect() decotator requires a callable.')
         return self.__create_Handler(func, func.name or 'anonymous', connection_strings)
     
     def __create_PyProperty(self, name):

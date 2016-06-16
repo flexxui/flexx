@@ -27,9 +27,9 @@ def connect(*connection_strings):
     dynamism and labels for further information on the possibilities
     of connection strings.
     
-    Note that naming a method ``on_foo()`` will be automatically
-    connected to event "foo". To connect a regular function to an event,
-    use the :func:`HasEvents.connect() <flexx.event.HasEvents.connect>` method.
+    To connect functions or methods to an event from another HasEvents
+    object, use that object's
+    :func:`HasEvents.connect()<flexx.event.HasEvents.connect>` method.
     
     .. code-block:: py
         

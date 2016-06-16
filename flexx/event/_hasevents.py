@@ -374,6 +374,9 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             
             # Direct usage
             h.connect(greet, 'first_name', 'last_name')
+            
+            # Order does not matter
+            h.connect('first_name', greet)
         
         """
         return self.__connect(*connection_strings)  # calls Py or JS version
@@ -387,6 +390,9 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         if callable(connection_strings[0]):
             func = connection_strings[0]
             connection_strings = connection_strings[1:]
+        elif callable(connection_strings[-1]):
+            func = connection_strings[-1]
+            connection_strings = connection_strings[:-1]
         
         for s in connection_strings:
             if not (isinstance(s, str) and len(s) > 0):

@@ -72,7 +72,7 @@ import threading
 from .. import event
 from ..event._hasevents import (with_metaclass, new_type, HasEventsMeta,
                                 finalize_hasevents_class)
-from ..event._emitters import Property, Emitter
+from ..event._emitters import Emitter
 from ..event._js import create_js_hasevents_class, HasEventsJS
 from ..pyscript import py2js, js_rename, window, Parser
 
@@ -556,7 +556,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             # Note: there is quite a bit of _pyfunc_truthy in the ifs here
             if window.flexx.ws is None:
                 super()._set_prop(name, value, _initial)
-                # todo: except NotImplemented? window.console.warn("Cannot set prop '%s' because its validated "
+                # todo: allow raising NotImplemented to avoid validationin either JS or Py?
+                # window.console.warn("Cannot set prop '%s' because its validated "
                 #                        "in Py, but there is no websocket." % name)
                 return
             

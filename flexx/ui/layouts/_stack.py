@@ -42,7 +42,8 @@ class StackedPanel(Layout):
             """ The currently shown widget.
             """
             if not (v is None or isinstance(v, Widget)):
-                raise ValueError('The StackedPanel\'s current widget should be a Widget.')
+                raise ValueError("The StackedPanel's current widget " +
+                                 "should be a Widget.")
             return v
     
     class JS:

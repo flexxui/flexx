@@ -77,8 +77,9 @@ class BokehWidget(Widget):
             return None
         if not isinstance(plot, Plot):
             raise ValueError('Plot must be a Bokeh plot object.')
+        # Responsive is fixed by default, but that's silly in this context
         if plot.responsive == 'fixed':
-            plot.responsive = 'box'  # Fixed is default, but silly in this context
+            plot.responsive = 'stretch_both'
         self._plot_components(plot)
         return plot
     

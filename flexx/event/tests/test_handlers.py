@@ -145,6 +145,36 @@ def test_func_handlers_nodecorator():
     assert handle1.get_name() == '_handle1'  # note the name
 
 
+def test_func_handlers_nodecorator_reverse_connect_order():
+    
+    events1 = []
+    events2 = []
+    class Foo(event.HasEvents):
+        pass
+    
+    foo = Foo()
+    
+    def _handle1(*events):
+        events1.extend(events)
+    handle1 = foo.connect('x1', _handle1)
+    
+    def _handle2(*events):
+        events2.extend(events)
+    handle2 = foo.connect('x1', 'x2', _handle2)
+    
+    with event.loop:
+        foo.emit('x1', {})
+        foo.emit('x2', {})
+    
+    assert len(events1) == 1
+    assert len(events2) == 2
+    
+    assert isinstance(handle1, event._handler.Handler)
+    assert repr(handle1)
+    assert hasattr(handle1, 'dispose')
+    assert handle1.get_name() == '_handle1'  # note the name
+
+
 def test_func_handlers_with_method_decorator():
 
     @event.connect('x')
