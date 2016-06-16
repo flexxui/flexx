@@ -238,22 +238,24 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
                 handlers.pop(i)
         self._handlers_changed_hook()
     
-    def emit(self, type, ev):
+    def emit(self, type, info=None):
         """ Generate a new event and dispatch to all event handlers.
         
         Arguments:
             type (str): the type of the event. Should not include a label.
-            ev (dict): the event object. This dict is turned into a Dict,
-                so that its elements can be accesses as attributes.
+            info (dict): Optional. Additional information to attach to
+                the event object. Note that the actual event is a Dict object
+                that allows its elements to be accesses as attributes.
         """
+        info = {} if info is None else info
         type, _, label = type.partition(':')
         if len(label):
             raise ValueError('The type given to emit() should not include a label.')
         # Prepare event
-        if not isinstance(ev, dict):
-            raise TypeError('Event object (for %r) must be a dict, not %r' %
-                            (type, ev))
-        ev = Dict(ev)  # make copy and turn into nicer Dict on py
+        if not isinstance(info, dict):
+            raise TypeError('Info object (for %r) must be a dict, not %r' %
+                            (type, info))
+        ev = Dict(info)  # make copy and turn into nicer Dict on py
         ev.type = type
         ev.source = self
         # Push the event to the handlers (handlers use labels for dynamism)
