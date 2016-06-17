@@ -99,17 +99,7 @@ class Widget(Model):
             return "<i>This widget is already shown in this notebook</i>"
 
         container_id = self.id + '_container'
-
         self._set_prop('container', container_id)
-
-        # todo: no need for call_later anymore, right?
-        # def set_cointainer_id():
-        #     self._set_prop('container', container_id)
-        # # Set container id, this gets applied in the next event loop
-        # # iteration, so by the time it gets called in JS, the div that
-        # # we define below will have been created.
-        # from ..app import call_later
-        # call_later(0.1, set_cointainer_id)  # todo: always do calls in next iter
         return "<div class='flx-container' id=%s />" % container_id
 
     def init(self):

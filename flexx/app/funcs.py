@@ -162,33 +162,72 @@ def _deprecated_init_interactive(runtime=None, **runtime_kwargs):
         session._runtime = launch('http://' + url, runtime=runtime, **runtime_kwargs)
 
 
+class NoteBookHelper:
+    """ Object that captures commands send to the websocket during the
+    execution of a cell, and then applies these commands using a script
+    node. This way, Flexx widgets keep working in the exported notebook.
+    """
+    
+    close_code = None
+    
+    def __init__(self, session):
+        self._session = session
+        self._ws = None
+        self._commands = []
+        self.enable()
+    
+    def enable(self):
+        from IPython import get_ipython
+        ip = get_ipython()
+        ip.events.register('pre_execute', self.capture)
+        ip.events.register('post_execute', self.release)
+    
+    def capture(self):
+        if self._ws is not None:
+            raise RuntimeError('already in capture mode')
+        self._ws = self._session._ws
+        self._session._ws = self
+    
+    def release(self):
+        self._session._ws = self._ws
+        self._ws = None
+        
+        from IPython.display import display, Javascript
+        commands = ['flexx.command(%s);' % reprs(msg) for msg in self._commands]
+        self._commands = []
+        display(Javascript('\n'.join(commands)))
+    
+    def command(self, msg):
+        self._commands.append(msg)
+
+
 def init_notebook():
     """ Initialize the Jupyter notebook by injecting the necessary CSS
     and JS into the browser. Note that any Flexx-based libraries that
     you plan to use should probably be imported *before* calling this.
     """
     
-    from IPython.display import display, Javascript, HTML
-    # from .. import ui  # noqa - make ui assets available
+    # Note: not using IPython Comm objects yet, since they seem rather
+    # undocumented and I could not get them to work when I tried for a bit.
+    # This means though, that flexx in the notebook only works on localhost.
     
-    # todo: ideally you don't want user interactions done this way:
-    # they result in spamming of JavaScript "objects" and when nbconverting,
-    # this will result in a huge number of output_javascript elements.
-    def my_send_command(command):
-        display(Javascript('flexx.command(%s);' % reprs(command)))
+    from IPython.display import display, HTML
+    # from .. import ui  # noqa - make ui assets available
     
     # Get session or create new, check if we already initialized notebook
     session = manager.get_default_session()
     if session is None:
         session = manager.create_default_session()
-    if hasattr(session, '_original_send_command'):
+    if hasattr(session, '_init_notebook_done'):
         display(HTML("<i>Flexx already loaded</i>"))
         return  # Don't inject twice
+    else:
+        session._init_notebook_done = True
     
-    # Monkey-patch it. Not very pretty, but this keeps notebook logic
-    # confined to this module/function.
-    session._original_send_command = session._send_command
-    session._send_command = my_send_command
+    # Install helper to make things work in exported notebooks
+    NoteBookHelper(session)
+    
+    # Load assets
     try:
         session.use_global_asset('phosphor-all.js')
         session.use_global_asset('flexx-ui.css')
@@ -196,25 +235,21 @@ def init_notebook():
     except IndexError as err:
         pass  # Ok if it fails; assets can be loaded dynamically.
     
-    # Open server - we only use websocket for JS-to-Py communication
+    # Open server - the notebook helper takes care of the JS resulting
+    # from running a cell, but any interaction goes over the websocket.
     init()
     host, port = server.serving_at
     asset_elements = session.get_assets_as_html()
-    
-    # Make the JS that we inject not take any vertical space when nbconverted
-    extra_css = '.output_subarea.output_javascript { padding: 0px; }'
     
     # Compose HTML to inject
     url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)
     t = "<i>Injecting Flexx JS and CSS</i>"
     t += '\n\n'.join(asset_elements)
-    t += '\n\n<style>%s</style>\n' % extra_css
     t += "<script>flexx.ws_url='%s'; " % url
     t += "flexx.is_notebook=true; flexx.init();</script>"
     
     # Note: the Widget._repr_html_() method is responsible for making
     # the widget show up in the notebook output area.
-    
     display(HTML(t))
 
 
