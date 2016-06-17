@@ -316,7 +316,7 @@ class Widget(Model):
             for key in size_limits_keys:
                 if key in d:
                     size_limits_changed = True
-
+            
             if size_limits_changed:
                 # Clear phosphor's limit cache (no need for getComputedStyle())
                 values = [self.outernode.style[k] for k in size_limits_keys]
@@ -327,6 +327,7 @@ class Widget(Model):
                 parent = self.parent
                 if parent:
                     parent.phosphor.fit()  # i.e. p.processMessage(p.MsgFitRequest)
+                self.phosphor.update()
 
         @event.connect('title')
         def __title_changed(self, *events):
@@ -380,17 +381,26 @@ class Widget(Model):
             self.outernode.classList.remove('flx-main-widget')
             if self.parent:
                 return
+            # Detach
+            if self.phosphor.isAttached:
+                self.phosphor.detach()
+            if self.outernode.parentNode is not None:  # detachWidget not enough
+                self.outernode.parentNode.removeChild(self.outernode)
+            # Attach
             if id:
                 el = window.document.getElementById(id)
-                if self.phosphor.isAttached:
-                    self.phosphor.detach()
-                if self.outernode.parentNode is not None:  # detachWidget not enough
-                    self.outernode.parentNode.removeChild(self.outernode)
                 self.phosphor.attach(el)
                 window.addEventListener('resize', lambda: (self.phosphor.update(),
                                                            self._check_real_size()))
             if id == 'body':
                 self.outernode.classList.add('flx-main-widget')
+            elif id:
+                # Update style. If there is stuff like min-height set (which
+                # would be common in the notebook), we need to reapply style
+                # because Phosphor sets some of the size-styling too.
+                style = self.style
+                window.setTimeout(lambda: (self._set_prop('style', ''),
+                                           self._set_prop('style', style)), 1)
 
         @event.connect('children')
         def __children_changed(self, *events):

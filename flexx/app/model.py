@@ -343,7 +343,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             from .session import manager
             session = manager.get_default_session()
         if session is None:
-            raise RuntimeError('Cannot instantiate Model %r without a session' % self.id)
+            raise RuntimeError('Cannot instantiate Model %r without a session'
+                               % self.id)
         self._session = session
         self._session.register_model_class(self.__class__)
         

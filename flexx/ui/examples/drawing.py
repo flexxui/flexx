@@ -10,6 +10,10 @@ from flexx import app, ui
 
 class Drawing(ui.CanvasWidget):
     
+    CSS = """
+    .flx-Drawing {background: #fff; border: 5px solid #000;}
+    """
+    
     class JS:
         
         def init(self):
@@ -52,7 +56,6 @@ class Main(ui.Widget):
     """
     
     CSS = """
-    .flx-Widget { background: #aaf;}
     .flx-Drawing {background: #fff; border: 5px solid #000;}
     """
     

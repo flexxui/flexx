@@ -48,10 +48,12 @@ class PrimeFinder(app.Model):
         self.call_js('_find_prime(%i)' % n)
 
 
-# Create app instance
-finder = app.launch(PrimeFinder, 'nodejs')  # can also use Firefox or Chrome
-
-finder.find_prime_py(2000)  # 0.7 s
-finder.find_prime_js(2000)  # 0.2 s
-
-app.run()
+if __name__ == '__main__':
+    
+    # Create app instance
+    finder = app.launch(PrimeFinder, 'nodejs')  # can also use Firefox or Chrome
+    
+    finder.find_prime_py(2000)  # 0.7 s
+    finder.find_prime_js(2000)  # 0.2 s
+    
+    app.run()

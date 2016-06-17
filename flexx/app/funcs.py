@@ -6,8 +6,7 @@ import os
 import sys
 import json
 
-from .. import webruntime
-from .. import config
+from .. import webruntime, config, set_log_level
 
 from . import model, logger
 from .model import Model
@@ -151,7 +150,7 @@ def _deprecated_init_interactive(runtime=None, **runtime_kwargs):
         session._set_app(ui.Widget(is_app=True))
     
     # Launch web runtime, the server will wait for the connection
-    _server_open()
+    init()
     host, port = server.serving_at
     if runtime == 'nodejs':
         all_js = session.get_js_only()
@@ -184,9 +183,10 @@ class NoteBookHelper:
     
     def capture(self):
         if self._ws is not None:
-            raise RuntimeError('already in capture mode')
-        self._ws = self._session._ws
-        self._session._ws = self
+            logger.warn('Notebookhelper already is in capture mode.')
+        else:
+            self._ws = self._session._ws
+            self._session._ws = self
     
     def release(self):
         self._session._ws = self._ws
@@ -214,6 +214,11 @@ def init_notebook():
     from IPython.display import display, HTML
     # from .. import ui  # noqa - make ui assets available
     
+    # Make default log level warning instead of "info" to avoid spamming
+    # This preserves the log level set by the user
+    config.load_from_string('log_level = warning', 'init_notebook')
+    set_log_level(config.log_level)
+    
     # Get session or create new, check if we already initialized notebook
     session = manager.get_default_session()
     if session is None:
@@ -232,7 +237,7 @@ def init_notebook():
         session.use_global_asset('phosphor-all.js')
         session.use_global_asset('flexx-ui.css')
         session.use_global_asset('flexx-ui.js')
-    except IndexError as err:
+    except IndexError:
         pass  # Ok if it fails; assets can be loaded dynamically.
     
     # Open server - the notebook helper takes care of the JS resulting
