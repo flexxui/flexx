@@ -29,7 +29,7 @@ class AppManager(event.HasEvents):
     def __init__(self):
         super().__init__()
         # name -> (ModelClass, pending, connected) - lists contain proxies
-        self._proxies = {'__default__': (None, [], [])}
+        self._proxies = {}
         self._last_check_time = time.time()
     
     def register_app_class(self, cls):
@@ -52,21 +52,31 @@ class AppManager(event.HasEvents):
             #raise ValueError('App with name %r already registered' % name)
         self._proxies[name] = cls, pending, connected
     
+    def create_default_session(self):
+        """ Create a default session for interactive use (e.g. the notebook).
+        """
+        
+        if '__default__' in self._proxies:
+            raise RuntimeError('The default session can only be created once.')
+        
+        session = Session('__default__')
+        self._proxies['__default__'] = (None, [session], [])
+        return session
+    
     def get_default_session(self):
         """ Get the default session that is used for interactive use.
+        Returns None unless create_default_session() was called.
         
         When a Model class is created without a session, this method
-        is called to get one. The default "app" is served at
-        "http://address:port/__default__".
+        is called to get one (and will then fail if it's None).
         """
-        _, pending, connected = self._proxies['__default__']
-        proxies = pending + connected
-        if proxies:
-            return proxies[-1]
+        x = self._proxies.get('__default__', None)
+        if x is None:
+            return None
         else:
-            session = Session('__default__')
-            pending.append(session)
-            return session
+            _, pending, connected = x
+            proxies = pending + connected
+            return proxies[-1]
     
     def _clear_old_pending_sessions(self):
         try:
@@ -102,7 +112,7 @@ class AppManager(event.HasEvents):
             self._clear_old_pending_sessions()
         
         if name == '__default__':
-            raise RuntimeError('Cannot connect to __default__ app like this.')
+            raise RuntimeError('There can be only one __default__ session.')
         elif name not in self._proxies:
             raise ValueError('Can only instantiate a session with a valid app name.')
         
@@ -214,12 +224,13 @@ class Session(SessionAssets):
         # Init assets
         id_asset = ('var flexx_session_id = "%s";\n' % self.id).encode()
         self.add_asset('index-flexx-id.js', id_asset)
+        self.use_global_asset('pyscript-std.js')
         self.use_global_asset('flexx-app.js')
         
         self._app_name = app_name  # name of the app, available before the app itself
         self._runtime = None  # init web runtime, will be set when used
         self._ws = None  # init websocket, will be set when a connection is made
-        self._model = None  # Model instance, None if app_name is __default__
+        self._model = None  # Model instance, can be None if app_name is __default__
         
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
@@ -239,8 +250,8 @@ class Session(SessionAssets):
     
     @property
     def app(self):
-        """ The Model instance that represents the app. Can be None if this
-        is the ``__default__`` app.
+        """ The Model instance that represents the app. Can be None if Flexx
+        is used in interactive mode (using the ``__default__`` app).
         """
         return self._model
     

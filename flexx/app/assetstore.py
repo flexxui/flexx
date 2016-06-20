@@ -410,30 +410,43 @@ class SessionAssets:
                 self.register_model_class(cls2)
         
         # Make sure that no two models have the same name, or we get problems
-        # that are difficult to debug.
+        # that are difficult to debug. Unless classes are defined in the notebook.
         same_name = [c for c in self._known_classes if c.__name__ == cls.__name__]
         if same_name:
+            from .session import manager  # noqa - avoid circular import
             same_name.append(cls)
-            raise RuntimeError('Cannot have multiple Model classes with the '
-                               'same name: %r' % same_name)
+            is_interactive = self is manager.get_default_session()  # e.g. in notebook
+            is_dynamic_cls = not any([self._store.get_module_name_for_model_class(c)
+                                      for c in same_name])
+            if not (is_interactive and is_dynamic_cls):
+                raise RuntimeError('Cannot have multiple Model classes with the same '
+                                   'name unless using interactive session and the '
+                                   'classes are dynamically defined: %r' % same_name)
         
         logger.debug('Registering Model class %r' % cls.__name__)
         self._known_classes.add(cls)
         
         # Check if cls is covered by our assets
         module_name = self._store.get_module_name_for_model_class(cls)
+        
         if module_name:
             # cls is present in a module, add corresponding asset (overwrite ok)
             fname = module_name.replace('.', '-')
             if (fname + '.js') not in self._asset_names:
                 if self._served:
-                    # Assume that intent is to use module; do not load dynamically
-                    t = ('Trying to use class %s that is defined in module %r, '
-                         'but that module is not loaded. Use '
-                         'session.register_model_class(%s) to preload it.')
-                    raise RuntimeError(t % (cls.__name__, module_name, cls.__name__))
-                self.use_global_asset(fname + '.css')
-                self.use_global_asset(fname + '.js')
+                    # todo: if we knew the deps of a module, this would work better
+                    t = ('Trying to use a class from module %r, but that module '
+                         'is not loaded. Use session.register_model_class(%s) '
+                         'to preload it. You might also see this because the runtime '
+                         'started before the relevant Python module was imported. '
+                         'Proceeding by dynamic loading, but things may not work.')
+                    logger.warning(t % (module_name, cls.__name__))
+                    load_asset = lambda f: self._store.load_asset(f).decode()
+                    self._send_command('DEFINE-JS ' + load_asset(fname + '.js'))
+                    self._send_command('DEFINE-CSS ' + load_asset(fname + '.js'))
+                else:
+                    self.use_global_asset(fname + '.css')
+                    self.use_global_asset(fname + '.js')
         elif not self._served:
             # Remember cls, will be served in the index
             self._extra_model_classes.append(cls)
@@ -489,6 +502,10 @@ class SessionAssets:
                 t = "<style>\n/* CSS for %s */\n%s\n</style>"
                 content_assets.append(t % (fname, code))
             else:
+                if fname == 'pyscript-std.js':
+                    # <script> elements might be embedded in a sub DOM element,
+                    # which wont expose vars in global scope bc of "use strict"
+                    code = code.replace('\nvar _py', '\nwindow._py')
                 t = "<script>\n/* JS for %s */\n%s\n</script>"
                 content_assets.append(t % (fname, code))
         return content_assets

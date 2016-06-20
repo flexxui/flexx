@@ -7,7 +7,7 @@ import logging
 import tornado
 
 from flexx.app.model import Model, _get_active_models
-from flexx import event
+from flexx import event, app
 
 
 class Foo1(Model):
@@ -105,6 +105,11 @@ def test_no_duplicate_code():
 
 def test_active_models():
     
+    # This test needs a default session
+    session = app.manager.get_default_session()
+    if session is None:
+        app.manager.create_default_session()
+    
     # Test that by default there are no active models
     m = Model()
     assert not _get_active_models()
@@ -114,8 +119,8 @@ def test_active_models():
         assert _get_active_models() == [m]
     
     # Can do this
-    app = tornado.ioloop.IOLoop.instance()
-    app.run_sync(lambda x=None: None)
+    ioloop = tornado.ioloop.IOLoop.instance()
+    ioloop.run_sync(lambda x=None: None)
     
     
     class PMHandler(logging.Handler):
@@ -133,7 +138,7 @@ def test_active_models():
     with m:
         assert _get_active_models() == [m]
         # This raises error, but gets caught by Tornado
-        app.run_sync(lambda x=None: None)
+        ioloop.run_sync(lambda x=None: None)
     assert handler.last_type is RuntimeError
     assert 'risk on race conditions' in str(handler.last_value)
 
