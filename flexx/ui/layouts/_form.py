@@ -221,13 +221,13 @@ class FormLayout(BaseTableLayout):
             if widget._title_elem:
                 del widget._title_elem
         
-        @event.connect('children.*.flex')
+        @event.connect('children', 'children.*.flex')
         def __update_flexes(self, *events):
             for widget in self.children:
                 widget.outernode.vflex = widget.flex[1]
             self._apply_table_layout()
         
-        @event.connect('children.*.title')
+        @event.connect('children', 'children.*.title')
         def __update_titles(self, *events):
             for widget in self.children:
                 if hasattr(widget, '_title_elem'):

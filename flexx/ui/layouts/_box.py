@@ -225,7 +225,7 @@ class BoxLayout(BaseBoxLayout):
         
         _DEFAULT_ORIENTATION = 'h'
         
-        @event.connect('orientation', 'children.*.flex')
+        @event.connect('orientation', 'children', 'children.*.flex')
         def __set_flexes(self, *events):
             ori = self.orientation
             i = 0 if ori in (0, 'h', 'hr') else 1
@@ -327,7 +327,7 @@ class BoxPanel(BaseBoxLayout):
             self.phosphor = window.phosphor.boxpanel.BoxPanel()
             self.node = self.phosphor.node
         
-        @event.connect('orientation', 'children.*.flex')
+        @event.connect('orientation', 'children', 'children.*.flex')
         def __set_flexes(self, *events):
             i = 0 if self.orientation in (0, 'h', 'hr') else 1
             for widget in self.children:

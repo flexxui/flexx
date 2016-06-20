@@ -88,7 +88,8 @@ class GridPanel(Layout):
             window.phosphor.messaging.installMessageFilter(self.phosphor,
                                                            LayoutNotifier())
         
-        @event.connect('children.*.pos', 'children.*.flex', 'children.*.base_size')
+        @event.connect('children', 'children.*.pos',
+                       'children.*.flex', 'children.*.base_size')
         def __update_positions(self, *events):
             self._child_limits_changed()
         

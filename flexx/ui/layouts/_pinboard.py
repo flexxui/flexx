@@ -41,7 +41,7 @@ class PinboardLayout(Layout):
             self.phosphor = window.phosphor.panel.Panel()
             self.node = self.phosphor.node
         
-        @event.connect('children.*.pos')
+        @event.connect('children', 'children.*.pos')
         def __pos_changed(self, *events):
             for child in self.children:
                 pos = child.pos
@@ -49,7 +49,7 @@ class PinboardLayout(Layout):
                 st.left = pos[0] + "px" if (pos[0] > 1) else pos[0] * 100 + "%"
                 st.top = pos[1] + "px" if (pos[1] > 1) else pos[1] * 100 + "%"
         
-        @event.connect('children.*.base_size')
+        @event.connect('children', 'children.*.base_size')
         def __size_changed(self, *events):
             for child in self.children:
                 size = child.base_size

@@ -254,9 +254,10 @@ is a ``HasEvents`` subclass that has properties ``parent`` and
         ...
 
 The ``parent_foo_handler`` gets invoked when the "foo" event gets
-emitted on the parent of main, *and* when the parent of main changes.
-Similarly, the ``children_foo_handler`` gets invoked when any of the
-children emits its "foo" event, or when the children property changes.
+emitted on the parent of main. Similarly, the ``children_foo_handler``
+gets invoked when any of the children emits its "foo" event. Note that
+in some cases you might also want to connect to changes of the ``parent``
+or ``children`` property itself.
 
 The event system automatically reconnects handlers when necessary. This
 concept makes it very easy to connect to the right events without the

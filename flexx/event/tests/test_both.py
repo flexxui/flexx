@@ -1029,7 +1029,7 @@ class Node(event.HasEvents):
                 self._r2.append('null')
 
 
-@run_in_both(Node, "[0, 0, 17, 18, 28, 29, null]")
+@run_in_both(Node, "[17, 18, 29]")
 def test_dynamism1(Node):
     n = Node()
     n1 = Node()
@@ -1057,8 +1057,8 @@ def test_dynamism1(Node):
     return n._r1
 
 
-@run_in_both(Node, "[0, 17, 18, 28, 29, null]")
-def test_dynamism2(Node):
+@run_in_both(Node, "[17, 18, 29]")
+def test_dynamism2a(Node):
     n = Node()
     n1 = Node()
     n2 = Node()
@@ -1095,7 +1095,45 @@ def test_dynamism2(Node):
     return res
 
 
-@run_in_both(Node, "['null', 'null', 17, 27, 18, 28, 'null', 29, 'null']")
+@run_in_both(Node, "[0, 17, 18, 28, 29, null]")
+def test_dynamism2b(Node):
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    res = []
+    
+    def func(*events):
+        for ev in events:
+            if n.parent:
+                res.append(n.parent.val)
+            else:
+                res.append(None)
+    handler = n.connect(func, 'parent', 'parent.val')  # also connect to parent
+    
+    n.parent = n1
+    n.val = 42
+    handler.handle_now()
+    n1.val = 17
+    n2.val = 27
+    handler.handle_now()
+    n1.val = 18
+    n2.val = 28
+    handler.handle_now()
+    n.parent = n2
+    handler.handle_now()
+    n1.val = 19
+    n2.val = 29
+    handler.handle_now()
+    n.parent = None
+    handler.handle_now()
+    n1.val = 11
+    n2.val = 21
+    handler.handle_now()
+    return res
+
+
+@run_in_both(Node, "[17, 27, 18, 28, 29]")
 def test_dynamism3(Node):
     n = Node()
     n1 = Node()
@@ -1123,8 +1161,8 @@ def test_dynamism3(Node):
     return n._r2
 
 
-@run_in_both(Node, "['null', 17, 27, 18, 28, 'null', 29, 'null']")
-def test_dynamism4(Node):
+@run_in_both(Node, "[17, 27, 18, 28, 29]")
+def test_dynamism4a(Node):
     n = Node()
     n1 = Node()
     n2 = Node()
@@ -1138,6 +1176,44 @@ def test_dynamism4(Node):
             else:
                 res.append('null')
     handler = n.connect(func, 'children.*.val')
+    
+    n.children = n1, n2
+    n.val = 42
+    handler.handle_now()
+    n1.val = 17
+    n2.val = 27
+    handler.handle_now()
+    n1.val = 18
+    n2.val = 28
+    handler.handle_now()
+    n.children = (n2, )
+    handler.handle_now()
+    n1.val = 19
+    n2.val = 29
+    handler.handle_now()
+    n.children = ()
+    handler.handle_now()
+    n1.val = 11
+    n2.val = 21
+    handler.handle_now()
+    return res
+
+
+@run_in_both(Node, "['null', 17, 27, 18, 28, 'null', 29, 'null']")
+def test_dynamism4b(Node):
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    res = []
+    
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                res.append(ev.new_value)
+            else:
+                res.append('null')
+    handler = n.connect(func, 'children', 'children.*.val')  # also connect children
     
     n.children = n1, n2
     n.val = 42
