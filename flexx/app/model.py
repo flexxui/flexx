@@ -550,15 +550,13 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         def _set_prop(self, name, value, _initial=False, frompy=False):
             
+            # Note: there is quite a bit of _pyfunc_truthy in the ifs here
+            
             islocal = self.__local_properties__.indexOf(name) >= 0
             issyncable = not _initial and not islocal
             
-            # Note: there is quite a bit of _pyfunc_truthy in the ifs here
-            if window.flexx.ws is None:
+            if window.flexx.ws is None:  # Exported app
                 super()._set_prop(name, value, _initial)
-                # todo: allow raising NotImplemented to avoid validationin either JS or Py?
-                # window.console.warn("Cannot set prop '%s' because its validated "
-                #                        "in Py, but there is no websocket." % name)
                 return
             
             ischanged = super()._set_prop(name, value, _initial)
