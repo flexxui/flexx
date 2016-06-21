@@ -127,8 +127,10 @@ class PlotWidget(CanvasWidget):
         @event.connect('xdata', 'ydata', 'yrange', 'line_color', 'line_width',
                        'marker_color', 'marker_size', 'xlabel', 'ylabel',
                        'title', 'size')
-        def _update_plot(self, *events):
+        def update(self, *events):
+            window.requestAnimationFrame(self._update)
             
+        def _update(self):
             xx, yy = self.xdata, self.ydata
             yrange = self.yrange
             lc, lw = self.line_color, self.line_width

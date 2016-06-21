@@ -432,6 +432,18 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         """
         return self._session
     
+    @event.prop
+    def sync_props(self, v=True):
+        """ Whether properties are synchronised from JS to Python. This
+        can be set to ``False`` if a model has properties that change
+        a lot, but are not of interest for the Python side. Note that
+        events are still synchronised if there is a Python handler.
+        """
+        # Use a direct approach to avoid event system here
+        v = bool(v)
+        self.call_js('_sync_props = true' if v else '_sync_props = false')
+        return v
+    
     # todo: limit this to within init()?
     def __setattr__(self, name, value):
         # Sync attributes that are Model instances, and not properties
@@ -533,6 +545,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             
             self.__event_types_py = py_events if py_events else []
             
+            self._sync_props = True
+            
             # Init HasEvents, but delay initialization of handlers
             super().__init__(False)
             
@@ -553,7 +567,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             # Note: there is quite a bit of _pyfunc_truthy in the ifs here
             
             islocal = self.__local_properties__.indexOf(name) >= 0
-            issyncable = not _initial and not islocal
+            issyncable = not _initial and not islocal and self._sync_props
             
             if window.flexx.ws is None:  # Exported app
                 super()._set_prop(name, value, _initial)
@@ -583,7 +597,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         def emit(self, type, ev, frompy=False):
             ev = super().emit(type, ev)
             isprop = (self.__properties__.indexOf(type) >= 0 and
-                      self.__local_properties__.indexOf(type) < 0)
+                      self.__local_properties__.indexOf(type) < 0 and
+                      self._sync_props)
             
             if not frompy and not isprop and type in self.__event_types_py:
                 txt = window.flexx.serializer.saves(ev)
