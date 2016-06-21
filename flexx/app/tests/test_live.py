@@ -153,7 +153,7 @@ class ModelC(ModelB):
     def test_check(self):
         py_result = ' '.join(self.__properties__) + ' - ' + ' '.join(self.__local_properties__)
         js_result = self.result
-        assert py_result == 'foo1 foo2 foo3 result spam1 spam2 spam3 - spam1 spam2 spam3'
+        assert py_result == 'foo1 foo2 foo3 result spam1 spam2 spam3 sync_props - spam1 spam2 spam3 sync_props'
         assert js_result == 'bar1 bar2 bar3 foo1 foo2 foo3 result - bar1 bar2 bar3'
         print('C ok')
     
