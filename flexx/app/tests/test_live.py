@@ -270,6 +270,56 @@ class ModelE(ModelA):
                 self.result = self.res3 + [''] + self.res4
 
 
+
+class ModelF(ModelA):
+    """ Test that props emit events (even for local props).
+    """
+    
+    def test_init(self):
+        
+        self.res = []
+        
+        self.foo1 = 2
+        self.spam1 = 2
+        
+        self.call_js('set_result()')
+    
+    def test_check(self):
+        assert self.res.count('foo1') == 3  # bit of a glitch bc we do +1
+        assert self.res.count('foo2') == 2
+        assert self.res.count('bar1') == 2
+        assert self.res.count('spam1') == 2
+        
+        assert self.result.count('foo1') == 2
+        assert self.result.count('foo2') == 2
+        assert self.result.count('bar1') == 2
+        assert self.result.count('spam1') == 2
+        
+        print('F ok')
+    
+    @event.connect('foo1', 'foo2', 'spam1', 'bar1')
+    def on_prop_change(self, *events):
+        for ev in events:
+            self.res.append(ev.type)
+    
+    class JS:
+        
+        def init(self):
+            super().init()
+            self.res = []
+        
+        @event.connect('foo1', 'foo2', 'spam1', 'bar1')
+        def on_prop_change(self, *events):
+            for ev in events:
+                self.res.append(ev.type)
+        
+        def set_result(self):
+            self.foo2 = 10
+            self.bar1 = 10
+            self.on_prop_change.handle_now()
+            
+            self.result = self.res
+
 ##
 
 
@@ -307,5 +357,5 @@ def test_apps():
 
 # NOTE: beware future self: if running this in Pyzo, turn off GUI integration!
 
-#runner(ModelB)
+#runner(ModelF)
 run_tests_if_main()

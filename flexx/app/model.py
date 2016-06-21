@@ -503,7 +503,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     
     def emit(self, type, ev, fromjs=False):
         ev = super().emit(type, ev)
-        isprop = type in self.__properties__  # are emitted via their proxies
+        isprop = type in self.__properties__ and type not in self.__local_properties__
         if not fromjs and not isprop and type in self.__event_types_js:
             cmd = 'flexx.instances.%s._emit_from_py(%s, %r);' % (
                 self._id, serializer.saves(type), serializer.saves(ev))
@@ -584,7 +584,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         def emit(self, type, ev, frompy=False):
             ev = super().emit(type, ev)
-            isprop = self.__properties__.indexOf(type) >= 0
+            isprop = (self.__properties__.indexOf(type) >= 0 and
+                      self.__local_properties__.indexOf(type) < 0)
             
             if not frompy and not isprop and type in self.__event_types_py:
                 txt = window.flexx.serializer.saves(ev)
