@@ -179,6 +179,12 @@ def test_no_duplicate_code():
 
 
 def test_get_instance_by_id():
+    
+    # This test needs a default session
+    session = app.manager.get_default_session()
+    if session is None:
+        app.manager.create_default_session()
+    
     m1 = Foo1()
     m2 = Foo1()
     
