@@ -116,24 +116,26 @@ class BaseBoxLayout(Layout):
     """ Base class for BoxLayout and BoxPanel.
     """
     
-    @event.prop(both=True)
-    def spacing(self, v=5):
-        """ The space between two child elements (in pixels)"""
-        return float(v)
-    
-    @event.prop(both=True)
-    def orientation(self, v=None):
-        """ The orientation of the child widgets. 'h' or 'v'. Default
-        horizontal. The items can also be reversed using 'hr' and 'vr'.
-        """
-        if v is None:
-            v = self._DEFAULT_ORIENTATION
-        if isinstance(v, str):
-            v = v.lower()
-        v = {'horizontal': 'h', 'vertical': 'v', 0: 'h', 1: 'v'}.get(v, v)
-        if v not in ('h', 'v', 'hr', 'vr'):
-            raise ValueError('Unknown value for box orientation %r' % v)
-        return v
+    class Both:
+        
+        @event.prop
+        def spacing(self, v=5):
+            """ The space between two child elements (in pixels)"""
+            return float(v)
+        
+        @event.prop
+        def orientation(self, v=None):
+            """ The orientation of the child widgets. 'h' or 'v'. Default
+            horizontal. The items can also be reversed using 'hr' and 'vr'.
+            """
+            if v is None:
+                v = self._DEFAULT_ORIENTATION
+            if isinstance(v, str):
+                v = v.lower()
+            v = {'horizontal': 'h', 'vertical': 'v', 0: 'h', 1: 'v'}.get(v, v)
+            if v not in ('h', 'v', 'hr', 'vr'):
+                raise ValueError('Unknown value for box orientation %r' % v)
+            return v
 
 
 class BoxLayout(BaseBoxLayout):
@@ -212,16 +214,18 @@ class BoxLayout(BaseBoxLayout):
     }
     """
     
-    @event.prop(both=True)
-    def padding(self, v=1):
-        """ The empty space around the layout (in pixels). """
-        return float(v)
+    class Both:
+        
+        @event.prop
+        def padding(self, v=1):
+            """ The empty space around the layout (in pixels). """
+            return float(v)
     
     class JS:
         
         _DEFAULT_ORIENTATION = 'h'
         
-        @event.connect('orientation', 'children.*.flex')
+        @event.connect('orientation', 'children', 'children.*.flex')
         def __set_flexes(self, *events):
             ori = self.orientation
             i = 0 if ori in (0, 'h', 'hr') else 1
@@ -323,7 +327,7 @@ class BoxPanel(BaseBoxLayout):
             self.phosphor = window.phosphor.boxpanel.BoxPanel()
             self.node = self.phosphor.node
         
-        @event.connect('orientation', 'children.*.flex')
+        @event.connect('orientation', 'children', 'children.*.flex')
         def __set_flexes(self, *events):
             i = 0 if self.orientation in (0, 'h', 'hr') else 1
             for widget in self.children:

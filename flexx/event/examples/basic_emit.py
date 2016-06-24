@@ -8,9 +8,11 @@ from flexx import event
 
 class Basic(event.HasEvents):
     
+    @event.connect('foo')
     def on_foo(self, *events):
         print('foo handler called with %i events' % len(events))
     
+    @event.connect('bar')
     def on_bar(self, *events):
         print('bar handler called with %i events' % len(events))
 

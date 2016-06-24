@@ -64,7 +64,7 @@ class BokehWidget(Widget):
                 filename = os.path.join(res, x, modname + x)
                 self.session.add_global_asset(modname + x, filename)
     
-    @event.prop(sync=False)
+    @event.prop
     def plot(self, plot=None):
         """ The Bokeh plot object to display. In JS, this prop
         provides the corresponding backbone model.
@@ -77,8 +77,9 @@ class BokehWidget(Widget):
             return None
         if not isinstance(plot, Plot):
             raise ValueError('Plot must be a Bokeh plot object.')
+        # Responsive is fixed by default, but that's silly in this context
         if plot.responsive == 'fixed':
-            plot.responsive = 'box'  # Fixed is default, but silly in this context
+            plot.responsive = 'stretch_both'
         self._plot_components(plot)
         return plot
     
@@ -91,7 +92,7 @@ class BokehWidget(Widget):
     
     class JS:
         
-        @event.prop(sync=False)
+        @event.prop
         def plot(self, plot=None):
             return plot
         

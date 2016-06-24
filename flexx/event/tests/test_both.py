@@ -50,13 +50,15 @@ def run_in_both(cls, reference, extra_classes=()):
         def runner():
             # Run in JS
             code = HasEventsJS.JSCODE
-            for c in cls.mro()[1:]:
-                if c is event.HasEvents:
-                    break
-                code += create_js_hasevents_class(c, c.__name__, c.__bases__[0].__name__+'.prototype')
             for c in extra_classes:
                 code += create_js_hasevents_class(c, c.__name__)
-            code += create_js_hasevents_class(cls, cls.__name__, cls.__bases__[0].__name__+'.prototype')
+            this_classes = []
+            for c in cls.mro():
+                if c is event.HasEvents:
+                    break
+                this_classes.append(c)
+            for c in reversed(this_classes):
+                code += create_js_hasevents_class(c, c.__name__, c.__bases__[0].__name__+'.prototype')
             code += py2js(func, 'test', inline_stdlib=False)
             code += 'test(%s);' % cls.__name__
             nargs, function_deps, method_deps = get_std_info(code)
@@ -534,6 +536,28 @@ def test_connect2(Person):
     return res
 
 
+@run_in_both(Person, "['jane', 'jansen', 'johnny', 1]")
+def test_connect3(Person):
+    res = []
+    res2 = []
+    def func(*events):
+        res2.append(1)
+        for ev in events:
+            res.append(ev.new_value)
+    
+    name = Person()
+    handler = name.connect('first_name', 'last_name', func)  # func can also come last
+    assert handler is not func
+    
+    name.first_name = 'jane'
+    name.last_name = 'jansen'
+    name.first_name = 'jane'
+    name.first_name = 'johnny'
+    handler.handle_now()
+    res.append(len(res2))
+    return res
+
+
 @run_in_both(Person, "['jane', 'jansen', '||', 'jane', 'jansen']")
 def test_disconnect_dispose(Person):
     res1 = []
@@ -642,29 +666,31 @@ def test_disconnect3(Person):
     return res1 + ['||'] + res2
 
 
-class InheritedPerson(Person):
+class InheritedPerson1(PersonNoDefault):
     
     @event.prop
-    def foo2(self, v=3):
-        return int(v)
+    def first_name(self, v='Ernie'):
+        return str(v) + '.'
     
-    @event.connect('foo2')
-    def _foo2_logger(self, *events):
-        for ev in events:
-            self.r1.append(ev.new_value)
+    @event.connect('first_name')
+    def _first_name_logger(self, *events):
+        super()._first_name_logger(*events)
+        self.r1.append('X' + str(len(events)))
 
-
-@run_in_both(InheritedPerson, "['john-john', 'john-jane', 3, 42]")
-def test_inheritance(InheritedPerson):
-    name = InheritedPerson()
+class InheritedPerson2(InheritedPerson1):
     
-    name.age = 42
+    @event.connect('first_name')
+    def _first_name_logger(self, *events):
+        super()._first_name_logger(*events)
+        self.r1.append('Y' + str(len(events)))
+
+@run_in_both(InheritedPerson2, "['ernie.-ernie.', 'ernie.-jane.', 'x2', 'y2']")
+def test_inheritance(InheritedPerson2):
+    # property behavior can be overloaded, and handlers can be overloaded.
+    # super can be used, and works for at least two levels
+    name = InheritedPerson2()
     name.first_name = 'jane'
-    name.foo2 = 42
-    
     name._first_name_logger.handle_now()
-    name._foo2_logger.handle_now()
-    
     return name.r1
 
 
@@ -794,7 +820,8 @@ class Simple1(event.HasEvents):
     def val(self, v=0):
         return int(v)
     
-    def on_val(self, *events):
+    @event.connect('val')
+    def on_val(self, *events):  # on_xx used to make implicit handler, but no more
         for ev in events:
             self._r1.append(ev.new_value)
 
@@ -1002,7 +1029,7 @@ class Node(event.HasEvents):
                 self._r2.append('null')
 
 
-@run_in_both(Node, "[0, 0, 17, 18, 28, 29, null]")
+@run_in_both(Node, "[17, 18, 29]")
 def test_dynamism1(Node):
     n = Node()
     n1 = Node()
@@ -1030,8 +1057,8 @@ def test_dynamism1(Node):
     return n._r1
 
 
-@run_in_both(Node, "[0, 17, 18, 28, 29, null]")
-def test_dynamism2(Node):
+@run_in_both(Node, "[17, 18, 29]")
+def test_dynamism2a(Node):
     n = Node()
     n1 = Node()
     n2 = Node()
@@ -1068,7 +1095,45 @@ def test_dynamism2(Node):
     return res
 
 
-@run_in_both(Node, "['null', 'null', 17, 27, 18, 28, 'null', 29, 'null']")
+@run_in_both(Node, "[0, 17, 18, 28, 29, null]")
+def test_dynamism2b(Node):
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    res = []
+    
+    def func(*events):
+        for ev in events:
+            if n.parent:
+                res.append(n.parent.val)
+            else:
+                res.append(None)
+    handler = n.connect(func, 'parent', 'parent.val')  # also connect to parent
+    
+    n.parent = n1
+    n.val = 42
+    handler.handle_now()
+    n1.val = 17
+    n2.val = 27
+    handler.handle_now()
+    n1.val = 18
+    n2.val = 28
+    handler.handle_now()
+    n.parent = n2
+    handler.handle_now()
+    n1.val = 19
+    n2.val = 29
+    handler.handle_now()
+    n.parent = None
+    handler.handle_now()
+    n1.val = 11
+    n2.val = 21
+    handler.handle_now()
+    return res
+
+
+@run_in_both(Node, "[17, 27, 18, 28, 29]")
 def test_dynamism3(Node):
     n = Node()
     n1 = Node()
@@ -1096,8 +1161,8 @@ def test_dynamism3(Node):
     return n._r2
 
 
-@run_in_both(Node, "['null', 17, 27, 18, 28, 'null', 29, 'null']")
-def test_dynamism4(Node):
+@run_in_both(Node, "[17, 27, 18, 28, 29]")
+def test_dynamism4a(Node):
     n = Node()
     n1 = Node()
     n2 = Node()
@@ -1111,6 +1176,44 @@ def test_dynamism4(Node):
             else:
                 res.append('null')
     handler = n.connect(func, 'children.*.val')
+    
+    n.children = n1, n2
+    n.val = 42
+    handler.handle_now()
+    n1.val = 17
+    n2.val = 27
+    handler.handle_now()
+    n1.val = 18
+    n2.val = 28
+    handler.handle_now()
+    n.children = (n2, )
+    handler.handle_now()
+    n1.val = 19
+    n2.val = 29
+    handler.handle_now()
+    n.children = ()
+    handler.handle_now()
+    n1.val = 11
+    n2.val = 21
+    handler.handle_now()
+    return res
+
+
+@run_in_both(Node, "['null', 17, 27, 18, 28, 'null', 29, 'null']")
+def test_dynamism4b(Node):
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    res = []
+    
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                res.append(ev.new_value)
+            else:
+                res.append('null')
+    handler = n.connect(func, 'children', 'children.*.val')  # also connect children
     
     n.children = n1, n2
     n.val = 42

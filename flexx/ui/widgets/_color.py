@@ -30,13 +30,15 @@ class ColorSelectWidget(Widget):
     on Firefox and Chrome, but not on IE/Edge last time I checked.
     """
     
-    @event.prop(both=True)
-    def color(self, v='#000000'):
-        """ The currently selected color.
-        """
-        if not (v.startswith('#') and len(v) == 7):
-            raise ValueError('ColorSelectWidget must be in #rrggbb format.')
-        return str(v)
+    class Both:
+            
+        @event.prop
+        def color(self, v='#000000'):
+            """ The currently selected color.
+            """
+            if not (v.startswith('#') and len(v) == 7):
+                raise ValueError('ColorSelectWidget must be in #rrggbb format.')
+            return str(v)
     
     class JS:
     

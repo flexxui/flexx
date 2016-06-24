@@ -35,13 +35,16 @@ class StackedPanel(Layout):
     """ A panel which shows only one of its children at a time.
     """
     
-    @event.prop(both=True)
-    def current(self, v=None):
-        """ The currently shown widget.
-        """
-        if not (v is None or isinstance(v, Widget)):
-            raise ValueError('The StackedPanel\'s current widget should be a Widget.')
-        return v
+    class Both:
+        
+        @event.prop
+        def current(self, v=None):
+            """ The currently shown widget.
+            """
+            if not (v is None or isinstance(v, Widget)):
+                raise ValueError("The StackedPanel's current widget " +
+                                 "should be a Widget.")
+            return v
     
     class JS:
         

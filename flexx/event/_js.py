@@ -67,26 +67,35 @@ class HasEventsJS:
     
     def __init_handlers(self, initial_pending_events):
         # Create handlers
-        # Note that methods on_xxx are converted by the HasEvents meta class
         for name in self.__handlers__:
-            func = self['_' + name + '_func']
+            func = self[name]
             self[name] = self.__create_Handler(func, name, func._connection_strings)
         # Emit events for properties
         for ev in initial_pending_events:
             self._emit(ev)
     
-    def __connect(self, func, *connection_strings):
+    def __connect(self, *connection_strings):
         # The JS version (no decorator functionality)
         
-        if len(connection_strings) == 0:
-            raise RuntimeError('connect() (js) needs one or more connection strings.')
+        if len(connection_strings) < 2:
+            raise RuntimeError('connect() (js) needs a function and one or ' +
+                               'more connection strings.')
         
+        # Get callable
+        if callable(connection_strings[0]):
+            func = connection_strings[0]
+            connection_strings = connection_strings[1:]
+        elif callable(connection_strings[-1]):
+            func = connection_strings[-1]
+            connection_strings = connection_strings[:-1]
+        else:
+            raise TypeError('connect() decorator requires a callable.')
+        
+        # Verify connection strings
         for s in connection_strings:
             if not (isinstance(s, str) and len(s)):
                 raise ValueError('Connection string must be nonempty strings.')
         
-        if not callable(func):
-            raise TypeError('connect() decotator requires a callable.')
         return self.__create_Handler(func, func.name or 'anonymous', connection_strings)
     
     def __create_PyProperty(self, name):
@@ -199,14 +208,14 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     special_funcs = ['_%s_func' % name for name in 
                      (cls.__handlers__ + cls.__emitters__ + cls.__properties__)]
     OK_MAGICS = ('__properties__', '__emitters__', '__handlers__',
-                 '__proxy_properties__', '__emitter_flags__')
+                 '__local_properties__')
     
     for name, val in sorted(cls.__dict__.items()):
         name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix mangling
-        funcname = '_' + name + '_func'
         if name in special_funcs:
             pass
         elif isinstance(val, BaseEmitter):
+            funcname = '_' + name + '_func'
             if isinstance(val, Property):
                 properties.append(name)
             else:
@@ -229,6 +238,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             funcs_code.append(t % (cls_name, funcname, reprs(emitter_type)))
             funcs_code.append('')
         elif isinstance(val, HandlerDescriptor):
+            funcname = name  # funcname is simply name, so that super() works
             handlers.append(name)
             # Add function def
             code = py2js(val._func, cls_name + '.prototype.' + funcname)

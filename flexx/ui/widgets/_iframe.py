@@ -23,15 +23,17 @@ class IFrame(Widget):
     
     CSS = '.flx-IFrame {border: none;}'
     
-    @event.prop(both=True)
-    def url(self, v=''):
-        """ The url to show. 'http://' is automatically prepended if the url
-        does not have '://' in it.
-        """
-        v = str(v)
-        if v and '://' not in v:
-            v = 'http://' + v
-        return v
+    class Both:
+        
+        @event.prop
+        def url(self, v=''):
+            """ The url to show. 'http://' is automatically prepended if the url
+            does not have '://' in it.
+            """
+            v = str(v)
+            if v and '://' not in v:
+                v = 'http://' + v
+            return v
     
     class JS:
         

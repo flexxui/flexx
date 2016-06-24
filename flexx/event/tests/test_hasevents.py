@@ -48,6 +48,7 @@ def test_basics():
         @event.connect('x')
         def spam(self, *events):
             pass
+        @event.connect('eggs')
         def on_eggs(self, *events):
             pass
     #
@@ -94,6 +95,20 @@ def test_get_event_handlers():
     # No labels allowed
     with raises(ValueError):
         foo.get_event_handlers('x:a')
+
+
+def test_that_methods_starting_with_on_are_not_autoconverted():
+    # There is also a warning, but seems a bit of a fuzz to test
+    class Foo(event.HasEvents):
+        def on_foo(self, *events):
+            pass
+        @event.connect('bar')
+        def on_bar(self, *events):
+            pass
+    
+    foo = Foo()
+    assert isinstance(foo.on_bar, event.Handler)
+    assert not isinstance(foo.on_foo, event.Handler)
 
 
 def test_collect_classes():

@@ -72,7 +72,7 @@ import threading
 from .. import event
 from ..event._hasevents import (with_metaclass, new_type, HasEventsMeta,
                                 finalize_hasevents_class)
-from ..event._emitters import Property, Emitter
+from ..event._emitters import Emitter
 from ..event._js import create_js_hasevents_class, HasEventsJS
 from ..pyscript import py2js, js_rename, window, Parser
 
@@ -115,7 +115,7 @@ def _get_active_models():
     # Get thread id
     if hasattr(threading, 'current_thread'):
         tid = id(threading.current_thread())
-    else:
+    else:  # pragma: no cover
         tid = id(threading.currentThread())
     # Get list of parents for this thread
     return _active_models_per_thread.setdefault(tid, [])
@@ -131,14 +131,8 @@ def get_active_model():
         return models[-1]
 
 
-def stub_prop_func(self, v):
-    return v
-
 def stub_emitter_func_py(self, *args):
     raise RuntimeError('This emitter can only be called from JavaScript')
-
-def stub_emitter_func_js(self, *args):
-    raise RuntimeError('This emitter can only be called from Python')
 
 
 class ModelMeta(HasEventsMeta):
@@ -149,84 +143,68 @@ class ModelMeta(HasEventsMeta):
     # Keep track of all subclasses
     CLASSES = []
     
-    def __init__(cls, name, bases, dct):
-        HasEventsMeta.__init__(cls, name, bases, dct)
+    def __init__(cls, cls_name, bases, dct):
         
         # Register this class and make PyScript convert the name
         ModelMeta.CLASSES.append(cls)
-        Parser.NAME_MAP[name] = 'flexx.classes.%s' % name
+        Parser.NAME_MAP[cls_name] = 'flexx.classes.%s' % cls_name
         
         OK_MAGICS = '__init__', '__json__', '__from_json__'
         
-        # Implicit inheritance for JS "sub"-class
+        # We have three classes: the main class (cls) on which the user
+        # defines things that apply only to Python, cls.JS for things
+        # that apply only to JavaScript, and cls.Both to things that
+        # apply to both. The class attributes of the latter must be
+        # copied to the former two classes.
+        
+        # Implicit inheritance for JS "subclass"
         jsbases = [getattr(b, 'JS') for b in cls.__bases__ if hasattr(b, 'JS')]
         JS = new_type('JS', tuple(jsbases), {})
-        for c in (cls, ):  # cls.__bases__ + (cls, ):
-            if 'JS' in c.__dict__:
-                if '__init__' in c.JS.__dict__:
-                    JS.__init__ = c.JS.__init__
-                for name, val in c.JS.__dict__.items():
-                    if not name.startswith('__'):
-                        bettername = name.replace('_JS__', '_' + c.__name__ + '__')
-                        setattr(JS, bettername, val)
-                    elif name in OK_MAGICS:
-                        setattr(JS, name, val)
+        if 'JS' in cls.__dict__:
+            if '__init__' in cls.JS.__dict__:
+                JS.__init__ = cls.JS.__init__
+            for name, val in cls.JS.__dict__.items():
+                if not name.startswith('__'):
+                    bettername = name.replace('_JS__', '_' + cls.__name__ + '__')
+                    setattr(JS, bettername, val)
+                elif name in OK_MAGICS:
+                    setattr(JS, name, val)
+        cls.JS = JS  # finalize_hasevents_class(JS)
         
-        # Finalize the JS class (e.g. need this to convert on_xxx)
-        cls.JS = finalize_hasevents_class(JS)
+        # Ensure that this class has a Both "subclass"
+        if 'Both' not in cls.__dict__:
+            Both = new_type('Both', (), {})
+            setattr(cls, 'Both', Both)
         
-        # Init proxy props
-        JS.__proxy_properties__ = list(getattr(JS, '__proxy_properties__', []))
-        cls.__proxy_properties__ = list(getattr(cls, '__proxy_properties__', []))
+        # Copy properties from Both class to main class and JS class
+        for name, val in cls.Both.__dict__.items():
+            if name.startswith('__') and name.endswith('__'):
+                continue
+            if name in cls.JS.__dict__:  # hasattr(cls.JS, name) is overloading
+                raise TypeError('Common attribute %r on %s clashes with JS '
+                                'attribute.' % (name, cls.__name__))
+            elif name in cls.__dict__:
+                raise TypeError('Common property %r on %s clashes with Python '
+                                'attribute.' % (name, cls.__name__))
+            else:
+                setattr(cls.JS, name, val)
+                setattr(cls, name, val)
         
-        # Create proxy properties on cls for each property on JS
+        # Create stub emitters on main class (for docs on events)
         for name, val in cls.JS.__dict__.items():
-            if isinstance(val, Property):
-                if name in JS.__proxy_properties__ or name in cls.__proxy_properties__:
-                    pass  # This is a proxy, or we already have a proxy for it
-                elif val._flags.get('both', False):
-                    raise RuntimeError("Prop %r with flag 'both' should not be "
-                                       "defined on JS class." % name)
-                elif not val._flags.get('sync', True):
-                    pass  # prop that should not be synced
-                elif not hasattr(cls, name):
-                    cls.__proxy_properties__.append(name)
-                    p = val.__class__(stub_prop_func, name, val._func.__doc__)
-                    setattr(cls, name, p)
-                else:
-                    logger.warn('JS property %r not proxied on %s, as it would '
-                                'hide a Py attribute.' % (name, cls.__name__))
-            elif isinstance(val, Emitter) and not hasattr(cls, name):
+            if isinstance(val, Emitter) and not hasattr(cls, name):
                 p = val.__class__(stub_emitter_func_py, name, val._func.__doc__)
                 setattr(cls, name, p)
         
-        # Create proxy properties on cls.JS for each property on cls
-        for name, val in cls.__dict__.items():
-            if isinstance(val, Property):
-                if name in JS.__proxy_properties__ or name in cls.__proxy_properties__:
-                    pass  # This is a proxy, or we already have a proxy for it
-                elif val._flags.get('both', False):
-                    setattr(cls.JS, name, val)  # copy the property
-                    cls.JS.__properties__.append(name)
-                elif not val._flags.get('sync', True):
-                    pass  # prop that should not be synced
-                elif not hasattr(cls.JS, name):
-                    JS.__proxy_properties__.append(name)
-                    p = val.__class__(stub_prop_func, name, val._func.__doc__)
-                    setattr(cls.JS, name, p)
-                else:
-                    logger.warn('Py property %r not proxied on %s, as it would '
-                                'hide a JS attribute.' % (name, cls.__name__))
-            elif isinstance(val, Emitter) and not hasattr(cls, name):
-                p = val.__class__(stub_emitter_func_js, name, val._func.__doc__)
-                setattr(cls, name, p)
-        
-        # Finalize classes to update __properties__ (we may have added some)
-        finalize_hasevents_class(cls)
+        # Finalize classes
         finalize_hasevents_class(JS)
-        # Finish proxy lists
-        cls.__proxy_properties__.sort()
-        JS.__proxy_properties__.sort()
+        HasEventsMeta.__init__(cls, cls_name, bases, dct)
+        
+        # Add lists for local properties
+        cls.__local_properties__ = [name for name in cls.__properties__
+                    if getattr(cls, name) is not getattr(cls.JS, name, None)]
+        cls.JS.__local_properties__ = [name for name in cls.JS.__properties__
+                    if getattr(cls.JS, name) is not getattr(cls, name, None)]
         
         # Set JS and CSS for this class
         cls.JS.CODE = cls._get_js()
@@ -258,29 +236,39 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     """ Subclass of HasEvents representing Python-JavaScript object models.
     
     Each instance of this class has a corresponding object in
-    JavaScript. Properties are synchronized, and events are
-    transparently handled accross the language barrier.
+    JavaScript. Events are transparently handled accross the language
+    barrier. To avoid unnecessary communication, only events for which
+    there are handlers at the other side are synchronized.
     
     The JS version of this class is defined by the contained ``JS``
     class. One can define methods, properties, handlers, and (json
     serializable) constants on the JS class.
     
-    When a Model instance is assigned as an attribute to the Python
-    instance (inside the init() method), the corresponding attribute
-    will also be present at the JavaScript side.
+    One can also make use of a contained ``Both`` class to define things
+    that will be present in both Python and JS. This is intended primarily
+    for defining properties, which can be set on both ends, and which get
+    automatically synchronised.
     
     The ``init()`` method on both the Python and JS side can be used
     to do initialization at a time when properties have their initial
     values, but handlers are not yet initialized and events are not yet
-    emitted.
+    emitted. When a Model instance is assigned as an attribute to the Python
+    instance (inside the init() method), the corresponding attribute
+    will also be present at the JavaScript side.
     
     Models can be used as a context manager to make new Model objects
     created inside such a context to share the same session. The ``init()``
     method is invoked in the context of the object itself.
     
+    The typical way to use a model is do define properties (preferably
+    in the Both "subclass") and events, and react to these by writing
+    handlers at the side where the action should be taken. See the example
+    below or many of the examples of the Flexx documentation.
+    
     Parameters:
         session (Session, None): the session object that connects this
-            instance to a JS client.
+            instance to a JS client. If not given, will use the session
+            of a currently active model (i.e. as a context manager).
         is_app (bool): whether this object is the main app object. Set
             by Flexx internally. Not used by the Model class, but can
             be used by subclasses.
@@ -297,14 +285,21 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
             class MyModel(Model):
                 
-                def a_python_method(self):
+                @event.connect('foo')
+                def handle_changes_to_foo_in_python(self, *events):
                     ...
+                
+                class Both:
+                
+                    @event.prop
+                    def foo(self, v=0):
+                        return float(v)
                 
                 class JS:
                     
-                    FOO = [1, 2, 3]
+                    BAR = [1, 2, 3]
                     
-                    def a_js_method(this):
+                    def handle_changes_to_foo_in_js(self, *events):
                         ...
     """
     
@@ -316,13 +311,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     
     # CSS for this class (no css in the base class)
     CSS = ""
-    
-    def __json__(self):
-        return {'__type__': 'Flexx-Model', 'id': self.id}
-    
-    @staticmethod
-    def __from_json__(dct):
-        return get_instance_by_id(dct['id'])
     
     def __init__(self, session=None, is_app=False, **kwargs):
         
@@ -385,6 +373,17 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         self._init_handlers()
         self._session._exec('flexx.instances.%s._init_handlers();' % self._id)
     
+    def __repr__(self):
+        clsname = self.__class__.__name__
+        return "<%s object '%s' at 0x%x>" % (clsname, self._id, id(self))
+    
+    def __json__(self):
+        return {'__type__': 'Flexx-Model', 'id': self.id}
+    
+    @staticmethod
+    def __from_json__(dct):
+        return get_instance_by_id(dct['id'])
+    
     def __enter__(self):
         # Note that __exit__ is guaranteed to be called, so there is
         # no need to use weak refs for items stored in active_models
@@ -397,16 +396,21 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         active_models = _get_active_models()
         assert self is active_models.pop(-1)
     
+    def init(self):
+        """ Can be overloaded when creating a custom class to do
+        initialization, such as creating sub models. This function is
+        called with this object as a context manager (the default
+        context is a stub).
+        """
+        pass
+    
+    
     def __check_not_active(self):
         active_models = _get_active_models()
         if self in active_models:
             raise RuntimeError('It seems that the event loop is processing '
-                               'events while a Model is active. This has a '
-                               'high risk on race conditions.')
-    
-    def __repr__(self):
-        clsname = self.__class__.__name__
-        return "<%s object '%s' at 0x%x>" % (clsname, self._id, id(self))
+                            'events while a Model is active. This has a '
+                            'high risk on race conditions.')
     
     def dispose(self):
         """ Overloaded version of dispose() that removes the global
@@ -416,14 +420,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             cmd = 'flexx.instances.%s = "disposed";' % self._id
             self._session._exec(cmd)
         super().dispose()
-    
-    def init(self):
-        """ Can be overloaded when creating a custom class to do
-        initialization, such as creating sub models. This function is
-        called with this object as a context manager (the default
-        context is a stub).
-        """
-        pass
     
     @property
     def id(self):
@@ -435,6 +431,18 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         """ The session object that connects us to the runtime.
         """
         return self._session
+    
+    @event.prop
+    def sync_props(self, v=True):
+        """ Whether properties are synchronised from JS to Python. This
+        can be set to ``False`` if a model has properties that change
+        a lot, but are not of interest for the Python side. Note that
+        events are still synchronised if there is a Python handler.
+        """
+        # Use a direct approach to avoid event system here
+        v = bool(v)
+        self.call_js('_sync_props = true' if v else '_sync_props = false')
+        return v
     
     # todo: limit this to within init()?
     def __setattr__(self, name, value):
@@ -463,26 +471,17 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             self._set_prop(name, value, False, True)
     
     def _set_prop(self, name, value, _initial=False, fromjs=False):
-        # This method differs from the JS version in that
-        # we *do not* sync to JS when the setting originated from JS and
-        # it is a "both" property; this is our eventual synchronicity.
-        # Python is the "end point".
-        
-        isproxy = name in self.__proxy_properties__
-        isboth = self.__emitter_flags__[name].get('both', False)
-        shouldsend = self.__emitter_flags__[name].get('sync', True)
-        if isboth:
-            shouldsend = shouldsend and not _initial
+        # This method differs from the JS version in that we *do
+        # not* sync to JS when the setting originated from JS; this
+        # is our eventual synchronicity. Python is the "end point".
+        islocal = name in self.__local_properties__
+        issyncable = not _initial and not islocal
         
         logger.debug('Setting prop %r on %s, fromjs=%s' % (name, self.id, fromjs))
+        ischanged = super()._set_prop(name, value, _initial)
         
-        if fromjs or not isproxy:  # Only not set if isproxy and not from js
-            shouldsend = super()._set_prop(name, value, _initial) and shouldsend
-        
-        #if shouldsend and not (fromjs and isproxy):
-        if shouldsend and not (fromjs and (isproxy or isboth)):
-            if not isproxy:  # if not a proxy, use normalized value
-                value = getattr(self, name)
+        if ischanged and issyncable and not fromjs:
+            value = getattr(self, name)  # use normalized value
             txt = serializer.saves(value)
             cmd = 'flexx.instances.%s._set_prop_from_py(%s, %s);' % (
                 self._id, reprs(name), reprs(txt))
@@ -516,7 +515,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     
     def emit(self, type, ev, fromjs=False):
         ev = super().emit(type, ev)
-        isprop = type in self.__properties__  # are emitted via their proxies
+        isprop = type in self.__properties__ and type not in self.__local_properties__
         if not fromjs and not isprop and type in self.__event_types_js:
             cmd = 'flexx.instances.%s._emit_from_py(%s, %r);' % (
                 self._id, serializer.saves(type), serializer.saves(ev))
@@ -546,6 +545,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             
             self.__event_types_py = py_events if py_events else []
             
+            self._sync_props = True
+            
             # Init HasEvents, but delay initialization of handlers
             super().__init__(False)
             
@@ -563,28 +564,19 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         def _set_prop(self, name, value, _initial=False, frompy=False):
             
-            isproxy = self.__proxy_properties__.indexOf(name) >= 0
-            isboth = self.__emitter_flags__[name].get('both', False)
-            shouldsend = self.__emitter_flags__[name].get('sync', True)
-            if isboth:
-                shouldsend = shouldsend and not _initial
-            
             # Note: there is quite a bit of _pyfunc_truthy in the ifs here
-            if window.flexx.ws is None:
-                if not isproxy:
-                    super()._set_prop(name, value, _initial)
-                else:
-                    window.console.warn("Cannot set prop '%s' because its validated "
-                                        "in Py, but there is no websocket." % name)
+            
+            islocal = self.__local_properties__.indexOf(name) >= 0
+            issyncable = not _initial and not islocal and self._sync_props
+            
+            if window.flexx.ws is None:  # Exported app
+                super()._set_prop(name, value, _initial)
                 return
             
-            if frompy or not isproxy:  # Only not set if isproxy and not frompy
-                shouldsend = super()._set_prop(name, value, _initial) and shouldsend
+            ischanged = super()._set_prop(name, value, _initial)
             
-            #if shouldsend and not (frompy and (isproxy or isboth)):
-            if shouldsend and not (frompy and isproxy):
-                if not isproxy:  # if not a proxy, use normalized value
-                    value = self[name]
+            if ischanged and issyncable:
+                value = self[name]
                 txt = window.flexx.serializer.saves(value)
                 window.flexx.ws.send('SET_PROP ' + [self.id, name, txt].join(' '))
         
@@ -604,7 +596,9 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         def emit(self, type, ev, frompy=False):
             ev = super().emit(type, ev)
-            isprop = self.__properties__.indexOf(type) >= 0
+            isprop = (self.__properties__.indexOf(type) >= 0 and
+                      self.__local_properties__.indexOf(type) < 0 and
+                      self._sync_props)
             
             if not frompy and not isprop and type in self.__event_types_py:
                 txt = window.flexx.serializer.saves(ev)

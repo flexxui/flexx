@@ -40,25 +40,27 @@ class Slider(Widget):
     
     CSS = ".flx-Slider {min-height: 30px;}"
     
-    @event.prop(both=True)
-    def step(self, v=0.01):
-        """ The step size for the slider."""
-        return float(v)
-    
-    @event.prop(both=True)
-    def min(self, v=0):
-        """ The minimal slider value."""
-        return float(v)
-    
-    @event.prop(both=True)
-    def max(self, v=1):
-        """ The maximum slider value."""
-        return float(v)
-    
-    @event.prop(both=True)
-    def value(self, v=0):
-        """ The current slider value (settable)."""
-        return float(v)
+    class Both:
+            
+        @event.prop
+        def step(self, v=0.01):
+            """ The step size for the slider."""
+            return float(v)
+        
+        @event.prop
+        def min(self, v=0):
+            """ The minimal slider value."""
+            return float(v)
+        
+        @event.prop
+        def max(self, v=1):
+            """ The maximum slider value."""
+            return float(v)
+        
+        @event.prop
+        def value(self, v=0):
+            """ The current slider value (settable)."""
+            return float(v)
     
     class JS:
         

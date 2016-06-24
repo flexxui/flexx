@@ -8,45 +8,38 @@ performance.
 from flexx import app
 
 
-def _find_prime(self, n):
-    """ The code that is executed on both Python and JS (via PyScript)
-    """
-    primes = []
-    
-    def isprime(x):
-        if x <= 1:
-            return False
-        elif x == 2:
-            return True
-        for i in range(2, x//2+1):
-            if x % i == 0:
-                return False
-        return True
-    
-    import time  # import here, so PyScript picks is up
-    t0 = time.perf_counter()
-    i = 0
-    while len(primes) < n:
-        i += 1
-        if isprime(i):
-            primes.append(i)
-    t1 = time.perf_counter()
-    print(i, 'found in ', t1-t0, 'seconds')
-
-
 class PrimeFinder(app.Model):
-    
-    _find_prime = _find_prime
     
     def find_prime_py(self, n):
         self._find_prime(n)
     
-    class JS:
-        _find_prime = _find_prime
-        
     def find_prime_js(self, n):
         self.call_js('_find_prime(%i)' % n)
-
+    
+    class Both:
+        
+        def _find_prime(self, n):
+            primes = []
+            
+            def isprime(x):
+                if x <= 1:
+                    return False
+                elif x == 2:
+                    return True
+                for i in range(2, x//2+1):
+                    if x % i == 0:
+                        return False
+                return True
+            
+            import time  # import here, so PyScript picks is up
+            t0 = time.perf_counter()
+            i = 0
+            while len(primes) < n:
+                i += 1
+                if isprime(i):
+                    primes.append(i)
+            t1 = time.perf_counter()
+            print(i, 'found in ', t1-t0, 'seconds')
 
 if __name__ == '__main__':
     

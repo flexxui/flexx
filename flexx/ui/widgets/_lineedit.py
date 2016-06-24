@@ -44,29 +44,31 @@ class LineEdit(Widget):
     }
     """
     
-    @event.prop(both=True)
-    def text(self, v=''):
-        """ The current text."""
-        return str(v)
-    
-    @event.prop(both=True)
-    def password_mode(self, v=False):
-        """ Whether the insered text should be hidden or not.
-        """
-        return bool(v)
-    
-    @event.prop(both=True)
-    def placeholder_text(self, v=''):
-        """ The placeholder text (shown when the text is an empty string)."""
-        return str(v)
-    
-    @event.prop(both=True)
-    def autocomp(self, v=()):
-        """ A tuple/list of strings for autocompletion. Might not work
-        in all browsers.
-        """
-        return tuple([str(i) for i in v])
-    
+    class Both:
+            
+        @event.prop
+        def text(self, v=''):
+            """ The current text."""
+            return str(v)
+        
+        @event.prop
+        def password_mode(self, v=False):
+            """ Whether the insered text should be hidden or not.
+            """
+            return bool(v)
+        
+        @event.prop
+        def placeholder_text(self, v=''):
+            """ The placeholder text (shown when the text is an empty string)."""
+            return str(v)
+        
+        @event.prop
+        def autocomp(self, v=()):
+            """ A tuple/list of strings for autocompletion. Might not work
+            in all browsers.
+            """
+            return tuple([str(i) for i in v])
+        
     class JS:
     
         def _init_phosphor_and_node(self):

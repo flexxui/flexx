@@ -11,6 +11,7 @@ class Foo(event.HasEvents):
         super().__init__()
         self.r = []
     
+    @event.connect('foo')
     def on_foo(self, *events):
         self.r.append(len(events))
 

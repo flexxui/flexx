@@ -54,10 +54,12 @@ class Monitor(ui.Widget):
                 
                 self.cpu_plot = ui.PlotWidget(style='width: 640px; height: 320px;',
                                               xdata=[], yrange=(0, 100), 
-                                              ylabel='CPU usage (%)')
+                                              ylabel='CPU usage (%)',
+                                              sync_props=False)
                 self.mem_plot = ui.PlotWidget(style='width: 640px; height: 320px;',
                                               xdata=[], yrange=(0, 100), 
-                                              ylabel='Mem usage (%)')
+                                              ylabel='Mem usage (%)',
+                                              sync_props=False)
                 ui.Widget(flex=1)
         
         # Relay global info into this app
@@ -94,7 +96,7 @@ class Monitor(ui.Widget):
             
             # Prepare plots
             import time
-            times = self.cpu_plot.xdata
+            times = self.cpu_plot.xdata.copy()
             times.append(time.time() - self.start_time)
             times = times[-self.nsamples:]
             self.cpu_plot.xdata = times

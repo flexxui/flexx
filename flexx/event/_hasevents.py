@@ -38,7 +38,7 @@ def new_type(name, *args, **kwargs):
 class HasEventsMeta(type):
     """ Meta class for HasEvents
     * Set the name of each handler and emitter.
-    * Sets __handlers__, __emitters, __signals__ attribute on the class.
+    * Sets __handlers__, __emitters, __properties__ attribute on the class.
     """
     
     def __init__(cls, name, bases, dct):
@@ -48,8 +48,7 @@ class HasEventsMeta(type):
 def finalize_hasevents_class(cls):
     """ Given a class, analyse its Properties, Readonlies, Emitters,
     and Handlers, to set a list of __emitters__, __properties__, and
-    __handlers__. Also convert methods named on_foo to a handler of the
-    'foo' event, and create private methods corresponding to the
+    __handlers__. Also create private methods corresponding to the
     properties, emitters and handlers.
     """
     # Collect handlers defined on this class
@@ -69,21 +68,16 @@ def finalize_hasevents_class(cls):
         elif isinstance(val, Handler):
             raise RuntimeError('Class methods can only be made handlers using '
                                '@event.connect() (handler %r)' % name)
-        elif name.startswith('on_'):
-            val = HandlerDescriptor(val, [name[3:]])
-            setattr(cls, name, val)
-            handlers[name] = val
+        elif callable(val) and name.startswith('on_'):
+            # todo: remove this between 0.3 and 0.4
+            logger.warn('Method %r starting with "on_" is not (anymore) '
+                        'converted to a handler.' % name)
+    
     # Finalize all found emitters
     for collection in (handlers, emitters, properties):
         for name, descriptor in collection.items():
             descriptor._name = name
             setattr(cls, '_' + name + '_func', descriptor._func)
-    # Apply flags
-    flags = {}
-    for collection in (emitters, properties):
-        for name, descriptor in collection.items():
-            flags[name] = descriptor._flags
-    cls.__emitter_flags__ = flags
     # Cache prop names
     cls.__handlers__ = [name for name in sorted(handlers.keys())]
     cls.__emitters__ = [name for name in sorted(emitters.keys())]
@@ -119,12 +113,14 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             
             # Handlers
             
-            @event.connect
+            @event.connect('foo')
             def handle_foo(self, *events):
                 print('foo was set to', events[-1].new_value)
             
+            @event.connect('bar')
             def on_bar(self, *events):
-                print('bar event was generated')
+                for ev in events:
+                    print('bar event was generated')
         
         ob = MyObject(foo=42)
         
@@ -242,22 +238,24 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
                 handlers.pop(i)
         self._handlers_changed_hook()
     
-    def emit(self, type, ev):
+    def emit(self, type, info=None):
         """ Generate a new event and dispatch to all event handlers.
         
         Arguments:
             type (str): the type of the event. Should not include a label.
-            ev (dict): the event object. This dict is turned into a Dict,
-                so that its elements can be accesses as attributes.
+            info (dict): Optional. Additional information to attach to
+                the event object. Note that the actual event is a Dict object
+                that allows its elements to be accesses as attributes.
         """
+        info = {} if info is None else info
         type, _, label = type.partition(':')
         if len(label):
             raise ValueError('The type given to emit() should not include a label.')
         # Prepare event
-        if not isinstance(ev, dict):
-            raise TypeError('Event object (for %r) must be a dict, not %r' %
-                            (type, ev))
-        ev = Dict(ev)  # make copy and turn into nicer Dict on py
+        if not isinstance(info, dict):
+            raise TypeError('Info object (for %r) must be a dict, not %r' %
+                            (type, info))
+        ev = Dict(info)  # make copy and turn into nicer Dict on py
         ev.type = type
         ev.source = self
         # Push the event to the handlers (handlers use labels for dynamism)
@@ -376,6 +374,9 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             
             # Direct usage
             h.connect(greet, 'first_name', 'last_name')
+            
+            # Order does not matter
+            h.connect('first_name', greet)
         
         """
         return self.__connect(*connection_strings)  # calls Py or JS version
@@ -389,6 +390,9 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         if callable(connection_strings[0]):
             func = connection_strings[0]
             connection_strings = connection_strings[1:]
+        elif callable(connection_strings[-1]):
+            func = connection_strings[-1]
+            connection_strings = connection_strings[:-1]
         
         for s in connection_strings:
             if not (isinstance(s, str) and len(s) > 0):

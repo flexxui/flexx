@@ -37,6 +37,39 @@ class LiveKeeper:
 liveKeeper = LiveKeeper()
 
 
+# To give both JS and Py a parent property without having it synced,
+# it is set explicitly for both sides. We need to sync either parent
+# or children to communicate the parenting structure, otherwise we end
+# up in endless loops. We use the children for this, because it contains
+# ordering information which cannot be communicated by the parent prop
+# alone.
+
+def parent(self, new_parent=None):
+    """ The parent widget, or None if it has no parent. Setting
+    this property will update the "children" property of the
+    old and new parent.
+    """
+    old_parent = self.parent  # or None
+
+    if new_parent is old_parent:
+        return new_parent
+    if not (new_parent is None or isinstance(new_parent, Widget)):
+        raise ValueError('parent must be a Widget or None')
+
+    if old_parent is not None:
+        children = list(old_parent.children if old_parent.children else [])
+        while self in children:
+            children.remove(self)
+        old_parent.children = children
+    if new_parent is not None:
+        children = list(new_parent.children if new_parent.children else [])
+        children.append(self)
+        new_parent.children = children
+
+    return new_parent
+
+
+
 class Widget(Model):
     """ Base widget class.
 
@@ -117,134 +150,109 @@ class Widget(Model):
         for child in children:
             child.dispose()
 
-    @event.prop(both=True)
-    def title(self, v=''):
-        """ The title of this widget. This is used to mark the widget
-        in e.g. a tab layout or form layout.
-        """
-        return str(v)
-
-    @event.prop(both=True)
-    def style(self, v=''):
-        """ CSS style options for this widget object. e.g.
-        ``"background: #f00; color: #0f0;"``. If the given value is a
-        dict, its key-value pairs are converted to a CSS style string.
-        Note that the CSS class attribute can be used to style all
-        instances of a class.
-        """
-        if isinstance(v, dict):
-            v = ['%s: %s' % (k, v) for k, v in v.items()]
-            v = '; '.join(v)
-        return str(v)
-
-    @event.prop(both=True)
-    def flex(self, v=0):
-        """ How much space this widget takes (relative to the other
-        widgets) when contained in a flexible layout such as BoxLayout,
-        BoxPanel, FormLayout or GridPanel. A flex of 0 means to take
-        the minimum size. Flex is a two-element tuple, but both values
-        can be specified at once by specifying a scalar.
-        """
-        if isinstance(v, (int, float)):
-            v = v, v
-        return float(v[0]), float(v[1])
-
-    @event.prop(both=True)
-    def pos(self, v=(0, 0)):
-        """ The position of the widget when it in a layout that allows
-        positioning, this can be an arbitrary position (e.g. in
-        PinBoardLayout) or the selection of column and row in a
-        GridPanel.
-        """
-        return float(v[0]), float(v[1])
-
-    @event.prop(both=True)
-    def base_size(self, v=(0, 0)):
-        """ The given size of the widget when it is in a layout that
-        allows explicit sizing, or the base-size in a BoxPanel or
-        GridPanel. A value <= 0 is interpreted as auto-size.
-        """
-        return float(v[0]), float(v[1])
-
-    @event.prop(both=True)
-    def tabindex(self, v=-1):
-        """ The index used to determine widget order when the user
-        iterates through the widgets using tab.
-        """
-        return int(v)
-
-    # Also see size readonly defined in JS
-
-    @event.prop(both=True)
-    def container(self, v=''):
-        """ The id of the DOM element that contains this widget if
-        parent is None. Use 'body' to make this widget the root.
-        """
-        return str(v)
-
-    # The parent is not synced; we need to sync either parent or children
-    # to communicate the parenting structure, otherwise we end up in endless
-    # loops. We use the children for this, because it contains ordering
-    # information which cannot be communicated by the parent prop alone.
-
-    @event.prop(both=True, sync=False)
-    def parent(self, new_parent=None):
-        """ The parent widget, or None if it has no parent. Setting
-        this property will update the "children" property of the
-        old and new parent.
-        """
-        old_parent = self.parent  # or None
-
-        if new_parent is old_parent:
-            return new_parent
-        if not (new_parent is None or isinstance(new_parent, Widget)):
-            raise ValueError('parent must be a Widget or None')
-
-        if old_parent is not None:
-            children = list(old_parent.children if old_parent.children else [])
-            while self in children:
-                children.remove(self)
-            old_parent.children = children
-        if new_parent is not None:
-            children = list(new_parent.children if new_parent.children else [])
-            children.append(self)
-            new_parent.children = children
-
-        return new_parent
-
-    @event.prop(both=True)
-    def children(self, new_children=()):
-        """ The child widgets of this widget. Setting this property
-        will update the "parent" property of the old and new
-        children.
-        """
-        old_children = self.children
-        if not old_children:  # Can be None during initialization
-            old_children = []
-
-        if len(new_children) == len(old_children):
-            if all([(c1 is c2) for c1, c2 in zip(old_children, new_children)]):
-                return new_children  # No need to do anything
-        if not all([isinstance(w, Widget) for w in new_children]):
-            raise ValueError('All children must be widget objects.')
-
-        for child in old_children:
-            if child not in new_children:
-                child.parent = None
-        for child in new_children:
-            if child not in old_children:
-                child.parent = self
-        return tuple(new_children)
-
     @event.connect('parent:aaa')
     def __keep_alive(self, *events):
         # When the parent changes, we prevent the widget from being deleted
         # for a few seconds, to it will survive parent-children "jitter".
         liveKeeper.keep(self)
-
+    
+    parent = event.prop(parent)
+    
+    class Both:
+        
+        @event.prop
+        def title(self, v=''):
+            """ The title of this widget. This is used to mark the widget
+            in e.g. a tab layout or form layout.
+            """
+            return str(v)
+    
+        @event.prop
+        def style(self, v=''):
+            """ CSS style options for this widget object. e.g.
+            ``"background: #f00; color: #0f0;"``. If the given value is a
+            dict, its key-value pairs are converted to a CSS style string.
+            Note that the CSS class attribute can be used to style all
+            instances of a class.
+            """
+            if isinstance(v, dict):
+                v = ['%s: %s' % (k, v) for k, v in v.items()]
+                v = '; '.join(v)
+            return str(v)
+    
+        @event.prop
+        def flex(self, v=0):
+            """ How much space this widget takes (relative to the other
+            widgets) when contained in a flexible layout such as BoxLayout,
+            BoxPanel, FormLayout or GridPanel. A flex of 0 means to take
+            the minimum size. Flex is a two-element tuple, but both values
+            can be specified at once by specifying a scalar.
+            """
+            if isinstance(v, (int, float)):
+                v = v, v
+            return float(v[0]), float(v[1])
+    
+        @event.prop
+        def pos(self, v=(0, 0)):
+            """ The position of the widget when it in a layout that allows
+            positioning, this can be an arbitrary position (e.g. in
+            PinBoardLayout) or the selection of column and row in a
+            GridPanel.
+            """
+            return float(v[0]), float(v[1])
+    
+        @event.prop
+        def base_size(self, v=(0, 0)):
+            """ The given size of the widget when it is in a layout that
+            allows explicit sizing, or the base-size in a BoxPanel or
+            GridPanel. A value <= 0 is interpreted as auto-size.
+            """
+            return float(v[0]), float(v[1])
+    
+        @event.prop
+        def tabindex(self, v=-1):
+            """ The index used to determine widget order when the user
+            iterates through the widgets using tab.
+            """
+            return int(v)
+    
+        # Also see size readonly defined in JS
+    
+        @event.prop
+        def container(self, v=''):
+            """ The id of the DOM element that contains this widget if
+            parent is None. Use 'body' to make this widget the root.
+            """
+            return str(v)
+    
+        @event.prop
+        def children(self, new_children=()):
+            """ The child widgets of this widget. Setting this property
+            will update the "parent" property of the old and new
+            children.
+            """
+            old_children = self.children
+            if not old_children:  # Can be None during initialization
+                old_children = []
+    
+            if len(new_children) == len(old_children):
+                if all([(c1 is c2) for c1, c2 in zip(old_children, new_children)]):
+                    return new_children  # No need to do anything
+            if not all([isinstance(w, Widget) for w in new_children]):
+                raise ValueError('All children must be widget objects.')
+    
+            for child in old_children:
+                if child not in new_children:
+                    child.parent = None
+            for child in new_children:
+                if child not in old_children:
+                    child.parent = self
+            return tuple(new_children)
 
     class JS:
-
+        
+        parent = event.prop(parent)
+        
         def __init__(self, *args):
             super().__init__(*args)
 

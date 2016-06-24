@@ -215,9 +215,11 @@ def test_emitter():
         def bar(self, v):
             return dict(value=float(v)+1)  # note plus 1
         
+        @event.connect('foo')
         def on_foo(self, *events):
             self.the_val = events[0].value  # so we can test it
         
+        @event.connect('bar')
         def on_bar(self, *events):
             self.the_val = events[0].value  # so we can test it
     
