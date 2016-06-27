@@ -7,38 +7,27 @@ Welcome to Flexx's documentation!
 =================================
 
 Flexx is a pure Python toolkit for creating graphical user interfaces
-(GUI's), that uses web technology for its rendering. You can use Flexx
-to create desktop applications, web applications, and (if designed well)
-export an app to a standalone HTML document. It also works in the
-Jupyter notebook.
+(GUI's), that uses web technology for its rendering. Apps are written
+purely in Python; Flexx' transpiler generates the necessary JavaScript
+on the fly.
 
-Being pure Python and cross platform, it should work anywhere where
-there's Python and a browser.
+You can use Flexx to create (cross platform) desktop applications, web
+applications, and (if designed well) export an app to a standalone HTML
+document. It also works in the Jupyter notebook.
+
+The Flexx docs are on `readthedocs <http://flexx.readthedocs.org>`_,
+the code is on `Github <http://github.com/zoofio/flexx>`_.
+Flexx is currently in alpha status; any part of the public API may
+change without notice. Feedback is welcome. We're definitely
+converging to a more stable API though ...
 
 Flexx has a modular design, consisting of a few subpackages, which can
-also be used by themselves:
+also be used by themselves. See the table of contents below. For building
+apps these three modules are most relevant:
 
-* :doc:`ui <ui/index>` - the widgets
-* :doc:`app <app/index>` - the event loop and server
-* :doc:`event <event/index>` - properties and events
-* :doc:`pyscript <pyscript/index>` - Python to JavaScript transpiler
-* :doc:`webruntime <webruntime/index>` - to launch a runtime
-
-
-Status
-------
-
-* Alpha status, any part of the public API may change. Looking for feedback though!
-* Currently, only Firefox and Chrome are supported.
-* Flexx is CPython 3.x only for now. Support for Pypy very likely. Support
-  for 2.x maybe.
-
-
-Links
------
-
-   * Flexx website: http://flexx.readthedocs.org
-   * Flexx code: http://github.com/zoofio/flexx
+* :doc:`flexx.ui <ui/index>` - the widgets
+* :doc:`flexx.app <app/index>` - the event loop and server
+* :doc:`flexx.event <event/index>` - properties and events
 
 
 Contents

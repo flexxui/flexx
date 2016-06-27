@@ -3,8 +3,8 @@ Reference for flexx.ui
 ----------------------
 
 The ui module provides a GUI toolkit based on web technology with a
-Pythonic API, making use of the reactive programming paradigm, and
-PyScript to easily define code to run on the client.
+Pythonic API, a powerful property and event system, and supports writing
+client-side code in Python.
 
 This module builds on the app module, implementing the
 :class:`Widget <flexx.ui.Widget>` class based on the 

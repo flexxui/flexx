@@ -2,6 +2,9 @@
 Reference for flexx.webruntime
 ------------------------------
 
+Webruntime introduction
+-----------------------
+
 .. automodule:: flexx.webruntime
 
 ----

@@ -1,5 +1,5 @@
-flexx.event API
-===============
+Event API
+=========
 
 
 Decorators
