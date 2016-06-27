@@ -47,7 +47,6 @@ Installation
 
 * ``conda install flexx -c conda-forge``
 * ``pip install flexx``
-* ``pip install flexx[all]``  (will also install Tornado)
 * Old school: ``python setup.py install``
 * Clone the repo and add the root dir to your PYTHONPATH (developer
   mode, not possible for Python 2.7)
