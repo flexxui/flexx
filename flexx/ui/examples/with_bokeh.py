@@ -23,9 +23,9 @@ p1.scatter(x, y, alpha=0.1, nonselection_alpha=0.1)
 
 # Plot2
 t = np.linspace(0, 6.5, 100)
-p2 = figure(tools=TOOLS, responsive='scale_width')
+p2 = figure(tools=TOOLS, sizing_mode='scale_width')
 p2.line(t, np.sin(t))
-p3 = figure(tools=TOOLS, responsive='scale_width')
+p3 = figure(tools=TOOLS, sizing_mode='scale_width')
 p3.line(t, np.cos(t))
 
 class Example(ui.Widget):
