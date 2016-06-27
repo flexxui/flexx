@@ -16,14 +16,16 @@ import zlib
 
 
 def write_png(im, shape=None, file=None):
-    """ Write a png image.
+    """
+    Write a png image. The written image is in RGB or RGBA format, with
+    8 bit precision, and without interlacing.
     
     Parameters:
         im (bytes, bytearray, numpy-array): the image data to write.
-        shape (tuple): the shape of the image. If im is a numpy array,
-            the shape can be omitted. The shape can be (N, M) for grayscale, 
-            (N, M, 3) for RGB and (N, M, 4) for RGBA. Note that grayscale
-            images are stored as RGB.
+        shape (tuple): the shape of the image. If ``im`` is a numpy array,
+            the shape can be omitted. The shape can be ``(N, M)`` for
+            grayscale, ``(N, M, 3)`` for RGB and ``(N, M, 4)`` for RGBA.
+            Note that grayscale images are converted to RGB.
         file (file-like object, None): where to write the resulting
             image. If omitted or None, the result is returned as bytes.
     """
@@ -97,18 +99,17 @@ def write_png(im, shape=None, file=None):
 
 
 def read_png(f, return_ndarray=False):
-    """ Read a png image.
+    """
+    Read a png image. This is a simple implementation; can only read
+    PNG's that are not interlaced, have a bit depth of 8, and are either
+    RGB or RGBA.
     
     Parameters:
         f (file-object, bytes): the source to read the png data from.
-        return_ndarray (bool): if True, returns the result as a numpy array.
-    
-    If return_ndarray is False, returns (pixel_array, shape), with shape
-    being NxMx3 or NxMx4, for RGB and RGBA, respectively. The
-    pixel_array is a bytearray object.
-    
-    This is a simple implementation; can only read PNG's that are not
-    interlaced, have a bit depth of 8, and are either RGB or RGBA.
+        return_ndarray (bool): whether to return the result as a numpy array.
+            Default False. If False, returns ``(pixel_array, shape)``,
+            with ``pixel_array`` a bytearray object and shape being
+            ``(N, M, 3)`` or ``(N, M, 4)``, for RGB and RGBA, respectively.
     """
     # http://en.wikipedia.org/wiki/Portable_Network_Graphics
     # http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html

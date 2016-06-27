@@ -107,7 +107,7 @@ class Config(object):
 
         With this, options can be set:
 
-        * With an entry ``foo = 3`` in '~appdata/.myconfig.cfg'.
+        * With an entry ``foo = 3`` in "~appdata/.myconfig.cfg".
         * With a string ``"foo = 3"`` passed at initialization.
         * With an environment variable named ``MYCONFIG_FOO``.
         * With a command line argument ``--myconfig-foo=3``.

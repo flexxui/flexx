@@ -2,9 +2,10 @@
 Flexx utilities
 ===============
 
-Flexx provides a few utilities that are need internally, but are exposed
-using a public API. Using anything from `flexx.util` does not import
-any of the other submodules.
+Flexx' ``util`` module contains utilities that are used internally,
+some of which can be useful outside of Flexx. Note that most modules
+in ``flexx.util`` are independent; using them does not import any other
+Flexx modules.
 
 
 .. toctree::
@@ -13,5 +14,6 @@ any of the other submodules.
     config
     logging
     png
-    ico
+    icon
+    minify
     

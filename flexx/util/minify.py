@@ -3,11 +3,14 @@ JavaScript minification tools.
 """
 
 def minify(code, remove_whitespace=False):
-    """ Main minification function.
+    """ Very basic minification of JavaScript code. Will likely support
+    more advanced minifcation in the future.
     
-    Removes comments. If remove_whitespace is True, removes all
-    non-functional whitespace. Otherwise remove all trailing whitespace
-    and indents using tabs to preserve space.
+    Parameters:
+        code (str) : the JavaScript code to minify.
+        remove_whitespace (bool) : if True, removes all non-functional
+            whitespace. Otherwise remove all trailing whitespace and
+            indents using tabs to preserve space. Default False.
     """
     # return jsmin(code)
     code = remove_comments(code)
