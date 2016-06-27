@@ -47,7 +47,7 @@ class ModelA(app.Model):
         
         assert self.foo1 == 1
         
-        self.call_js('set_result()')
+        app.call_later(0, lambda: self.call_js('set_result()'))
     
     def test_check(self):
         assert self.foo1 == 1
@@ -174,7 +174,7 @@ class ModelD(ModelB):
         self.spam2 = 10
         assert self.foo2 == 12
         
-        self.call_js('set_result()')
+        app.call_later(0, lambda: self.call_js('set_result()'))
     
     def test_check(self):
         
@@ -282,7 +282,7 @@ class ModelF(ModelA):
         self.foo1 = 2
         self.spam1 = 2
         
-        self.call_js('set_result()')
+        app.call_later(0, lambda: self.call_js('set_result()'))
     
     def test_check(self):
         assert self.res.count('foo1') == 3  # bit of a glitch bc we do +1
