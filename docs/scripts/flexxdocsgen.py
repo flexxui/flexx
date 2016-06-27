@@ -14,14 +14,14 @@ def init():
     genuiclasses.main()
     print('  Generating examples.')
     genexamples.main()
-    print('  Generating commonast.')
-    gencommonast.main()
+    #print('  Generating commonast.')
+    #gencommonast.main()
 
 
 def clean(app, *args):
     genuiclasses.clean()
     genexamples.clean()
-    gencommonast.clean()
+    #gencommonast.clean()
 
 def setup(app):
     init()

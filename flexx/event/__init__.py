@@ -80,7 +80,7 @@ e.g. a property is set twice, the handler function is called
 just once, with multiple events, in the next event loop iteration. It
 is up to the programmer to determine whether only one action is
 required, or whether all events need processing. In the latter case,
-just use ``for ev in events: ``.
+just use ``for ev in events: ...``.
 
 Another useful feature of this system is that a handler can connect to
 multiple events at once:

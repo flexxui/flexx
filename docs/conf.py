@@ -25,7 +25,16 @@ sys.path.insert(0, os.path.abspath('scripts'))
 import flexx
 from flexx import util, webruntime
 
+
+# Make Flexx shut up a bit
+class DocFilter:
+    def filter(self, record):
+        return 're-registering app class' not in record.getMessage().lower()
+#
 flexx.set_log_level('warning')  # Don't spam the Sphynx output
+for handler in util.logging.logger.handlers:
+    handler.addFilter(DocFilter())
+
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
