@@ -62,7 +62,7 @@ class TornadoServer(AbstractServer):
     
     def __init__(self):
         self._native = None
-        self._loop = tornado.ioloop.IOLoop.instance()
+        self._loop = tornado.ioloop.IOLoop.current()  # Current loop for this thread
     
     def open(self, host, port):
         
