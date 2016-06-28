@@ -38,11 +38,9 @@ def intl(x):
 
 
 class Icon(object):
-    """ Icon class
-    
-    Functionality to read/create icons. Considers only RGBA icons. Can
+    """
+    Object for reading/creating icons. Considers only RGBA icons. Can
     deal with images stored raw (BMP) and compressed (PNG).
-    
     """
     # Conventions:
     # im -> an image stores as a bytearray array, uint8, NxNx4
@@ -58,12 +56,14 @@ class Icon(object):
         return '<Icon with %i sizes: %r at 0x%x>' % (len(ss), ss, id(self))
     
     def image_sizes(self):
-        """ Get a tuple of image sizes currently loaded
+        """ Get a tuple of image sizes (integers) currently loaded.
         """
         return tuple(sorted(self._ims.keys()))
     
     def add(self, data):
-        """ Add an image represented as bytes or bytearray.
+        """ Add an image represented as bytes or bytearray. The size
+        of the image is inferred from the number of bytes. The image
+        is assumed to be square and in RGBA format.
         """
         if isinstance(data, (bytes, bytearray)):
             self._store_image(data)
@@ -71,11 +71,10 @@ class Icon(object):
             raise ValueError('Data to add should be bytes or bytearray')
     
     def read(self, filename):
-        """ Read an image from the given filename and add to collection
-        
-        Can be an ICO, PNG, or BMP file.  When an RGB image is read,
-        it is converted to RGBA. Some restrictions may apply to the
-        formats that can be read.
+        """ Read an image from the given filename and add to collection.
+        Can be an ICO, PNG, or BMP file.  When a grayscale or RGB image
+        is read, it is converted to RGBA. Some restrictions may apply
+        to the formats that can be read.
         """
         if not isinstance(filename, basestring):
             raise TypeError('Icon.read() needs a file name')
@@ -99,8 +98,7 @@ class Icon(object):
             raise ValueError('Can only load from png, bmp, or ico')
     
     def write(self, filename):
-        """ Write the icon collection to an image with the given filename
-        
+        """ Write the icon collection to an image with the given filename.
         Can be an ICO, ICNS, PNG, or BMP file. In case of PNG/BMP,
         multiple images may be generated, the image size is appended
         to the file name.
@@ -132,8 +130,7 @@ class Icon(object):
             raise ValueError('Can only export to png, bmp, or ico')
     
     def to_bytes(self):
-        """ Return the bytes that represent the .ico image
-        
+        """ Return the bytes that represent the .ico image.
         This function can be used by webservers to serve the ico image
         without needing a physical representation on disk.
         """

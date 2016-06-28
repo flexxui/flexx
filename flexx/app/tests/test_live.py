@@ -21,6 +21,7 @@ TIMEOUT2 = 1.0
 def runner(cls):
     t = app.launch(cls, 'xul')  # fails somehow with XUL
     t.test_init()
+    t.test_set_result()
     # Install failsafe. Use a closure so failsafe wont spoil a future test
     isrunning = True
     def stop():
@@ -33,21 +34,49 @@ def runner(cls):
     print('ran %f seconds' % (time.time()-t0))
     isrunning = False
     # Check result
-    if not (ON_TRAVIS and ON_PYPY):  # has intermittent fails on pypy3
+    if True:  # not (ON_TRAVIS and ON_PYPY):  # has intermittent fails on pypy3
         t.test_check()
     # Shut down
     t.session.close()
 
 
-class ModelA(app.Model):
+class Model0(app.Model):
+    """ Base tester class.
+    """
+    def test_init(self):
+        pass
+    
+    def test_set_result(self):
+        self.call_js('set_result_later()')
+
+    def test_check(self):
+        pass
+    
+    class Both:
+        
+        @event.prop
+        def result(self, v=None):
+            if v and not this_is_js():
+                print('stopping by ourselves', v)
+                app.call_later(TIMEOUT2, app.stop)
+            return v
+
+    class JS:
+        
+        def set_result_later(self):
+            # Do in next event loop iter
+            window.setTimeout(self.set_result, 0)
+        
+        def set_result(self):
+            pass
+
+
+class ModelA(Model0):
     """ Test both props, py-only props and js-only props.
     """
     
     def test_init(self):
-        
         assert self.foo1 == 1
-        
-        self.call_js('set_result()')
     
     def test_check(self):
         assert self.foo1 == 1
@@ -67,14 +96,6 @@ class ModelA(app.Model):
         return int(v+1)
     
     class Both:
-        
-        @event.prop
-        def result(self, v=None):
-            if v and not this_is_js():
-                #app.stop()
-                print('stopping by ourselves', v)
-                app.call_later(TIMEOUT2, app.stop)
-            return v
         
         @event.prop
         def foo1(self, v=0):
@@ -173,8 +194,6 @@ class ModelD(ModelB):
         self.foo2 = 10
         self.spam2 = 10
         assert self.foo2 == 12
-        
-        self.call_js('set_result()')
     
     def test_check(self):
         
@@ -209,9 +228,12 @@ class ModelE(ModelA):
     """ Test counting events
     """
     
-    def init(self):
+    def test_init(self):
         self.res1 = []
         self.res2 = []
+        
+        self.emit('foo', {})
+        self.emit('foo', {})
     
     @event.connect('foo')
     def foo_handler(self, *events):
@@ -223,23 +245,13 @@ class ModelE(ModelA):
         self.res2.append(len(events))
         print('Py saw %i bar events' % len(events))
     
-    def test_init(self):
-        app.call_later(0.2, self._emit_foo)
-        app.call_later(0.3, lambda:self.call_js('set_result()'))
-    
-    def _emit_foo(self):
-        self.emit('foo', {})
-        self.emit('foo', {})
-    
     def test_check(self):
         result_py = self.res1 + [''] + self.res2
         result_js = self.result
-        print(result_py)
-        print(result_js)
+        print('result_py', result_py)
+        print('result_js', result_js)
         assert result_py == [2, '', 2]
-        if ON_TRAVIS and sys.version_info[0] == 2:
-            pass  # not sure why this fails
-        elif ON_TRAVIS:  # Ok, good enough Travis ...
+        if False:  # ON_TRAVIS:  # Ok, good enough Travis ...
             assert result_js == [2, '', 2] or result_js == [1, 1, '', 2]
         else:
             assert result_js == [2, '', 2]
@@ -257,18 +269,15 @@ class ModelE(ModelA):
         def foo_handler(self, *events):
             self.res3.append(len(events))
             print('JS saw %i foo events' % len(events))
-            self._maybe_set_result()
         
         @event.connect('bar')
         def bar_handler(self, *events):
             self.res4.append(len(events))
             print('JS saw %i bar events' % len(events))
-            self._maybe_set_result()
         
-        def _maybe_set_result(self):
-            if self.res3 and self.res4:
-                self.result = self.res3 + [''] + self.res4
-
+        def set_result(self):
+            print('setting rssulr in js' + (self.res3 + [''] + self.res4) )
+            self.result = self.res3 + [''] + self.res4
 
 
 class ModelF(ModelA):
@@ -276,13 +285,10 @@ class ModelF(ModelA):
     """
     
     def test_init(self):
-        
         self.res = []
         
         self.foo1 = 2
         self.spam1 = 2
-        
-        self.call_js('set_result()')
     
     def test_check(self):
         assert self.res.count('foo1') == 3  # bit of a glitch bc we do +1
@@ -357,5 +363,5 @@ def test_apps():
 
 # NOTE: beware future self: if running this in Pyzo, turn off GUI integration!
 
-#runner(ModelF)
+#runner(ModelE)
 run_tests_if_main()

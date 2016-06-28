@@ -69,9 +69,10 @@ def finalize_hasevents_class(cls):
             raise RuntimeError('Class methods can only be made handlers using '
                                '@event.connect() (handler %r)' % name)
         elif callable(val) and name.startswith('on_'):
-            # todo: remove this between 0.3 and 0.4
-            logger.warn('Method %r starting with "on_" is not (anymore) '
-                        'converted to a handler.' % name)
+            if not getattr(cls, '_HAS_ON_METHODS', False):
+                # todo: remove this between 0.3 and 0.4
+                logger.warn('Method %r is not (anymore) converted to a '
+                            'handler (on %s).' % (name, cls.__name__))
     
     # Finalize all found emitters
     for collection in (handlers, emitters, properties):

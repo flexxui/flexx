@@ -1,22 +1,34 @@
 """
-Flexx is a pure Python toolkit for creating
-graphical user interfaces (GUI's), that uses web technology for its
-rendering. You can use Flexx to create desktop applications, web
+Flexx is a pure Python toolkit for creating graphical user interfaces
+(GUI's), that uses web technology for its rendering. Apps are written
+purely in Python; Flexx' transpiler generates the necessary JavaScript
+on the fly.
+
+You can use Flexx to create (cross platform) desktop applications, web
 applications, and (if designed well) export an app to a standalone HTML
 document. It also works in the Jupyter notebook.
 
-Being pure Python and cross platform, it should work anywhere where
-there's Python and a browser. To run apps in desktop-mode, we recommend having Firefox
-installed.
+The Flexx docs are on `readthedocs <http://flexx.readthedocs.org>`_,
+the code is on `Github <http://github.com/zoofio/flexx>`_.
+Flexx is currently in alpha status; any part of the public API may
+change without notice. Feedback is welcome. We're definitely
+converging to a more stable API though ...
 
 Flexx has a modular design, consisting of a few subpackages, which can
 also be used by themselves:
 
-* ui - the widgets
-* app - the event loop and server
-* react - reactive programming (how information flows through your program)
-* pyscript - Python to JavaScript transpiler
-* webruntime - to launch a runtime
+* `flexx.ui <http://flexx.readthedocs.io/en/stable/ui/>`_
+  - the widgets
+* `flexx.app <http://flexx.readthedocs.io/en/stable/app/>`_
+  - the event loop and server
+* `flexx.event <http://flexx.readthedocs.io/en/stable/event/>`_
+  - properties and events
+* `flexx.pyscript <http://flexx.readthedocs.io/en/stable/pyscript/>`_
+  - Python to JavaScript transpiler
+* `flexx.webruntime <http://flexx.readthedocs.io/en/stable/webruntime/>`_
+  - to launch a runtime
+* `flexx.util <http://flexx.readthedocs.io/en/stable/util/>`_
+  - utilities
 
 For more information, see http://flexx.readthedocs.org.
 """

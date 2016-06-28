@@ -79,11 +79,6 @@ description = "Pure Python toolkit for creating GUI's using web technology."
 # Get version and docstring (i.e. long description)
 version, doc = get_version_and_doc(os.path.join(THIS_DIR, name, '__init__.py'))
 
-# Define dependencies per subpackage
-extras_require = {'app': ['tornado']}
-extras_require['ui'] = extras_require['app']
-extras_require['all'] = [i for ii in extras_require.values() for i in ii]
-
 # Import to trigger download of phosphorjs
 if 'sdist' in sys.argv and sys.version_info[0] == 3:
     from flexx import ui  # noqa
@@ -106,13 +101,12 @@ setup(
     license='(new) BSD',
     url='http://flexx.readthedocs.org',
     download_url='https://pypi.python.org/pypi/flexx',
-    keywords="ui design, web runtime, pyscript, reactive programming, FRP",
+    keywords="ui design, GUI, web, runtime, pyscript, events, properties",
     description=description,
     long_description=doc,
     platforms='any',
     provides=[name],
-    install_requires=[],  # react, pyscript and webruntime require nothing
-    extras_require=extras_require,
+    install_requires=['tornado'],  # react, pyscript and webruntime require nothing
     packages=package_tree(name) + package_tree(name_legacy),
     package_dir={name: name, name_legacy: name_legacy},
     package_data={name: ['resources/*'], name_legacy: ['resources/*']},

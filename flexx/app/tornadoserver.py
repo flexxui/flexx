@@ -62,7 +62,8 @@ class TornadoServer(AbstractServer):
     
     def __init__(self):
         self._native = None
-        self._loop = tornado.ioloop.IOLoop.instance()
+        self._loop = None
+        self._call_laters = []
     
     def open(self, host, port):
         
@@ -95,6 +96,13 @@ class TornadoServer(AbstractServer):
         logger.info('Serving apps at http://%s:%i/' % (host, port))
     
     def start(self):
+        # Get the current ioloop for the current thread
+        self._loop = tornado.ioloop.IOLoop.current()
+        # Submit any pending call_laters
+        while self._call_laters:
+            delay, callback, args, kwargs = self._call_laters.pop(0)
+            self.call_later(delay, callback, *args, **kwargs)
+        # Start event loop
         if not getattr(self._loop, '_running', False):
             self._loop.start()
     
@@ -106,7 +114,9 @@ class TornadoServer(AbstractServer):
         self._loop.add_callback(self._loop.stop)
     
     def call_later(self, delay, callback, *args, **kwargs):
-        if delay <= 0:
+        if self._loop is None:
+            self._call_laters.append((delay, callback, args, kwargs))
+        elif delay <= 0:
             self._loop.add_callback(callback, *args, **kwargs)
         else:
             self._loop.add_timeout(self._loop.time() + delay, callback, *args, **kwargs)

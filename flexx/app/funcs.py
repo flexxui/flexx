@@ -50,7 +50,7 @@ def init(**kwargs):
     # If already hosting, return or error
     if getattr(server, '_is_hosting', False):
         if host is None and port is None:
-            return
+            return server
         else:
             raise RuntimeError('Already hosting')
     # Handle defaults

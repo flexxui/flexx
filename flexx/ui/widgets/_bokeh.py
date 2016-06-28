@@ -37,9 +37,9 @@ Bokeh = None  # fool flakes
 class BokehWidget(Widget):
     """ A widget that shows a Bokeh plot object.
     
-    In Bokeh 0.12 and up, the plot's ``responsive`` property is set to
-    ``box`` unless it was set to something else than ``fixed``. Other
-    responsive modes are 'width_ar', 'height_ar' and 'box_ar`, which
+    For Bokeh 0.12 and up. The plot's ``sizing_mode`` property is set to
+    ``stretch_both`` unless it was set to something other than ``fixed``. Other
+    responsive modes are 'scale_width', 'scale_height' and 'scale_both`, which
     all keep aspect ratio while being responsive in a certain direction.
     """
     
@@ -77,9 +77,9 @@ class BokehWidget(Widget):
             return None
         if not isinstance(plot, Plot):
             raise ValueError('Plot must be a Bokeh plot object.')
-        # Responsive is fixed by default, but that's silly in this context
-        if plot.responsive == 'fixed':
-            plot.responsive = 'stretch_both'
+        # The sizing_mode is fixed by default, but that's silly in this context
+        if plot.sizing_mode == 'fixed':
+            plot.sizing_mode = 'stretch_both'
         self._plot_components(plot)
         return plot
     

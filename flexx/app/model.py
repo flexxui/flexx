@@ -409,8 +409,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         active_models = _get_active_models()
         if self in active_models:
             raise RuntimeError('It seems that the event loop is processing '
-                            'events while a Model is active. This has a '
-                            'high risk on race conditions.')
+                               'events while a Model is active. This has a '
+                               'high risk on race conditions.')
     
     def dispose(self):
         """ Overloaded version of dispose() that removes the global

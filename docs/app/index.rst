@@ -9,3 +9,4 @@ The app module implements the connection between Python and JavaScript.
    
    intro
    api
+   examples

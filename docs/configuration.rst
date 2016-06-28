@@ -9,4 +9,5 @@ environment variables and command line argumenets, as explained below.
 Alternatively, options can be set directly in Python via
 ``flexx.config.foo = 3``.
 
-.. autofunction:: flexx.config
+.. autodata:: flexx.config
+    :annotation:

@@ -6,10 +6,13 @@ Getting started
 Dependencies
 ------------
 
+Being pure Python and cross platform, it should work (almost) anywhere
+where there's Python and a browser.
 Flexx is written for Python 3, but can also be installed on legacy
 Python (Python 2.7). It also works on Pypy.
+Flexx actively supports Firefox, Chrome and (with minor limitations) IE/Edge.
 
-The ``react``, ``webruntime`` and ``pyscrip`` subpackages require no
+The ``event``, ``webruntime`` and ``pyscrip`` subpackages require no
 dependencies. The ``app`` and ``ui`` subpackages require Tornado (a
 pure Python package) and a browser. To run apps that look like desktop
 apps, we recommend having Firefox installed.
@@ -28,22 +31,22 @@ Current status
 Flexx is in development and is in alpha status. Any part of the public
 API may change without notice. Status of subpackages:
    
-* The ``flexx.pyscript`` module is in a good state and has 100% test
-  coverage. Needs methods for list/dict/str, but is otherwise very
-  complete.
-* The ``flexx.react`` module is in a good state, with good test
-  coverage, but needs some work for functionals. 
-* The ``flexx.webruntime`` module works well, but needs
-  tests and should support more runtimes. 
-* The ``flexx.app`` module is in a flux.
-* The ``flexx.ui`` module is in a flux.
+* The ``flexx.pyscript`` module is in a good state and has ~ 100% test
+  coverage.
+* The ``flexx.event`` module recently received an overhaul. Minor tweaks
+  can be expected.
+* The ``flexx.webruntime`` module works well, but needs tests and should
+  support more runtimes.
+* The ``flexx.app`` module is increasingly stable.
+* The ``flexx.ui`` module is stabalizing and most changes will be related
+  to the *addition* of new widgets.
 
 
 Installation
 ------------
 
+* ``conda install flexx -c conda-forge``
 * ``pip install flexx``
-* ``pip install flexx[all]``  (will also install Tornado)
 * Old school: ``python setup.py install``
 * Clone the repo and add the root dir to your PYTHONPATH (developer
   mode, not possible for Python 2.7)
@@ -73,7 +76,7 @@ time to survive, because users don't easily become contributors. This
 is one of the reasons of the success of e.g. scikit-image, and the
 demise of e.g. Mayavi. Since Flexx is written in a combination of Python
 and PyScript, its user community is more likely to take an active role
-in the development.
+in its development.
 
 
 Flexx overview
@@ -92,16 +95,15 @@ The image above outlines the structure of Flexx. The sole purpose of
 the *webruntime* module is to launch a runtime to execute the app in.
 This can be a browser, or a XUL application that looks like a desktop
 app, or e.g. nodejs.
-The *react* module provides functionality for reactive programming;
-handling events via signals to let information flow through your
-application.
+The *event* module provides a powerful property and event system that
+makes it easy to connect different parts of your application.
 The *pyscript* module provides a system for translating Python code to
 JavaScript.
 In the *app* module the app mainloop is defined, running the server to
 which the web runtime connects (via a websocket). Further, it combines
-the *react* and *pyscript* functionalities into the ``Model`` class;
+the *event* and *pyscript* functionalities into the ``Model`` class;
 a class for which its instances have a corresponding representation in
-JavaScript. Signals are synced both ways, and it allows subclasses
+JavaScript. Properties are synced both ways, and it allows subclasses
 to define methods for the JS version of the object in Python code (or
 PyScript, to be precise). This is the base class for all widgets, but
 could in principle also be useful in other situations where a tight
@@ -120,6 +122,4 @@ There is a collection of
 The tutorial notebooks are also listed in the examples section of each
 subpackage in the reference docs.
 
-The notebooks containing widgets are best viewed live. Using the
-nbviewer *should* also render them correctly, but this is somewhat
-broken at this stage.
+The notebooks containing widgets are best viewed live or in the nbviewer.
