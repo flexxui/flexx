@@ -347,7 +347,6 @@ class Splines(ui.Widget):
                 self.tension.style = self.tension_label.style = 'visibility: visible'
             else:
                 self.tension.style = self.tension_label.style = 'visibility: hidden'
-            window.setTimeout(self.spline._check_real_size, 0)  # todo: bit of a hack
         
         @event.connect('tension.value')
         def _set_tension(self, *events):

@@ -354,18 +354,26 @@ class Widget(Model):
             return v[0], v[1]
 
         @event.connect('container', 'parent.size', 'children')
-        def __update_size(self, *events):
+        def check_size(self, *events):
+            """ Check the current size of this widget. It is normally
+            not necessary to call this method directly, but there are (rare)
+            cases when Flexx is otherwise unaware of a change in size.
+            """
             # Check size in *next* event loop iter to give the DOM a
             # chance to settle.
             window.setTimeout(self._check_real_size, 0)
 
-        def _check_real_size(self):
+        def _check_real_size(self, notify_parent=False):
             """ Check whether the current size has changed.
             """
             n = self.outernode
             cursize = self.size
             if cursize[0] != n.clientWidth or cursize[1] != n.clientHeight:
                 self._set_prop('size', [n.clientWidth, n.clientHeight])
+                # Notify parent? This is basically a hook box layout
+                if notify_parent and self.parent:
+                    if self.parent.let_children_check_size:
+                        self.parent.let_children_check_size()
 
         def _set_size(self, prefix, w, h):
             """ Method to allow setting size (via style). Used by some layouts.
