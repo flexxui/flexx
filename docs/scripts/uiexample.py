@@ -50,9 +50,12 @@ def create_ui_example(filename, to_root, height=300):
     
     # Import
     try:
-        spec = importlib.util.spec_from_file_location("example", filename)
-        m = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(m)
+        if sys.version_info >= (3, 5):
+            spec = importlib.util.spec_from_file_location("example", filename)
+            m = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(m)
+        else:  # http://stackoverflow.com/a/67692/2271927
+            SourceFileLoader("example", filename).load_module()
     except Exception as err:
         err_text = str(err)
         msg = 'Example not generated. <pre>%s</pre>' % err_text
