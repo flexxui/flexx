@@ -225,6 +225,13 @@ class BoxLayout(BaseBoxLayout):
         
         _DEFAULT_ORIENTATION = 'h'
         
+        def let_children_check_size(self):
+            """ Hook to allow a size changes in child widgets to
+            propagate to sibling widgets.
+            """
+            for widget in self.children:
+                widget._check_real_size()
+        
         @event.connect('orientation', 'children', 'children.*.flex')
         def __set_flexes(self, *events):
             ori = self.orientation

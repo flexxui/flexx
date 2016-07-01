@@ -69,9 +69,11 @@ class Label(Widget):
         @event.connect('text')
         def _text_changed(self, *events):
             self.node.innerHTML = self.text
+            self._check_real_size(True)
         
         @event.connect('wrap')
         def _wrap_changed(self, *events):
             wrap = self.wrap
             self.node.style['word-wrap'] = ['initial', 'normal', 'break-word'][wrap]
             self.node.style['white-space'] = ['no-wrap', 'normal', 'normal'][wrap]
+            self._check_real_size(True)
