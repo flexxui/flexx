@@ -56,7 +56,7 @@ def create_ui_example(filename, to_root, height=300):
             spec.loader.exec_module(m)
         else:  # http://stackoverflow.com/a/67692/2271927
             from importlib.machinery import SourceFileLoader
-            SourceFileLoader("example", filename).load_module()
+            m = SourceFileLoader("example", filename).load_module()
     except Exception as err:
         err_text = str(err)
         msg = 'Example not generated. <pre>%s</pre>' % err_text
