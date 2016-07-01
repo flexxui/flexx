@@ -170,19 +170,19 @@ def get_firefox_exe():
         paths.append('/usr/lib/iceweasel/iceweasel')
         paths.append('/usr/lib64/iceweasel/iceweasel')
     elif sys.platform.startswith('darwin'):
-        try:
-            # Use app-id to get the .app path
-            osx_search_arg='kMDItemCFBundleIdentifier==org.mozilla.firefox'
-            basepath = subprocess.check_output(['mdfind', osx_search_arg]).rstrip()
-            if basepath:
-                paths.append(op.join(basepath,'Contents/MacOS/firefox'))
-        except (OSError, subprocess.CalledProcessError):
-            pass
-        # '~/Applications' and '/Applications'
-        osx_user_apps = op.join(os.environ['HOME'], 'Applications')
+        osx_user_apps = op.expanduser('~/Applications')
         osx_root_apps = '/Applications'
         paths.append(op.join(osx_user_apps, 'Firefox.app/Contents/MacOS/firefox'))
         paths.append(op.join(osx_root_apps, 'Firefox.app/Contents/MacOS/firefox'))
+        if not any([op.isfile(path) for path in paths]):
+            # Try harder - use app-id to get the .app path
+            try:
+                osx_search_arg='kMDItemCFBundleIdentifier==org.mozilla.firefox'
+                basepath = subprocess.check_output(['mdfind', osx_search_arg]).rstrip()
+                if basepath:
+                    paths.append(op.join(basepath, 'Contents/MacOS/firefox'))
+            except (OSError, subprocess.CalledProcessError):
+                pass
 
     # Try location until we find one that exists
     for path in paths:
