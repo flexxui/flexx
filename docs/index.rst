@@ -6,28 +6,18 @@
 Welcome to Flexx's documentation!
 =================================
 
-Flexx is a pure Python toolkit for creating graphical user interfaces
-(GUI's), that uses web technology for its rendering. Apps are written
-purely in Python; Flexx' transpiler generates the necessary JavaScript
-on the fly.
-
-You can use Flexx to create (cross platform) desktop applications, web
-applications, and (if designed well) export an app to a standalone HTML
-document. It also works in the Jupyter notebook.
-
-The Flexx docs are on `readthedocs <http://flexx.readthedocs.org>`_,
-the code is on `Github <http://github.com/zoofio/flexx>`_.
-Flexx is currently in alpha status; any part of the public API may
-change without notice. Feedback is welcome. We're definitely
-converging to a more stable API though ...
+.. automodule:: flexx
 
 Flexx has a modular design, consisting of a few subpackages, which can
 also be used by themselves. See the table of contents below. For building
-apps these three modules are most relevant:
+apps these three modules are the most relevant:
 
 * :doc:`flexx.ui <ui/index>` - the widgets
+  (see :doc:`intro <ui/intro>`, :doc:`api <ui/api>`, :doc:`examples <ui/examples>`)
 * :doc:`flexx.app <app/index>` - the event loop and server
+  (see :doc:`intro <app/intro>`, :doc:`api <app/api>`, :doc:`examples <app/examples>`)
 * :doc:`flexx.event <event/index>` - properties and events
+  (see :doc:`intro <event/intro>`, :doc:`api <event/api>`, :doc:`examples <event/examples>`)
 
 
 Contents
