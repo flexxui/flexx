@@ -89,7 +89,7 @@ which are independent from each-other, and can be used by themselves.
 E.g. ``import flexx.webruntime`` only imports that subpackage, and not
 the whole ui toolkit and app framework (nor Tornado).
 
-.. image:: overview.svg
+.. image:: _static\overview.svg
 
 The image above outlines the structure of Flexx. The sole purpose of
 the *webruntime* module is to launch a runtime to execute the app in.

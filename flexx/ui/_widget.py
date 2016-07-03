@@ -643,21 +643,26 @@ class Widget(Model):
             # Note that this also makes the widget able to get focus, and this
             # able to do key events.
             self.node.tabIndex = events[-1].new_value
-
-        @event.connect('children')
-        def __update_css(self, *events):
-            children = events[-1].new_value
-            if 'flx-Layout' not in self.outernode.className:
-                # Ok, no layout, so maybe we need to take care of CSS.
-                # If we have a child that is a hbox/vbox, we need to be a
-                # flex container.
-                self.outernode.style['display'] = ''
-                self.outernode.style['flex-flow'] = ''
-                if len(children) == 1:
-                    subClassName = children[0].outernode.className
-                    if 'flx-hbox' in subClassName:
-                        self.outernode.style['display'] = 'flex'
-                        self.outernode.style['flex-flow'] = 'row'
-                    elif 'flx-vbox' in subClassName:
-                        self.outernode.style['display'] = 'flex'
-                        self.outernode.style['flex-flow'] = 'column'
+        
+        # I cannot recall/reproduce the need for this. Maybe its not
+        # needed anymore. If the need for this is found, and this is
+        # to be revived, it should bw done using CSS, because setting
+        # "display" style attribute clashes with the hiding of widgets
+        # in a TabPanel.
+        # @event.connect('children')
+        # def __update_css(self, *events):
+        #     children = events[-1].new_value
+        #     if 'flx-Layout' not in self.outernode.className:
+        #         # Ok, no layout, so maybe we need to take care of CSS.
+        #         # If we have a child that is a hbox/vbox, we need to be a
+        #         # flex container.
+        #         self.outernode.style['display'] = ''
+        #         self.outernode.style['flex-flow'] = ''
+        #         if len(children) == 1:
+        #             subClassName = children[0].outernode.className
+        #             if 'flx-hbox' in subClassName:
+        #                 self.outernode.style['display'] = 'flex'
+        #                 self.outernode.style['flex-flow'] = 'row'
+        #             elif 'flx-vbox' in subClassName:
+        #                 self.outernode.style['display'] = 'flex'
+        #                 self.outernode.style['flex-flow'] = 'column'
