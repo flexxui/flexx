@@ -42,7 +42,7 @@ http://makeapullrequest.com/ and http://www.firsttimersonly.com/
 Feel free to ask for help; everyone is a beginner at first :)
 
 
-# How to report a bug
+## How to report a bug
 
 If you find a security vulnerability, do NOT open an issue. Send
 almarklein an email via gmail instead.
@@ -57,7 +57,7 @@ When filing an issue, make sure to answer these five questions:
 * What did you see instead?
 
 
-# How to suggest a feature or enhancement
+## How to suggest a feature or enhancement
 
 Please first check whether the feature (or a very similar feature) has
 already been requested. If so, subscribe to that issue. Otherwise,
@@ -65,7 +65,7 @@ create a new issue describing the proposed feature and why it is
 relevant (to you).
 
 
-# Code review process
+## Code review process
 
 Pull requests are not merged if they the tests do not pass. Though review
 may start before the pull request is completely finished.
@@ -81,6 +81,6 @@ week. If a reviewer has not responded in say a week or two, feel free
 to post a comment with a gentle reminder.
 
 
-# Community
+## Community
 
 All community traffic goes through Github for now.
