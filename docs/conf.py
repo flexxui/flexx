@@ -25,6 +25,8 @@ sys.path.insert(0, os.path.abspath('scripts'))
 import flexx
 from flexx import util, webruntime
 
+# Cut our relevant part of docstring of Flexx' main module (i.e. the summary)
+flexx.__doc__ = flexx.__doc__.split('----')[0]
 
 # Make Flexx shut up a bit
 class DocFilter:

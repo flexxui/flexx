@@ -8,30 +8,32 @@ You can use Flexx to create (cross platform) desktop applications, web
 applications, and (if designed well) export an app to a standalone HTML
 document. It also works in the Jupyter notebook.
 
-The Flexx docs are on `readthedocs <http://flexx.readthedocs.org>`_,
+The docs are on `Readthedocs <http://flexx.readthedocs.org>`_,
 the code is on `Github <http://github.com/zoofio/flexx>`_.
 Flexx is currently in alpha status; any part of the public API may
-change without notice. Feedback is welcome. We're definitely
-converging to a more stable API though ...
+change without notice. Feedback is welcome.
+
+----
 
 Flexx has a modular design, consisting of a few subpackages, which can
 also be used by themselves:
 
-* `flexx.ui <http://flexx.readthedocs.io/en/stable/ui/>`_
-  - the widgets
-* `flexx.app <http://flexx.readthedocs.io/en/stable/app/>`_
-  - the event loop and server
-* `flexx.event <http://flexx.readthedocs.io/en/stable/event/>`_
-  - properties and events
-* `flexx.pyscript <http://flexx.readthedocs.io/en/stable/pyscript/>`_
-  - Python to JavaScript transpiler
-* `flexx.webruntime <http://flexx.readthedocs.io/en/stable/webruntime/>`_
-  - to launch a runtime
-* `flexx.util <http://flexx.readthedocs.io/en/stable/util/>`_
-  - utilities
+* flexx.ui - the widgets
+* flexx.app - the event loop and server
+* flexx.event - properties and events
+* flexx.pyscript - Python to JavaScript transpiler
+* flexx.webruntime - to launch a runtime
+* flexx.util - utilities
 
 For more information, see http://flexx.readthedocs.org.
 """
+
+# NOTES ON DOCS:
+# There are 2 places that define the short summary of Flexx: the
+# __init__.py and the README.md. Their summaries should be kept equal.
+# The index.rst for the docs uses the summary from __init__.py (the
+# part after the "----" is stripped. The long-description for Pypi is
+# obtained by converting README.md to RST.
 
 __version__ = '0.3.1'
 

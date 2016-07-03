@@ -4,74 +4,74 @@ Flexx
 [![Build Status](https://travis-ci.org/zoofIO/flexx.svg)](https://travis-ci.org/zoofIO/flexx)
 [![Documentation Status](https://readthedocs.org/projects/flexx/badge/?version=latest)](https://flexx.readthedocs.org)
 
-[Flexx](https://flexx.readthedocs.org) is a pure Python toolkit for creating
-graphical user interfaces (GUI's), that uses web technology for its
-rendering. You can use Flexx to create desktop applications, web
+Introduction
+------------
+
+Flexx is a pure Python toolkit for creating graphical user interfaces
+(GUI's), that uses web technology for its rendering. Apps are written
+purely in Python; Flexx' transpiler generates the necessary JavaScript
+on the fly.
+
+You can use Flexx to create (cross platform) desktop applications, web
 applications, and (if designed well) export an app to a standalone HTML
 document. It also works in the Jupyter notebook.
 
-Being pure Python and cross platform, it should work anywhere where
-there's Python and a browser. To run apps in desktop-mode, we recommend having Firefox
-installed.
+The docs are on [Readthedocs](http://flexx.readthedocs.org).
+the code is on [Github](http://github.com/zoofio/flexx).
+Flexx is currently in alpha status; any part of the public API may
+change without notice. Feedback is welcome.
 
 Flexx has a modular design, consisting of a few subpackages, which can
 also be used by themselves:
 
-* ui - the widgets
-* app - the event loop and server
-* react - reactive programming (how information flows through your program)
-* pyscript - Python to JavaScript transpiler
-* webruntime - to launch a runtime
+* [flexx.ui](http://flexx.readthedocs.io/en/stable/ui/) - the widgets
+* [flexx.app](http://flexx.readthedocs.io/en/stable/app/) - the event loop and server
+* [flexx.event](http://flexx.readthedocs.io/en/stable/event/) - properties and events
+* [flexx.pyscript](http://flexx.readthedocs.io/en/stable/pyscript/) - Python to JavaScript transpiler
+* [flexx.webruntime](http://flexx.readthedocs.io/en/stable/webruntime/) - to launch a runtime
+* [flexx.util](http://flexx.readthedocs.io/en/stable/util/) - utilities
 
-Example and demo server
------------------------
 
-Working code example::
+Example
+-------
 
-```python
-from flexx import app, ui, react
-    
-class Example(ui.Widget):
-    
-    def init(self):
-        self.count = 0
-        with ui.HBox():
-            self.button = ui.Button(text='Click me', flex=0)
-            self.label = ui.Label(flex=1)
-    
-    @react.connect('button.mouse_down')
-    def _handle_click(self, down):
-        if down:
-            self.count += 1
-            self.label.text('clicked %i times' % self.count)
+Click the image below for an interactive example:
 
-main = app.launch(Example)
-app.run()
-```
+[![demo](https://dl.dropboxusercontent.com/u/1463853/images/flexx_demo_300.png)](http://flexx.readthedocs.io/en/latest/ui/examples/demo_src.html)
 
 There is an Amazon instance running some demos on http://52.21.93.28:8000/ 
-(unless I turned it off for testing, etc.).
-
-Current status
---------------
-
-Flexx is still very much a work in progress. Please don't go use it
-just yet for anything serious. The public API can change without notice.
-However, we're interested in feedback, so we invite you to play with
-it!
+(it might not always be on).
 
 
-Requirements
+Motivation
+----------
+
+The primary motivation for Flexx is the undeniable fact that the web
+(i.e. browser technology) has become an increasingly popular method for
+delivering applications to users, also for (interactive) scientific
+content.
+
+The purpose of Flexx is to provide a single application framework to
+create desktop applications, web apps, and (hopefully soon) mobile apps.
+By making use of browser technology, the library itself can be
+relatively small and pure Python, making it widely available and easy
+to use.
+
+
+Installation
 ------------
 
 Flexx requires Python 2.7 or Python 3.2+ and also works on pypy. Further,
 it needs the [tornado](http://www.tornadoweb.org) library (pure Python).
+For running desktop apps, it is recommended to have Firefox installed.
+
+To install use any of:
+* ``conda install flexx -c conda-forge``
+* ``pip install flexx``
+* Clone the repo and add it to your PYTHONPATH, or ``python setup.py install``.
 
 
-Getting started
----------------
+License
+-------
 
-* Clone the repo and add it to your PYTHONPATH, 
-  or ``python setup.py install``, or ``pip install flexx``.
-* Run the examples.
-* Read the [docs](http://flexx.readthedocs.org).
+FLexx makes use of the liberal 2-clause BSD license. See LICENSE for details.

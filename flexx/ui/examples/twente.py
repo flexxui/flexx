@@ -109,32 +109,37 @@ def parse_data(raw_data):
 years, data = parse_data(raw_data)
 
 
-class Twente(ui.HBox):
+class Twente(ui.Widget):
     
     def init(self):
         
-        ui.Widget(flex=1)
-        with ui.VBox(flex=0):
-            with ui.GroupWidget(title='Plot options'):
-                with ui.VBox():
-                    self.month_label = ui.Label(text='Month')
-                    self.month = ui.Slider(max=12, step=1)
-                    self.smoothing_label = ui.Label(text='Smoothing')
-                    self.smoothing = ui.Slider(max=20, step=2)
+        with ui.HBox():
             ui.Widget(flex=1)
-        with ui.VBox(flex=4):
-            self.plot = ui.PlotWidget(flex=1,
-                                        xdata=years, yrange=(-5, 20),
-                                        title='Average monthly temperature',
-                                        xlabel='year', ylabel=u'temperature (°C)')
-            # ui.Widget(flex=0, style='height:30px')
-        ui.Widget(flex=1)
+            with ui.VBox(flex=0):
+                with ui.GroupWidget(title='Plot options'):
+                    with ui.VBox():
+                        self.month_label = ui.Label(text='Month')
+                        self.month = ui.Slider(max=12, step=1, value=12)
+                        self.smoothing_label = ui.Label(text='Smoothing')
+                        self.smoothing = ui.Slider(max=20, step=2)
+                ui.Widget(flex=1)
+            with ui.VBox(flex=4):
+                self.plot = ui.PlotWidget(flex=1,
+                                            xdata=years, yrange=(-5, 20),
+                                            title='Average monthly temperature',
+                                            xlabel='year', ylabel=u'temperature (°C)')
+                # ui.Widget(flex=0, style='height:30px')
+            ui.Widget(flex=1)
 
     class JS:
         
         data = data
         months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 
                   'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'total']
+        
+        def init(self):
+            super().init()
+            self._update_plot()
         
         @event.connect('month.value', 'smoothing.value')
         def _update_plot(self, *events):
