@@ -24,24 +24,19 @@ change without notice. Feedback is welcome.
 Flexx has a modular design, consisting of a few subpackages, which can
 also be used by themselves:
 
-* [flexx.ui](http://flexx.readthedocs.io/en/stable/ui/)
-  - the widgets
-* [flexx.app](http://flexx.readthedocs.io/en/stable/app/)
-  - the event loop and server
-* [flexx.event](http://flexx.readthedocs.io/en/stable/event/)
-  - properties and events
-* [flexx.pyscript](http://flexx.readthedocs.io/en/stable/pyscript/)
-  - Python to JavaScript transpiler
-* [flexx.webruntime](http://flexx.readthedocs.io/en/stable/webruntime/)
-  - to launch a runtime
-* [flexx.util](http://flexx.readthedocs.io/en/stable/util/)
-  - utilities
+* [flexx.ui](http://flexx.readthedocs.io/en/stable/ui/) - the widgets
+* [flexx.app](http://flexx.readthedocs.io/en/stable/app/) - the event loop and server
+* [flexx.event](http://flexx.readthedocs.io/en/stable/event/) - properties and events
+* [flexx.pyscript](http://flexx.readthedocs.io/en/stable/pyscript/) - Python to JavaScript transpiler
+* [flexx.webruntime](http://flexx.readthedocs.io/en/stable/webruntime/) - to launch a runtime
+* [flexx.util](http://flexx.readthedocs.io/en/stable/util/) - utilities
 
 
 Example
 -------
 
 Click the image below for an interactive example:
+
 [![demo](https://dl.dropboxusercontent.com/u/1463853/images/flexx_demo_300.png)](http://flexx.readthedocs.io/en/latest/ui/examples/splines_src.html)
 
 There is an Amazon instance running some demos on http://52.21.93.28:8000/ 
