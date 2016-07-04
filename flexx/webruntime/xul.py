@@ -31,10 +31,10 @@ import os
 import sys
 import time
 import shutil
-import logging
 import subprocess
 import os.path as op
 
+from . import logger
 from .common import DesktopRuntime, create_temp_app_dir, appdata_dir
 
 # todo: title should change with title of web page?
@@ -238,7 +238,7 @@ def copy_xul_runtime(dir1, dir2):
             if op.isfile(exe):
                 break
         shutil.copy2(exe, op.join(dir2, 'xulrunner' + ext))
-        logging.info('Copied firefox (in %1.2f s)' % (time.time()-t0))
+        logger.info('Copied firefox (in %1.2f s)' % (time.time()-t0))
     except Exception:
         # Clean up
         shutil.rmtree(dir2)
@@ -310,8 +310,8 @@ class XulRuntime(DesktopRuntime):
     def _check_compat(self):
         qts = 'PySide', 'PyQt4', 'PyQt5'
         if any([name+'.QtCore' in sys.modules for name in qts]):
-            logging.warn("Using Flexx' Xul runtime and Qt (PySide/PyQt4/PyQt5) "
-                         "together may cause problems.")
+            logger.warn("Using Flexx' Xul runtime and Qt (PySide/PyQt4/PyQt5) "
+                        "together may cause problems.")
 
     def _create_xul_app(self, path, id, **kwargs):
         """ Create the files that determine the XUL app to launch.
@@ -413,7 +413,7 @@ class XulRuntime(DesktopRuntime):
         # Clean up old runtimes (do before installing new ff, because
         # we may be "updating" it)
         for dname in (obsolete + dnames[:-1]):
-            logging.info('Clearing XUL runtime at %s' % dname)
+            logger.info('Clearing XUL runtime at %s' % dname)
             try:
                 shutil.rmtree(op.join(xuldir, dname))
             except (OSError, IOError):

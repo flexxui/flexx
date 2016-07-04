@@ -7,11 +7,10 @@ import sys
 import time
 import atexit
 import shutil
-import logging
 import threading
 import subprocess
 
-
+from . import logger
 from ..util.icon import Icon
 
 
@@ -28,7 +27,7 @@ class BaseRuntime:
         self._streamreader = None
         atexit.register(self.close)
 
-        logging.info('launching %s' % self.__class__.__name__)
+        logger.info('launching %s' % self.__class__.__name__)
         self._launch()
 
     def close(self):
@@ -128,7 +127,7 @@ class StreamReader(threading.Thread):
                 continue  # nodejs stubs
             msgs.append(msg)
             msgs[:-32] = []
-            logging.debug('webruntime: ' + msg)
+            logger.debug('from runtime: ' + msg)
 
         if self._exit:
             return  # might be interpreter shutdown, don't print
@@ -140,12 +139,12 @@ class StreamReader(threading.Thread):
 
         # Notify
         code = self._process.poll()
-        if hasattr(self._process, 'we_closed_it') and self._process.we_closed_it:
-            logging.info('runtime process terminated by us')
+        if getattr(self._process, 'we_closed_it', False):
+            logger.info('runtime process terminated by us')
         elif not code:
-            logging.info('runtime process stopped')
+            logger.info('runtime process stopped')
         else:
-            logging.error('runtime process stopped (%i), stdout:\n%s' %
+            logger.error('runtime process stopped (%i), stdout:\n%s' %
                           (code, '\n'.join(msgs)))
 
 
