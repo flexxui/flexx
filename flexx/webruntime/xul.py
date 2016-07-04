@@ -31,10 +31,10 @@ import os
 import sys
 import time
 import shutil
-import logging
 import subprocess
 import os.path as op
 
+from . import logger
 from .common import DesktopRuntime, create_temp_app_dir, appdata_dir
 
 # todo: title should change with title of web page?
@@ -44,6 +44,8 @@ from .common import DesktopRuntime, create_temp_app_dir, appdata_dir
 
 ## File templates
 
+# The Profile setting makes all apps use the same dummy profile (see issue #150)
+
 APPLICATION_INI = """
 [App]
 Vendor={vendor}
@@ -51,6 +53,7 @@ Name={name}
 Version={version}
 BuildID={buildid}
 ID={id}
+Profile=flexx_xul_stub_profile
 
 [Gecko]
 MinVersion=1.8
@@ -235,7 +238,7 @@ def copy_xul_runtime(dir1, dir2):
             if op.isfile(exe):
                 break
         shutil.copy2(exe, op.join(dir2, 'xulrunner' + ext))
-        logging.info('Copied firefox (in %1.2f s)' % (time.time()-t0))
+        logger.info('Copied firefox (in %1.2f s)' % (time.time()-t0))
     except Exception:
         # Clean up
         shutil.rmtree(dir2)
@@ -307,8 +310,8 @@ class XulRuntime(DesktopRuntime):
     def _check_compat(self):
         qts = 'PySide', 'PyQt4', 'PyQt5'
         if any([name+'.QtCore' in sys.modules for name in qts]):
-            logging.warn("Using Flexx' Xul runtime and Qt (PySide/PyQt4/PyQt5) "
-                         "together may cause problems.")
+            logger.warn("Using Flexx' Xul runtime and Qt (PySide/PyQt4/PyQt5) "
+                        "together may cause problems.")
 
     def _create_xul_app(self, path, id, **kwargs):
         """ Create the files that determine the XUL app to launch.
@@ -316,7 +319,7 @@ class XulRuntime(DesktopRuntime):
 
         # Dict with all values that are injected in the file templates
         # All values can be overriden via kwargs
-        D = dict(vendor='None',
+        D = dict(vendor='Flexx',
                  name='flexx_ui_app',
                  version='1.0',
                  buildid='1',
@@ -410,7 +413,7 @@ class XulRuntime(DesktopRuntime):
         # Clean up old runtimes (do before installing new ff, because
         # we may be "updating" it)
         for dname in (obsolete + dnames[:-1]):
-            logging.info('Clearing XUL runtime at %s' % dname)
+            logger.info('Clearing XUL runtime at %s' % dname)
             try:
                 shutil.rmtree(op.join(xuldir, dname))
             except (OSError, IOError):
@@ -459,7 +462,7 @@ class XulRuntime(DesktopRuntime):
         that the runtime process shows up in the task manager with the
         correct exe_name.
 
-        * xul_exe: the location of the xul executbale (can be a symlink)
+        * xul_exe: the location of the xul executable (can be a symlink)
         * app_path: the location of the xul app (the application.ini etc.)
 
         """

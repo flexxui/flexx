@@ -4,8 +4,8 @@ Opens browser via webbrowser module.
 """
 
 import webbrowser
-import logging
 
+from . import logger
 from .common import BaseRuntime
 
 
@@ -75,8 +75,8 @@ class BrowserRuntime(BaseRuntime):
             return
         
         if errors:
-            logging.warn('Given browser %r not valid/available;\n'
-                         'Falling back to the default browser.' % type)
+            logger.warn('Given browser %r not valid/available;\n'
+                        'Falling back to the default browser.' % type)
         
         # Run default
         webbrowser.open(url)

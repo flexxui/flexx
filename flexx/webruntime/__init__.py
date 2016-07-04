@@ -36,6 +36,10 @@ Memory considerations
 
 """
 
+import logging
+logger = logging.getLogger(__name__)
+del logging
+
 from .. import config
 
 from .common import BaseRuntime, DesktopRuntime  # noqa
