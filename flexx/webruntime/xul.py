@@ -44,6 +44,8 @@ from .common import DesktopRuntime, create_temp_app_dir, appdata_dir
 
 ## File templates
 
+# The Profile setting makes all apps use the same dummy profile (see issue #150)
+
 APPLICATION_INI = """
 [App]
 Vendor={vendor}
@@ -51,6 +53,7 @@ Name={name}
 Version={version}
 BuildID={buildid}
 ID={id}
+Profile=flexx_xul_stub_profile
 
 [Gecko]
 MinVersion=1.8
@@ -316,7 +319,7 @@ class XulRuntime(DesktopRuntime):
 
         # Dict with all values that are injected in the file templates
         # All values can be overriden via kwargs
-        D = dict(vendor='None',
+        D = dict(vendor='Flexx',
                  name='flexx_ui_app',
                  version='1.0',
                  buildid='1',
@@ -459,7 +462,7 @@ class XulRuntime(DesktopRuntime):
         that the runtime process shows up in the task manager with the
         correct exe_name.
 
-        * xul_exe: the location of the xul executbale (can be a symlink)
+        * xul_exe: the location of the xul executable (can be a symlink)
         * app_path: the location of the xul app (the application.ini etc.)
 
         """
