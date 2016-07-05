@@ -15,6 +15,10 @@ Functions related to the event loop
 
 .. autofunction:: flexx.app.call_later
 
+.. autofunction:: flexx.app.create_server
+
+.. autofunction:: flexx.app.get_current_server
+
 
 Functions related to us Model classes as apps
 ---------------------------------------------

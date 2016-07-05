@@ -5,18 +5,24 @@ can be generalized.
 
 import json
 import time
+import socket
 import traceback
 from urllib.parse import urlparse
 # from concurrent.futures import ThreadPoolExecutor
 
 import tornado.web
-import tornado.ioloop
 import tornado.websocket
+import tornado.httpserver
+from tornado.ioloop import IOLoop
 from tornado import gen
+from tornado import netutil
 
 from .session import manager, valid_app_name
 from .assetstore import assets
 from . import logger
+
+if tornado.version_info < (4, ):
+    raise RuntimeError('Flexx requires Tornado v4.0 or higher.')
 
 # todo: threading, or even multi-process
 #executor = ThreadPoolExecutor(4)
@@ -27,103 +33,152 @@ BINARY = False
 
 class AbstractServer:
     """ This is an attempt to generalize the server, so that in the
-    future we may have e.g. a Pyramid server.
+    future we may have e.g. a Flask or Pyramid server.
     
     A server must implement this, and use the manager to instantiate,
-    connect and disconnect proxies. The assets object must be used to
+    connect and disconnect sessions. The assets object must be used to
     server assets to the client.
+    
+    Arguments:
+        host (str): the hostname to serve at
+        port (int): the port to serve at. None or 0 mean to autoselect a port.
     """
     
-    def open(self, host, port):
-        """ Open the connection as a host. If port is None, auto-select one. """
-        raise NotImplementedError()
+    def __init__(self, host, port):
+        self._open(host, port)
+        # Check that subclass set private variables
+        assert self._serving
+        self._running = False
     
     def start(self):
         """ Start the event loop. """
-        raise NotImplementedError()
+        if not self._serving:
+            raise RuntimeError('Cannot start a closed server!')
+        if self._running:
+            raise RuntimeError('Cannot start a running server.')
+        self._running = True
+        try:
+            self._start()
+        finally:
+            self._running = False
     
     def stop(self):
-        """ Stop the event loop. """
+        """ Stop the event loop. This does not close the connection; the server
+        can be restarted. Thread safe. """
+        self.call_later(0, self._stop)
+    
+    def close(self):
+        """ Close the connection. A closed server cannot be used again. """
+        if self._running:
+            raise RuntimeError('Cannot close a running server; need to stop first.')
+        self._serving = None
+        self._close()
+    
+    def _open(self, host, port):
         raise NotImplementedError()
     
+    def _start(self):
+        raise NotImplementedError()
+    
+    def _stop(self):
+        raise NotImplementedError()
+    
+    def _close(self):
+        raise NotImplementedError()
+    
+    # This method must be implemented directly for performance (its used a lot)
     def call_later(self, delay, callback, *args, **kwargs):
         """ Call a function in a later event loop iteration. """
         raise NotImplementedError()
     
     @property
-    def native(self):
-        """ Get the native server object (e.g. the Tornado Application). """
-        return self._native
+    def serving(self):
+        """ Get a tuple (hostname, port) that is being served. """
+        return self._serving
 
 
 class TornadoServer(AbstractServer):
     """ Flexx Server implemented in Tornado.
     """
     
-    def __init__(self):
-        self._native = None
-        self._loop = None
-        self._call_laters = []
-    
-    def open(self, host, port):
+    def _open(self, host, port):
         
-        # Check that its not already running
-        if self._native is not None:
-            # return
-            raise RuntimeError('flexx server is already hosting.')
+        # Get the current ioloop for the current thread
+        self._loop = tornado.ioloop.IOLoop.current()
         
-        # Create server
-        self._native = tornado.web.Application([(r"/(.*)/ws", WSHandler), 
-                                                (r"/(.*)", MainHandler), ])
+        # Create tornado application
+        self._app = tornado.web.Application([(r"/(.*)/ws", WSHandler), 
+                                             (r"/(.*)", MainHandler), ])
+        # Create tornado server. It will bind to the ioloop on calling listen or 
+        self._server = tornado.httpserver.HTTPServer(self._app)
         
         # Start server (find free port number if port not given)
         if port:
-            port = int(port)
-            self._native.listen(port, host)
+            # Turn port into int, use hashed port number if a string was given
+            try:
+                port = int(port)
+            except ValueError:
+                port = port_hash(port)
+            self._server.listen(port, host)
         else:
-            for i in range(100):
-                port = port_hash('flexx%i' % i)
+            # Try N ports in a repeatable range (easier, browser history, etc.)
+            prefered_port = port_hash('Flexx')
+            for i in range(8):
+                port = prefered_port + i
                 try:
-                    self._native.listen(port, host)
+                    self._server.listen(port, host)
                     break
                 except OSError:
                     pass  # address already in use
             else:
-                raise RuntimeError('Could not bind to free address')    
+                # Ok, let Tornado figure out a port
+                [sock] = netutil.bind_sockets(None, host, family=socket.AF_INET)
+                self._server.add_sockets([sock])
+                port = sock.getsockname()[1]
         
         # Notify address, so its easy to e.g. copy and paste in the browser
-        self.serving_at = self._native.serving_at = host, port
+        self._serving = self._app._flexx_serving = host, port
         logger.info('Serving apps at http://%s:%i/' % (host, port))
     
-    def start(self):
-        # Get the current ioloop for the current thread
-        self._loop = tornado.ioloop.IOLoop.current()
-        # Submit any pending call_laters
-        while self._call_laters:
-            delay, callback, args, kwargs = self._call_laters.pop(0)
-            self.call_later(delay, callback, *args, **kwargs)
-        # Start event loop
-        if not getattr(self._loop, '_running', False):
+    def _start(self):
+        # Start event loop - make use of the semi-standard defined by IPython
+        # to determine if the ioloop is "hijacked" (e.g. in Pyzo).
+        # There is no public way to determine if a loop is already running,
+        # but the AbstractServer class keeps track of this.
+        loop = IOLoop.current()
+        if loop is not self._loop:
+            raise RuntimeError('Server must start from same thread it was created in.')
+        if not getattr(self._loop, '_in_event_loop', False):
             self._loop.start()
     
-    def stop(self):
-        """ Stop the server. Thread-safe.
-        """
+    def _stop(self):
         # todo: explicitly close all websocket connections
         logger.debug('Stopping Tornado server')
-        self._loop.add_callback(self._loop.stop)
+        self._loop.stop()
+    
+    def _close(self):
+        self._server.stop()
     
     def call_later(self, delay, callback, *args, **kwargs):
-        if self._loop is None:
-            self._call_laters.append((delay, callback, args, kwargs))
-        elif delay <= 0:
+        if delay <= 0:
             self._loop.add_callback(callback, *args, **kwargs)
         else:
-            self._loop.add_timeout(self._loop.time() + delay, callback, *args, **kwargs)
-            #self._loop.call_later(delay, callback, *args, **kwargs)  # v4.0+
-
-# Create server instance
-server = TornadoServer()
+            self._loop.call_later(delay, callback, *args, **kwargs)
+    
+    @property
+    def app(self):
+        """ The Tornado Application object being used."""
+        return self._app
+    
+    @property
+    def loop(self):
+        """ The Tornado IOLoop object being used."""
+        return self._loop
+    
+    @property
+    def server(self):
+        """ The Tornado HttpServer object being used."""
+        return self._server
 
 
 def port_hash(name):
@@ -186,14 +241,15 @@ class MainHandler(tornado.web.RequestHandler):
                 return
             
             if file_name == 'info':
-                info = dict(address=self.application.serving_at,
+                info = dict(address=self.application._flexx_serving,
                             app_names=manager.get_app_names(),
                             nsessions=sum([len(manager.get_connections(x))
                                            for x in manager.get_app_names()]),
                             )
                 self.write(json.dumps(info))
             elif file_name == 'stop':
-                server.stop()
+                loop = IOLoop.current()
+                loop.add_callback(loop.stop)
             else:
                 self.write('unknown command')
         
@@ -316,7 +372,8 @@ class MessageCounter:
         logger.debug('Websocket messages per second: %1.1f' % (n / T))
         
         if not self._stop:
-            server.call_later(self._notify_interval, self._notify)
+            loop = IOLoop.current()
+            loop.call_later(self._notify_interval, self._notify)
     
     def stop(self):
         self._stop = True
@@ -353,10 +410,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         
         logger.debug('New websocket connection %s' % path)
         if manager.has_app_name(self.app_name):
-            if tornado.version_info < (4, ):
-                tornado.ioloop.IOLoop.current().add_callback(self.pinger)
-            else:
-                tornado.ioloop.IOLoop.current().spawn_callback(self.pinger)
+            IOLoop.current().spawn_callback(self.pinger)
         else:
             self.close(1003, "Could not associate socket with an app.")
     
@@ -434,7 +488,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     def check_origin(self, origin):
         """ Handle cross-domain access; override default same origin policy.
         """
-        host, port = self.application.serving_at  # set by us
+        host, port = self.application._flexx_serving  # set by us
         incoming_host = urlparse(origin).hostname
         if host == 'localhost':
             return True  # Safe

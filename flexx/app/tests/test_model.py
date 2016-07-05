@@ -196,6 +196,10 @@ def test_get_instance_by_id():
 
 def test_active_models():
     
+    ioloop = tornado.ioloop.IOLoop()
+    ioloop.make_current()
+    app.create_server(port=0)
+    
     # This test needs a default session
     session = app.manager.get_default_session()
     if session is None:
@@ -210,7 +214,6 @@ def test_active_models():
         assert _get_active_models() == [m]
     
     # Can do this
-    ioloop = tornado.ioloop.IOLoop.instance()
     ioloop.run_sync(lambda x=None: None)
     
     

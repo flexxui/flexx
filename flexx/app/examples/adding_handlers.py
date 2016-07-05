@@ -40,7 +40,7 @@ class MyAPIHandler(tornado.web.RequestHandler):
 
 
 # Get a ref to the tornado.web.Application object
-tornado_app = app.init().native
+tornado_app = app.get_current_server().app
 
 # Add our handler
 tornado_app.add_handlers(r".*", [(r"/about", MyAboutHandler),
