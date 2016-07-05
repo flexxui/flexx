@@ -11,113 +11,129 @@ from .. import webruntime, config, set_log_level
 from . import model, logger
 from .model import Model
 from .session import manager
-from .tornadoserver import server
-
-# Make event system use of Tornado
+from .tornadoserver import TornadoServer
 from ..event import _loop
-_loop.loop.integrate_tornado()
-
 
 reprs = json.dumps
 
 ## Main loop functions
 
 
-def init(**kwargs):
-    """ Initialize (bind) the server and return the server object.
-    
-    As a user, you typically do not need this function, as it is
-    automatically called by start() and run(). If called without
-    arguments, this function can safely be called multiple times.
-    
-    The returned server object is a small wrapper around a native server
-    object (available through ``server_object.native``). For now this
-    is always a Tornado Application, but in the future other types of
-    servers (e.g. Flask) may be supported.
+# There is always a single current server (except initially there is None)
+_current_server = None
+
+
+def create_server(host=None, port=None, backend='tornado'):
+    """
+    Create a new server object. Flexx uses a notion of a single current
+    server object. This function creates that object. If there already
+    was a server object, it is replaced. If is an error to call this
+    function if the current server is still running.
     
     Arguments:
-        args: currently unused. Arguments may be added at a later time (e.g.
-            to chose between different server backends).
         host (str): The hostname to serve on. By default
             ``flexx.config.hostname`` is used.
         port (int, str): The port number. If a string is given, it is
             hashed to an ephemeral port number. By default
             ``flexx.config.hostname`` is used.
+        backend (str): Stub argument; only Tornado is currently supported.
+    
+    Returns:
+        server: The server object, see ``get_current_server()``.
     """
-    def _getargs(host=None, port=None):
-        return host, port
-    host, port = _getargs(**kwargs)
-    # If already hosting, return or error
-    if getattr(server, '_is_hosting', False):
-        if host is None and port is None:
-            return server
-        else:
-            raise RuntimeError('Already hosting')
+    global _current_server
+    if backend.lower() != 'tornado':
+        raise RuntimeError('Flexx server can only run on Tornado (for now).')
     # Handle defaults
     if host is None:
         host = config.hostname
     if port is None:
         port = config.port
+    # Stop old server
+    if _current_server:
+        _current_server.close()
     # Start hosting
-    server.open(host, port)
-    server._is_hosting = True
-    return server
+    _current_server = TornadoServer(host, port)
+    return _current_server
 
 
-def start(host=None, port=None):
-    """ Start the server and event loop if not already running.
-    
-    This function generally does not return until the application is
-    stopped, although it will try to behave nicely in interactive
-    environments (e.g. Spyder, IEP, Jupyter notebook), so the caller
-    should take into account that the function may return immediately.
-    
-    If not given, the host and port specified by the config are used, e.g.
-    from environment variables FLEXX_HOSTNAME and FLEXX_PORT.
-    
-    Arguments:
-        host (str): The hostname to serve on. By default
-            ``flexx.config.hostname`` is used.
-        port (int, str): The port number. If a string is given, it is
-            hashed to an ephemeral port number. By default
-            ``flexx.config.hostname`` is used.
+def get_current_server():
     """
-    # Get server up
-    init(host=host, port=port)
-    # Start event loop
+    Get the current server object. Creates a server if there is none.
+    Currently, this is always a TornadoServer object, which has properties:
+    
+    * serving: a tuple ``(hostname, port)`` specifying the location being served,
+      or ``None`` if not servering yet/anymore.
+    * app: the ``tornado.web.Application`` instance
+    * loop: the ``tornado.ioloop.IOLoop`` instance
+    * server: the ``tornado.httpserver.HttpServer`` instance
+    """
+    if not _current_server:
+        create_server()
+    return _current_server
+
+
+def start():
+    """
+    Start the server and event loop. This function generally does not
+    return until the application is stopped (although it may in
+    interactive environments (e.g. Pyzo)). If ``create_server()`` was
+    explicitly called, ``start()`` must be called from the same thread,
+    otherwise an error is raised.
+    """
+    server = get_current_server()
     logger.info('Starting Flexx event loop.')
     server.start()
 
 
 def run():
-    """ Start the event loop if not already running, for desktop apps.
-    
-    In contrast to ``start()``, when the server is started this way,
-    it will close down when there are no more connections.
     """
+    Start the event loop in desktop app mode; the server will close
+    down when there are no more connections.
+    """
+    server = get_current_server()
     server._auto_stop = True
     return start()
 
 
 def stop():
-    """ Stop the event loop
     """
+    Stop the event loop. This function is thread safe (it can be used
+    even if ``flexx.start()`` was called from another thread). 
+    The server can be restarted after it has been stopped. Note that
+    calling ``stop()`` too often will cause a subsequent call to `start()``
+    to return almost immediately.
+    """
+    server = get_current_server()
     server.stop()
 
 
 def call_later(delay, callback, *args, **kwargs):
     """ Call the given callback after delay seconds. If delay is zero, 
     call in the next event loop iteration.
+    
+    Arguments:
+        delay (float): the delay in seconds. If zero, the callback will
+            be executed in the next event loop iteration.
+        callback (callable): the function to call.
+        args: the positional arguments to call the callback with.
+        kwargs: the keyword arguments to call the callback with.
     """
+    server = get_current_server()
     server.call_later(delay, callback, *args, **kwargs)
 
-model.call_later = call_later  # Work around circular dependency
+
+# Work around circular dependency
+model.call_later = call_later
+
+# Integrate the "event-loop" of flexx.event
+_loop.loop.integrate(lambda f: get_current_server().call_later(0, f))
 
 
-server._auto_stop = False
 @manager.connect('connections_changed')
 def _auto_closer(*events):
-    if not server._auto_stop:
+    server = get_current_server()
+    if not getattr(server, '_auto_stop', False):
         return
     for name in manager.get_app_names():
         proxies = manager.get_connections(name)
@@ -150,8 +166,8 @@ def _deprecated_init_interactive(runtime=None, **runtime_kwargs):
         session._set_app(ui.Widget(is_app=True))
     
     # Launch web runtime, the server will wait for the connection
-    init()
-    host, port = server.serving_at
+    server = get_current_server()
+    host, port = server.serving
     if runtime == 'nodejs':
         all_js = session.get_js_only()
         url = '%s:%i/%s/' % (host, port, session.app_name)
@@ -242,8 +258,8 @@ def init_notebook():
     
     # Open server - the notebook helper takes care of the JS resulting
     # from running a cell, but any interaction goes over the websocket.
-    init()
-    host, port = server.serving_at
+    server = get_current_server()
+    host, port = server.serving
     asset_elements = session.get_assets_as_html()
     
     # Compose HTML to inject
@@ -298,8 +314,8 @@ def launch(cls, runtime=None, **runtime_kwargs):
     session = manager.create_session(cls.__name__)
     
     # Launch web runtime, the server will wait for the connection
-    init()
-    host, port = server.serving_at
+    server = get_current_server()
+    host, port = server.serving
     if runtime == 'nodejs':
         all_js = session.get_js_only()
         url = '%s:%i/%s/' % (host, port, session.app_name)

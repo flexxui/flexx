@@ -81,7 +81,7 @@ class Loop:
         """ Integrate with tornado.
         """
         import tornado.ioloop
-        loop = tornado.ioloop.IOLoop.instance()
+        loop = tornado.ioloop.IOLoop.current()
         self._calllaterfunc = loop.add_callback
         logger.debug('Flexx event loop integrated with Tornado')
     

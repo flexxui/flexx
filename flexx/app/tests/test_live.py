@@ -5,6 +5,8 @@ import os
 import time
 import sys
 
+import tornado
+
 from flexx import app, event, webruntime
 from flexx.pyscript import this_is_js
 
@@ -19,6 +21,12 @@ TIMEOUT2 = 1.0
 
 
 def runner(cls):
+    
+    # Run with a fresh server
+    loop = tornado.ioloop.IOLoop()
+    loop.make_current()
+    app.create_server(port=0)
+    
     t = app.launch(cls, 'xul')  # fails somehow with XUL
     t.test_init()
     t.test_set_result()
