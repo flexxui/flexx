@@ -7,10 +7,10 @@ should generally only be done from a single thread. Event handlers
 are *always* called from the same thread that runs the event loop
 (unless manually called).
 
-The app.create_server() is used to (re)create the server object, binding
-it to the ioloop of the current thread. Note that app.start() must be
-called from that same thread.
-
+The app.create_server() is used to (re)create the server object. It is
+important that the used IOLoop is local to the thread. This can be
+accomplished by calling create_server() and start() from the same
+thread, or using ``new_loop=True`` (as is done here).
 """
 
 import time
@@ -32,13 +32,9 @@ class MyModel1(event.HasEvents):
 # Create model in main thread
 model = MyModel1()
 
-def main():
-    app.create_server()
-    model.foo = 2  # Probably a bad idea to set props from both threads
-    app.start()
-
-# Start Flexx server in new thread
-t = threading.Thread(target=main)
+# Start server in its own thread
+app.create_server(new_loop=True)
+t = threading.Thread(target=app.start)
 t.start()
 
 # Manipulate model from main thread (the model's on_foo() gets called from other thread)
