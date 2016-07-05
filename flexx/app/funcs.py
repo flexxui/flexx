@@ -25,10 +25,13 @@ _current_server = None
 
 def create_server(host=None, port=None, backend='tornado'):
     """
-    Create a new server object. Flexx uses a notion of a single current
-    server object. This function creates that object. If there already
-    was a server object, it is replaced. If is an error to call this
-    function if the current server is still running.
+    Create a new server object. This is automatically called; for common
+    use this is not needed.
+    
+    Flexx uses a notion of a single current server object. This function
+    creates that object. If there already was a server object, it is
+    replaced. If is an error to call this function if the current server
+    is still running.
     
     Arguments:
         host (str): The hostname to serve on. By default

@@ -147,7 +147,7 @@ class TornadoServer(AbstractServer):
         # but the AbstractServer class keeps track of this.
         loop = IOLoop.current()
         if loop is not self._loop:
-            raise RuntimeError('Server must be started from the same thread it was created in.')
+            raise RuntimeError('Server must start from same thread it was created in.')
         if not getattr(self._loop, '_in_event_loop', False):
             self._loop.start()
     
