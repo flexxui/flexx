@@ -304,7 +304,8 @@ def test_flexx_multiprocessing():
     
     processes = []
     for i in range(10):
-        p = multiprocessing.Process(target=multiprocessing_func, daemon=True)
+        p = multiprocessing.Process(target=multiprocessing_func)
+        p.daemon = True
         p.start()
         processes.append(p)
     
