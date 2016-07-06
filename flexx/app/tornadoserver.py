@@ -7,6 +7,7 @@ import json
 import time
 import socket
 import traceback
+import threading
 from urllib.parse import urlparse
 # from concurrent.futures import ThreadPoolExecutor
 
@@ -29,6 +30,11 @@ if tornado.version_info < (4, ):
 
 # Use a binary websocket or not?
 BINARY = False
+
+
+def is_main_thread():
+    """ Get whether this is the main thread. """
+    return isinstance(threading.current_thread(), threading._MainThread)
 
 
 class AbstractServer:
@@ -101,16 +107,25 @@ class TornadoServer(AbstractServer):
     """ Flexx Server implemented in Tornado.
     """
     
+    def __init__(self, host, port, new_loop):
+        self._new_loop = new_loop
+        super().__init__(host, port)
+    
     def _open(self, host, port):
         
-        # Get the current ioloop for the current thread
-        self._loop = tornado.ioloop.IOLoop.current()
+        # Get a new ioloop or the current ioloop for this thread
+        if self._new_loop:
+            self._loop = IOLoop()
+        else:
+            self._loop = IOLoop.current(instance=is_main_thread())
+            if self._loop is None:
+                self._loop = IOLoop(make_current=True)
         
         # Create tornado application
         self._app = tornado.web.Application([(r"/(.*)/ws", WSHandler), 
                                              (r"/(.*)", MainHandler), ])
-        # Create tornado server. It will bind to the ioloop on calling listen or 
-        self._server = tornado.httpserver.HTTPServer(self._app)
+        # Create tornado server, bound to our own ioloop
+        self._server = tornado.httpserver.HTTPServer(self._app, io_loop=self._loop)
         
         # Start server (find free port number if port not given)
         if port:
@@ -141,13 +156,15 @@ class TornadoServer(AbstractServer):
         logger.info('Serving apps at http://%s:%i/' % (host, port))
     
     def _start(self):
-        # Start event loop - make use of the semi-standard defined by IPython
-        # to determine if the ioloop is "hijacked" (e.g. in Pyzo).
-        # There is no public way to determine if a loop is already running,
-        # but the AbstractServer class keeps track of this.
-        loop = IOLoop.current()
-        if loop is not self._loop:
-            raise RuntimeError('Server must start from same thread it was created in.')
+        # Ensure that our loop is the current loop for this thread
+        if self._new_loop:
+            self._loop.make_current()
+        elif IOLoop.current(instance=is_main_thread()) is not self._loop:
+            raise RuntimeError('Server must use ioloop that is current to this thread.')
+        # Make use of the semi-standard defined by IPython to determine
+        # if the ioloop is "hijacked" (e.g. in Pyzo). There is no public
+        # way to determine if a loop is already running, but the
+        # AbstractServer class keeps track of this.
         if not getattr(self._loop, '_in_event_loop', False):
             self._loop.start()
     

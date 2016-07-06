@@ -23,14 +23,15 @@ reprs = json.dumps
 _current_server = None
 
 
-def create_server(host=None, port=None, backend='tornado'):
+def create_server(host=None, port=None, new_loop=False, backend='tornado'):
     """
-    Create a new server object. This is automatically called; for common
-    use this is not needed.
+    Create a new server object. This is automatically called; users generally
+    don't need this, unless they want to explicitly specify host/port,
+    create a fresh server in testing scenarios, or run Flexx in a thread.
     
     Flexx uses a notion of a single current server object. This function
-    creates that object. If there already was a server object, it is
-    replaced. If is an error to call this function if the current server
+    (re)creates that object. If there already was a server object, it is
+    replaced. It is an error to call this function if the current server
     is still running.
     
     Arguments:
@@ -38,11 +39,14 @@ def create_server(host=None, port=None, backend='tornado'):
             ``flexx.config.hostname`` is used.
         port (int, str): The port number. If a string is given, it is
             hashed to an ephemeral port number. By default
-            ``flexx.config.hostname`` is used.
+            ``flexx.config.port`` is used.
+        new_loop (bool): Whether to create a fresh Tornado IOLoop instance,
+            which is made current when ``start()`` is called. If ``False``
+            (default) will use the current IOLoop for this thread.
         backend (str): Stub argument; only Tornado is currently supported.
     
     Returns:
-        server: The server object, see ``get_current_server()``.
+        server: The server object, see ``current_server()``.
     """
     global _current_server
     if backend.lower() != 'tornado':
@@ -56,17 +60,17 @@ def create_server(host=None, port=None, backend='tornado'):
     if _current_server:
         _current_server.close()
     # Start hosting
-    _current_server = TornadoServer(host, port)
+    _current_server = TornadoServer(host, port, new_loop)
     return _current_server
 
 
-def get_current_server():
+def current_server():
     """
     Get the current server object. Creates a server if there is none.
     Currently, this is always a TornadoServer object, which has properties:
     
-    * serving: a tuple ``(hostname, port)`` specifying the location being served,
-      or ``None`` if not servering yet/anymore.
+    * serving: a tuple ``(hostname, port)`` specifying the location
+      being served (or ``None`` if the server is closed).
     * app: the ``tornado.web.Application`` instance
     * loop: the ``tornado.ioloop.IOLoop`` instance
     * server: the ``tornado.httpserver.HttpServer`` instance
@@ -80,11 +84,9 @@ def start():
     """
     Start the server and event loop. This function generally does not
     return until the application is stopped (although it may in
-    interactive environments (e.g. Pyzo)). If ``create_server()`` was
-    explicitly called, ``start()`` must be called from the same thread,
-    otherwise an error is raised.
+    interactive environments (e.g. Pyzo)).
     """
-    server = get_current_server()
+    server = current_server()
     logger.info('Starting Flexx event loop.')
     server.start()
 
@@ -94,7 +96,7 @@ def run():
     Start the event loop in desktop app mode; the server will close
     down when there are no more connections.
     """
-    server = get_current_server()
+    server = current_server()
     server._auto_stop = True
     return start()
 
@@ -107,13 +109,14 @@ def stop():
     calling ``stop()`` too often will cause a subsequent call to `start()``
     to return almost immediately.
     """
-    server = get_current_server()
+    server = current_server()
     server.stop()
 
 
 def call_later(delay, callback, *args, **kwargs):
-    """ Call the given callback after delay seconds. If delay is zero, 
-    call in the next event loop iteration.
+    """
+    Schedule a function call in the current event loop. This function is
+    thread safe.
     
     Arguments:
         delay (float): the delay in seconds. If zero, the callback will
@@ -122,7 +125,7 @@ def call_later(delay, callback, *args, **kwargs):
         args: the positional arguments to call the callback with.
         kwargs: the keyword arguments to call the callback with.
     """
-    server = get_current_server()
+    server = current_server()
     server.call_later(delay, callback, *args, **kwargs)
 
 
@@ -130,12 +133,12 @@ def call_later(delay, callback, *args, **kwargs):
 model.call_later = call_later
 
 # Integrate the "event-loop" of flexx.event
-_loop.loop.integrate(lambda f: get_current_server().call_later(0, f))
+_loop.loop.integrate(lambda f: current_server().call_later(0, f))
 
 
 @manager.connect('connections_changed')
 def _auto_closer(*events):
-    server = get_current_server()
+    server = current_server()
     if not getattr(server, '_auto_stop', False):
         return
     for name in manager.get_app_names():
@@ -169,7 +172,7 @@ def _deprecated_init_interactive(runtime=None, **runtime_kwargs):
         session._set_app(ui.Widget(is_app=True))
     
     # Launch web runtime, the server will wait for the connection
-    server = get_current_server()
+    server = current_server()
     host, port = server.serving
     if runtime == 'nodejs':
         all_js = session.get_js_only()
@@ -261,7 +264,7 @@ def init_notebook():
     
     # Open server - the notebook helper takes care of the JS resulting
     # from running a cell, but any interaction goes over the websocket.
-    server = get_current_server()
+    server = current_server()
     host, port = server.serving
     asset_elements = session.get_assets_as_html()
     
@@ -317,7 +320,7 @@ def launch(cls, runtime=None, **runtime_kwargs):
     session = manager.create_session(cls.__name__)
     
     # Launch web runtime, the server will wait for the connection
-    server = get_current_server()
+    server = current_server()
     host, port = server.serving
     if runtime == 'nodejs':
         all_js = session.get_js_only()

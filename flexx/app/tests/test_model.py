@@ -196,9 +196,7 @@ def test_get_instance_by_id():
 
 def test_active_models():
     
-    ioloop = tornado.ioloop.IOLoop()
-    ioloop.make_current()
-    app.create_server(port=0)
+    ioloop = app.create_server(port=0, new_loop=True).loop
     
     # This test needs a default session
     session = app.manager.get_default_session()
