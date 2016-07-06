@@ -404,7 +404,10 @@ class Widget(Model):
                 self.outernode.parentNode.removeChild(self.outernode)
             # Attach
             if id:
-                el = window.document.getElementById(id)
+                if id == 'body':
+                    el = window.document.body
+                else:
+                    el = window.document.getElementById(id)
                 self.phosphor.attach(el)
                 window.addEventListener('resize', lambda: (self.phosphor.update(),
                                                            self._check_real_size()))
