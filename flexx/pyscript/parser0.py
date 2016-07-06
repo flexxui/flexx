@@ -75,6 +75,13 @@ UMD = """
 """.lstrip()  # "dep", require("dep"), name, root.dep, dep
 
 
+UMD_LIGHT = """
+(function (root, factory) {
+    root.%s = factory();
+}(this, function () {
+""".lstrip()
+
+
 def get_module_preamble(name, deps):
     """ Wrap code in a module compatible with UMD (Universal Module
     Definition), making it work with AMD (i.e. require), Node, plain
@@ -252,7 +259,10 @@ class Parser0:
             exports = [name for name in sorted(ns) if not name.startswith('_')]
             export_keyvals = [reprs(name) + ': ' + name for name in exports]
             code = self._parts
-            code.insert(0, get_module_preamble(module, []))
+            if module.endswith('+'):  # todo: document - proper UMD
+                code.insert(0, get_module_preamble(module[:-1], []))
+            else:  # Light module
+                code.insert(0, UMD_LIGHT % module)
             code.append('\n    return {%s};\n' % ', '.join(export_keyvals))
             code.append('}));\n')
             

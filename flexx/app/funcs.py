@@ -245,22 +245,24 @@ def init_notebook():
     session = manager.get_default_session()
     if session is None:
         session = manager.create_default_session()
-    if hasattr(session, '_init_notebook_done'):
+    if getattr(session, 'init_notebook_done', False):
         display(HTML("<i>Flexx already loaded</i>"))
         return  # Don't inject twice
     else:
-        session._init_notebook_done = True
+        session.init_notebook_done = True  # also used in assetstore
     
     # Install helper to make things work in exported notebooks
     NoteBookHelper(session)
     
-    # Load assets
+    # Try loading assets for flexx.ui. This will only work if flexx.ui
+    # is imported. This is not strictly necessary, since Flexx can
+    # dynamically load the assets, but it seems nicer to do it here.
     try:
         session.use_global_asset('phosphor-all.js')
         session.use_global_asset('flexx-ui.css')
         session.use_global_asset('flexx-ui.js')
     except IndexError:
-        pass  # Ok if it fails; assets can be loaded dynamically.
+        pass
     
     # Open server - the notebook helper takes care of the JS resulting
     # from running a cell, but any interaction goes over the websocket.
