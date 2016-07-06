@@ -117,7 +117,7 @@ class TornadoServer(AbstractServer):
         if self._new_loop:
             self._loop = IOLoop()
         else:
-            self._loop = IOLoop.current(is_main_thread())
+            self._loop = IOLoop.current(instance=is_main_thread())
             if self._loop is None:
                 self._loop = IOLoop(make_current=True)
         
@@ -159,7 +159,7 @@ class TornadoServer(AbstractServer):
         # Ensure that our loop is the current loop for this thread
         if self._new_loop:
             self._loop.make_current()
-        elif IOLoop.current(is_main_thread()) is not self._loop:
+        elif IOLoop.current(instance=is_main_thread()) is not self._loop:
             raise RuntimeError('Server must use ioloop that is current to this thread.')
         # Make use of the semi-standard defined by IPython to determine
         # if the ioloop is "hijacked" (e.g. in Pyzo). There is no public

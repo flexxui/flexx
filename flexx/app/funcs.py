@@ -25,12 +25,13 @@ _current_server = None
 
 def create_server(host=None, port=None, new_loop=False, backend='tornado'):
     """
-    Create a new server object. This is automatically called; for common
-    use this is not needed.
+    Create a new server object. This is automatically called; users generally
+    don't need this, unless they want to explicitly specify host/port,
+    create a fresh server in testing scenarios, or run Flexx in a thread.
     
     Flexx uses a notion of a single current server object. This function
-    creates that object. If there already was a server object, it is
-    replaced. If is an error to call this function if the current server
+    (re)creates that object. If there already was a server object, it is
+    replaced. It is an error to call this function if the current server
     is still running.
     
     Arguments:
@@ -38,7 +39,7 @@ def create_server(host=None, port=None, new_loop=False, backend='tornado'):
             ``flexx.config.hostname`` is used.
         port (int, str): The port number. If a string is given, it is
             hashed to an ephemeral port number. By default
-            ``flexx.config.hostname`` is used.
+            ``flexx.config.port`` is used.
         new_loop (bool): Whether to create a fresh Tornado IOLoop instance,
             which is made current when ``start()`` is called. If ``False``
             (default) will use the current IOLoop for this thread.
@@ -68,8 +69,8 @@ def current_server():
     Get the current server object. Creates a server if there is none.
     Currently, this is always a TornadoServer object, which has properties:
     
-    * serving: a tuple ``(hostname, port)`` specifying the location being served,
-      or ``None`` if not servering yet/anymore.
+    * serving: a tuple ``(hostname, port)`` specifying the location
+      being served (or ``None`` if the server is closed).
     * app: the ``tornado.web.Application`` instance
     * loop: the ``tornado.ioloop.IOLoop`` instance
     * server: the ``tornado.httpserver.HttpServer`` instance
@@ -83,9 +84,7 @@ def start():
     """
     Start the server and event loop. This function generally does not
     return until the application is stopped (although it may in
-    interactive environments (e.g. Pyzo)). If ``create_server()`` was
-    explicitly called, ``start()`` must be called from the same thread,
-    otherwise an error is raised.
+    interactive environments (e.g. Pyzo)).
     """
     server = current_server()
     logger.info('Starting Flexx event loop.')
@@ -115,8 +114,9 @@ def stop():
 
 
 def call_later(delay, callback, *args, **kwargs):
-    """ Call the given callback after delay seconds. If delay is zero, 
-    call in the next event loop iteration.
+    """
+    Schedule a function call in the current event loop. This function is
+    thread safe.
     
     Arguments:
         delay (float): the delay in seconds. If zero, the callback will
