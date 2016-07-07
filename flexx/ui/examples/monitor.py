@@ -1,10 +1,9 @@
 """
-Simple web app to monitor the CPU usage of the server process.
+Simple web app to monitor the CPU and memory usage of the server process.
 
 Requires psutil
 """
 
-import os
 import time
 import psutil
 
@@ -49,8 +48,11 @@ class Monitor(ui.Widget):
             with ui.VBox():
                 ui.Label(text='<h3>Server monitor</h3>')
                 self.info = ui.Label(text='...')
-                if os.getenv('FLEXX_HOSTNAME', 'localhost') == 'localhost':
+                
+                if app.current_server().serving[0] == 'localhost':
+                    # Don't do this for a public server
                     self.button = ui.Button(text='Do some work')
+                    self.button.connect('mouse_down', self._do_work)
                 
                 self.cpu_plot = ui.PlotWidget(style='width: 640px; height: 320px;',
                                               xdata=[], yrange=(0, 100), 
@@ -70,7 +72,7 @@ class Monitor(ui.Widget):
             return relay.disconnect('system_info:' + self.id)
         self.emit('system_info', events[-1])
     
-    @event.connect('button.mouse_down')
+    
     def _do_work(self, *events):
         etime = time.time() + len(events)
         while time.time() < etime:
