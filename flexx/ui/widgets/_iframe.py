@@ -5,8 +5,8 @@ Example:
 .. UIExample:: 100
     
     with ui.BoxPanel():
-        ui.IFrame(url='flexx.readthedocs.org')
-        ui.IFrame(url='flexx.readthedocs.org')
+        ui.IFrame(url='flexx.readthedocs.io')
+        ui.IFrame(url='flexx.readthedocs.io')
 """
 
 from ... import event

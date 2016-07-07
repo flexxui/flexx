@@ -8,7 +8,7 @@ You can use Flexx to create (cross platform) desktop applications, web
 applications, and (if designed well) export an app to a standalone HTML
 document. It also works in the Jupyter notebook.
 
-The docs are on `Readthedocs <http://flexx.readthedocs.org>`_,
+The docs are on `Readthedocs <http://flexx.readthedocs.io>`_,
 the code is on `Github <http://github.com/zoofio/flexx>`_,
 and there is a `demo server <http://flexx1.zoof.io>`_.
 Flexx is currently in alpha status; any part of the public API may
@@ -26,7 +26,7 @@ also be used by themselves:
 * flexx.webruntime - to launch a runtime
 * flexx.util - utilities
 
-For more information, see http://flexx.readthedocs.org.
+For more information, see http://flexx.readthedocs.io.
 """
 
 # NOTES ON DOCS:

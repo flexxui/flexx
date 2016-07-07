@@ -127,7 +127,7 @@ setup(
     author='Flexx contributors',
     author_email='almar.klein@gmail.com',
     license='(new) BSD',
-    url='http://flexx.readthedocs.org',
+    url='http://flexx.readthedocs.io',
     download_url='https://pypi.python.org/pypi/flexx',
     keywords="ui design, GUI, web, runtime, pyscript, events, properties",
     description=description,
