@@ -60,7 +60,7 @@ class Slider(Widget):
         @event.prop
         def value(self, v=0):
             """ The current slider value (settable)."""
-            return float(v)
+            return float(min(self.max, max(self.min, v)))
     
     class JS:
         
