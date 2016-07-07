@@ -179,10 +179,12 @@ class FlexxJS:
         elif msg.startswith('EXEC '):
             eval(msg[5:])  # like eval, but do not return result
         elif msg.startswith('DEFINE-JS '):
-            eval(msg[10:])
-            #el = window.document.createElement("script")
-            #el.innerHTML = msg[10:]
-            #window.document.body.appendChild(el)
+            if self.nodejs:
+                eval(msg[10:])  # best we can do
+            else:
+                el = window.document.createElement("script")
+                el.innerHTML = msg[10:]
+                window.document.body.appendChild(el)
         elif msg.startswith('DEFINE-CSS '):
             # http://stackoverflow.com/a/707580/2271927
             el = window.document.createElement("style")
