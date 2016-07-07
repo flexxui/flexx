@@ -7,12 +7,14 @@ from flexx import app
 
 from flexx.ui.examples.monitor import Monitor
 from flexx.ui.examples.chatroom import ChatRoom
-from flexx.ui.examples.twente import Twente
+from flexx.ui.examples.demo import Demo
+from flexx.ui.examples.colab_painting import ColabPainting
 
 
 if __name__ == '__main__':
     # This example is setup as a server app
     app.serve(Monitor)
     app.serve(ChatRoom)
-    app.serve(Twente)
+    app.serve(ColabPainting)
+    app.serve(Demo)
     app.start()
