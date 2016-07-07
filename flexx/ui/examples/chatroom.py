@@ -1,5 +1,7 @@
 """
 Simple chat web app in less than 80 lines.
+
+This app might be running at the demo server: http://flexx1.zoof.io
 """
 
 from flexx import app, ui, event

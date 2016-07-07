@@ -36,7 +36,7 @@ test:
     - flexx.webruntime
 
 about:
-  home: http://flexx.readthedocs.org
+  home: http://flexx.readthedocs.io
   license: BSD License
   summary: "Pure Python toolkit for creating GUI's using web technology."
 

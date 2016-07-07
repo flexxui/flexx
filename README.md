@@ -16,7 +16,7 @@ You can use Flexx to create (cross platform) desktop applications, web
 applications, and (if designed well) export an app to a standalone HTML
 document. It also works in the Jupyter notebook.
 
-The docs are on [Readthedocs](http://flexx.readthedocs.org).
+The docs are on [Readthedocs](http://flexx.readthedocs.io).
 the code is on [Github](http://github.com/zoofio/flexx).
 Flexx is currently in alpha status; any part of the public API may
 change without notice. Feedback is welcome.
@@ -39,8 +39,7 @@ Click the image below for an interactive example:
 
 [![demo](https://dl.dropboxusercontent.com/u/1463853/images/flexx_demo_300.png)](http://flexx.readthedocs.io/en/latest/ui/examples/demo_src.html)
 
-There is an Amazon instance running some demos on http://52.21.93.28:8000/ 
-(it might not always be on).
+There is a demo server at http://flexx1.zoof.io (it might not always be on).
 
 
 Motivation
@@ -74,4 +73,4 @@ To install use any of:
 License
 -------
 
-FLexx makes use of the liberal 2-clause BSD license. See LICENSE for details.
+Flexx makes use of the liberal 2-clause BSD license. See LICENSE for details.

@@ -479,7 +479,7 @@ class SessionAssets:
             logger.debug('Dynamically defining class %r' % cls)
             js, css = cls.JS.CODE, cls.CSS
             self._load_asset_dynamically('.js', js)
-            self._load_asset_dynamically('.js', css)
+            self._load_asset_dynamically('.css', css)
     
     def _get_js_and_css_assets(self, with_reset=False):
         """ Get an ordered dictionary with the JS and CSS assets.

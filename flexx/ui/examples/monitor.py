@@ -1,7 +1,8 @@
 """
 Simple web app to monitor the CPU and memory usage of the server process.
+Requires psutil.
 
-Requires psutil
+This app might be running at the demo server: http://flexx1.zoof.io
 """
 
 import time

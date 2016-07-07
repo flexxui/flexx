@@ -5,13 +5,16 @@ Flexx setup script.
 
 Release checklist:
 
-* Check docs in __init__.py, index.rst and README.md
+* write release notes
+* check docs in __init__.py, index.rst and README.md
 * bump __version__
 * git tag
+* git push
 * trigger build on conda-forge
 * python setup.py register
 * python setup.py sdist bdist_wheel --universal upload
 * spread the word
+* bump __version__ to dev
 
 """
 
@@ -101,7 +104,7 @@ THIS_DIR = os.path.dirname(__file__)
 
 # Define name and description
 name = 'flexx'
-description = "Pure Python toolkit for creating GUI's using web technology."
+description = "Write desktop and web apps in pure Python."
 
 # Get version and docstring (i.e. long description)
 version, doc = get_version_and_doc(os.path.join(THIS_DIR, name, '__init__.py'))
@@ -127,7 +130,7 @@ setup(
     author='Flexx contributors',
     author_email='almar.klein@gmail.com',
     license='(new) BSD',
-    url='http://flexx.readthedocs.org',
+    url='http://flexx.readthedocs.io',
     download_url='https://pypi.python.org/pypi/flexx',
     keywords="ui design, GUI, web, runtime, pyscript, events, properties",
     description=description,
