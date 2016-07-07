@@ -73,4 +73,4 @@ To install use any of:
 License
 -------
 
-FLexx makes use of the liberal 2-clause BSD license. See LICENSE for details.
+Flexx makes use of the liberal 2-clause BSD license. See LICENSE for details.

@@ -101,7 +101,7 @@ THIS_DIR = os.path.dirname(__file__)
 
 # Define name and description
 name = 'flexx'
-description = "Pure Python toolkit for creating GUI's using web technology."
+description = "Write desktop and web apps in pure Python."
 
 # Get version and docstring (i.e. long description)
 version, doc = get_version_and_doc(os.path.join(THIS_DIR, name, '__init__.py'))
