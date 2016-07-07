@@ -5,13 +5,36 @@ Release notes and roadmap
 Roadmap
 -------
 
-* More tests
-* More widgets
-* Support for mobile apps
+Things to work on for the relative short term:
+
+* Visual tests and Selenium tests.
+* A more complete widget set.
+* Support for mobile apps.
+* Support to run native apps on Windows without needing Firefox.
+* Support for sending (large) binary data to the client for scientific applications.
 
 
 Release notes
 -------------
+
+**v0.4** (07-07-2016)
+
+A lot of work and major changes compared to the previous release. Most notably:
+
+* Completely new event system ``flexx.event`` replaces ``flexx.react``.
+* System for configure Flexx through config files, env variables and command line arguments.
+* Better logging.
+* More widgets, more examples.
+* Better notebook support.
+* Fixed nasty bug where new profile data was stored on each launch of the XUL runtime.
+* Better support for testing and running Flexx in a separate thread.
+
+Also see the
+`overview of 0.4 pull request <https://github.com/zoofIO/flexx/issues?q=is%3Apr+milestone%3Av0.4>`_
+and
+`overview of 0.4 issues <https://github.com/zoofIO/flexx/issues?q=is%3Aissue+milestone%3Av0.4>`_
+corresponding to this release.
+
 
 **v0.3.1** (19-02-2016)
 
