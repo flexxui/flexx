@@ -14,8 +14,7 @@ Some background info on the server process
 
 Each server process hosts on a single URL (domain+port), but can serve
 multiple applications (via different paths). Each process uses one
-tornado IOLoop (the default one), and exactly one Tornado Application
-object.
+tornado IOLoop, and exactly one Tornado Application object.
 
 Applications
 ------------
@@ -33,29 +32,23 @@ a client webruntime which is connected to the returned app object. This
 is the intended way to launch desktop-like apps. An app can also be
 exported to HTML via ``app.export()``.
 
-Further, there is a notion of a default app, intended for interactive use
-and use inside the Jupyter notebook; any ``Model`` instance created
-without a ``session`` argument will connect to this default app.
-
 Starting the server
 -------------------
 
-Use ``start()`` to enter the mainloop for the server. Optionally, the
-hostname and port can be specified. Avoid ``sys.exit(app.start())``,
-because ``start()`` may return immediately in interactive environments.
-
-For desktop applications you can use ``run()``, which does what
-``start()`` does, except the main loop exits when there are no more
-connections (i.e. the server stops when the window is closed).
+Use ``start()`` to enter the mainloop for the server. For desktop
+applications you can use ``run()``, which does what ``start()`` does,
+except the main loop exits when there are no more connections (i.e. the
+server stops when the window is closed).
 
 In the notebook
 ---------------
 
 In the IPython/Jupyter notebook, the user needs to run
 ``init_notebook()`` which will inject JS and CSS into the browser.
+Simple widgets (e.g. buttons) will display just fine, but for other
+widgets you might want to use ``SomeWidget(style='height:300px')`` to
+specify its size.
 
-For each widget that gets used as a cell output, a container DOM
-element is created, in which the widget is displayed.
 """
 
 _DEV_NOTES = """
