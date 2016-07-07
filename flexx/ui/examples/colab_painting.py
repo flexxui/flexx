@@ -3,6 +3,8 @@ A web app that allows multiple people to colaborate in painting. People
 connecting later will not see the "paint" that was added earlier. Each
 person is assigned a random color which affects how that person can
 best contribute to the painting.
+
+This app might be running at the demo server: http://flexx1.zoof.io
 """
 
 import random

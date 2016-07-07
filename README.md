@@ -39,8 +39,7 @@ Click the image below for an interactive example:
 
 [![demo](https://dl.dropboxusercontent.com/u/1463853/images/flexx_demo_300.png)](http://flexx.readthedocs.io/en/latest/ui/examples/demo_src.html)
 
-There is an Amazon instance running some demos on http://52.21.93.28:8000/ 
-(it might not always be on).
+There is a demo server at http://flexx1.zoof.io (it might not always be on).
 
 
 Motivation

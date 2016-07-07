@@ -9,7 +9,8 @@ applications, and (if designed well) export an app to a standalone HTML
 document. It also works in the Jupyter notebook.
 
 The docs are on `Readthedocs <http://flexx.readthedocs.org>`_,
-the code is on `Github <http://github.com/zoofio/flexx>`_.
+the code is on `Github <http://github.com/zoofio/flexx>`_,
+and there is a `demo server <http://flexx1.zoof.io>`_.
 Flexx is currently in alpha status; any part of the public API may
 change without notice. Feedback is welcome.
 
