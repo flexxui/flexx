@@ -19,8 +19,12 @@ class FlexxJS:
         self.last_msg = None
         self.is_notebook = False  # if not, we "close" when the ws closes
         # For nodejs, the location is set by the flexx nodejs runtime.
-        loc = location
-        self.ws_url = ('ws://%s:%s/%s/ws' % (loc.hostname, loc.port, loc.pathname))
+        address = location.hostname
+        if location.port:
+            address += ':' + location.port
+        if location.pathname:
+            address += '/' + location.pathname
+        self.ws_url = 'ws://%s/ws' % address
         self.is_exported = False
         self.classes = {}
         self.instances = {}
