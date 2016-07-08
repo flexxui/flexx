@@ -647,25 +647,22 @@ class Widget(Model):
             # able to do key events.
             self.node.tabIndex = events[-1].new_value
         
-        # I cannot recall/reproduce the need for this. Maybe its not
-        # needed anymore. If the need for this is found, and this is
-        # to be revived, it should bw done using CSS, because setting
-        # "display" style attribute clashes with the hiding of widgets
-        # in a TabPanel.
-        # @event.connect('children')
-        # def __update_css(self, *events):
-        #     children = events[-1].new_value
-        #     if 'flx-Layout' not in self.outernode.className:
-        #         # Ok, no layout, so maybe we need to take care of CSS.
-        #         # If we have a child that is a hbox/vbox, we need to be a
-        #         # flex container.
-        #         self.outernode.style['display'] = ''
-        #         self.outernode.style['flex-flow'] = ''
-        #         if len(children) == 1:
-        #             subClassName = children[0].outernode.className
-        #             if 'flx-hbox' in subClassName:
-        #                 self.outernode.style['display'] = 'flex'
-        #                 self.outernode.style['flex-flow'] = 'row'
-        #             elif 'flx-vbox' in subClassName:
-        #                 self.outernode.style['display'] = 'flex'
-        #                 self.outernode.style['flex-flow'] = 'column'
+        @event.connect('children')
+        def __make_singleton_container_widgets_work(self, *events):
+            # This fixes an issue related to a vbox in a widget in a
+            # vbox on Chrome. If this is a plain widget, and it has one
+            # child that is a HBox or VBox, we need to act like a flex
+            # container.
+            # Note that we should *not* set the display style attribute
+            # directly, as that would break down in situations where
+            # the widget must be hidden, such as in a tab panel.
+            if 'flx-Layout' not in self.outernode.className:
+                self.outernode.classList.remove('flx-hbox')
+                self.outernode.classList.remove('flx-vbox')
+                children = self.children
+                if len(children) == 1:
+                    subClassName = children[0].outernode.className
+                    if 'flx-VBox' in subClassName:
+                        self.outernode.classList.add('flx-hbox')
+                    elif 'flx-HBox' in subClassName:
+                        self.outernode.classList.add('flx-vbox')
