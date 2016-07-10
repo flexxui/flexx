@@ -10,10 +10,9 @@ import os
 
 try:
     from .logging import logger
+    warning, info = logger.warning, logger.info
 except Exception:
-    import logging
-    logger = logging.getLogger('getresource')
-    logger.setLevel(logging.INFO)
+    warning = info = print
 
 try:
     from urllib.request import urlopen
@@ -22,6 +21,9 @@ except ImportError:
         from urllib2 import urlopen  # Legacy Python
     except ImportError:
         raise RuntimeError('Could not import urlopen.')
+
+
+# todo: just define urls + tags in this file instead of a .tag file
 
 
 def get_resoure_filename(tagfile):
@@ -69,12 +71,12 @@ def _fetch_file(url):
     """ Fetches a file from the internet. Retry a few times before
     giving up on failure.
     """
-    logger.info('Downloading %s' % url)
+    info('Downloading %s' % url)
     for tries in range(4):
         try:
             return urlopen(url, timeout=5.0).read()
         except Exception as e:
-            logger.warn('Error while fetching file: %s' % str(e))
+            warning('Error while fetching file: %s' % str(e))
     raise IOError('Unable to download %r. Perhaps there is a no internet '
                   'connection? If there is, please report this problem.' % url)
 
