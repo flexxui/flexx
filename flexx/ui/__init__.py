@@ -83,9 +83,8 @@ from ._plotlayout import PlotLayout
 
 # flexx.ui needs phosphor
 def _install_assets():
-    COMMIT = '2db421f7c2d60b'  # <-- update this to sync with specific version
     from ..app import assets
-    from ..util.getphosphor import get_phosphor
-    assets.add_asset('phosphor-all.js', get_phosphor(COMMIT).encode())
+    from ..util.getresource import get_resource
+    assets.add_asset('phosphor-all.js', get_resource('phosphor-all.js.tag'))
     assets.create_module_assets('flexx.ui')
 _install_assets()
