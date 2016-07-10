@@ -108,7 +108,8 @@ description = "Write desktop and web apps in pure Python."
 
 # Get version and docstring (i.e. long description)
 version, doc = get_version_and_doc(os.path.join(THIS_DIR, name, '__init__.py'))
-doc = get_readme_as_rst(os.path.join(THIS_DIR, 'README.md'))
+if os.path.isfile(os.path.join(THIS_DIR, 'README.md')):
+    doc = get_readme_as_rst(os.path.join(THIS_DIR, 'README.md'))
 
 # Import to trigger download of phosphorjs
 if 'sdist' in sys.argv and sys.version_info[0] == 3:
