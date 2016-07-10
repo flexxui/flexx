@@ -98,6 +98,15 @@ def copy_for_legacy_python(src_dir, dest_dir):
     LegacyPythonTranslator.translate_dir(dest_dir, skip=skip)
 
 
+def get_all_resources():
+    import logging  # noqa - prevent mixup with logging module inside flexx.util
+    sys.path.insert(0, os.path.join(THIS_DIR, 'flexx', 'util'))
+    from getresource import get_resoure_filename
+    for name in ['phosphor-all.js.tag']:
+        get_resoure_filename(name)
+    sys.path.pop(0)
+
+
 ## Collect info for setup()
 
 THIS_DIR = os.path.dirname(__file__)
@@ -111,9 +120,8 @@ version, doc = get_version_and_doc(os.path.join(THIS_DIR, name, '__init__.py'))
 if os.path.isfile(os.path.join(THIS_DIR, 'README.md')):
     doc = get_readme_as_rst(os.path.join(THIS_DIR, 'README.md'))
 
-# Import to trigger download of phosphorjs
-if 'sdist' in sys.argv and sys.version_info[0] == 3:
-    from flexx import ui  # noqa
+# Install resources (e.g. phosphor.js)
+get_all_resources()
 
 # Support for legacy Python: we install a second package with the
 # translated code. We generate that code when we can. We use
