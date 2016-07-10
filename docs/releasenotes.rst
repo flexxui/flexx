@@ -17,6 +17,11 @@ Things to work on for the relative short term:
 Release notes
 -------------
 
+**v0.4.1** (10-07-2016)
+
+A few [fixes](https://github.com/zoofIO/flexx/milestone/8).
+
+
 **v0.4** (07-07-2016)
 
 A lot of work and major changes compared to the previous release. Most notably:
