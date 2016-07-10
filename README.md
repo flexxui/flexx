@@ -65,6 +65,7 @@ it needs the [tornado](http://www.tornadoweb.org) library (pure Python).
 For running desktop apps, it is recommended to have Firefox installed.
 
 To install use any of:
+
 * ``conda install flexx -c conda-forge``
 * ``pip install flexx``
 * Clone the repo and add it to your PYTHONPATH, or ``python setup.py install``.
