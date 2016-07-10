@@ -5,7 +5,6 @@ __pycache__/
 # Specific to here
 exp/html_examples.txt
 flexx/resources/phosphor-all.*.js
-flexx/resources/*.tag
 _flexx-notebooks
 _feedstock
 flexx_legacy

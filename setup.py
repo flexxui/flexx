@@ -2,20 +2,6 @@
 
 """
 Flexx setup script.
-
-Release checklist:
-
-* write release notes
-* check docs in __init__.py, index.rst and README.md
-* bump __version__
-* git tag
-* git push
-* trigger build on conda-forge
-* python setup.py register
-* python setup.py sdist bdist_wheel --universal upload
-* spread the word
-* bump __version__ to dev
-
 """
 
 import os
