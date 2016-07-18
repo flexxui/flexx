@@ -243,8 +243,8 @@ class Parser(Parser3):
     
     Parameters:
         code (str): the Python source code.
-        module (str, optional): the module name. If given, produces an
-            AMD module.
+        module (str, optional): the module name. If given, produces a
+            UMD module.
         indent (int): the base indentation level (default 0). One
             indentation level means 4 spaces.
         docstrings (bool): whether docstrings are included in JS
