@@ -69,7 +69,7 @@ class BrowserRuntime(BaseRuntime):
             self._start_subprocess([exe, url])
             self._proc = None  # Prevent closing
             return
-        elif type in ('edge'):
+        elif type in ('edge', ):
             self._start_subprocess(['start', 'microsoft-edge:'+url], shell=True)
             self._proc = None  # Prevent closing
             return
