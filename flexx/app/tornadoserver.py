@@ -3,6 +3,7 @@ Serve web page and handle web sockets. Uses Tornado, though this
 can be generalized.
 """
 
+import sys
 import json
 import time
 import socket
@@ -177,10 +178,24 @@ class TornadoServer(AbstractServer):
         self._server.stop()
     
     def call_later(self, delay, callback, *args, **kwargs):
+        # Bah, Tornado seems to close websockets when an exception occurs
+        # even in functions invoked via call_later or add_callback.
+        # Very strange, not sure if its intended. This fixes that.
+        def wrapper():
+            try:
+                callback(*args, **kwargs)
+            except Exception:
+                type, value, tb = sys.exc_info()
+                tb = tb.tb_next  # Skip *this* frame
+                sys.last_type = type
+                sys.last_value = value
+                sys.last_traceback = tb
+                logger.error(''.join(traceback.format_tb(tb)))
+        
         if delay <= 0:
-            self._loop.add_callback(callback, *args, **kwargs)
+            self._loop.add_callback(wrapper)
         else:
-            self._loop.call_later(delay, callback, *args, **kwargs)
+            self._loop.call_later(delay, wrapper)
     
     @property
     def app(self):
@@ -454,7 +469,14 @@ class WSHandler(tornado.websocket.WebSocketHandler):
                     raise
                 self.write_message("PRINT Flexx server says hi", binary=BINARY)
         else:
-            self._session._receive_command(message)
+            try:
+                self._session._receive_command(message)
+            except Exception:
+                type, value, tb = sys.exc_info()
+                sys.last_type = type
+                sys.last_value = value
+                sys.last_traceback = tb
+                logger.error(''.join(traceback.format_tb(tb)))
     
     def on_close(self):
         """ Called when the connection is closed.
