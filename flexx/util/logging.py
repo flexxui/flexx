@@ -14,7 +14,9 @@ set_log_level()
 
 import re
 import sys
+import time
 import logging
+import traceback
 
 
 MODULE_NAME = __name__.split('.')[0]
@@ -28,15 +30,32 @@ class _Formatter(logging.Formatter):
     """Formatter that optionally prepends caller """
     
     def __init__(self):
-        super().__init__('%(levelname)s %(name)s: %(message)s')
+        super().__init__()  # '%(levelname)s %(name)s: %(message)s')
         self.prepend_caller = False
     
     def format(self, record):
-        out = logging.Formatter.format(self, record)
-        if self.prepend_caller:
-            part1, part2 = out.split(':', 1)
-            out = part1 + ' ' + record.funcName + '():' + part2
-        return out
+        base = '[{} {} {}] '.format(record.levelname[0],
+                                    time.strftime('%H:%M:%S'),
+                                    record.name)
+        if isinstance(record.msg, Exception):
+            # Get excepion info and skip first frames
+            type_, value, tb = sys.exc_info()
+            for _ in range(getattr(value, 'skip_tb', 0)):
+                tb = tb.tb_next
+            # Enable post mortem debugging
+            sys.last_type = type_
+            sys.last_value = value
+            sys.last_traceback = tb
+            # Compose message
+            out = ''.join(traceback.format_list(traceback.extract_tb(tb)))
+            del tb  # we don't want to hold too much references to this
+            return base + str(value) + '\n' + out.rstrip()
+        else:
+            out = base + str(record.msg)
+            if self.prepend_caller:
+                part1, part2 = out.split(':', 1)
+                out = part1 + ' ' + record.funcName + '():' + part2
+            return out
 
 
 class _Handler(logging.StreamHandler):
