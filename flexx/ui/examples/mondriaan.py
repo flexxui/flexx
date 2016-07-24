@@ -4,7 +4,7 @@ Piet Mondriaan was a Dutch painter who is famous for his style that looks
 a little like this. Best viewed in a square window.
 """
 
-from flexx import app, event, ui
+from flexx import app, ui
 
 
 class MyVBox(ui.BoxLayout):
