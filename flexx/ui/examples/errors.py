@@ -59,5 +59,5 @@ class Errors(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Errors)
+    m = app.launch(Errors, 'firefox')
     app.run()

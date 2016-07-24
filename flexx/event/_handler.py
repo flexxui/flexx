@@ -250,7 +250,7 @@ class Handler:
                 self(*events)
             except Exception as err:
                 if this_is_js():
-                    console.log(err)
+                    console.error(err)
                 else:
                     err.skip_tb = 2
                     logger.exception(err)
