@@ -87,48 +87,25 @@ def show_coverage_html():
 def test_style(rel_path='.'):
     # Ensure we have flake8
     try:
-        import flake8.main
-        from flake8.main import main  # noqa
-    except ImportError:
-        sys.exit('Cannot do style test, flake8 not installed')
-    # Monkey-patch flake8 to get a clear summary
-    def my_report(report, flake8_style):
-        print('%sFound %i errors in %i lines in %i files.' % (
-              'Arg! ' if report.total_errors else 'Hooray! ',
-              report.total_errors,
-              report.counters['logical lines'],
-              report.counters['files']))
-        return flake8.main.ori_print_report(report, flake8_style)
-    if not hasattr(flake8.main, 'ori_print_report'):
-        flake8.main.ori_print_report = flake8.main.print_report
-        flake8.main.print_report = my_report
+        import flake8  # noqa
+        from flake8.main.application import Application
+    except ImportError as err:
+        sys.exit('Cannot do style test: ' + str(err))
     # Prepare
-    orig_dir = os.getcwd()
-    orig_argv = sys.argv
     os.chdir(ROOT_DIR)
+    sys.argv[1:] = [rel_path]
     # Do test
     print('Running flake8 tests ...')
-    sys.argv[1:] = [rel_path]
-    flake8.main.main()  # Raises SystemExit
-
-
-class FileForTesting(object):
-    """ Alternative to stdout that makes path relative to ROOT_DIR
-    """
-    def __init__(self, original):
-        self._original = original
-    
-    def write(self, msg):
-        if msg.startswith(ROOT_DIR):
-            msg = os.path.relpath(msg, ROOT_DIR)
-        self._original.write(msg)
-        self._original.flush()
-    
-    def flush(self):
-        self._original.flush()
-    
-    def revert(self):
-        sys.stdout = self._original
+    app = Application()
+    app.run()
+    # Report
+    nerrors = app.result_count
+    if nerrors:
+        print('Arg! Found %i style errors.' % nerrors)
+    else:
+        print('Hooray, no style errors found!')
+    # Exit (will exit(1) if errors)
+    app.exit()
 
 
 def _enable_faulthandler():

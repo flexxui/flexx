@@ -15,26 +15,27 @@ CODE_TO_RUN = """
 import sys
 
 qt = None
-try:
-    from PyQt4 import QtCore, QtGui, QtWebKit
-    qt = 'pyqt4'
-except ImportError:
+for iter in range(3):
     try:
-        from PySide import QtCore, QtGui, QtWebKit
-        qt = 'pyside'
-    except ImportError:
-        try:
+        if iter == 0:
             from PyQt5 import QtCore, QtGui, QtWebKit, QtWidgets, QtWebKitWidgets
             qt = 'pyqt5'
-        except ImportError:
-            pass
+        elif iter == 1:
+            from PyQt4 import QtCore, QtGui, QtWebKit
+            qt = 'pyqt4'
+        elif iter == 2:
+            from PySide import QtCore, QtGui, QtWebKit
+            qt = 'pyside'
+        break
+    except ImportError:
+        pass
 
 if not qt:
     sys.exit('Cannot import Qt')
 
-url = "{url}"
-title = "{title}"
-icon = "{icon}"
+url = {url}
+title = {title}
+icon = {icon}
 size = {size}
 pos = {pos}
 
@@ -47,7 +48,7 @@ else:
     m = QtWebKitWidgets.QWebView(None)
 
 m.setUrl(QtCore.QUrl(url))
-m.setWindowTitle(title)
+m.setWindowTitle(title + ' (%s)' % qt)
 if icon:
     i = QtGui.QIcon()
     i.addFile(icon, QtCore.QSize(16, 16))
@@ -70,7 +71,6 @@ class PyQtRuntime(DesktopRuntime):
     _app_count = 0
     
     def _launch(self):
-        
         # Write icon
         iconfile = ''
         self.__class__._app_count += 1
@@ -80,9 +80,10 @@ class PyQtRuntime(DesktopRuntime):
             iconfile = os.path.join(app_path, 'icon.png')
             icon.write(iconfile)
         
-        code = CODE_TO_RUN.format(url=self._kwargs['url'],
-                                  title=self._kwargs.get('title', 'QWebkit runtime'),
-                                  icon=iconfile,
+        code = CODE_TO_RUN.format(url=repr(self._kwargs['url']),
+                                  title=repr(self._kwargs.get('title',
+                                                              'QWebkit runtime')),
+                                  icon=repr(iconfile),
                                   size=repr(self._kwargs.get('size', None)),
                                   pos=repr(self._kwargs.get('pos', None)),
                                   )
