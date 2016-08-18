@@ -21,6 +21,8 @@ from tornado import netutil
 from .session import manager, valid_app_name
 from .assetstore import assets
 from . import logger
+from .. import config
+
 
 if tornado.version_info < (4, ):
     raise RuntimeError('Flexx requires Tornado v4.0 or higher.')
@@ -475,7 +477,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         while self.close_code is None:
             self.ping(b'x')
             yield gen.sleep(2)
-            if time.time() - self._pongtime > 20:
+            if time.time() - self._pongtime > config.ws_timeout:
                 logger.warn('Closing connection due to lack of pong')
                 self.close(1000, 'Conection timed out (no pong).')
                 return
