@@ -9,7 +9,6 @@ import tornado
 from flexx.app.model import Model, _get_active_models
 from flexx import event, app
 
-
 class Foo1(Model):
     
     @event.prop
@@ -222,8 +221,7 @@ def test_active_models():
             return record
     
     handler = PMHandler()
-    root_logger = logging.getLogger()
-    root_logger.addHandler(handler)
+    app.logger.addHandler(handler)
     
     # Test that we prevent going back to Tornado in context
     handler.last_type = None

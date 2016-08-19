@@ -179,7 +179,9 @@ class TornadoServer(AbstractServer):
     def call_later(self, delay, callback, *args, **kwargs):
         # We use a wrapper func so that exceptions are processed via our
         # logging system. Also fixes that Tornado seems to close websockets
-        # when an exception occurs (issue #164)
+        # when an exception occurs (issue #164) though one could also
+        # use ``with tornado.stack_context.NullContext()`` to make callbacks
+        # be called more "independently".
         def wrapper():
             try:
                 callback(*args, **kwargs)
@@ -303,7 +305,8 @@ class MainHandler(tornado.web.RequestHandler):
             elif file_name and ('.js:' in file_name or file_name.startswith(':')):
                 # Request for a view of a JS source file at a certain line, redirect
                 fname, where = file_name.split(':')[:2]
-                self.redirect('/%s/%s.debug%s#L%s' % (app_name, fname.replace('/:', ':'), where, where))
+                self.redirect('/%s/%s.debug%s#L%s' %
+                              (app_name, fname.replace('/:', ':'), where, where))
             elif file_name and '.debug' in file_name:
                 # Show JS source file at a certain line
                 fname, lineno = file_name.split('.debug', 1)

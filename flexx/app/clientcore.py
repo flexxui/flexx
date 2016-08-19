@@ -148,7 +148,7 @@ class FlexxJS:
             if window.flexx.ws is not None:
                 window.flexx.ws.send("WARN " + msg)
         def error(self, msg):
-            evt = dict(message=str(msg), error=msg, preventDefault=lambda:None)
+            evt = dict(message=str(msg), error=msg, preventDefault=lambda: None)
             on_error(evt)
         def on_error(self, evt):
             msg = evt.message
