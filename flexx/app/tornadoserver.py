@@ -179,10 +179,22 @@ class TornadoServer(AbstractServer):
         self._server.stop()
     
     def call_later(self, delay, callback, *args, **kwargs):
+        # We use a wrapper func so that exceptions are processed via our
+        # logging system. Also fixes that Tornado seems to close websockets
+        # when an exception occurs (issue #164) though one could also
+        # use ``with tornado.stack_context.NullContext()`` to make callbacks
+        # be called more "independently".
+        def wrapper():
+            try:
+                callback(*args, **kwargs)
+            except Exception as err:
+                err.skip_tb = 1
+                logger.exception(err)
+        
         if delay <= 0:
-            self._loop.add_callback(callback, *args, **kwargs)
+            self._loop.add_callback(wrapper)
         else:
-            self._loop.call_later(delay, callback, *args, **kwargs)
+            self._loop.call_later(delay, wrapper)
     
     @property
     def app(self):
@@ -292,27 +304,34 @@ class MainHandler(tornado.web.RequestHandler):
                     self.write(session.get_page().encode())
                 else:
                     self.write('No app "%s" is currently hosted.' % app_name)
-            elif file_name and '.js:' in file_name:
+            elif file_name and ('.js:' in file_name or file_name.startswith(':')):
                 # Request for a view of a JS source file at a certain line, redirect
                 fname, where = file_name.split(':')[:2]
-                self.redirect('/%s/%s.debug%s#L%s' % (app_name, fname, where, where))
+                self.redirect('/%s/%s.debug%s#L%s' %
+                              (app_name, fname.replace('/:', ':'), where, where))
             elif file_name and '.debug' in file_name:
                 # Show JS source file at a certain line
                 fname, lineno = file_name.split('.debug', 1)
-                try:
-                    res = assets.load_asset(fname)
-                except (IOError, IndexError):
-                    self.write('invalid resource: %s' % fname)
+                if not fname:  # root app
+                    session = manager.create_session(app_name)
+                    res = session.get_page().encode()
+                    session.close()
                 else:
-                    lines = ['<html><head><style>%s</style></head><body>' % 
-                             "pre {display:inline} #L%s {background:#cca;}" % lineno]
-                    for i, line in enumerate(res.decode().splitlines()):
-                        table = {ord('&'): '&amp;', ord('<'): '&lt;', ord('>'): '&gt;'}
-                        line = line.translate(table).replace('\t', '    ')
-                        lines.append('<a id="L%i">%i<pre>  %s</pre></a><br />' %
-                                     (i+1, i+1, line))
-                    lines.append('</body></html>')
-                    self.write('\n'.join(lines))
+                    try:
+                        res = assets.load_asset(fname)
+                    except (IOError, IndexError):
+                        self.write('invalid resource: %s' % fname)
+                        return
+                # Build HTML page
+                lines = ['<html><head><style>%s</style></head><body>' % 
+                            "pre {display:inline} #L%s {background:#cca;}" % lineno]
+                for i, line in enumerate(res.decode().splitlines()):
+                    table = {ord('&'): '&amp;', ord('<'): '&lt;', ord('>'): '&gt;'}
+                    line = line.translate(table).replace('\t', '    ')
+                    lines.append('<a id="L%i">%i<pre>  %s</pre></a><br />' %
+                                    (i+1, i+1, line))
+                lines.append('</body></html>')
+                self.write('\n'.join(lines))
             elif file_name:
                 # A resource, e.g. js/css/icon
                 if file_name.endswith('.css'):
@@ -456,7 +475,11 @@ class WSHandler(tornado.websocket.WebSocketHandler):
                     raise
                 self.write_message("PRINT Flexx server says hi", binary=BINARY)
         else:
-            self._session._receive_command(message)
+            try:
+                self._session._receive_command(message)
+            except Exception as err:
+                err.skip_tb = 1
+                logger.exception(err)
     
     def on_close(self):
         """ Called when the connection is closed.

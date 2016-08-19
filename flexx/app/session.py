@@ -333,7 +333,8 @@ class Session(SessionAssets):
         if command.startswith('RET '):
             print(command[4:])  # Return value
         elif command.startswith('ERROR '):
-            logger.error('JS - ' + command[6:].strip())
+            logger.error('JS - ' + command[6:].strip() +
+                         ' (stack trace in browser console)')
         elif command.startswith('WARN '):
             logger.warn('JS - ' + command[5:].strip())
         elif command.startswith('PRINT '):

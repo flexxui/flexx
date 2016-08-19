@@ -148,19 +148,24 @@ class FlexxJS:
             if window.flexx.ws is not None:
                 window.flexx.ws.send("WARN " + msg)
         def error(self, msg):
-            window.console.ori_error(msg)
-            if window.flexx.ws is not None:
-                window.flexx.ws.send("ERROR " + msg)
+            evt = dict(message=str(msg), error=msg, preventDefault=lambda: None)
+            on_error(evt)
         def on_error(self, evt):
             msg = evt.message
             if evt.error.stack:
-                stack = [x.replace('@', ' @ ') if '.js' in x else x.split('@')[0]
-                         for x in evt.error.stack.splitlines()]
+                stack = evt.error.stack.splitlines()
+                if evt.message in stack[0]:
+                    stack.pop(0)
                 msg += '\n' + '\n'.join(stack)
+                session_needle = '?session_id=' + flexx_session_id
+                msg = msg.replace('@', ' @ ').replace(session_needle, '')  # Firefox
             elif evt.message and evt.lineno:  # message, url, linenumber (not in nodejs)
                 msg += "\nIn %s:%i" % (evt.filename, evt.lineno)
-            window.console.error(msg)
+            # Handle error
             evt.preventDefault()  # Don't do the standard error 
+            window.console.ori_error(msg)
+            if window.flexx.ws is not None:
+                window.flexx.ws.send("ERROR " + evt.message)
         # Set new versions
         window.console.log = log
         window.console.info = info

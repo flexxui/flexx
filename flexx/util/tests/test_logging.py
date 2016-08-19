@@ -39,11 +39,11 @@ def test_capture():
     
     assert 'flexx' in msg1
     assert 'AA' in msg1
-    assert 'WARNING' in msg1
+    assert '[W ' in msg1
     
     assert 'flexx' in msg2
     assert 'BB' in msg2
-    assert 'INFO' in msg2
+    assert '[I' in msg2
 
 
 def test_match():

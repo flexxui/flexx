@@ -2,7 +2,6 @@
 Implementation of handler class and corresponding descriptor.
 """
 
-import sys
 import inspect
 import weakref
 
@@ -251,17 +250,10 @@ class Handler:
                 self(*events)
             except Exception as err:
                 if this_is_js():
-                    console.log(err)
+                    console.error(err)
                 else:
-                    # Allow post-mortem debugging
-                    type_, value, tb = sys.exc_info()
-                    tb = tb.tb_next  # Skip *this* frame
-                    sys.last_type = type_
-                    sys.last_value = value
-                    sys.last_traceback = tb
-                    tb = None  # Get rid of it in this namespace
-                    # Show the exception
-                    logger.exception(value)
+                    err.skip_tb = 2
+                    logger.exception(err)
     
     
     ## Connecting
