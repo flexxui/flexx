@@ -74,11 +74,6 @@ def finalize_hasevents_class(cls):
                 logger.warn('Method %r is not (anymore) converted to a '
                             'handler (on %s).' % (name, cls.__name__))
     
-    # Finalize all found emitters
-    for collection in (handlers, emitters, properties):
-        for name, descriptor in collection.items():
-            descriptor._name = name
-            setattr(cls, '_' + name + '_func', descriptor._func)
     # Cache prop names
     cls.__handlers__ = [name for name in sorted(handlers.keys())]
     cls.__emitters__ = [name for name in sorted(emitters.keys())]
@@ -148,14 +143,15 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # Initialize properties with default and given values (does not emit yet)
         for name in self.__properties__:
             self.__handlers.setdefault(name, [])
-            setattr(self, '_' + name + '_value', None)  # need *something*
+            setattr(self, '_' + name + '_value', None)  # need *something* for value
+            func = getattr(self.__class__, name).get_func()
+            setattr(self, '_' + name + '_func', func)  # needed in set_prop()
         for name in self.__properties__:
             dd = getattr(self.__class__, name)._defaults
             if dd:
                 self._set_prop(name, dd[0], True)
         for name, value in property_values.items():
             if name in self.__properties__:
-                #self._set_prop(name, value)
                 setattr(self, name, value)  # should raises error whith readonly
             else:
                 cname = self.__class__.__name__
@@ -289,7 +285,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             return
         # Prepare
         private_name = '_' + prop_name + '_value'
-        func_name = '_' + prop_name + '_func'
+        func_name = '_' + prop_name + '_func'  # set in init in both Py and JS
         # Validate value
         self.__props_being_set[prop_name] = True
         func = getattr(self, func_name)
@@ -297,7 +293,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             if this_is_js():
                 value2 = func.apply(self, [value])
             else:
-                value2 = func(value)
+                value2 = func(self, value)
         finally:
             self.__props_being_set[prop_name] = False
         # If not initialized yet, set
@@ -318,18 +314,6 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             setattr(self, private_name, value2)
             self.emit(prop_name, dict(new_value=value2, old_value=old))
             return True
-    
-    def _get_emitter(self, emitter_name):
-        # Get an emitter function.
-        func_name = '_' + emitter_name + '_func'
-        func = getattr(self, func_name)
-        def emitter_func(*args):
-            if this_is_js():
-                ev = func.apply(self, args)
-            else:
-                ev = func(*args)
-            self.emit(emitter_name, ev)
-        return emitter_func
     
     def get_event_types(self):
         """ Get the known event types for this HasEvent object. Returns

@@ -98,6 +98,11 @@ class BaseEmitter:
     def __repr__(self):
         cls_name = self.__class__.__name__
         return '<%s for %s at 0x%x>' % (cls_name, self._name, id(self))
+    
+    def get_func(self):
+        """ Get the corresponding function object.
+        """
+        return self._func
 
 
 class Property(BaseEmitter):
@@ -111,7 +116,7 @@ class Property(BaseEmitter):
         self._defaults = inspect.getargspec(self._func).defaults
     
     def __set__(self, instance, value):
-        if isinstance is not None:  # pragma: no cover
+        if instance is not None:  # pragma: no cover
             return instance._set_prop(self._name, value)
     
     def __delete__(self, instance):
@@ -120,7 +125,6 @@ class Property(BaseEmitter):
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        
         private_name = '_' + self._name + self._SUFFIX
         return getattr(instance, private_name)
 
@@ -146,6 +150,9 @@ class Emitter(BaseEmitter):
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        func = instance._get_emitter(self._name)
+        def func(*args):  # this func should return None, so super() works correct
+            ev = self._func(instance, *args)
+            if ev is not None:
+                instance.emit(self._name, ev)
         func.__doc__ = self.__doc__
         return func
