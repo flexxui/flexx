@@ -146,6 +146,10 @@ class Emitter(BaseEmitter):
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        func = instance._get_emitter(self._name)
+        #func = instance._get_emitter(self._name, self._func)
+        def func(*args):
+            ev = self._func(instance, *args)
+            if ev is not None:  # this protects against sending multiple events when using super
+                instance.emit(self._name, ev)
         func.__doc__ = self.__doc__
         return func

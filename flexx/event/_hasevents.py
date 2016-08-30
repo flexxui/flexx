@@ -74,6 +74,7 @@ def finalize_hasevents_class(cls):
                 logger.warn('Method %r is not (anymore) converted to a '
                             'handler (on %s).' % (name, cls.__name__))
     
+    # todo: can we ditch this?
     # Finalize all found emitters
     for collection in (handlers, emitters, properties):
         for name, descriptor in collection.items():
@@ -319,17 +320,19 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             self.emit(prop_name, dict(new_value=value2, old_value=old))
             return True
     
-    def _get_emitter(self, emitter_name):
-        # Get an emitter function.
-        func_name = '_' + emitter_name + '_func'
-        func = getattr(self, func_name)
-        def emitter_func(*args):
-            if this_is_js():
-                ev = func.apply(self, args)
-            else:
-                ev = func(*args)
-            self.emit(emitter_name, ev)
-        return emitter_func
+    # def _get_emitter(self, emitter_name, func):
+    #     # Get an emitter function.
+    #     #func_name = '_' + emitter_name + '_func'
+    #     #func = getattr(self, func_name)
+    #     
+    #     def emitter_func(*args):
+    #         print('emitter_func(*args):', args)
+    #         if this_is_js():
+    #             ev = func.apply(self, args)
+    #         else:
+    #             ev = func(self, *args)
+    #         self.emit(emitter_name, ev)
+    #     return emitter_func
     
     def get_event_types(self):
         """ Get the known event types for this HasEvent object. Returns

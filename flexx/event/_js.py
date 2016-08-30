@@ -49,7 +49,7 @@ class HasEventsJS:
             self.__handlers.setdefault(name, [])
             self['_' + name + '_value'] = None  # need *something*
         for name in self.__properties__:
-            func = self['_' + name + '_func']
+            func = self[name]  # self['_' + name + '_func']
             creator = self['__create_' + func.emitter_type]
             creator(name)
             if func.default is not undefined:
@@ -58,7 +58,7 @@ class HasEventsJS:
         # Create emitters
         for name in self.__emitters__:
             self.__handlers.setdefault(name, [])
-            func = self['_' + name + '_func']
+            func = self[name]  #['_' + name + '_func']
             self.__create_Emitter(name)
         
         # Init handlers and properties now, or later?
@@ -122,8 +122,13 @@ class HasEventsJS:
         Object.defineProperty(self, name, opts)
     
     def __create_Emitter(self, name):
+        emitter_func = self['_' + name + '_func']
+        window.emitter_func = emitter_func
+        def func(*args):
+            ev = emitter_func.apply(self, args)
+            self.emit(name, ev)
         def getter():
-            return self._get_emitter(name)
+            return func  # self._get_emitter(name)
         def setter(x):
             raise AttributeError('Emitter %s is not settable' % name)
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
@@ -205,17 +210,13 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     total_code[0] = prefix + total_code[0]
     
     # Functions to ignore
-    special_funcs = ['_%s_func' % name for name in 
-                     (cls.__handlers__ + cls.__emitters__ + cls.__properties__)]
     OK_MAGICS = ('__properties__', '__emitters__', '__handlers__',
                  '__local_properties__')
     
     for name, val in sorted(cls.__dict__.items()):
         name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix mangling
-        if name in special_funcs:
-            pass
-        elif isinstance(val, BaseEmitter):
-            funcname = '_' + name + '_func'
+        if isinstance(val, BaseEmitter):
+            funcname = name # '_' + name + '_func'
             if isinstance(val, Property):
                 properties.append(name)
             else:

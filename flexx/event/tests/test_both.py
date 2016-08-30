@@ -156,6 +156,10 @@ class PersonNoDefault(event.HasEvents):
     def _first_name_logger(self, *events):
         for ev in events:
             self.r1.append(ev.old_value + '-' + ev.new_value)
+    
+    @event.emitter
+    def some_event(self, v):
+        return dict(val=v)
 
 
 @run_in_both(Person, "['', 'john doe', '', 'almar klein', '', 'jorik klein']")
@@ -210,6 +214,22 @@ def test_name_ev_nodefault(PersonNoDefault):
     res.extend(name.r1)
     
     return res
+
+@run_in_both(PersonNoDefault, "[7]")
+def test_emitter_ev_nodefault(PersonNoDefault):
+    res = []
+    def handler(*events):
+        for ev in events:
+            res.append(ev.val)
+    
+    name = PersonNoDefault()
+    handler = name.connect(handler, 'some_event')
+    
+    name.some_event(7)
+    handler.handle_now()
+    
+    return res 
+
 
 ## Test prop
 
@@ -683,14 +703,28 @@ class InheritedPerson2(InheritedPerson1):
     def _first_name_logger(self, *events):
         super()._first_name_logger(*events)
         self.r1.append('Y' + str(len(events)))
+    
+    @event.emitter
+    def some_event(self, v):
+        return super().some_event(v + 1)
 
-@run_in_both(InheritedPerson2, "['ernie.-ernie.', 'ernie.-jane.', 'x2', 'y2']")
+@run_in_both(InheritedPerson2, "['ernie.-ernie.', 'ernie.-jane.', 'x2', 'y2', 8]")
 def test_inheritance(InheritedPerson2):
     # property behavior can be overloaded, and handlers can be overloaded.
     # super can be used, and works for at least two levels
     name = InheritedPerson2()
     name.first_name = 'jane'
     name._first_name_logger.handle_now()
+    
+    # Test emitter inheritance
+    def handler(*events):
+        for ev in events:
+            name.r1.append(ev.val)
+    handler = name.connect(handler, 'some_event')
+    #
+    name.some_event(7)
+    handler.handle_now()
+    
     return name.r1
 
 
