@@ -168,13 +168,13 @@ def test_emitters_in_JS():
 
 
 def test_no_duplicate_code():
-    assert '_blue_func' in Foo1.JS.CODE
-    assert '_blue_func' not in Foo2.JS.CODE
-    assert '_blue_func' not in Foo4.JS.CODE
+    assert '.blue.' in Foo1.JS.CODE
+    assert '.blue.' not in Foo2.JS.CODE
+    assert '.blue.' not in Foo4.JS.CODE
     
-    assert '_red_func' not in Foo1.JS.CODE
-    assert '_red_func' in Foo2.JS.CODE
-    assert '_red_func' in Foo4.JS.CODE
+    assert '.red.' not in Foo1.JS.CODE
+    assert '.red.' in Foo2.JS.CODE
+    assert '.red.' in Foo4.JS.CODE
 
 
 def test_get_instance_by_id():

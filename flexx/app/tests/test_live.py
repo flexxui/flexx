@@ -340,19 +340,19 @@ def test_generated_javascript():
     
     codeA, codeB = ModelA.JS.CODE, ModelB.JS.CODE
     
-    assert codeA.count('_foo1_func = function') == 1
-    assert codeA.count('_foo2_func = function') == 1
-    assert codeA.count('_foo3_func = function') == 0
-    assert codeA.count('_bar1_func = function') == 1
-    assert codeA.count('_bar2_func = function') == 1
-    assert codeA.count('_bar3_func = function') == 0
+    assert codeA.count('.foo1 = function') == 1
+    assert codeA.count('.foo2 = function') == 1
+    assert codeA.count('.foo3 = function') == 0
+    assert codeA.count('.bar1 = function') == 1
+    assert codeA.count('.bar2 = function') == 1
+    assert codeA.count('.bar3 = function') == 0
     
-    assert codeB.count('_foo1_func = function') == 0
-    assert codeB.count('_foo2_func = function') == 1
-    assert codeB.count('_foo3_func = function') == 1
-    assert codeB.count('_bar1_func = function') == 0
-    assert codeB.count('_bar2_func = function') == 1
-    assert codeB.count('_bar3_func = function') == 1
+    assert codeB.count('.foo1 = function') == 0
+    assert codeB.count('.foo2 = function') == 1
+    assert codeB.count('.foo3 = function') == 1
+    assert codeB.count('.bar1 = function') == 0
+    assert codeB.count('.bar2 = function') == 1
+    assert codeB.count('.bar3 = function') == 1
 
 
 def test_apps():

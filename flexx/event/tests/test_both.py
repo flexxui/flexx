@@ -750,7 +750,7 @@ def test_emitter_return_val(InheritedPerson2):
             name.r1.append(ev.type)
     handler = name.connect(handler, 'null_event', 'non_null_event')
     
-    name.r1.clear()
+    name.r1 = []
     name.null_event()
     name.non_null_event()
     handler.handle_now()
