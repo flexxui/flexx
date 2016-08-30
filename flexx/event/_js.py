@@ -48,8 +48,9 @@ class HasEventsJS:
         for name in self.__properties__:
             self.__handlers.setdefault(name, [])
             self['_' + name + '_value'] = None  # need *something*
+            self['_' + name + '_func'] = self[name]  # need below and in set_prop()
         for name in self.__properties__:
-            func = self[name]  # self['_' + name + '_func']
+            func = self['_' + name + '_func']
             creator = self['__create_' + func.emitter_type]
             creator(name)
             if func.default is not undefined:
@@ -58,8 +59,8 @@ class HasEventsJS:
         # Create emitters
         for name in self.__emitters__:
             self.__handlers.setdefault(name, [])
-            func = self[name]  #['_' + name + '_func']
-            self.__create_Emitter(name)
+            func = self[name]
+            self.__create_Emitter(func, name)
         
         # Init handlers and properties now, or later?
         if init_handlers:
@@ -121,25 +122,28 @@ class HasEventsJS:
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
     
-    def __create_Emitter(self, name):
-        emitter_func = self['_' + name + '_func']
-        window.emitter_func = emitter_func
-        def func(*args):
+    def __create_Emitter(self, emitter_func, name):
+        # Keep a ref to the emitter func, which is a class attribute. The object
+        # attribute with the same name will be overwritten with the property below.
+        # Because the class attribute is the underlying function, super() works.
+        def func(*args):  # this func should return None, so super() works correct
             ev = emitter_func.apply(self, args)
-            self.emit(name, ev)
+            if ev is not None:
+                self.emit(name, ev)
         def getter():
-            return func  # self._get_emitter(name)
+            return func
         def setter(x):
             raise AttributeError('Emitter %s is not settable' % name)
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
     
-    def __create_Handler(self, func, name, connection_strings):
+    def __create_Handler(self, handler_func, name, connection_strings):
+        # Keep ref to the handler function, see comment in create_Emitter().
         
         # Create function that becomes our "handler object"
         def handler(*events):
-            return func.apply(self, events)
+            return handler_func.apply(self, events)
         
         # Attach methods to the function object (this gets replaced)
         HANDLER_METHODS_HOOK  # noqa
@@ -216,7 +220,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     for name, val in sorted(cls.__dict__.items()):
         name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix mangling
         if isinstance(val, BaseEmitter):
-            funcname = name # '_' + name + '_func'
+            funcname = name
             if isinstance(val, Property):
                 properties.append(name)
             else:

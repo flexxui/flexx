@@ -707,6 +707,15 @@ class InheritedPerson2(InheritedPerson1):
     @event.emitter
     def some_event(self, v):
         return super().some_event(v + 1)
+    
+    @event.emitter
+    def null_event(self):
+        return None
+    
+    @event.emitter
+    def non_null_event(self):
+        return {}
+
 
 @run_in_both(InheritedPerson2, "['ernie.-ernie.', 'ernie.-jane.', 'x2', 'y2', 8]")
 def test_inheritance(InheritedPerson2):
@@ -723,6 +732,27 @@ def test_inheritance(InheritedPerson2):
     handler = name.connect(handler, 'some_event')
     #
     name.some_event(7)
+    handler.handle_now()
+    
+    return name.r1
+
+@run_in_both(InheritedPerson2, "['non_null_event']")
+def test_emitter_return_val(InheritedPerson2):
+    # property behavior can be overloaded, and handlers can be overloaded.
+    # super can be used, and works for at least two levels
+    name = InheritedPerson2()
+    name.first_name = 'jane'
+    name._first_name_logger.handle_now()
+    
+    # Test emitter inheritance
+    def handler(*events):
+        for ev in events:
+            name.r1.append(ev.type)
+    handler = name.connect(handler, 'null_event', 'non_null_event')
+    
+    name.r1.clear()
+    name.null_event()
+    name.non_null_event()
     handler.handle_now()
     
     return name.r1
