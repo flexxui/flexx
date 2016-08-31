@@ -268,8 +268,9 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     * On the JavaScript side the same order applies. The creation of
       the JavaScript object occurs after the Python object is created.
     * The JavaScript part of a Model is not garbadge collected, but removed
-      when the Python side is disposed using dispose().
-    * The Python part of a model is garbadge collected as usual.
+      when the Python side object is deleted or disposed using dispose().
+    * The Python part of a model is garbadge collected as usual. Note that
+      handlers hold references to the objects that they connect to.
     * Note that the Widget class has a mechanism to avoid being deleted
       when it is temporarily not referenced due to jitter in the
       children property.
