@@ -178,6 +178,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         for name in self.__handlers__:
             getattr(self, name)
     
+    # todo: should we call this from __del__?
     def dispose(self):
         """ Use this to dispose of the object to prevent memory leaks.
         
