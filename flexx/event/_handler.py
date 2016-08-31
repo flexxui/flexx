@@ -228,19 +228,17 @@ class Handler:
         be called manually to force the handler to process pending
         events *now*.
         """
-        # Collect pending events and check what connections need to reconnect
-        events = []
-        reconnect = []
-        for label, ev in self._pending:
-            if label.startswith('reconnect_'):
-                index = int(label.split('_')[-1])
-                reconnect.append(index)
-            else:
-                events.append(ev)
+        # Collect pending events and clear current list
+        events, reconnect = self._collect()
         self._pending = []
         # Reconnect (dynamism)
         for index in reconnect:
             self._connect_to_event(index)
+        # Collect newly created events (corresponding to props)
+        events2, reconnect2 = self._collect()
+        if not len(reconnect2):
+            events = events + events2
+            self._pending = []
         # Handle events
         if len(events):
             if not this_is_js():
@@ -255,6 +253,18 @@ class Handler:
                     err.skip_tb = 2
                     logger.exception(err)
     
+    def _collect(self):
+        """ Get list of events and reconnect-events from list of pending events.
+        """
+        events = []
+        reconnect = []
+        for label, ev in self._pending:
+            if label.startswith('reconnect_'):
+                index = int(label.split('_')[-1])
+                reconnect.append(index)
+            else:
+                events.append(ev)
+        return events, reconnect
     
     ## Connecting
     

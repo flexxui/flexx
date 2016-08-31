@@ -42,7 +42,7 @@ class HasEventsJS:
         # Init some internal variables
         self.__handlers = {}
         self.__props_being_set = {}
-        self.__initial_pending_events = []
+        self.__props_ever_set = {}
         
         # Create properties
         for name in self.__properties__:
@@ -66,14 +66,11 @@ class HasEventsJS:
         if init_handlers:
             self._init_handlers()
     
-    def __init_handlers(self, initial_pending_events):
-        # Create handlers
+    def __init_handlers(self):
+        # Create (and connect) handlers
         for name in self.__handlers__:
             func = self[name]
             self[name] = self.__create_Handler(func, name, func._connection_strings)
-        # Emit events for properties
-        for ev in initial_pending_events:
-            self._emit(ev)
     
     def __connect(self, *connection_strings):
         # The JS version (no decorator functionality)

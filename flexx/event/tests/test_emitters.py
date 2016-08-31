@@ -146,15 +146,14 @@ def test_prop_init():
     m.foo = 3
     assert len(m.foo_handler._pending) == 3
     
-    # Specifying the value in the init will result
-    # in two events, one for the default and one for the initial value
+    # Specifying the value in the init will result in just one event
     m = MyObject(foo=9)
-    assert len(m.foo_handler._pending) == 2
+    assert len(m.foo_handler._pending) == 1
     m.foo = 2
     m.foo = 3
-    assert len(m.foo_handler._pending) == 4
+    assert len(m.foo_handler._pending) == 3
     m.foo = 3
-    assert len(m.foo_handler._pending) == 4
+    assert len(m.foo_handler._pending) == 3
     
 
 def test_readonly():

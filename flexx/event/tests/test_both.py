@@ -59,7 +59,7 @@ def run_in_both(cls, reference, extra_classes=()):
                 this_classes.append(c)
             for c in reversed(this_classes):
                 code += create_js_hasevents_class(c, c.__name__, c.__bases__[0].__name__+'.prototype')
-            code += py2js(func, 'test', inline_stdlib=False)
+            code += py2js(func, 'test', inline_stdlib=False, docstrings=False)
             code += 'test(%s);' % cls.__name__
             nargs, function_deps, method_deps = get_std_info(code)
             code = get_partial_std_lib(function_deps, method_deps, []) + code
@@ -459,6 +459,8 @@ def test_get_event_handlers1(Person):
 
 @run_in_both(Person, "[]")
 def test_get_event_handlers2(Person):
+    res1 = []
+    res2 = []
     
     def func1(*events):
         for ev in events:
@@ -513,7 +515,7 @@ def test_dispose1(Person):
     return []
 
 
-@run_in_both(Person, "['jane', 'johnny', 1]")
+@run_in_both(Person, "['john', 'jane', 'johnny', 1]")
 def test_connect1(Person):
     res = []
     res2 = []
@@ -534,7 +536,7 @@ def test_connect1(Person):
     return res
 
 
-@run_in_both(Person, "['jane', 'jansen', 'johnny', 1]")
+@run_in_both(Person, "['john', 'doe', 'jane', 'jansen', 'johnny', 1]")
 def test_connect2(Person):
     res = []
     res2 = []
@@ -556,7 +558,7 @@ def test_connect2(Person):
     return res
 
 
-@run_in_both(Person, "['jane', 'jansen', 'johnny', 1]")
+@run_in_both(Person, "['john', 'doe', 'jane', 'jansen', 'johnny', 1]")
 def test_connect3(Person):
     res = []
     res2 = []
@@ -578,7 +580,8 @@ def test_connect3(Person):
     return res
 
 
-@run_in_both(Person, "['jane', 'jansen', '||', 'jane', 'jansen']")
+@run_in_both(Person, "['john', 'doe', 'jane', 'jansen', '||'," +
+                     " 'john', 'doe', 'jane', 'jansen']")
 def test_disconnect_dispose(Person):
     res1 = []
     res2 = []
@@ -620,6 +623,13 @@ def test_disconnect1(Person):
     handler1 = name.connect(func1, 'first_name', 'last_name')
     handler2 = name.connect(func2, 'first_name', 'last_name')
     
+    # reset, since connecting generates a first event
+    handler1.handle_now()
+    handler2.handle_now()
+    assert len(res1) == 2
+    res1 = []
+    res2 = []
+    
     name.first_name = 'jane'
     name.last_name = 'jansen'
     name.disconnect('first_name')  # disconnect handler
@@ -648,6 +658,13 @@ def test_disconnect2(Person):
     handler1 = name.connect(func1, 'first_name', 'last_name')
     handler2 = name.connect(func2, 'first_name', 'last_name')
     
+    # reset, since connecting generates a first event
+    handler1.handle_now()
+    handler2.handle_now()
+    assert len(res1) == 2
+    res1 = []
+    res2 = []
+    
     name.first_name = 'jane'
     name.last_name = 'jansen'
     name.disconnect('first_name', handler1)  # disconnect handler
@@ -674,6 +691,13 @@ def test_disconnect3(Person):
     name = Person()
     handler1 = name.connect(func1, 'first_name:label1', 'last_name:label1')
     handler2 = name.connect(func2, 'first_name:label2', 'last_name:label2')
+    
+    # reset, since connecting generates a first event
+    handler1.handle_now()
+    handler2.handle_now()
+    assert len(res1) == 2
+    res1 = []
+    res2 = []
     
     name.first_name = 'jane'
     name.last_name = 'jansen'
@@ -776,6 +800,13 @@ def test_event_object_persistence(Person):
     handler1 = name.connect(func1, 'first_name', 'last_name')
     handler2 = name.connect(func2, 'first_name', 'last_name')
     
+    # reset, since connecting generates a first event
+    handler1.handle_now()
+    handler2.handle_now()
+    assert len(res1) == 2
+    res1 = []
+    res2 = []
+    
     name.first_name = 'jane'
     name.last_name = 'jansen'
     handler1.handle_now()
@@ -788,7 +819,7 @@ def test_event_object_persistence(Person):
     return []
 
 
-@run_in_both(Person, "['jane', 'jansen', 0, 0, 2]")
+@run_in_both(Person, "['john', 'doe', 'jane', 'jansen', 0, 0, 4]")
 def test_handler_calling(Person):
     res1 = []
     res2 = []
@@ -829,6 +860,13 @@ def test_handler_dispose(Person):
     name = Person()
     handler1 = name.connect(func1, 'first_name', 'last_name')
     handler2 = name.connect(func2, 'first_name', 'last_name')
+    
+    # reset, since connecting generates a first event
+    handler1.handle_now()
+    handler2.handle_now()
+    assert len(res1) == 2
+    res1 = []
+    res2 = []
     
     name.first_name = 'jane'
     name.last_name = 'jansen'
@@ -1092,8 +1130,7 @@ class Node(event.HasEvents):
             else:
                 self._r2.append('null')
 
-
-@run_in_both(Node, "[17, 18, 29]")
+@run_in_both(Node, "[0, 17, 18, 28, 29]")
 def test_dynamism1(Node):
     n = Node()
     n1 = Node()
@@ -1121,7 +1158,7 @@ def test_dynamism1(Node):
     return n._r1
 
 
-@run_in_both(Node, "[17, 18, 29]")
+@run_in_both(Node, "[0, 17, 18, 28, 29]")
 def test_dynamism2a(Node):
     n = Node()
     n1 = Node()
@@ -1159,7 +1196,7 @@ def test_dynamism2a(Node):
     return res
 
 
-@run_in_both(Node, "[0, 17, 18, 28, 29, null]")
+@run_in_both(Node, "[null, null, 0, 17, 18, null, 28, 29, null]")
 def test_dynamism2b(Node):
     n = Node()
     n1 = Node()
@@ -1169,7 +1206,7 @@ def test_dynamism2b(Node):
     
     def func(*events):
         for ev in events:
-            if n.parent:
+            if ev.type == 'val':
                 res.append(n.parent.val)
             else:
                 res.append(None)
@@ -1197,7 +1234,7 @@ def test_dynamism2b(Node):
     return res
 
 
-@run_in_both(Node, "[17, 27, 18, 28, 29]")
+@run_in_both(Node, "[0, 0, 17, 27, 18, 28, 28, 29]")
 def test_dynamism3(Node):
     n = Node()
     n1 = Node()
@@ -1225,7 +1262,7 @@ def test_dynamism3(Node):
     return n._r2
 
 
-@run_in_both(Node, "[17, 27, 18, 28, 29]")
+@run_in_both(Node, "[0, 0, 17, 27, 18, 28, 28, 29]")
 def test_dynamism4a(Node):
     n = Node()
     n1 = Node()
@@ -1263,7 +1300,7 @@ def test_dynamism4a(Node):
     return res
 
 
-@run_in_both(Node, "['null', 17, 27, 18, 28, 'null', 29, 'null']")
+@run_in_both(Node, "['null', 'null', 0, 0, 17, 27, 18, 28, 'null', 28, 29, 'null']")
 def test_dynamism4b(Node):
     n = Node()
     n1 = Node()
@@ -1301,7 +1338,7 @@ def test_dynamism4b(Node):
     return res
 
 
-@run_in_both(Node, "[17, 18, 19]")
+@run_in_both(Node, "[0, 17, 18, 19]")
 def test_dynamism5(Node):
     # connection strings with static attributes - no reconnect
     n = Node()
