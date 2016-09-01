@@ -1,8 +1,8 @@
 """
-This example demonstrates the orde of initialization:
+This example demonstrates the order of initialization:
 
-* Initial property values are set
-* The init() method gets called
+* Initial property values are set.
+* The init() method gets called.
 * Events are handled.
 """
 
