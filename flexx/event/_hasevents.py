@@ -178,11 +178,10 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         for name in self.__handlers__:
             getattr(self, name)
     
-    def __del__(self):
-        try:
+    if sys.version_info > (3, 4):
+        # http://eli.thegreenplace.net/2009/06/12/safely-using-destructors-in-python
+        def __del__(self):
             self.dispose()
-        except Exception:
-            pass
     
     def dispose(self):
         """ Use this to dispose of the object to prevent memory leaks.
