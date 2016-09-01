@@ -19,7 +19,8 @@ class SubModel(app.Model):
     @event.connect('foo')
     def on_foo(self, *events):
         for ev in events:
-            print('Py %s: handling %s event' % (self.id, ev.type), self.foo + self.spam)
+            print('Py %s: handling %s event' % (self.id, ev.type),
+                  self.foo + self.spam)
 
     class JS:
         
@@ -35,7 +36,8 @@ class SubModel(app.Model):
         @event.connect('bar')
         def on_bar(self, *events):
             for ev in events:
-                print('JS %s: handling %s event' % (self.id, ev.type), self.bar + self.eggs)
+                print('JS %s: handling %s event' % (self.id, ev.type),
+                      self.bar + self.eggs)
 
 
 class MainModel(SubModel):

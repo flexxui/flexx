@@ -38,9 +38,36 @@ def get_std_info(code):
     method_deps = sorted(set(method_deps))
     # Filter
     function_deps = [dep for dep in function_deps if dep not in method_deps]
-    function_deps = [dep for dep in function_deps if dep in FUNCTIONS]
-    method_deps = [dep for dep in method_deps if dep in METHODS]
-    return nargs, function_deps, method_deps
+    function_deps = set([dep for dep in function_deps if dep in FUNCTIONS])
+    method_deps = set([dep for dep in method_deps if dep in METHODS])
+    # Recurse
+    for dep in list(function_deps):
+        update_deps(FUNCTIONS[dep], function_deps, method_deps)
+    for dep in list(method_deps):
+        update_deps(METHODS[dep], function_deps, method_deps)
+    
+    return nargs, sorted(function_deps), sorted(method_deps)
+
+def update_deps(code, function_deps, method_deps):
+    """ Given the code of a dependency, recursively resolve additional dependencies.
+    """
+    # Collect deps
+    sep = FUNCTION_PREFIX
+    new_function_deps = [part.split('(')[0].strip() for part in code.split(sep)[1:]]
+    sep = METHOD_PREFIX
+    new_method_deps = [part.split('.')[0].strip() for part in code.split(sep)[1:]]
+    # Update
+    new_function_deps = set(new_function_deps).difference(function_deps)
+    new_method_deps = set(new_method_deps).difference(method_deps)
+    function_deps.update(new_function_deps)
+    method_deps.update(new_method_deps)
+    # Recurse
+    for dep in new_function_deps:
+        update_deps(FUNCTIONS[dep], function_deps, method_deps)
+    for dep in new_method_deps:
+        update_deps(METHODS[dep], function_deps, method_deps)
+    return function_deps, method_deps
+
 
 def get_partial_std_lib(func_names, method_names, imported_objects, indent=0):
     """ Get the code for the PyScript standard library consisting of

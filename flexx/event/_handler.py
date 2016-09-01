@@ -334,9 +334,9 @@ class Handler:
             return  # found it
         
         # Resolve name
-        obname, path = path[0], path[1:]
-        selector = '*' * obname.count('*')
-        obname = obname.rstrip('*')
+        obname_full, path = path[0], path[1:]
+        obname = obname_full.rstrip('*')
+        selector = obname_full[len(obname):]
         # Internally, 3-star notation is used for optional selectors
         if selector == '***':
             self._seek_event_object(index, path, ob)

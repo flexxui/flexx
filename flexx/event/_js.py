@@ -147,9 +147,9 @@ class HasEventsJS:
         
         # Init handler
         that = self
-        HasEvents.prototype._HANDLER_COUNT += 1
+        HasEvents.Ƥ._HANDLER_COUNT += 1
         handler._name = name
-        handler._id = 'h' + str(HasEvents.prototype._HANDLER_COUNT)
+        handler._id = 'h' + str(HasEvents.Ƥ._HANDLER_COUNT)
         handler._ob = lambda : that  # no weakref in JS
         handler._init(connection_strings, self)
         
@@ -173,7 +173,7 @@ def get_HasEvents_js():
     for name, val in sorted(HasEvents.__dict__.items()):
         if name.startswith(('__', '_HasEvents__')) or not callable(val):
             continue
-        code += py2js(val, 'HasEvents.prototype.' + name)
+        code += py2js(val, 'HasEvents.Ƥ.' + name)
         code += '\n'
     jscode += code
     # Almost done
@@ -184,7 +184,7 @@ def get_HasEvents_js():
 HasEventsJS.JSCODE = get_HasEvents_js()
 
 
-def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
+def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
     """ Create the JS equivalent of a subclass of the HasEvents class.
     
     Given a Python class with handlers, properties and emitters, this
@@ -223,19 +223,19 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             else:
                 emitters.append(name)
             # Add function def
-            code = py2js(val._func, cls_name + '.prototype.' + funcname)
+            code = py2js(val._func, cls_name + '.Ƥ.' + funcname)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             # Mark to not bind the func
-            t = '%s.prototype.%s.nobind = true;'
+            t = '%s.Ƥ.%s.nobind = true;'
             funcs_code.append(t % (cls_name, funcname))
             # Has default val?
             if isinstance(val, Property) and val._defaults:
                 default_val = json.dumps(val._defaults[0])
-                t = '%s.prototype.%s.default = %s;'
+                t = '%s.Ƥ.%s.default = %s;'
                 funcs_code.append(t % (cls_name, funcname, default_val))
             # Add type of emitter
-            t = '%s.prototype.%s.emitter_type = %s;'
+            t = '%s.Ƥ.%s.emitter_type = %s;'
             emitter_type = val.__class__.__name__
             funcs_code.append(t % (cls_name, funcname, reprs(emitter_type)))
             funcs_code.append('')
@@ -243,23 +243,23 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             funcname = name  # funcname is simply name, so that super() works
             handlers.append(name)
             # Add function def
-            code = py2js(val._func, cls_name + '.prototype.' + funcname)
+            code = py2js(val._func, cls_name + '.Ƥ.' + funcname)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             # Mark to not bind the func
-            t = '%s.prototype.%s.nobind = true;'
+            t = '%s.Ƥ.%s.nobind = true;'
             funcs_code.append(t % (cls_name, funcname))
             # Add connection strings to the function object
-            t = '%s.prototype.%s._connection_strings = %s;'
+            t = '%s.Ƥ.%s._connection_strings = %s;'
             funcs_code.append(t % (cls_name, funcname, reprs(val._connection_strings)))
             funcs_code.append('')
         elif callable(val):
-            code = py2js(val, cls_name + '.prototype.' + name)
+            code = py2js(val, cls_name + '.Ƥ.' + name)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             funcs_code.append('')
         elif name in OK_MAGICS:
-            t = '%s.prototype.%s = %s;'
+            t = '%s.Ƥ.%s = %s;'
             const_code.append(t % (cls_name, name, reprs(val)))
         elif name.startswith('__'):
             pass  # we create our own __emitters__, etc.
@@ -269,9 +269,9 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             except Exception as err:  # pragma: no cover
                 raise ValueError('Attributes on JS HasEvents class must be '
                                  'JSON compatible.\n%s' % str(err))
-            #const_code.append('%s.prototype.%s = JSON.parse(%s)' %
+            #const_code.append('%s.Ƥ.%s = JSON.parse(%s)' %
             #                  (cls_name, name, reprs(serialized)))
-            const_code.append('%s.prototype.%s = %s;' % (cls_name, name, serialized))
+            const_code.append('%s.Ƥ.%s = %s;' % (cls_name, name, serialized))
     
     if const_code:
         total_code.append('')

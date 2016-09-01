@@ -811,7 +811,7 @@ class Parser2(Parser1):
         elif base_class.lower() == 'object':  # maybe Python "object"
             base_class = 'Object'
         else:
-            base_class = base_class + '.prototype'
+            base_class = base_class + '.Ƥ'
         
         # Define function that acts as class constructor
         code = []
@@ -855,7 +855,7 @@ class Parser2(Parser1):
             raise JSError('can only use super() inside a method.')
         
         base_class = nsname2
-        return '%s.prototype._base_class' % base_class
+        return '%s.Ƥ._base_class' % base_class
     
     
     #def parse_With
@@ -886,9 +886,11 @@ def get_class_definition(name, base='Object', docstring=''):
     code.append('}')
     
     if base != 'Object':
-        code.append('%s.prototype = Object.create(%s);' % (name, base))
-    code.append('%s.prototype._base_class = %s;' % (name, base))
-    code.append('%s.prototype._class_name = %s;' % (name, reprs(name.split('.')[-1])))
+        code.append('%s.Ƥ = %s.prototype = Object.create(%s);' % (name, name, base))
+    else:
+        code.append('%s.Ƥ = %s.prototype;' % (name, name))
+    code.append('%s.Ƥ._base_class = %s;' % (name, base))
+    code.append('%s.Ƥ._class_name = %s;' % (name, reprs(name.split('.')[-1])))
     
     code.append('')
     return code

@@ -147,7 +147,7 @@ class Parser0:
     }
     
     ATTRIBUTE_MAP = {
-        '__class__': 'constructor.prototype',
+        '__class__': 'constructor.Ƥ',
     }
     
     BINARY_OP = {
@@ -336,7 +336,7 @@ class Parser0:
         """
         nstype, nsname, ns = self._stack[-1]
         if nstype == 'class':
-            return nsname + '.prototype.' + name
+            return nsname + '.Ƥ.' + name
         else:
             return name
     
