@@ -114,6 +114,7 @@ class Property(BaseEmitter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._defaults = inspect.getargspec(self._func).defaults
+        # defaults is a list, so we can see if there is a default (it might be None)
     
     def __set__(self, instance, value):
         if instance is not None:  # pragma: no cover

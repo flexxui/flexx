@@ -275,7 +275,7 @@ class TestExpressions:
         # Class variables don't get a var
         code = py2js('class Foo:\n  bar=3\n  bar = bar + 1')
         assert code.count('bar') == 3
-        assert code.count('Foo.prototype.bar') == 3
+        assert code.count('Foo.Ƥ.bar') == 3
     
     def test_aug_assignments(self):
         # assign + bin op

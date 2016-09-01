@@ -1,4 +1,5 @@
 import os
+import sys
 import types
 import inspect
 import hashlib
@@ -99,6 +100,8 @@ def js_rename(jscode, cur_name, new_name):
                             '%s = function' % (new_name), 1)
     jscode = jscode.replace('%s.prototype' % cur_name, 
                             '%s.prototype' % new_name)
+    jscode = jscode.replace('%s.Ƥ' % cur_name, 
+                            '%s.Ƥ' % new_name)
     jscode = jscode.replace('_class_name = "%s"' % cur_name, 
                             '_class_name = "%s"' % new_name)
     if '.' in new_name:
@@ -141,10 +144,12 @@ def evaljs(jscode, whitespace=True):
     
     # Call node
     cmd = [get_node_exe(), '--use_strict', '-p', '-e', jscode]
+    if sys.version_info[0] < 3:
+        cmd = [c.encode('raw_unicode_escape') for c in cmd]
     try:
         res = subprocess.check_output(cmd)
     except Exception as err:
-        err = str(err)
+        err = err.output.decode()
         err = err[:200] + '...' if len(err) > 200 else err
         raise Exception(err)
     

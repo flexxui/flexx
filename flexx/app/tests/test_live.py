@@ -240,6 +240,7 @@ class ModelE(ModelA):
         
         self.emit('foo', {})
         self.emit('foo', {})
+        self.call_js('test_init()')
     
     @event.connect('foo')
     def foo_handler(self, *events):
@@ -267,7 +268,8 @@ class ModelE(ModelA):
         def init(self):
             self.res3 = []
             self.res4 = []
-            
+        
+        def test_init(self):
             self.emit('bar', {})
             self.emit('bar', {})
         
@@ -282,7 +284,7 @@ class ModelE(ModelA):
             print('JS saw %i bar events' % len(events))
         
         def set_result(self):
-            print('setting rssulr in js' + (self.res3 + [''] + self.res4) )
+            print('setting result in js' + (self.res3 + [''] + self.res4) )
             self.result = self.res3 + [''] + self.res4
 
 

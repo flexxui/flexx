@@ -43,13 +43,13 @@ def unify(x):
     
     if x[0] in '\'"' and x[0] == x[-1] and x.count(x[0]) == 2:
         return x  # string
-    elif re.match(r'^[\.\w]*$', x):
+    elif re.match(r'^[\.\w]*$', x, re.UNICODE):
         return x  # words consisting of normal chars, numbers and dots
-    elif re.match(r'^[\.\w]*\(.*\)$', x) and x.count(')') == 1:
+    elif re.match(r'^[\.\w]*\(.*\)$', x, re.UNICODE) and x.count(')') == 1:
         return x  # function calls (e.g. 'super()' or 'foo.bar(...)')
-    elif re.match(r'^[\.\w]*\[.*\]$', x) and x.count(']') == 1:
+    elif re.match(r'^[\.\w]*\[.*\]$', x, re.UNICODE) and x.count(']') == 1:
         return x  # indexing
-    elif re.match(r'^\{.*\}$', x) and x.count('}') == 1:
+    elif re.match(r'^\{.*\}$', x, re.UNICODE) and x.count('}') == 1:
         return x  # dicts
     else:
         return '(%s)' % x
@@ -147,7 +147,7 @@ class Parser0:
     }
     
     ATTRIBUTE_MAP = {
-        '__class__': 'constructor.prototype',
+        '__class__': 'constructor.Ƥ',
     }
     
     BINARY_OP = {
@@ -336,7 +336,7 @@ class Parser0:
         """
         nstype, nsname, ns = self._stack[-1]
         if nstype == 'class':
-            return nsname + '.prototype.' + name
+            return nsname + '.Ƥ.' + name
         else:
             return name
     

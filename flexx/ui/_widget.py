@@ -223,6 +223,8 @@ class Widget(Model):
             """ The id of the DOM element that contains this widget if
             parent is None. Use 'body' to make this widget the root.
             """
+            if not isinstance(v, str):
+                raise ValueError('Widget.container should be a string.')
             return str(v)
     
         @event.prop

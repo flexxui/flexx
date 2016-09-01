@@ -130,10 +130,13 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
     
     def __init__(self, **property_values):
         
-        # Init some internal variables
+        # Init some internal variables. Note that __handlers__ is a list of handler
+        # names for this class, and __handlers a dict of handlers registered to
+        # events of this object.
         self.__handlers = {}
         self.__props_being_set = {}
-        self.__initial_pending_events = []
+        self.__props_ever_set = {}
+        self.__initialized_handlers = False
         init_handlers = property_values.pop('_init_handlers', True)
         
         # Instantiate emitters
@@ -165,19 +168,20 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         """ Initialize handlers and properties. You should only do this once,
         and only when using the object is initialized with init_handlers=False.
         """
-        if self.__initial_pending_events is None:
+        if self.__initialized_handlers:
             raise RuntimeError('Cannot initialize handlers twice')
-        events = self.__initial_pending_events
-        self.__initial_pending_events = None
-        self.__init_handlers(events)  # calls Python or JS version
+        self.__initialized_handlers = True
+        self.__init_handlers()  # calls Python or JS version
     
-    def __init_handlers(self, initial_pending_events):
-        # Instantiate handlers, its enough to reference them
+    def __init_handlers(self):
+        # Instantiate handlers (i.e. resolve connections) its enough to reference them
         for name in self.__handlers__:
             getattr(self, name)
-        # Emit events for properties
-        for ev in initial_pending_events:
-            self._emit(ev)
+    
+    if sys.version_info > (3, 4):
+        # http://eli.thegreenplace.net/2009/06/12/safely-using-destructors-in-python
+        def __del__(self):
+            self.dispose()
     
     def dispose(self):
         """ Use this to dispose of the object to prevent memory leaks.
@@ -213,6 +217,16 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             handlers.append(entry)
         handlers.sort(key=lambda x: x[0]+'-'+x[1]._id)
         self._handlers_changed_hook()
+        # Emit initializing event if connection is a property. Old value == cur value.
+        if type in self.__properties__:
+            if self.__props_ever_set.get(type, False):
+                if not label.startswith('reconnect_'):  # Avoid recursion
+                    val = getattr(self, type)
+                    ev = Dict()  # PyScript compatible
+                    ev.type = type
+                    ev.source = self
+                    ev.new_value = ev.old_value = val
+                    handler._add_pending_event(label, ev)  # friend class
     
     def disconnect(self, type, handler=None):
         """ Disconnect handlers. 
@@ -256,10 +270,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         ev.type = type
         ev.source = self
         # Push the event to the handlers (handlers use labels for dynamism)
-        if self.__initial_pending_events is not None:
-            self.__initial_pending_events.append(ev)
-        else:
-            self._emit(ev)
+        self._emit(ev)
         return ev
     
     def _emit(self, ev):
@@ -288,6 +299,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         func_name = '_' + prop_name + '_func'  # set in init in both Py and JS
         # Validate value
         self.__props_being_set[prop_name] = True
+        self.__props_ever_set[prop_name] = True
         func = getattr(self, func_name)
         try:
             if this_is_js():

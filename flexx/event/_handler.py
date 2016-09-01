@@ -228,19 +228,17 @@ class Handler:
         be called manually to force the handler to process pending
         events *now*.
         """
-        # Collect pending events and check what connections need to reconnect
-        events = []
-        reconnect = []
-        for label, ev in self._pending:
-            if label.startswith('reconnect_'):
-                index = int(label.split('_')[-1])
-                reconnect.append(index)
-            else:
-                events.append(ev)
+        # Collect pending events and clear current list
+        events, reconnect = self._collect()
         self._pending = []
         # Reconnect (dynamism)
         for index in reconnect:
             self._connect_to_event(index)
+        # Collect newly created events (corresponding to props)
+        events2, reconnect2 = self._collect()
+        if not len(reconnect2):
+            events = events + events2
+            self._pending = []
         # Handle events
         if len(events):
             if not this_is_js():
@@ -255,6 +253,18 @@ class Handler:
                     err.skip_tb = 2
                     logger.exception(err)
     
+    def _collect(self):
+        """ Get list of events and reconnect-events from list of pending events.
+        """
+        events = []
+        reconnect = []
+        for label, ev in self._pending:
+            if label.startswith('reconnect_'):
+                index = int(label.split('_')[-1])
+                reconnect.append(index)
+            else:
+                events.append(ev)
+        return events, reconnect
     
     ## Connecting
     
@@ -296,7 +306,7 @@ class Handler:
             ob, name = connection.objects.pop(0)
             ob.disconnect(name, self)
         
-        path = connection.fullname.split('.')[:-1]
+        path = connection.fullname.replace('.*', '*').split('.')[:-1]
         
         # Obtain root object and setup connections
         ob = self._ob()
@@ -324,15 +334,25 @@ class Handler:
             return  # found it
         
         # Resolve name
-        obname, path = path[0], path[1:]
+        obname_full, path = path[0], path[1:]
+        obname = obname_full.rstrip('*')
+        selector = obname_full[len(obname):]
+        # Internally, 3-star notation is used for optional selectors
+        if selector == '***':
+            self._seek_event_object(index, path, ob)
+        # Select object
         if hasattr(ob, '_IS_HASEVENTS') and obname in ob.__properties__:
             name_label = obname + ':reconnect_' + str(index)
             connection.objects.append((ob, name_label))
             ob = getattr(ob, obname, None)
-        elif obname == '*' and isinstance(ob, (tuple, list)):
+        else:
+            ob = getattr(ob, obname, None)
+        # Look inside?
+        if selector in '***' and isinstance(ob, (tuple, list)):
+            if len(selector) > 1:
+                path.insert(0, obname + '***')  # recurse
             for sub_ob in ob:
                 self._seek_event_object(index, path, sub_ob)
             return
-        else:
-            ob = getattr(ob, obname, None)
+        
         return self._seek_event_object(index, path, ob)
