@@ -147,9 +147,9 @@ class HasEventsJS:
         
         # Init handler
         that = self
-        HasEvents.Ƥ._HANDLER_COUNT += 1
+        HasEvents.prototype._HANDLER_COUNT += 1
         handler._name = name
-        handler._id = 'h' + str(HasEvents.Ƥ._HANDLER_COUNT)
+        handler._id = 'h' + str(HasEvents.prototype._HANDLER_COUNT)
         handler._ob = lambda : that  # no weakref in JS
         handler._init(connection_strings, self)
         

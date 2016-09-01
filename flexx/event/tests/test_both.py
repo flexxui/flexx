@@ -32,11 +32,11 @@ def reduce_code(code):
     # On Windows we can pass up to 2**15 chars
     # over the command line before getting filename-too-long error.
     # Doing this gives us just enough to be able to run our tests :)
-    if sys.platform.startswith('win') and len(code.encode()) > 2**15:
+    if sys.platform.startswith('win') and len(code.encode('utf-8')) > 2**15:
         code = code.replace('    ', '')
         code = code.replace('_pyfunc_', 'pf_').replace('_pymeth_', 'pm_')
         code = code.replace('stub', 'l')  # we know that we don't use varnames with only an l
-        code_len = len(code.encode())
+        code_len = len(code.encode('utf-8'))
         if code_len > 2**15:
             raise RuntimeError('Cannot run this code on Windows: too long '
                                '(%i - 2**15 = %i)!' % (code_len, code_len - 2**15))
