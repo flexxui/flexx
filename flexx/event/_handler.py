@@ -306,7 +306,7 @@ class Handler:
             ob, name = connection.objects.pop(0)
             ob.disconnect(name, self)
         
-        path = connection.fullname.split('.')[:-1]
+        path = connection.fullname.replace('.*', '*').split('.')[:-1]
         
         # Obtain root object and setup connections
         ob = self._ob()
@@ -335,14 +335,24 @@ class Handler:
         
         # Resolve name
         obname, path = path[0], path[1:]
+        selector = '*' * obname.count('*')
+        obname = obname.rstrip('*')
+        # Internally, 3-star notation is used for optional selectors
+        if selector == '***':
+            self._seek_event_object(index, path, ob)
+        # Select object
         if hasattr(ob, '_IS_HASEVENTS') and obname in ob.__properties__:
             name_label = obname + ':reconnect_' + str(index)
             connection.objects.append((ob, name_label))
             ob = getattr(ob, obname, None)
-        elif obname == '*' and isinstance(ob, (tuple, list)):
+        else:
+            ob = getattr(ob, obname, None)
+        # Look inside?
+        if selector in '***' and isinstance(ob, (tuple, list)):
+            if len(selector) > 1:
+                path.insert(0, obname + '***')  # recurse
             for sub_ob in ob:
                 self._seek_event_object(index, path, sub_ob)
             return
-        else:
-            ob = getattr(ob, obname, None)
+        
         return self._seek_event_object(index, path, ob)
