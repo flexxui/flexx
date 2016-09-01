@@ -1,4 +1,5 @@
 import os
+import sys
 import types
 import inspect
 import hashlib
@@ -143,8 +144,10 @@ def evaljs(jscode, whitespace=True):
     
     # Call node
     cmd = [get_node_exe(), '--use_strict', '-p', '-e', jscode]
+    if sys.version_info[0] < 3:
+        cmd = [c.encode('raw_unicode_escape') for c in cmd]
     try:
-        res = subprocess.check_output([c.encode('raw_unicode_escape') for c in cmd])
+        res = subprocess.check_output(cmd)
     except Exception as err:
         err = err.output.decode()
         err = err[:200] + '...' if len(err) > 200 else err
