@@ -10,9 +10,11 @@ from flexx import app, ui
 class DatePicker(ui.Widget):
     
     class JS:
-        def init(self):
-            self.p = phosphor.createWidget('input')  # noqa
-            self._make_picker(self.p.node)
+        
+        def _init_phosphor_and_node(self):
+            self.phosphor = phosphor.createWidget('input')  # noqa
+            self.node = self.phosphor.node
+            self._make_picker(self.node)
         
         def _make_picker(node):
             """ $(node).datepicker(); // we cannot use $ as a variable name in PyScript
@@ -46,5 +48,5 @@ class Example(ui.Widget):
 
 
 if __name__ == '__main__':
-    app.launch(Example)
+    m = app.launch(Example, 'firefox')
     app.run()

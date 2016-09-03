@@ -144,8 +144,9 @@ class AssetStore:
     """ Global provider of client assets (CSS, JavaScript, images, etc.).
     
     Assets are global to the process via the AssetStore instance at
-    ``flexx.app.assets``. Use the Session instance for unique (name
-    mangled) assets.
+    ``flexx.app.assets``. An asset must be "used" at each ``Session``
+    instance where it ought to be loaded. The session can also be used
+    to load unique (per session, name mangled) assets.
     """
     
     def __init__(self):
@@ -287,7 +288,7 @@ class SessionAssets:
     def __init__(self, store=None):  # Allow custom store for testing
         self._store = store if (store is not None) else assets
         assert isinstance(self._store, AssetStore)
-        self._asset_names = list()
+        self._asset_names = []
         self._remote_asset_names = []  # e.g. JS and CSS to load from a CDN
         self._served = False
         self._known_classes = set()  # Cache what classes we know (for performance)
@@ -560,15 +561,6 @@ class SessionAssets:
         link_assets = []
         content_assets = []
         
-        # Collect remote assets
-        for url in self._remote_asset_names:
-            if url.endswith('.css'):
-                t = "    <link rel='stylesheet' type='text/css' href='%s' />"
-                link_assets.append(t % url)
-            else:
-                t = "    <script src='%s'></script>"
-                link_assets.append(t % url)
-        
         # Collect JS and CSS
         for fname, code in self._get_js_and_css_assets(True).items():
             if not code.strip():  # pragma: no cover
@@ -587,6 +579,16 @@ class SessionAssets:
                 else:
                     t = "    <script src='%s'></script>"
                     link_assets.append(t % fname)
+        
+        # Collect remote assets. These come after the other assets.
+        # Does that make sense, or is it better to maintain order?
+        for url in self._remote_asset_names:
+            if url.endswith('.css'):
+                t = "    <link rel='stylesheet' type='text/css' href='%s' />"
+                link_assets.append(t % url)
+            else:
+                t = "    <script src='%s'></script>"
+                link_assets.append(t % url)
         
         # Compose index page
         src = INDEX
