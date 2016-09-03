@@ -263,6 +263,8 @@ def test_disposing_method_handler1():
     foo_ref = weakref.ref(foo)
     foo.dispose()  # <----
     
+    event.loop.iter()
+    
     del foo
     gc.collect()
     assert foo_ref() is None
@@ -284,6 +286,8 @@ def test_disposing_handler2():
     assert foo.get_event_handlers('xx')
     foo_ref = weakref.ref(foo)
     
+    event.loop.iter()
+    
     del foo
     gc.collect()
     assert foo_ref() is None
@@ -301,6 +305,8 @@ def test_disposing_handler3():
         pass
     foo_ref = weakref.ref(foo)
     assert foo.get_event_handlers('xx')
+    
+    event.loop.iter()
     
     del foo
     gc.collect()
@@ -323,6 +329,8 @@ def test_disposing_handler4():
         pass
     foo_ref = weakref.ref(foo)
     assert foo.get_event_handlers('xx')
+    
+    event.loop.iter()
     
     foo.emit('xx', {})  # <---------
     
@@ -358,10 +366,11 @@ def test_disposing_emitter():
     foo = Foo()
     foo_ref = weakref.ref(foo)
     
+    event.loop.iter()
+    
     del foo
     gc.collect()
     assert foo_ref() is None
-
 
 
 run_tests_if_main()

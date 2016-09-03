@@ -301,6 +301,20 @@ def test_connecting():
         def foo(*events):
             pass
 
+def test_connecting_and_getting_cached_event():
+    
+    h = event.HasEvents()
+    h.emit('foo')
+    
+    res = []
+    @h.connect('foo')
+    def handle(ev):
+        res.append(ev)
+    
+    event.loop.iter()
+    event.loop.iter()
+    assert len(res) == 1
+
 
 def test_exceptions():
     h = event.HasEvents()

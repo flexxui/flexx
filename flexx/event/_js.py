@@ -12,7 +12,7 @@ from flexx.event._handler import HandlerDescriptor, Handler
 from flexx.event._hasevents import HasEvents
 
 
-Object = Date = undefined = None  # fool pyflake
+Object = Date = console = setTimeout = undefined = None  # fool pyflake
 
 reprs = json.dumps
 
@@ -43,6 +43,7 @@ class HasEventsJS:
         self.__handlers = {}
         self.__props_being_set = {}
         self.__props_ever_set = {}
+        self.__pending_events = {}
         
         # Create properties
         for name in self.__properties__:
@@ -156,11 +157,39 @@ class HasEventsJS:
         return handler
 
 
+class Loop:
+    
+    def __init__(self):
+        self._pending_calls = []
+        self._scheduled = False
+    
+    def call_later(self, func):
+        """ Call the given function in the next iteration of the "event loop".
+        """
+        self._pending_calls.append(func)
+        if not self._scheduled:
+            self._scheduled = True
+            setTimeout(self.iter, 0)
+    
+    def iter(self):
+        """ Do one event loop iteration; process all pending function calls.
+        """
+        self._scheduled = False
+        while len(self._pending_calls):
+            func = self._pending_calls.pop(0)
+            try:
+                func()
+            except Exception as err:
+                console.log(err)
+
+
 def get_HasEvents_js():
     """ Get the final code for the JavaScript version of the HasEvents class.
     """
+    # Add the loop
+    jscode = py2js(Loop, 'Loop') + '\nvar loop = new Loop();\n'
     # Start with our special JS version
-    jscode = py2js(HasEventsJS, 'HasEvents')
+    jscode += py2js(HasEventsJS, 'HasEvents')
     # Add the Handler methods
     code = '\n'
     for name, val in sorted(Handler.__dict__.items()):

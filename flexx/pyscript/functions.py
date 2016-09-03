@@ -148,6 +148,8 @@ def evaljs(jscode, whitespace=True):
         cmd = [c.encode('raw_unicode_escape') for c in cmd]
     try:
         res = subprocess.check_output(cmd)
+    except FileNotFoundError as err:
+        raise Exception('%s - The code is probably too big' % str(err))
     except Exception as err:
         err = err.output.decode()
         err = err[:200] + '...' if len(err) > 200 else err

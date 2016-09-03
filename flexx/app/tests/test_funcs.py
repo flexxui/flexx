@@ -187,7 +187,7 @@ def test_flexx_in_thread2():
         model = MyModel1()
         model.foo = 3
         model.foo = 4
-        # Run mainloop for two iterartions
+        # Run mainloop for one iterartion
         app.call_later(0, app.stop)
         app.start()
 

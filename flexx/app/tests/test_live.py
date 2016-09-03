@@ -240,7 +240,6 @@ class ModelE(ModelA):
         
         self.emit('foo', {})
         self.emit('foo', {})
-        self.call_js('test_init()')
     
     @event.connect('foo')
     def foo_handler(self, *events):
@@ -269,7 +268,6 @@ class ModelE(ModelA):
             self.res3 = []
             self.res4 = []
         
-        def test_init(self):
             self.emit('bar', {})
             self.emit('bar', {})
         

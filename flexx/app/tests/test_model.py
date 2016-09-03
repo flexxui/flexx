@@ -233,4 +233,32 @@ def test_active_models():
     assert 'risk on race conditions' in str(handler.last_value)
 
 
+class EmitInInit(app.Model):
+    
+    def init(self):
+        self.res1 = []
+        self.res2 = []
+        self.emit('foo')
+        self.emit('foo')
+    
+    @event.prop
+    def bar(self, v=1):
+        return v
+    
+    @event.connect('foo')
+    def on_foo(self, *events):
+        self.res1.append(len(events))
+    
+    @event.connect('bar')
+    def on_bar(self, *events):
+        self.res2.append(len(events))
+
+def test_can_emit_in_init():
+    m = EmitInInit()
+    m.on_foo.handle_now()
+    m.on_bar.handle_now()
+    
+    assert m.res1 == [2]
+    assert m.res2 == [1]
+
 run_tests_if_main()

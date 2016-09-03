@@ -17,6 +17,7 @@ single quotes.
 from flexx.util.testing import run_tests_if_main, raises
 
 from flexx import event
+from flexx.event import loop
 from flexx.event._js import create_js_hasevents_class, HasEventsJS, reprs
 from flexx.pyscript.functions import py2js, evaljs, evalpy, js_rename
 from flexx.pyscript.stdlib import get_std_info, get_partial_std_lib
@@ -1137,35 +1138,38 @@ class Node(event.HasEvents):
             else:
                 self._r2.append('null')
 
-@run_in_both(Node, "[0, 17, 18, 28, 29]")
+
+@run_in_both(Node, "[17, 18, 29]")
 def test_dynamism1(Node):
     n = Node()
     n1 = Node()
     n2 = Node()
     
+    loop.iter()
+    
     n.parent = n1
     n.val = 42
-    n.handle_parent_val.handle_now()
+    loop.iter()
     n1.val = 17
     n2.val = 27
-    n.handle_parent_val.handle_now()
+    loop.iter()
     n1.val = 18
     n2.val = 28
-    n.handle_parent_val.handle_now()
+    loop.iter()
     n.parent = n2
-    n.handle_parent_val.handle_now()
+    loop.iter()
     n1.val = 19
     n2.val = 29
-    n.handle_parent_val.handle_now()
+    loop.iter()
     n.parent = None
-    n.handle_parent_val.handle_now()
+    loop.iter()
     n1.val = 11
     n2.val = 21
-    n.handle_parent_val.handle_now()
+    loop.iter()
     return n._r1
 
 
-@run_in_both(Node, "[0, 17, 18, 28, 29]")
+@run_in_both(Node, "[17, 18, 29]")
 def test_dynamism2a(Node):
     n = Node()
     n1 = Node()
@@ -1181,6 +1185,8 @@ def test_dynamism2a(Node):
                 res.append(None)
     handler = n.connect(func, 'parent.val')
     
+    loop.iter()
+    
     n.parent = n1
     n.val = 42
     handler.handle_now()
@@ -1203,7 +1209,7 @@ def test_dynamism2a(Node):
     return res
 
 
-@run_in_both(Node, "[null, null, 0, 17, 18, null, 28, 29, null]")
+@run_in_both(Node, "[null, null, 17, 18, null, 29, null]")
 def test_dynamism2b(Node):
     n = Node()
     n1 = Node()
@@ -1219,6 +1225,8 @@ def test_dynamism2b(Node):
                 res.append(None)
     handler = n.connect(func, 'parent', 'parent.val')  # also connect to parent
     
+    loop.iter()
+    
     n.parent = n1
     n.val = 42
     handler.handle_now()
@@ -1241,11 +1249,13 @@ def test_dynamism2b(Node):
     return res
 
 
-@run_in_both(Node, "[0, 0, 17, 27, 18, 28, 28, 29]")
+@run_in_both(Node, "[17, 27, 18, 28, 29]")
 def test_dynamism3(Node):
     n = Node()
     n1 = Node()
     n2 = Node()
+    
+    loop.iter()
     
     n.children = n1, n2
     n.val = 42
@@ -1269,7 +1279,7 @@ def test_dynamism3(Node):
     return n._r2
 
 
-@run_in_both(Node, "[0, 0, 17, 27, 18, 28, 28, 29]")
+@run_in_both(Node, "[17, 27, 18, 28, 29]")
 def test_dynamism4a(Node):
     n = Node()
     n1 = Node()
@@ -1284,6 +1294,8 @@ def test_dynamism4a(Node):
             else:
                 res.append('null')
     handler = n.connect(func, 'children.*.val')
+    
+    loop.iter()
     
     n.children = n1, n2
     n.val = 42
@@ -1307,7 +1319,7 @@ def test_dynamism4a(Node):
     return res
 
 
-@run_in_both(Node, "['null', 'null', 0, 0, 17, 27, 18, 28, 'null', 28, 29, 'null']")
+@run_in_both(Node, "['null', 'null', 17, 27, 18, 28, 'null', 29, 'null']")
 def test_dynamism4b(Node):
     n = Node()
     n1 = Node()
@@ -1322,6 +1334,8 @@ def test_dynamism4b(Node):
             else:
                 res.append('null')
     handler = n.connect(func, 'children', 'children.*.val')  # also connect children
+    
+    loop.iter()
     
     n.children = n1, n2
     n.val = 42
@@ -1360,6 +1374,8 @@ def test_dynamism5(Node):
             else:
                 res.append('null')
     handler = n.connect(func, 'foo.val')
+    
+    loop.iter()
     
     n.val = 42
     handler.handle_now()

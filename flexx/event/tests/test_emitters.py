@@ -148,12 +148,12 @@ def test_prop_init():
     
     # Specifying the value in the init will result in just one event
     m = MyObject(foo=9)
-    assert len(m.foo_handler._pending) == 1
+    assert len(m.foo_handler._pending) == 2
     m.foo = 2
     m.foo = 3
-    assert len(m.foo_handler._pending) == 3
+    assert len(m.foo_handler._pending) == 4
     m.foo = 3
-    assert len(m.foo_handler._pending) == 3
+    assert len(m.foo_handler._pending) == 4
     
 
 def test_readonly():

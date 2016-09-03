@@ -13,7 +13,7 @@ from . import logger
 def this_is_js():
     return False
 
-console = setTimeout = None
+console = window = None
 
 
 # Decorator to wrap a function in a Handler object
@@ -212,7 +212,8 @@ class Handler:
             # register only once
             self._scheduled_update = True
             if this_is_js():
-                setTimeout(self._handle_now_callback.bind(self), 0)
+                #setTimeout(self._handle_now_callback.bind(self), 0)
+                loop.call_later(self._handle_now_callback.bind(self))
             else:
                 loop.call_later(self._handle_now_callback)
         self._pending.append((label, ev))
@@ -288,7 +289,7 @@ class Handler:
         working, but wont receive events from that object anymore.
         """
         for connection in self._connections:
-            for i in reversed(range(len(connection.objects))):
+            for i in range(len(connection.objects)-1, -1, -1):
                 if connection.objects[i][0] is ob:
                     connection.objects.pop(i)
         
@@ -350,7 +351,7 @@ class Handler:
         # Look inside?
         if selector in '***' and isinstance(ob, (tuple, list)):
             if len(selector) > 1:
-                path.insert(0, obname + '***')  # recurse
+                path = [obname + '***'] + path  # recurse (avoid insert for space)
             for sub_ob in ob:
                 self._seek_event_object(index, path, sub_ob)
             return
