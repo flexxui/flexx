@@ -8,10 +8,13 @@ import sys
 from ._dict import Dict
 from ._handler import HandlerDescriptor, Handler
 from ._emitters import BaseEmitter, Property
+from ._loop import loop
 from . import logger
 
 def this_is_js():
     return False
+
+setTimeout = None
 
 
 # From six.py
@@ -136,7 +139,8 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         self.__handlers = {}
         self.__props_being_set = {}
         self.__props_ever_set = {}
-        self.__initialized_handlers = False
+        self.__pending_events = {}
+        
         init_handlers = property_values.pop('_init_handlers', True)
         
         # Instantiate emitters
@@ -155,7 +159,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
                 self._set_prop(name, dd[0], True)
         for name, value in property_values.items():
             if name in self.__properties__:
-                setattr(self, name, value)  # should raises error whith readonly
+                setattr(self, name, value)  # should raise error whith readonly
             else:
                 cname = self.__class__.__name__
                 raise AttributeError('%s does not have a property %r' % (cname, name))
@@ -168,10 +172,14 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         """ Initialize handlers and properties. You should only do this once,
         and only when using the object is initialized with init_handlers=False.
         """
-        if self.__initialized_handlers:
-            raise RuntimeError('Cannot initialize handlers twice')
-        self.__initialized_handlers = True
-        self.__init_handlers()  # calls Python or JS version
+        if self.__pending_events is None:
+            return
+        # Schedule a call to disable event capturing
+        def stop_capturing():
+            self.__pending_events = None
+        loop.call_later(stop_capturing)
+        # Call Python or JS version to initialize and connect the handlers
+        self.__init_handlers()
     
     def __init_handlers(self):
         # Instantiate handlers (i.e. resolve connections) its enough to reference them
@@ -217,16 +225,21 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             handlers.append(entry)
         handlers.sort(key=lambda x: x[0]+'-'+x[1]._id)
         self._handlers_changed_hook()
-        # Emit initializing event if connection is a property. Old value == cur value.
-        if type in self.__properties__:
-            if self.__props_ever_set.get(type, False):
-                if not label.startswith('reconnect_'):  # Avoid recursion
-                    val = getattr(self, type)
-                    ev = Dict()  # PyScript compatible
-                    ev.type = type
-                    ev.source = self
-                    ev.new_value = ev.old_value = val
-                    handler._add_pending_event(label, ev)  # friend class
+        # Emit any pending events
+        if self.__pending_events is not None:
+            if not label.startswith('reconnect_'):
+                for ev in self.__pending_events.get(type, []):
+                    handler._add_pending_event(type + ":" + label, ev)  # friend class
+        # Send an event to communicate the value of a property
+        # if type in self.__properties__:
+        #     if self.__props_ever_set.get(type, False):
+        #         if not label.startswith('reconnect_'):  # Avoid recursion
+        #             val = getattr(self, type)
+        #             ev = Dict()  # PyScript compatible
+        #             ev.type = type
+        #             ev.source = self
+        #             ev.new_value = ev.old_value = val
+        #             handler._add_pending_event(label, ev)  # friend class
     
     def disconnect(self, type, handler=None):
         """ Disconnect handlers. 
@@ -242,7 +255,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # they reconnect (dynamism).
         type, _, label = type.partition(':')
         handlers = self.__handlers.get(type, ())
-        for i in reversed(range(len(handlers))):
+        for i in range(len(handlers)-1, -1, -1):
             entry = handlers[i]
             if not ((label and label != entry[0]) or
                     (handler and handler is not entry[1])):
@@ -270,6 +283,8 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         ev.type = type
         ev.source = self
         # Push the event to the handlers (handlers use labels for dynamism)
+        if self.__pending_events is not None:
+            self.__pending_events.setdefault(ev.type, []).append(ev)
         self._emit(ev)
         return ev
     
@@ -333,7 +348,9 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         property/emitter or for which any handlers are registered.
         Sorted alphabetically.
         """
-        return list(sorted(self.__handlers.keys()))
+        types = list(self.__handlers)  # avoid using sorted (one less stdlib func)
+        types.sort()
+        return types
     
     def get_event_handlers(self, type):
         """ Get a list of handlers for the given event type. The order

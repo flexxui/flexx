@@ -67,6 +67,8 @@ def test_integrate():
     def calllater(f):
         res.append(f)
     
+    ori = event.loop._calllaterfunc
+    
     foo = Foo()
     event.loop.integrate(calllater)
     foo.emit('foo', {})
@@ -76,8 +78,7 @@ def test_integrate():
     with raises(ValueError):
         event.loop.integrate('not a callable')
     
-    import tornado
-    event.loop.integrate()
+    event.loop._calllaterfunc = ori
 
 
 run_tests_if_main()

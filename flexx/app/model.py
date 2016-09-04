@@ -532,8 +532,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         for type, ev in pending:
             self.emit(type, ev, True)
     
-    def emit(self, type, ev, fromjs=False):
-        ev = super().emit(type, ev)
+    def emit(self, type, info=None, fromjs=False):
+        ev = super().emit(type, info)
         isprop = type in self.__properties__ and type not in self.__local_properties__
         if not fromjs and not isprop and type in self.__event_types_js:
             cmd = 'flexx.instances.%s._emit_from_py(%s, %r);' % (
@@ -613,8 +613,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             ev = window.flexx.serializer.loads(text)
             self.emit(type, ev, True)
         
-        def emit(self, type, ev, frompy=False):
-            ev = super().emit(type, ev)
+        def emit(self, type, info=None, frompy=False):
+            ev = super().emit(type, info)
             isprop = (self.__properties__.indexOf(type) >= 0 and
                       self.__local_properties__.indexOf(type) < 0 and
                       self._sync_props)

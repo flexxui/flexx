@@ -66,6 +66,7 @@ class Loop:
         if call_later_func is not None:
             if callable(call_later_func):
                 self._calllaterfunc = call_later_func
+                self._calllaterfunc(self.iter)
             else:
                 raise ValueError('call_later_func must be a function')
         elif 'tornado' in sys.modules:
@@ -83,6 +84,7 @@ class Loop:
         import tornado.ioloop
         loop = tornado.ioloop.IOLoop.current()
         self._calllaterfunc = loop.add_callback
+        self._calllaterfunc(self.iter)
         logger.debug('Flexx event loop integrated with Tornado')
     
     def integrate_pyqt4(self):  # pragma: no cover
@@ -125,6 +127,7 @@ class Loop:
         
         _callbackEventHandler = _CallbackEventHandler()
         self._calllaterfunc = _callbackEventHandler.postEventWithCallback
+        self._calllaterfunc(self.iter)
 
 
 loop = Loop()

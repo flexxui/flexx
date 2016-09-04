@@ -61,6 +61,11 @@ def create_server(host=None, port=None, new_loop=False, backend='tornado'):
         _current_server.close()
     # Start hosting
     _current_server = TornadoServer(host, port, new_loop)
+    # Schedule pending calls
+    _current_server.call_later(0, _loop.loop.iter)
+    while _pending_call_laters:
+        delay, callback, args, kwargs = _pending_call_laters.pop(0)
+        call_later(delay, callback, *args, **kwargs)
     return _current_server
 
 
@@ -125,6 +130,9 @@ def call_later(delay, callback, *args, **kwargs):
         args: the positional arguments to call the callback with.
         kwargs: the keyword arguments to call the callback with.
     """
+    if not _current_server:
+        _pending_call_laters.append((delay, callback, args, kwargs))
+        return
     server = current_server()
     server.call_later(delay, callback, *args, **kwargs)
 
@@ -132,8 +140,10 @@ def call_later(delay, callback, *args, **kwargs):
 # Work around circular dependency
 model.call_later = call_later
 
+_pending_call_laters = []
+
 # Integrate the "event-loop" of flexx.event
-_loop.loop.integrate(lambda f: current_server().call_later(0, f))
+_loop.loop.integrate(lambda f: call_later(0, f))
 
 
 @manager.connect('connections_changed')
