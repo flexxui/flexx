@@ -341,7 +341,7 @@ class MainHandler(tornado.web.RequestHandler):
                 try:
                     res = assets.load_asset(file_name)
                 except (IOError, IndexError):
-                    #self.write('invalid resource')
+                    #self.write('invalid resource') 
                     super().write_error(404)
                 else:
                     self.write(res)
