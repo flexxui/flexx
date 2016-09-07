@@ -15,6 +15,20 @@ def test_add_handlers():
     assert tornado_app.add_handlers
 
 
+def test_setting_properties():
+    
+    class MyPropClass(app.Model):
+        @event.prop
+        def foo(self, v=1):
+            return v
+    
+    m = app.launch(MyPropClass)
+    assert m.foo == 1
+    
+    m = app.launch(MyPropClass, None, dict(foo=3))
+    assert m.foo == 3
+
+    
 def test_restarting():
     """ Test stopping and starting the ioloop.
     """
