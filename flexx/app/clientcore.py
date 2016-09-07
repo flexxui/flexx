@@ -4,7 +4,7 @@ The client's core Flexx engine, implemented in PyScript.
 
 from ..pyscript import py2js, undefined, window
 
-location = require = module = typeof = None  # fool PyFlakes
+flexx = location = require = module = typeof = None  # fool PyFlakes
 
 
 @py2js(inline_stdlib=False)

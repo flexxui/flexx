@@ -36,8 +36,6 @@ INDEX = """<!doctype html>
     <meta charset="utf-8">
     <title>Flexx UI</title>
 
-ASSET-ID-HOOK
-
 ASSET-LINK-HOOK
 
 </head>
@@ -296,7 +294,6 @@ class SessionAssets:
         self._known_classes = set()  # Cache what classes we know (for performance)
         self._extra_model_classes = []  # Model classes that are not in an asset/module
         self._id = get_random_string()
-        self._app_name = 'FlexxApp'  # Set in Session class
     
     @property
     def id(self):
@@ -564,22 +561,19 @@ class SessionAssets:
         link_assets = []
         content_assets = []
         
-        # Set id  and classname asset
-        # todo: for export, the id does not matter
-        id_asset = '    <script>var flexx = {app_name: "%s", session_id: "%s"};</script>'
-        id_asset = id_asset % (self._app_name, self.id)
-        
         # Collect JS and CSS
         for fname, code in self._get_js_and_css_assets(True).items():
             if not code.strip():  # pragma: no cover
                 continue
-            if single or fname.startswith('index-'):
+            elif single or fname.startswith('index-'):
                 if fname.endswith('.css'):
                     t = "<style>\n/* CSS for %s */\n%s\n</style>"
                     content_assets.append(t % (fname, code))
                 else:
                     t = "<script>\n/* JS for %s */\n%s\n</script>"
                     content_assets.append(t % (fname, code))
+            elif fname.startswith('session') and fname.endswith('.js'):
+                link_assets.append("    <script>%s</script>" % code)
             else:
                 if fname.endswith('.css'):
                     t = "    <link rel='stylesheet' type='text/css' href='%s' />"
@@ -600,7 +594,6 @@ class SessionAssets:
         
         # Compose index page
         src = INDEX
-        src = src.replace('ASSET-ID-HOOK', id_asset)
         src = src.replace('ASSET-LINK-HOOK', '\n'.join(link_assets))
         src = src.replace('ASSET-CONTENT-HOOK', '\n'.join(content_assets))
         

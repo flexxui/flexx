@@ -125,7 +125,7 @@ class AppManager(event.HasEvents):
         
         # Session and app class need each-other, thus the _set_app()
         session = Session(name)
-        app = cls(session=session, is_app=True, **properties)  # is_app marks this Model as "main"
+        app = cls(session=session, is_app=True, **properties)  # is_app marks it as main
         session._set_app(app)
         
         # Now wait for the client to connect. The client will be served
@@ -232,7 +232,9 @@ class Session(SessionAssets):
     def __init__(self, app_name):
         super().__init__()
         
-        # Init assets
+        # Init assets (need that \n to make it look like code on py2
+        t = 'var flexx = {app_name: "%s", session_id: "%s"};\n' % (app_name, self.id)
+        self.add_asset('session-id.js', t.encode())
         self.use_global_asset('pyscript-std.js')
         self.use_global_asset('flexx-app.js')
         

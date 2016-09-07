@@ -301,7 +301,7 @@ def serve(cls, name=None, properties=None):
     Arguments:
         cls (Model): a subclass of ``app.Model`` (or ``ui.Widget``).
         name (str): the relative URL path to serve the app on. If this is
-          ``''`` or ``'__main__'``, this will be the main app.
+          ``''`` (the empty string), this will be the main app.
         properties (dict, optional): the initial properties for the model. The
           model is instantiated using ``Cls(**properties)``.
     

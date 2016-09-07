@@ -254,9 +254,9 @@ class MainHandler(tornado.web.RequestHandler):
         
         # Redirect to fixed app name?
         correct_app_name = manager.has_app_name(app_name)
-        if correct_app_name and ((correct_app_name != app_name) or
-                                 (app_name in path and '/' not in path)):
-            self.redirect('/%s/' % correct_app_name)
+        if correct_app_name and app_name in path and ('/' not in path or
+                                                      correct_app_name != app_name):
+            self.redirect('/%s/%s' % (correct_app_name, file_name))
         
         if app_name == '__index__':
             # Show plain index page
@@ -339,8 +339,8 @@ class MainHandler(tornado.web.RequestHandler):
                 try:
                     res = assets.load_asset(file_name)
                 except (IOError, IndexError):
-                    self.write('Invalid resource %r' % file_name)
-                    # super().write_error(404)
+                    # self.write('Invalid resource %r' % file_name)
+                    super().write_error(404)
                 else:
                     self.write(res)
         

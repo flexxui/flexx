@@ -24,9 +24,11 @@ def test_setting_properties():
     
     m = app.launch(MyPropClass)
     assert m.foo == 1
+    m.session.close()
     
     m = app.launch(MyPropClass, None, dict(foo=3))
     assert m.foo == 3
+    m.session.close()
 
     
 def test_restarting():
