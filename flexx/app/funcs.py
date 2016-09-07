@@ -292,7 +292,7 @@ def init_notebook():
     display(HTML(t))
 
 
-def serve(cls, path=None, properties=None):
+def serve(cls, name=None, properties=None):
     """ Serve the given Model class as a web app. Can be used as a decorator.
     
     This registers the given class with the internal app manager. The
@@ -300,7 +300,7 @@ def serve(cls, path=None, properties=None):
     
     Arguments:
         cls (Model): a subclass of ``app.Model`` (or ``ui.Widget``).
-        path (str): the relative path to serve the app on.
+        name (str): the relative URL path to serve the app on.
         properties (dict, optional): the initial properties for the model. The
           model is instantiated using ``Cls(**properties)``.
     
@@ -310,7 +310,7 @@ def serve(cls, path=None, properties=None):
     # todo: doc how to make it serve on root
     # Note: this talks to the manager; it has nothing to do with the server
     assert isinstance(cls, type) and issubclass(cls, Model)
-    manager.register_app_class(cls, properties or {})
+    manager.register_app_class(cls, name, properties or {})
     return cls
 
 
@@ -334,8 +334,9 @@ def launch(cls, runtime=None, properties=None, **runtime_kwargs):
         raise ValueError('runtime must be a string or Model subclass.')
     
     # Create session
-    serve(cls, None, properties)
-    session = manager.create_session(cls.__name__)
+    name = cls.__name__
+    serve(cls, name, properties)
+    session = manager.create_session(name)
     
     # Launch web runtime, the server will wait for the connection
     server = current_server()
@@ -372,8 +373,9 @@ def export(cls, filename=None, properties=None, single=True):
         raise ValueError('runtime must be a string or Model subclass.')
     
     # Create session
-    serve(cls, None, properties)
-    session = manager.create_session(cls.__name__)
+    name = cls.__name__
+    serve(cls, name, properties)
+    session = manager.create_session(name)
     
     # Make fake connection using exporter object
     exporter = ExporterWebSocketDummy()

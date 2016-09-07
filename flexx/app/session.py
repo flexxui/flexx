@@ -32,7 +32,7 @@ class AppManager(event.HasEvents):
         self._appinfo = {}
         self._last_check_time = time.time()
     
-    def register_app_class(self, cls, properties):
+    def register_app_class(self, cls, name, properties):
         """ Register a Model class as being an application.
         
         After registering a class, it becomes possible to connect to 
@@ -40,11 +40,13 @@ class AppManager(event.HasEvents):
         
         Parameters:
           cls (Model): The Model class to serv as an app.
+          name (str): The name (relative url path) by which this app can be accessed.
           properties (dict): The model's initial properties.
         """
+        name = cls.__name__ if name is None else name
         assert isinstance(cls, type) and issubclass(cls, Model)
+        assert isinstance(name, str)
         assert isinstance(properties, dict)
-        name = cls.__name__
         if not valid_app_name(name):
             raise ValueError('Given app does not have a valid name %r' % name)
         pending, connected = [], []
@@ -121,7 +123,7 @@ class AppManager(event.HasEvents):
         cls, properties, pending, connected = self._appinfo[name]
         
         # Session and app class need each-other, thus the _set_app()
-        session = Session(cls.__name__)
+        session = Session(name)
         app = cls(session=session, is_app=True, **properties)  # is_app marks this Model as "main"
         session._set_app(app)
         
