@@ -45,8 +45,9 @@ class AppManager(event.HasEvents):
         """
         name = cls.__name__ if name is None else name
         assert isinstance(cls, type) and issubclass(cls, Model)
-        assert isinstance(name, str)
         assert isinstance(properties, dict)
+        assert isinstance(name, str)
+        name = name or '__main__'  # empty string maps to __main__
         if not valid_app_name(name):
             raise ValueError('Given app does not have a valid name %r' % name)
         pending, connected = [], []
@@ -174,15 +175,21 @@ class AppManager(event.HasEvents):
         self.connections_changed(session.app_name)
     
     def has_app_name(self, name):
-        """ Returns True if name is a registered appliciation name
+        """ Returns the case-corrected name if the given name matches
+        a registered appliciation (case insensitive). Returns None if the
+        given name does not match any applications.
         """
-        return name in self._appinfo.keys()
+        name = name.lower()
+        for key in self._appinfo.keys():
+            if key.lower() == name:
+                return key
+        else:
+            return None
     
     def get_app_names(self):
-        """ Get a list of registered application names (excluding those
-        that start with an underscore).
+        """ Get a list of registered application names.
         """
-        return [name for name in self._appinfo.keys() if not name.startswith('_')]
+        return [name for name in sorted(self._appinfo.keys())]
     
     def get_session_by_id(self, name, id):
         """ Get session object by name and id
@@ -226,8 +233,6 @@ class Session(SessionAssets):
         super().__init__()
         
         # Init assets
-        id_asset = ('var flexx_session_id = "%s";\n' % self.id).encode()
-        self.add_asset('index-flexx-id.js', id_asset)
         self.use_global_asset('pyscript-std.js')
         self.use_global_asset('flexx-app.js')
         

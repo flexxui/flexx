@@ -240,30 +240,30 @@ class MainHandler(tornado.web.RequestHandler):
         logger.debug('Incoming request at %s' % path)
         
         # Analyze path to derive components
-        # app_name - class name of the app, must be a valid identifier
+        # app_name - name of the app, must be a valid identifier
         # file_name - path (can have slashes) to a file
         parts = [p for p in path.split('/') if p]
         if parts and valid_app_name(parts[0]):
             app_name, file_name = parts[0], '/'.join(parts[1:])
         else:
-            app_name, file_name = None, '/'.join(parts)
+            app_name = '__main__' if manager.has_app_name('__main__') else '__index__'
+            file_name = '/'.join(parts)
         
         # Session id (if any) is provided via "?session_id=X"
         session_id = self.get_argument('session_id', None)
         
-        # What to do when selecting root?
-        if not path:
-            if 'Index' in manager.get_app_names():
-                app_name = 'Index'
-            else:
-                app_name = '__index__'
+        # Redirect to fixed app name?
+        correct_app_name = manager.has_app_name(app_name)
+        if correct_app_name and ((correct_app_name != app_name) or
+                                 (app_name in path and '/' not in path)):
+            self.redirect('/%s/' % correct_app_name)
         
         if app_name == '__index__':
             # Show plain index page
-            all_apps = ['<a href="%s">%s</a>' % (name, name) for name in 
+            all_apps = ['<li><a href="%s">%s</a></li>' % (name, name) for name in 
                         manager.get_app_names()]
-            all_apps = ', '.join(all_apps)
-            self.write('Index of available apps: %s' % all_apps)
+            the_list = '<ul>%s</ul>' % ''.join(all_apps) if all_apps else 'no apps'
+            self.write('Index of available apps: ' + the_list)
         
         elif app_name == '__cmd__':
             # Control the server using http, but only from localhost
@@ -284,26 +284,24 @@ class MainHandler(tornado.web.RequestHandler):
             else:
                 self.write('unknown command')
         
-        elif app_name:
+        elif correct_app_name:
             # App name given. But is it the app, or a resource for it?
+            
+            # idea: if file_name.startswith('api/foo/bar') -> send foo/bar to app
             
             if not file_name:
                 # This looks like an app, redirect, serve app, or error
-                if '/' not in path:
-                    self.redirect('/%s/' % app_name)
-                elif session_id:
+                if session_id:
                     # If session_id matches a pending app, use that session
                     session = manager.get_session_by_id(app_name, session_id)
                     if session and session.status == session.STATUS.PENDING:
                         self.write(session.get_page().encode())
                     else:
                         self.redirect('/%s/' % app_name)  # redirect for normal serve
-                elif manager.has_app_name(app_name):
+                else:
                     # Create session - client will connect to it via session_id
                     session = manager.create_session(app_name)
                     self.write(session.get_page().encode())
-                else:
-                    self.write('No app "%s" is currently hosted.' % app_name)
             elif file_name and ('.js:' in file_name or file_name.startswith(':')):
                 # Request for a view of a JS source file at a certain line, redirect
                 fname, where = file_name.split(':')[:2]
@@ -341,18 +339,18 @@ class MainHandler(tornado.web.RequestHandler):
                 try:
                     res = assets.load_asset(file_name)
                 except (IOError, IndexError):
-                    #self.write('invalid resource')
-                    super().write_error(404)
+                    self.write('Invalid resource %r' % file_name)
+                    # super().write_error(404)
                 else:
                     self.write(res)
         
         elif file_name:
-            # filename in root. We don't support that yet
-            self.write('Invalid file % r' % file_name)
+            # filename in root. We don't support anything like that
+            self.write('Flexx only provides files relative to an app (%r)' % file_name)
         
         else:
             # In theory this cannot happen
-            self.write('This should not happen')
+            self.write('No app "%s" is currently hosted.' % app_name)
     
     def write_error(self, status_code, **kwargs):
         if status_code == 404:  # does not work?

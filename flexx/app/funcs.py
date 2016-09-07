@@ -300,14 +300,14 @@ def serve(cls, name=None, properties=None):
     
     Arguments:
         cls (Model): a subclass of ``app.Model`` (or ``ui.Widget``).
-        name (str): the relative URL path to serve the app on.
+        name (str): the relative URL path to serve the app on. If this is
+          ``''`` or ``'__main__'``, this will be the main app.
         properties (dict, optional): the initial properties for the model. The
           model is instantiated using ``Cls(**properties)``.
     
     Returns:
         cls: The given class.
     """
-    # todo: doc how to make it serve on root
     # Note: this talks to the manager; it has nothing to do with the server
     assert isinstance(cls, type) and issubclass(cls, Model)
     manager.register_app_class(cls, name, properties or {})

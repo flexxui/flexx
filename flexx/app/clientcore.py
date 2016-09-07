@@ -4,7 +4,7 @@ The client's core Flexx engine, implemented in PyScript.
 
 from ..pyscript import py2js, undefined, window
 
-flexx_session_id = location = require = module = typeof = None  # fool PyFlakes
+location = require = module = typeof = None  # fool PyFlakes
 
 
 @py2js(inline_stdlib=False)
@@ -14,22 +14,26 @@ class FlexxJS:
     """
     
     def __init__(self):
-        
+        # Copy attributes from temporary flexx object
+        self.session_id = flexx.session_id
+        self.app_name = flexx.app_name
+        # Init variables
         self.ws = None
         self.last_msg = None
         self.is_notebook = False  # if not, we "close" when the ws closes
-        # For nodejs, the location is set by the flexx nodejs runtime.
+        self.is_exported = False
+        # Containers to keep track of classes and objects
+        self.classes = {}
+        self.instances = {}
+        # Construct url (for nodejs the location is set by the flexx nodejs runtime)
         address = location.hostname
         if location.port:
             address += ':' + location.port
-        if location.pathname:
-            address += '/' + location.pathname
+        address += '/' + self.app_name
         self.ws_url = 'ws://%s/ws' % address
-        self.is_exported = False
-        self.classes = {}
-        self.instances = {}
+        
         if typeof(window) is 'undefined' and typeof(module) is 'object':
-            # nodejs (call exit on exit and ctrl-c
+            # nodejs (call exit on exit and ctrl-c)
             self._set_window_as_global()  # create alias
             self.nodejs = True
             window.setTimeout(self.init, 1)  # ms
@@ -40,7 +44,7 @@ class FlexxJS:
             # browser
             window.addEventListener('load', self.init, False)
             window.addEventListener('beforeunload', self.exit, False)
-        window.flexx = self
+        window.flexx = self  # Set this as the global flexx object
     
     def _set_window_as_global(self):  # https://github.com/nodejs/node/pull/1838
         """ global.window = global;
@@ -94,7 +98,7 @@ class FlexxJS:
         
         def on_ws_open(evt):
             window.console.info('Socket connected')
-            ws.send('hiflexx ' + flexx_session_id)
+            ws.send('hiflexx ' + self.session_id)
         def on_ws_message(evt):
             window.flexx.last_msg = msg = evt.data or evt
             #msg = window.flexx.decodeUtf8(msg)
@@ -157,7 +161,7 @@ class FlexxJS:
                 if evt.message in stack[0]:
                     stack.pop(0)
                 msg += '\n' + '\n'.join(stack)
-                session_needle = '?session_id=' + flexx_session_id
+                session_needle = '?session_id=' + self.session_id
                 msg = msg.replace('@', ' @ ').replace(session_needle, '')  # Firefox
             elif evt.message and evt.lineno:  # message, url, linenumber (not in nodejs)
                 msg += "\nIn %s:%i" % (evt.filename, evt.lineno)
