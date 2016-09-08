@@ -28,39 +28,44 @@ class AppManager(event.HasEvents):
     
     def __init__(self):
         super().__init__()
-        # name -> (ModelClass, pending, connected) - lists contain proxies
-        self._proxies = {}
+        # name -> (ModelClass, properties, pending, connected) - lists contain Sessions
+        self._appinfo = {}
         self._last_check_time = time.time()
     
-    def register_app_class(self, cls):
+    def register_app_class(self, cls, name, properties):
         """ Register a Model class as being an application.
         
-        Applications are identified by the ``__name__`` attribute of
-        the class. The given class must inherit from ``Model``.
-        
         After registering a class, it becomes possible to connect to 
-        "http://address:port/ClassName". 
+        "http://address:port/ClassName".
+        
+        Parameters:
+          cls (Model): The Model class to serv as an app.
+          name (str): The name (relative url path) by which this app can be accessed.
+          properties (dict): The model's initial properties.
         """
+        name = cls.__name__ if name is None else name
         assert isinstance(cls, type) and issubclass(cls, Model)
-        name = cls.__name__
+        assert isinstance(properties, dict)
+        assert isinstance(name, str)
+        name = name or '__main__'  # empty string maps to __main__
         if not valid_app_name(name):
             raise ValueError('Given app does not have a valid name %r' % name)
         pending, connected = [], []
-        if name in self._proxies and cls is not self._proxies[name][0]:
-            oldCls, pending, connected = self._proxies[name]
+        if name in self._appinfo and cls is not self._appinfo[name][0]:
+            oldCls, pending, connected = self._appinfo[name]
             logger.warn('Re-registering app class %r' % name)
             #raise ValueError('App with name %r already registered' % name)
-        self._proxies[name] = cls, pending, connected
+        self._appinfo[name] = cls, properties, pending, connected
     
     def create_default_session(self):
         """ Create a default session for interactive use (e.g. the notebook).
         """
         
-        if '__default__' in self._proxies:
+        if '__default__' in self._appinfo:
             raise RuntimeError('The default session can only be created once.')
         
         session = Session('__default__')
-        self._proxies['__default__'] = (None, [session], [])
+        self._appinfo['__default__'] = (None, {}, [session], [])
         return session
     
     def get_default_session(self):
@@ -70,22 +75,22 @@ class AppManager(event.HasEvents):
         When a Model class is created without a session, this method
         is called to get one (and will then fail if it's None).
         """
-        x = self._proxies.get('__default__', None)
+        x = self._appinfo.get('__default__', None)
         if x is None:
             return None
         else:
-            _, pending, connected = x
-            proxies = pending + connected
-            return proxies[-1]
+            _, _, pending, connected = x
+            sessions = pending + connected
+            return sessions[-1]
     
     def _clear_old_pending_sessions(self):
         try:
             
             count = 0
-            for name in self._proxies:
+            for name in self._appinfo:
                 if name == '__default__':
                     continue
-                _, pending, _ = self._proxies[name]
+                _, _, pending, _ = self._appinfo[name]
                 to_remove = [s for s in pending
                              if (time.time() - s._creation_time) > 10]
                 for s in to_remove:
@@ -113,14 +118,14 @@ class AppManager(event.HasEvents):
         
         if name == '__default__':
             raise RuntimeError('There can be only one __default__ session.')
-        elif name not in self._proxies:
+        elif name not in self._appinfo:
             raise ValueError('Can only instantiate a session with a valid app name.')
         
-        cls, pending, connected = self._proxies[name]
+        cls, properties, pending, connected = self._appinfo[name]
         
         # Session and app class need each-other, thus the _set_app()
-        session = Session(cls.__name__)
-        app = cls(session=session, is_app=True)  # is_app marks this Model as "main"
+        session = Session(name)
+        app = cls(session=session, is_app=True, **properties)  # is_app marks it as main
         session._set_app(app)
         
         # Now wait for the client to connect. The client will be served
@@ -134,7 +139,7 @@ class AppManager(event.HasEvents):
     def connect_client(self, ws, name, app_id):
         """ Connect a client to a session that was previously created.
         """
-        cls, pending, connected = self._proxies[name]
+        _, _, pending, connected = self._appinfo[name]
         
         # Search for the session with the specific id
         for session in pending:
@@ -160,7 +165,7 @@ class AppManager(event.HasEvents):
         The manager will remove the session from the list of connected
         instances.
         """
-        cls, pending, connected = self._proxies[session.app_name]
+        _, _, pending, connected = self._appinfo[session.app_name]
         try:
             connected.remove(session)
         except ValueError:
@@ -170,20 +175,26 @@ class AppManager(event.HasEvents):
         self.connections_changed(session.app_name)
     
     def has_app_name(self, name):
-        """ Returns True if name is a registered appliciation name
+        """ Returns the case-corrected name if the given name matches
+        a registered appliciation (case insensitive). Returns None if the
+        given name does not match any applications.
         """
-        return name in self._proxies.keys()
+        name = name.lower()
+        for key in self._appinfo.keys():
+            if key.lower() == name:
+                return key
+        else:
+            return None
     
     def get_app_names(self):
-        """ Get a list of registered application names (excluding those
-        that start with an underscore).
+        """ Get a list of registered application names.
         """
-        return [name for name in self._proxies.keys() if not name.startswith('_')]
+        return [name for name in sorted(self._appinfo.keys())]
     
     def get_session_by_id(self, name, id):
         """ Get session object by name and id
         """
-        cls, pending, connected = self._proxies[name]
+        _, _, pending, connected = self._appinfo[name]
         for session in pending:
             if session.id == id:
                 return session
@@ -194,7 +205,7 @@ class AppManager(event.HasEvents):
     def get_connections(self, name):
         """ Given an app name, return the session connected objects.
         """
-        cls, pending, connected = self._proxies[name]
+        _, _, pending, connected = self._appinfo[name]
         return list(connected)
     
     @event.emitter
@@ -221,9 +232,9 @@ class Session(SessionAssets):
     def __init__(self, app_name):
         super().__init__()
         
-        # Init assets
-        id_asset = ('var flexx_session_id = "%s";\n' % self.id).encode()
-        self.add_asset('index-flexx-id.js', id_asset)
+        # Init assets (need that \n to make it look like code on py2
+        t = 'var flexx = {app_name: "%s", session_id: "%s"};\n' % (app_name, self.id)
+        self.add_asset('session-id.js', t.encode())
         self.use_global_asset('pyscript-std.js')
         self.use_global_asset('flexx-app.js')
         

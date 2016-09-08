@@ -565,13 +565,15 @@ class SessionAssets:
         for fname, code in self._get_js_and_css_assets(True).items():
             if not code.strip():  # pragma: no cover
                 continue
-            if single or fname.startswith('index-'):
+            elif single or fname.startswith('index-'):
                 if fname.endswith('.css'):
                     t = "<style>\n/* CSS for %s */\n%s\n</style>"
                     content_assets.append(t % (fname, code))
                 else:
                     t = "<script>\n/* JS for %s */\n%s\n</script>"
                     content_assets.append(t % (fname, code))
+            elif fname.startswith('session') and fname.endswith('.js'):
+                link_assets.append("    <script>%s</script>" % code)
             else:
                 if fname.endswith('.css'):
                     t = "    <link rel='stylesheet' type='text/css' href='%s' />"

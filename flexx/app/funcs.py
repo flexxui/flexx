@@ -292,7 +292,7 @@ def init_notebook():
     display(HTML(t))
 
 
-def serve(cls):
+def serve(cls, name=None, properties=None):
     """ Serve the given Model class as a web app. Can be used as a decorator.
     
     This registers the given class with the internal app manager. The
@@ -300,23 +300,29 @@ def serve(cls):
     
     Arguments:
         cls (Model): a subclass of ``app.Model`` (or ``ui.Widget``).
+        name (str): the relative URL path to serve the app on. If this is
+          ``''`` (the empty string), this will be the main app.
+        properties (dict, optional): the initial properties for the model. The
+          model is instantiated using ``Cls(**properties)``.
     
     Returns:
         cls: The given class.
     """
     # Note: this talks to the manager; it has nothing to do with the server
     assert isinstance(cls, type) and issubclass(cls, Model)
-    manager.register_app_class(cls)
+    manager.register_app_class(cls, name, properties or {})
     return cls
 
 
-def launch(cls, runtime=None, **runtime_kwargs):
+def launch(cls, runtime=None, properties=None, **runtime_kwargs):
     """ Launch the given Model class as a desktop app in the given runtime.
     
     Arguments:
         cls (type, str): a subclass of ``app.Model`` (or ``ui.Widget`). If this 
             is a string, it simply calls ``webruntime.launch()``.
         runtime (str): the runtime to launch the application in. Default 'xul'.
+        properties (dict, optional): the initial properties for the model. The
+          model is instantiated using ``Cls(**properties)``.
         runtime_kwargs: kwargs to pass to the ``webruntime.launch`` function.
     
     Returns:
@@ -328,8 +334,9 @@ def launch(cls, runtime=None, **runtime_kwargs):
         raise ValueError('runtime must be a string or Model subclass.')
     
     # Create session
-    serve(cls)
-    session = manager.create_session(cls.__name__)
+    name = cls.__name__
+    serve(cls, name, properties)
+    session = manager.create_session(name)
     
     # Launch web runtime, the server will wait for the connection
     server = current_server()
@@ -345,13 +352,15 @@ def launch(cls, runtime=None, **runtime_kwargs):
     return session.app
 
 
-def export(cls, filename=None, single=True):
+def export(cls, filename=None, properties=None, single=True):
     """ Export the given Model class to an HTML document.
     
     Arguments:
         cls (Model): a subclass of ``app.Model`` (or ``ui.Widget``).
         filename (str, optional): Path to write the HTML document to.
             If not given or None, will return the html as a string.
+        properties (dict, optional): the initial properties for the model. The
+          model is instantiated using ``Cls(**properties)``.
         single (bool): If True, will include all JS and CSS dependencies
             in the HTML page. If False, you want to export all assets
             using ``app.assets.export(dirname)``.
@@ -364,8 +373,9 @@ def export(cls, filename=None, single=True):
         raise ValueError('runtime must be a string or Model subclass.')
     
     # Create session
-    serve(cls)
-    session = manager.create_session(cls.__name__)
+    name = cls.__name__
+    serve(cls, name, properties)
+    session = manager.create_session(name)
     
     # Make fake connection using exporter object
     exporter = ExporterWebSocketDummy()
