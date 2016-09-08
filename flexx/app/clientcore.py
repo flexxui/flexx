@@ -170,6 +170,7 @@ class FlexxJS:
             window.console.ori_error(msg)
             if window.flexx.ws is not None:
                 window.flexx.ws.send("ERROR " + evt.message)
+        on_error = on_error.bind(self)
         # Set new versions
         window.console.log = log
         window.console.info = info
