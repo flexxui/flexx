@@ -124,30 +124,37 @@ class Handler:
     _count = 0
     
     def __init__(self, func, connection_strings, ob):
-        # Check and set func
+        # Check and set id
         assert callable(func)
-        self._func = func
-        self._func_once = func
-        self._name = func.__name__
         Handler._count += 1
         self._id = 'h%i' % Handler._count  # to ensure a consistent event order
         
-        # Set docstring; this appears correct in sphinx docs
-        self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
+        # Store objects using a weakref.
+        # - ob1 is the HasEvents object of which the connect() method was called
+        #   to create the handler. Connection strings are relative to this object.
+        # - ob2 is the object to be passed to func (if it is a method). Is often
+        #   the same as ob1, but not per see.
+        self._ob1 = weakref.ref(ob)
+        self._ob2 = self._ob1
         
-        # Store object using a weakref
-        self._ob = weakref.ref(ob)
+        # Use unbounded version of bound methods
+        if getattr(func, '__self__', None) is not None:
+            self._ob2 = weakref.ref(func.__self__)
+            func = func.__func__
         
         # Get whether function is a method
         try:
             self._func_is_method = inspect.getargspec(func)[0][0] in ('self', 'this')
         except (TypeError, IndexError):
             self._func_is_method = False
-        if getattr(func, '__self__', None) is not None:
-            self._func_is_method = False  # already bound
+        
+        # Store func, name, and docstring (e.g. for sphinx docs)
+        self._func = func
+        self._func_once = func
+        self._name = func.__name__
+        self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
         
         self._init(connection_strings)
-    
     
     def _init(self, connection_strings):
         """ Init of this handler that is compatible with PyScript.
@@ -197,8 +204,13 @@ class Handler:
         """ Call the handler function.
         """
         func = self._func_once
-        if self._func_is_method and self._ob is not None:
-            res = func(self._ob(), *events)
+        if self._func_is_method:
+            if self._ob2() is not None:
+                res = func(self._ob2(), *events)
+            else:
+                # We detected that the object that wants the events no longer exist
+                self.dispose()
+                return
         else:
             res = func(*events)
         self._func_once = self._func
@@ -310,7 +322,7 @@ class Handler:
         path = connection.fullname.replace('.*', '*').split('.')[:-1]
         
         # Obtain root object and setup connections
-        ob = self._ob()
+        ob = self._ob1()
         if ob is not None:
             self._seek_event_object(index, path, ob)
         

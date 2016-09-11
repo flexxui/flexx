@@ -377,4 +377,36 @@ def test_dispose2():
     assert handler_ref() is None
 
 
+def test_dispose3():
+    # Test that connecting a "volatile" object to a static object works well
+    # w.r.t. cleanup.
+    
+    relay = event.HasEvents()
+    
+    class Foo:
+        def bar(self, *events):
+            pass
+    
+    foo = Foo()
+    handler = relay.connect(foo.bar, 'xx')
+    
+    handler_ref = weakref.ref(handler)
+    foo_ref = weakref.ref(foo)
+    
+    del foo
+    del handler
+    
+    gc.collect()
+    
+    assert foo_ref() is None
+    assert handler_ref() is not None
+    
+    relay.emit('xx')
+    event.loop.iter()
+    gc.collect()
+    
+    assert foo_ref() is None
+    assert handler_ref() is None
+
+
 run_tests_if_main()

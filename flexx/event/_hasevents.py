@@ -414,10 +414,12 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         
         def _connect(func):
             if not callable(func):
-                raise TypeError('connect() decotator requires a callable.')
+                raise TypeError('connect() decorator requires a callable.')
             return Handler(func, connection_strings, self)
         
         if func is not None:
             return _connect(func)
         else:
             return _connect
+
+

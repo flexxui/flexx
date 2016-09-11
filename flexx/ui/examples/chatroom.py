@@ -44,18 +44,16 @@ class ChatRoom(ui.Widget):
             ui.Widget(flex=1)
         
         # Pipe messages send by the relay into this app
-        relay.connect(self._push_info, 'new_message:' + self.id)
+        relay.connect(self._push_info, 'new_message')
         
         self._update_participants()
     
     def _push_info(self, *events):
-        if self.session.status:
-            for ev in events:
-                self.emit('new_message', ev)
+        for ev in events:
+            self.emit('new_message', ev)
     
     def _update_participants(self):
         if not self.session.status:
-            relay.disconnect('new_message:' + self.id)
             return  # and dont't invoke a new call
         proxies = app.manager.get_connections(self.__class__.__name__)
         names = [p.app.name.text for p in proxies]
