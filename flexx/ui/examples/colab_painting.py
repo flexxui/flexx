@@ -84,7 +84,7 @@ class ColabPainting(ui.Widget):
     def _update_participants(self):
         """ Keep track of the number of participants. """
         if not self.session.status:
-            relay.disconnect('new_dot:' + self.id)  # clean up
+            relay.disconnect('global_paint:' + self.id)  # clean up
             return  # and dont't invoke a new call
         proxies = app.manager.get_connections(self.__class__.__name__)
         n = len(proxies)
