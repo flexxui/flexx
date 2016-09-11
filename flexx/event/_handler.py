@@ -2,20 +2,30 @@
 Implementation of handler class and corresponding descriptor.
 """
 
-import inspect
 import weakref
+import inspect
 
 from ._dict import Dict
 from ._loop import loop
 from . import logger
 
 
-def this_is_js():
-    return False
-
 console = window = None
 
 
+def this_is_js():
+    return False
+
+
+def looks_like_method(func):
+    if hasattr(func, '__func__'):
+        return False  # this is a bound method
+    try:
+        return inspect.getargspec(func)[0][0] in ('self', 'this')
+    except (TypeError, IndexError):
+        return False
+
+        
 # Decorator to wrap a function in a Handler object
 def connect(*connection_strings):
     """ Decorator to turn a method of HasEvents into an event
@@ -53,6 +63,9 @@ def connect(*connection_strings):
     def _connect(func):
         if not callable(func):
             raise TypeError('connect() decorator requires a callable.')
+        if not looks_like_method(func):
+            raise TypeError('connect() decorator requires a method '
+                            '(first arg must be self).')
         return HandlerDescriptor(func, connection_strings)
     
     if func is not None:
@@ -63,12 +76,19 @@ def connect(*connection_strings):
 
 class HandlerDescriptor:
     """ Class descriptor for handlers.
+    
+    Arguments:
+        func (callable): function that handles the events.
+        connection_strings (list): the strings that represent the connections.
+        ob (HasEvents, optional): the HasEvents object to use a a basis for the
+            connection. A weak reference to this object is stored.
     """
     
-    def __init__(self, func, connection_strings):
+    def __init__(self, func, connection_strings, ob=None):
         assert callable(func)  # HandlerDescriptor is not instantiated directly
         self._func = func
         self._name = func.__name__  # updated by HasEvents meta class
+        self._ob = None if ob is None else weakref.ref(ob)
         self._connection_strings = connection_strings
         self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
     
@@ -90,7 +110,8 @@ class HandlerDescriptor:
         try:
             handler = getattr(instance, private_name)
         except AttributeError:
-            handler = Handler(self._func, self._connection_strings, instance)
+            handler = Handler((self._func, instance), self._connection_strings,
+                              instance if self._ob is None else self._ob())
             setattr(instance, private_name, handler)
         
         # Make the handler use *our* func one time. In most situations
@@ -116,16 +137,12 @@ class Handler:
         func (callable): function that handles the events.
         connection_strings (list): the strings that represent the connections.
         ob (HasEvents): the HasEvents object to use a a basis for the
-            connection. A weak reference to this object is stored. It
-            is passed a a first argument to the function in case its
-            first arg is self.
+            connection. A weak reference to this object is stored.
     """
     
     _count = 0
     
     def __init__(self, func, connection_strings, ob):
-        # Check and set id
-        assert callable(func)
         Handler._count += 1
         self._id = 'h%i' % Handler._count  # to ensure a consistent event order
         
@@ -133,22 +150,20 @@ class Handler:
         # - ob1 is the HasEvents object of which the connect() method was called
         #   to create the handler. Connection strings are relative to this object.
         # - ob2 is the object to be passed to func (if it is a method). Is often
-        #   the same as ob1, but not per see.
+        #   the same as ob1, but not per see. Can be None.
         self._ob1 = weakref.ref(ob)
-        self._ob2 = self._ob1
         
-        # Use unbounded version of bound methods
+        # Get unbounded version of bound methods. 
+        self._ob2 = None  # if None, its regarded a regular function
+        if isinstance(func, tuple):
+            self._ob2 = weakref.ref(func[1])
+            func = func[0]
         if getattr(func, '__self__', None) is not None:
             self._ob2 = weakref.ref(func.__self__)
             func = func.__func__
         
-        # Get whether function is a method
-        try:
-            self._func_is_method = inspect.getargspec(func)[0][0] in ('self', 'this')
-        except (TypeError, IndexError):
-            self._func_is_method = False
-        
         # Store func, name, and docstring (e.g. for sphinx docs)
+        assert callable(func)
         self._func = func
         self._func_once = func
         self._name = func.__name__
@@ -204,7 +219,7 @@ class Handler:
         """ Call the handler function.
         """
         func = self._func_once
-        if self._func_is_method:
+        if self._ob2 is not None:
             if self._ob2() is not None:
                 res = func(self._ob2(), *events)
             else:

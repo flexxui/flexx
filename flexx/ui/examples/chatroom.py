@@ -26,6 +26,10 @@ class MessageBox(ui.Label):
     """
 
 
+# Create global relay
+relay = Relay()
+
+
 class ChatRoom(ui.Widget):
     """ Despite the name, this represents one connection to the chat room.
     """
@@ -43,11 +47,9 @@ class ChatRoom(ui.Widget):
                     self.ok = ui.Button(text='Send')
             ui.Widget(flex=1)
         
-        # Pipe messages send by the relay into this app
-        relay.connect(self._push_info, 'new_message')
-        
         self._update_participants()
     
+    @relay.connect('new_message')  # note that we connect to relay
     def _push_info(self, *events):
         for ev in events:
             self.emit('new_message', ev)
@@ -78,8 +80,6 @@ class ChatRoom(ui.Widget):
             self.messages.text += ''.join([ev.msg for ev in events])
 
 
-# Create global relay
-relay = Relay()
 
 if __name__ == '__main__':
     app.serve(ChatRoom)
