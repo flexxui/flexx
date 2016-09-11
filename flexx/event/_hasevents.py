@@ -6,7 +6,7 @@ generated and handled. It is the object that keeps track of handlers.
 import sys
 
 from ._dict import Dict
-from ._handler import HandlerDescriptor, Handler
+from ._handler import HandlerDescriptor, Handler, looks_like_method
 from ._emitters import BaseEmitter, Property
 from ._loop import loop
 from . import logger
@@ -414,8 +414,11 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         
         def _connect(func):
             if not callable(func):
-                raise TypeError('connect() decotator requires a callable.')
-            return Handler(func, connection_strings, self)
+                raise TypeError('connect() decorator requires a callable.')
+            if looks_like_method(func):
+                return HandlerDescriptor(func, connection_strings, self)
+            else:
+                return Handler(func, connection_strings, self)
         
         if func is not None:
             return _connect(func)

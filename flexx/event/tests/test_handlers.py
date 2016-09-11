@@ -177,13 +177,19 @@ def test_func_handlers_nodecorator_reverse_connect_order():
 
 def test_func_handlers_with_method_decorator():
 
+    with raises(TypeError):  # error because needs self as first arg
+        @event.connect('x')
+        def foo(*events):
+            pass
+    
+    # We can fool Flexx by putting self as a first arg. No way for Flexx to see
+    # that this is not a method.
     @event.connect('x')
-    def foo(*events):
+    def foo(self, *events):
         pass
     
     assert isinstance(foo, event._handler.HandlerDescriptor)
     assert repr(foo)
-    # too bad we cannot raise an error when a function in decorated this way
 
 
 def test_method_handler_invoking():
@@ -192,7 +198,8 @@ def test_method_handler_invoking():
     class MyObject(event.HasEvents):
         
         @event.connect('x1', 'x2')
-        def handler(*events):
+        def handler(self, *events):
+            print(events)
             called.append(len(events))
         
         @event.connect('x3')
@@ -258,12 +265,27 @@ def test_method_handler_invoking_other():
     
     h = event.HasEvents()
     
-    with raises(RuntimeError):
-        class Foo(event.HasEvents):
-            
-            @h.connect('x1')
-            def handler(self, *events):
-                self.was_invoked = True
+    # This used not not work
+    # with raises(RuntimeError):
+    #     class Foo(event.HasEvents):
+    #         
+    #         @h.connect('x1')
+    #         def handler(self, *events):
+    #             self.was_invoked = True
+    
+    # But now it does!
+    
+    class Foo(event.HasEvents):
+        
+        @h.connect('x1')
+        def handler(self, *events):
+            self.was_invoked = True
+    
+    foo = Foo()
+    
+    h.emit('x1')
+    event.loop.iter()
+    assert foo.was_invoked
 
 
 def test_connecting():
@@ -374,6 +396,38 @@ def test_dispose2():
     
     h.dispose()  # <=== only this line is different from test_dispose1()
     gc.collect()
+    assert handler_ref() is None
+
+
+def test_dispose3():
+    # Test that connecting a "volatile" object to a static object works well
+    # w.r.t. cleanup.
+    
+    relay = event.HasEvents()
+    
+    class Foo:
+        def bar(self, *events):
+            pass
+    
+    foo = Foo()
+    handler = relay.connect(foo.bar, 'xx')
+    
+    handler_ref = weakref.ref(handler)
+    foo_ref = weakref.ref(foo)
+    
+    del foo
+    del handler
+    
+    gc.collect()
+    
+    assert foo_ref() is None
+    assert handler_ref() is not None
+    
+    relay.emit('xx')
+    event.loop.iter()
+    gc.collect()
+    
+    assert foo_ref() is None
     assert handler_ref() is None
 
 

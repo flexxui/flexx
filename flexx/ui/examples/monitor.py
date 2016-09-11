@@ -42,6 +42,10 @@ class Relay(event.HasEvents):
         app.call_later(1, self.refresh)
 
 
+# Create global relay
+relay = Relay()
+
+
 class Monitor(ui.Widget):
     
     def init(self):
@@ -64,10 +68,8 @@ class Monitor(ui.Widget):
                                               ylabel='Mem usage (%)',
                                               sync_props=False)
                 ui.Widget(flex=1)
-        
-        # Relay global info into this app
-        relay.connect(self._push_info, 'system_info:' + self.id)
     
+    @relay.connect('system_info')  # note that we connect to relay
     def _push_info(self, *events):
         if not self.session.status:
             return relay.disconnect('system_info:' + self.id)
@@ -116,10 +118,6 @@ class Monitor(ui.Widget):
             usage.append(ev.mem)
             usage = usage[-self.nsamples:]
             self.mem_plot.ydata = usage
-
-
-# Create global relay
-relay = Relay()
 
 
 if __name__ == '__main__':

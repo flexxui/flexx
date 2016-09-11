@@ -242,6 +242,7 @@ class Session(SessionAssets):
         self._runtime = None  # init web runtime, will be set when used
         self._ws = None  # init websocket, will be set when a connection is made
         self._model = None  # Model instance, can be None if app_name is __default__
+        self._closing = False
         
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
@@ -306,11 +307,15 @@ class Session(SessionAssets):
         """ Close the runtime, if possible
         """
         # todo: close via JS
-        if self._runtime:
-            self._runtime.close()
-        if self._model:
-            self._model.dispose()
-            self._model = None  # break circular reference
+        self._closing = True  # suppress warnings for session being closed.
+        try:
+            if self._runtime:
+                self._runtime.close()
+            if self._model:
+                self._model.dispose()
+                self._model = None  # break circular reference
+        finally:
+            self._closing = False
     
     @property
     def status(self):
@@ -334,6 +339,8 @@ class Session(SessionAssets):
             self._ws.command(command)
         elif self.status == self.STATUS.PENDING:
             self._pending_commands.append(command)
+        elif self._closing:
+            pass
         else:
             #raise RuntimeError('Cannot send commands; app is closed')
             logger.warn('Cannot send commands; app is closed')

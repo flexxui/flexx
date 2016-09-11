@@ -58,10 +58,6 @@ class ColabPainting(ui.Widget):
                 ui.Widget(flex=1)
             ui.Widget(flex=1)
         
-        # Connect events
-        self.connect(self._this_user_adds_paint, 'canvas.mouse_down')
-        relay.connect(self._any_user_adds_paint, 'global_paint:' + self.id)
-        
         # Start people-count-updater
         self._update_participants()
     
@@ -70,21 +66,23 @@ class ColabPainting(ui.Widget):
         """ The selected color for the current session. """
         return str(color)
     
+    @event.connect('canvas.mouse_down')
     def _this_user_adds_paint(self, *events):
         """ Detect mouse down, emit global paint event via the relay. """
         for ev in events:
             relay.global_paint(ev.pos, self.color)
     
+    @relay.connect('global_paint')  # note that we connect to relay here
     def _any_user_adds_paint(self, *events):
         """ Receive global paint event from the relay, emit local paint event. """
-        if self.session.status:
-            for ev in events:
-                self.emit('paint', ev)
+        # if not self.session.status:
+        #     return  I think this is not required anymore. Worst case we get a warning
+        for ev in events:
+            self.emit('paint', ev)
     
     def _update_participants(self):
         """ Keep track of the number of participants. """
         if not self.session.status:
-            relay.disconnect('new_dot:' + self.id)  # clean up
             return  # and dont't invoke a new call
         proxies = app.manager.get_connections(self.__class__.__name__)
         n = len(proxies)
