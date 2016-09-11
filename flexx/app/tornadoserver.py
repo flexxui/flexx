@@ -258,9 +258,9 @@ class MainHandler(tornado.web.RequestHandler):
                                                       correct_app_name != app_name):
             self.redirect('/%s/%s' % (correct_app_name, file_name))
         
-        if app_name == '__index__':
+        elif app_name == '__index__':
             # Show plain index page
-            all_apps = ['<li><a href="%s">%s</a></li>' % (name, name) for name in 
+            all_apps = ['<li><a href="%s/">%s</a></li>' % (name, name) for name in 
                         manager.get_app_names()]
             the_list = '<ul>%s</ul>' % ''.join(all_apps) if all_apps else 'no apps'
             self.write('Index of available apps: ' + the_list)
