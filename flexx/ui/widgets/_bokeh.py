@@ -76,7 +76,7 @@ class BokehWidget(Widget):
         if plot is None:
             return None
         if not isinstance(plot, Plot):
-            raise ValueError('Plot must be a Bokeh plot object.')
+            raise ValueError('%s.plot must be a Bokeh plot object.' % self.id)
         # The sizing_mode is fixed by default, but that's silly in this context
         if plot.sizing_mode == 'fixed':
             plot.sizing_mode = 'stretch_both'

@@ -48,7 +48,7 @@ class SplitPanel(Layout):
                 v = v.lower()
             v = {'horizontal': 'h', 'vertical': 'v', 0: 'h', 1: 'v'}.get(v, v)
             if v not in ('h', 'v'):
-                raise ValueError('Unknown value for splitter orientation %r' % v)
+                raise ValueError('%s.orientation got unknown value %r' % (self.id, v))
             return v
     
     class JS:
