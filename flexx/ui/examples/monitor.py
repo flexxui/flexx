@@ -90,7 +90,7 @@ class Monitor(ui.Widget):
             import time
             self.start_time = time.time()
         
-        @event.connect('system_info')
+        @event.connect('!system_info')
         def _update_info(self, *events):
             ev = events[-1]
             

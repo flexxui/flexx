@@ -14,7 +14,7 @@ from . import logger
 def this_is_js():
     return False
 
-setTimeout = None
+setTimeout = console = None
 
 
 # From six.py
@@ -212,14 +212,29 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # Called when the handlers changed, can be implemented in subclasses
         pass
     
-    def _register_handler(self, type, handler):
+    def _register_handler(self, event_type, handler):
         # Register a handler for the given event type. The type
         # can include a label, e.g. 'mouse_down:foo'.
         # This is called from Handler objects at initialization and when
         # they reconnect (dynamism).
-        type, _, label = type.partition(':')
+        type, _, label = event_type.partition(':')
+        type = type.lstrip('!')
         label = label or handler._name
-        handlers = self.__handlers.setdefault(type, [])
+        handlers = self.__handlers.get(type, None)
+        if handlers is None:  # i.e. type not in self.__handlers
+            handlers = []
+            self.__handlers[type] = handlers
+            if not event_type.startswith('!'):  # ! means force
+                msg = ('Event type "{}" does not exist. ' +
+                       'Use "!{}" to suppress this warning.')
+                msg = msg.replace('{}', type)
+                if hasattr(self, 'id'):
+                    msg = msg.replace('exist.', 'exist on %s.' % self.id)  # Model
+                if this_is_js():
+                    console.warn(msg)
+                else:
+                    logger.warn(msg)
+        
         entry = label, handler
         if entry not in handlers:
             handlers.append(entry)

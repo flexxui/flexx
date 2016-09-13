@@ -364,6 +364,10 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             descriptor = getattr(self.JS, handler_name)
             event_types_js.extend(descriptor.local_connection_strings)
         
+        # Get event types that we need to register that may come from other end
+        known_event_types_py = self.__emitters__ + self.__local_properties__
+        known_event_types_js = self.JS.__emitters__ + self.JS.__local_properties__
+        
         # Further initialization of attributes
         self.__event_types_js = event_types_js
         self.__pending_events_from_js = []
@@ -371,14 +375,20 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         # Instantiate JavaScript version of this class
         clsname = 'flexx.classes.' + self.__class__.__name__
-        cmd = 'flexx.instances.%s = new %s(%s, %s);' % (
-                self._id, clsname, reprs(self._id), serializer.saves(event_types_py))
+        cmd = 'flexx.instances.%s = new %s(%s, %s, %s);' % (
+                self._id, clsname, reprs(self._id),
+                serializer.saves(event_types_py),
+                serializer.saves(known_event_types_py))
         self._session._exec(cmd)
         
         # Init HasEvents, but delay initialization of handlers
         # We init after producing the JS command to create the corresponding
         # object, so that subsequent commands work ok
         super().__init__(_init_handlers=False, **kwargs)
+        
+        # Make JS-side events known
+        for name in known_event_types_js:
+            self._HasEvents__handlers.setdefault(name, [])
         
         # Initialize the model further, e.g. Widgets can create
         # subwidgets etc. This is done here, at the point where the
@@ -554,7 +564,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         def __from_json__(dct):
             return window.flexx.instances[dct.id]
         
-        def __init__(self, id, py_events=None):
+        def __init__(self, id, py_events=None, py_known_events=None):
             
             # Set id alias. In most browsers this shows up as the first element
             # of the object, which makes it easy to identify objects while
@@ -568,6 +578,10 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             
             # Init HasEvents, but delay initialization of handlers
             super().__init__(False)
+            
+            # Register event types that handlers can connect to without warning
+            for name in py_known_events:
+                self.__handlers.setdefault(name, [])
             
             # self.init() -> called from py
             # self._init_handlers() -> called from py

@@ -75,7 +75,7 @@ class ChatRoom(ui.Widget):
     
     class JS:
         
-        @event.connect('new_message')
+        @event.connect('!new_message')
         def _update_total_text(self, *events):
             self.messages.text += ''.join([ev.msg for ev in events])
 
