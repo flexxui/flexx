@@ -235,6 +235,8 @@ class Parser2(Parser1):
         # Get cls and msg
         err_cls, err_msg = None, "''"
         if isinstance(err_node, ast.Name):
+            if err_node.name[0].islower():  # raise an (error) object
+                return [self.lf("throw " + err_node.name + ';')]
             err_cls = err_node.name
         elif isinstance(err_node, ast.Call):
             err_cls = err_node.func_node.name
