@@ -158,9 +158,10 @@ class Handler:
         if isinstance(func, tuple):
             self._ob2 = weakref.ref(func[1])
             func = func[0]
-        if getattr(func, '__self__', None) is not None:
-            self._ob2 = weakref.ref(func.__self__)
-            func = func.__func__
+        if getattr(func, '__self__', None) is not None:  # builtin funcs have __self__
+            if getattr(func, '__func__', None) is not None:
+                self._ob2 = weakref.ref(func.__self__)
+                func = func.__func__
         
         # Store func, name, and docstring (e.g. for sphinx docs)
         assert callable(func)
