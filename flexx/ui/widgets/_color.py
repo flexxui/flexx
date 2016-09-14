@@ -36,8 +36,10 @@ class ColorSelectWidget(Widget):
         def color(self, v='#000000'):
             """ The currently selected color.
             """
+            v = str(v)
             if not (v.startswith('#') and len(v) == 7):
-                raise ValueError('ColorSelectWidget must be in #rrggbb format.')
+                raise ValueError('%s.color must be in #rrggbb format, not %r' %
+                                 (self.id, v))
             return str(v)
     
     class JS:

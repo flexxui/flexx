@@ -54,7 +54,7 @@ def parent(self, new_parent=None):
     if new_parent is old_parent:
         return new_parent
     if not (new_parent is None or isinstance(new_parent, Widget)):
-        raise ValueError('parent must be a Widget or None')
+        raise ValueError('%s.parent must be a Widget or None' % self.id)
 
     if old_parent is not None:
         children = list(old_parent.children if old_parent.children else [])
@@ -224,7 +224,7 @@ class Widget(Model):
             parent is None. Use 'body' to make this widget the root.
             """
             if not isinstance(v, str):
-                raise ValueError('Widget.container should be a string.')
+                raise ValueError('%s.container should be a string.' % self.id)
             return str(v)
     
         @event.prop
@@ -241,7 +241,7 @@ class Widget(Model):
                 if all([(c1 is c2) for c1, c2 in zip(old_children, new_children)]):
                     return new_children  # No need to do anything
             if not all([isinstance(w, Widget) for w in new_children]):
-                raise ValueError('All children must be widget objects.')
+                raise ValueError('%s.children must all be widget objects.' % self.id)
     
             for child in old_children:
                 if child not in new_children:
@@ -260,6 +260,7 @@ class Widget(Model):
 
             # Let widget create Phoshor and DOM nodes
             self._init_phosphor_and_node()
+            self.phosphor.id = self.id
             # Set outernode. Usually, but not always equal to self.node
             self.outernode = self.phosphor.node
 
@@ -287,7 +288,7 @@ class Widget(Model):
                 if not cls_name or cls_name == 'Model':
                     break
             else:
-                raise RuntimeError('Error while determining class names')
+                raise RuntimeError('Error determining class names for %s' % self.id)
 
         def _init_phosphor_and_node(self):
             """ Overload this in sub widgets.
@@ -401,7 +402,11 @@ class Widget(Model):
                 return
             # Detach
             if self.phosphor.isAttached:
-                self.phosphor.detach()
+                try:
+                    self.phosphor.detach()
+                except Exception as err:
+                    err.message += ' (%s)' % self.id
+                    raise err
             if self.outernode.parentNode is not None:  # detachWidget not enough
                 self.outernode.parentNode.removeChild(self.outernode)
             # Attach
@@ -410,7 +415,11 @@ class Widget(Model):
                     el = window.document.body
                 else:
                     el = window.document.getElementById(id)
-                self.phosphor.attach(el)
+                try:
+                    self.phosphor.attach(el)
+                except Exception as err:
+                    err.message += ' (%s)' % self.id
+                    raise err
                 window.addEventListener('resize', lambda: (self.phosphor.update(),
                                                            self._check_real_size()))
             if id == 'body':
@@ -447,7 +456,11 @@ class Widget(Model):
             """ Add the DOM element. Called right after the child widget
             is added. Overloadable by layouts.
             """
-            self.phosphor.addChild(widget.phosphor)
+            try:
+                self.phosphor.addChild(widget.phosphor)
+            except Exception as err:
+                err.message += ' (%s)' % self.id
+                raise err
 
         def _remove_child(self, widget):
             """ Remove the DOM element. Called right after the child

@@ -197,6 +197,7 @@ class TestExceptions:
         assert evaljs(catcher % py2js('raise 42')) == '42'
         assert evaljs(catcher % py2js('raise ValueError')).count('ValueError')
         assert evaljs(catcher % py2js('raise ValueError("foo")')).count('foo')
+        assert evaljs(catcher % py2js('xx = "bar"; raise xx;')).count('bar')
     
     def test_assert(self):
         
