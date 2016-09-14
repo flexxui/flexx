@@ -85,6 +85,6 @@ from ._plotlayout import PlotLayout
 def _install_assets():
     from ..app import assets
     from ..util.getresource import get_resource
-    assets.add_asset('phosphor-all.js', get_resource('phosphor-all.js.tag'))
+    assets.add_asset('phosphor-all.js', get_resource('phosphor-all.js'))
     assets.create_module_assets('flexx.ui')
 _install_assets()
