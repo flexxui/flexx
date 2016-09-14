@@ -192,6 +192,15 @@ def test_func_handlers_with_method_decorator():
     assert repr(foo)
 
 
+def test_handler_builtin_function():
+    
+    class Foo(event.HasEvents):
+        pass
+    
+    foo = Foo()
+    foo.connect('!bar', print)  # this should not error
+
+
 def test_method_handler_invoking():
     called = []
     
