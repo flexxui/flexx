@@ -132,7 +132,9 @@ class BaseBoxLayout(Layout):
                 v = self._DEFAULT_ORIENTATION
             if isinstance(v, str):
                 v = v.lower()
-            v = {'horizontal': 'h', 'vertical': 'v', 0: 'h', 1: 'v'}.get(v, v)
+            v = {'horizontal': 'h', 0: 'h', 'left-to-right': 'h',
+                 'vertical': 'v', 1: 'v', 'top-to-bottom': 'v',
+                 'right-to-left': 'hr', 'bottom-to-top': 'vr'}.get(v, v)
             if v not in ('h', 'v', 'hr', 'vr'):
                 raise ValueError('%s.orientation got unknown value %r' % (self.id, v))
             return v
@@ -331,16 +333,16 @@ class BoxPanel(BaseBoxLayout):
         _DEFAULT_ORIENTATION = 'h'
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.boxpanel.BoxPanel()
+            self.phosphor = window.phosphor.ui.boxpanel.BoxPanel()
             self.node = self.phosphor.node
         
         @event.connect('orientation', 'children', 'children.*.flex')
         def __set_flexes(self, *events):
             i = 0 if self.orientation in (0, 'h', 'hr') else 1
             for widget in self.children:
-                window.phosphor.boxpanel.BoxPanel.setStretch(widget.phosphor,
-                                                             widget.flex[i])
-                window.phosphor.boxpanel.BoxPanel.setSizeBasis(widget.phosphor, 100)
+                window.phosphor.ui.boxpanel.BoxPanel.setStretch(widget.phosphor,
+                                                                widget.flex[i])
+                window.phosphor.ui.boxpanel.BoxPanel.setSizeBasis(widget.phosphor, 100)
         
         @event.connect('spacing')
         def __spacing_changed(self, *events):
@@ -350,12 +352,12 @@ class BoxPanel(BaseBoxLayout):
         def __orientation_changed(self, *events):
             ori = self.orientation
             if ori == 0 or ori == 'h':
-                self.phosphor.direction = window.phosphor.boxpanel.BoxPanel.LeftToRight
+                self.phosphor.direction = 'left-to-right'
             elif ori == 1 or ori == 'v':
-                self.phosphor.direction = window.phosphor.boxpanel.BoxPanel.TopToBottom
+                self.phosphor.direction = 'top-to-bottom'
             elif ori == 'hr':
-                self.phosphor.direction = window.phosphor.boxpanel.BoxPanel.RightToLeft
+                self.phosphor.direction = 'right-to-left'
             elif ori == 'vr':
-                self.phosphor.direction = window.phosphor.boxpanel.BoxPanel.BottomToTop
+                self.phosphor.direction = 'bottom-to-top'
             else:
                 raise ValueError('Invalid boxpanel orientation: ' + ori)

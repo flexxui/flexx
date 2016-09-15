@@ -109,7 +109,7 @@ class Button(BaseButton):
     """
     class JS:
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.createWidget('button')
+            self.phosphor = self._create_phosphor_widget('button')
             self.node = self.phosphor.node
             self.node.addEventListener('click', self.mouse_click, 0)
         
@@ -131,7 +131,7 @@ class ToggleButton(BaseButton):
     
     class JS:
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.createWidget('button')
+            self.phosphor = self._create_phosphor_widget('button')
             self.node = self.phosphor.node
             self.node.addEventListener('click', self.mouse_click, 0)
         
@@ -158,7 +158,7 @@ class RadioButton(BaseButton):
     
     class JS:
         def _init_phosphor_and_node(self):
-            self.phosphor = p = window.phosphor.createWidget('div')
+            self.phosphor = p = self._create_phosphor_widget('div')
             template = '<input type="radio" id="ID"><label for="ID">'
             p.node.innerHTML = template.replace('ID', self.id)
             self.node = p.node.childNodes[0]
@@ -198,7 +198,7 @@ class CheckBox(BaseButton):
     
     class JS:
         def _init_phosphor_and_node(self):
-            self.phosphor = p = window.phosphor.createWidget('div')
+            self.phosphor = p = self._create_phosphor_widget('div')
             template = '<input type="checkbox" id="ID"><label for="ID">'
             p.node.innerHTML = template.replace('ID', self.id)
             self.node = p.node.childNodes[0]

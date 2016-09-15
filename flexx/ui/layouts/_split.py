@@ -56,16 +56,15 @@ class SplitPanel(Layout):
         _DEFAULT_ORIENTATION = 'h'
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.splitpanel.SplitPanel()
+            self.phosphor = window.phosphor.ui.splitpanel.SplitPanel()
             self.node = self.phosphor.node
         
         @event.connect('orientation')
         def __orientation_changed(self, *events):
             ori = self.orientation
-            NS = window.phosphor.splitpanel.SplitPanel
             if ori == 0 or ori == 'h':
-                self.phosphor.orientation = NS.Horizontal
+                self.phosphor.orientation = 'horizontal'
             elif ori == 1 or ori == 'v':
-                self.phosphor.orientation = NS.Vertical
+                self.phosphor.orientation = 'vertical'
             else:
                 raise ValueError('Invalid splitter orientation: ' + ori)

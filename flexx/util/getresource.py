@@ -27,7 +27,7 @@ except ImportError:
 RESOURCES = {
     'phosphor-all.js': (
         'https://raw.githubusercontent.com/zoofIO/phosphor-all/{}/phosphor-all.js',
-        '2db421f7c2d60b'),
+        '2b3028274f85'),
 }
 
 
@@ -87,5 +87,7 @@ def _fetch_file(url):
                   'connection? If there is, please report this problem.' % url)
 
 
+# Running this file as a script will download all downloadable resources
 if __name__ == '__main__':
-    get_resource('phosphor-all.js.tag')
+    for key in RESOURCES:
+        get_resource(key)

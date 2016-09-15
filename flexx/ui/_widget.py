@@ -269,13 +269,11 @@ class Widget(Model):
 
             # Keep track of size
             that = self
-            class SizeNotifier:
-                def filterMessage(handler, msg):
-                    if msg._type == 'resize':
-                        that._check_real_size()
-                    return False
-            window.phosphor.messaging.installMessageFilter(self.phosphor,
-                                                           SizeNotifier())
+            def msg_hook(handler, msg):
+                if msg._type == 'resize':
+                    that._check_real_size()
+                return True  # resume processing the message as normal
+            window.phosphor.core.messaging.installMessageHook(self.phosphor, msg_hook)
 
             # Derive css class name
             cls_name = self._class_name
@@ -293,9 +291,15 @@ class Widget(Model):
         def _init_phosphor_and_node(self):
             """ Overload this in sub widgets.
             """
-            self.phosphor = window.phosphor.panel.Panel()
+            self.phosphor = window.phosphor.ui.panel.Panel()
             self.node = self.phosphor.node
-
+        
+        def _create_phosphor_widget(self, element_name='div'):
+            """ Convenience func to create a Phosphor widget from a div element name.
+            """
+            node = window.document.createElement(element_name)
+            return phosphor.ui.widget.Widget({'node': node})
+        
         @event.connect('style')
         def __style_changed(self, *events):
             """ Emits when the style signal changes, and provides a dict with
@@ -331,7 +335,6 @@ class Widget(Model):
             if size_limits_changed:
                 # Clear phosphor's limit cache (no need for getComputedStyle())
                 values = [self.outernode.style[k] for k in size_limits_keys]
-                # todo: do I need a variant of self.phosphor.clearSizeLimits()?
                 for k, v in zip(size_limits_keys, values):
                     self.outernode.style[k] = v
                 # Allow parent to re-layout
@@ -403,7 +406,7 @@ class Widget(Model):
             # Detach
             if self.phosphor.isAttached:
                 try:
-                    self.phosphor.detach()
+                    phosphor.ui.widget.Widget.detach(self.phosphor)
                 except Exception as err:
                     err.message += ' (%s)' % self.id
                     raise err
@@ -416,7 +419,7 @@ class Widget(Model):
                 else:
                     el = window.document.getElementById(id)
                 try:
-                    self.phosphor.attach(el)
+                    phosphor.ui.widget.Widget.attach(self.phosphor, el)
                 except Exception as err:
                     err.message += ' (%s)' % self.id
                     raise err
@@ -457,7 +460,7 @@ class Widget(Model):
             is added. Overloadable by layouts.
             """
             try:
-                self.phosphor.addChild(widget.phosphor)
+                self.phosphor.addWidget(widget.phosphor)
             except Exception as err:
                 err.message += ' (%s)' % self.id
                 raise err

@@ -61,12 +61,14 @@ class DockPanel(Layout):
     }
     """
     
+    # todo: properties for spacing (self.phosphor.spacing)
+    
     class JS:
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.dockpanel.DockPanel()
+            self.phosphor = window.phosphor.ui.dockpanel.DockPanel()
             self.node = self.phosphor.node
         
         def _add_child(self, widget):
-            self.phosphor.insertRight(widget.phosphor)
+            self.phosphor.addWidget(widget.phosphor)
             # todo: phosphor allows fine-grained control over where to place the widgets

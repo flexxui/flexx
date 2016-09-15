@@ -12,7 +12,7 @@ class DatePicker(ui.Widget):
     class JS:
         
         def _init_phosphor_and_node(self):
-            self.phosphor = phosphor.createWidget('input')  # noqa
+            self.phosphor = self._create_phosphor_widget('input')
             self.node = self.phosphor.node
             self._make_picker(self.node)
         

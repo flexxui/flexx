@@ -38,7 +38,7 @@ class PinboardLayout(Layout):
     
     class JS:
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.panel.Panel()
+            self.phosphor = window.phosphor.ui.panel.Panel()
             self.node = self.phosphor.node
         
         @event.connect('children', 'children.*.pos')
