@@ -64,6 +64,12 @@ class GroupWidget(Widget):
             
             self.node = self.phosphor.node
         
+        @event.connect('children')
+        def _keep_legend_up(self, *events):
+            if len(self.children):
+                first = self.children[0].outernode
+                self.node.insertBefore(self._legend, first)
+        
         @event.connect('title')
         def _title_changed(self, *events):
             self._legend.innerHTML = self.title
