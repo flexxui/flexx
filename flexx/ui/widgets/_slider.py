@@ -71,8 +71,7 @@ class Slider(Widget):
             self.node.type = 'range'
             f = lambda ev: self._set_prop('user_value', self.node.value)
             self.node.addEventListener('input', f, False)
-            #if IE10:
-            #   this.node.addEventListener('change', f, False)
+            this.node.addEventListener('change', f, False)  # IE
         
         @event.readonly
         def user_value(self, v=None):
