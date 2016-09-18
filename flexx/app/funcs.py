@@ -368,6 +368,10 @@ def export(cls, filename=None, properties=None, single=True):
     Returns:
         html (str): The resulting html. If a filename was specified
         this returns None.
+    
+    Notes:
+        If the given filename ends with .hta, a Windows HTML Application is
+        created.
     """
     if not (isinstance(cls, type) and issubclass(cls, Model)):
         raise ValueError('runtime must be a string or Model subclass.')
@@ -388,6 +392,9 @@ def export(cls, filename=None, properties=None, single=True):
     html = session.get_page_for_export(exporter._commands, single)
     if filename is None:
         return html
+    elif filename.lower().endswith('.hta'):
+        hta_tag = '<meta http-equiv="x-ua-compatible" content="ie=edge" />'
+        html = html.replace('<head>', '<head>\n    ' + hta_tag, 1)
     
     # Save to file
     if filename.startswith('~'):
