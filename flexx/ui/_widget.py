@@ -481,11 +481,16 @@ class Widget(Model):
             self.node.addEventListener('keydown', self.key_down, 0)
             self.node.addEventListener('keyup', self.key_up, 0)
             self.node.addEventListener('keypress', self.key_press, 0)
-
+            
             # Disable context menu so we can handle RMB clicks
-            _context_menu = lambda ev: ev.preventDefault() and False
-            self.node.addEventListener('contextmenu', _context_menu, 0)
-
+            # Firefox is particularly stuborn with Shift+RMB, and RMB dbl click
+            if not window.flexx._disabled_context_menu:
+                self._disabled_context_menu = True
+                _context_menu = lambda ev: ev.preventDefault() and False
+                window.document.addEventListener('contextmenu', _context_menu, 0)
+                window.document.addEventListener('click', _context_menu, 0)
+                #window.document.addEventListener('dblclick', _context_menu, 0)
+            
             # Implement mouse capturing. When a mouse is pressed down on
             # a widget, it "captures" the mouse, and will continue to receive
             # move and up events, even if the mouse is not over the widget.
