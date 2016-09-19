@@ -21,7 +21,7 @@ An event is something that has occurred at a certain moment in time,
 such as the mouse being pressed down or a property changing its value.
 In this framework events are represented with dictionary objects that
 provide information about the event (such as what button was pressed,
-or the new value of a property). A custom :class:`Dict <flexx.event.Dict>`
+or the old and new value of a property). A custom :class:`Dict <flexx.event.Dict>`
 class is used that inherits from ``dict`` but allows attribute access,
 e.g. ``ev.button`` as an alternative to ``ev['button']``.
 
@@ -35,7 +35,7 @@ class for objects that have properties and/or emit events. E.g. a
 from ``flexx.event.HasEvents``.
 
 Events are emitted using the :func:`emit() <flexx.event.HasEvents.emit>`
-method, which accepts a name for the type of the event, and a dict:
+method, which accepts a name for the type of the event, and optionally a dict,
 e.g. ``emitter.emit('mouse_down', dict(button=1, x=103, y=211))``.
 
 The HasEvents object will add two attributes to the event: ``source``,
@@ -43,7 +43,7 @@ a reference to the HasEvents object itself, and ``type``, a string
 indicating the type of the event.
 
 As a user, you generally do not need to emit events explicitly; events are
-automatically emitted e.g. when setting a property.
+automatically emitted, e.g. when setting a property.
 
 
 Handler
@@ -82,7 +82,14 @@ is up to the programmer to determine whether only one action is
 required, or whether all events need processing. In the latter case,
 just use ``for ev in events: ...``.
 
-Another useful feature of this system is that a handler can connect to
+In most cases, you will connect to events that are known beforehand,
+like those they correspond to properties, readonlies and emitters. 
+If you connect to an event that is not known (as in the example above)
+it might be a typo and Flexx will display a warning. Use `'!foo'` as a
+connection string (i.e. prepend an exclamation mark) to suppress such
+warnings.
+
+Another useful feature of the event system is that a handler can connect to
 multiple events at once:
 
 .. code-block:: python
@@ -249,7 +256,7 @@ is a ``HasEvents`` subclass that has properties ``parent`` and
     def parent_foo_handler(*events):
         ...
     
-    @main.connect('children.*.foo')
+    @main.connect('children*.foo')
     def children_foo_handler(*events):
         ...
 
