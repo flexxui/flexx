@@ -101,7 +101,7 @@ class ColabPainting(ui.Widget):
         def _update_color(self, *events):
             self.canvas.style = 'border: 10px solid ' + events[-1].new_value
         
-        @event.connect('paint')
+        @event.connect('!paint')
         def _paint_dot(self, *events):
             for ev in events:
                 self._ctx.globalAlpha = 0.8
