@@ -52,7 +52,7 @@ class AppManager(event.HasEvents):
             raise ValueError('Given app does not have a valid name %r' % name)
         pending, connected = [], []
         if name in self._appinfo and cls is not self._appinfo[name][0]:
-            oldCls, pending, connected = self._appinfo[name]
+            oldCls, properties, pending, connected = self._appinfo[name]
             logger.warn('Re-registering app class %r' % name)
             #raise ValueError('App with name %r already registered' % name)
         self._appinfo[name] = cls, properties, pending, connected

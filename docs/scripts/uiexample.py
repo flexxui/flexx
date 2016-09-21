@@ -88,13 +88,13 @@ def create_ui_example(filename, to_root, height=300):
     
     # Export
     try:
-        app.export(m.__dict__[class_name], filename_abs, False)
+        app.export(m.__dict__[class_name], filename_abs, single=False)
     except Exception as err:
         err_text = str(err)
         msg = 'Example not generated. <pre>%s</pre>' % err_text
         open(filename_abs, 'wt', encoding='utf-8').write(msg.replace('\\n', '<br />'))
-        raise RuntimeError('Could not export ui example: %s\n%s' % (err_text, code) )
-        #print('Could not create ui example: %s\n%s' % (err_text, code) )
+        print('ERROR: Could not export ui example: %s\n%s' % (err_text, code) )
+        raise err
     
     return get_html(filename_rel, height)
 
