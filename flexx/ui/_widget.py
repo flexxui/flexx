@@ -269,11 +269,24 @@ class Widget(Model):
             # Setup JS events to enter Flexx' event system
             self._init_events()
 
-            # Keep track of size
+            # Keep track of size, children, closing. The size is all that really
+            # matters. Would be nice if we can keep Flexx up-to-date even when
+            # children are changed from the outside, but this is non-trivial
+            # and easily leads to strange recursions. E.g. we temporarily remove
+            # widgets ourselves to get the order straight.
             that = self
             def msg_hook(handler, msg):
-                if msg._type == 'resize':
+                if msg.type == 'resize':
                     that._check_real_size()
+                elif msg.type == 'close-request':
+                    pass  # not sure what close means in Phosphor
+                elif msg.type == 'child-added':
+                    if msg.child.id not in window.flexx.instances:
+                        print('Phosphor child added that is not managed by Flexx.')
+                    elif window.flexx.instances[msg.child.id] not in self.children:
+                        print('Phosphor child %s added without us knowing' % msg.child.id)
+                elif msg.type == 'child-removed':
+                    pass
                 return True  # resume processing the message as normal
             window.phosphor.core.messaging.installMessageHook(self.phosphor, msg_hook)
             
