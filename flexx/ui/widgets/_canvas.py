@@ -21,16 +21,58 @@ class CanvasWidget(Widget):
     class JS:
         
         CAPTURE_MOUSE = True
+        CAPTURE_WHEEL = False
         
         def _init_phosphor_and_node(self):
             
             self.phosphor = window.phosphor.createWidget('div')
             self.node = window.document.createElement('canvas')
+            self.node.id = self.id + '-canvas'
             
             self.phosphor.node.appendChild(self.node)
             # Set position to absolute so that the canvas is not going
             # to be forcing a size on the container div.
             self.node.style.position = 'absolute'
+            
+            # Disable context menu so we can handle RMB clicks
+            # Firefox is particularly stuborn with Shift+RMB, and RMB dbl click
+            window.document.addEventListener('contextmenu', self.__prevent_default, 0)
+            window.document.addEventListener('click', self.__prevent_default, 0)
+            window.document.addEventListener('dblclick', self.__prevent_default, 0)
+            
+            # If the canvas uses the wheel event for something, you'd want to
+            # disable browser-scroll when the mouse is over the canvas. But
+            # when you scroll down a page and the cursor comes over the canvas
+            # because of that, we don't want the canvas to capture too eagerly.
+            # This code only captures if there has not been scrolled elsewhere
+            # for about half a second.
+            def wheel_behavior(e):
+                import time  # noqa
+                id, t0 = window.flexx._wheel_timestamp
+                t1 = time.time()
+                if (t1 - t0) < 0.5:
+                    window.flexx._wheel_timestamp = id, t1  # keep scrolling
+                else:
+                    window.flexx._wheel_timestamp = e.target.id, t1  # new scroll
+            if not window.flexx._wheel_timestamp:
+                window.flexx._wheel_timestamp = 0, ''
+                window.document.addEventListener('wheel', wheel_behavior, 0)
+        
+        def __prevent_default(self, e):
+            """ Prevent the default action of an event unless all modifier
+            keys (shift, ctrl, alt) are pressed down.
+            """
+            if e.target is self.node:
+                if not (e.altKey is True and e.ctrlKey is True and e.shiftKey is True):
+                    e.preventDefault()
+        
+        @event.emitter
+        def mouse_wheel(self, e):
+            if not self.CAPTURE_WHEEL:
+                return super().mouse_wheel(e)  # normal behavior
+            elif window.flexx._wheel_timestamp[0] == self.node.id:
+                e.preventDefault()
+                return super().mouse_wheel(e)
         
         @event.connect('size')
         def _update_canvas_size(self, *events):
