@@ -148,10 +148,12 @@ class Widget(Model):
         dispose any child widgets.
         """
         children = self.children
-        super().dispose()
         for child in children:
             child.dispose()
-
+        if self.session.status:
+            self._session._exec('flexx.instances.%s.phosphor.dispose();' % self._id)
+        super().dispose()
+    
     @event.connect('parent:aaa')
     def __keep_alive(self, *events):
         # When the parent changes, we prevent the widget from being deleted
