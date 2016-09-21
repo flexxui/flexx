@@ -124,6 +124,8 @@ class Widget(Model):
         
         # All widgets need phosphor
         self._session.use_global_asset('phosphor-all.js', before='flexx-ui.css')
+        self._session.use_global_asset('phosphor-all.css', before='flexx-ui.css')
+
 
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
@@ -274,7 +276,12 @@ class Widget(Model):
                     that._check_real_size()
                 return True  # resume processing the message as normal
             window.phosphor.core.messaging.installMessageHook(self.phosphor, msg_hook)
-
+            
+            # Keep track of Phosphor changing the title
+            def _title_changed_in_phosphor(title):
+                self.title = title.label
+            self.phosphor.title.changed.connect(_title_changed_in_phosphor)
+            
             # Derive css class name
             cls_name = self._class_name
             for i in range(32):  # i.e. a safe while-loop
@@ -346,8 +353,9 @@ class Widget(Model):
         @event.connect('title')
         def __title_changed(self, *events):
             # All Phosphor widgets have a title
-            self.phosphor.title.text = events[-1].new_value
-
+            self.phosphor.title.label = events[-1].new_value
+            # todo: title also supports caption, icon, closable, and more
+        
         ## Size
 
         @event.readonly

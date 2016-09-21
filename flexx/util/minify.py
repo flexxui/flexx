@@ -12,12 +12,12 @@ def minify(code, remove_whitespace=False):
             whitespace. Otherwise remove all trailing whitespace and
             indents using tabs to preserve space. Default False.
     """
-    # return jsmin(code)
     code = remove_comments(code)
     if remove_whitespace:
         code = remove_all_whitespace(code)
     else:
         code = remove_trailing_whitespace(code)
+        code = remove_empty_lines(code)
         code = tabbify(code)
     return code
 
@@ -100,13 +100,17 @@ def remove_all_whitespace(code):
     chars.pop(0)
     return ''.join(chars)
     
+def remove_empty_lines(code):
+    return '\n'.join([line for line in code.splitlines() if line])
+
 def remove_trailing_whitespace(code):
     return '\n'.join([line.rstrip() for line in code.splitlines()])
 
 def tabbify(code):
     lines = []
     for line in code.splitlines():
-        line2 = line.lstrip(' ')
-        indent = (len(line)-len(line2)) // 4
-        lines.append('\t'*indent + line2)
+        line2 = line.lstrip(' \t')
+        indent_str = line[:len(line)-len(line2)]
+        indent_str = indent_str.replace('    ', '\t')
+        lines.append(indent_str + line2)
     return '\n'.join(lines)
