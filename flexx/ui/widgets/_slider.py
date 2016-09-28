@@ -26,7 +26,6 @@ Interactive example:
                 self.label.text = 'x' * events[-1].new_value
 """
 
-from ...pyscript import window
 from ... import event
 from . import Widget
 

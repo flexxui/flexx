@@ -19,7 +19,6 @@ Simple example:
 """
 
 from ... import event
-from ...pyscript import window
 from . import Widget
 
 

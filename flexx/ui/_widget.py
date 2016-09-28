@@ -292,7 +292,8 @@ class Widget(Model):
                     if msg.child.id not in window.flexx.instances:
                         print('Phosphor child added that is not managed by Flexx.')
                     elif window.flexx.instances[msg.child.id] not in self.children:
-                        print('Phosphor child %s added without us knowing' % msg.child.id)
+                        print('Phosphor child %s added without Flexx knowing' %
+                              msg.child.id)
                 elif msg.type == 'child-removed':
                     pass
                 return True  # resume processing the message as normal
@@ -326,7 +327,7 @@ class Widget(Model):
             """ Convenience func to create a Phosphor widget from a div element name.
             """
             node = window.document.createElement(element_name)
-            return phosphor.ui.widget.Widget({'node': node})
+            return window.phosphor.ui.widget.Widget({'node': node})
         
         @event.connect('style')
         def __style_changed(self, *events):
@@ -435,7 +436,7 @@ class Widget(Model):
             # Detach
             if self.phosphor.isAttached:
                 try:
-                    phosphor.ui.widget.Widget.detach(self.phosphor)
+                    window.phosphor.ui.widget.Widget.detach(self.phosphor)
                 except Exception as err:
                     err.message += ' (%s)' % self.id
                     raise err
@@ -448,7 +449,7 @@ class Widget(Model):
                 else:
                     el = window.document.getElementById(id)
                 try:
-                    phosphor.ui.widget.Widget.attach(self.phosphor, el)
+                    window.phosphor.ui.widget.Widget.attach(self.phosphor, el)
                 except Exception as err:
                     err.message += ' (%s)' % self.id
                     raise err

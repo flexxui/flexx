@@ -54,6 +54,7 @@ class StackedPanel(Layout):
         @event.connect('current')
         def __set_current_widget(self, *events):
             widget = events[-1].new_value
-            phosphor.algorithm.iteration.each(self.phosphor.widgets, lambda w: w.hide())
+            window.phosphor.algorithm.iteration.each(self.phosphor.widgets,
+                                                     lambda w: w.hide())
             if widget is not None:
                 widget.phosphor.show()

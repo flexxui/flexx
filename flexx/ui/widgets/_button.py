@@ -57,7 +57,6 @@ Example with interaction:
 """
 
 from ... import event
-from ...pyscript import window
 from . import Widget
 
 
