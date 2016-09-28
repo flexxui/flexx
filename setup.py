@@ -87,8 +87,8 @@ def copy_for_legacy_python(src_dir, dest_dir):
 def get_all_resources():
     import logging  # noqa - prevent mixup with logging module inside flexx.util
     sys.path.insert(0, os.path.join(THIS_DIR, 'flexx', 'util'))
-    from getresource import get_resoure_path
-    for name in ['phosphor-all.js.tag']:
+    from getresource import RESOURCES, get_resoure_path
+    for name in RESOURCES.keys():
         get_resoure_path(name)
     sys.path.pop(0)
 
