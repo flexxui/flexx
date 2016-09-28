@@ -76,17 +76,15 @@ class GridPanel(Layout):
     class JS:
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.gridpanel.GridPanel()
+            self.phosphor = window.phosphor.ui.gridpanel.GridPanel()
             self.node = self.phosphor.node
             
-            that = self
-            class LayoutNotifier:
-                def filterMessage(handler, msg):
-                    if msg._type == 'layout-request':
-                        that._child_limits_changed()
-                    return False
-            window.phosphor.messaging.installMessageFilter(self.phosphor,
-                                                           LayoutNotifier())
+            that = self  # todo: just use self ...
+            def msg_hook(handler, msg):
+                if msg._type == 'layout-request':
+                    that._child_limits_changed()
+                return False
+            window.phosphor.core.messaging.installMessageHook(self.phosphor, msg_hook)
         
         @event.connect('children', 'children.*.pos',
                        'children.*.flex', 'children.*.base_size')
@@ -98,8 +96,8 @@ class GridPanel(Layout):
             max_row, max_col = 0, 0
             for child in self.children:
                 x, y = child.pos
-                window.phosphor.gridpanel.GridPanel.setColumn(child.phosphor, x)
-                window.phosphor.gridpanel.GridPanel.setRow(child.phosphor, y)
+                window.phosphor.ui.gridpanel.GridPanel.setColumn(child.phosphor, x)
+                window.phosphor.ui.gridpanel.GridPanel.setRow(child.phosphor, y)
                 max_col = max(max_col, x)
                 max_row = max(max_row, y)
             
@@ -124,7 +122,7 @@ class GridPanel(Layout):
             # Assign
             self.phosphor._columnSpecs = colSpecs
             self.phosphor._rowSpecs = rowSpecs
-            Spec = window.phosphor.gridpanel.Spec
+            Spec = window.phosphor.ui.gridpanel.Spec
             self.phosphor.columnSpecs = [Spec(i) for i in colSpecs]
             self.phosphor.rowSpecs = [Spec(i) for i in rowSpecs]
         

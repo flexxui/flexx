@@ -44,21 +44,16 @@ class GroupWidget(Widget):
     class JS:
         
         def _init_phosphor_and_node(self):
-            # class FieldsetPanel(phosphor.panel.Panel):
-            #      def createNode():
-            #          return document.createElement('fieldset')
-            # self.phosphor = FieldsetPanel()
             
-            # todo: make a createPanel function in phosphor all 
-            # (especially if this is needed in more places)
-            ori = window.phosphor.panel.Panel.createNode
-            def _():
-                return window.document.createElement('fieldset')
-            window.phosphor.panel.Panel.createNode = _
-            self.phosphor = window.phosphor.panel.Panel()
-            window.phosphor.panel.Panel.createNode = ori
+            self.phosphor = window.phosphor.ui.panel.Panel()
             
-            #self.phosphor = phosphor.createWidget('fieldset')
+            # Replace the internal node of the phosphor widget.
+            # Bit of a hack, but I see no other way
+            node = window.document.createElement('fieldset')
+            self.phosphor._node = node
+            node.classList.add('p-Widget')
+            node.classList.add('p-Panel')
+            
             self._legend = window.document.createElement('legend')
             self.phosphor.node.appendChild(self._legend)
             

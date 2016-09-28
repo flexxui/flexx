@@ -175,7 +175,7 @@ class FormLayout(BaseTableLayout):
     class JS:
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.createWidget('table')
+            self.phosphor = self._create_phosphor_widget('table')
             self.node = self.phosphor.node
         
         def _apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):

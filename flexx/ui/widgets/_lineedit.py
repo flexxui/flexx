@@ -73,22 +73,13 @@ class LineEdit(Widget):
     
         def _init_phosphor_and_node(self):
             
-            # self.phosphor = window.phosphor.createWidget('input')
-            # self.node = self.phosphor.node
-            # self.node.type = 'text'  
-            # self.node.list = self.id  -> readonly!
+            # Create node element
+            d = window.document.createElement('div')
+            d.innerHTML = '<input type="text", list="%s" />' % self.id
+            node = d.childNodes[0]
             
-            # Some hacking to create an element with custom HTML
-            # todo: Maybe we can make createWidget accept HTML instead
-            ori = window.phosphor.widget.Widget.createNode
-            def _():
-                d = window.document.createElement('div')
-                d.innerHTML = '<input type="text", list="%s" />' % self.id
-                return d.childNodes[0]
-            window.phosphor.widget.Widget.createNode = _
-            self.phosphor = window.phosphor.widget.Widget()
-            window.phosphor.widget.Widget.createNode = ori
-            
+            # Wrap up in Phosphor
+            self.phosphor = window.phosphor.ui.widget.Widget({'node': node})
             self.node = self.phosphor.node
             
             self._autocomp = window.document.createElement('datalist')

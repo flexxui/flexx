@@ -23,48 +23,57 @@ except ImportError:
         raise RuntimeError('Could not import urlopen.')
 
 
-# todo: just define urls + tags in this file instead of a .tag file
+# Definition of remote resources, optionally versioned ('{}' in url becomes tag)
+RESOURCES = {
+    'phosphor-all.js': (
+        'https://raw.githubusercontent.com/zoofIO/phosphor-all/{}/phosphor-all.js',
+        'da2aa9a609f55'),
+    'phosphor-all.css': (
+        'https://raw.githubusercontent.com/zoofIO/phosphor-all/{}/phosphor-all.css',
+        'da2aa9a609f55'),
+}
 
 
-def get_resoure_filename(tagfile):
-    """ Get the filename for a resource, corresponding to the given
-    tagfile. The tagfile should consist of two line: the url of the
-    resource and a tag (used for versioning). Will use cached version
-    if available. Otherwise will download and cache.
+def get_resoure_path(filename):
+    """ Get the full path to a resource, corresponding to the given
+    filename. Will use cached version if available. Otherwise will
+    download and cache.
     """
-    # Get location of tag file (i.e. the file that says where the source is)
+    
+    # Get location of resource dir
     dest = os.path.abspath(os.path.join(__file__, '..', '..', 'resources'))
-    tagfilename = os.path.join(dest, tagfile)
-
     if not os.path.isdir(dest):
         raise ValueError('Resource dest dir %r is not a directory.' % dest)
-    if not os.path.isfile(tagfilename):
-        raise ValueError('Resource tag file %r is not a valid file.' % tagfile)
     
-    # Get url
-    url = open(tagfilename, 'rb').read().decode('utf-8').strip()
-    if not url.count('\n') == 1:
-        raise ValueError('The tag file should consists of two lines: a url and a tag.')
-    url, tag = [x.strip() for x in url.split('\n')]
+    # Get full filename for downloaded file
+    path = os.path.join(dest, filename)
+    url = ''
     
-    # Filename for downloaded file
-    baseame, ext, _ = tagfile.rsplit('.', 2)
-    filename = os.path.join(dest, baseame + '.' + tag + '.' + ext)
+    if filename in RESOURCES:
+        # Get url
+        url, tag = RESOURCES[filename]
+        # Modify url and path based on tag
+        if tag:
+            url = url.replace('{}', tag)
+            basename, ext = path.rsplit('.', 1)
+            path = basename + '.' + tag + '.' + ext
+        # Download if needed
+        if not os.path.isfile(path):
+            data = _fetch_file(url)
+            with open(path, 'wb') as f:
+                f.write(data)
+    else:
+        # Resource is supposed to just be in the dir
+        if not os.path.isfile(path):
+            raise ValueError('Unknown/unavailable resource %r' % filename)
     
-    # Download if needed
-    if not os.path.isfile(filename):
-        data = _fetch_file(url)
-        with open(filename, 'wb') as f:
-            f.write(data)
-    
-    return filename
+    return path
 
 
-def get_resource(tagfile):
-    """ Get the bytes of the resource corresponding to the given
-    tagfile.
+def get_resource(filename):
+    """ Get the bytes of the resource corresponding to the given filename.
     """
-    return open(get_resoure_filename(tagfile), 'rb').read()
+    return open(get_resoure_path(filename), 'rb').read()
 
 
 def _fetch_file(url):
@@ -81,5 +90,7 @@ def _fetch_file(url):
                   'connection? If there is, please report this problem.' % url)
 
 
+# Running this file as a script will download all downloadable resources
 if __name__ == '__main__':
-    get_resource('phosphor-all.js.tag')
+    for key in RESOURCES:
+        get_resource(key)

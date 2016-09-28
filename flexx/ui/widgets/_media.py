@@ -76,7 +76,7 @@ class ImageWidget(Widget):
     class JS:
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.createWidget('div')
+            self.phosphor = self._create_phosphor_widget('div')
             self.node = window.document.createElement('img')
             self.phosphor.node.appendChild(self.node)
         
@@ -115,7 +115,7 @@ class VideoWidget(Widget):
     class JS:
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.createWidget('video')
+            self.phosphor = self._create_phosphor_widget('video')
             self.node = self.phosphor.node
             self.node.controls = 'controls'
             self.node.innerHTML = 'Your browser does not support HTML5 video.'
@@ -145,7 +145,7 @@ class YoutubeWidget(Widget):
     class JS:
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.createWidget('div')
+            self.phosphor = self._create_phosphor_widget('div')
             
             self.inode = window.document.createElement('iframe')
             self.phosphor.node.appendChild(self.inode)

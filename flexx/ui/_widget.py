@@ -84,21 +84,27 @@ class Widget(Model):
 
     CSS = """
 
-    .flx-container {
-        min-height: 10px; /* splitter sets its own minsize if contained */
-    }
-
     .flx-Widget {
         box-sizing: border-box;
         white-space: nowrap;
         overflow: hidden;
     }
-
+    
+    /* in a notebook or otherwise embedded in classic HTML */
+    .flx-container {
+        min-height: 10px;
+    }
+    
+    /* Main widget to fill the whole page */
     .flx-main-widget {
+       position: absolute;
+       top: 0;
+       left: 0;
+       left: 0;
+       right: 0;
        width: 100%;
        height: 100%;
     }
-
     """
 
     def __init__(self, **kwargs):
@@ -124,6 +130,8 @@ class Widget(Model):
         
         # All widgets need phosphor
         self._session.use_global_asset('phosphor-all.js', before='flexx-ui.css')
+        self._session.use_global_asset('phosphor-all.css', before='flexx-ui.css')
+
 
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
@@ -146,10 +154,12 @@ class Widget(Model):
         dispose any child widgets.
         """
         children = self.children
-        super().dispose()
         for child in children:
             child.dispose()
-
+        if self.session.status:
+            self._session._exec('flexx.instances.%s.phosphor.dispose();' % self._id)
+        super().dispose()
+    
     @event.connect('parent:aaa')
     def __keep_alive(self, *events):
         # When the parent changes, we prevent the widget from being deleted
@@ -267,16 +277,33 @@ class Widget(Model):
             # Setup JS events to enter Flexx' event system
             self._init_events()
 
-            # Keep track of size
+            # Keep track of size, children, closing. The size is all that really
+            # matters. Would be nice if we can keep Flexx up-to-date even when
+            # children are changed from the outside, but this is non-trivial
+            # and easily leads to strange recursions. E.g. we temporarily remove
+            # widgets ourselves to get the order straight.
             that = self
-            class SizeNotifier:
-                def filterMessage(handler, msg):
-                    if msg._type == 'resize':
-                        that._check_real_size()
-                    return False
-            window.phosphor.messaging.installMessageFilter(self.phosphor,
-                                                           SizeNotifier())
-
+            def msg_hook(handler, msg):
+                if msg.type == 'resize':
+                    that._check_real_size()
+                elif msg.type == 'close-request':
+                    pass  # not sure what close means in Phosphor
+                elif msg.type == 'child-added':
+                    if msg.child.id not in window.flexx.instances:
+                        print('Phosphor child added that is not managed by Flexx.')
+                    elif window.flexx.instances[msg.child.id] not in self.children:
+                        print('Phosphor child %s added without Flexx knowing' %
+                              msg.child.id)
+                elif msg.type == 'child-removed':
+                    pass
+                return True  # resume processing the message as normal
+            window.phosphor.core.messaging.installMessageHook(self.phosphor, msg_hook)
+            
+            # Keep track of Phosphor changing the title
+            def _title_changed_in_phosphor(title):
+                self.title = title.label
+            self.phosphor.title.changed.connect(_title_changed_in_phosphor)
+            
             # Derive css class name
             cls_name = self._class_name
             for i in range(32):  # i.e. a safe while-loop
@@ -293,9 +320,15 @@ class Widget(Model):
         def _init_phosphor_and_node(self):
             """ Overload this in sub widgets.
             """
-            self.phosphor = window.phosphor.panel.Panel()
+            self.phosphor = window.phosphor.ui.panel.Panel()
             self.node = self.phosphor.node
-
+        
+        def _create_phosphor_widget(self, element_name='div'):
+            """ Convenience func to create a Phosphor widget from a div element name.
+            """
+            node = window.document.createElement(element_name)
+            return window.phosphor.ui.widget.Widget({'node': node})
+        
         @event.connect('style')
         def __style_changed(self, *events):
             """ Emits when the style signal changes, and provides a dict with
@@ -331,7 +364,6 @@ class Widget(Model):
             if size_limits_changed:
                 # Clear phosphor's limit cache (no need for getComputedStyle())
                 values = [self.outernode.style[k] for k in size_limits_keys]
-                # todo: do I need a variant of self.phosphor.clearSizeLimits()?
                 for k, v in zip(size_limits_keys, values):
                     self.outernode.style[k] = v
                 # Allow parent to re-layout
@@ -343,8 +375,9 @@ class Widget(Model):
         @event.connect('title')
         def __title_changed(self, *events):
             # All Phosphor widgets have a title
-            self.phosphor.title.text = events[-1].new_value
-
+            self.phosphor.title.label = events[-1].new_value
+            # todo: title also supports caption, icon, closable, and more
+        
         ## Size
 
         @event.readonly
@@ -403,7 +436,7 @@ class Widget(Model):
             # Detach
             if self.phosphor.isAttached:
                 try:
-                    self.phosphor.detach()
+                    window.phosphor.ui.widget.Widget.detach(self.phosphor)
                 except Exception as err:
                     err.message += ' (%s)' % self.id
                     raise err
@@ -416,7 +449,7 @@ class Widget(Model):
                 else:
                     el = window.document.getElementById(id)
                 try:
-                    self.phosphor.attach(el)
+                    window.phosphor.ui.widget.Widget.attach(self.phosphor, el)
                 except Exception as err:
                     err.message += ' (%s)' % self.id
                     raise err
@@ -457,7 +490,7 @@ class Widget(Model):
             is added. Overloadable by layouts.
             """
             try:
-                self.phosphor.addChild(widget.phosphor)
+                self.phosphor.addWidget(widget.phosphor)
             except Exception as err:
                 err.message += ' (%s)' % self.id
                 raise err

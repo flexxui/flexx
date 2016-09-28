@@ -48,13 +48,13 @@ class StackedPanel(Layout):
     class JS:
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.stackedpanel.StackedPanel()
+            self.phosphor = window.phosphor.ui.stackedpanel.StackedPanel()
             self.node = self.phosphor.node
         
         @event.connect('current')
         def __set_current_widget(self, *events):
             widget = events[-1].new_value
-            for i in range(self.phosphor.childCount()):
-                self.phosphor.childAt(i).hide()
+            window.phosphor.algorithm.iteration.each(self.phosphor.widgets,
+                                                     lambda w: w.hide())
             if widget is not None:
                 widget.phosphor.show()

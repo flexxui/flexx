@@ -26,7 +26,6 @@ Interactive example:
 """
 
 from ... import event
-from ...pyscript import window
 from . import Widget
 
 
@@ -63,7 +62,7 @@ class Label(Widget):
     class JS:
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.createWidget('div')
+            self.phosphor = self._create_phosphor_widget('div')
             self.node = self.phosphor.node
         
         @event.connect('text')
