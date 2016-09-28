@@ -15,15 +15,10 @@ class Layout(Widget):
     
     CSS = """
     
-    html {
-        /* set height, so body can have height, and the first layout too */
-        height: 100%;  
-    }
-    
     body {
-        /* Set height so the first layout can fill whole window */
-        height: 100%;
-        margin: 0px;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
     }
     
     .flx-Layout {

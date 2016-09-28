@@ -84,21 +84,27 @@ class Widget(Model):
 
     CSS = """
 
-    .flx-container {
-        min-height: 10px; /* splitter sets its own minsize if contained */
-    }
-
     .flx-Widget {
         box-sizing: border-box;
         white-space: nowrap;
         overflow: hidden;
     }
-
+    
+    /* in a notebook or otherwise embedded in classic HTML */
+    .flx-container {
+        min-height: 10px;
+    }
+    
+    /* Main widget to fill the whole page */
     .flx-main-widget {
+       position: absolute;
+       top: 0;
+       left: 0;
+       left: 0;
+       right: 0;
        width: 100%;
        height: 100%;
     }
-
     """
 
     def __init__(self, **kwargs):
