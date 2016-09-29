@@ -302,14 +302,14 @@ class TestExpressions:
         assert py2js('from %s import x, y, z\n42' % modname) == '42;'
     
     def test_import(self):
-        # time
-        import time
-        assert abs(float(evalpy('import time; time.time()')) - time.time()) < 0.5
-        assert abs(float(evalpy('from time import time; time()')) - time.time()) < 0.5
-        assert evalpy('import time; t0=time.perf_counter(); t1=time.perf_counter(); (t1-t0)').startswith('0.0')
-        # sys
-        assert 'pyscript' in evalpy('import sys; sys.version').lower()
+        with raises(JSError):
+            py2js('import time')
         
+        # But we do support special time funcs
+        import time
+        assert abs(float(evalpy('time()')) - time.time()) < 0.5
+        evalpy('t0=perf_counter(); t1=perf_counter(); (t1-t0)').startswith('0.0')
+    
     def test_funcion_call(self):
         jscode = 'var foo = function (x, y) {return x+y;};'
         assert evaljs(jscode + py2js('foo(2,2)')) == '4'

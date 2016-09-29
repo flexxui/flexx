@@ -5,6 +5,8 @@ same code to find the n-th prime on both Python and JS and measure the
 performance.
 """
 
+from time import perf_counter
+
 from flexx import app
 
 
@@ -31,20 +33,19 @@ class PrimeFinder(app.Model):
                         return False
                 return True
             
-            import time  # import here, so PyScript picks is up
-            t0 = time.perf_counter()
+            t0 = perf_counter()
             i = 0
             while len(primes) < n:
                 i += 1
                 if isprime(i):
                     primes.append(i)
-            t1 = time.perf_counter()
+            t1 = perf_counter()
             print(i, 'found in ', t1-t0, 'seconds')
 
 if __name__ == '__main__':
     
     # Create app instance
-    finder = app.launch(PrimeFinder, 'nodejs')  # can also use Firefox or Chrome
+    finder = app.launch(PrimeFinder, 'xul')  # can also use Firefox or Chrome
     
     finder.find_prime_py(2000)  # 0.7 s
     finder.find_prime_js(2000)  # 0.2 s
