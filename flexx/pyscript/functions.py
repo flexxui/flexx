@@ -47,6 +47,7 @@ def py2js(ob=None, new_name=None, **parser_options):
             try:
                 fname = inspect.getsourcefile(ob)
                 lines, linenr = inspect.getsourcelines(ob)
+                filename = inspect.getsourcefile(ob)
             except Exception as err:
                 raise ValueError('Could not get source code for object %r: %s' %
                                  (ob, err))
@@ -70,7 +71,7 @@ def py2js(ob=None, new_name=None, **parser_options):
         hash = h.digest()
         
         # Get JS code
-        p = Parser(pycode, **parser_options)
+        p = Parser(pycode, (filename, linenr), **parser_options)
         jscode = p.dump()
         if new_name and thetype in ('class', 'def'):
             jscode = js_rename(jscode, ob.__name__, new_name)

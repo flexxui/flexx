@@ -186,9 +186,10 @@ class Parser0:
         'IsNot' : "!==",
     }
     
-    def __init__(self, code, module=None, indent=0, docstrings=True,
+    def __init__(self, code, pysource=None, module=None, indent=0, docstrings=True,
                  inline_stdlib=True):
         self._pycode = code  # helpfull during debugging
+        self._pysource = (pysource[0], int(pysource[1])) if pysource else None
         if sys.version_info[0] == 2:
             fut = 'from __future__ import unicode_literals, print_function\n'
             code = fut + code
@@ -285,15 +286,24 @@ class Parser0:
             classNode = node if isinstance(node, ast.ClassDef) else classNode
             funcNode = node if isinstance(node, ast.FunctionDef) else funcNode
         
+        # Get location as accurately as we can
+        filename = None
+        lineno = getattr(node, 'lineno', -1)
+        if self._pysource:
+            filename, lineno = self._pysource
+            lineno += node.lineno - 1
+        
         msg = 'Error processing %s-node' % (node.__class__.__name__)
         if classNode:
             msg += ' in class "%s"' % classNode.name
         if funcNode:
             msg += ' in function "%s"' % funcNode.name
+        if filename:
+            msg += ' in "%s"' % filename
         if hasattr(node, 'lineno'):
-            msg += ' on line %i' % node.lineno
+            msg += ', line %i, ' % lineno
         if hasattr(node, 'col_offset'):
-            msg += ':%i' % node.col_offset
+            msg += 'col %i' % node.col_offset
         return msg
     
     def push_stack(self, type, name):
