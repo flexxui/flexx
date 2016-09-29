@@ -243,6 +243,7 @@ class Parser(Parser3):
     
     Parameters:
         code (str): the Python source code.
+        pysource (tuple): the filename and line number that contain the source.
         module (str, optional): the module name. If given, produces a
             UMD module.
         indent (int): the base indentation level (default 0). One
