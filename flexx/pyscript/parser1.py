@@ -149,22 +149,11 @@ As in Python, the default return value of a function is ``None`` (i.e.
 Imports
 -------
 
-PyScript has limited support for imports. At this point, only a few
-objects from ``time`` and ``sys`` are supported. Module support may be
-extended in the future.
+Imports are not supported syntax in PyScript. Imports "from pyscript"
+and "from __future__" are ignored to help writing hybrid Python/JS
+modules.
 
-.. pyscript_example::
-    
-    # Get time (number of seconds since epoch)
-    import time
-    print(time.time())
-    
-    # High resolution timer (as in time.perf_counter on Python 3)
-    import time
-    t0 = time.perf_counter()
-    do_something()
-    t1 = time.perf_counter()
-    print('this took me', t1-t0, 'seconds')
+# todo: more info on defining dependencies and exports for modules ...
 
 """
 
@@ -378,11 +367,6 @@ class Parser1(Parser0):
             base_name = ''
             full_name = unify(self.parse(node.func_node))
         
-        # Handle imports
-        imported = self._imports.get(base_name)
-        if imported:
-            full_name = self.use_imported_object(imported + '.' + method_name)
-        
         # Handle special functions and methods
         res = None
         if method_name in self._methods:
@@ -478,11 +462,6 @@ class Parser1(Parser0):
     
     def parse_Attribute(self, node):
         base_name = unify(self.parse(node.value_node))
-        # Handle imports
-        imported = self._imports.get(base_name)
-        if imported:
-            return self.use_imported_object(imported + '.' + node.attr)
-        # Handle normally
         return "%s.%s" % (base_name, self.ATTRIBUTE_MAP.get(node.attr, node.attr))
     
     ## Statements
@@ -609,28 +588,7 @@ class Parser1(Parser0):
         if node.root and node.root == '__future__':
             return []  # stuff to help the parser
         
-        if node.level:
-            raise JSError('PyScript does not support relative imports.')
-        
-        root = node.root + '.' if node.root else ''
-        names = [name[0] for name in node.names]
-        aliases = [name[1] for name in node.names]
-        
-        code = []
-        for name, alias in zip(names, aliases):
-            full_name = root + name
-            alias = alias if alias else name
-            if full_name in stdlib.IMPORTS:
-                if stdlib.IMPORTS[full_name] is None:
-                    # Register the module for later attribute lookup 
-                    self._imports[alias] = full_name
-                else:
-                    # Import the object
-                    realname = self.use_imported_object(full_name)
-                    code += [self.lf(), 'var %s = %s;' % (alias, realname)]
-            else:
-                raise JSError('Unknown import %r' % name)
-        return code
+        raise JSError('PyScript does not support imports.')
     
     def parse_Module(self, node):
         # Module level. Every piece of code has a module as the root.
