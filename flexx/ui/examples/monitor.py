@@ -5,7 +5,7 @@ Requires psutil.
 This app might be running at the demo server: http://flexx1.zoof.io
 """
 
-import time
+from time import time
 import psutil
 
 from flexx import app, ui, event
@@ -77,8 +77,8 @@ class Monitor(ui.Widget):
     
     
     def _do_work(self, *events):
-        etime = time.time() + len(events)
-        while time.time() < etime:
+        etime = time() + len(events)
+        while time() < etime:
             pass
     
     class JS:
@@ -87,8 +87,7 @@ class Monitor(ui.Widget):
         
         def init(self):
             super().init()
-            import time
-            self.start_time = time.time()
+            self.start_time = time()
         
         @event.connect('!system_info')
         def _update_info(self, *events):
@@ -100,9 +99,8 @@ class Monitor(ui.Widget):
                               'And in total we served %i connections.<br />' % n[1])
             
             # Prepare plots
-            import time
             times = self.cpu_plot.xdata.copy()
-            times.append(time.time() - self.start_time)
+            times.append(time() - self.start_time)
             times = times[-self.nsamples:]
             self.cpu_plot.xdata = times
             self.mem_plot.xdata = times
