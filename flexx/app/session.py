@@ -220,6 +220,38 @@ class AppManager(event.HasEvents):
 manager = AppManager()
 
 
+# todo: can this like create a window.define() but only if it does not already exist?
+# -> if so, this drops the flexx object, and this can be part of PyScript perhaps
+# todo: put this in own asset "flexx-require.js"
+# todo: we could do something like wait with loading if deps
+# are not yet loaded but error when page is already loaded.
+# That way we (and our users) wont have to care about import order
+MOD_BLA = """
+if (typeof window === 'undefined' && typeof module == 'object') {
+    global.window = global; // https://github.com/nodejs/node/pull/1838
+    window.is_node = true;
+}
+window._flexx_modules = {};
+window.define = function (name, deps, factory) {
+    /* Very simple variant of UMD loader */
+    if (typeof define === 'function' && define.amd) {
+        return define(name, deps, factory);
+    }
+    dep_vals = [];
+    for (var i=0; i<deps.length; i++) {
+        if (_flexx_modules[deps[i]] === undefined) {
+            throw Error('Unknown dependency: ' + deps[i]);
+        }
+        dep_vals.push(_flexx_modules[deps[i]]);
+    }
+    _flexx_modules[name] = factory.apply(null, dep_vals);
+};
+window.require = function(name) {
+    return _flexx_modules[name];
+}
+"""
+       
+
 class Session(SessionAssets):
     """ A session between Python and the client runtime
 
@@ -231,12 +263,6 @@ class Session(SessionAssets):
     
     def __init__(self, app_name):
         super().__init__()
-        
-        # Init assets (need that \n to make it look like code on py2
-        t = 'var flexx = {app_name: "%s", session_id: "%s"};\n' % (app_name, self.id)
-        self.add_asset('session-id.js', t.encode())
-        self.use_global_asset('pyscript-std.js')
-        self.use_global_asset('flexx-app.js')
         
         self._app_name = app_name  # name of the app, available before the app itself
         self._runtime = None  # init web runtime, will be set when used

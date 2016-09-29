@@ -24,6 +24,7 @@ RESULTS = [(124863, 'CPython 3.4', 'blue'),
            ]
 
 import sys
+from time import time
 import platform
 from test import pystone
 
@@ -36,6 +37,7 @@ if sys.argv[1:]:
 
 # Get pystone code
 pycode = open(pystone.__file__, 'rb').read().decode()
+pycode = pycode.replace('from time import time', '')
 jscode = pyscript.py2js(pycode, module='pystone')
 
 
@@ -60,94 +62,92 @@ def Float32Array(n):
 
 
 def convolve():
-    import time
     N = 400000
     data = Float32Array(N)
     support = 3
-    t0 = time.time()
+    t0 = time()
     for i in range(support, N-support):
         for j in range(-support, support+1):
             data[i] += data[i+j] * (1/support*2)
-    t1 = time.time()
+    t1 = time()
     print('convolution took %f s' % (t1-t0))
     
 
 def bench_str():
     """ From http://brythonista.wordpress.com/2015/03/28
     """
-    import time
     
-    t0 = time.time()
+    t0 = time()
     for i in range(1000000):
         a = 1
-    print("assignment.py", time.time()-t0)
+    print("assignment.py", time()-t0)
     
-    t0 = time.time()
+    t0 = time()
     a = 0
     for i in range(1000000):
         a += 1
-    print("augm_assign.py", time.time()-t0)
+    print("augm_assign.py", time()-t0)
     
-    t0 = time.time()
+    t0 = time()
     for i in range(1000000):
         a = 1.0
-    print("assignment_float.py", time.time()-t0)
+    print("assignment_float.py", time()-t0)
     
-    t0 = time.time()
+    t0 = time()
     for i in range(1000000):
         a = {0: 0}
-    print("build_dict.py", time.time()-t0)
+    print("build_dict.py", time()-t0)
     
-    t0 = time.time()
+    t0 = time()
     a = {0: 0}
     
     for i in range(1000000):
         a[0] = i
     
     assert a[0]==999999
-    print("set_dict_item.py", time.time()-t0)
+    print("set_dict_item.py", time()-t0)
     
-    t0 = time.time()
+    t0 = time()
     for i in range(1000000):
         a = [1, 2, 3]
-    print("build_list.py", time.time()-t0)
+    print("build_list.py", time()-t0)
     
-    t0 = time.time()
+    t0 = time()
     a = [0]
     
     for i in range(1000000):
         a[0] = i
-    print("set_list_item.py", time.time()-t0)
+    print("set_list_item.py", time()-t0)
     
-    t0 = time.time()
+    t0 = time()
     a, b, c = 1, 2, 3
     for i in range(1000000):
         a + b + c
-    print("add_integers.py", time.time()-t0)
+    print("add_integers.py", time()-t0)
     
-    t0 = time.time()
+    t0 = time()
     a, b, c = 'a', 'b', 'c'
     for i in range(1000000):
         a + b + c
-    print("add_strings.py", time.time()-t0)
+    print("add_strings.py", time()-t0)
     
-    t0 = time.time()
+    t0 = time()
     for _i in range(100000):
         str(_i)
-    print("str_of_int.py", time.time()-t0)
+    print("str_of_int.py", time()-t0)
     
-    t0 = time.time()
+    t0 = time()
     for i in range(1000000):
         def f():
             pass
-    print("create_function.py", time.time()-t0)
+    print("create_function.py", time()-t0)
     
-    t0 = time.time()
+    t0 = time()
     def g(x):
         return x
     for i in range(1000000):
         g(i)
-    print("function_call.py", time.time()-t0)
+    print("function_call.py", time()-t0)
 
 
 class Benchmarker(app.Model):

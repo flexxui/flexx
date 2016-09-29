@@ -185,7 +185,8 @@ def _deprecated_init_interactive(runtime=None, **runtime_kwargs):
     server = current_server()
     host, port = server.serving
     if runtime == 'nodejs':
-        all_js = session.get_js_only()
+        js_assets, _ = session.get_assets_in_order()
+        all_js = '\n\n'.join([asset.to_string() for asset in js_assets])
         url = '%s:%i/%s/' % (host, port, session.app_name)
         session._runtime = launch('http://' + url, runtime=runtime, code=all_js)
     else:
@@ -278,7 +279,9 @@ def init_notebook():
     # from running a cell, but any interaction goes over the websocket.
     server = current_server()
     host, port = server.serving
-    asset_elements = session.get_assets_as_html()
+    
+    js_assets, css_assets = session.get_assets_in_order(css_reset=False)
+    asset_elements = [asset.to_html(True) for asset in css_assets + js_assets]
     
     # Compose HTML to inject
     url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)
@@ -342,7 +345,8 @@ def launch(cls, runtime=None, properties=None, **runtime_kwargs):
     server = current_server()
     host, port = server.serving
     if runtime == 'nodejs':
-        all_js = session.get_js_only()
+        js_assets, _ = session.get_assets_in_order()
+        all_js = '\n\n'.join([asset.to_string() for asset in js_assets])
         url = '%s:%i/%s/' % (host, port, session.app_name)
         session._runtime = launch('http://' + url, runtime=runtime, code=all_js)
     else:

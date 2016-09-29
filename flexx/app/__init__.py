@@ -81,13 +81,17 @@ from .model import Model, get_active_model
 from .model import get_instance_by_id, get_model_classes
 from .funcs import create_server, current_server, run, start, stop, call_later
 from .funcs import init_notebook, serve, launch, export
-from .assetstore import assets
-from .clientcore import FlexxJS
-
-from ..pyscript.stdlib import get_full_std_lib as _get_full_std_lib
+from .assetstore import assets, Asset, RemoteAsset, ModuleAsset
 
 
-_JS_TEMPLATE = "%s\nvar flexx = new FlexxJS();"
+def _install_assets():
+    from ..pyscript.stdlib import get_full_std_lib_module
+    from .clientcore import FlexxJS
+    
+    classes = assets.get_module_classes('flexx.app')
+    a1 = Asset('pyscript-std.js', [], get_full_std_lib_module().saves())
+    a2 = ModuleAsset('flexx-app.js', ['pyscript-std.js'], ['flexx'],
+                     FlexxJS, 'var flexx = new FlexxJS();', *classes)
+    assets.add_asset(a1, a2)
 
-assets.add_asset('pyscript-std.js', _get_full_std_lib().encode())
-assets.create_module_assets('flexx.app', js=_JS_TEMPLATE % FlexxJS)
+_install_assets()

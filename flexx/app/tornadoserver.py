@@ -315,15 +315,16 @@ class MainHandler(tornado.web.RequestHandler):
                     res = session.get_page().encode()
                     session.close()
                 else:
-                    try:
-                        res = assets.load_asset(fname)
-                    except (IOError, IndexError):
-                        self.write('invalid resource: %s' % fname)
+                    res = assets.get_asset(fname)
+                    if res is not None:
+                        res = res.to_string()
+                    else:
+                        self.write('Asset %r unavailable\n' % fname)
                         return
                 # Build HTML page
                 lines = ['<html><head><style>%s</style></head><body>' % 
                             "pre {display:inline} #L%s {background:#cca;}" % lineno]
-                for i, line in enumerate(res.decode().splitlines()):
+                for i, line in enumerate(res.splitlines()):
                     table = {ord('&'): '&amp;', ord('<'): '&lt;', ord('>'): '&gt;'}
                     line = line.translate(table).replace('\t', '    ')
                     lines.append('<a id="L%i">%i<pre>  %s</pre></a><br />' %
@@ -336,13 +337,11 @@ class MainHandler(tornado.web.RequestHandler):
                     self.set_header("Content-Type", 'text/css')
                 elif file_name.endswith('.js'):
                     self.set_header("Content-Type", 'application/x-javascript')
-                try:
-                    res = assets.load_asset(file_name)
-                except (IOError, IndexError):
-                    # self.write('Invalid resource %r' % file_name)
-                    super().write_error(404)
+                res = assets.get_asset(file_name)
+                if res is not None:
+                    self.write(res.to_string())
                 else:
-                    self.write(res)
+                    self.write('Could not load asset %r' % file_name)
         
         elif file_name:
             # filename in root. We don't support anything like that

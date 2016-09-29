@@ -47,9 +47,8 @@ class CanvasWidget(Widget):
             # This code only captures if there has not been scrolled elsewhere
             # for about half a second.
             def wheel_behavior(e):
-                import time  # noqa
                 id, t0 = window.flexx._wheel_timestamp
-                t1 = time.time()
+                t1 = perf_counter()
                 if (t1 - t0) < 0.5:
                     window.flexx._wheel_timestamp = id, t1  # keep scrolling
                 else:

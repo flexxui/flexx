@@ -15,8 +15,8 @@ class FlexxJS:
     
     def __init__(self):
         # Copy attributes from temporary flexx object
-        self.session_id = flexx.session_id
-        self.app_name = flexx.app_name
+        for key in window.flexx.keys():
+            self[key] = window.flexx[key]  # session_id, app_name, and more
         # Init variables
         self.ws = None
         self.last_msg = None
@@ -32,9 +32,8 @@ class FlexxJS:
         address += '/' + self.app_name
         self.ws_url = 'ws://%s/ws' % address
         
-        if typeof(window) is 'undefined' and typeof(module) is 'object':
+        if window.is_node is True:
             # nodejs (call exit on exit and ctrl-c)
-            self._set_window_as_global()  # create alias
             self.nodejs = True
             window.setTimeout(self.init, 1)  # ms
             window.process.on('exit', self.exit, False)
@@ -45,10 +44,6 @@ class FlexxJS:
             window.addEventListener('load', self.init, False)
             window.addEventListener('beforeunload', self.exit, False)
         window.flexx = self  # Set this as the global flexx object
-    
-    def _set_window_as_global(self):  # https://github.com/nodejs/node/pull/1838
-        """ global.window = global;
-        """
     
     def init(self):
         """ Called after document is loaded. """
