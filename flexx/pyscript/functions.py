@@ -41,6 +41,7 @@ def py2js(ob=None, new_name=None, **parser_options):
         if isinstance(ob, str):
             thetype = 'str'
             pycode = ob
+            filename = None
         elif isinstance(ob, type) or isinstance(ob, (types.FunctionType,
                                                      types.MethodType)):
             thetype = 'class' if isinstance(ob, type) else 'def'
@@ -68,7 +69,10 @@ def py2js(ob=None, new_name=None, **parser_options):
         hash = h.digest()
         
         # Get JS code
-        p = Parser(pycode, (filename, linenr), **parser_options)
+        if filename:
+            p = Parser(pycode, (filename, linenr), **parser_options)
+        else:
+            p = Parser(pycode, **parser_options)
         jscode = p.dump()
         if new_name and thetype in ('class', 'def'):
             jscode = js_rename(jscode, ob.__name__, new_name)

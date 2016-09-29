@@ -85,11 +85,18 @@ from .widgets import *
 
 from ._plotlayout import PlotLayout
 
-# flexx.ui needs phosphor
+
 def _install_assets():
-    from ..app import assets
+    from ..app import assets, Asset, ModuleAsset
     from ..util.getresource import get_resource
-    assets.add_asset('phosphor-all.js', get_resource('phosphor-all.js'))
-    assets.add_asset('phosphor-all.css', get_resource('phosphor-all.css'))
-    assets.create_module_assets('flexx.ui')
+    
+    a1 = Asset('phosphor-all.js', [], get_resource('phosphor-all.js').decode())
+    a2 = Asset('phosphor-all.css', [], get_resource('phosphor-all.css').decode())
+    
+    classes = assets.get_module_classes('flexx.ui')
+    a3 = ModuleAsset('flexx-ui.js', ['phosphor-all.js'], [], *classes)
+    a4 = Asset('flexx-ui.css', ['phosphor-all.css'], *classes)
+    
+    assets.add_asset(a1, a2, a3, a4)
+
 _install_assets()

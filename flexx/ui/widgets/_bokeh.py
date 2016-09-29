@@ -55,7 +55,7 @@ class BokehWidget(Widget):
         import bokeh
         dev = os.environ.get('BOKEH_RESOURCES', '') == 'relative-dev'
         modname = 'bokeh.' if dev else 'bokeh.min.'
-        if not (modname + 'js') in self.session.get_used_asset_names():
+        if not (modname + 'js') in self.session.get_asset_names():
             res = bokeh.resources.bokehjsdir()
             if dev:
                 res = os.path.abspath(
