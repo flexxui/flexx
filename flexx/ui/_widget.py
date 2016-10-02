@@ -105,6 +105,11 @@ class Widget(Model):
        width: 100%;
        height: 100%;
     }
+    
+    /* to position children absolute */
+    .flx-abs-children > .flx-Widget {
+        position: absolute;
+    }
     """
 
     def __init__(self, **kwargs):
@@ -703,6 +708,7 @@ class Widget(Model):
             if 'flx-Layout' not in self.outernode.className:
                 self.outernode.classList.remove('flx-hbox')
                 self.outernode.classList.remove('flx-vbox')
+                self.outernode.classList.remove('flx-abs-children')
                 children = self.children
                 if len(children) == 1:
                     subClassName = children[0].outernode.className
@@ -710,3 +716,5 @@ class Widget(Model):
                         self.outernode.classList.add('flx-hbox')
                     elif 'flx-HBox' in subClassName:
                         self.outernode.classList.add('flx-vbox')
+                    elif 'flx-BoxPanel' in subClassName:
+                        self.outernode.classList.add('flx-abs-children')
