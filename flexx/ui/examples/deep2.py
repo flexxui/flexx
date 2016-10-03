@@ -4,7 +4,7 @@ Flexx takes precautions to make it work. This example is to test that it
 still works.
 """
 
-from flexx import app, event, ui
+from flexx import app, ui
 
 
 class Red(ui.Widget):
