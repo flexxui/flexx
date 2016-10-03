@@ -120,5 +120,5 @@ class Deep(ui.Widget):
 
 
 if __name__ == '__main__':
-    app.launch(Deep)
+    app.launch(Deep, 'chromeapp')
     app.run()
