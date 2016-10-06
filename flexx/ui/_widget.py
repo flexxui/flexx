@@ -181,14 +181,25 @@ class Widget(Model):
             in e.g. a tab layout or form layout.
             """
             return str(v)
-    
+        
+        @event.prop
+        def css_class(self, v=''):
+            """ The extra CSS class name to asign to the DOM element.
+            Spaces can be used to delimit multiple names. Note that the
+            DOM element already has a css class-name corresponding to
+            its class (e.g. 'flx-Widget) and all its superclasses.
+            """
+            return str(v)
+        
         @event.prop
         def style(self, v=''):
             """ CSS style options for this widget object. e.g.
             ``"background: #f00; color: #0f0;"``. If the given value is a
             dict, its key-value pairs are converted to a CSS style string.
-            Note that the CSS class attribute can be used to style all
-            instances of a class.
+            Note that setting this propery is cumulative; setting it back
+            to the empty string does not undo previously set styling.
+            A better approach might be to add CSS to the CSS class attribute
+            and use ``css_class``.
             """
             if isinstance(v, dict):
                 v = ['%s: %s' % (k, v) for k, v in v.items()]
@@ -309,8 +320,8 @@ class Widget(Model):
                 self.title = title.label
             self.phosphor.title.changed.connect(_title_changed_in_phosphor)
             
-            # Derive css class name
-            cls_name = self._class_name
+            # Derive css class name from class hierarchy
+            cls_name = self._class_name  # _class_name is a PyScript thing
             for i in range(32):  # i.e. a safe while-loop
                 self.outernode.classList.add('flx-' + cls_name)
                 cls = window.flexx.classes[cls_name]
@@ -321,7 +332,7 @@ class Widget(Model):
                     break
             else:
                 raise RuntimeError('Error determining class names for %s' % self.id)
-
+        
         def _init_phosphor_and_node(self):
             """ Overload this in sub widgets.
             """
@@ -376,7 +387,18 @@ class Widget(Model):
                 if parent:
                     parent.phosphor.fit()  # i.e. p.processMessage(p.MsgFitRequest)
                 self.phosphor.update()
-
+        
+        @event.connect('css_class')
+        def __css_class_changed(self, *events):
+            if len(events):
+                # Reset / apply explicitly given class name (via the prop)
+                for cn in events[0].old_value.split(' '):
+                    if cn:
+                        self.outernode.classList.remove(cn)
+                for cn in events[-1].new_value.split(' '):
+                    if cn:
+                        self.outernode.classList.add(cn)
+        
         @event.connect('title')
         def __title_changed(self, *events):
             # All Phosphor widgets have a title
