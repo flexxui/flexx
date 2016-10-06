@@ -178,8 +178,8 @@ class Widget(Model):
             return str(v)
         
         @event.prop
-        def css_class_name(self, v=''):
-            """ The extra CSS class names to asign to the DOM element.
+        def css_class(self, v=''):
+            """ The extra CSS class name to asign to the DOM element.
             Spaces can be used to delimit multiple names. Note that the
             DOM element already has a css class-name corresponding to
             its class (e.g. 'flx-Widget) and all its superclasses.
@@ -194,7 +194,7 @@ class Widget(Model):
             Note that setting this propery is cumulative; setting it back
             to the empty string does not undo previously set styling.
             A better approach might be to add CSS to the CSS class attribute
-            and use ``css_class_name``.
+            and use ``css_class``.
             """
             if isinstance(v, dict):
                 v = ['%s: %s' % (k, v) for k, v in v.items()]
@@ -383,8 +383,8 @@ class Widget(Model):
                     parent.phosphor.fit()  # i.e. p.processMessage(p.MsgFitRequest)
                 self.phosphor.update()
         
-        @event.connect('css_class_name')
-        def __css_class_name_changed(self, *events):
+        @event.connect('css_class')
+        def __css_class_changed(self, *events):
             if len(events):
                 # Reset / apply explicitly given class name (via the prop)
                 for cn in events[0].old_value.split(' '):

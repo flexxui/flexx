@@ -39,25 +39,25 @@ class Mondriaan(ui.Widget):
             with MyVBox(flex=2):
                 
                 with MyVBox(flex=4, spacing=30):
-                    ui.Widget(flex=1, css_class_name='white')
-                    ui.Widget(flex=1, css_class_name='white')
+                    ui.Widget(flex=1, css_class='white')
+                    ui.Widget(flex=1, css_class='white')
                 
-                with MyVBox(flex=2, css_class_name='blue'):
-                    ui.Widget(flex=1, css_class_name='edge')
-                    ui.Widget(flex=1, css_class_name='edge')
+                with MyVBox(flex=2, css_class='blue'):
+                    ui.Widget(flex=1, css_class='edge')
+                    ui.Widget(flex=1, css_class='edge')
                 
             with MyVBox(flex=6):
                 
-                with MyVBox(flex=4, spacing=30, css_class_name='red'):
-                    ui.Widget(flex=1, css_class_name='edge')
-                    ui.Widget(flex=1, css_class_name='edge')
+                with MyVBox(flex=4, spacing=30, css_class='red'):
+                    ui.Widget(flex=1, css_class='edge')
+                    ui.Widget(flex=1, css_class='edge')
                 
                 with MyHBox(flex=2):
-                    ui.Widget(flex=6, css_class_name='white')
+                    ui.Widget(flex=6, css_class='white')
                     
                     with MyVBox(flex=1):
-                        ui.Widget(flex=1, css_class_name='white')
-                        ui.Widget(flex=1, css_class_name='yellow')
+                        ui.Widget(flex=1, css_class='white')
+                        ui.Widget(flex=1, css_class='yellow')
 
 
 if __name__ == '__main__':
