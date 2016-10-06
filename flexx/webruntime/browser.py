@@ -48,29 +48,29 @@ class BrowserRuntime(BaseRuntime):
         if type == 'firefox':  # pragma: no cover
             from .xul import get_firefox_exe
             exe = get_firefox_exe() or 'firefox'
-            self._start_subprocess([exe, url])
+            self._spawn_subprocess([exe, url])
             self._proc = None  # Prevent closing
             return
         elif type == 'chrome':  # pragma: no cover
             from .chromeapp import get_chrome_exe
             exe = get_chrome_exe() or 'google-chrome'
-            self._start_subprocess([exe, url])
+            self._spawn_subprocess([exe, url])
             self._proc = None  # Prevent closing
             return
         elif type == 'chromium':  # pragma: no cover
             from .chromeapp import get_chromium_exe
             exe = get_chromium_exe() or 'chromium-browser'
-            self._start_subprocess([exe, url])
+            self._spawn_subprocess([exe, url])
             self._proc = None  # Prevent closing
             return
         elif type in ('ie', 'iexplore'):
             from .mshtml import get_ie_exe
             exe = get_ie_exe() or 'iexplore.exe'
-            self._start_subprocess([exe, url])
+            self._spawn_subprocess([exe, url])
             self._proc = None  # Prevent closing
             return
         elif type in ('edge', ):
-            self._start_subprocess(['start', 'microsoft-edge:'+url], shell=True)
+            self._spawn_subprocess(['start', 'microsoft-edge:'+url], shell=True)
             self._proc = None  # Prevent closing
             return
         

@@ -54,20 +54,28 @@ class BaseRuntime:
         self._proc = None
 
     def _start_subprocess(self, cmd, shell=False, **env):
-        """ For subclasses to easily launch the subprocess.
+        """ Start subclasses, store handle, and launch a thread to read
+        stdout for the process. Intended for web runtimes that are "bound"
+        to this process.
+        """
+        self._proc = self._spawn_subprocess(cmd, shell, **env)
+        self._streamreader = StreamReader(self._proc)
+        self._streamreader.start()
+    
+    def _spawn_subprocess(self, cmd, shell=False, **env):
+        """ Spawn a subprocess and return process handle. Intended for
+        web runtimes that are "spawned", like browsers.
         """
         environ = os.environ.copy()
         environ.update(env)
         try:
-            self._proc = subprocess.Popen(cmd, env=environ, shell=shell,
+            return subprocess.Popen(cmd, env=environ, shell=shell,
                                           stdout=subprocess.PIPE,
                                           stderr=subprocess.STDOUT)
         except OSError as err:  # pragma: no cover
             raise RuntimeError('Could not start runtime with command %r:\n%s' %
                                (cmd[0], str(err)))
-        self._streamreader = StreamReader(self._proc)
-        self._streamreader.start()
-
+        
     def _launch(self):
         raise NotImplementedError()
 
