@@ -223,7 +223,7 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
     # portable distro or a frozen application that wants to be portable)
     prefix = sys.prefix
     if getattr(sys, 'frozen', None):  # See application_dir() function
-        prefix = os.path.abspath(os.path.dirname(sys.path[0]))
+        prefix = os.path.abspath(os.path.dirname(sys.executable))
     for reldir in ('settings', '../settings'):
         localpath = os.path.abspath(os.path.join(prefix, reldir))
         if os.path.isdir(localpath):  # pragma: no cover
