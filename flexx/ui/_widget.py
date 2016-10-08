@@ -86,7 +86,6 @@ class Widget(Model):
 
     .flx-Widget {
         box-sizing: border-box;
-        white-space: nowrap;
         overflow: hidden;
     }
     

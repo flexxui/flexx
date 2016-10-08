@@ -66,6 +66,10 @@ class BaseButton(Widget):
     
     CSS = """
     
+    .flx-BaseButton {
+        white-space: nowrap;
+    }
+    
     .flx-RadioButton, .flx-CheckBox {
         margin-left: 0.5em;
         margin-right: 0.5em;
