@@ -60,6 +60,8 @@ class Div(Widget):
     
     In contrast to regular Flexx widgets, the css class name of the node only
     consists of the name(s) provided via the ``css_class`` property.
+    
+    Also see :ref:`this example <classic_web_dev.py>`.
     """
     
     class Both:

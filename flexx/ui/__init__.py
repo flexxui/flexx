@@ -63,6 +63,10 @@ To create an actual app from a widget, there are three possibilities:
 
 To lean about the individual widgets, check the 
 :doc:`list of widget classes <api>`.
+
+Web developers may want to have a look at the :class:`Div class <flexx.ui.Div>`
+and :ref:`this example <classic_web_dev.py>` for a more classic way of
+creating HTML content.
 """
 
 import logging
