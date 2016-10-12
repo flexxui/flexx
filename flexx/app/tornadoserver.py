@@ -536,7 +536,7 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     @property
     def ping_counter(self):
         """ Counter indicating the number of pings so far. This measure is
-        used by ``Model.keep_alive()``.
+        used by ``Session.keep_alive()``.
         """
         return self._ping_counter
     

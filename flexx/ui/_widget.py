@@ -21,8 +21,8 @@ class LiveKeeper:
     def keep(self, ob):
         if not self._warned:
             self._warned = True
-            logger.warn('_widget.liveKeeper is deprecated, use Model.keep_alive() instead.')
-        ob.keep_alive()
+            logger.warn('liveKeeper is deprecated, use Session.keep_alive() instead.')
+        ob.session.keep_alive(ob)
 
 liveKeeper = LiveKeeper()
 
@@ -159,7 +159,7 @@ class Widget(Model):
     def __keep_alive(self, *events):
         # When the parent changes, we prevent the widget from being deleted
         # for a few seconds, to it will survive parent-children "jitter".
-        self.keep_alive()
+        self._session.keep_alive(self)
     
     parent = event.prop(parent)
     

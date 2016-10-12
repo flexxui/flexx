@@ -325,9 +325,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     # Keep track of all instances, so we can easily collect al JS/CSS
     _instances = weakref.WeakValueDictionary()
     
-    # Instances that are guarded from deletion: id: (ping_count, instance)
-    _instances_guarded = {}
-    
     # Count instances to give each instance a unique id
     _counter = 0
     
@@ -404,7 +401,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         # so that they can connect to newly created sub Models.
         self._init_handlers()
         self._session._exec('flexx.instances.%s._init_handlers();' % self._id)
-        self.keep_alive()
+        self._session.keep_alive(self)
     
     def __repr__(self):
         clsname = self.__class__.__name__
@@ -452,23 +449,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             cmd = 'flexx.instances.%s = "disposed";' % self._id
             self._session._exec(cmd)
         super().dispose()
-    
-    def keep_alive(self, iters=4):
-        """ Keep this Model instance alive for a certain amount of time,
-        expressed in Python-JS ping roundtrips. This is to make this
-        object survive jitter due to synchronisation. This method is
-        automatically called upon initialization, so that all Model
-        objects survive their first moments of existance.
-        """
-        # Note that models cannot be stored on session object as it would be a
-        # circular ref that the GC can clean up; must store at a global object.
-        # Note that keeping objects alive using call_later will not work if
-        # Python or JS are busy, since the timer may expire too soon.
-        # See Session._receive_pong()
-        counter = 0 if self._session._ws is None else self._session._ws.ping_counter
-        lifetime = counter + int(iters)
-        if lifetime > Model._instances_guarded.get(self._id, (0, ))[0]:
-            Model._instances_guarded[self._id] = lifetime, self
     
     @property
     def id(self):
