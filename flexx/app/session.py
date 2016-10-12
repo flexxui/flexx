@@ -248,9 +248,6 @@ class Session(SessionAssets):
         # commands, which are send to the client as soon as it connects
         self._pending_commands = []
         
-        # Similar to call_later, but call on next pong
-        self._pong_callbacks = []
-        
         self._creation_time = time.time()
     
     def __repr__(self):
@@ -382,35 +379,17 @@ class Session(SessionAssets):
         else:
             logger.warn('Unknown command received from JS:\n%s' % command)
     
-    def call_on_next_pong(self, i, callback, *args):
-        """ Similar to ``app.call_later()``, but waits for i ping-pong
-        roundtrips, so that all current Py and JS events will be
-        flushed. This method is not thread-safe.
-        
-        Parameters:
-            i (int): the number of ping-pong roundtrips to wait. Each round-trip
-                takes at least 1 second, possibly more if Py or JS is busy.
-            callback: the function to call.
-            args: the positional arguments to call the function with.
-        """
-        i = int(i)
-        count = i if (self._ws is None) else self._ws._ping_counter + i
-        self._pong_callbacks.append((count, callback, args))
-    
     def _receive_pong(self, count):
-        """ Called by ws when it gets a pong. Thus gets called about every sec.
+        """ Called by ws when it gets a pong. Thus gets called about
+        every sec. Clear the guarded Model instances for which the
+        "timeout counter" has expired.
+        
+        See Model.keep_alive()
         """
-        if not self._pong_callbacks:
-            return  # early exit
-        # We need to make a copy of the pending callbacks, because callbacks
-        # might re-register!
-        callbacks = [cb for cb in self._pong_callbacks if cb[0] <= count]
-        self._pong_callbacks = []
-        for c, f, args in callbacks:
-            try:
-                f(*args)
-            except Exception as err:
-                 logger.exception(err)
+        models_to_clear = [model for c, model in
+                           Model._instances_guarded.values() if c <= count]
+        for model in models_to_clear:
+            Model._instances_guarded.pop(model.id)
     
     def _exec(self, code):
         """ Like eval, but without returning the result value.
@@ -426,4 +405,3 @@ class Session(SessionAssets):
         if self._ws is None:
             raise RuntimeError('App not connected')
         self._send_command('EVAL ' + code)
- 

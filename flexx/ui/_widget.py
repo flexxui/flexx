@@ -10,29 +10,19 @@
 """
 
 from .. import event
-from ..app import Model, call_later, get_active_model
+from ..app import Model, get_active_model
 from ..pyscript import undefined, window
+from . import logger
 
-
+# todo: remove this (left for now for backward compat)
 class LiveKeeper:
-    """ This little utility keeps objects alive for a set period of
-    time. This is used to prevent Widget objects from being cleaned up
-    by the garbadge collector when they are only referenced by the
-    "children" property of their parent. Due to synchronization, the
-    children property can "jitter", causing references of objects to
-    be lost.
-    """
-
-    def __init__(self):
-        self._objects = {}
-
-    def keep(self, ob, timeout=5.0):
-        i = id(ob)
-        self._objects[i] = ob
-        call_later(timeout, self.clear, i)
-
-    def clear(self, i):
-        self._objects.pop(i, None)
+    _warned = False
+    
+    def keep(self, ob):
+        if not self._warned:
+            self._warned = True
+            logger.warn('_widget.liveKeeper is deprecated, use Model.keep_alive() instead.')
+        ob.keep_alive()
 
 liveKeeper = LiveKeeper()
 
@@ -169,7 +159,7 @@ class Widget(Model):
     def __keep_alive(self, *events):
         # When the parent changes, we prevent the widget from being deleted
         # for a few seconds, to it will survive parent-children "jitter".
-        liveKeeper.keep(self)
+        self.keep_alive()
     
     parent = event.prop(parent)
     

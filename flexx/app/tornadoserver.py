@@ -533,6 +533,13 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         """
         self._pongtime = time.time()
     
+    @property
+    def ping_counter(self):
+        """ Counter indicating the number of pings so far. This measure is
+        used by ``Model.keep_alive()``.
+        """
+        return self._ping_counter
+    
     @gen.coroutine
     def pinger2(self):
         """ Ticker so we have a signal of sorts to indicate round-trips.
