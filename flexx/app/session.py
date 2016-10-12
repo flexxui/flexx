@@ -248,6 +248,9 @@ class Session(SessionAssets):
         # commands, which are send to the client as soon as it connects
         self._pending_commands = []
         
+        # Objects that are guarded from deletion: id: (ping_count, instance)
+        self._instances_guarded = {}
+        
         self._creation_time = time.time()
     
     def __repr__(self):
@@ -378,6 +381,28 @@ class Session(SessionAssets):
                 ob._emit_from_js(name, txt)
         else:
             logger.warn('Unknown command received from JS:\n%s' % command)
+    
+    def keep_alive(self, ob, iters=4):
+        """ Keep an object alive for a certain amount of time, expressed
+        in Python-JS ping roundtrips. This is intended for making Model
+        objects survive jitter due to synchronisation, though any type
+        of object can be given.
+        """
+        obid = id(ob)
+        counter = 0 if self._ws is None else self._ws.ping_counter
+        lifetime = counter + int(iters)
+        if lifetime > self._instances_guarded.get(obid, (0, ))[0]:
+            self._instances_guarded[obid] = lifetime, ob
+    
+    def _receive_pong(self, count):
+        """ Called by ws when it gets a pong. Thus gets called about
+        every sec. Clear the guarded Model instances for which the
+        "timeout counter" has expired.
+        """
+        objects_to_clear = [ob for c, ob in
+                           self._instances_guarded.values() if c <= count]
+        for ob in objects_to_clear:
+            self._instances_guarded.pop(id(ob))
     
     def _exec(self, code):
         """ Like eval, but without returning the result value.

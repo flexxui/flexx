@@ -185,11 +185,13 @@ class FlexxJS:
     def command(self, msg):
         """ Execute a command received from the server.
         """
-        if msg.startswith('PRINT '):
+        if msg.startswith('PING '):
+            self.ws.send('PONG ' + msg[5:])
+        elif msg.startswith('PRINT '):
             window.console.ori_log(msg[6:])
         elif msg.startswith('EVAL '):
             window._ = eval(msg[5:])
-            window.flexx.ws.send('RET ' + window._)  # send back result
+            self.ws.send('RET ' + window._)  # send back result
         elif msg.startswith('EXEC '):
             eval(msg[5:])  # like eval, but do not return result
         elif msg.startswith('DEFINE-JS '):

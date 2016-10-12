@@ -446,7 +446,8 @@ class WSHandler(tornado.websocket.WebSocketHandler):
         
         logger.debug('New websocket connection %s' % path)
         if manager.has_app_name(self.app_name):
-            IOLoop.current().spawn_callback(self.pinger)
+            IOLoop.current().spawn_callback(self.pinger1)
+            IOLoop.current().spawn_callback(self.pinger2)
         else:
             self.close(1003, "Could not associate socket with an app.")
     
@@ -472,6 +473,8 @@ class WSHandler(tornado.websocket.WebSocketHandler):
                     self.close(1003, "Could not launch app: %r" % err)
                     raise
                 self.write_message("PRINT Flexx server says hi", binary=BINARY)
+        elif message.startswith('PONG '):
+            self.on_pong2(message[5:])
         else:
             try:
                 self._session._receive_command(message)
@@ -491,23 +494,78 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             self._session = None  # Allow cleaning up
     
     @gen.coroutine
-    def pinger(self):
+    def pinger1(self):
         """ Check for timeouts. This helps remove lingering false connections.
+        
+        This uses the websocket's native ping-ping mechanism. On the
+        browser side, pongs work even if JS is busy. On the Python side
+        we perform a check whether we were really waiting or whether Python 
+        was too busy to detect the pong.
         """
         self._pongtime = time.time()
+        self._pingtime = pingtime = 0
+        
         while self.close_code is None:
-            self.ping(b'x')
-            yield gen.sleep(2)
-            if time.time() - self._pongtime > config.ws_timeout:
+            dt = config.ws_timeout
+            
+            # Ping, but don't spam
+            if pingtime <= self._pongtime:
+                self.ping(b'x')
+                pingtime = self._pingtime = time.time()
+                iters_since_ping = 0
+            
+            yield gen.sleep(dt / 5)
+            
+            # Check pong status
+            iters_since_ping += 1
+            if iters_since_ping < 5:
+                pass  # we might have missed the pong
+            elif time.time() - self._pongtime > dt:
+                # Delay is so big that connection probably dropped.
+                # Note that a browser sends a pong even if JS is busy
                 logger.warn('Closing connection due to lack of pong')
                 self.close(1000, 'Conection timed out (no pong).')
                 return
     
     def on_pong(self, data):
-        """ Called when our ping is returned.
+        """ Implement the ws's on_pong() method. Called when our ping
+        is returned by the browser.
         """
-        #logger.debug('pong')
         self._pongtime = time.time()
+    
+    @property
+    def ping_counter(self):
+        """ Counter indicating the number of pings so far. This measure is
+        used by ``Session.keep_alive()``.
+        """
+        return self._ping_counter
+    
+    @gen.coroutine
+    def pinger2(self):
+        """ Ticker so we have a signal of sorts to indicate round-trips.
+        
+        This is used to implement session.call_on_next_pong(), which
+        is sort of like call_later(), but waits for both Py and JS to "flush"
+        their current events.
+        
+        This uses a ping-pong mechanism implemented *atop* the websocket.
+        When JS is working, it is not able to send a pong (which is what we
+        want in this case).
+        """
+        self._ping_counter = 0
+        self._pong_counter = 0
+        while self.close_code is None:
+            if self._pong_counter >= self._ping_counter:
+                self._ping_counter += 1
+                self.command('PING %i' % self._ping_counter)
+            yield gen.sleep(1.0)
+    
+    def on_pong2(self, data):
+        """ Called when our ping is returned by Flexx.
+        """
+        self._pong_counter = int(data)
+        if self._session:
+            self._session._receive_pong(self._pong_counter)
     
     # --- methods
     

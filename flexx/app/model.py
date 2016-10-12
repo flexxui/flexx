@@ -401,6 +401,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         # so that they can connect to newly created sub Models.
         self._init_handlers()
         self._session._exec('flexx.instances.%s._init_handlers();' % self._id)
+        self._session.keep_alive(self)
     
     def __repr__(self):
         clsname = self.__class__.__name__
@@ -432,7 +433,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         context is a stub).
         """
         pass
-    
     
     def __check_not_active(self):
         active_models = _get_active_models()
