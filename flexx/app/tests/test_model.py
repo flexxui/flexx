@@ -327,4 +327,60 @@ def test_keep_alive():
     assert foo3_ref() is None
 
 
+def test_keep_alive_noleak1():
+    
+    class Foo:
+        pass
+    
+    # Create a session and an object that has a reference to it (like Model)
+    session = app.Session('test')
+    foo = Foo()
+    foo.session = session
+    
+    # Let the session keep the object alive, so it keeps its reference
+    session.keep_alive(foo)
+    
+    session_ref = weakref.ref(session)
+    foo_ref = weakref.ref(foo)
+    
+    # Removing object wont delete it
+    del foo
+    gc.collect()
+    assert foo_ref() is not None
+    
+    # But closing the session will; session clears up after itself
+    session.close()
+    gc.collect()
+    assert foo_ref() is None
+
+
+def test_keep_alive_noleak2():
+    # Even if the above would not work ...
+    
+    class Foo:
+        pass
+    
+    # Create a session and an object that has a reference to it (like Model)
+    session = app.Session('test')
+    foo = Foo()
+    foo.session = session
+    
+    # Let the session keep the object alive, so it keeps its reference
+    session.keep_alive(foo)
+    
+    session_ref = weakref.ref(session)
+    foo_ref = weakref.ref(foo)
+    
+    # Removing session wont delete it
+    del session
+    gc.collect()
+    assert session_ref() is not None
+    
+    # But removing both will; gc is able to clear circular ref
+    del foo
+    gc.collect()
+    assert session_ref() is None
+    assert foo_ref() is None
+
+
 run_tests_if_main()
