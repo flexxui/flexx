@@ -6,6 +6,7 @@ can be generalized.
 import json
 import time
 import socket
+import mimetypes
 import traceback
 import threading
 from urllib.parse import urlparse
@@ -234,122 +235,172 @@ class MainHandler(tornado.web.RequestHandler):
         # kwargs == dict set as third arg in url spec
         pass
     
+    def _guess_mime_type(self, fname):
+        """ Set the mimetype if we can guess it from the filename.
+        """
+        guess = mimetypes.guess_type(fname)[0]
+        if guess:
+            self.set_header("Content-Type", guess)
+    
     @gen.coroutine
-    def get(self, path=None):
+    def get(self, full_path):
         
-        logger.debug('Incoming request at %s' % path)
+        logger.debug('Incoming request at %s' % full_path)
         
         # Analyze path to derive components
-        # app_name - name of the app, must be a valid identifier
-        # file_name - path (can have slashes) to a file
-        parts = [p for p in path.split('/') if p]
+        # Note: invalid app name can mean its a path relative to the main app
+        parts = [p for p in full_path.split('/') if p]
         if parts and valid_app_name(parts[0]):
-            app_name, file_name = parts[0], '/'.join(parts[1:])
+            app_name, path = parts[0], '/'.join(parts[1:])
         else:
-            app_name = '__main__' if manager.has_app_name('__main__') else '__index__'
-            file_name = '/'.join(parts)
+            app_name = (manager.has_app_name('_main') or
+                        manager.has_app_name('__main__') or
+                        '_index')
+            path = '/'.join(parts)
         
-        # Session id (if any) is provided via "?session_id=X"
-        session_id = self.get_argument('session_id', None)
+        # We now have:
+        # * app_name: name of the app, must be a valid identifier, names
+        #   with underscrores are reserved for special things like assets,
+        #   commands, etc.
+        # * path: part (possibly with slashes) after app_name
         
-        # Redirect to fixed app name?
+        if app_name in ('_main', '__main__') or not app_name.startswith('_'):
+            self._get_app(app_name, path)  # An actual app!
+        elif app_name in ('__index__', '_index'):
+            self._get_index(app_name, path)  # Index page
+        elif app_name in ('_assets', '_assetview', '_data'):
+            self._get_asset(app_name, path) # JS, CSS, or data
+        elif app_name in ('_cmd', '__cmd__'):
+            self._get_cmd(app_name, path)  # Execute (or ignore) command
+        else:
+            self.write('Ivalid URL: apps do not start with an underscore, and '
+                       'path %r has no special meaning.' % app_name)
+    
+    def _get_index(self, app_name, path):
+        if path:
+            return self.redirect('/_index')
+        all_apps = ['<li><a href="%s/">%s</a></li>' % (name, name) for name in 
+                    manager.get_app_names()]
+        the_list = '<ul>%s</ul>' % ''.join(all_apps) if all_apps else 'no apps'
+        self.write('Index of available apps: ' + the_list)
+    
+    def _get_app(self, app_name, path):
+    
+        # todo: send path to app somehow
+        
+        # Get case-corrected app name if the app is known
         correct_app_name = manager.has_app_name(app_name)
-        if correct_app_name and app_name in path and ('/' not in path or
-                                                      correct_app_name != app_name):
-            self.redirect('/%s/%s' % (correct_app_name, file_name))
         
-        elif app_name == '__index__':
-            # Show plain index page
-            all_apps = ['<li><a href="%s/">%s</a></li>' % (name, name) for name in 
-                        manager.get_app_names()]
-            the_list = '<ul>%s</ul>' % ''.join(all_apps) if all_apps else 'no apps'
-            self.write('Index of available apps: ' + the_list)
+        # Error or redirect if app name is not right
+        if not correct_app_name:
+            return self.write('No app "%s" is currently hosted.' % app_name)
+        if correct_app_name != app_name:
+            return self.redirect('/%s/%s' % (correct_app_name, path))
         
-        elif app_name == '__cmd__':
-            # Control the server using http, but only from localhost
-            if not self.request.host.startswith('localhost:'):
-                self.write('403')
-                return
-            
-            if file_name == 'info':
-                info = dict(address=self.application._flexx_serving,
-                            app_names=manager.get_app_names(),
-                            nsessions=sum([len(manager.get_connections(x))
-                                           for x in manager.get_app_names()]),
-                            )
-                self.write(json.dumps(info))
-            elif file_name == 'stop':
-                loop = IOLoop.current()
-                loop.add_callback(loop.stop)
+        # Should we bind this app instance to a pre-created session?
+        session_id = self.get_argument('session_id', '')
+        
+        if session_id:
+            # If session_id matches a pending app, use that session
+            session = manager.get_session_by_id(session_id)
+            if session and session.status == session.STATUS.PENDING:
+                self.write(session.get_page().encode())
             else:
-                self.write('unknown command')
+                self.redirect('/%s/' % app_name)  # redirect for normal serve
+        else:
+            # Create session - websocket will connect to it via session_id
+            session = manager.create_session(app_name)
+            self.write(session.get_page().encode())
+    
+    def _get_asset(self, app_name, path):
         
-        elif correct_app_name:
-            # App name given. But is it the app, or a resource for it?
-            
-            # idea: if file_name.startswith('api/foo/bar') -> send foo/bar to app
-            
-            if not file_name:
-                # This looks like an app, redirect, serve app, or error
-                if session_id:
-                    # If session_id matches a pending app, use that session
-                    session = manager.get_session_by_id(app_name, session_id)
-                    if session and session.status == session.STATUS.PENDING:
-                        self.write(session.get_page().encode())
-                    else:
-                        self.redirect('/%s/' % app_name)  # redirect for normal serve
-                else:
-                    # Create session - client will connect to it via session_id
-                    session = manager.create_session(app_name)
-                    self.write(session.get_page().encode())
-            elif file_name and ('.js:' in file_name or file_name.startswith(':')):
-                # Request for a view of a JS source file at a certain line, redirect
-                fname, where = file_name.split(':')[:2]
-                self.redirect('/%s/%s.debug%s#L%s' %
-                              (app_name, fname.replace('/:', ':'), where, where))
-            elif file_name and '.debug' in file_name:
-                # Show JS source file at a certain line
-                fname, lineno = file_name.split('.debug', 1)
-                if not fname:  # root app
-                    session = manager.create_session(app_name)
-                    res = session.get_page().encode()
-                    session.close()
-                else:
-                    res = assets.get_asset(fname)
-                    if res is not None:
-                        res = res.to_string()
-                    else:
-                        self.write('Asset %r unavailable\n' % fname)
-                        return
-                # Build HTML page
-                lines = ['<html><head><style>%s</style></head><body>' % 
-                            "pre {display:inline} #L%s {background:#cca;}" % lineno]
-                for i, line in enumerate(res.splitlines()):
-                    table = {ord('&'): '&amp;', ord('<'): '&lt;', ord('>'): '&gt;'}
-                    line = line.translate(table).replace('\t', '    ')
-                    lines.append('<a id="L%i">%i<pre>  %s</pre></a><br />' %
-                                    (i+1, i+1, line))
-                lines.append('</body></html>')
-                self.write('\n'.join(lines))
-            elif file_name:
-                # A resource, e.g. js/css/icon
-                if file_name.endswith('.css'):
-                    self.set_header("Content-Type", 'text/css')
-                elif file_name.endswith('.js'):
-                    self.set_header("Content-Type", 'application/x-javascript')
-                res = assets.get_asset(file_name)
-                if res is not None:
-                    self.write(res.to_string())
-                else:
-                    self.write('Could not load asset %r' % file_name)
+        # Get session id and filename
+        session_id, _, filename = path.partition('/')
+        session_id = '' if session_id == 'shared' else session_id
         
-        elif file_name:
-            # filename in root. We don't support anything like that
-            self.write('Flexx only provides files relative to an app (%r)' % file_name)
+        # Get asset provider: store or session
+        asset_provider = assets
+        if session_id:
+            asset_provider = manager.get_session_by_id(session_id)
+        
+        # Checks
+        if asset_provider is None:
+            return self.write('Invalid session %r' % session_id)
+        if not filename:
+            return self.write('Root dir for %s/%s' % (app_name, path))
+        
+        if app_name == '_assets':
+            
+            # If colon: request for a view of an asset at a certain line
+            if '.js:' in filename or '.css:' in filename or filename[0] == ':':
+                fname, where = filename.split(':')[:2]
+                return self.redirect('/_assetview/%s/%s#L%s' %
+                    (session_id or 'shared', fname.replace('/:', ':'), where))
+            
+            # Retrieve asset
+            res = asset_provider.get_asset(filename)
+            if res is None:
+                self.write('Could not load asset %r' % filename)
+            else:
+                self._guess_mime_type(filename)
+                self.write(res.to_string())
+        
+        elif app_name == '_assetview':
+            
+            # Retrieve asset
+            res = asset_provider.get_asset(filename)
+            if res is None:
+                return self.write('Could not load asset %r' % filename)
+            else:
+                res = res.to_string()
+            
+            # Build HTML page
+            style = ('pre {display:block; width: 100%; padding:0; margin:0} '
+                    'a {text-decoration: none; color: #000; background: #ddd} '
+                    ':target {background:#ada;} ')
+            lines = ['<html><head><style>%s</style></head><body>' % style]
+            for i, line in enumerate(res.splitlines()):
+                table = {ord('&'): '&amp;', ord('<'): '&lt;', ord('>'): '&gt;'}
+                line = line.translate(table).replace('\t', '    ')
+                lines.append('<pre id="L%i"><a href="#L%i">%i</a>  %s</pre>' %
+                            (i+1, i+1, i+1, line))
+            lines.append('</body></html>')
+            return self.write('\n'.join(lines))
+        
+        elif app_name == '_data':
+            # todo: can/do we async write in case the data is large?
+            
+            # Retrieve data
+            res = asset_provider.get_data(filename)
+            if res is None:
+                self.write('Could not load data %r' % filename)
+            else:
+                self._guess_mime_type(filename)  # so that images show up
+                self.write(res)
         
         else:
-            # In theory this cannot happen
-            self.write('No app "%s" is currently hosted.' % app_name)
+            raise RuntimeError('Invalid asset type %r' % app_name)
+    
+    def _get_cmd(self, app_name, path):
+        # Control the server using http, but only from localhost
+        if not self.request.host.startswith('localhost:'):
+            self.write('403')
+            return
+        
+        if not path:
+            self.write('No command given')
+        elif path == 'info':
+            info = dict(address=self.application._flexx_serving,
+                        app_names=manager.get_app_names(),
+                        nsessions=sum([len(manager.get_connections(x))
+                                        for x in manager.get_app_names()]),
+                        )
+            self.write(json.dumps(info))
+        elif path == 'stop':
+            loop = IOLoop.current()
+            loop.add_callback(loop.stop)
+        else:
+            self.write('unknown command %r' % path)
     
     def write_error(self, status_code, **kwargs):
         if status_code == 404:  # does not work?

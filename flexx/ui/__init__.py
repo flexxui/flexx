@@ -97,6 +97,6 @@ def _install_assets():
     a3 = ModuleAsset('flexx-ui.js', ['phosphor-all.js'], [], *classes)
     a4 = Asset('flexx-ui.css', ['phosphor-all.css'], *classes)
     
-    assets.add_asset(a1, a2, a3, a4)
+    assets.add_shared_asset(a1, a2, a3, a4)
 
 _install_assets()

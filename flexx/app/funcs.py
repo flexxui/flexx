@@ -281,7 +281,7 @@ def init_notebook():
     host, port = server.serving
     
     js_assets, css_assets = session.get_assets_in_order(css_reset=False)
-    asset_elements = [asset.to_html(True) for asset in css_assets + js_assets]
+    asset_elements = [asset.to_html(None) for asset in css_assets + js_assets]
     
     # Compose HTML to inject
     url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)
