@@ -31,6 +31,12 @@ class FlexxJS:
             address += ':' + location.port
         address += '/' + self.app_name
         self.ws_url = 'ws://%s/ws' % address
+        # remove querystring ?session=x
+        try:
+            window.history.replaceState(window.history.state, '',
+                                        window.location.pathname)
+        except Exception:
+            pass  # Xul, nodejs, ...
         
         if window.is_node is True:
             # nodejs (call exit on exit and ctrl-c)
