@@ -92,6 +92,6 @@ def _install_assets():
     a1 = Asset('pyscript-std.js', [], get_full_std_lib_module().saves())
     a2 = ModuleAsset('flexx-app.js', ['pyscript-std.js'], ['flexx'],
                      FlexxJS, 'var flexx = new FlexxJS();', *classes)
-    assets.add_asset(a1, a2)
+    assets.add_shared_asset(a1, a2)
 
 _install_assets()

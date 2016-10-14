@@ -3,6 +3,7 @@ Definition of App class and the app manager.
 """
 
 import time
+import weakref
 
 from .. import event
 from .model import Model, new_type
@@ -30,6 +31,7 @@ class AppManager(event.HasEvents):
         super().__init__()
         # name -> (ModelClass, properties, pending, connected) - lists contain Sessions
         self._appinfo = {}
+        self._session_map = weakref.WeakValueDictionary()
         self._last_check_time = time.time()
     
     def register_app_class(self, cls, name, properties):
@@ -51,10 +53,12 @@ class AppManager(event.HasEvents):
         if not valid_app_name(name):
             raise ValueError('Given app does not have a valid name %r' % name)
         pending, connected = [], []
-        if name in self._appinfo and cls is not self._appinfo[name][0]:
-            oldCls, properties, pending, connected = self._appinfo[name]
-            logger.warn('Re-registering app class %r' % name)
-            #raise ValueError('App with name %r already registered' % name)
+        if name in self._appinfo:
+            old_cls, old_properties, pending, connected = self._appinfo[name]
+            properties, new_properties = old_properties, properties
+            properties.update(new_properties)
+            if cls is not self._appinfo[name][0]:
+                logger.warn('Re-registering app class %r' % name)
         self._appinfo[name] = cls, properties, pending, connected
     
     def create_default_session(self):
@@ -65,6 +69,7 @@ class AppManager(event.HasEvents):
             raise RuntimeError('The default session can only be created once.')
         
         session = Session('__default__')
+        self._session_map[session.id] = session
         self._appinfo['__default__'] = (None, {}, [session], [])
         return session
     
@@ -92,8 +97,9 @@ class AppManager(event.HasEvents):
                     continue
                 _, _, pending, _ = self._appinfo[name]
                 to_remove = [s for s in pending
-                             if (time.time() - s._creation_time) > 10]
+                             if (time.time() - s._creation_time) > 30]
                 for s in to_remove:
+                    self._session_map.pop(s.id, None)
                     pending.remove(s)
                 count += len(to_remove)
             if count:
@@ -125,6 +131,7 @@ class AppManager(event.HasEvents):
         
         # Session and app class need each-other, thus the _set_app()
         session = Session(name)
+        self._session_map[session.id] = session
         app = cls(session=session, is_app=True, **properties)  # is_app marks it as main
         session._set_app(app)
         
@@ -136,22 +143,23 @@ class AppManager(event.HasEvents):
         logger.debug('Instantiate app client %s' % session.app_name)
         return session
     
-    def connect_client(self, ws, name, app_id):
+    def connect_client(self, ws, name, session_id):
         """ Connect a client to a session that was previously created.
         """
         _, _, pending, connected = self._appinfo[name]
         
         # Search for the session with the specific id
         for session in pending:
-            if session.id == app_id:
+            if session.id == session_id:
                 pending.remove(session)
                 break
         else:
-            raise RuntimeError('Asked for app id %r, but could not find it' % app_id)
+            raise RuntimeError('Asked for session id %r, but could not find it' %
+                               session_id)
     
         # Add app to connected, set ws
         assert session.status == Session.STATUS.PENDING
-        logger.info('New session %s %s' %(name, app_id))
+        logger.info('New session %s %s' %(name, session_id))
         session._set_ws(ws)
         connected.append(session)
         AppManager.total_sessions += 1
@@ -191,16 +199,10 @@ class AppManager(event.HasEvents):
         """
         return [name for name in sorted(self._appinfo.keys())]
     
-    def get_session_by_id(self, name, id):
-        """ Get session object by name and id
+    def get_session_by_id(self, id):
+        """ Get session object by its id
         """
-        _, _, pending, connected = self._appinfo[name]
-        for session in pending:
-            if session.id == id:
-                return session
-        for session in connected:
-            if session.id == id:
-                return session
+        return self._session_map.get(id, None)
     
     def get_connections(self, name):
         """ Given an app name, return the session connected objects.

@@ -49,21 +49,23 @@ class ImageWidget(Widget):
     """ Display an image using a url.
     """
     
+    _sequence = 0
+    
     class Both:
-            
+        
         @event.prop
         def source(self, v=''):
             """ The source of the image, This can be anything that an HTML
             img element supports. Also supported are images on the server,
-            these will be added as assets so the client can request them.
+            these will be added as data assets so the client can request them.
             """
             if not this_is_js():
                 # Is it an image on the server that we need to serve up?
                 if v.endswith(('.png', '.jpg', '.svg', '.gif')):
-                    if os.path.isfile(v):
-                        fname = self.id + os.path.splitext(v)[1]
-                        app.assets.add_asset(fname, v)
-                        return fname
+                    if v.startswith('file://') or os.path.isfile(v):
+                        ImageWidget._sequence += 1
+                        fname = 'im' + str(ImageWidget._sequence)
+                        return self.session.add_data(fname, 'file://' + v)
             return str(v)
         
         @event.prop

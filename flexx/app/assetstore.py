@@ -223,20 +223,23 @@ class Asset:
         """
         return tuple(self._code)
     
-    def to_html(self, embed=False):
-        """ Get HTML element tag to include in the document.
+    def to_html(self, link='{}'):
+        """ Get HTML element tag to include in the document. The link
+        argument is formatted with the asset name. If link evaluates to False,
+        the asset is embedded rather than linked.
         """
         if self.name.lower().endswith('.js'):
-            if embed:
+            if not link:
                 return '<script>\n' + self.to_string() + '\n</script>'
             else:
-                return "<script src=%r></script>" % self.name
+                return "<script src='%s'></script>" % link.format(self.name)
         elif self.name.lower().endswith('.css'):
-            if embed:
+            if not link:
                 code, _ = self._get_code_and_names()
                 return '<style>\n' + self.to_string() + '\n</style>'
             else:
-                return "<link rel='stylesheet' type='text/css' href=%r />" % self.name
+                t = "<link rel='stylesheet' type='text/css' href='%s' />"
+                return t % link.format(self.name)
         else:  # pragma: no cover
             raise NameError('Assets must be .js or .css')
     
@@ -297,8 +300,8 @@ class EmbeddedAsset(Asset):
     """ An asset that is always embedded on the page.
     """
     
-    def to_html(self, embed=False):
-        return super().to_html(True).replace('\n', '')
+    def to_html(self, link='{}'):
+        return super().to_html(False).replace('\n', '')
 
 
 class RemoteAsset(Asset):
@@ -324,9 +327,9 @@ class RemoteAsset(Asset):
         """
         return self._code[0]
     
-    def to_html(self, embed=False):
-        if embed:
-            return super().to_html(True)
+    def to_html(self, link='{}'):
+        if not link:
+            return super().to_html(False)
         
         if self.name.lower().endswith('.js'):
             return "<script src=%r></script>" % self.url
@@ -394,8 +397,10 @@ class AssetStore:
     def __init__(self):
         self._assets = OrderedDict()
         self._data = {}
-        self.add_asset(Asset('reset.css', [], RESET))
-        self.add_asset(Asset('flexx-loader.js', [], LOADER))
+        self.add_shared_asset(Asset('reset.css', [], RESET))
+        # todo: wrap loader code in a module, but not a define/AMD one, just function () {..}()
+        # todo: --> support multiple loaders, AMD / UMD constructs
+        self.add_shared_asset(Asset('flexx-loader.js', [], LOADER))
     
     def __repr__(self):
         names1 = ', '.join([repr(name) for name in self._assets])
@@ -426,32 +431,44 @@ class AssetStore:
         """
         return list(self._data.keys())
     
-    def add_data(self, name, data):
-        """ Add data to serve to the client (e.g. images). It is an
-        error to add data with a name that is already registered.
+    def add_shared_data(self, name, data):
+        """ Add data to serve to the client (e.g. images), which is shared
+        between sessions. It is an error to add data with a name that
+        is already registered. Returns the link at which the data can
+        be retrieved. See ``Session.add_data()`` to set data per-session.
         
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. 
-            data (bytes): the data blob.
+            data (bytes): the data blob. Can also be a uri to the blob
+                (string starting with "file://", "http://" or "https://").
+          the code is (down)loaded on the server.
         """
         if not isinstance(name, str):
-            raise ValueError('AssetStore.add_data() name must be a str.')
+            raise ValueError('add_shared_data() name must be a str.')
         if name in self._data:
-            raise ValueError('AssetStore.add_data() got existing name %r.' % name)
+            raise ValueError('add_shared_data() got existing name %r.' % name)
+        if isinstance(data, str):
+            if data.startswith('file://'):
+                data = open(data.split('//', 1)[1], 'rb').read()
+            elif data.startswith(('http://', 'https://')):
+                data = urlopen(data, timeout=5.0).read()
         if not isinstance(data, bytes):
-            raise ValueError('AssetStore.add_data() data must be a bytes.')
+            raise ValueError('add_shared_data() data must be bytes.')
         self._data[name] = data
+        return '/_data/shared/%s' % name
     
-    def add_asset(self, *assets):
-        """ Add one or more assets (JS or CSS) to serve the client. It is an
-        error to add an asset with a name that is already registered.
+    def add_shared_asset(self, *assets):
+        """ Add one or more assets (JS or CSS) to use at the client, wich
+        are shared between sessions. It is an error to add an asset
+        with a name that is already registered. See ``Session.add_asset()``
+        to set assets per-session.
         
         Parameters:
             assets (Asset): The asset to add.
         """
         for asset in assets:
             if not isinstance(asset, Asset):
-                raise ValueError('AssetStorr.add_asset() needs an Asset instance.')
+                raise ValueError('add_shared_asset() needs an Asset instance.')
             if asset.name in self._assets:
                 raise ValueError('Asset %r is already set.' % asset.name)
             self._assets[asset.name] = asset
@@ -584,7 +601,7 @@ class SessionAssets:
             data = self._store.get_data(name)
         return data
     
-    def use_asset(self, asset):  # -> asset must already exist
+    def add_asset(self, asset):  # -> asset must already exist
         """ Use the given asset in this session. The given asset can
         also be the name of an asset in the asset store. It is safe to
         call this method with an already registered asset.
@@ -593,9 +610,9 @@ class SessionAssets:
         if isinstance(asset, str):
             asset = self._store.get_asset(asset)
             if asset is None:
-                raise ValueError('AssetStore.add_asset() got unknown asset name.')
+                raise ValueError('Session.add_asset() got unknown asset name.')
         if not isinstance(asset, Asset):
-            raise ValueError('Session.use_asset() needs str or Asset.')
+            raise ValueError('Session.add_asset() needs str or Asset.')
         
         # Register or load asset, if necessary
         if asset.name in self._assets:
@@ -609,22 +626,30 @@ class SessionAssets:
         else:
             self._assets[asset.name] = asset
     
-    def use_data(self, name, data):  # todo: add option to clear data after its loaded?
+    def add_data(self, name, data):  # todo: add option to clear data after its loaded?
         """ Add data to serve to the client (e.g. images), specific to this
-        session.
+        session. Returns the link at which the data can be retrieved.
+        See ``app.assets.add_shared_data()`` to provide shared data.
         
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. If data has
                 already been set on this name, it is overwritten.
-            data (bytes): the data blob.
+            data (bytes): the data blob. Can also be a uri to the blob
+                (string starting with "file://", "http://" or "https://").
         """
         if not isinstance(name, str):
             raise ValueError('Session.add_data() name must be a str.')
         if name in self._data:
             raise ValueError('Session.add_data() got existing name %r.' % name)
+        if isinstance(data, str):
+            if data.startswith('file://'):
+                data = open(data.split('//', 1)[1], 'rb').read()
+            elif data.startswith(('http://', 'https://')):
+                data = urlopen(data, timeout=5.0).read()
         if not isinstance(data, bytes):
             raise ValueError('Session.add_data() data must be a bytes.')
         self._data[name] = data
+        return '/_data/%s/%s' % (self.id, name)
     
     def register_model_class(self, cls):
         """ Ensure that the client knows the given class. A class can
@@ -692,7 +717,7 @@ class SessionAssets:
         respectively. The assets contain all assets in use and their
         dependencies. The order is based on the dependency resolution
         and the order in which assets were registered via
-        ``use_asset()``. Special assets are added, such as the CSS reset,
+        ``add_asset()``. Special assets are added, such as the CSS reset,
         the JS loader, and CSS and JS for classes not defined in a module.
         """
         # todo: test incorrect order; loader should be able to handle it for JS
@@ -730,6 +755,13 @@ class SessionAssets:
                     else:
                         break  # no changes, move to next index
         
+        # Append code for extra classes
+        if self._extra_model_classes and 'extra-classes.js' not in self._assets:
+            self.add_asset(ModuleAsset('extra-classes.js', [], [],
+                                       *self._extra_model_classes))
+            self.add_asset(Asset('extra-classes.css', [],
+                                  *self._extra_model_classes))
+        
         # Collect initial assets for this session
         js_assets, css_assets = OrderedDict(), OrderedDict()
         for name in self._assets.keys():
@@ -763,13 +795,7 @@ class SessionAssets:
         t = 'var flexx = {app_name: "%s", session_id: "%s"};' % (self._app_name, self.id)
         js_assets.insert(0, EmbeddedAsset('flexx-init.js', [], t))
         
-        # Append code for extra classes
-        if self._extra_model_classes:
-            js_assets.append(ModuleAsset('extra-classes.js', [], [],
-                                         *self._extra_model_classes))
-            css_assets.append(Asset('extra-classes.css', [],
-                                    *self._extra_model_classes))
-        
+        # todo: set served!
         return js_assets, css_assets
     
     def get_page(self, single=False):
@@ -798,9 +824,13 @@ class SessionAssets:
         """ Compose index page.
         """
         codes = []
-        codes += [asset.to_html(single) for asset in css_assets]
-        codes += ['']
-        codes += [asset.to_html(single) for asset in js_assets]
+        for assets in [css_assets, js_assets]:
+            for asset in assets:
+                link = '/_assets/shared/{}'
+                if self._store.get_asset(asset.name) is not asset:
+                    link = '/_assets/%s/{}' % self.id
+                codes.append(asset.to_html(link))
+            codes.append('')
         
         src = INDEX
         if single:

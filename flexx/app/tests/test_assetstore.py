@@ -158,9 +158,9 @@ def test_asset_store_assets():
     
     # Add assets
     asset1 = app.Asset('foo.js', [], '-foo=7-')
-    s.add_asset(asset1)
+    s.add_shared_asset(asset1)
     asset2 = app.Asset('bar.js', [], '-bar=8-')
-    s.add_asset(asset2)
+    s.add_shared_asset(asset2)
     #
     assert len(s.get_asset_names()) == 2
     assert len(s.get_data_names()) == 0
@@ -178,13 +178,13 @@ def test_asset_store_assets():
     # Add asset with same name
     asset = app.Asset('bar.js', [], '-bar=1-')
     with raises(ValueError):
-        s.add_asset(asset)
+        s.add_shared_asset(asset)
     
     # Add BS asset
     with raises(ValueError):
-        s.add_asset(4)  # not an asset
+        s.add_shared_asset(4)  # not an asset
     with raises(ValueError):
-        s.add_asset('not an asset')
+        s.add_shared_asset('not an asset')
 
 
 def test_asset_store_data():
@@ -194,8 +194,8 @@ def test_asset_store_data():
     assert len(s.get_data_names()) == 0
     
     # Add data
-    s.add_data('xx', b'xxxx')
-    s.add_data('yy', b'yyyy')
+    s.add_shared_data('xx', b'xxxx')
+    s.add_shared_data('yy', b'yyyy')
     assert len(s.get_asset_names()) == 0
     assert len(s.get_data_names()) == 2
     assert 'xx' in s.get_data_names()
@@ -209,20 +209,20 @@ def test_asset_store_data():
     
     # Add data with same name
     with raises(ValueError):
-        s.add_data('xx', b'zzzz')
+        s.add_shared_data('xx', b'zzzz')
     
     # Add BS data
     with raises(TypeError):
-        s.add_data('dd')  # no data
+        s.add_shared_data('dd')  # no data
     with raises(ValueError):
-        s.add_data('dd', 4)  # not an asset
+        s.add_shared_data('dd', 4)  # not an asset
     if sys.version_info > (3, ):
         with raises(ValueError):
-            s.add_data('dd', 'not bytes')
+            s.add_shared_data('dd', 'not bytes')
         with raises(ValueError):
-            s.add_data(b'dd', b'yes, bytes')  # name not str
+            s.add_shared_data(b'dd', b'yes, bytes')  # name not str
     with raises(ValueError):
-        s.add_data(4, b'zzzz')  # name not a str
+        s.add_shared_data(4, b'zzzz')  # name not a str
 
 
 # 
@@ -239,8 +239,8 @@ def test_asset_store_data():
 #     assert len(os.listdir(dir)) == 1
 #     assert os.path.isfile(os.path.join(dir, 'reset.css'))
 #     
-#     s.add_asset('foo.js', b'xx\n')
-#     s.add_asset('foo.css', b'xx\n')
+#     s.add_shared_asset('foo.js', b'xx\n')
+#     s.add_shared_asset('foo.css', b'xx\n')
 #     s.export(dir)
 #     assert len(os.listdir(dir)) == 3
 #     
@@ -264,7 +264,7 @@ def test_asset_store_data():
 def test_session_assets():
     
     store = AssetStore()
-    store.add_asset(app.Asset('spam.css', [], ''))
+    store.add_shared_asset(app.Asset('spam.css', [], ''))
     s = SessionAssets(store)
     s._send_command = lambda x: None
     assert s.id
@@ -276,7 +276,7 @@ def test_session_assets():
     
     # Add an asset
     asset = app.Asset('foo.js', [], '-foo=7-')
-    s.use_asset(asset)
+    s.add_asset(asset)
     #
     assert len(s.get_asset_names()) == 1
     assert len(s.get_data_names()) == 0
@@ -284,31 +284,31 @@ def test_session_assets():
     
     # Add another asset
     asset = app.Asset('bar.js', [], '-bar=8-')
-    s.use_asset(asset)
+    s.add_asset(asset)
     #
     assert len(s.get_asset_names()) == 2
     assert 'bar.js' in s.get_asset_names()
     
     # Add asset from store
-    s.use_asset('spam.css')
+    s.add_asset('spam.css')
     assert len(s.get_asset_names()) == 3
     assert 'spam.css' in s.get_asset_names()
     
     # Use store asset again: ok
-    s.use_asset('spam.css')
+    s.add_asset('spam.css')
     # Use asset that's already used: ok
-    s.use_asset(asset)
+    s.add_asset(asset)
     
     # Add unknown store asset
     with raises(ValueError):
-        s.use_asset('spam.js')
+        s.add_asset('spam.js')
     # Not an asset instance
     with raises(ValueError):
-        s.use_asset(3)
+        s.add_asset(3)
     # New asset with existing name
     asset3 = app.Asset('bar.js', [], '-bar=1-')
     with raises(ValueError):
-        s.use_asset(asset3)
+        s.add_asset(asset3)
     
     # get_asset()
     assert s.get_asset('bar.js') is asset
@@ -321,14 +321,14 @@ def test_session_assets():
 def test_session_assets_data():
     
     store = AssetStore()
-    store.add_data('ww', b'wwww')
+    store.add_shared_data('ww', b'wwww')
     s = SessionAssets(store)
     s._send_command = lambda x: None
     assert s.id
     
     # Add data
-    s.use_data('xx', b'xxxx')
-    s.use_data('yy', b'yyyy')
+    s.add_data('xx', b'xxxx')
+    s.add_data('yy', b'yyyy')
     assert len(s.get_asset_names()) == 0
     assert len(s.get_data_names()) == 2
     assert 'xx' in s.get_data_names()
@@ -341,20 +341,20 @@ def test_session_assets_data():
     
     # Add data with same name
     with raises(ValueError):
-        s.use_data('xx', b'zzzz')
+        s.add_data('xx', b'zzzz')
     
     # Add BS data
     with raises(TypeError):
-        s.use_data('dd')  # no data
+        s.add_data('dd')  # no data
     with raises(ValueError):
-        s.use_data('dd', 4)  # not an asset
+        s.add_data('dd', 4)  # not an asset
     if sys.version_info > (3, ):
         with raises(ValueError):
-            s.use_data('dd', 'not bytes')
+            s.add_data('dd', 'not bytes')
         with raises(ValueError):
-            s.use_data(b'dd', b'yes, bytes')  # name not str
+            s.add_data(b'dd', b'yes, bytes')  # name not str
     with raises(ValueError):
-        s.use_data(4, b'zzzz')  # name not a str
+        s.add_data(4, b'zzzz')  # name not a str
     
     # get_data()
     assert s.get_data('xx') is b'xxxx'
@@ -372,11 +372,11 @@ def test_session_assets_data():
     # assert store.load_asset(a2) == b'bar\n'
     # 
     # # Use asset
-    # store.add_asset('spam.js', b'1234\x00')
+    # store.add_shared_asset('spam.js', b'1234\x00')
     # s.use_global_asset('spam.js')
     # assert s.get_asset_names()[-1] == 'spam.js'
     # raises(IndexError, s.use_global_asset, 'unknown-asset.js')
-    # raises(ValueError, s.add_asset, 3, b'a\n')
+    # raises(ValueError, s.add_shared_asset, 3, b'a\n')
     # 
     # # Add assets after loading page
     # s.get_page()
@@ -407,9 +407,9 @@ def test_dependency_resolution_1():
     a2 = app.Asset('a2.js', [], '')
     a3 = app.Asset('a3.js', [], '')
     
-    s.use_asset(a1)
-    s.use_asset(a2)
-    s.use_asset(a3)
+    s.add_asset(a1)
+    s.add_asset(a2)
+    s.add_asset(a3)
     
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == ['a1.js', 'a2.js', 'a3.js']
@@ -430,41 +430,41 @@ def test_dependency_resolution_2():
     # g1 = app.Asset('g1.js', [], '')
     
     for asset in [a1, b1, c1, d1, e1]:
-        store.add_asset(asset)
+        store.add_shared_asset(asset)
     
     # Add first
     s = SessionAssets(store)
-    s.use_asset(a1)
+    s.add_asset(a1)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == ['e1.js', 'd1.js', 'c1.js', 'b1.js', 'a1.js']
     
     # Add middle
     s = SessionAssets(store)
-    s.use_asset(c1)
+    s.add_asset(c1)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == ['e1.js', 'd1.js', 'c1.js']
     
     # Add last
     s = SessionAssets(store)
-    s.use_asset(e1)
+    s.add_asset(e1)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == ['e1.js']
     
     # Add first and middle
     s = SessionAssets(store)
-    s.use_asset(a1)
-    s.use_asset(c1)
+    s.add_asset(a1)
+    s.add_asset(c1)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == ['e1.js', 'd1.js', 'c1.js', 'b1.js', 'a1.js']
     
     # Add first and last
     s = SessionAssets(store)
-    s.use_asset(e1)
-    s.use_asset(a1)
+    s.add_asset(e1)
+    s.add_asset(a1)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == ['e1.js', 'd1.js', 'c1.js', 'b1.js', 'a1.js']
@@ -482,10 +482,10 @@ def test_dependency_resolution_3():
     e1 = app.Asset('e1.js', [], '')
     
     for asset in [a1, b1, c1, d1, e1]:
-        store.add_asset(asset)
+        store.add_shared_asset(asset)
     
     s = SessionAssets(store)
-    s.use_asset(a1)
+    s.add_asset(a1)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == ['e1.js', 'd1.js', 'c1.js', 'b1.js', 'a1.js']
@@ -503,10 +503,10 @@ def test_dependency_resolution_4():
     e1 = app.Asset('e1.js', [], '')
     
     for asset in [a1, b1, c1, d1, e1]:
-        store.add_asset(asset)
+        store.add_shared_asset(asset)
     
     s = SessionAssets(store)
-    s.use_asset(a1)
+    s.add_asset(a1)
     #
     with raises(RuntimeError):
         aa, _ = s.get_assets_in_order()
@@ -526,34 +526,34 @@ def test_dependency_resolution_5():
     c2 = app.Asset('c2.js', ['d2.js'], '')
     
     for asset in [a1, b1, c1, a2, b2, c2]:
-        store.add_asset(asset)
+        store.add_shared_asset(asset)
     
     # Only chain 1
     s = SessionAssets(store)
-    s.use_asset(a1)
+    s.add_asset(a1)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == ['c1.js', 'b1.js', 'a1.js']
     
     # Only chain 2
     s = SessionAssets(store)
-    s.use_asset(a2)
+    s.add_asset(a2)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == ['c2.js', 'b2.js', 'a2.js']
     
     # Both chains, first 1
     s = SessionAssets(store)
-    s.use_asset(a1)
-    s.use_asset(a2)
+    s.add_asset(a1)
+    s.add_asset(a2)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == ['c1.js', 'b1.js', 'a1.js', 'c2.js', 'b2.js', 'a2.js']
     
     # Both chains, first 2
     s = SessionAssets(store)
-    s.use_asset(a2)
-    s.use_asset(a1)
+    s.add_asset(a2)
+    s.add_asset(a1)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == [ 'c2.js', 'b2.js', 'a2.js', 'c1.js', 'b1.js', 'a1.js']
@@ -572,10 +572,10 @@ def test_dependency_resolution_6():
     c3 = app.Asset('c3.js', [], '')
     
     for asset in [a1, b1, b2, c1, c2, c3]:
-        store.add_asset(asset)
+        store.add_shared_asset(asset)
     
     s = SessionAssets(store)
-    s.use_asset(a1)
+    s.add_asset(a1)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == [ 'c1.js', 'c2.js', 'b1.js', 'c3.js', 'b2.js', 'a1.js']
@@ -593,10 +593,10 @@ def test_dependency_resolution_7():
     d1 = app.Asset('d1.js', [], '')
     
     for asset in [a1, b1, b2, c1, d1]:
-        store.add_asset(asset)
+        store.add_shared_asset(asset)
     
     s = SessionAssets(store)
-    s.use_asset(a1)
+    s.add_asset(a1)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == ['d1.js', 'c1.js', 'b1.js', 'b2.js', 'a1.js']
@@ -614,11 +614,11 @@ def test_dependency_resolution_8():
     d1 = app.Asset('d1.js', [], '')
     
     for asset in [a1, b1, b2, c1, d1]:
-        store.add_asset(asset)
+        store.add_shared_asset(asset)
     
     s = SessionAssets(store)
-    s.use_asset(a0)
-    s.use_asset(a1)
+    s.add_asset(a0)
+    s.add_asset(a1)
     #
     aa, _ = s.get_assets_in_order()
     assert [a.name for a in aa] == ['a0.js', 'd1.js', 'c1.js', 'b1.js', 'b2.js', 'a1.js']
