@@ -331,7 +331,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     # CSS for this class (no css in the base class)
     CSS = ""
     
-    def __init__(self, session=None, is_app=False, **kwargs):
+    def __init__(self, *init_args, session=None, is_app=False, **kwargs):
         
         # Param "is_app" is not used, but we "take" the argument so it
         # is not mistaken for a property value.
@@ -394,7 +394,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         # subwidgets etc. This is done here, at the point where the
         # properties are initialized, but the handlers not yet.
         with self:
-            self.init()
+            self.init(*init_args)
         self._session._exec('flexx.instances.%s.init();' % self._id)
         
         # Initialize handlers for Python and for JS. Done after init()
