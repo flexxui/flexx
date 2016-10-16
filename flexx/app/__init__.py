@@ -85,17 +85,9 @@ from .assetstore import assets, Asset
 
 
 def _install_assets():
-    from ..pyscript.stdlib import get_full_std_lib_module
     from .clientcore import FlexxJS
     
     classes = assets.get_module_classes('flexx.app')
-    
-    # todo: get plain JS and let assetstore wrap module?,
-    assets.add_shared_asset(
-            name='pyscript-std.js',
-            sources=['var mod = {};', get_full_std_lib_module().saves()],
-            deps=[],
-            exports=None)  # is already a module
     
     assets.add_shared_asset(
             name='flexx-app.js',

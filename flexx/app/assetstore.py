@@ -176,8 +176,9 @@ def get_random_string(length=24, allowed_chars=None):
 
 
 class Asset:
-    """ Abstract class to represent an asset (JS or CSS) to be included
-    on the page, and can have dependencies on other assets.
+    """ Class to represent an asset (JS or CSS) to be included on the
+    page, defined from one more more sources, and which can have
+    dependencies on other assets.
     
     Parameters:
         name (str): the asset name, e.g. 'foo.js' or 'bar.css'. Can contain
@@ -260,6 +261,7 @@ class Asset:
         self._imports = [d for d in deps if ' as ' in d]
         
         # Handle exports
+        self._need_pyscript_std = False
         if not isjs:
             if exports is not None:
                 raise ValueError('Assets exports must *not* be given for CSS assets.')
@@ -361,15 +363,20 @@ class Asset:
         if self._cache is not None:
             pass  # nothing to do
         elif self.is_module:
-            # todo: clean this up
+            # Create JS module, but also take care of inserting PyScript std.
+            from ..pyscript.stdlib import create_js_module, get_all_std_names
+            lib_name = 'pyscript-std.js'
             code, names = self._get_code_and_names()
-            s = '\n\n'.join(code)
-            from ..pyscript.stdlib import JSModule, FUNCTION_PREFIX, METHOD_PREFIX
-            s = s.replace(FUNCTION_PREFIX, 'py_.f_').replace(METHOD_PREFIX, 'py_.m_')
-            m = JSModule(self.name, s,
-                        ['pyscript-std.js as py_'] + self._imports,
-                        self._exports)
-            self._cache = m.saves()
+            if self._need_pyscript_std and lib_name not in self._imports:
+                self._imports.append(lib_name)
+            if lib_name in self._imports:
+                self._imports[self._imports.index(lib_name)] = lib_name + ' as _py'
+                func_names, method_names = get_all_std_names()
+                pre1 = ', '.join(['%s = _py.%s' % (n, n) for n in func_names])
+                pre2 = ', '.join(['%s = _py.%s' % (n, n) for n in method_names])
+                code.insert(0, 'var %s;\nvar %s;' % (pre1, pre2))
+            self._cache = create_js_module(self.name, '\n\n'.join(code), 
+                                           self._imports, self._exports)
         else:
             code, names = self._get_code_and_names()
             self._cache = '\n\n'.join(code)
@@ -400,9 +407,11 @@ class Asset:
         elif isinstance(ob, type) and issubclass(ob, Model):
             name = ob.__name__
             c = ob.JS.CODE if isjs else ob.CSS
+            self._need_pyscript_std = True
         elif isjs and callable(ob):
             try:
                 c = py2js(ob)
+                self._need_pyscript_std = True
             except Exception as err:
                 raise ValueError('Asset %r cannot convert %r to JS:\n%s' %
                                  (self.name, ob, str(err)))
@@ -437,6 +446,11 @@ class AssetStore:
         # todo: wrap loader code in a module, but not a define/AMD one, just function () {..}()
         # todo: --> support multiple loaders, AMD / UMD constructs
         self.add_shared_asset(Asset('flexx-loader.js', LOADER, []))
+        
+        from ..pyscript.stdlib import get_full_std_lib, get_all_std_names
+        func_names, method_names = get_all_std_names()
+        self.add_shared_asset(Asset('pyscript-std.js', get_full_std_lib(),
+                                    [], func_names + method_names))
     
     def __repr__(self):
         names1 = ', '.join([repr(name) for name in self._assets])
