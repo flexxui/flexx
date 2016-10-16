@@ -28,10 +28,9 @@ class Example(ui.Widget):
         # Two ways to add assets
         if True:
             # The client will load these assets from the URL's. Good for web apps.
-            ura = self.session.use_remote_asset
-            ura("http://code.jquery.com/jquery-1.10.2.js")
-            ura("http://code.jquery.com/ui/1.11.4/jquery-ui.js")
-            ura("http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css")
+            self.session.add_asset(name="http://code.jquery.com/jquery-1.10.2.js")
+            self.session.add_asset(name="http://code.jquery.com/ui/1.11.4/jquery-ui.js")
+            self.session.add_asset(name="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css")
         else:
             # Flexx will download the assets and serve them to the client.
             # Good for desktop/exported apps.

@@ -87,16 +87,33 @@ from ._plotlayout import PlotLayout
 
 
 def _install_assets():
-    from ..app import assets, Asset, ModuleAsset
+    from ..app import assets, Asset
     from ..util.getresource import get_resource
     
-    a1 = Asset('phosphor-all.js', [], get_resource('phosphor-all.js').decode())
-    a2 = Asset('phosphor-all.css', [], get_resource('phosphor-all.css').decode())
-    
     classes = assets.get_module_classes('flexx.ui')
-    a3 = ModuleAsset('flexx-ui.js', ['phosphor-all.js'], [], *classes)
-    a4 = Asset('flexx-ui.css', ['phosphor-all.css'], *classes)
     
-    assets.add_shared_asset(a1, a2, a3, a4)
+    assets.add_shared_asset(
+            name='flexx-ui.js',
+            sources=classes,
+            deps=['phosphor-all.js', 'flexx-app.js'],
+            exports=[])  # makes this a module
+    
+    assets.add_shared_asset(
+            name='flexx-ui.css',
+            sources=classes,
+            deps=['phosphor-all.css'])                     
+
+    # Defining this later, the deps will sort out the order
+    assets.add_shared_asset(
+            name='phosphor-all.js',
+            sources=get_resource('phosphor-all.js').decode(),
+            deps=[],
+            exports=None)  # make this *not* a module
+    
+    assets.add_shared_asset(
+            name='phosphor-all.css',
+            sources=get_resource('phosphor-all.css').decode(),
+            deps=[])
+
 
 _install_assets()
