@@ -163,8 +163,7 @@ class RadioButton(BaseButton):
             self.node = p.node.childNodes[0]
             self.text_node = p.node.childNodes[1]
             
-            self.node.addEventListener('click', self.mouse_click, 0)
-            self.node.addEventListener('change', self._check_changed_from_dom, 0)
+            self.node.addEventListener('click', self._check_radio_click, 0)
         
         @event.connect('parent')
         def __update_group(self, *events):
@@ -180,8 +179,12 @@ class RadioButton(BaseButton):
         def __check_changed(self, *events):
             self.node.checked = self.checked
         
-        def _check_changed_from_dom(self, ev):
-            # This gets called when a button is checked (not when unchecked)
+        def _check_radio_click(self, ev):
+            """ This method is called on JS a click event. We *first* update
+            the checked properties, and then emit the Flexx click event.
+            That way, one can connect to the click event and have an 
+            up-to-date checked props (even on Py).
+            """
             # Turn off any radio buttons in the same group
             if self.parent:
                 for child in self.parent.children:
@@ -189,6 +192,8 @@ class RadioButton(BaseButton):
                         child.checked = child.node.checked
             # Turn on this button (last)
             self.checked = self.node.checked
+            # Process actual click event
+            self.mouse_click(ev)
 
 
 class CheckBox(BaseButton):
