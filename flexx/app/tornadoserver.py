@@ -355,15 +355,15 @@ class MainHandler(tornado.web.RequestHandler):
                 res = res.to_string()
             
             # Build HTML page
-            style = ('pre {display:block; width: 100%; padding:0; margin:0} '
-                    'a {text-decoration: none; color: #000; background: #ddd} '
+            style = ('pre {display:block; width: 100%; padding:0; margin:0;} '
+                    'a {text-decoration: none; color: #000; background: #ddd;} '
                     ':target {background:#ada;} ')
             lines = ['<html><head><style>%s</style></head><body>' % style]
             for i, line in enumerate(res.splitlines()):
                 table = {ord('&'): '&amp;', ord('<'): '&lt;', ord('>'): '&gt;'}
                 line = line.translate(table).replace('\t', '    ')
-                lines.append('<pre id="L%i"><a href="#L%i">%i</a>  %s</pre>' %
-                            (i+1, i+1, i+1, line))
+                lines.append('<pre id="L%i"><a href="#L%i">%s</a>  %s</pre>' %
+                             (i+1, i+1, str(i+1).rjust(4).replace(' ', '&nbsp'), line))
             lines.append('</body></html>')
             return self.write('\n'.join(lines))
         

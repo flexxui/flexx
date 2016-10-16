@@ -81,7 +81,7 @@ from .model import Model, get_active_model
 from .model import get_instance_by_id, get_model_classes
 from .funcs import create_server, current_server, run, start, stop, call_later
 from .funcs import init_notebook, serve, launch, export
-from .assetstore import assets, Asset, RemoteAsset, ModuleAsset
+from .assetstore import assets, Asset
 
 
 def _install_assets():
@@ -89,9 +89,24 @@ def _install_assets():
     from .clientcore import FlexxJS
     
     classes = assets.get_module_classes('flexx.app')
-    a1 = Asset('pyscript-std.js', [], get_full_std_lib_module().saves())
-    a2 = ModuleAsset('flexx-app.js', ['pyscript-std.js'], ['flexx'],
-                     FlexxJS, 'var flexx = new FlexxJS();', *classes)
-    assets.add_shared_asset(a1, a2)
+    
+    # todo: get plain JS and let assetstore wrap module?,
+    assets.add_shared_asset(
+            name='pyscript-std.js',
+            sources=['var mod = {};', get_full_std_lib_module().saves()],
+            deps=[],
+            exports=None)  # is already a module
+    
+    assets.add_shared_asset(
+            name='flexx-app.js',
+            sources=[FlexxJS, 'var flexx = new FlexxJS();'] + classes,
+            deps=['pyscript-std.js'],
+            exports=['flexx'])
+    
+    assets.add_shared_asset(
+            name='flexx-app.css',
+            sources=classes,
+            deps=[])
+
 
 _install_assets()
