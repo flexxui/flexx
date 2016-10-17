@@ -103,6 +103,7 @@ def get_full_std_lib(indent=0):
 
 
 # todo: now that we have modules, we can have shorter/no prefixes, right?
+# -> though maybe we use them for string replacement somewhere?
 def get_all_std_names():
     """ Get list if function names and methods names in std lib.
     """
