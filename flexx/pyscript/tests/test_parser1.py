@@ -363,16 +363,10 @@ class TestModules:
     
     def test_module(self):
         
-        code = Parser('"docstring"\nfoo=3;bar=4;_priv=0;', 'mymodule').dump()
+        code = Parser('"docstring"\nfoo=3;bar=4;_priv=0;', 'foo.py').dump()
         
         # Has docstring
         assert code.count('// docstring') == 1
-        
-        # Test that global variables exist
-        assert evaljs(code+'mymodule.foo+mymodule.bar') == '7'
-        
-        # And privates do not
-        assert evaljs(code+'mymodule._priv===undefined') == 'true'
 
 
 run_tests_if_main()

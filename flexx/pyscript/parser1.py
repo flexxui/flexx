@@ -594,9 +594,11 @@ class Parser1(Parser0):
         # Module level. Every piece of code has a module as the root.
         # Just pass body.
         
-        # Get docstring, but only if in module mode (i.e. top stack has a name)
+        # Get docstring, but only if in module mode 
+        # module_mode = self._stack[0][1] # top stack has a name -> works no more
+        module_mode = self._pysource and self._pysource[1] == 0  # line nr offset
         docstring = ''
-        if self._docstrings and self._stack[0][1]:
+        if self._docstrings and module_mode:
             docstring = self.pop_docstring(node)
         
         code = []
