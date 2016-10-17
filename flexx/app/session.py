@@ -307,16 +307,24 @@ class Session(SessionAssets):
         self._runtime = runtime
     
     def close(self):
-        """ Close the runtime, if possible
+        """ Close the session: close websocket, close runtime, dispose app.
         """
-        # todo: close via JS
+        # Stop guarding objects to break down any circular refs
+        for id in list(self._instances_guarded.keys()):
+            self._instances_guarded.pop(id)
         self._closing = True  # suppress warnings for session being closed.
         try:
+            
+            # Close the websocket
+            if self._ws:
+                self._ws.close_this()
+            # Close the runtime
             if self._runtime:
                 self._runtime.close()
+            # Dispose the model and break the circular reference
             if self._model:
                 self._model.dispose()
-                self._model = None  # break circular reference
+                self._model = None
         finally:
             self._closing = False
     
@@ -338,12 +346,12 @@ class Session(SessionAssets):
     def _send_command(self, command):
         """ Send the command, add to pending queue.
         """
-        if self.status == self.STATUS.CONNECTED:
+        if self._closing:
+            pass
+        elif self.status == self.STATUS.CONNECTED:
             self._ws.command(command)
         elif self.status == self.STATUS.PENDING:
             self._pending_commands.append(command)
-        elif self._closing:
-            pass
         else:
             #raise RuntimeError('Cannot send commands; app is closed')
             logger.warn('Cannot send commands; app is closed')
