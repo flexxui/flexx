@@ -27,7 +27,7 @@ from urllib.request import urlopen
 from collections import OrderedDict
 
 from .model import Model, get_model_classes
-from ..pyscript import py2js, create_js_module, get_all_std_names
+from ..pyscript import py2js, create_js_module, get_all_std_names, get_full_std_lib
 from . import logger
 
 
@@ -58,25 +58,40 @@ if (typeof window === 'undefined' && typeof module == 'object') {
     global.window = global; // https://github.com/nodejs/node/pull/1838
     window.is_node = true;
 }
-window._flexx_modules = {};
-window.define = function (name, deps, factory) {
-    /* Very simple variant of UMD loader */
-    if (typeof define === 'function' && define.amd && !define.flexx) {
-        return define(name, deps, factory);
-    }
-    dep_vals = [];
-    for (var i=0; i<deps.length; i++) {
-        if (_flexx_modules[deps[i]] === undefined) {
-            throw Error('Unknown dependency: ' + deps[i]);
+if (typeof define === 'function' && define.amd) {
+    // An AMD loader is already in place
+} else {
+    window._flexx_modules = {};
+    window.define = function (name, deps, factory) {
+        if (arguments.length == 1) {
+            factory = name;
+            deps = [];
+            name = null;
         }
-        dep_vals.push(_flexx_modules[deps[i]]);
+        if (arguments.length == 2) {
+            factory = deps;
+            deps = name;
+            name = null;
+        }
+        // Get dependencies - in current implementation, these must be loaded
+        var dep_vals = [];
+        for (var i=0; i<deps.length; i++) {
+            if (_flexx_modules[deps[i]] === undefined) {
+                throw Error('Unknown dependency: ' + deps[i]);
+            }
+            dep_vals.push(_flexx_modules[deps[i]]);
+        }
+        // Load the module and store it if is not anonymous
+        var mod = factory.apply(null, dep_vals);
+        if (name) {
+            _flexx_modules[name] = mod;
+        }
+    };
+    window.define.amd = true;
+    window.define.flexx = true;
+    window.require = function(name) {
+        return _flexx_modules[name];
     }
-    _flexx_modules[name] = factory.apply(null, dep_vals);
-};
-window.define.amd = true;  // Work nice with UMD
-window.define.flexx = true;
-window.require = function(name) {
-    return _flexx_modules[name];
 }
 
 })();
@@ -436,14 +451,10 @@ class AssetStore:
         self._assets = OrderedDict()
         self._data = {}
         self.add_shared_asset(Asset('reset.css', RESET, []))
-        # todo: wrap loader code in a module, but not a define/AMD one, just function () {..}()
-        # todo: --> support multiple loaders, AMD / UMD constructs
         self.add_shared_asset(Asset('flexx-loader.js', LOADER, [], None))
-        
-        from ..pyscript.stdlib import get_full_std_lib, get_all_std_names
         func_names, method_names = get_all_std_names()
-        self.add_shared_asset(Asset('pyscript-std.js', get_full_std_lib(),
-                                    [], func_names + method_names))
+        self.add_shared_asset(Asset('pyscript-std.js', get_full_std_lib(), [],
+                                    func_names + method_names))
     
     def __repr__(self):
         names1 = ', '.join([repr(name) for name in self._assets])
@@ -782,8 +793,6 @@ class SessionAssets:
         ``add_asset()``. Special assets are added, such as the CSS reset,
         the JS loader, and CSS and JS for classes not defined in a module.
         """
-        # todo: test incorrect order; loader should be able to handle it for JS
-        # todo: put remote assets with no deps at the end
         
         def collect_dependencies(asset, asset_dict):
             for dep in asset.deps:
@@ -858,6 +867,10 @@ class SessionAssets:
         js_assets.insert(0, Asset('embed:flexx-init.js', t, []))
         
         # todo: set served!
+        # todo: fix incorrect order; loader should be able to handle it for JS
+        #import random
+        #random.shuffle(js_assets)
+        
         return js_assets, css_assets
     
     def get_page(self, single=False):
