@@ -94,11 +94,5 @@ def _install_assets():
             sources=[FlexxJS, 'var flexx = new FlexxJS();'] + classes,
             deps=['pyscript-std.js'],
             exports=['flexx'])
-    
-    assets.add_shared_asset(
-            name='flexx-app.css',
-            sources=classes,
-            deps=[])
-
 
 _install_assets()
