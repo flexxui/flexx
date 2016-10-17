@@ -346,12 +346,12 @@ class Session(SessionAssets):
     def _send_command(self, command):
         """ Send the command, add to pending queue.
         """
-        if self.status == self.STATUS.CONNECTED:
+        if self._closing:
+            pass
+        elif self.status == self.STATUS.CONNECTED:
             self._ws.command(command)
         elif self.status == self.STATUS.PENDING:
             self._pending_commands.append(command)
-        elif self._closing:
-            pass
         else:
             #raise RuntimeError('Cannot send commands; app is closed')
             logger.warn('Cannot send commands; app is closed')
