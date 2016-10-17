@@ -6,6 +6,8 @@ Functionality for creating JS modules of various formats, including AMD and UMD.
 HIDDEN = """
 (function () {
 
+"use strict";
+
 {code}
 
 })();
@@ -17,6 +19,8 @@ SIMPLE = """
     root.{save_name} = factory();
 }(this, function () {
 
+"use strict";
+
 {code}
 
 return {exports};
@@ -26,6 +30,8 @@ return {exports};
 
 AMD = """
 define("{name}", [{dep_strings}], function ({dep_names}) {
+
+"use strict";
 
 {code}
 
@@ -52,6 +58,8 @@ UMD = """
     }
 }(this, function ({dep_names}) {
 
+"use strict";
+
 {code}
 
 return {exports};
@@ -59,10 +67,11 @@ return {exports};
 """.lstrip()
 
 
-# todo: which code is responsible for adding license header?
-# todo: which code is responsible for adding strict mode?
 def create_js_module(name, code, imports, exports, type='umd'):
     """ Wrap the given code in an AMD module.
+    
+    Note that "use strict" is added to the top of the module body. PyScript
+    does not deal with license strings; the caller should deal with that.
     
     Parameters:
         name (str): the name of the module.
