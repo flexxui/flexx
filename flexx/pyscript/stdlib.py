@@ -90,6 +90,7 @@ def get_partial_std_lib(func_names, method_names, indent=0,
         code = '\n'.join(lines)
     return code
 
+
 def get_full_std_lib(indent=0):
     """ Get the code for the full PyScript standard library.
     
@@ -109,64 +110,6 @@ def get_all_std_names():
     """
     return ([FUNCTION_PREFIX + f for f in FUNCTIONS],
             [METHOD_PREFIX + f for f in METHODS])
-
-# todo: where to define this?
-# todo: tests, docs
-# todo: which code is responsible for adding license header?
-# todo: which code is responsible for adding strict mode?
-def create_js_module(name, code, imports, exports):
-    """ Wrap the given code in an AMD module.
-    
-    Parameters:
-        name (str): the name of the module.
-        code (str): the JS code to wrap.
-        imports (list): the imports for this module, as string names of the
-            dependencies. Optionally, 'as' can  be used to make a dependency
-            available under a specific name (e.g. 'foo.js as foo').
-        exports (str, list): the result of this module (i.e. what other modules
-            get when they import this module. Can be a JS expression or a list
-            of names to export.
-    """
-    
-    # Check input args
-    if not isinstance(name, str):
-        raise ValueError('create_module() name arg must be a string.')
-    if not isinstance(code, str):
-        raise ValueError('create_module() code arg must be a string.')
-    if not isinstance(imports, (tuple, list)):
-        raise ValueError('create_module() imports arg must be a string.')
-    if not isinstance(exports, (str, tuple, list)):
-        raise ValueError('create_module() exports arg must be a string or list.')
-    
-    # Process imports
-    deps, dep_names = [], []
-    for imp in imports:
-        if not isinstance(imp, str):
-            raise ValueError('Elements in create_module() imports must be str.')
-        if ' as ' in imp:
-            dep, dep_name = imp.split(' as ', 1)
-        else:
-            dep = dep_name = imp
-        deps.append(dep)
-        dep_names.append(dep_name)
-    
-    # Process exports
-    if isinstance(exports, str):
-        return_val = exports
-    else:  # list
-        for exp in exports:
-            if not isinstance(exp, str):
-                raise ValueError('Elements in create_module() exports must be str.')
-        return_val = ', '.join([exp for exp in exports])
-        return_val = '{' + return_val + '}'
-    
-    # generate wrapped code
-    t = 'define("%s", [%s], function (%s) {\n\n%s\n\nreturn %s;\n});'
-    return t % (name,
-                ', '.join(map(repr, deps)),
-                ', '.join(dep_names),
-                code,
-                return_val)
 
 
 ## ----- Functions

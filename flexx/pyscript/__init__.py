@@ -244,8 +244,6 @@ class Parser(Parser3):
     Parameters:
         code (str): the Python source code.
         pysource (tuple): the filename and line number that contain the source.
-        module (str, optional): the module name. If given, produces a
-            UMD module.
         indent (int): the base indentation level (default 0). One
             indentation level means 4 spaces.
         docstrings (bool): whether docstrings are included in JS
@@ -256,7 +254,9 @@ class Parser(Parser3):
     pass
 
 
-from .functions import py2js, evaljs, evalpy, script2js, js_rename, get_full_std_lib
+# todo: update docs
+from .functions import py2js, evaljs, evalpy, script2js, js_rename, create_js_module
+from .stdlib import get_full_std_lib, get_all_std_names
 
 # Create stubs
 

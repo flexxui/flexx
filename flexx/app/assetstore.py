@@ -27,7 +27,7 @@ from urllib.request import urlopen
 from collections import OrderedDict
 
 from .model import Model, get_model_classes
-from ..pyscript import py2js
+from ..pyscript import py2js, create_js_module
 from . import logger
 
 
@@ -57,7 +57,7 @@ if (typeof window === 'undefined' && typeof module == 'object') {
 window._flexx_modules = {};
 window.define = function (name, deps, factory) {
     /* Very simple variant of UMD loader */
-    if (typeof define === 'function' && define.amd) {
+    if (typeof define === 'function' && define.amd && !define.flexx) {
         return define(name, deps, factory);
     }
     dep_vals = [];
@@ -69,6 +69,8 @@ window.define = function (name, deps, factory) {
     }
     _flexx_modules[name] = factory.apply(null, dep_vals);
 };
+window.define.amd = true;  // Work nice with UMD
+window.define.flexx = true;
 window.require = function(name) {
     return _flexx_modules[name];
 }
@@ -364,7 +366,7 @@ class Asset:
             pass  # nothing to do
         elif self.is_module:
             # Create JS module, but also take care of inserting PyScript std.
-            from ..pyscript.stdlib import create_js_module, get_all_std_names
+            from ..pyscript import create_js_module, get_all_std_names
             lib_name = 'pyscript-std.js'
             code, names = self._get_code_and_names()
             if self._need_pyscript_std and lib_name not in self._imports:
@@ -376,7 +378,7 @@ class Asset:
                 pre2 = ', '.join(['%s = _py.%s' % (n, n) for n in method_names])
                 code.insert(0, 'var %s;\nvar %s;' % (pre1, pre2))
             self._cache = create_js_module(self.name, '\n\n'.join(code), 
-                                           self._imports, self._exports)
+                                           self._imports, self._exports, 'amd')
         else:
             code, names = self._get_code_and_names()
             self._cache = '\n\n'.join(code)
@@ -445,7 +447,9 @@ class AssetStore:
         self.add_shared_asset(Asset('reset.css', RESET, []))
         # todo: wrap loader code in a module, but not a define/AMD one, just function () {..}()
         # todo: --> support multiple loaders, AMD / UMD constructs
-        self.add_shared_asset(Asset('flexx-loader.js', LOADER, []))
+        self.add_shared_asset(Asset('flexx-loader.js',
+                                    create_js_module('L', LOADER, [], [], 'hidden'),
+                                    []))
         
         from ..pyscript.stdlib import get_full_std_lib, get_all_std_names
         func_names, method_names = get_all_std_names()

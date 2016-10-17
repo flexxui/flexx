@@ -171,7 +171,7 @@ def test_scripts():
     assert 'define(' not in jscode
     
     # Convert - module light
-    script2js(pyname, 'mymodule')
+    script2js(pyname, 'mymodule', module_type='simple')
     
     # Check result
     jscode = open(jsname, 'rb').read().decode()
@@ -179,7 +179,7 @@ def test_scripts():
     assert 'define(' not in jscode
     
     # Convert - module UMD
-    script2js(pyname, 'mymodule+')  # at the moment, this is the undocumented API
+    script2js(pyname, 'mymodule', module_type='umd')
     
     # Check result
     jscode = open(jsname, 'rb').read().decode()
