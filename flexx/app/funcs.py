@@ -195,6 +195,63 @@ def init_interactive(cls=None, runtime=None):
     session._runtime = launch('http://' + url, runtime=runtime)
     
 
+class App:
+    """ Specification of a Flexx class.
+    
+    In the strict sense, this is a container for a Model class plus the
+    args and kwargs that it is to be instantiated with.
+    
+    Arguments:
+        cls (Model): the Model class (or Widget) that represents this app.
+        args: positional arguments used to instantiate the class (and received
+            in its ``init()`` method).
+        kwargs: keyword arguments used to initialize the model's properties.
+    """
+    
+    def __init__(self, cls, *args, **kwargs):
+        if not isinstance(cls, type) and issubclass(type, Model):
+            raise ValueError('App needs a Model class as its first argument.')
+        self._cls = cls
+        self.args = args
+        self.kwargs = kwargs
+        self._path = None
+    
+    def __call__(self, *args, **kwargs):
+        a = list(self.args) + list(args)
+        kw = {}
+        kw.update(self.kwargs)
+        kw.update(kwargs)
+        return self.cls(*a, **kw)
+    
+    def __repr__(self):
+        t = '<App based on class %s pre-initialized with %i args and %i kwargs>'
+        return t % (self.cls.__name__, len(self.args), len(self.kwargs))
+    
+    @property
+    def cls(self):
+        """ The Model class that is the basis of this app.
+        """
+        return self._cls
+    
+    @property
+    def path(self):
+        """ The url path that this app is served at. Is None if the app
+        is not served yet.
+        """
+        return self._path
+    
+    # todo: move implementation here and make app.serve() et al. call these.
+    
+    def serve(self, *args, **kwargs):
+        serve(self, *args, **kwargs)
+    
+    def launch(self, *args, **kwargs):
+        launch(self, *args, **kwargs)
+    
+    def export(self, *args, **kwargs):
+        export(self, *args, **kwargs)
+    
+
 class NoteBookHelper:
     """ Object that captures commands send to the websocket during the
     execution of a cell, and then applies these commands using a script
@@ -348,7 +405,8 @@ def serve(cls, name=None, properties=None):
         cls: The given class.
     """
     # Note: this talks to the manager; it has nothing to do with the server
-    assert isinstance(cls, type) and issubclass(cls, Model)
+    assert ((isinstance(cls, type) and issubclass(cls, Model)) or
+            (isinstance(cls, App) and issubclass(cls.cls, Model)))
     manager.register_app_class(cls, name, properties or {})
     return cls
 
@@ -369,7 +427,11 @@ def launch(cls, runtime=None, properties=None, **runtime_kwargs):
     """
     if isinstance(cls, str):
         return webruntime.launch(cls, runtime, **runtime_kwargs)
-    if not (isinstance(cls, type) and issubclass(cls, Model)):
+    if isinstance(cls, type) and issubclass(cls, Model):
+        pass
+    elif isinstance(cls, App) and issubclass(cls.cls, Model):
+        pass
+    else:
         raise ValueError('runtime must be a string or Model subclass.')
     
     # Create session
