@@ -102,7 +102,7 @@ class Widget(Model):
     }
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, *init_args, **kwargs):
 
         # Handle parent
         parent = kwargs.pop('parent', None)
@@ -121,7 +121,7 @@ class Widget(Model):
             kwargs['container'] = 'body'
 
         # Init - pass signal values via kwargs
-        Model.__init__(self, **kwargs)
+        Model.__init__(self, *init_args, **kwargs)
         
         # All widgets need phosphor
         self._session.use_global_asset('phosphor-all.js', before='flexx-ui.css')

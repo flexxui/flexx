@@ -85,6 +85,13 @@ class Foo6(Foo1):
             return {}
 
 
+class Foo7(Model):
+    
+    def init(self, foo, bar=0):
+        self.foo = foo
+        self.bar = bar
+
+
 def test_pairing1():
     
     assert isinstance(Foo1.title, event._emitters.Property)
@@ -118,6 +125,31 @@ def test_overloading():
     
     assert Foo4.title is not Foo1.title
     assert Foo4.JS.red is not Foo2.JS.red
+
+
+def test_init_args():
+    
+    # This test needs a default session
+    session = app.manager.get_default_session()
+    if session is None:
+        app.manager.create_default_session()
+    
+    with raises(TypeError):
+        m = Model(2, 3)
+    
+    m = Foo7(2, 3)
+    assert m.foo == 2
+    assert m.bar == 3
+    
+    m = Foo7(2)
+    assert m.foo == 2
+    assert m.bar == 0
+    
+    with raises(TypeError):
+        m = Foo7()
+    
+    with raises(TypeError):
+        m = Foo7(2, 3, 4)
 
 
 def test_both():
