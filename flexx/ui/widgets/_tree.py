@@ -305,7 +305,7 @@ class TreeWidget(ui.Widget):
                     for i in self.items:
                         i.selected = False
         
-        @event.connect('items**.!click')
+        @event.connect('items**.!mouse_click')
         def __item_clicked(self, *events):
             if self.max_selected == 0:
                 # No selection allowed
@@ -339,6 +339,14 @@ class TreeWidget(ui.Widget):
 class TreeItem(app.Model):
     """ An item to put in a TreeWidget. TreeItem objects are Model
     objects, but do not inherit from `ui.Widget`.
+    
+    Items are collapsable/expandable if their ``collapsed`` property
+    is set to ``True`` or ``False`` (i.e. not ``None``), or if they
+    have sub items. Items are checkable if their ``checked`` property
+    is set to ``True`` or ``False`` (i.e. not ``None``). Items are
+    selectable depending on the selection policy defined by
+    ``TreeWidget.max_selected``.
+    
     """
     
     def __init__(self, *args, **kwargs):
@@ -362,7 +370,8 @@ class TreeItem(app.Model):
         
         @event.prop
         def text(self, text=''):
-            """ The text for this item.
+            """ The text for this item. Can be used in combination with
+            ``title`` to obtain two columns.
             """
             return str(text)
         
@@ -376,7 +385,7 @@ class TreeItem(app.Model):
         
         @event.prop
         def visible(self, v=True):
-            """ Whether this item is visible.
+            """ Whether this item (and its sub items) is visible.
             """
             return bool(v)
         
@@ -435,14 +444,20 @@ class TreeItem(app.Model):
             self._title = self._row.childNodes[3]
             self._text = self._row.childNodes[4]
             
-            #self._collapsebut.addEventListener('click', self._on_click)
             self._row.addEventListener('click', self._on_click)
+            self._row.addEventListener('dblclick', self.mouse_double_click)
         
         @event.emitter
-        def click(self):
+        def mouse_click(self):
             """ Event emitted when the item is clicked on. Depending
             on the tree's max_selected, this can result in the item
             being selected/deselected.
+            """
+            return {}
+        
+        @event.emitter
+        def mouse_double_click(self, e=None):
+            """ Event emitted when the item is double-clicked.
             """
             return {}
         
@@ -454,7 +469,7 @@ class TreeItem(app.Model):
             elif e.target is self._checkbut:
                 self.checked = not self.checked
             else:
-                self.click()
+                self.mouse_click()
         
         @event.connect('items')
         def __update(self, *events):
