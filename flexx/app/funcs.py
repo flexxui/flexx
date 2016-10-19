@@ -413,6 +413,7 @@ class ExporterWebSocketDummy:
     
     def __init__(self):
         self._commands = []
+        self.ping_counter = 0
         # todo: make icon and title work
         #self.command('ICON %s.ico' % session.id)
         # self.command('TITLE %s' % session._runtime_kwargs.get('title', 

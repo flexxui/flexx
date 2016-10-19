@@ -24,7 +24,7 @@ def main():
         if isinstance(mod, ModuleType):
             classes = []
             for w in mod.__dict__.values():
-                if isinstance(w, type) and issubclass(w, ui.Widget):
+                if isinstance(w, type) and issubclass(w, app.Model):  # Model, cause e.g. TreeItem
                     if w.__module__ == mod.__name__:
                         classes.append(w)
                         if issubclass(w, ui.Layout):
