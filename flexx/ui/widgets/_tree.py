@@ -1,9 +1,8 @@
 
 from flexx import app, event, ui
 
-
+# todo: tooltip
 # todo: icons
-# todo: columns
 
 
 class TreeWidget(ui.Widget):
@@ -28,6 +27,7 @@ class TreeWidget(ui.Widget):
     * ``collapsebut`` the element used to collapse/expand an item.
     * ``checkbut`` the element used to check/uncheck an item.
     * ``text`` the element that contains the text of the item.
+    * ``title`` the element that contains the title of the item.
     
     Style classes applied to the TreeItem, corresponding to its properties:
     
@@ -49,6 +49,12 @@ class TreeWidget(ui.Widget):
         overflow-x: hidden;
     }
     
+    .flx-TreeWidget > ul {
+        position: absolute; /* avoid having an implicit width */
+        left: 0;
+        right: 0;
+    }
+    
     .flx-TreeWidget .row {
         display: inline-block;
         margin: 0;
@@ -60,10 +66,15 @@ class TreeWidget(ui.Widget):
         -ms-user-select: none;
     }
     
-    .flx-TreeWidget > ul {
-        position: absolute; /* avoid having an implicit width */
-        left: 0;
+    .flx-TreeWidget .text {
+        display: inline-block;
+        position: absolute;
+        padding-top: 0.1em;  /* tweak */
         right: 0;
+    }
+    .flx-TreeWidget .title:empty + .text {
+        position: initial;  /* .text width is not used*/
+        padding-top: 0;
     }
     
     .flx-TreeWidget ul {
@@ -95,7 +106,7 @@ class TreeWidget(ui.Widget):
     
     /* indentation guides */
     .flx-TreeWidget ul {
-        padding-left: 0.75em;  /* half the size of the collapse node */
+        padding-left: 0.75em;
     }
     .flx-TreeWidget > ul {
         padding-left: 0em; 
@@ -133,7 +144,8 @@ class TreeWidget(ui.Widget):
     }
     
     .flx-TreeWidget .checked-null > .checkbut {
-        display: none;  /* could also be visibility: 'hidden' */
+        content: '\\2611\\00a0';
+       /* display: none;  /* could also be visibility: hidden */
     }
     .flx-TreeWidget .checked-true > .checkbut::after {
         content: '\\2611\\00a0';
@@ -142,8 +154,12 @@ class TreeWidget(ui.Widget):
         content: '\\2610\\00a0';
     }
     
+    .flx-TreeWidget .text {
+        width: 50%;
+    }
     
     /* ----- End Tree Widget ----- */
+    
     """
     
     class Both:
@@ -280,6 +296,14 @@ class TreeItem(app.Model):
             return str(text)
         
         @event.prop
+        def title(self, title=''):
+            """ The title for this item that appears before the text. Intended
+            for display of key-value pairs. If a title is given, the text is
+            positioned in a second (virtual) column of the tree widget.
+            """
+            return str(title)
+        
+        @event.prop
         def visible(self, v=True):
             """ Whether this item is visible.
             """
@@ -317,10 +341,11 @@ class TreeItem(app.Model):
         _HTML = ''.join([line.split('#')[0].strip() for line in """
             
             # This is the actual HTML used to generate an item
-            
-            <span class='collapsebut'></span>   # the collapse button
             <span class='row'>                  # the row that represents the item
+                <span class='padder'></span>   # padding
+                <span class='collapsebut'></span>   # the collapse button
                 <span class='checkbut'></span>  # the check button
+                <span class='title'></span>     # the title text for this item
                 <span class='text'></span>      # the text for this item
                 </span>
             <ul></ul>                           # to hold sub items
@@ -331,14 +356,15 @@ class TreeItem(app.Model):
             self.node = window.document.createElement('li')
             self.node.innerHTML = self._HTML
             
-            self._collapsebut = self.node.childNodes[0]
-            self._row = self.node.childNodes[1]
-            self._ul = self.node.childNodes[2]
+            self._row = self.node.childNodes[0]
+            self._ul = self.node.childNodes[1]
             
-            self._checkbut = self._row.childNodes[0]
-            self.textnode = self._row.childNodes[1]
+            self._collapsebut = self._row.childNodes[1]
+            self._checkbut = self._row.childNodes[2]
+            self._title = self._row.childNodes[3]
+            self._text = self._row.childNodes[4]
             
-            self._collapsebut.addEventListener('click', self._on_click)
+            #self._collapsebut.addEventListener('click', self._on_click)
             self._row.addEventListener('click', self._on_click)
         
         @event.emitter
@@ -352,6 +378,7 @@ class TreeItem(app.Model):
         def _on_click(self, e):
             # Handle JS mouse click event
             if e.target is self._collapsebut:
+                print('collapsing')
                 self.collapsed = not self.collapsed
             elif e.target is self._checkbut:
                 self.checked = not self.checked
@@ -367,7 +394,11 @@ class TreeItem(app.Model):
         
         @event.connect('text')
         def __text_changed(self, *events):
-            self.textnode.innerHTML = self.text
+            self._text.innerHTML = self.text
+        
+        @event.connect('title')
+        def __title_changed(self, *events):
+            self._title.innerHTML = self.title
         
         @event.connect('visible')
         def __visible_changed(self, *events):
@@ -426,10 +457,13 @@ class TreeItem(app.Model):
 
 class Example(ui.Widget):
     
-    CSS = """
+    CSXCS = """
     .flx-TreeWidget {
         background: #000;
         color: #f00;
+    }
+    .flx-TreeWidget .title {
+        width: 60%;
     }
     """
     def init(self):
@@ -448,9 +482,9 @@ class Example(ui.Widget):
                             item2 = TreeItem(text=t + str(i), checked=False)
                             if i == 2:
                                 with item2:
-                                    TreeItem(text='A')
-                                    TreeItem(text='B')
+                                    TreeItem(text='A', title='')
+                                    TreeItem(text='B', title='')
 
 
-m = app.launch(Example, 'browser-edge')
+m = app.launch(Example, 'xul')
 app.run()
