@@ -65,7 +65,9 @@ and custom styling:
                     self.label.text = text + '<br />' +  self.label.text
 """
 
-from ... import app, event, ui
+from ... import event
+from ...app import Model, get_active_model
+from .. import Widget
 
 window = None
 
@@ -75,7 +77,7 @@ window = None
 # todo: a variant that can load data dynamically from Python, for biggish data
 
 
-class TreeWidget(ui.Widget):
+class TreeWidget(Widget):
     """
     A Widget that can be used to structure information in a list or a tree.
     To add items, create TreeItem objects in the context of a TreeWidget.
@@ -336,7 +338,7 @@ class TreeWidget(ui.Widget):
                         item.selected = True
 
     
-class TreeItem(app.Model):
+class TreeItem(Model):
     """ An item to put in a TreeWidget. TreeItem objects are Model
     objects, but do not inherit from `ui.Widget`.
     
@@ -352,7 +354,7 @@ class TreeItem(app.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        active_model = app.get_active_model()
+        active_model = get_active_model()
         if isinstance(active_model, (TreeItem, TreeWidget)):
             active_model.items = active_model.items + (self, )
         else:
