@@ -1,13 +1,83 @@
+"""
 
-from flexx import app, event, ui
+A TreeWidget object can contain TreeItems, which in turn, can contain
+TreeItems to construct a tree. First an example flat list with items
+that are selectable and checkable:
 
+
+.. UIExample:: 120
+
+    from flexx import app, ui
+    
+    class Example(ui.Widget):
+        
+        def init(self):
+        
+            with ui.TreeWidget(max_selected=2):
+            
+                for t in ['foo', 'bar', 'spam', 'eggs']:
+                    ui.TreeItem(text=t, checked=False)
+
+
+Next, a tree example illustrating connecting to various item events,
+and custom styling:
+
+
+.. UIExample:: 250
+
+    from flexx import app, event, ui
+    
+    class Example(ui.Widget):
+        
+        CSS = '''
+        .flx-TreeWidget {
+            background: #000;
+            color: #afa;
+        }
+        '''
+        
+        def init(self):
+            
+            with ui.BoxPanel():
+                
+                self.label = ui.Label(flex=1, style='overflow-y: scroll;')
+                
+                with ui.TreeWidget(flex=1, max_selected=1) as self.tree:
+                    for t in ['foo', 'bar', 'spam', 'eggs']:
+                        with ui.TreeItem(text=t, checked=None):
+                            for i in range(4):
+                                item2 = ui.TreeItem(text=t + ' %i'%i, checked=False)
+                                if i == 2:
+                                    with item2:
+                                        ui.TreeItem(title='A', text='more info on A')
+                                        ui.TreeItem(title='B', text='more info on B')
+        class JS:
+            
+            @event.connect('tree.items**.checked', 'tree.items**.selected',
+                        'tree.items**.collapsed')
+            def on_event(self, *events):
+                for ev in events:
+                    id = ev.source.title or ev.source.text
+                    if ev.new_value:
+                        text = id + ' was ' + ev.type 
+                    else:
+                        text = id + ' was ' + 'un-' + ev.type 
+                    self.label.text = text + '<br />' +  self.label.text
+"""
+
+from ... import app, event, ui
+
+window = None
+
+# todo: icon
 # todo: tooltip
-# todo: icons
+# todo: allow items to be placed in multiple views at once?
+# todo: a variant that can load data dynamically from Python, for biggish data
 
 
 class TreeWidget(ui.Widget):
     """
-    Widget that can be used to structure information in a list or a tree.
+    A Widget that can be used to structure information in a list or a tree.
     To add items, create TreeItem objects in the context of a TreeWidget.
     Sub items can be created by instantiating TreeItems in the context
     of another TreeItem.
@@ -16,13 +86,14 @@ class TreeWidget(ui.Widget):
     "list mode". Otherwise, items can be collapsed/expanded etc.
     This widget can be fully styled using CSS, see below.
     
-    *Style*
+    **Style**
     
     Style classes applied to the TreeWidget:
     
     * ``listmode`` is set on the widget's node if no items have sub items.
     
     Style classes for a TreeItem's elements:
+    
     * ``row`` indicates the row of an item (its text, icon, and checkbox).
     * ``collapsebut`` the element used to collapse/expand an item.
     * ``checkbut`` the element used to check/uncheck an item.
@@ -45,6 +116,7 @@ class TreeWidget(ui.Widget):
     /* ----- Tree Widget Mechanics ----- */
     
     .flx-TreeWidget {
+        height: 100%;
         overflow-y: scroll;
         overflow-x: hidden;
     }
@@ -69,12 +141,10 @@ class TreeWidget(ui.Widget):
     .flx-TreeWidget .text {
         display: inline-block;
         position: absolute;
-        padding-top: 0.1em;  /* tweak */
         right: 0;
     }
     .flx-TreeWidget .title:empty + .text {
         position: initial;  /* .text width is not used*/
-        padding-top: 0;
     }
     
     .flx-TreeWidget ul {
@@ -172,9 +242,10 @@ class TreeWidget(ui.Widget):
             return tuple(items)
         
         @event.prop
-        def max_selected(self, v=1):
-            """ The maximum number of selected items. Can be -1 to allow
-            any number of selected items. This determines the selection policy.
+        def max_selected(self, v=0):
+            """ The maximum number of selected items. Default 0. Can be -1 to
+            allow any number of selected items. This determines the selection
+            policy.
             """
             return int(v)
         
@@ -451,40 +522,3 @@ class TreeItem(app.Model):
                     node.classList.remove('collapsed-null')
                     node.classList.remove('collapsed-true')
                     node.classList.add('collapsed-false')
-
-            
-##
-
-class Example(ui.Widget):
-    
-    CSXCS = """
-    .flx-TreeWidget {
-        background: #000;
-        color: #f00;
-    }
-    .flx-TreeWidget .title {
-        width: 60%;
-    }
-    """
-    def init(self):
-        
-        with ui.SplitPanel():
-            with TreeWidget(flex=2, max_selected=-1) as self.tree1:
-                for t in ['foo', 'bar', 'spam', 'eggs']:
-                    TreeItem(text=t, checked=False)
-            
-            ui.Widget(flex=1)
-            with TreeWidget(flex=2) as self.tree2:
-                for t in ['foo', 'bar', 'spam', 'eggs']:
-                    item = TreeItem(text=t, checked=None)
-                    with item:
-                        for i in range(4):
-                            item2 = TreeItem(text=t + str(i), checked=False)
-                            if i == 2:
-                                with item2:
-                                    TreeItem(text='A', title='')
-                                    TreeItem(text='B', title='')
-
-
-m = app.launch(Example, 'xul')
-app.run()

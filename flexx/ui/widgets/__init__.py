@@ -7,6 +7,7 @@ from .. import Widget
 
 from ._button import BaseButton, Button, ToggleButton, RadioButton, CheckBox
 from ._slider import Slider
+from ._tree import TreeWidget, TreeItem
 from ._lineedit import LineEdit
 from ._label import Label
 from ._group import GroupWidget
