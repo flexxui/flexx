@@ -1389,4 +1389,91 @@ def test_dynamism5(Node):
     return res
 
 
+@run_in_both(Node, "[7, 8, 17]")
+def test_deep1(Node):
+    # deep connectors
+    
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    n.children = Node(), n1
+    n.children[0].children = Node(), n2
+    
+    loop.iter()
+    
+    res = []
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                if ev.new_value:
+                    res.append(ev.new_value)
+            else:
+                res.append('null')
+    handler = n.connect(func, 'children**.val')
+    
+    loop.iter()
+    
+    # We want these
+    n1.val = 7
+    handler.handle_now()
+    n2.val = 8
+    handler.handle_now()
+    # But not these
+    n.val = 42
+    handler.handle_now()
+    n1.children = Node(), Node()
+    n.children[0].children = []
+    # again ...
+    n1.val = 17
+    handler.handle_now()
+    n2.val = 18  # n2 is no longer in the tree
+    handler.handle_now()
+    return res
+
+
+@run_in_both(Node, "['id12', 'id11', 'id10', 'id11']")
+def test_deep2(Node):
+    # deep connectors - string ends in deep connector
+    
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    n.children = Node(), n1
+    n.children[0].children = Node(), n2
+    
+    loop.iter()
+    
+    res = []
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                res.append(ev.new_value)
+            elif ev.type == 'children':
+                if ev.source.val:
+                    res.append('id%i' % ev.source.val)
+            else:
+                res.append('null')
+    handler = n.connect(func, 'children**')
+    
+    loop.iter()
+    
+    # Give val to id by - these should have no effect on res though
+    n.val = 10
+    handler.handle_now()
+    n1.val = 11
+    handler.handle_now()
+    n2.val = 12
+    handler.handle_now()
+    # Change children
+    n2.children = Node(), Node(), Node()
+    n1.children = Node(), Node()
+    n.children = Node(), n1, Node()
+    handler.handle_now()
+    n2.children = []  # no longer in the tree
+    n1.children = []
+    handler.handle_now()
+    
+    return res
+
+
 run_tests_if_main()

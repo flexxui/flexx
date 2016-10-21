@@ -181,7 +181,7 @@ class Handler:
             d = Dict()  # don't do Dict(foo=x) bc PyScript only supports that for dict
             self._connections.append(d)
             d.fullname = s
-            d.type = s.split('.')[-1]
+            d.type = s.split('.')[-1].rstrip('*')
             d.objects = []
 
         # Pending events for this handler
@@ -335,7 +335,7 @@ class Handler:
             ob, name = connection.objects.pop(0)
             ob.disconnect(name, self)
 
-        path = connection.fullname.replace('.*', '*').split('.')[:-1]
+        path = connection.fullname.replace('.*', '*').split('.')
 
         # Obtain root object and setup connections
         ob = self._ob1()
@@ -352,16 +352,22 @@ class Handler:
 
     def _seek_event_object(self, index, path, ob):
         """ Seek an event object based on the name (PyScript compatible).
+        The path is a list: the path to the event, the last element being the
+        event type.
         """
         connection = self._connections[index]
 
-        # Done traversing name: add to list or fail
-        if ob is None or not len(path):
-            if ob is None or not hasattr(ob, '_IS_HASEVENTS'):
-                return  # we cannot seek further
-            connection.objects.append((ob, connection.type))
-            return  # found it
-
+        # Should we make connection or stop?
+        if ob is None or len(path) == 0:
+            return  # We cannot seek further
+        if len(path) == 1:
+            # Path only consists of event type now: make connection
+            if hasattr(ob, '_IS_HASEVENTS'):
+                connection.objects.append((ob, connection.type))
+            # Reached end or continue?
+            if not path[0].endswith('**'):
+                return
+        
         # Resolve name
         obname_full, path = path[0], path[1:]
         obname = obname_full.rstrip('*')
