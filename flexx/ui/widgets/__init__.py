@@ -18,3 +18,4 @@ from ._bokeh import BokehWidget
 from ._canvas import CanvasWidget
 from ._color import ColorSelectWidget
 from ._media import ImageWidget, VideoWidget, YoutubeWidget
+from ._html import Div, html
