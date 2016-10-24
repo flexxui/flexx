@@ -80,7 +80,7 @@ from .session import manager, Session
 from .model import Model, get_active_model
 from .model import get_instance_by_id, get_model_classes
 from .funcs import create_server, current_server, run, start, stop, call_later
-from .funcs import init_notebook, serve, launch, export
+from .funcs import init_interactive, init_notebook, serve, launch, export
 from .assetstore import assets, Asset
 
 

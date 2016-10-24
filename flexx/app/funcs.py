@@ -165,34 +165,35 @@ def _auto_closer(*events):
 
 
 
-def _deprecated_init_interactive(runtime=None, **runtime_kwargs):
-    """ Initialize Flexx for use in interactive mode.
+def init_interactive(runtime=None):
+    """ Initialize Flexx for interactive mode. This creates a default session
+    and launches a runtime to connect to it. Instantiating a Model object
+    will automatically associate it with the default session.
     
-    This would need a bit of code in the Widget class to automatically
-    use the default app as the parent if no parent is set. But
-    autosetting parents seems wrong, and explicitly setting parents (as
-    in hello_world1.py) seems like not too much work, and for more ease,
-    one can use a notebook. Keeping this as a reference, for now.
+    Parameters:
+        runtime (str): the runtime to launch the application in. Default 'xul'.
     """
     
-    session = manager.create_default_session()
-    
-    # Insert container widget
-    if 'flexx.ui' in sys.modules:
-        from .. import ui
-        session._set_app(ui.Widget(is_app=True))
-    
+    # Create the default session
+    session = manager.get_default_session()
+    if session is None:
+        session = manager.create_default_session()
+    else:
+        return  # default session already running
+
     # Launch web runtime, the server will wait for the connection
     server = current_server()
     host, port = server.serving
-    if runtime == 'nodejs':
-        js_assets, _ = session.get_assets_in_order()
-        all_js = '\n\n'.join([asset.to_string() for asset in js_assets])
-        url = '%s:%i/%s/' % (host, port, session.app_name)
-        session._runtime = launch('http://' + url, runtime=runtime, code=all_js)
-    else:
-        url = '%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id)
-        session._runtime = launch('http://' + url, runtime=runtime, **runtime_kwargs)
+    url = '%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id)
+    session._runtime = launch('http://' + url, runtime=runtime)
+    
+    # Create a "default widget"
+    if 'flexx.ui' in sys.modules:
+        from .. import ui
+        from .model import _get_active_models
+        w = ui.Widget(is_app=True)
+        active_models = _get_active_models()
+        active_models.append(w)
 
 
 class NoteBookHelper:
