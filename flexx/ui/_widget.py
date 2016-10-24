@@ -121,11 +121,7 @@ class Widget(Model):
 
         # Init - pass signal values via kwargs
         Model.__init__(self, *init_args, **kwargs)
-        
-        # All widgets need phosphor
-        self._session.use_global_asset('phosphor-all.js', before='flexx-ui.css')
-        self._session.use_global_asset('phosphor-all.css', before='flexx-ui.css')
-
+    
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
         """
