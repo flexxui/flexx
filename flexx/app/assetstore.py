@@ -241,9 +241,9 @@ class Asset:
         
         # Handle name
         if name is None:
-            raise ValueError('Assets name must be given (str).')
+            raise TypeError('Assets name must be given (str).')
         if not isinstance(name, str):
-            raise ValueError('Asset name must be str.')
+            raise TypeError('Asset name must be str.')
         if not name.lower().endswith(('.js', '.css')):
             raise ValueError('Asset is only for .js and .css assets.')
         self._name = name
@@ -255,13 +255,13 @@ class Asset:
         if isinstance(sources, str):
             sources = [sources]
         if not isinstance(sources, (tuple, list)):
-            raise ValueError('Asset sources must be str/tuple/list.')
+            raise TypeError('Asset sources must be str/tuple/list.')
         for source in sources:
             if not (isinstance(source, str) or
                     (isinstance(source, type) and issubclass(source, Model)) or
                     (isjs and callable(source))):
-                raise ValueError('Asset %r cannot convert source %r to CSS.' %
-                                 (name, source, name.split('.')[0].upper()))
+                raise TypeError('Asset %r cannot convert source %r to %s.' %
+                                (name, source, name.split('.')[-1].upper()))
         self._sources = list(sources)
         
         # Remote source?
@@ -271,20 +271,21 @@ class Asset:
             self._remote = name
             self._name = name.replace('\\', '/').split('/')[-1]
             if len(self._sources):
-                raise ValueError('A remote asset cannot have sources: %s' % name)
+                raise TypeError('A remote asset cannot have sources: %s' % name)
         elif len(self._sources) == 0:
-            raise ValueError('An asset cannot be without sources.')
+            raise TypeError('An asset cannot be without sources '
+                            '(unless its a remote asset).')
         
         # Handle deps
         if deps is None and self._remote:
             deps = []
         if deps is None:
-            raise ValueError('Assets deps must be given, '
+            raise TypeError('Assets deps must be given, '
                              'use empty list if it has no dependencies.')
         if not isinstance(deps, (tuple, list)):
-            raise ValueError('Asset deps must be a tuple/list.')
+            raise TypeError('Asset deps must be a tuple/list.')
         if not all(isinstance(dep, str) for dep in deps):
-            raise ValueError('Asset deps\' elements must be str.')
+            raise TypeError('Asset deps\' elements must be str.')
         # Handler "as" in deps
         self._deps = [d.split(' as ')[0] for d in deps]
         self._imports = [d for d in deps if ' as ' in d]
@@ -293,7 +294,7 @@ class Asset:
         self._need_pyscript_std = False
         if not isjs:
             if exports is not None:
-                raise ValueError('Assets exports must *not* be given for CSS assets.')
+                raise TypeError('Assets exports must *not* be given for CSS assets.')
             exports = None
         if exports is None:
             self._exports = None
@@ -301,10 +302,10 @@ class Asset:
             self._exports = str(exports)
         elif isinstance(exports, (tuple, list)):
             if not all(isinstance(export, str) for export in exports):
-                raise ValueError('Asset exports\' elements must be str.')
+                raise TypeError('Asset exports\' elements must be str.')
             self._exports = list(exports)
         else:
-            raise ValueError('Asset exports must be a None or list.')
+            raise TypeError('Asset exports must be a None or list.')
         
         # Cache -> total code is generated just once
         self._cache = None
@@ -353,11 +354,13 @@ class Asset:
     
     @property
     def exports(self):
-        """ List of names that this JS module should export. Is
-        auto-populated with the names of classes provided in the
-        code list.
+        """ None if the asset is not a module asset. If it is, ``exports``
+        is a str or list of names that this JS module should export. Is
+        auto-populated with the names of classes provided in the code list.
         """
-        return tuple(self._exports)
+        if isinstance(self._exports, list):
+            return tuple(self._exports)
+        return self._exports  # str or None
 
     def to_html(self, path='{}', link=2):
         """ Get HTML element tag to include in the document.
@@ -399,6 +402,8 @@ class Asset:
                 # Create JS module, but also take care of inserting PyScript std.
                 lib = 'pyscript-std.js'
                 code, names = self._get_code_and_names()
+                if names and isinstance(self._exports, list):
+                    self._exports.extend(names)
                 if self._need_pyscript_std and lib not in self._imports:
                     self._imports.append(lib)
                 if lib in self._imports:
@@ -419,13 +424,15 @@ class Asset:
         return self._cache
     
     def _get_code_and_names(self):
+        """ Get the code and public class/function names of the sources.
+        """
         code = []
         names = []
         for ob in self.sources:
             c, name = self._convert_to_code(ob)
             if c:
                 code.append(c)
-                if name:
+                if name and not name.startswith('_'):
                     names.append(name)
         if not (len(code) == 1 and not '\n' in code[0]):
             code.append('')
@@ -451,9 +458,9 @@ class Asset:
                 raise ValueError('Asset %r cannot convert %r to JS:\n%s' %
                                  (self.name, ob, str(err)))
             name = ob.__name__
-        else:
-            raise ValueError('Asset %r cannot convert object %r to CSS.' %
-                             (ob, self.name.split('.')[0].upper()))
+        else:  # pragma: no cover - this should not happen
+            raise ValueError('Asset %r cannot convert object %r to %s.' %
+                             (self.name, ob, self.name.split('.')[-1].upper()))
         return c.strip(), name
     
     def _handle_uri(self, s):
@@ -529,7 +536,7 @@ class AssetStore:
           the code is (down)loaded on the server.
         """
         if not isinstance(name, str):
-            raise ValueError('add_shared_data() name must be a str.')
+            raise TypeError('add_shared_data() name must be a str.')
         if name in self._data:
             raise ValueError('add_shared_data() got existing name %r.' % name)
         if isinstance(data, str):
@@ -538,7 +545,7 @@ class AssetStore:
             elif data.startswith(('http://', 'https://')):
                 data = urlopen(data, timeout=5.0).read()
         if not isinstance(data, bytes):
-            raise ValueError('add_shared_data() data must be bytes.')
+            raise TypeError('add_shared_data() data must be bytes.')
         self._data[name] = data
         return '_data/shared/%s' % name  # relative path so it works /w export
     
@@ -552,20 +559,20 @@ class AssetStore:
         See :class:`Asset class <flexx.app.Asset>` for details.
         """
         if kwargs and asset is not None:
-            raise ValueError('add_shared_asset() needs either asset or kwargs.')
+            raise TypeError('add_shared_asset() needs either asset or kwargs.')
         elif asset is not None:
             if not isinstance(asset, Asset):
-                raise ValueError('add_shared_asset() asset arg must be an Asset.')
+                raise TypeError('add_shared_asset() asset arg must be an Asset.')
             if asset.name in self._assets:
                 raise ValueError('add_shared_asset() %r is already set.' % asset.name)
             self._assets[asset.name] = asset
         elif kwargs:
             self.add_shared_asset(Asset(**kwargs))
         else:
-            raise ValueError('add_shared_asset() needs asset or kwargs.')
+            raise TypeError('add_shared_asset() needs asset or kwargs.')
     
     def get_asset_for_class(self, cls):
-        """ Get the asset that provides the given Python class.
+        """ Get the asset that provides the given Python class, or None
         """
         for asset in self._assets.values():
             if cls in asset.sources:
@@ -700,7 +707,7 @@ class SessionAssets:
         a new ``Asset``. See :class:`Asset class <flexx.app.Asset>` for details.
         """
         if kwargs and asset is not None:
-            raise ValueError('Session.add_asset() needs either asset or kwargs.')
+            raise TypeError('Session.add_asset() needs either asset or kwargs.')
         elif asset is not None:
             # Get the actual asset instance
             if isinstance(asset, str):
@@ -708,12 +715,12 @@ class SessionAssets:
                 if asset is None:
                     raise ValueError('Session.add_asset() got unknown asset name.')
             elif not isinstance(asset, Asset):
-                raise ValueError('Session.add_asset() needs str, Asset or kwargs.')
+                raise TypeError('Session.add_asset() needs str, Asset or kwargs.')
             self._register_asset(asset)
         elif kwargs:
             self.add_asset(Asset(**kwargs))
         else:
-            raise ValueError('Session.add_asset() needs asset or kwargs.')
+            raise TypeError('Session.add_asset() needs asset or kwargs.')
     
     def _register_asset(self, asset):
         # Register or load asset, if necessary
@@ -742,7 +749,7 @@ class SessionAssets:
                 (string starting with "file://", "http://" or "https://").
         """
         if not isinstance(name, str):
-            raise ValueError('Session.add_data() name must be a str.')
+            raise TypeError('Session.add_data() name must be a str.')
         if name in self._data:
             raise ValueError('Session.add_data() got existing name %r.' % name)
         if isinstance(data, str):
@@ -751,7 +758,7 @@ class SessionAssets:
             elif data.startswith(('http://', 'https://')):
                 data = urlopen(data, timeout=5.0).read()
         if not isinstance(data, bytes):
-            raise ValueError('Session.add_data() data must be a bytes.')
+            raise TypeError('Session.add_data() data must be a bytes.')
         self._data[name] = data
         return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
     
