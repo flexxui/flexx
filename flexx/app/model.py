@@ -455,7 +455,10 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         """
         if self.session.status:
             cmd = 'flexx.instances.%s = "disposed";' % self._id
-            self._session._exec(cmd)
+            try:
+                self._session._exec(cmd)
+            except Exception:
+                pass  # ws can be closed/gone if this gets invoked from __del__
         super().dispose()
     
     @property
