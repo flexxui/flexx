@@ -40,6 +40,7 @@ ASSET-HOOK
 </html>
 """
 
+# todo: make this work with out-of-order assets too
 LOADER = """
 /*Flexx module loader. Licensed by BSD-2-clause.*/
 

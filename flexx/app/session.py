@@ -224,38 +224,6 @@ class AppManager(event.HasEvents):
 manager = AppManager()
 
 
-# todo: can this like create a window.define() but only if it does not already exist?
-# -> if so, this drops the flexx object, and this can be part of PyScript perhaps
-# todo: put this in own asset "flexx-require.js"
-# todo: we could do something like wait with loading if deps
-# are not yet loaded but error when page is already loaded.
-# That way we (and our users) wont have to care about import order
-MOD_BLA = """
-if (typeof window === 'undefined' && typeof module == 'object') {
-    global.window = global; // https://github.com/nodejs/node/pull/1838
-    window.is_node = true;
-}
-window._flexx_modules = {};
-window.define = function (name, deps, factory) {
-    /* Very simple variant of UMD loader */
-    if (typeof define === 'function' && define.amd) {
-        return define(name, deps, factory);
-    }
-    dep_vals = [];
-    for (var i=0; i<deps.length; i++) {
-        if (_flexx_modules[deps[i]] === undefined) {
-            throw Error('Unknown dependency: ' + deps[i]);
-        }
-        dep_vals.push(_flexx_modules[deps[i]]);
-    }
-    _flexx_modules[name] = factory.apply(null, dep_vals);
-};
-window.require = function(name) {
-    return _flexx_modules[name];
-}
-"""
-       
-
 class Session(SessionAssets):
     """ A session between Python and the client runtime
 
