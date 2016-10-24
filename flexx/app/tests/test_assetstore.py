@@ -170,7 +170,7 @@ def test_module_asset():
     assert asset.deps == ()
     assert asset.exports == ('foo', )
     assert 'define(' in asset.to_string()
-    assert 'return {foo};' in asset.to_string()
+    assert 'return {foo: foo};' in asset.to_string()
     
     # Exports can be str
     asset = app.Asset('foo.js', 'var foo = 7;', [], 'foo')
@@ -188,7 +188,7 @@ def test_module_asset():
     asset = app.Asset('foo.js', ['var foo = 7;', WTF], [], ['foo'])
     assert asset.exports == ('foo', 'WTF')
     assert 'define(' in asset.to_string()
-    assert 'return {foo, WTF};' in asset.to_string()
+    assert 'return {foo: foo, WTF: WTF};' in asset.to_string()
     
     # Exports ara NOT auto-populated if exports is str
     asset = app.Asset('foo.js', ['var foo = 7;', WTF], [], 'foo')

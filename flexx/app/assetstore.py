@@ -727,19 +727,39 @@ class SessionAssets:
             raise TypeError('Session.add_asset() needs asset or kwargs.')
     
     def _register_asset(self, asset):
-        # Register or load asset, if necessary
-        if asset.remote:  # Remote assets can be overridden; name fully defines it
-            self._assets[asset.name] = asset
-        elif asset.name in self._assets:
+        """ Register an asset and also try to resolve dependencies.
+        """
+        # Early exit?
+        if asset.name in self._assets:
             cur_asset = self._assets[asset.name]
-            if not (cur_asset is None or cur_asset is asset):
+            if asset.remote:  # Remote assets can be overridden
+                self._assets[asset.name] = asset
+            elif not (cur_asset is None or cur_asset is asset):
                 raise ValueError('Cannot register asset under an existing asset name.')
-        elif self._served:
+            return
+        # Register / load the asset. Also try to resolve dependencies.
+        # In dynamic case we load dependency first. In other cases we
+        # do not as to avoid recursion with circular deps.
+        if self._served:
+            self._collect_dependencies(asset, True)
             self._inject_asset_dynamically(asset)
         elif asset is self._store.get_asset(asset.name):
             self._assets[asset.name] = None  # None means that asset is global
+            self._collect_dependencies(asset)
         else:
             self._assets[asset.name] = asset
+            self._collect_dependencies(asset)
+    
+    def _collect_dependencies(self, asset, warn=False):
+        """ Register dependencies of the given asset.
+        """
+        for dep in asset.deps:
+            if dep not in self._assets:
+                if dep in self._store._assets:
+                    self._register_asset(self._store._assets[dep])
+                elif warn:
+                    logger.warn('Asset %r has unfulfilled dependency %r' %
+                                (asset.name, dep))
     
     def add_data(self, name, data):  # todo: add option to clear data after its loaded?
         """ Add data to serve to the client (e.g. images), specific to this
@@ -814,7 +834,7 @@ class SessionAssets:
             for asset in [asset_js, asset_css]:
                 if asset and asset.name not in self._assets:
                     if self._served:
-                        self._inject_asset_dynamically(asset)
+                        self._register_asset(asset)
                     else:
                         self._assets[asset.name] = None
         elif not self._served:
@@ -822,10 +842,10 @@ class SessionAssets:
             self._extra_model_classes.append(cls)
         else:
             # Define class dynamically - assuming we're a session subclass ...
-            for asset in [Asset(cls.__name__ + '.js', [], cls.JS.CODE), 
-                          Asset(cls.__name__ + '.css', [], cls.CSS)]:
-                if asset.sources[0].strip():
-                    self._inject_asset_dynamically(asset)
+            for asset in [Asset(cls.__name__ + '.js', [cls], [], []), 
+                          Asset(cls.__name__ + '.css', [cls], [])]:
+                if asset.to_string().strip():
+                    self._register_asset(asset)
     
     def get_assets_in_order(self, css_reset=False):
         """ Get two lists containing the JS assets and CSS assets,
@@ -834,20 +854,10 @@ class SessionAssets:
         and the order in which assets were registered via
         ``add_asset()``. Special assets are added, such as the CSS reset,
         the JS loader, and CSS and JS for classes not defined in a module.
-        """
         
-        def collect_dependencies(asset, asset_dict):
-            for dep in asset.deps:
-                if dep in asset_dict:
-                    pass  # already in list
-                elif dep in self._store._assets:
-                    a = self._store._assets[dep]
-                    asset_dict[a.name] = a
-                    collect_dependencies(a, asset_dict)
-                else:
-                    unknown_deps.append(dep)
-                    logger.warn('Asset %r has unfulfilled dependency %r' %
-                                (asset.name, dep))
+        When this function gets called, it is assumed that the assets have
+        been served and that future asset loads should be done dynamically.
+        """
         
         def flatten_tree(asset_list, asset_dict):
             for index in range(len(asset_list)):
@@ -860,7 +870,10 @@ class SessionAssets:
                     seen_names.append(name)
                     # Move deps in front of us if necessary
                     for dep in asset_dict[name].deps:
-                        if dep not in unknown_deps:
+                        if dep not in self._assets:
+                            logger.warn('Asset %r has unfulfilled dependency %r' %
+                                        (asset.name, dep))
+                        else:
                             j = asset_list.index(dep)
                             if j > index:
                                 asset_list.insert(index, asset_list.pop(j))
@@ -874,7 +887,11 @@ class SessionAssets:
                                  deps=[], exports=[]))
             self.add_asset(Asset('extra-classes.css', self._extra_model_classes, []))
         
-        # Collect initial assets for this session
+        # Do a round of collecting deps
+        for name in self.get_asset_names():
+            self._collect_dependencies(self.get_asset(name))
+        
+        # Collect initial assets for this session, per JS/CSS
         js_assets, css_assets = OrderedDict(), OrderedDict()
         for name in self._assets.keys():
             asset = self.get_asset(name)
@@ -882,13 +899,6 @@ class SessionAssets:
                 js_assets[asset.name] = asset
             else:
                 css_assets[asset.name] = asset
-        
-        # Collect dependencies so that we have all assets that matter
-        unknown_deps = []
-        for asset in list(js_assets.values()):
-            collect_dependencies(asset, js_assets)
-        for asset in list(css_assets.values()):
-            collect_dependencies(asset, css_assets)
         
         # Flatten the trees into flat lists
         js_assets2 = list(js_assets.keys())
@@ -908,7 +918,9 @@ class SessionAssets:
                                                                  self.id)
         js_assets.insert(0, Asset('embed/flexx-init.js', t, []))
         
-        # todo: set served!
+        # Mark this session as served; all future asset loads are dynamic
+        self._served = True
+        
         # todo: fix incorrect order; loader should be able to handle it for JS
         #import random
         #random.shuffle(js_assets)
