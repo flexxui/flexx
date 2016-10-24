@@ -264,7 +264,8 @@ class MainHandler(tornado.web.RequestHandler):
         #   commands, etc.
         # * path: part (possibly with slashes) after app_name
         
-        if app_name in ('_main', '__main__') or not app_name.startswith('_'):
+        ok_app_names = '_main', '__main__', '__default__'
+        if app_name in ok_app_names or not app_name.startswith('_'):
             self._get_app(app_name, path)  # An actual app!
         elif app_name in ('__index__', '_index'):
             self._get_index(app_name, path)  # Index page

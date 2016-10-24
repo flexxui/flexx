@@ -444,7 +444,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     
     def __check_not_active(self):
         active_models = _get_active_models()
-        if self in active_models:
+        if self in active_models and self.session.app_name != '__default__':
             raise RuntimeError('It seems that the event loop is processing '
                                'events while a Model is active. This has a '
                                'high risk on race conditions.')

@@ -86,7 +86,8 @@ class AppManager(event.HasEvents):
         else:
             _, _, pending, connected = x
             sessions = pending + connected
-            return sessions[-1]
+            if sessions:
+                return sessions[-1]
     
     def _clear_old_pending_sessions(self):
         try:
