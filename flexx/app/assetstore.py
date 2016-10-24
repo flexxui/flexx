@@ -204,8 +204,6 @@ def export_assets_and_data(assets, data, dirname, app_id, clear=False):
             f.write(d)
 
 
-# todo: what if we constrained the scope of flexx.app and above to browsers, e.g. no node? I wonder if this code would get simpler. Also clientcore et al. can assume the presence of the window object.
-
 # todo: minification ...
 
 class Asset:
@@ -251,7 +249,7 @@ class Asset:
         
         # Handle sources
         if sources is None:
-            sources = []  #raise ValueError('Assets sources must be given (str or list).')
+            sources = []  # checked below when we know if this is a remote
         if isinstance(sources, str):
             sources = [sources]
         if not isinstance(sources, (tuple, list)):
@@ -434,7 +432,7 @@ class Asset:
                 code.append(c)
                 if name and not name.startswith('_'):
                     names.append(name)
-        if not (len(code) == 1 and not '\n' in code[0]):
+        if not (len(code) == 1 and '\n' not in code[0]):
             code.append('')
         return code, names
     
@@ -848,7 +846,6 @@ class SessionAssets:
         def flatten_tree(asset_list, asset_dict):
             for index in range(len(asset_list)):
                 seen_names = []
-                cur_asset_list = asset_list.copy()
                 while True:
                     # Get asset name on this position, check if its new
                     name = asset_list[index]
@@ -901,7 +898,8 @@ class SessionAssets:
         
         # Prepend loader
         js_assets.insert(0, self.get_asset('flexx-loader.js'))
-        t = 'var flexx = {app_name: "%s", session_id: "%s"};' % (self._app_name, self.id)
+        t = 'var flexx = {app_name: "%s", session_id: "%s"};' % (self._app_name,
+                                                                 self.id)
         js_assets.insert(0, Asset('embed/flexx-init.js', t, []))
         
         # todo: set served!
@@ -960,7 +958,8 @@ class SessionAssets:
         src = INDEX
         if not link:
             asset_names = [a.name for a in css_assets + js_assets]
-            codes.insert(0, '<!-- Contents:\n\n- ' + '\n- '.join(asset_names) + '\n\n-->')
+            toc = '<!-- Contents:\n\n- ' + '\n- '.join(asset_names) + '\n\n-->'
+            codes.insert(0, toc)
             src = src.replace('ASSET-HOOK', '\n\n\n'.join(codes))
         else:
             src = src.replace('ASSET-HOOK', '\n'.join(codes))

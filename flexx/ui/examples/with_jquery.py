@@ -26,20 +26,26 @@ class Example(ui.Widget):
     
     def init(self):
         
+        jquery_url = "http://code.jquery.com/jquery-1.10.2.js"
+        jquery_ui_url = "http://code.jquery.com/ui/1.11.4/jquery-ui.js"
+        jquery_css = "http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css"
+        
         # Two ways to add assets
         if True:
-            # Remote assets: the client will load these assets from the URL's. Good for web apps.
-            self.session.add_asset(name="http://code.jquery.com/jquery-1.10.2.js")
-            self.session.add_asset(name="http://code.jquery.com/ui/1.11.4/jquery-ui.js")
-            self.session.add_asset(name="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css")
+            # Remote assets: the client will load these assets from the
+            # URL's. Good for web apps.
+            self.session.add_asset(name=jquery_url)
+            self.session.add_asset(name=jquery_ui_url)
+            self.session.add_asset(name=jquery_css)
         else:
-            # Regular assets: Flexx will download the assets and serve them to the client.
-            # Good for desktop apps.
-            self.session.add_asset(name='jquery.js', sources="http://code.jquery.com/jquery-1.10.2.js", deps=[])
-            self.session.add_asset(name='jquery-ui.js', sources="http://code.jquery.com/ui/1.11.4/jquery-ui.js", deps=[])
-            self.session.add_asset(name='jquery-ui.css', sources="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css", deps=[])
+            # Regular assets: Flexx will download the assets and serve
+            # them to the client. Good for desktop apps.
+            self.session.add_asset(name='jquery.js', sources=jquery_url, deps=[])
+            self.session.add_asset(name='jquery-ui.js', sources=jquery_ui_url, deps=[])
+            self.session.add_asset(name='jquery-ui.css', sources=jquery_css, deps=[])
         
-        # Note that when exporting an app, one has the option to embed/include remote assets.
+        # Note that when exporting an app, one has the option to
+        # embed/include remote assets.
         
         with ui.FormLayout():
             self.start = DatePicker(title='Start date')

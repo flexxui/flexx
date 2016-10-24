@@ -23,7 +23,7 @@ import random
 
 import imageio
 
-from flexx import app, event, ui
+from flexx import app, ui
 from flexx.util import png
 
 

@@ -269,7 +269,7 @@ class MainHandler(tornado.web.RequestHandler):
         elif app_name in ('__index__', '_index'):
             self._get_index(app_name, path)  # Index page
         elif app_name in ('_assets', '_assetview', '_data'):
-            self._get_asset(app_name, path) # JS, CSS, or data
+            self._get_asset(app_name, path)  # JS, CSS, or data
         elif app_name in ('_cmd', '__cmd__'):
             self._get_cmd(app_name, path)  # Execute (or ignore) command
         else:
