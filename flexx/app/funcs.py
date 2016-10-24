@@ -270,9 +270,8 @@ def init_notebook():
     # is imported. This is not strictly necessary, since Flexx can
     # dynamically load the assets, but it seems nicer to do it here.
     try:
-        session.use_global_asset('phosphor-all.js')
-        session.use_global_asset('flexx-ui.css')
-        session.use_global_asset('flexx-ui.js')
+        session.add_asset('flexx-ui.css')
+        session.add_asset('flexx-ui.js')
     except IndexError:
         pass
     
@@ -282,9 +281,9 @@ def init_notebook():
     host, port = server.serving
     
     js_assets, css_assets = session.get_assets_in_order(css_reset=False)
-    asset_elements = [asset.to_html(None) for asset in css_assets + js_assets]
+    asset_elements = [asset.to_html('{}', 0) for asset in css_assets + js_assets]
     
-    # Compose HTML to inject
+    # Compose HTML to inject - we need to overload the ws url
     url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)
     t = "<i>Injecting Flexx JS and CSS</i>"
     t += '\n\n'.join(asset_elements)

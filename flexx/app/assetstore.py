@@ -826,7 +826,7 @@ class SessionAssets:
                 if asset.sources[0].strip():
                     self._inject_asset_dynamically(asset)
     
-    def _get_assets_in_order(self, css_reset=False):
+    def get_assets_in_order(self, css_reset=False):
         """ Get two lists containing the JS assets and CSS assets,
         respectively. The assets contain all assets in use and their
         dependencies. The order is based on the dependency resolution
@@ -917,7 +917,7 @@ class SessionAssets:
     def get_page(self, link=2):
         """ Get the string for the HTML page to render this session's app.
         """
-        js_assets, css_assets = self._get_assets_in_order(True)
+        js_assets, css_assets = self.get_assets_in_order(True)
         for asset in js_assets + css_assets:
             if asset.remote and asset.remote.startswith('file://'):
                 raise RuntimeError('Can only use remote assets with "file://" '
@@ -937,7 +937,7 @@ class SessionAssets:
         self.add_asset(Asset('flexx-export.js', '\n'.join(lines), []))
         
         # Compose
-        js_assets, css_assets = self._get_assets_in_order(True)
+        js_assets, css_assets = self.get_assets_in_order(True)
         return self._get_page(js_assets, css_assets, link, True)
     
     def _get_page(self, js_assets, css_assets, link, export):
