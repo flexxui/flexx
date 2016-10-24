@@ -27,7 +27,7 @@ Simple example:
 
 import os
 
-from ... import event
+from ... import event, app
 from ...pyscript import window
 from . import Widget
 
@@ -55,14 +55,21 @@ class BokehWidget(Widget):
         import bokeh
         dev = os.environ.get('BOKEH_RESOURCES', '') == 'relative-dev'
         modname = 'bokeh.' if dev else 'bokeh.min.'
-        if not (modname + 'js') in self.session.get_asset_names():
+        # Make sure we have Bokeh registered as a global asset
+        if not (modname + 'js') in app.assets.get_asset_names():
             res = bokeh.resources.bokehjsdir()
             if dev:
                 res = os.path.abspath(
                     os.path.join(bokeh.__file__, '..', '..', 'bokehjs', 'build'))
             for x in ('css', 'js'):
                 filename = os.path.join(res, x, modname + x)
-                self.session.add_global_asset(modname + x, filename)
+                app.assets.add_shared_asset(name=modname + x,
+                                            sources='file://'+filename,
+                                            deps=[])
+        # Make this session use the Bokeh asset
+        # todo: use remote asset from CDN?
+        for x in ('css', 'js'):
+            self.session.add_asset(modname + x)
     
     @event.prop
     def plot(self, plot=None):
