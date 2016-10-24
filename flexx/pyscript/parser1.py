@@ -153,7 +153,8 @@ Imports are not supported syntax in PyScript. Imports "from pyscript"
 and "from __future__" are ignored to help writing hybrid Python/JS
 modules.
 
-# todo: more info on defining dependencies and exports for modules ...
+PyScript does provide functionality to package code in JS modules,
+but these follow the ``require`` pattern.
 
 """
 
