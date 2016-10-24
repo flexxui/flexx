@@ -213,7 +213,11 @@ class ModelMeta(HasEventsMeta):
     def _get_js(cls):
         """ Get source code for this class.
         """
-        cls_name = 'flexx.classes.' + cls.__name__
+        # Since classes are defined in a module, we can safely name the classes
+        # by their plain name. But flexx.classes.X remains the "official" 
+        # namespace, so that things work easlily accross modules, and we can
+        # even re-define classes (e.g. in the notebook).
+        cls_name = cls.__name__
         base_class = 'flexx.classes.%s.prototype' % cls.mro()[1].__name__
         code = []
         # Add JS version of HasEvents when this is the Model class
@@ -224,12 +228,14 @@ class ModelMeta(HasEventsMeta):
             c = js_rename(HasEventsJS.JSCODE, 'HasEvents', 'flexx.classes.HasEvents')
             code.append(c)
         # Add this class
-        code.append(create_js_hasevents_class(cls.JS, cls_name, base_class))
+        c = create_js_hasevents_class(cls.JS, cls_name, base_class)
+        code.append(c.replace('var %s =' % cls_name,
+                              'var %s = flexx.classes.%s =' % (cls_name, cls_name),
+                              1))
         if cls.mro()[1] is event.HasEvents:
             code.append('flexx.serializer.add_reviver("Flexx-Model",'
                         ' flexx.classes.Model.prototype.__from_json__);\n')
         return '\n'.join(code)
-
 
 
 class Model(with_metaclass(ModelMeta, event.HasEvents)):
