@@ -497,6 +497,11 @@ class AssetStore:
         names2 = ', '.join([repr(name) for name in self._data])
         return '<AssetStore with assets: %s, and data %s>' % (names1, names2)
     
+    def create_module_assets(self, *args, **kwargs):
+        # Backward compatibility
+        raise RuntimeError('create_module_assets is deprecated. Use '
+                           'get_module_classes() plus add_shared_asset() instead.')
+    
     def get_asset(self, name):
         """ Get the asset instance corresponding to the given name or None
         if it not known.
