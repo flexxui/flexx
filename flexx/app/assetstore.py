@@ -540,7 +540,7 @@ class AssetStore:
         if not isinstance(data, bytes):
             raise ValueError('add_shared_data() data must be bytes.')
         self._data[name] = data
-        return '/_data/shared/%s' % name
+        return '_data/shared/%s' % name  # relative path so it works /w export
     
     def add_shared_asset(self, asset=None, **kwargs):
         """ Add a JS/CSS asset to share between sessions. It is an error
@@ -753,7 +753,7 @@ class SessionAssets:
         if not isinstance(data, bytes):
             raise ValueError('Session.add_data() data must be a bytes.')
         self._data[name] = data
-        return '/_data/%s/%s' % (self.id, name)
+        return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
     
     def register_model_class(self, cls):
         """ Ensure that the client knows the given class. A class can
@@ -934,8 +934,6 @@ class SessionAssets:
         """ Compose index page.
         """
         pre_path = '' if export else '/'
-        
-        # todo: how do we make the abs data paths work? allow using relative paths and redirect?
         
         codes = []
         for assets in [css_assets, js_assets]:

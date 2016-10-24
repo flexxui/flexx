@@ -395,15 +395,16 @@ def export(cls, filename=None, properties=None, single=None, link=None,
                 link = 2
     link = int(link or 0)
     
-    # Create session
-    name = os.path.basename(filename).split('.')[0]  # cls.__name__
-    serve(cls, name, properties)
-    session = manager.create_session(name)
+    # Prepare name, based on exported file name (instead of cls.__name__)
+    name = os.path.basename(filename).split('.')[0]
+    name = name.replace('-', '_').replace(' ', '_')
     
-    # Set session id to the app name. This would not be strictly necessary
-    # to make exports work, but it make sure that exporting twice generates
-    # the exact same thing (instead of having randomly generated dir names).
-    session._id = name
+    serve(cls, name, properties)
+    
+    # Create session with id equal to the app name. This would not be strictly
+    # necessary to make exports work, but it makes sure that exporting twice
+    # generates the exact same thing (no randomly generated dir names).
+    session = manager.create_session(name, name)
     
     # Make fake connection using exporter object
     exporter = ExporterWebSocketDummy()
