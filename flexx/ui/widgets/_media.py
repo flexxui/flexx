@@ -40,7 +40,7 @@ Video example:
 
 import os
 
-from ... import event, app
+from ... import event
 from ...pyscript import window, this_is_js
 from . import Widget
 

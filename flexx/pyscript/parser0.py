@@ -146,7 +146,7 @@ class Parser0:
         elif isinstance(pysource, tuple):
             self._pysource = str(pysource[0]), int(pysource[1])
         elif pysource is not None:
-            logger.warn('Parser ignores pysource, because it must be str or (str, int).')
+            logger.warn('Parser ignores pysource; it must be str or (str, int).')
         if sys.version_info[0] == 2:
             fut = 'from __future__ import unicode_literals, print_function\n'
             code = fut + code

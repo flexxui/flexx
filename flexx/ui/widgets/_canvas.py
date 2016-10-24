@@ -5,6 +5,8 @@ from ... import event
 from ...pyscript import window
 from .. import Widget
 
+perf_counter = None  # exists in PyScript, time.perf_counter only in Python 3.3+
+
 
 class CanvasWidget(Widget):
     """ A widget that provides an HTML5 canvas. The canvas is scaled with
