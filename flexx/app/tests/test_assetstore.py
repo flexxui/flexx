@@ -1,3 +1,9 @@
+"""
+Tests for Asset AssetStore and SessionAssets.
+
+Note that our docs is very much a test for our export mechanism.
+"""
+
 import os
 import sys
 import tempfile
@@ -10,51 +16,65 @@ from flexx.app.assetstore import assets, AssetStore, SessionAssets
 from flexx import ui, app
 
 
+N_STANDARD_ASSETS = 3
+
 test_filename = os.path.join(tempfile.gettempdir(), 'flexx_asset_cache.test')
+
+
+class WTF:
+    pass
 
 
 def test_asset():
     
     # Initialization
     
-    asset1 = app.Asset('foo.js', [], 'foo=3')
+    asset1 = app.Asset('foo.js', 'foo=3', [])
     assert 'foo.js' in repr(asset1)
     assert 'foo.js' == asset1.name
     assert asset1.deps == ()
     
-    asset2 = app.Asset('bar.css', [], 'bar=2')
+    asset2 = app.Asset('bar.css', 'bar=2', [])
     assert 'bar.css' in repr(asset2)
     assert 'bar.css' == asset2.name
     
     with raises(TypeError):
         app.Asset()  # :/
     with raises(TypeError):
-        app.Asset('foo.js')  # need deps
+        app.Asset('foo.js')  # need sources
+    with raises(TypeError):
+        app.Asset('foo.js', 'bla=3')  # need deps
     
+    with raises(TypeError):
+        app.Asset(3, 'bar=2', [])  # name not a str
     with raises(ValueError):
-        app.Asset('foo.png', [], '')  # js and css only
+        app.Asset('foo.png', '', [])  # js and css only
+    with raises(TypeError):
+        app.Asset('bar.css', 3, [])  # source not str/list
+    with raises(TypeError):
+        app.Asset('bar.css', [3], [])  # source not convertable to code
+    with raises(TypeError):
+        app.Asset('bar.css', ['bla=2'], 2)  # deps not list
+    with raises(TypeError):
+        app.Asset('bar.css', ['bla=2'], [2])  # deps not list of str
     
     # Code composition 
     
-    class WTF:
-        pass
-    
-    asset = app.Asset('foo.js', [], 'foo=3', 'bar=2', app.Model, WTF)
+    asset = app.Asset('foo.js', ['foo=3', 'bar=2', app.Model, WTF], [])
     code = asset.to_string()
     assert 'foo=3\n' in code  # note the newline
     assert 'bar=2\n' in code
     assert 'Model = function (' in code
     assert 'WTF = function (' in code
     
-    asset = app.Asset('foo.js', [], 4)
-    raises(ValueError, asset.to_string)
-    
-    asset = app.Asset('foo.css', [], WTF)
-    raises(ValueError, asset.to_string)
+    with raises(TypeError):
+        app.Asset('foo.js', [4], [])
+    with raises(TypeError):
+        app.Asset('foo.css', [WTF], [])
     
     # To html JS
-    asset = app.Asset('foo.js', [], 'foo=3', 'bar=2', app.Model, WTF)
-    code = asset.to_html(True)
+    asset = app.Asset('foo.js', ['foo=3', 'bar=2', app.Model, WTF], [])
+    code = asset.to_html('', 0)
     assert code.startswith('<script') and code.strip().endswith('</script>')
     assert 'foo=3\n' in code  # note the newline
     assert 'bar=2\n' in code
@@ -62,18 +82,24 @@ def test_asset():
     assert 'WTF = function (' in code
     assert all([c in code for c in ['foo=', 'bar=', 'WTF', 'Model']])
     
-    asset = app.Asset('foo.js', [], 'foo=3', 'bar=2', app.Model, WTF)
+    asset = app.Asset('foo.js', ['foo=3', 'bar=2', app.Model, WTF], [])
     code = asset.to_html()
     assert code.startswith('<script ') and code.strip().endswith('</script>')
     assert not any([c in code for c in ['foo=', 'bar=', 'WTF', 'Model']])
     
+    def foo(x):
+        with x:
+            pass
+    with raises(ValueError):
+        app.Asset('foo.js', [foo], [])  # caught during pyscript conversion
+    
     # To html CSS
-    asset = app.Asset('bar.css', [], 'foo=3', 'bar=2', app.Model)
-    code = asset.to_html(True)
+    asset = app.Asset('bar.css', ['foo=3', 'bar=2', app.Model], [])
+    code = asset.to_html('', 0)
     assert code.startswith('<style>') and code.strip().endswith('</style>')
     assert all([c in code for c in ['foo=', 'bar=']])
     
-    asset = app.Asset('bar.css', [], 'foo=3', 'bar=2', app.Model)
+    asset = app.Asset('bar.css', ['foo=3', 'bar=2', app.Model], [])
     code = asset.to_html()
     assert code.startswith('<link') and code.strip().endswith('/>')
     assert not any([c in code for c in ['foo=', 'bar=']])
@@ -81,8 +107,8 @@ def test_asset():
     # Test asset via uri
     with open(test_filename, 'wb') as f:
         f.write('var blablabla=7;'.encode())
-    asset = app.Asset('bar.css', [], 'foo=3', 'bar=2', 'file://' + test_filename,
-                      'http://code.jquery.com/jquery-3.1.1.slim.min.js')
+    asset = app.Asset('bar.css', ['foo=3', 'bar=2', 'file://' + test_filename,
+                      'http://code.jquery.com/jquery-3.1.1.slim.min.js'], [])
     code = asset.to_string()
     assert 'blablabla=7' in code
     assert 'jQuery v3.1.1' in code
@@ -92,60 +118,103 @@ def test_remote_asset():
     
     # Prepare example asset info
     bootstrap_url = 'https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'
-    jquery_url = 'http://code.jquery.com/jquery-3.1.1.slim.min.js'
-    with open(test_filename, 'wb') as f:
+    jquery_url = 'https://code.jquery.com/jquery-3.1.1.slim.min.js'
+    with open(test_filename + '.js', 'wb') as f:
         f.write('var blablabla=7;'.encode())
     
     # JS from url
-    asset = app.RemoteAsset('foo.js', [], jquery_url)
-    assert asset.url == jquery_url
+    asset = app.Asset(jquery_url)
+    assert asset.remote == jquery_url
     assert 'jQuery v3.1.1' in asset.to_string()
-    assert 'jQuery v3.1.1' in asset.to_html(True)
-    assert 'jQuery v3.1.1' not in asset.to_html()
-    assert asset.to_html().startswith('<script src=')
+    assert 'jQuery v3.1.1' in asset.to_html('{}', 0)
+    assert 'jQuery v3.1.1' in asset.to_html('{}', 0)
+    assert 'jQuery v3.1.1' not in asset.to_html('{}', 1)
+    assert 'jQuery v3.1.1' not in asset.to_html('{}', 2)
+    assert 'src=' not in asset.to_html('{}', 0)
+    assert 'src=' in asset.to_html('{}', 1)
+    assert 'src=' in asset.to_html('{}', 2)
+    assert 'https://' not in asset.to_html('{}', 1)
+    assert 'https://' in asset.to_html('{}', 2)
     
     # CSS from url
-    asset = app.RemoteAsset('bar.css', [], bootstrap_url)
-    assert asset.url == bootstrap_url
+    asset = app.Asset(bootstrap_url)
+    assert asset.remote == bootstrap_url
     assert 'Bootstrap v3.3.7' in asset.to_string()
-    assert 'Bootstrap v3.3.7' in asset.to_html(True)
-    assert 'Bootstrap v3.3.7' not in asset.to_html()
-    assert asset.to_html().startswith('<link')
+    assert 'Bootstrap v3.3.7' in asset.to_html('{}', 0)
+    assert 'Bootstrap v3.3.7' not in asset.to_html('{}', 1)
+    assert 'Bootstrap v3.3.7' not in asset.to_html('{}', 2)
+    assert 'href=' not in asset.to_html('{}', 0)
+    assert 'href=' in asset.to_html('{}', 1)
+    assert 'href=' in asset.to_html('{}', 2)
+    assert 'https://' not in asset.to_html('{}', 1)
+    assert 'https://' in asset.to_html('{}', 2)
     
     # JS from file
-    asset = app.RemoteAsset('foo.js', [], 'file://' + test_filename)
-    assert test_filename in asset.url
+    asset = app.Asset('file://' + test_filename + '.js')
+    assert test_filename in asset.remote
     assert 'blablabla=7' in asset.to_string()
-    assert 'blablabla=7' in asset.to_html(True)
-    assert 'blablabla=7' not in asset.to_html()
+    assert 'blablabla=7' in asset.to_html('{}', 0)
+    assert 'blablabla=7' not in asset.to_html('{}', 1)
+    assert 'blablabla=7' not in asset.to_html('{}', 2)
     
     with raises(TypeError):
-        app.RemoteAsset('foo.js', [], jquery_url, 'foo=3')  # only an url
-    with raises(ValueError):
-        app.RemoteAsset('foo.js', [], 'foo=3')  # not a uri
-    with raises(ValueError):
-        app.RemoteAsset('foo.js', [], test_filename)  # not a uri (no file prefix)
+         app.Asset(jquery_url, 'foo=3')  # no sources for remote asset
+    with raises(TypeError):
+         app.Asset(jquery_url, ['foo=3'])  # no sources for remote asset
 
 
 def test_module_asset():
     
-    asset = app.ModuleAsset('foo.js', [], ['foo'], 'var foo = 7;')
+    # By defining exports, it becomes a module asset
+    asset = app.Asset('foo.js', 'var foo = 7;', [], ['foo'])
     assert asset.deps == ()
     assert asset.exports == ('foo', )
     assert 'define(' in asset.to_string()
+    assert 'return {foo};' in asset.to_string()
     
-    with raises(ValueError):
-        app.ModuleAsset('foo.js', [], 'var foo = 7;')  # need exports
-    with raises(ValueError):
-        app.ModuleAsset('foo.css', [], [], '.xxx {}')  # No css
+    # Exports can be str
+    asset = app.Asset('foo.js', 'var foo = 7;', [], 'foo')
+    assert asset.exports == 'foo'
+    assert 'define(' in asset.to_string()
+    assert 'return foo;' in asset.to_string()
+    
+    # Exports can be empty list
+    asset = app.Asset('foo.js', 'var foo = 7;', [], [])
+    assert asset.exports == ()
+    assert 'define(' in asset.to_string()
+    assert 'return {};' in asset.to_string()
+    
+    # Exports ara auto-populated
+    asset = app.Asset('foo.js', ['var foo = 7;', WTF], [], ['foo'])
+    assert asset.exports == ('foo', 'WTF')
+    assert 'define(' in asset.to_string()
+    assert 'return {foo, WTF};' in asset.to_string()
+    
+    # Exports ara NOT auto-populated if exports is str
+    asset = app.Asset('foo.js', ['var foo = 7;', WTF], [], 'foo')
+    assert asset.exports == 'foo'
+    assert 'define(' in asset.to_string()
+    assert 'return foo;' in asset.to_string()
+    
+    # But if exports not given or None, its not a module
+    asset = app.Asset('foo.js', 'var foo = 7;', [], None)
+    assert asset.exports is None
+    assert 'define(' not in asset.to_string()
+    
+    with raises(TypeError):
+        app.Asset('foo.css', ['.xxx {}'], [], [])  # No css
+    with raises(TypeError):
+        app.Asset('foo.js', 'var foo = 7;', [], 3)  # exports not str or list
+    with raises(TypeError):
+        app.Asset('foo.js', 'var foo = 7;', [], [3])  # exports element not str
     
     # Deps ...
     
-    asset = app.ModuleAsset('foo.js', ['xxx.py'], ['foo'], 'var foo = 7;')
+    asset = app.Asset('foo.js', 'var foo = 7;', ['xxx.py'], ['foo'])
     assert 'xxx.py' in asset.deps
     assert 'xxx.py' not in asset.to_string()
     
-    asset = app.ModuleAsset('foo.js', ['xxx.py as xxx'], ['foo'], 'var foo = 7;')
+    asset = app.Asset('foo.js', 'var foo = 7;', ['xxx.py as xxx'], ['foo'])
     assert 'xxx.py' in asset.deps
     assert 'xxx.py' in asset.to_string()
 
@@ -153,16 +222,16 @@ def test_module_asset():
 def test_asset_store_assets():
     
     s = AssetStore()
-    assert len(s.get_asset_names()) == 0
+    assert len(s.get_asset_names()) == N_STANDARD_ASSETS
     assert len(s.get_data_names()) == 0
     
     # Add assets
-    asset1 = app.Asset('foo.js', [], '-foo=7-')
+    asset1 = app.Asset('foo.js', '-foo=7-', [])
     s.add_shared_asset(asset1)
-    asset2 = app.Asset('bar.js', [], '-bar=8-')
+    asset2 = app.Asset('bar.js', '-bar=8-', [])
     s.add_shared_asset(asset2)
     #
-    assert len(s.get_asset_names()) == 2
+    assert len(s.get_asset_names()) == N_STANDARD_ASSETS + 2
     assert len(s.get_data_names()) == 0
     assert 'foo.js' in s.get_asset_names()
     assert 'foo.js' in repr(s)
@@ -176,27 +245,31 @@ def test_asset_store_assets():
         s.get_asset('fooo')  # must ends with .js or .css
     
     # Add asset with same name
-    asset = app.Asset('bar.js', [], '-bar=1-')
+    asset = app.Asset('bar.js', '-bar=1-', [])
     with raises(ValueError):
         s.add_shared_asset(asset)
     
     # Add BS asset
-    with raises(ValueError):
+    with raises(TypeError):
+        s.add_shared_asset()  # no asset nor kwargs
+    with raises(TypeError):
+        s.add_shared_asset(asset, name='asd.js')  # both is also wrong
+    with raises(TypeError):
         s.add_shared_asset(4)  # not an asset
-    with raises(ValueError):
+    with raises(TypeError):
         s.add_shared_asset('not an asset')
 
 
 def test_asset_store_data():
     
     s = AssetStore()
-    assert len(s.get_asset_names()) == 0
+    assert len(s.get_asset_names()) == N_STANDARD_ASSETS
     assert len(s.get_data_names()) == 0
     
     # Add data
     s.add_shared_data('xx', b'xxxx')
     s.add_shared_data('yy', b'yyyy')
-    assert len(s.get_asset_names()) == 0
+    assert len(s.get_asset_names()) == N_STANDARD_ASSETS
     assert len(s.get_data_names()) == 2
     assert 'xx' in s.get_data_names()
     assert 'yy' in s.get_data_names()
@@ -211,43 +284,54 @@ def test_asset_store_data():
     with raises(ValueError):
         s.add_shared_data('xx', b'zzzz')
     
+    # Add url data
+    s.add_shared_data('readme', 'https://github.com/zoofIO/flexx/blob/master/README.md')
+    assert 'Flexx is' in s.get_data('readme').decode()
+    
     # Add BS data
     with raises(TypeError):
         s.add_shared_data('dd')  # no data
-    with raises(ValueError):
+    with raises(TypeError):
         s.add_shared_data('dd', 4)  # not an asset
     if sys.version_info > (3, ):
-        with raises(ValueError):
+        with raises(TypeError):
             s.add_shared_data('dd', 'not bytes')
-        with raises(ValueError):
+        with raises(TypeError):
             s.add_shared_data(b'dd', b'yes, bytes')  # name not str
-    with raises(ValueError):
+    with raises(TypeError):
         s.add_shared_data(4, b'zzzz')  # name not a str
 
 
-# 
-# def test_asset_store_export():
-#     
-#     dir = os.path.join(tempfile.gettempdir(), 'flexx_export')
-#     if os.path.isdir(dir):
-#         shutil.rmtree(dir)
-#     os.mkdir(dir)
-#     
-#     s = AssetStore()
-#     
-#     s.export(dir)
-#     assert len(os.listdir(dir)) == 1
-#     assert os.path.isfile(os.path.join(dir, 'reset.css'))
-#     
-#     s.add_shared_asset('foo.js', b'xx\n')
-#     s.add_shared_asset('foo.css', b'xx\n')
-#     s.export(dir)
-#     assert len(os.listdir(dir)) == 3
-#     
-#     # Fail
-#     raises(ValueError, s.export, os.path.join(dir, 'doesnotexist'))
-# 
-# 
+
+def test_asset_store_export():
+    
+    dir = os.path.join(tempfile.gettempdir(), 'flexx_export')
+    if os.path.isdir(dir):
+        shutil.rmtree(dir)
+    
+    # os.mkdir(dir) -> No, export can create this dir!
+    
+    store = AssetStore()
+    store.add_shared_asset(app.Asset('foo.css', '', []))
+    store.add_shared_data('foo.png', b'x')
+    
+    s = SessionAssets(store)
+    s.add_asset(app.Asset('bar.js', '', []))
+    s.add_data('bar.png', b'x')
+    
+    store.export(dir)
+    s._export(dir)
+    assert len(os.listdir(dir)) == 2
+    assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'reset.css'))
+    assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'foo.css'))
+    assert os.path.isfile(os.path.join(dir, '_data', 'shared', 'foo.png'))
+    assert os.path.isfile(os.path.join(dir, '_assets', s.id, 'bar.js'))
+    assert os.path.isfile(os.path.join(dir, '_data', s.id, 'bar.png'))
+
+    # Will only create a dir that is one level deep
+    with raises(ValueError):
+        store.export(os.path.join(dir, 'not', 'exist'))
+
 # def test_cache_submodules():
 #     
 #     s = AssetStore()
@@ -264,7 +348,7 @@ def test_asset_store_data():
 def test_session_assets():
     
     store = AssetStore()
-    store.add_shared_asset(app.Asset('spam.css', [], ''))
+    store.add_shared_asset(app.Asset('spam.css', '', []))
     s = SessionAssets(store)
     s._send_command = lambda x: None
     assert s.id
@@ -275,7 +359,7 @@ def test_session_assets():
     # Adding assets ..
     
     # Add an asset
-    asset = app.Asset('foo.js', [], '-foo=7-')
+    asset = app.Asset('foo.js', '-foo=7-', [])
     s.add_asset(asset)
     #
     assert len(s.get_asset_names()) == 1
@@ -283,7 +367,7 @@ def test_session_assets():
     assert 'foo.js' in s.get_asset_names()
     
     # Add another asset
-    asset = app.Asset('bar.js', [], '-bar=8-')
+    asset = app.Asset('bar.js', '-bar=8-', [])
     s.add_asset(asset)
     #
     assert len(s.get_asset_names()) == 2
@@ -294,6 +378,11 @@ def test_session_assets():
     assert len(s.get_asset_names()) == 3
     assert 'spam.css' in s.get_asset_names()
     
+    # Add asset via kwargs
+    s.add_asset(name='eggs.js', sources=['x=3'], deps=[])
+    assert len(s.get_asset_names()) == 4
+    assert 'eggs.js' in s.get_asset_names()
+    
     # Use store asset again: ok
     s.add_asset('spam.css')
     # Use asset that's already used: ok
@@ -303,10 +392,14 @@ def test_session_assets():
     with raises(ValueError):
         s.add_asset('spam.js')
     # Not an asset instance
-    with raises(ValueError):
+    with raises(TypeError):
+        s.add_asset()
+    with raises(TypeError):
+        s.add_asset('spam.js', name='foo.j2')
+    with raises(TypeError):
         s.add_asset(3)
     # New asset with existing name
-    asset3 = app.Asset('bar.js', [], '-bar=1-')
+    asset3 = app.Asset('bar.js', '-bar=1-', [])
     with raises(ValueError):
         s.add_asset(asset3)
     
@@ -339,6 +432,10 @@ def test_session_assets_data():
     assert s.get_data('zz') is None
     assert s.get_data('ww') is b'wwww'
     
+    # Add url data
+    s.add_data('readme', 'https://github.com/zoofIO/flexx/blob/master/README.md')
+    assert 'Flexx is' in s.get_data('readme').decode()
+    
     # Add data with same name
     with raises(ValueError):
         s.add_data('xx', b'zzzz')
@@ -346,14 +443,14 @@ def test_session_assets_data():
     # Add BS data
     with raises(TypeError):
         s.add_data('dd')  # no data
-    with raises(ValueError):
+    with raises(TypeError):
         s.add_data('dd', 4)  # not an asset
     if sys.version_info > (3, ):
-        with raises(ValueError):
+        with raises(TypeError):
             s.add_data('dd', 'not bytes')
-        with raises(ValueError):
+        with raises(TypeError):
             s.add_data(b'dd', b'yes, bytes')  # name not str
-    with raises(ValueError):
+    with raises(TypeError):
         s.add_data(4, b'zzzz')  # name not a str
     
     # get_data()
@@ -398,20 +495,28 @@ def test_session_assets_data():
     # assert 'not/verified.css' in page
 
 
+def get_assets_in_order(s):
+    """ Version of Session._get_assets_in_order() that strips the 
+    standard assets.
+    """
+    js_assets, css_assets = s._get_assets_in_order()
+    return js_assets[2:], css_assets
+
+
 def test_dependency_resolution_1():
     """ No deps, maintain order. """
     store = AssetStore()
     s = SessionAssets(store)
     
-    a1 = app.Asset('a1.js', [], '')
-    a2 = app.Asset('a2.js', [], '')
-    a3 = app.Asset('a3.js', [], '')
+    a1 = app.Asset('a1.js', '', [])
+    a2 = app.Asset('a2.js', '', [])
+    a3 = app.Asset('a3.js', '', [])
     
     s.add_asset(a1)
     s.add_asset(a2)
     s.add_asset(a3)
     
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == ['a1.js', 'a2.js', 'a3.js']
     
 
@@ -420,14 +525,14 @@ def test_dependency_resolution_2():
     
     store = AssetStore()
     
-    a1 = app.Asset('a1.js', ['b1.js'], '')
-    b1 = app.Asset('b1.js', ['c1.js'], '')
-    c1 = app.Asset('c1.js', ['d1.js'], '')
-    d1 = app.Asset('d1.js', ['e1.js'], '')
-    e1 = app.Asset('e1.js', [], '')
-    # e1 = app.Asset('e1.js', ['f1.js'], '')
-    # f1 = app.Asset('f1.js', ['g1.js'], '')
-    # g1 = app.Asset('g1.js', [], '')
+    a1 = app.Asset('a1.js', '', ['b1.js'])
+    b1 = app.Asset('b1.js', '', ['c1.js'])
+    c1 = app.Asset('c1.js', '', ['d1.js'])
+    d1 = app.Asset('d1.js', '', ['e1.js'])
+    e1 = app.Asset('e1.js', '', [])
+    # e1 = app.Asset('e1.js', '', ['f1.js'])
+    # f1 = app.Asset('f1.js', '', ['g1.js'])
+    # g1 = app.Asset('g1.js', '', [])
     
     for asset in [a1, b1, c1, d1, e1]:
         store.add_shared_asset(asset)
@@ -436,21 +541,21 @@ def test_dependency_resolution_2():
     s = SessionAssets(store)
     s.add_asset(a1)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == ['e1.js', 'd1.js', 'c1.js', 'b1.js', 'a1.js']
     
     # Add middle
     s = SessionAssets(store)
     s.add_asset(c1)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == ['e1.js', 'd1.js', 'c1.js']
     
     # Add last
     s = SessionAssets(store)
     s.add_asset(e1)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == ['e1.js']
     
     # Add first and middle
@@ -458,7 +563,7 @@ def test_dependency_resolution_2():
     s.add_asset(a1)
     s.add_asset(c1)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == ['e1.js', 'd1.js', 'c1.js', 'b1.js', 'a1.js']
     
     # Add first and last
@@ -466,7 +571,7 @@ def test_dependency_resolution_2():
     s.add_asset(e1)
     s.add_asset(a1)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == ['e1.js', 'd1.js', 'c1.js', 'b1.js', 'a1.js']
 
 
@@ -475,11 +580,11 @@ def test_dependency_resolution_3():
     
     store = AssetStore()
     
-    a1 = app.Asset('a1.js', ['b1.js'], '')
-    b1 = app.Asset('b1.js', ['bar.js', 'c1.js'], '')
-    c1 = app.Asset('c1.js', ['d1.js', 'foo.js'], '')
-    d1 = app.Asset('d1.js', ['e1.js'], '')
-    e1 = app.Asset('e1.js', [], '')
+    a1 = app.Asset('a1.js', '', ['b1.js'])
+    b1 = app.Asset('b1.js', '', ['bar.js', 'c1.js'])
+    c1 = app.Asset('c1.js', '', ['d1.js', 'foo.js'])
+    d1 = app.Asset('d1.js', '', ['e1.js'])
+    e1 = app.Asset('e1.js', '', [])
     
     for asset in [a1, b1, c1, d1, e1]:
         store.add_shared_asset(asset)
@@ -487,7 +592,7 @@ def test_dependency_resolution_3():
     s = SessionAssets(store)
     s.add_asset(a1)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == ['e1.js', 'd1.js', 'c1.js', 'b1.js', 'a1.js']
 
 
@@ -496,11 +601,11 @@ def test_dependency_resolution_4():
     
     store = AssetStore()
     
-    a1 = app.Asset('a1.js', ['b1.js'], '')
-    b1 = app.Asset('b1.js', ['c1.js'], '')
-    c1 = app.Asset('c1.js', ['d1.js'], '')
-    d1 = app.Asset('d1.js', ['e1.js', 'a1.js'], '')
-    e1 = app.Asset('e1.js', [], '')
+    a1 = app.Asset('a1.js', '', ['b1.js'])
+    b1 = app.Asset('b1.js', '', ['c1.js'])
+    c1 = app.Asset('c1.js', '', ['d1.js'])
+    d1 = app.Asset('d1.js', '', ['e1.js', 'a1.js'])
+    e1 = app.Asset('e1.js', '', [])
     
     for asset in [a1, b1, c1, d1, e1]:
         store.add_shared_asset(asset)
@@ -509,7 +614,7 @@ def test_dependency_resolution_4():
     s.add_asset(a1)
     #
     with raises(RuntimeError):
-        aa, _ = s.get_assets_in_order()
+        aa, _ = get_assets_in_order(s)
 
 
 def test_dependency_resolution_5():
@@ -517,13 +622,13 @@ def test_dependency_resolution_5():
     
     store = AssetStore()
     
-    a1 = app.Asset('a1.js', ['b1.js'], '')
-    b1 = app.Asset('b1.js', ['c1.js'], '')
-    c1 = app.Asset('c1.js', ['d1.js'], '')
+    a1 = app.Asset('a1.js', '', ['b1.js'])
+    b1 = app.Asset('b1.js', '', ['c1.js'])
+    c1 = app.Asset('c1.js', '', ['d1.js'])
     
-    a2 = app.Asset('a2.js', ['b2.js'], '')
-    b2 = app.Asset('b2.js', ['c2.js'], '')
-    c2 = app.Asset('c2.js', ['d2.js'], '')
+    a2 = app.Asset('a2.js', '', ['b2.js'])
+    b2 = app.Asset('b2.js', '', ['c2.js'])
+    c2 = app.Asset('c2.js', '', ['d2.js'])
     
     for asset in [a1, b1, c1, a2, b2, c2]:
         store.add_shared_asset(asset)
@@ -532,14 +637,14 @@ def test_dependency_resolution_5():
     s = SessionAssets(store)
     s.add_asset(a1)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == ['c1.js', 'b1.js', 'a1.js']
     
     # Only chain 2
     s = SessionAssets(store)
     s.add_asset(a2)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == ['c2.js', 'b2.js', 'a2.js']
     
     # Both chains, first 1
@@ -547,7 +652,7 @@ def test_dependency_resolution_5():
     s.add_asset(a1)
     s.add_asset(a2)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == ['c1.js', 'b1.js', 'a1.js', 'c2.js', 'b2.js', 'a2.js']
     
     # Both chains, first 2
@@ -555,7 +660,7 @@ def test_dependency_resolution_5():
     s.add_asset(a2)
     s.add_asset(a1)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == [ 'c2.js', 'b2.js', 'a2.js', 'c1.js', 'b1.js', 'a1.js']
 
 
@@ -564,12 +669,12 @@ def test_dependency_resolution_6():
     
     store = AssetStore()
     
-    a1 = app.Asset('a1.js', ['b1.js', 'b2.js'], '')
-    b1 = app.Asset('b1.js', ['c1.js', 'c2.js'], '')
-    b2 = app.Asset('b2.js', ['c2.js', 'c3.js'], '')
-    c1 = app.Asset('c1.js', [], '')
-    c2 = app.Asset('c2.js', [], '')
-    c3 = app.Asset('c3.js', [], '')
+    a1 = app.Asset('a1.js', '', ['b1.js', 'b2.js'])
+    b1 = app.Asset('b1.js', '', ['c1.js', 'c2.js'])
+    b2 = app.Asset('b2.js', '', ['c2.js', 'c3.js'])
+    c1 = app.Asset('c1.js', '', [])
+    c2 = app.Asset('c2.js', '', [])
+    c3 = app.Asset('c3.js', '', [])
     
     for asset in [a1, b1, b2, c1, c2, c3]:
         store.add_shared_asset(asset)
@@ -577,7 +682,7 @@ def test_dependency_resolution_6():
     s = SessionAssets(store)
     s.add_asset(a1)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == [ 'c1.js', 'c2.js', 'b1.js', 'c3.js', 'b2.js', 'a1.js']
 
 
@@ -586,11 +691,11 @@ def test_dependency_resolution_7():
     
     store = AssetStore()
     
-    a1 = app.Asset('a1.js', ['b1.js', 'b2.js'], '')
-    b1 = app.Asset('b1.js', ['c1.js'], '')
-    b2 = app.Asset('b2.js', ['d1.js'], '')
-    c1 = app.Asset('c1.js', ['d1.js'], '')
-    d1 = app.Asset('d1.js', [], '')
+    a1 = app.Asset('a1.js', '', ['b1.js', 'b2.js'])
+    b1 = app.Asset('b1.js', '', ['c1.js'])
+    b2 = app.Asset('b2.js', '', ['d1.js'])
+    c1 = app.Asset('c1.js', '', ['d1.js'])
+    d1 = app.Asset('d1.js', '', [])
     
     for asset in [a1, b1, b2, c1, d1]:
         store.add_shared_asset(asset)
@@ -598,7 +703,7 @@ def test_dependency_resolution_7():
     s = SessionAssets(store)
     s.add_asset(a1)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == ['d1.js', 'c1.js', 'b1.js', 'b2.js', 'a1.js']
 
 
@@ -606,12 +711,12 @@ def test_dependency_resolution_8():
     """ Position of singleton asset """
     
     store = AssetStore()
-    a0 = app.Asset('a0.js', [], '')
-    a1 = app.Asset('a1.js', ['b1.js', 'b2.js'], '')
-    b1 = app.Asset('b1.js', ['c1.js'], '')
-    b2 = app.Asset('b2.js', ['d1.js'], '')
-    c1 = app.Asset('c1.js', ['d1.js'], '')
-    d1 = app.Asset('d1.js', [], '')
+    a0 = app.Asset('a0.js', '', [])
+    a1 = app.Asset('a1.js', '', ['b1.js', 'b2.js'])
+    b1 = app.Asset('b1.js', '', ['c1.js'])
+    b2 = app.Asset('b2.js', '', ['d1.js'])
+    c1 = app.Asset('c1.js', '', ['d1.js'])
+    d1 = app.Asset('d1.js', '', [])
     
     for asset in [a1, b1, b2, c1, d1]:
         store.add_shared_asset(asset)
@@ -620,7 +725,7 @@ def test_dependency_resolution_8():
     s.add_asset(a0)
     s.add_asset(a1)
     #
-    aa, _ = s.get_assets_in_order()
+    aa, _ = get_assets_in_order(s)
     assert [a.name for a in aa] == ['a0.js', 'd1.js', 'c1.js', 'b1.js', 'b2.js', 'a1.js']
 
 # 
