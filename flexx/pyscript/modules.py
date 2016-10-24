@@ -116,7 +116,7 @@ def create_js_module(name, code, imports, exports, type='umd'):
         for exp in exports:
             if not isinstance(exp, str):
                 raise ValueError('Elements in create_module() exports must be str.')
-        return_val = ', '.join([exp for exp in exports])
+        return_val = ', '.join(['%s: %s' % (exp, exp) for exp in exports])
         return_val = '{' + return_val + '}'
     
     # Process type -> select template
