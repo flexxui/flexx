@@ -459,47 +459,12 @@ def test_session_assets_data():
     assert s.get_data('ww') == b'wwww'
     assert s.get_data('bla') is None
 
-    
-    # 
-    # 
-    # # Get the asset
-    # raises(IndexError, store.load_asset, 'foo.css')
-    # raises(IndexError, store.load_asset, 'foo.js')
-    # assert store.load_asset(a1) == b'foo\n'
-    # assert store.load_asset(a2) == b'bar\n'
-    # 
-    # # Use asset
-    # store.add_shared_asset('spam.js', b'1234\x00')
-    # s.use_global_asset('spam.js')
-    # assert s.get_asset_names()[-1] == 'spam.js'
-    # raises(IndexError, s.use_global_asset, 'unknown-asset.js')
-    # raises(ValueError, s.add_shared_asset, 3, b'a\n')
-    # 
-    # # Add assets after loading page
-    # s.get_page()
-    # s.use_global_asset('spam.js')  # prints a warning, but it does work
-
-   ##   # Global assets
-    # s.add_global_asset('eggs.js', b'12345\x00')
-    # assert s.get_asset_names()[-1] == 'eggs.js'
-    # assert store.load_asset('eggs.js') == b'12345\x00'
-    # raises(ValueError, s.use_global_asset, 3)
-    # 
-    # # Remote assets
-    # s.use_remote_asset('http://linked.com/not/verified.js')
-    # s.use_remote_asset('http://linked.com/not/verified.css')
-    # s.use_remote_asset('http://linked.com/not/verified.css')  # twice is ok
-    # raises(ValueError, s.use_remote_asset, 3)
-    # page = s.get_page()
-    # assert 'not/verified.js' in page
-    # assert 'not/verified.css' in page
-
 
 def get_assets_in_order(s):
     """ Version of Session._get_assets_in_order() that strips the 
     standard assets.
     """
-    js_assets, css_assets = s._get_assets_in_order()
+    js_assets, css_assets = s.get_assets_in_order()
     return js_assets[2:], css_assets
 
 
