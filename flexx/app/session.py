@@ -108,7 +108,7 @@ class AppManager(event.HasEvents):
         except Exception as err:
             logger.error('Error when clearing old pending sessions: %s' % str(err))
     
-    def create_session(self, name):
+    def create_session(self, name, id=None):
         """ Create a session for the app with the given name.
         
         Instantiate an app and matching session object corresponding
@@ -131,6 +131,8 @@ class AppManager(event.HasEvents):
         
         # Session and app class need each-other, thus the _set_app()
         session = Session(name)
+        if id is not None:
+            session._id = id  # used by app.export
         self._session_map[session.id] = session
         app = cls(session=session, is_app=True, **properties)  # is_app marks it as main
         session._set_app(app)

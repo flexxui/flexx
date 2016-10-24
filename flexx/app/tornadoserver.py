@@ -288,6 +288,9 @@ class MainHandler(tornado.web.RequestHandler):
     
         # todo: send path to app somehow
         
+        if path.startswith('_data/'):
+            return self.redirect('/' + path)
+        
         # Get case-corrected app name if the app is known
         correct_app_name = manager.has_app_name(app_name)
         
