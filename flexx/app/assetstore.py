@@ -1,20 +1,13 @@
 """
-Asset store.
+Flexx asset and data management system. The purpose of these classes
+is to provide the assets (JavaScript and CSS files) and data (images,
+etc.) needed by the applications.
 
-The purpose of these classes is simple: they must provide the assets
-(JavaScript files, CSS files, images, etc.) needed by the applications.
+Flexx makes a dinstinction between shared assets and session-specific
+assets. Most source code for e.g. the widgets is served as a shared asset,
+but app-specific classes and session-specific data can be served
+per-session (and is deleted when the session is closed).
 
-Assets are global, which makes certain things (e.g. exporting a bunch
-of apps to the same directory) very simple.
-
-Naturally, different sessions may need different assets with the same
-name. Therefore the SessionAssets class provides a way to manage assets
-with name mangling.
-    
-Groups of Model classes can be added as a CSS and JS asset using
-``assets.create_module_assets()``, which will select all Model classes
-present in the given Python module. Classes used by the session that
-are not provided via such a module asset will be added to the index.
 """
 
 import os
@@ -22,6 +15,7 @@ import sys
 import json
 import time
 import random
+import shutil
 import hashlib
 from urllib.request import urlopen
 from collections import OrderedDict
@@ -36,14 +30,11 @@ INDEX = """<!doctype html>
 <head>
     <meta charset="utf-8">
     <title>Flexx UI</title>
-
-ASSET-LINK-HOOK
-
 </head>
 
 <body id='body'>
 
-ASSET-CONTENT-HOOK
+ASSET-HOOK
 
 </body>
 </html>
@@ -180,6 +171,39 @@ def get_random_string(length=24, allowed_chars=None):
     return ''.join(srandom.choice(allowed_chars) for i in range(length))
 
 
+def export_assets_and_data(assets, data, dirname, app_id, clear=False):
+    """ Export the given assets (list of Asset objects) and data (list of
+    (name, value) tuples to a file system structure.
+    """
+    # Normalize and check - we create the dir if its inside an existing dir
+    dirname = os.path.abspath(os.path.expanduser(dirname))
+    if clear and os.path.isdir(dirname):
+        shutil.rmtree(dirname)
+    if not os.path.isdir(dirname):
+        if os.path.isdir(os.path.dirname(dirname)):
+            os.mkdir(dirname)
+        else:
+            raise ValueError('dirname %r for export is not a directory.' % dirname)
+    
+    # Export all assets
+    for asset in assets:
+        filename = os.path.join(dirname, '_assets', app_id, asset.name)
+        dname = os.path.dirname(filename)
+        if not os.path.isdir(dname):
+            os.makedirs(dname)
+        with open(filename, 'wb') as f:
+            f.write(asset.to_string().encode())
+    
+    # Export all data
+    for fname, d in data:
+        filename = os.path.join(dirname, '_data', app_id, fname)
+        dname = os.path.dirname(filename)
+        if not os.path.isdir(dname):
+            os.makedirs(dname)
+        with open(filename, 'wb') as f:
+            f.write(d)
+
+
 # todo: what if we constrained the scope of flexx.app and above to browsers, e.g. no node? I wonder if this code would get simpler. Also clientcore et al. can assume the presence of the window object.
 
 # todo: minification ...
@@ -206,18 +230,14 @@ class Asset:
     
     *Remote assets*
     
-    If only one source is provided and its a uri (starting with
-    'http://', 'https://' or 'file://') this is considered a remote asset,
-    i.e. the client will obtain the source from elsewhere. Exported apps
-    will include the asset though. In case a uri is given together with
-    other sources, Flexx will (down)load the code to include it in the asset.
-    
+    If a source is provided as a URI (starting with 'http://', 'https://' or
+    'file://') Flexx will (down)load the code to include it in the final asset.
+    If only name is provided and it is a URI, it is considered a remote asset,
+    i.e. the client will load the asset from elsewhere. Note that
+    ``app.export()`` provides control over how remote assets are handled.
     """
+    
     def __init__(self, name=None, sources=None, deps=None, exports=None):
-        
-        # if no_args:
-        #     raise ValueError('For reasons of clarity, assets must be defined '
-        #                      'using keyword arguments: name, sources, deps, exports.')
         
         # Handle name
         if name is None:
@@ -245,18 +265,18 @@ class Asset:
         self._sources = list(sources)
         
         # Remote source?
-        self._is_remote = False
+        self._remote = None
         uri_starts = 'http://', 'https://', 'file://'
-        if len(self._sources) == 0 and name.startswith(uri_starts):
-            self._sources = [name]  # todo: will this work with exported apps?
-        if len(self._sources) == 0:
+        if name.startswith(uri_starts):
+            self._remote = name
+            self._name = name.replace('\\', '/').split('/')[-1]
+            if len(self._sources):
+                raise ValueError('A remote asset cannot have sources: %s' % name)
+        elif len(self._sources) == 0:
             raise ValueError('An asset cannot be without sources.')
-        if (len(self._sources) == 1 and isinstance(self._sources[0], str)
-                                    and self._sources[0].startswith(uri_starts)):
-            self._is_remote = True
         
         # Handle deps
-        if deps is None and self._is_remote:
+        if deps is None and self._remote:
             deps = []
         if deps is None:
             raise ValueError('Assets deps must be given, '
@@ -288,7 +308,7 @@ class Asset:
         
         # Cache -> total code is generated just once
         self._cache = None
-        if not self._is_remote:
+        if not self._remote:
             self.to_string()  # Generate code now
     
     def __repr__(self):
@@ -301,10 +321,11 @@ class Asset:
         return self._name
     
     @property
-    def is_remote(self):
-        """ Whether the asset is remote (client will load it from elsewhere).
+    def remote(self):
+        """ If the asset is remote (client will load it from elsewhere), then 
+        this is the corresponding URI. Otherwise this is None.
         """
-        return self._is_remote
+        return self._remote
     
     @property
     def is_module(self):
@@ -323,7 +344,7 @@ class Asset:
         """ The list of sources. Each source can be:
         
         * A string of JS/CSS code.
-        * A filename or uri (start with "file://", "http://" or "https://"):
+        * A filename or URI (start with "file://", "http://" or "https://"):
           the code is (down)loaded on the server. 
         * A subclass of ``Model``: the corresponding JS/CSS is extracted.
         * Any other Python function ot class: JS is generated via PyScript.
@@ -338,30 +359,34 @@ class Asset:
         """
         return tuple(self._exports)
 
-    def to_html(self, link='{}'):
-        """ Get HTML element tag to include in the document. The link
-        argument is formatted with the asset name. If link evaluates to False,
-        the asset is embedded rather than linked.
+    def to_html(self, path='{}', link=2):
+        """ Get HTML element tag to include in the document.
+        
+        Parameters:
+            path (str): the path of this asset, in which '{}' can be used as
+                a placeholder for the asset name.
+            link (int): whether to link to this asset. If 0, the asset is
+                embedded. If 1, the asset is linked (and served by our server
+                as a separate file). If 2 (default) remote assets remain remote.
         """
-        if self._name.startswith('embed:'):
-            link = False  # Undocumented feature used internally
+        path = path.replace('{}', self.name)
+        name_line = ('/* %s */\n' % path) if path else ''
         
         if self.name.lower().endswith('.js'):
             if not link:
-                return '<script>' + self.to_string() + '</script>'
-            elif self._is_remote:
-                return "<script src=%r></script>" % self._sources[0]
+                return '<script>' + name_line + self.to_string() + '</script>'
+            elif link >= 2 and self._remote:
+                return "<script src='%s'></script>" % self._remote
             else:
-                return "<script src='%s'></script>" % link.format(self.name)
+                return "<script src='%s'></script>" % path
         elif self.name.lower().endswith('.css'):
             if not link:
-                return '<style>' + self.to_string() + '</style>'
-            elif self._is_remote:
-                url = self._sources[0]
-                return "<link rel='stylesheet' type='text/css' href=%r />" % url
+                return '<style>' + name_line + self.to_string() + '</style>'
+            elif link >= 2 and self._remote:
+                url = self._remote
+                return "<link rel='stylesheet' type='text/css' href='%s' />" % url
             else:
-                t = "<link rel='stylesheet' type='text/css' href='%s' />"
-                return t % link.format(self.name)
+                return "<link rel='stylesheet' type='text/css' href='%s' />" % path
         else:  # pragma: no cover
             raise NameError('Assets must be .js or .css')
     
@@ -384,6 +409,8 @@ class Asset:
                     code.insert(0, 'var %s;\nvar %s;' % (pre1, pre2))
                 self._cache = create_js_module(self.name, '\n\n'.join(code), 
                                             self._imports, self._exports, 'amd')
+            elif self.remote:
+                self._cache = self._handle_uri(self.remote)
             else:
                 code, names = self._get_code_and_names()
                 self._cache = '\n\n'.join(code)
@@ -433,18 +460,22 @@ class Asset:
         if s.startswith(('http://', 'https://')):
             return urlopen(s, timeout=5.0).read().decode()
         elif s.startswith('file://'):
-            return open(s.split('//', 1)[1], 'rb').read().decode()
+            fname = s.split('//', 1)[1]
+            if sys.platform.startswith('win'):
+                fname = fname.lstrip('/')
+            return open(fname, 'rb').read().decode()
         else:
             return s
 
 
 class AssetStore:
-    """ Global provider of client assets (CSS, JavaScript, images, etc.).
+    """ Provider of shared assets (CSS, JavaScript) and data (images, etc.).
     
-    Assets are global to the process via the AssetStore instance at
-    ``flexx.app.assets``. An asset must be "used" at each ``Session``
-    instance where it ought to be loaded. The session can also be used
-    to load unique (per session, name mangled) assets.
+    The global asset store object can be found at ``flexx.app.assets``.
+    Assets and data in the asset store can be used by all sessions.
+    
+    Each session object also keeps track of assets and data. Using
+    ``session.add_asset(str_name)`` makes a session use a shared asset.
     """
     
     def __init__(self):
@@ -517,7 +548,7 @@ class AssetStore:
         ``Session.add_asset()`` to set assets per-session.
         
         The asset should be given either as an asset instance, or as keyword
-        arguments to create an ``Asset``.
+        arguments to create a new ``Asset``.
         See :class:`Asset class <flexx.app.Asset>` for details.
         """
         if kwargs and asset is not None:
@@ -545,7 +576,6 @@ class AssetStore:
         """ Get the Model classes corrsesponding to the given module name
         and that are not already provided by an asset.
         """
-        # Get classes
         classes = list()
         for cls in get_model_classes():
             if modname_startswith(cls.__module__, module_name):
@@ -553,30 +583,29 @@ class AssetStore:
                     classes.append(cls)
         return classes
     
-    # todo: test this
-    def export(self, dirname):
-        """ Write all assets to the given directory.
+    def export(self, dirname, clear=False):
+        """ Write all shared assets and data to the given directory.
+        
+        Parameters:
+            dirname (str): the directory to export to. The toplevel
+                directory is created if necessary.
+            clear (bool): if given and True, the directory is first cleared.
         """
-        # Normalize and check
-        if dirname.startswith('~'):  # pragma: no cover
-            dirname = os.path.expanduser(dirname)
-        if not os.path.isdir(dirname):
-            raise ValueError('dirname %r for export is not a directory.' % dirname)
-        # Export all assets
-        for fname in self.get_asset_names():
-            if not fname.startswith('index-'):
-                with open(os.path.join(dirname, fname), 'wb') as f:
-                    f.write(self.get_asset(fname).tobytes())
+        assets = [self.get_asset(name) for name in self.get_asset_names()]
+        data = [(name, self.get_data(name)) for name in self.get_data_names()]
+        export_assets_and_data(assets, data, dirname, 'shared', clear)
+        logger.info('Exported shared assets and data to %r.' % dirname)
+
 
 # Our singleton asset store
 assets = AssetStore()
 
 
 class SessionAssets:
-    """ Provider for assets for a specific session. Inherited by Session.
+    """ Provider for assets of a specific session. Inherited by Session.
     
     Assets included on the document consist of the page assets
-    registered on the session, plus the (global) page assets that these
+    registered on the session, plus the (shared) page assets that these
     depend on.
     """
     
@@ -668,7 +697,7 @@ class SessionAssets:
         
         The asset should be given either as an asset instance, the name of
         an asset in the asset store, or as keyword arguments to create
-        an ``Asset``. See :class:`Asset class <flexx.app.Asset>` for details.
+        a new ``Asset``. See :class:`Asset class <flexx.app.Asset>` for details.
         """
         if kwargs and asset is not None:
             raise ValueError('Session.add_asset() needs either asset or kwargs.')
@@ -688,7 +717,9 @@ class SessionAssets:
     
     def _register_asset(self, asset):
         # Register or load asset, if necessary
-        if asset.name in self._assets:
+        if asset.remote:  # Remote assets can be overridden; name fully defines it
+            self._assets[asset.name] = asset
+        elif asset.name in self._assets:
             cur_asset = self._assets[asset.name]
             if not (cur_asset is None or cur_asset is asset):
                 raise ValueError('Cannot register asset under an existing asset name.')
@@ -785,7 +816,7 @@ class SessionAssets:
                 if asset.sources[0].strip():
                     self._inject_asset_dynamically(asset)
     
-    def get_assets_in_order(self, css_reset=False):
+    def _get_assets_in_order(self, css_reset=False):
         """ Get two lists containing the JS assets and CSS assets,
         respectively. The assets contain all assets in use and their
         dependencies. The order is based on the dependency resolution
@@ -864,7 +895,7 @@ class SessionAssets:
         # Prepend loader
         js_assets.insert(0, self.get_asset('flexx-loader.js'))
         t = 'var flexx = {app_name: "%s", session_id: "%s"};' % (self._app_name, self.id)
-        js_assets.insert(0, Asset('embed:flexx-init.js', t, []))
+        js_assets.insert(0, Asset('embed/flexx-init.js', t, []))
         
         # todo: set served!
         # todo: fix incorrect order; loader should be able to handle it for JS
@@ -873,47 +904,71 @@ class SessionAssets:
         
         return js_assets, css_assets
     
-    def get_page(self, single=False):
+    def get_page(self, link=2):
         """ Get the string for the HTML page to render this session's app.
         """
-        js_assets, css_assets = self.get_assets_in_order(True)
-        return self._get_page(js_assets, css_assets, single)
+        js_assets, css_assets = self._get_assets_in_order(True)
+        for asset in js_assets + css_assets:
+            if asset.remote and asset.remote.startswith('file://'):
+                raise RuntimeError('Can only use remote assets with "file://" '
+                                   'when exporting.')
+        return self._get_page(js_assets, css_assets, link, False)
     
-    def get_page_for_export(self, commands, single=False):
+    def get_page_for_export(self, commands, link=0):
         """ Get the string for an exported HTML page (to run without a server).
         """
         # Create lines to init app
         lines = []
-        lines.append('flexx.is_exported = true;\n')  # todo: use session_id = 'exported'?
+        lines.append('flexx.is_exported = true;\n')
         lines.append('flexx.runExportedApp = function () {')
         lines.extend(['    flexx.command(%s);' % reprs(c) for c in commands])
         lines.append('};\n')
-        # Compose - make it use a dummy session id
-        id, self._id = self._id, 'exported'
-        js_assets, css_assets = self.get_assets_in_order(True)
-        self._id = id
-        js_assets.append(Asset('flexx-export.js', [], '\n'.join(lines)))
-        return self._get_page(js_assets, css_assets, single)
+        # Create a session asset for it
+        self.add_asset(Asset('flexx-export.js', '\n'.join(lines), []))
+        
+        # Compose
+        js_assets, css_assets = self._get_assets_in_order(True)
+        return self._get_page(js_assets, css_assets, link, True)
     
-    def _get_page(self, js_assets, css_assets, single):
+    def _get_page(self, js_assets, css_assets, link, export):
         """ Compose index page.
         """
+        pre_path = '' if export else '/'
+        
+        # todo: how do we make the abs data paths work? allow using relative paths and redirect?
+        
         codes = []
         for assets in [css_assets, js_assets]:
             for asset in assets:
-                link = '/_assets/shared/{}'
-                if self._store.get_asset(asset.name) is not asset:
-                    link = '/_assets/%s/{}' % self.id
-                codes.append(asset.to_html(link))
-            codes.append('')
+                if not link:
+                    html = asset.to_html('{}', link)
+                else:
+                    if asset.name.startswith('embed/'):
+                        html = asset.to_html('', 0)
+                    elif self._store.get_asset(asset.name) is not asset:
+                        html = asset.to_html(pre_path + '_assets/%s/{}' % self.id, link)
+                    else:
+                        html = asset.to_html(pre_path + '_assets/shared/{}', link)
+                codes.append(html)
+            codes.append('')  # whitespace between css and js assets
         
         src = INDEX
-        if single:
-            src = src.replace('ASSET-LINK-HOOK', '')
-            src = src.replace('ASSET-CONTENT-HOOK', '\n'.join(codes))
+        if not link:
+            asset_names = [a.name for a in css_assets + js_assets]
+            codes.insert(0, '<!-- Contents:\n\n- ' + '\n- '.join(asset_names) + '\n\n-->')
+            src = src.replace('ASSET-HOOK', '\n\n\n'.join(codes))
         else:
-            codes = ['    ' + code for code in codes]
-            src = src.replace('ASSET-LINK-HOOK', '\n'.join(codes))
-            src = src.replace('ASSET-CONTENT-HOOK', '')
+            src = src.replace('ASSET-HOOK', '\n'.join(codes))
         
         return src
+    
+    def _export(self, dirname, clear=False):
+        """ Export all assets and data specific to this session.
+        Private method, used by app.export().
+        """
+        # Note that self.id will have been set to the app name.
+        assets = [self._assets[name] for name in self.get_asset_names()]
+        assets = [asset for asset in assets if asset is not None]
+        data = [(name, self.get_data(name)) for name in self.get_data_names()]
+        export_assets_and_data(assets, data, dirname, self.id, clear)
+        logger.info('Exported assets and data for %r to %r.' % (self.id, dirname))

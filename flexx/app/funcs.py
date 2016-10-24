@@ -11,6 +11,7 @@ from .. import webruntime, config, set_log_level
 from . import model, logger
 from .model import Model
 from .session import manager
+from .assetstore import assets
 from .tornadoserver import TornadoServer
 from ..event import _loop
 
@@ -356,7 +357,8 @@ def launch(cls, runtime=None, properties=None, **runtime_kwargs):
     return session.app
 
 
-def export(cls, filename=None, properties=None, single=True):
+def export(cls, filename=None, properties=None, single=None, link=None,
+           write_shared=True):
     """ Export the given Model class to an HTML document.
     
     Arguments:
@@ -365,9 +367,14 @@ def export(cls, filename=None, properties=None, single=True):
             If not given or None, will return the html as a string.
         properties (dict, optional): the initial properties for the model. The
           model is instantiated using ``Cls(**properties)``.
-        single (bool): If True, will include all JS and CSS dependencies
-            in the HTML page. If False, you want to export all assets
-            using ``app.assets.export(dirname)``.
+        link (int): whether to link assets or embed them. If 0 (default) the
+            assets are embedded. If 1, the assets are linked and "served"
+            relative to the document. If 2, assets are linked and remote
+            assets remain remote.
+        write_shared (bool): if True (default) will also write shared assets
+            when linking to assets. This can be set to False when
+            exporting multiple apps to the same location. The shared assets can
+            then be exported last using ``app.assets.export(dirname)``.
     
     Returns:
         html (str): The resulting html. If a filename was specified
@@ -380,10 +387,23 @@ def export(cls, filename=None, properties=None, single=True):
     if not (isinstance(cls, type) and issubclass(cls, Model)):
         raise ValueError('runtime must be a string or Model subclass.')
     
+    # Backward comp - deprecate "single" argument at some point
+    if link is None:
+        if single is not None:
+            logger.warn('Export single arg is deprecated, use link instead.')
+            if not single:
+                link = 2
+    link = int(link or 0)
+    
     # Create session
-    name = cls.__name__
+    name = os.path.basename(filename).split('.')[0]  # cls.__name__
     serve(cls, name, properties)
     session = manager.create_session(name)
+    
+    # Set session id to the app name. This would not be strictly necessary
+    # to make exports work, but it make sure that exporting twice generates
+    # the exact same thing (instead of having randomly generated dir names).
+    session._id = name
     
     # Make fake connection using exporter object
     exporter = ExporterWebSocketDummy()
@@ -392,20 +412,33 @@ def export(cls, filename=None, properties=None, single=True):
     # Clean up again - NO keep in memory to ensure two sessions dont get same id
     # manager.disconnect_client(session)
     
+    # Warn if this app has data and is meant to be run standalone
+    if (not link) and session.get_data_names():
+        logger.warn('Exporting a standalone app, but it has registered data.')
+    
     # Get HTML - this may be good enough
-    html = session.get_page_for_export(exporter._commands, single)
+    html = session.get_page_for_export(exporter._commands, link)
     if filename is None:
         return html
     elif filename.lower().endswith('.hta'):
         hta_tag = '<meta http-equiv="x-ua-compatible" content="ie=edge" />'
         html = html.replace('<head>', '<head>\n    ' + hta_tag, 1)
+    elif not filename.lower().endswith(('.html', 'htm')):
+        raise ValueError('Invalid extension for exporting to %r' %
+                         os.path.basename(filename))
     
-    # Save to file
-    if filename.startswith('~'):
-        filename = os.path.expanduser(filename)
+    # Save to file. If standalone, all assets will be included in the main html
+    # file, if not, we need to export shared assets and session assets too.
+    filename = os.path.abspath(os.path.expanduser(filename))
+    if link:
+        if write_shared:
+            assets.export(os.path.dirname(filename))
+        session._export(os.path.dirname(filename))
     with open(filename, 'wb') as f:
         f.write(html.encode())
-    logger.info('Exported app to %r' % filename)
+    
+    app_type = 'standalone app' if link else 'app'
+    logger.info('Exported %s to %r' % (app_type, filename))
 
 
 class ExporterWebSocketDummy:

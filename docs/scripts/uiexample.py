@@ -88,7 +88,7 @@ def create_ui_example(filename, to_root, height=300):
     
     # Export
     try:
-        app.export(m.__dict__[class_name], filename_abs, single=False)
+        app.export(m.__dict__[class_name], filename_abs, link=2, write_shared=False)
     except Exception as err:
         err_text = str(err)
         msg = 'Example not generated. <pre>%s</pre>' % err_text
