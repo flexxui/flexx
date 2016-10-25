@@ -129,6 +129,11 @@ def get_active_model():
     models = _get_active_models()
     if models:
         return models[-1]
+    else:
+        from .session import manager
+        session = manager.get_default_session()
+        if session is not None:
+            return session.app
 
 
 def stub_emitter_func_py(self, *args):
@@ -355,9 +360,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             if active_model is not None:
                 session = active_model.session
         if session is None:
-            from .session import manager
-            session = manager.get_default_session()
-        if session is None:
             raise RuntimeError('Cannot instantiate Model %r without a session'
                                % self.id)
         self._session = session
@@ -444,7 +446,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     
     def __check_not_active(self):
         active_models = _get_active_models()
-        if self in active_models and self.session.app_name != '__default__':
+        if self in active_models:
             raise RuntimeError('It seems that the event loop is processing '
                                'events while a Model is active. This has a '
                                'high risk on race conditions.')

@@ -93,7 +93,7 @@ def test_js_module_exports():
     assert 'return aa' in code
     
     code = create_js_module('foo.js', CODE, ['bb'], ['aa', 'bb'], 'simple')
-    assert 'return {aa, bb}' in code
+    assert 'return {aa: aa, bb: bb}' in code
     
     
 
