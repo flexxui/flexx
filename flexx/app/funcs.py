@@ -164,20 +164,27 @@ def _auto_closer(*events):
 ## App functions
 
 
-
-def init_interactive(runtime=None):
+def init_interactive(cls=None, runtime=None):
     """ Initialize Flexx for interactive mode. This creates a default session
     and launches a runtime to connect to it. Instantiating a Model object
     will automatically associate it with the default session.
     
     Parameters:
+        cls (None, Model): a subclass of ``app.Model`` (or ``ui.Widget``) to use
+            as the "default active model". Only has effect the first time that
+            this function is called.
         runtime (str): the runtime to launch the application in. Default 'xul'.
     """
+    
+    # Determine default model class (which is a Widget if ui is imported)
+    if cls is None and 'flexx.ui' in sys.modules:
+        from .. import ui
+        cls = ui.Widget
     
     # Create the default session
     session = manager.get_default_session()
     if session is None:
-        session = manager.create_default_session()
+        session = manager.create_default_session(cls)
     else:
         return  # default session already running
 
@@ -187,14 +194,6 @@ def init_interactive(runtime=None):
     url = '%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id)
     session._runtime = launch('http://' + url, runtime=runtime)
     
-    # Create a "default widget"
-    if 'flexx.ui' in sys.modules:
-        from .. import ui
-        from .model import _get_active_models
-        w = ui.Widget(is_app=True)
-        active_models = _get_active_models()
-        active_models.append(w)
-
 
 class NoteBookHelper:
     """ Object that captures commands send to the websocket during the

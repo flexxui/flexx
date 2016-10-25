@@ -61,7 +61,7 @@ class AppManager(event.HasEvents):
                 logger.warn('Re-registering app class %r' % name)
         self._appinfo[name] = cls, properties, pending, connected
     
-    def create_default_session(self):
+    def create_default_session(self, cls=None):
         """ Create a default session for interactive use (e.g. the notebook).
         """
         
@@ -71,6 +71,16 @@ class AppManager(event.HasEvents):
         session = Session('__default__')
         self._session_map[session.id] = session
         self._appinfo['__default__'] = (None, {}, [session], [])
+        
+        if cls is None:
+            cls = Model
+        if not isinstance(cls, type) and issubclass(cls, Model):
+            raise TypeError('create_default_session() needs a Model subclass.')
+        
+        # Create app instance
+        app = cls(session=session, is_app=True)
+        session._set_app(app)
+        
         return session
     
     def get_default_session(self):
