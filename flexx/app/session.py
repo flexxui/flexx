@@ -236,8 +236,8 @@ manager = AppManager()
 
 
 class Session(SessionAssets):
-    """ A session between Python and the client runtime
-
+    """
+    A session between Python and the client runtime.
     This class is what holds together the app widget, the web runtime,
     and the websocket instance that connects to it.
     """

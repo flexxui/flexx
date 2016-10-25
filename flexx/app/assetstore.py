@@ -220,14 +220,14 @@ class Asset:
             subclasses, and (for JS) any PyScript compatible class or function.
         deps (list): names of assets that this asset depends on, used to
             resolve the load order. For module assets one can use
-            'foo.js as foo' to define the name by which the dependency can be
+            `'foo.js as foo'` to define the name by which the dependency can be
             accessed inside the module.
         exports (list, str, optional): Should not be given for CSS. If given
             for JS (and not None) the asset is wrapped in an AMD module that
             exports the given name/names. Note that providing an empty list
             is interpreted as "make a module without exported names".
     
-    *Remote assets*
+    **Remote assets**
     
     If a source is provided as a URI (starting with 'http://', 'https://' or
     'file://') Flexx will (down)load the code to include it in the final asset.
@@ -475,11 +475,10 @@ class Asset:
 
 
 class AssetStore:
-    """ Provider of shared assets (CSS, JavaScript) and data (images, etc.).
-    
+    """
+    Provider of shared assets (CSS, JavaScript) and data (images, etc.).
     The global asset store object can be found at ``flexx.app.assets``.
     Assets and data in the asset store can be used by all sessions.
-    
     Each session object also keeps track of assets and data. Using
     ``session.add_asset(str_name)`` makes a session use a shared asset.
     """

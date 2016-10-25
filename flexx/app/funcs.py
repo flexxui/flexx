@@ -166,12 +166,11 @@ def _auto_closer(*events):
 
 def init_interactive(cls=None, runtime=None):
     """ Initialize Flexx for interactive mode. This creates a default session
-    and launches a runtime to connect to it. Instantiating a Model object
-    will automatically associate it with the default session.
+    and launches a runtime to connect to it. 
     
     Parameters:
         cls (None, Model): a subclass of ``app.Model`` (or ``ui.Widget``) to use
-            as the "default active model". Only has effect the first time that
+            as the *default active model*. Only has effect the first time that
             this function is called.
         runtime (str): the runtime to launch the application in. Default 'xul'.
     """
