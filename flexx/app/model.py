@@ -518,6 +518,12 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 self._id, reprs(name), reprs(txt))
             self._session._exec(cmd)
     
+    def _register_handler(self, *args):
+        event_type = args[0].split(':')[0].strip('!')
+        if not self.get_event_handlers(event_type):
+            self.call_js('_new_event_type_hook("%s")' % event_type)
+        return super()._register_handler(*args)
+    
     def _handlers_changed_hook(self):
         handlers = self._HasEvents__handlers
         types = [name for name in handlers.keys() if handlers[name]]
@@ -590,6 +596,17 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         def init(self):
             """ Can be overloaded by subclasses to initialize the model.
+            """
+            pass
+        
+        def _register_handler(self, *args):
+            event_type = args[0].split(':')[0].strip('!')
+            if not self.get_event_handlers(event_type):
+                self._new_event_type_hook(event_type)
+            return super()._register_handler(*args)
+        
+        def _new_event_type_hook(self, event_type):
+            """ Called when a new event is registered.
             """
             pass
         
