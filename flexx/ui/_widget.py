@@ -125,8 +125,7 @@ class Widget(Model):
         # All widgets need phosphor
         self._session.use_global_asset('phosphor-all.js', before='flexx-ui.css')
         self._session.use_global_asset('phosphor-all.css', before='flexx-ui.css')
-
-
+    
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
         """
@@ -225,10 +224,23 @@ class Widget(Model):
             return float(v[0]), float(v[1])
     
         @event.prop
-        def tabindex(self, v=-1):
+        def tabindex(self, v=None):
             """ The index used to determine widget order when the user
-            iterates through the widgets using tab.
+            iterates through the widgets using tab. This also determines
+            if a widget is able to receive key events. Flexx automatically
+            sets this property when it should emit key events.
+            Effect of possible values on underlying DOM element:
+            
+            * None: element cannot have focus unless its a special element like
+                a link or form control (default).
+            * -1: element can have focus, but is not reachable via tab.
+            * 0: element can have focus, and is reachable via tab in the order
+              at which the element is defined.
+            * 1 and up: element can have focus, and the tab-order is determined
+              by the value of tabindex.
             """
+            if v is None:
+                return None
             return int(v)
     
         # Also see size readonly defined in JS
@@ -522,7 +534,14 @@ class Widget(Model):
         # todo: events: focus, enter, leave ... ?
 
         CAPTURE_MOUSE = False
-
+        
+        def _new_event_type_hook(self, event_type):
+            # In order to receive JS key events, we need a tabindex.
+            if self.tabindex is None:
+                if event_type in ('key_down', 'key_up', 'key_press'):
+                    self.tabindex = -1
+            super()._new_event_type_hook(event_type)
+        
         def _init_events(self):
             # Connect some standard events
             self.node.addEventListener('mousedown', self.mouse_down, 0)
@@ -703,9 +722,13 @@ class Widget(Model):
 
         @event.connect('tabindex')
         def __update_tabindex(self, *events):
-            # Note that this also makes the widget able to get focus, and this
+            # Note that this also makes the widget able to get focus, and thus
             # able to do key events.
-            self.node.tabIndex = events[-1].new_value
+            ti = events[-1].new_value
+            if ti is None:
+                self.node.removeAttribute('tabIndex')
+            else:
+                self.node.tabIndex = ti
         
         @event.connect('children')
         def __make_singleton_container_widgets_work(self, *events):
