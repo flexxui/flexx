@@ -1,13 +1,9 @@
 """
 The app module implements the connection between Python and JavaScript.
-
-It implements a simple server based on Tornado. HTML is served to
-provide the client with the JavaScript and CSS, but once connected, all
-communication goed via a websocket.
-
-A central component is the ``Model`` class, which allows definition of
-objects that have both a Python and JavaScript representation, forming
-a basis for model-view-like systems.
+It runs a web server and websocket server based on Tornado, provides
+an asset (and data) management system, and provides the ``Model`` class,
+which allows definition of objects that have both a Python and JavaScript
+representation, forming the basis for widgets etc.
 
 Some background info on the server process
 ------------------------------------------
@@ -16,12 +12,17 @@ Each server process hosts on a single URL (domain+port), but can serve
 multiple applications (via different paths). Each process uses one
 tornado IOLoop, and exactly one Tornado Application object.
 
+When a client connects to the server, it is served an HTML page, which
+contains the information needed to connect to a websocket. From there,
+all communication happens over this websocket.
+
 Applications
 ------------
 
 A ``Model`` class can be made into an application by decorating it with
 ``app.serve``. This registers the application, so that clients can connect
-to the app based on its name. One instance of this class is instantiated
+to the app based on its name (or using a custom name specified in
+``app.serve()``). One instance of this class is created
 per connection. Multiple apps can be hosted from the same process simply
 be specifying more app classes. To connect to the application
 corresponding to the `MyApp` class, one should connect to
@@ -29,25 +30,100 @@ corresponding to the `MyApp` class, one should connect to
 
 An app can also be launched (via ``app.launch()``), which will invoke
 a client webruntime which is connected to the returned app object. This
-is the intended way to launch desktop-like apps. An app can also be
-exported to HTML via ``app.export()``.
+is the intended way to launch desktop-like apps.
+
+An app can also be exported to HTML via ``app.export()``. One can
+create a drectory structure that contains multiple exported apps that
+share assets, or export apps as standalone html documents.
 
 Starting the server
 -------------------
 
-Use ``start()`` to enter the mainloop for the server. For desktop
-applications you can use ``run()``, which does what ``start()`` does,
+Use ``app.start()`` to enter the mainloop for the server. For desktop
+applications you can use ``app.run()``, which does what ``start()`` does,
 except the main loop exits when there are no more connections (i.e. the
-server stops when the window is closed).
+server stops when the (last) window is closed).
 
-In the notebook
+Interactive use
 ---------------
 
+Further, Flexx can be used interactively, from an IDE or from the Jupyter
+notebook. Use ``app.init_interactive()`` to launch a runtime in the same
+way as ``app.launch()``, except one can now interactively (re)define models
+and widgets, and make them appear in the runtime/browser.
+
 In the IPython/Jupyter notebook, the user needs to run
-``init_notebook()`` which will inject JS and CSS into the browser.
+``init_notebook()`` which will inject the necessary JS and CSS.
 Simple widgets (e.g. buttons) will display just fine, but for other
 widgets you might want to use ``SomeWidget(style='height:300px')`` to
 specify its size.
+
+
+Asset management
+----------------
+
+When writing code that relies on a certain JS library, that library
+can be loaded in the client by adding it as an asset. This can be done using:
+
+.. code-block:: py
+    
+    # Normal asset
+    your_model.session.add_asset(name='mydep.js', [js_code], [dependencies])
+    
+    # Sometimes a more lightweight *remote* asset is prefered
+    your_model.session.add_asset('http://some.cdn/lib.js')
+
+When you write several ``Model`` subclasses, and perhaps PyScript
+functions/classes, you might want to consider packing them in a module like so:
+
+.. code-block:: py
+
+    # As an example, define a PyScipt-compatible function here
+    def foo():
+        print('hello world')
+    
+    # Get a list of classes that is defined in the given Python module
+    classes = app.assets.get_module_classes('my.module')
+    
+    # Package it up in an asset
+    assets.add_shared_asset(
+            name='my_module.js',
+            sources=[foo, 'var bar = 42;'] + classes,
+            deps=[flexx-ui.js'],
+            exports=[])
+    
+    # If your models define CSS, you might want to make a corresponding .css asset
+
+
+In the above example, one can see how we create an asset consisting of sources
+that are a mix of Model objects, PyScript-compatible objects, and
+strings of raw JS. We define that our modules depend on ``flexx-ui.js``.
+By specifying ``exports`` we're defining this as an AMD module. Note that all
+public classes that we specified in ``sources`` will automatically be added
+as an exported name.
+
+This is all that's needed. When one of your classes get instantiated, it
+will automatically trigger the use of this asset (and its dependencies)
+in the current session.
+
+
+Data management
+---------------
+
+Data can be provided to the client in a similar way:
+
+.. code-block:: py
+    
+    # Add shared data
+    link = app.assets.add_shared_data('some_name.png', binary_blob)
+
+    # Add session-specific data
+    link = your_model.session.add_data('some_name.png', binary_blob)
+
+Note that ``binary_blob`` can also be a string starting with ``http://`` or
+``file://``. In the future we plan to make it easier to load arbitrary
+data in the client (mainly for scientific purposes).
+
 
 """
 
