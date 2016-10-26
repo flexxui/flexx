@@ -184,6 +184,8 @@ class ComboBox(BaseDropdown):
     with an editable text. It can be used to select among a set of
     options in a more compact manner than a TreeWidget would.
     Optionally, the text of the combobox can be edited.
+    Connect to the ``text`` and/or ``selected_index`` properties to keep
+    track of interactions.
     """
         
     CSS = """
