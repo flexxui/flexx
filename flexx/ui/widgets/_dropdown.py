@@ -33,7 +33,7 @@
             
             # A combobox
             self.combo = ui.ComboBox(editable=True,
-                                     options=('foo', 'bar', 'spaaaaaaaaam', 'egs'))
+                                     options=('foo', 'bar', 'spaaaaaaaaam', 'eggs'))
             self.label = ui.Label()
         
         class JS:
@@ -65,10 +65,11 @@ class BaseDropdown(Widget):
         .flx-BaseDropdown {
             display: inline-block;
             overflow: visible;
-            margin: 2px;
+            margin: 0;
             padding: 2px;
             border: 1px solid black;
-            height: 1.7em;
+            min-height: 1.7em;
+            max-height: 1.7em;
         }
         
         .flx-BaseDropdown > .flx-dd-edit {
@@ -149,13 +150,12 @@ class BaseDropdown(Widget):
             self._button = self.node.childNodes[3]
             self._strud = self.node.childNodes[4]
             
-            self._label.addEventListener('click', self._but_click, 0)
-            self._button.addEventListener('click', self._but_click, 0)
-            self.node.addEventListener('blur', self._collapse, 0)
-            
             f2 = lambda e: self._submit_text() if e.which == 13 else None
             self._edit.addEventListener('keydown', f2, False)
             self._edit.addEventListener('blur', self._submit_text, False)
+            
+            self._label.addEventListener('click', self._but_click, 0)
+            self._button.addEventListener('click', self._but_click, 0)
         
         @event.connect('text')
         def __on_text(self, *events):
@@ -172,10 +172,39 @@ class BaseDropdown(Widget):
             self.text = self._edit.value
         
         def _expand(self):
+            # Expand
             self.node.classList.add('expanded')
+            # Collapse when the node changes position (e.g. scroll or layout change)
+            rect = self.node.getBoundingClientRect()
+            self._rect_to_check = rect
+            window.setTimeout(self._check_expanded_pos, 100)
+            # Collapse when the mouse is used outside the combobox (or its children)
+            window.document.addEventListener('mouseup', self._collapse_maybe, 0)
+            # Return rect so subclasses can use it
+            return rect
+        
+        def _collapse_maybe(self, e):
+            # Collapse if the given mouse event is outside the combobox.
+            # Better version of blur event, sort of,
+            t = e.target
+            while t is not window.document.body:
+                if t is self.node:
+                    return
+                t = t.parentElement
+            window.document.removeEventListener('mouseup', self._collapse_maybe)
+            self._collapse()
         
         def _collapse(self):
             self.node.classList.remove('expanded')
+        
+        def _check_expanded_pos(self):
+            if self.node.classList.contains('expanded'):
+                rect = self.node.getBoundingClientRect()
+                if not (rect.top == self._rect_to_check.top and
+                        rect.left == self._rect_to_check.left):
+                    self._collapse()
+                else:
+                    window.setTimeout(self._check_expanded_pos, 100)
 
 
 class ComboBox(BaseDropdown):
@@ -198,16 +227,13 @@ class ComboBox(BaseDropdown):
             border: 1px solid black;
             margin: 0;
             padding: 2px;
-            position: absolute;
-            top: calc(1.7em - 3px);  /* matches box height */
-            left: -1px;
-            right: -1px;
+            position: fixed;  /* because all our widgets are overflow:hidden */
+            background: white;
+            z-index: 9999;
             display: none;
         }
         .flx-ComboBox.expanded > ul {
             display: initial;
-            background: white;
-            z-index: 999;
         }
         
         .flx-ComboBox.expanded > ul > li:hover {
@@ -265,13 +291,19 @@ class ComboBox(BaseDropdown):
             self.node.appendChild(self._ul)
             
             self._ul.addEventListener('click', self._ul_click, 0)
-        
+            
         def _ul_click(self, e):
             index = e.target.index
             if index >= 0:
                 self.selected_index = index
                 self.text = self.options[index]
             self._collapse()
+        
+        def _expand(self):
+            rect = super()._expand()
+            self._ul.style.left = rect.left + 'px'
+            self._ul.style.top = (rect.bottom - 1) + 'px'
+            self._ul.style.width = (rect.width - 6) + 'px'
         
         def _submit_text(self):
             self.text = self._edit.value
@@ -318,17 +350,16 @@ class DropdownContainer(BaseDropdown):
     
     CSS = """
         .flx-DropdownContainer > .flx-Widget {
-            display: none;
-            position: absolute;
-            top: calc(1.7em - 3px);
-            left: -1px;
-            right: -1px;
+            position: fixed;
             min-height: 100px;
+            max-height: 300px;
+            width: 200px;
+            background: white;
+            z-index: 10001;
+            display: none;
         }
         .flx-DropdownContainer.expanded > .flx-Widget {
             display: initial;
-            background: white;
-            z-index: 999;
         }
     """
     
@@ -347,3 +378,10 @@ class DropdownContainer(BaseDropdown):
         
         def _remove_child(self, widget):
             self.node.removeChild(widget.node)
+        
+        def _expand(self):
+            rect = super()._expand()
+            node = self.children[0].node
+            node.style.left = rect.left + 'px'
+            node.style.top = (rect.bottom - 1) + 'px'
+            # node.style.width = (rect.width - 6) + 'px'
