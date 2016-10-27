@@ -322,7 +322,7 @@ class ComboBox(BaseDropdown):
             strud = ''
             for i, option in enumerate(self.options):
                 li = window.document.createElement('li')
-                li.innerHTML = option
+                li.innerHTML = option if len(option.strip()) else '&nbsp;'
                 li.index = i
                 self._ul.appendChild(li)
                 strud += option + '&nbsp;&nbsp;<span class="flx-dd-space"></span><br />'
