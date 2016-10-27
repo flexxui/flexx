@@ -224,6 +224,7 @@ class ComboBox(BaseDropdown):
         
         .flx-ComboBox > ul  {
             list-style-type: none;
+            box-sizing: border-box;
             border: 1px solid black;
             margin: 0;
             padding: 2px;
@@ -303,7 +304,7 @@ class ComboBox(BaseDropdown):
             rect = super()._expand()
             self._ul.style.left = rect.left + 'px'
             self._ul.style.top = (rect.bottom - 1) + 'px'
-            self._ul.style.width = (rect.width - 6) + 'px'
+            self._ul.style.width = rect.width + 'px'
         
         def _submit_text(self):
             self.text = self._edit.value
