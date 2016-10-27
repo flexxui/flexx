@@ -7,6 +7,7 @@ exp/html_examples.txt
 flexx/resources/phosphor-all.*.js
 flexx/resources/phosphor-all.*.css
 _flexx-notebooks
+_flexx-book
 _feedstock
 flexx_legacy
 _phosphor-all
