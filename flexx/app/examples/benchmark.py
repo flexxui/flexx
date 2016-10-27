@@ -38,7 +38,7 @@ if sys.argv[1:]:
 # Get pystone code
 pycode = open(pystone.__file__, 'rb').read().decode()
 pycode = pycode.replace('from time import time', '')
-jscode = pyscript.py2js(pycode, module='pystone')
+jscode = pyscript.py2js(pycode)
 
 
 def plot_results():
@@ -153,7 +153,8 @@ def bench_str():
 class Benchmarker(app.Model):
     
     def init(self):
-        self.session.add_asset('pystone.js', jscode.encode())
+        self.session.add_asset(name='pystone.js', deps=[]
+                               sources=[jscode, 'var pystone = {main: main};'])
     
     def run_js_benchmark(self):
         self.call_js('_benchmark()')
