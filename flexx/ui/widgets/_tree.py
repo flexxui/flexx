@@ -92,15 +92,15 @@ class TreeWidget(Widget):
     
     Style classes applied to the TreeWidget:
     
-    * ``listmode`` is set on the widget's node if no items have sub items.
+    * ``flx-listmode`` is set on the widget's node if no items have sub items.
     
     Style classes for a TreeItem's elements:
     
-    * ``row`` indicates the row of an item (its text, icon, and checkbox).
-    * ``collapsebut`` the element used to collapse/expand an item.
-    * ``checkbut`` the element used to check/uncheck an item.
-    * ``text`` the element that contains the text of the item.
-    * ``title`` the element that contains the title of the item.
+    * ``flx-row`` indicates the row of an item (its text, icon, and checkbox).
+    * ``flx-collapsebut`` the element used to collapse/expand an item.
+    * ``flx-checkbut`` the element used to check/uncheck an item.
+    * ``flx-text`` the element that contains the text of the item.
+    * ``flx-title`` the element that contains the title of the item.
     
     Style classes applied to the TreeItem, corresponding to its properties:
     
@@ -129,7 +129,7 @@ class TreeWidget(Widget):
         right: 0;
     }
     
-    .flx-TreeWidget .row {
+    .flx-TreeWidget .flx-row {
         display: inline-block;
         margin: 0;
         padding-left: 2px;
@@ -140,12 +140,12 @@ class TreeWidget(Widget):
         -ms-user-select: none;
     }
     
-    .flx-TreeWidget .text {
+    .flx-TreeWidget .flx-text {
         display: inline-block;
         position: absolute;
         right: 0;
     }
-    .flx-TreeWidget .title:empty + .text {
+    .flx-TreeWidget .flx-title:empty + .flx-text {
         position: initial;  /* .text width is not used*/
     }
     
@@ -163,16 +163,16 @@ class TreeWidget(Widget):
     }
     
     /* collapse button */
-    .flx-TreeWidget .collapsebut {
+    .flx-TreeWidget .flx-collapsebut {
         display: inline-block;
         width: 1.5em;  /* must match with ul padding-left */
         text-align: center;
-        margin-left: 1px;  /* aligns better with indentation guide */
+        margin-left: -1px;  /* aligns better with indentation guide */
     }
-    .flx-TreeWidget .collapsed-null > .collapsebut {
+    .flx-TreeWidget .collapsed-null > .flx-collapsebut {
         visibility: 'hidden';
     }
-    .flx-TreeWidget.listmode .collapsebut {
+    .flx-TreeWidget.flx-listmode .flx-collapsebut {
         display: none;
     }
     
@@ -183,7 +183,7 @@ class TreeWidget(Widget):
     .flx-TreeWidget > ul {
         padding-left: 0em; 
     }
-    .flx-TreeWidget.listmode ul {
+    .flx-TreeWidget.flx-listmode ul {
         padding-left: 0.25em;
     }
     
@@ -194,18 +194,18 @@ class TreeWidget(Widget):
         padding: 3px;
     }
     
-    .flx-TreeWidget .selected-true > .row {
+    .flx-TreeWidget .selected-true > .flx-row {
         background: rgba(128, 128, 128, 0.35);
     }
     
-    .flx-TreeWidget .collapsed-true > .collapsebut::after {
+    .flx-TreeWidget .collapsed-true > .flx-collapsebut::after {
         content: '\\23f5';
     }
-    .flx-TreeWidget .collapsed-false > .collapsebut::after {
+    .flx-TreeWidget .collapsed-false > .flx-collapsebut::after {
         content: '\\23f7';
     }
     
-    .flx-TreeWidget .collapsebut {
+    .flx-TreeWidget .flx-collapsebut {
         color: rgba(128, 128, 128, 0.6);
     }
     .flx-TreeWidget .collapsed-false > ul > li {
@@ -226,7 +226,7 @@ class TreeWidget(Widget):
         content: '\\2610\\00a0';
     }
     
-    .flx-TreeWidget .text {
+    .flx-TreeWidget .flx-text {
         width: 50%;
     }
     
@@ -285,9 +285,9 @@ class TreeWidget(Widget):
             for i in self.items:
                 listmode = listmode and len(i.items) == 0
             if listmode:
-                self.node.classList.add('listmode')
+                self.node.classList.add('flx-listmode')
             else:
-                self.node.classList.remove('listmode')
+                self.node.classList.remove('flx-listmode')
         
         @event.connect('max_selected')
         def __max_selected_changed(self, *events):
@@ -423,12 +423,12 @@ class TreeItem(Model):
         _HTML = ''.join([line.split('#')[0].strip() for line in """
             
             # This is the actual HTML used to generate an item
-            <span class='row'>                  # the row that represents the item
+            <span class='flx-row'>         # the row that represents the item
                 <span class='padder'></span>   # padding
-                <span class='collapsebut'></span>   # the collapse button
+                <span class='flx-collapsebut'></span>   # the collapse button
                 <span class='checkbut'></span>  # the check button
-                <span class='title'></span>     # the title text for this item
-                <span class='text'></span>      # the text for this item
+                <span class='flx-title'></span>     # the title text for this item
+                <span class='flx-text'></span>      # the text for this item
                 </span>
             <ul></ul>                           # to hold sub items
             
