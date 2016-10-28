@@ -95,7 +95,7 @@ def _install_assets():
     assets.add_shared_asset(
             name='flexx-ui.js',
             sources=classes,
-            deps=['phosphor-all.js', 'flexx-app.js'],
+            deps=['phosphor-all.js', 'flexx-app.js as flexx_app'],
             exports=[])  # makes this a module
     
     assets.add_shared_asset(

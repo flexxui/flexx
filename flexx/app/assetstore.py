@@ -41,6 +41,14 @@ ASSET-HOOK
 """
 
 # todo: make this work with out-of-order assets too
+
+# This is our loader for AMD modules. It invokes the modules immediately,
+# since we want Flexx to be ready to use so we can execute commands via the
+# websocket. It also allows redefining modules so that one can interactively
+# (re)define module classes. The loader is itself wrapped in a IIFE to
+# create a private namespace. The modules must follow this pattern:
+# define(name, dep_strings, function (name1, name2) {...});
+
 LOADER = """
 /*Flexx module loader. Licensed by BSD-2-clause.*/
 
@@ -50,41 +58,46 @@ if (typeof window === 'undefined' && typeof module == 'object') {
     global.window = global; // https://github.com/nodejs/node/pull/1838
     window.is_node = true;
 }
-if (typeof define === 'function' && define.amd) {
-    // An AMD loader is already in place
-} else {
-    window._flexx_modules = {};
-    window.define = function (name, deps, factory) {
-        if (arguments.length == 1) {
-            factory = name;
-            deps = [];
-            name = null;
+if (typeof flexx == 'undefined') {
+    window.flexx = {};
+}
+
+var modules = {};
+function define (name, deps, factory) {
+    if (arguments.length == 1) {
+        factory = name;
+        deps = [];
+        name = null;
+    }
+    if (arguments.length == 2) {
+        factory = deps;
+        deps = name;
+        name = null;
+    }
+    // Get dependencies - in current implementation, these must be loaded
+    var dep_vals = [];
+    for (var i=0; i<deps.length; i++) {
+        if (modules[deps[i]] === undefined) {
+            throw Error('Unknown dependency: ' + deps[i]);
         }
-        if (arguments.length == 2) {
-            factory = deps;
-            deps = name;
-            name = null;
-        }
-        // Get dependencies - in current implementation, these must be loaded
-        var dep_vals = [];
-        for (var i=0; i<deps.length; i++) {
-            if (_flexx_modules[deps[i]] === undefined) {
-                throw Error('Unknown dependency: ' + deps[i]);
-            }
-            dep_vals.push(_flexx_modules[deps[i]]);
-        }
-        // Load the module and store it if is not anonymous
-        var mod = factory.apply(null, dep_vals);
-        if (name) {
-            _flexx_modules[name] = mod;
-        }
-    };
-    window.define.amd = true;
-    window.define.flexx = true;
-    window.require = function(name) {
-        return _flexx_modules[name];
+        dep_vals.push(modules[deps[i]]);
+    }
+    // Load the module and store it if is not anonymous
+    var mod = factory.apply(null, dep_vals);
+    if (name) {
+        modules[name] = mod;
     }
 }
+define.amd = true;
+define.flexx = true;
+
+function require (name) {
+    return modules[name];
+}
+
+// Expose this
+window.flexx.define = define;
+window.flexx.modules = modules;
 
 })();
 """
@@ -412,13 +425,13 @@ class Asset:
                     pre2 = ', '.join(['%s = _py.%s' % (n, n) for n in method_names])
                     code.insert(0, 'var %s;\nvar %s;' % (pre1, pre2))
                 self._cache = create_js_module(self.name, '\n\n'.join(code), 
-                                            self._imports, self._exports, 'amd')
+                                            self._imports, self._exports, 'amd-flexx')
             elif self.remote:
                 self._cache = self._handle_uri(self.remote)
             else:
                 code, names = self._get_code_and_names()
                 self._cache = '\n\n'.join(code)
-            if self._need_pyscript_std:
+            if self._need_pyscript_std or self.name.startswith('pyscript-std'):
                 self._cache = HEADER + '\n\n' + self._cache  # Add license header
         return self._cache
     
@@ -658,6 +671,7 @@ class SessionAssets:
     
     def _inject_asset_dynamically(self, asset):
         """ Load an asset in a running session.
+        This method assumes that this is a Session class.
         """
         logger.debug('Dynamically loading asset %r' % asset.name)
         
@@ -674,7 +688,7 @@ class SessionAssets:
             else:
                 display(HTML("<style>%s</style>" % asset.to_string()))
         else:
-            # Load using Flexx construct
+            # Load using Flexx construct (using Session._send_command())
             suffix = asset.name.split('.')[-1].upper()
             self._send_command('DEFINE-%s %s' % (suffix, asset.to_string()))
     
@@ -840,7 +854,7 @@ class SessionAssets:
             # Remember cls, will be served in the index
             self._extra_model_classes.append(cls)
         else:
-            # Define class dynamically - assuming we're a session subclass ...
+            # Define class dynamically via a single-class asset
             for asset in [Asset(cls.__name__ + '.js', [cls], [], []), 
                           Asset(cls.__name__ + '.css', [cls], [])]:
                 if asset.to_string().strip():

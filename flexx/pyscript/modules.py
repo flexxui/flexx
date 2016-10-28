@@ -2,7 +2,10 @@
 Functionality for creating JS modules of various formats, including AMD and UMD.
 """
 
+import re
 
+
+# Immediately Invoked Function Expression (IIFE)
 HIDDEN = """
 (function () {
 
@@ -39,6 +42,8 @@ return {exports};
 });
 """.lstrip()
 
+AMD_FLEXX = "flexx." + AMD
+
 
 # https://github.com/umdjs/umd/blob/master/returnExports.js
 UMD = """
@@ -67,6 +72,13 @@ return {exports};
 """.lstrip()
 
 
+def isidentifier(s):
+    # http://stackoverflow.com/questions/2544972/
+    if not isinstance(s, str):
+        return False
+    return re.match(r'^\w+$', s, re.UNICODE) and re.match(r'^[0-9]', s) is None
+
+
 def create_js_module(name, code, imports, exports, type='umd'):
     """ Wrap the given code in an AMD module.
     
@@ -83,8 +95,8 @@ def create_js_module(name, code, imports, exports, type='umd'):
             get when they import this module. Can be a JS expression or a list
             of names to export.
         type (str): the type of module to export, valid values are
-            'hidden', 'simple' (save module on root), 'amd' and 'umd' (case
-            insensitive). Default 'umd'.
+            'hidden', 'simple' (save module on root), 'amd' , 'amd-flexx' and
+            'umd' (case insensitive). Default 'umd'.
     """
     
     # Check input args
@@ -106,6 +118,9 @@ def create_js_module(name, code, imports, exports, type='umd'):
             dep, dep_name = imp.split(' as ', 1)
         else:
             dep = dep_name = imp
+        if not isidentifier(dep_name):
+            raise ValueError('Import %r is not an identifier, '
+                             'have you used "as"?' % dep_name)
         deps.append(dep)
         dep_names.append(dep_name)
     
@@ -120,7 +135,8 @@ def create_js_module(name, code, imports, exports, type='umd'):
         return_val = '{' + return_val + '}'
     
     # Process type -> select template
-    types = {'hidden': HIDDEN, 'simple': SIMPLE, 'amd': AMD, 'umd': UMD}
+    types = {'hidden': HIDDEN, 'simple': SIMPLE,
+             'amd': AMD, 'umd': UMD, 'amd-flexx': AMD_FLEXX}
     if not isinstance(type, str):
         raise ValueError('create_js_module() type must be str.')
     if type.lower() not in types:
