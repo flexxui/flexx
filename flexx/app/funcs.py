@@ -232,6 +232,10 @@ class NoteBookHelper:
     
     def command(self, msg):
         self._commands.append(msg)
+    
+    @property
+    def ping_counter(self):
+        return self._ws.ping_counter
 
 
 def init_notebook():
@@ -267,7 +271,7 @@ def init_notebook():
     
     # Try loading assets for flexx.ui. This will only work if flexx.ui
     # is imported. This is not strictly necessary, since Flexx can
-    # dynamically load the assets, but it seems nicer to do it here.
+    # dynamically load the assets, but it is nicer to do it here.
     try:
         session.add_asset('flexx-ui.css')
         session.add_asset('flexx-ui.js')
@@ -286,8 +290,11 @@ def init_notebook():
     url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)
     t = "<i>Injecting Flexx JS and CSS</i>"
     t += '\n\n'.join(asset_elements)
-    t += "<script>flexx.ws_url='%s'; " % url
-    t += "flexx.is_notebook=true; flexx.init();</script>"
+    t += """<script>
+            window.flexx.ws_url='%s';
+            flexx.is_notebook=true;
+            flexx.init();
+            </script>""" % url
     
     # Note: the Widget._repr_html_() method is responsible for making
     # the widget show up in the notebook output area.
