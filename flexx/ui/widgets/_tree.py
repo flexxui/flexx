@@ -199,10 +199,10 @@ class TreeWidget(Widget):
     }
     
     .flx-TreeWidget .collapsed-true > .flx-collapsebut::after {
-        content: '\\23f5';
+        content: '\\25B8';  /* small right triangle */
     }
     .flx-TreeWidget .collapsed-false > .flx-collapsebut::after {
-        content: '\\23f7';
+        content: '\\25BE';  /* small down triangle */
     }
     
     .flx-TreeWidget .flx-collapsebut {

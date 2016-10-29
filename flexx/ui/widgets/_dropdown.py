@@ -110,7 +110,7 @@ class BaseDropdown(Widget):
             background: rgba(128, 128, 128, 0.1);
         }
         .flx-BaseDropdown > .flx-dd-button::after {
-            content: '\\23f7';  /* 2228 1F847 1F83F */
+            content: '\\25BE';  /* 2228 1F847 1F83F */
         }
         
         .flx-BaseDropdown .flx-dd-space {
