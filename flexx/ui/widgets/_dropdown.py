@@ -46,11 +46,11 @@
 
 """
 
+from collections import OrderedDict
 
+from ...pyscript import window, this_is_js
 from ... import event
 from .. import Widget
-
-window = None
 
 
 # todo: some form of autocompletetion
@@ -70,12 +70,13 @@ class BaseDropdown(Widget):
             border: 1px solid black;
             min-height: 1.7em;
             max-height: 1.7em;
+            white-space: nowrap; /* keep label and but on-line */
         }
         
         .flx-BaseDropdown > .flx-dd-edit {
             display: none;
             max-width: 2em;  /* reset silly lineedit sizing */
-            min-width: calc(100% - 1.5em);
+            min-width: calc(100% - 1.5em - 2px);
             min-height: 1em;
             margin: 0;
             padding: 0;
@@ -84,7 +85,7 @@ class BaseDropdown(Widget):
         
         .flx-BaseDropdown > .flx-dd-label {
             display: inline-block;
-            min-width: calc(100% - 1.5em);
+            min-width: calc(100% - 1.5em - 2px);
             min-height: 1em;
             user-select: none;
             -moz-user-select: none;
@@ -100,13 +101,14 @@ class BaseDropdown(Widget):
         }
         
         .flx-BaseDropdown > .flx-dd-button {
-            position: absolute;
-            right: 0;
+            display: inline-block;
+            position: static;
+            min-width: 1.5em;
+            max-width: 1.5em;
+            text-align: center;
             margin: 0;
-            border-left: 1px solid rgba(0, 0, 0, 0);
         }
         .flx-BaseDropdown > .flx-dd-button:hover {
-            /*border-left: 1px solid black;*/
             background: rgba(128, 128, 128, 0.1);
         }
         .flx-BaseDropdown > .flx-dd-button::after {
@@ -135,7 +137,7 @@ class BaseDropdown(Widget):
         _HTML = """
             <span class='flx-dd-label'></span>
             <input type='text' class='flx-dd-edit'></input>
-            <span>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+            <span></span>
             <span class='flx-dd-button'></span>
             <div class='flx-dd-strud'>&nbsp;</span>
             """.replace('  ', '').replace('\n', '')
@@ -159,7 +161,7 @@ class BaseDropdown(Widget):
         
         @event.connect('text')
         def __on_text(self, *events):
-            self._label.innerHTML = self.text or '&nbsp;'  # strut it
+            self._label.innerHTML = self.text + '&nbsp;'  # strut it
             self._edit.value = self.text
         
         def _but_click(self):
@@ -261,10 +263,21 @@ class ComboBox(BaseDropdown):
         def selected_index(self, v=None):
             """ The currently selected item index. Can be None if no item has
             been selected or when the text was changed manually (if editable).
+            Can also be programatically set.
             """
             if v is None:
                 return None
             return int(v)
+        
+        @event.prop
+        def selected_key(self, v=None):
+            """ The currently selected item key. Can be None if no item has
+            been selected or when the text was changed manually (if editable).
+            Can also be programatically set.
+            """
+            if v is None:
+                return None
+            return str(v)
         
         @event.prop
         def placeholder_text(self, v=''):
@@ -274,9 +287,27 @@ class ComboBox(BaseDropdown):
         
         @event.prop
         def options(self, options=[]):
-            """ A list of strings representing the options.
+            """ A list of tuples (key, text) representing the options.
+            For items that are given as a string, the key and text are the same.
+            If a dict is given, it is transformed to key-text pairs.
             """
-            return tuple([str(option) for option in options])
+            # If dict ...
+            if isinstance(options, dict):
+                keys = options.keys()
+                if this_is_js() or not isinstance(options, OrderedDict):
+                    keys = sorted(keys)  # Sort dict by key
+                options = [(k, options[k]) for k in keys]
+            # Parse
+            options2 = []
+            for opt in options:
+                if isinstance(opt, (tuple, list)):
+                    opt = str(opt[0]), str(opt[1])
+                else:
+                    opt = str(opt), str(opt)
+                options2.append(opt)
+            #
+            self.selected_key = self.selected_index = None
+            return tuple(options2)
         
         @event.prop
         def editable(self, v=False):
@@ -296,8 +327,10 @@ class ComboBox(BaseDropdown):
         def _ul_click(self, e):
             index = e.target.index
             if index >= 0:
+                key, text = self.options[index]
                 self.selected_index = index
-                self.text = self.options[index]
+                self.selected_key = key
+                self.text = text
             self._collapse()
         
         def _expand(self):
@@ -308,12 +341,25 @@ class ComboBox(BaseDropdown):
         
         def _submit_text(self):
             self.text = self._edit.value
+            # todo: select option if text happens to match it?
             self.selected_index = None
+            self.selected_key = None
         
         @event.connect('selected_index')
         def __on_selected_index(self, *events):
             if self.selected_index is not None:
-                self.text = self.options[self.selected_index]
+                key, text = self.options[self.selected_index]
+                self.text = text 
+                self.selected_key = key
+        
+        @event.connect('selected_key')
+        def __on_selected_key(self, *events):
+            if self.selected_key is not None:
+                key = self.selected_key
+                if self.options[self.selected_index][0] != key:
+                    for index, option in enumerate(self.options):
+                        if option[0] == key:
+                            self.selected_index = index
         
         @event.connect('options')
         def __on_options(self, *events):
@@ -321,11 +367,12 @@ class ComboBox(BaseDropdown):
                 self._ul.removeChild(self._ul.firstChild)
             strud = ''
             for i, option in enumerate(self.options):
+                key, text = option
                 li = window.document.createElement('li')
-                li.innerHTML = option if len(option.strip()) else '&nbsp;'
+                li.innerHTML = text if len(text.strip()) else '&nbsp;'
                 li.index = i
                 self._ul.appendChild(li)
-                strud += option + '&nbsp;&nbsp;<span class="flx-dd-space"></span><br />'
+                strud += text + '&nbsp;&nbsp;<span class="flx-dd-space"></span><br />'
             self._strud.innerHTML = strud
         
         @event.connect('editable')
