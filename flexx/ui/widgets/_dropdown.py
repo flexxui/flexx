@@ -70,13 +70,13 @@ class BaseDropdown(Widget):
             border: 1px solid black;
             min-height: 1.7em;
             max-height: 1.7em;
-            padding-right: 1.5em; /* space for the expand but */
+            white-space: nowrap; /* keep label and but on-line */
         }
         
         .flx-BaseDropdown > .flx-dd-edit {
             display: none;
             max-width: 2em;  /* reset silly lineedit sizing */
-            min-width: 100%;
+            min-width: calc(100% - 1.5em - 2px);
             min-height: 1em;
             margin: 0;
             padding: 0;
@@ -85,7 +85,7 @@ class BaseDropdown(Widget):
         
         .flx-BaseDropdown > .flx-dd-label {
             display: inline-block;
-            min-width: 100%;
+            min-width: calc(100% - 1.5em - 2px);
             min-height: 1em;
             user-select: none;
             -moz-user-select: none;
@@ -102,14 +102,13 @@ class BaseDropdown(Widget):
         
         .flx-BaseDropdown > .flx-dd-button {
             display: inline-block;
-            position: absolute;
+            position: static;
             min-width: 1.5em;
+            max-width: 1.5em;
             text-align: center;
             margin: 0;
-            border-left: 1px solid rgba(0, 0, 0, 0);
         }
         .flx-BaseDropdown > .flx-dd-button:hover {
-            /*border-left: 1px solid black;*/
             background: rgba(128, 128, 128, 0.1);
         }
         .flx-BaseDropdown > .flx-dd-button::after {
