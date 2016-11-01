@@ -14,6 +14,7 @@ import os
 import sys
 import json
 import time
+import types
 import random
 import shutil
 import hashlib
@@ -21,7 +22,8 @@ from urllib.request import urlopen
 from collections import OrderedDict
 
 from .model import Model, get_model_classes
-from ..pyscript import py2js, create_js_module, get_all_std_names, get_full_std_lib
+from ..pyscript import (py2js, Parser,
+                        create_js_module, get_all_std_names, get_full_std_lib)
 from . import logger
 
 
@@ -97,7 +99,8 @@ function require (name) {
 
 // Expose this
 window.flexx.define = define;
-window.flexx.modules = modules;
+window.flexx.require = require;
+window.flexx._modules = modules;
 
 })();
 """
@@ -264,12 +267,11 @@ class Asset:
         # Handle sources
         if sources is None:
             sources = []  # checked below when we know if this is a remote
-        if isinstance(sources, str):
-            sources = [sources]
         if not isinstance(sources, (tuple, list)):
-            raise TypeError('Asset sources must be str/tuple/list.')
+            sources = [sources]
         for source in sources:
             if not (isinstance(source, str) or
+                    isinstance(source, types.ModuleType) or
                     (isinstance(source, type) and issubclass(source, Model)) or
                     (isjs and callable(source))):
                 raise TypeError('Asset %r cannot convert source %r to %s.' %
@@ -358,9 +360,10 @@ class Asset:
         
         * A string of JS/CSS code.
         * A filename or URI (start with "file://", "http://" or "https://"):
-          the code is (down)loaded on the server. 
+          the code is (down)loaded on the server.
         * A subclass of ``Model``: the corresponding JS/CSS is extracted.
         * Any other Python function ot class: JS is generated via PyScript.
+        * A Python module is converted to JS as a whole.
         """
         return tuple(self._sources)
     
@@ -441,11 +444,10 @@ class Asset:
         code = []
         names = []
         for ob in self.sources:
-            c, name = self._convert_to_code(ob)
+            c, names2 = self._convert_to_code(ob)
             if c:
                 code.append(c)
-                if name and not name.startswith('_'):
-                    names.append(name)
+                names.extend([n for n in names2 if n and not n.startswith('_')])
         if not (len(code) == 1 and '\n' not in code[0]):
             code.append('')
         return code, names
@@ -454,26 +456,37 @@ class Asset:
         """ Convert object to JS/CSS.
         """
         isjs = self.name.lower().endswith('.js')
-        name = None
+        names = []
         
         if isinstance(ob, str):
             c = self._handle_uri(ob)
         elif isinstance(ob, type) and issubclass(ob, Model):
-            name = ob.__name__
+            names.append(ob.__name__)
             c = ob.JS.CODE if isjs else ob.CSS
+            self._need_pyscript_std = True
+        elif isinstance(ob, types.ModuleType):
+            fname = ob.__file__
+            py = open(fname, 'rb').read().decode()
+            try:
+                parser = Parser(py, fname, inline_stdlib=False, docstrings=False)
+                c = parser.dump()
+            except Exception as err:
+                raise ValueError('Asset %r cannot convert %r to JS:\n%s' %
+                                 (self.name, ob, str(err)))
+            names.extend(list(parser.vars))
             self._need_pyscript_std = True
         elif isjs and callable(ob):
             try:
-                c = py2js(ob)
+                c = py2js(ob, inline_stdlib=False, docstrings=False)
                 self._need_pyscript_std = True
             except Exception as err:
                 raise ValueError('Asset %r cannot convert %r to JS:\n%s' %
                                  (self.name, ob, str(err)))
-            name = ob.__name__
+            names.append(ob.__name__)
         else:  # pragma: no cover - this should not happen
             raise ValueError('Asset %r cannot convert object %r to %s.' %
                              (self.name, ob, self.name.split('.')[-1].upper()))
-        return c.strip(), name
+        return c.strip(), names
     
     def _handle_uri(self, s):
         if s.startswith(('http://', 'https://')):
