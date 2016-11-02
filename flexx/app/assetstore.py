@@ -273,7 +273,7 @@ class Asset:
             if not (isinstance(source, str) or
                     isinstance(source, types.ModuleType) or
                     (isinstance(source, type) and issubclass(source, Model)) or
-                    (isjs and callable(source))):
+                    (isjs and isinstance(ob, (type, types.FunctionType)))):
                 raise TypeError('Asset %r cannot convert source %r to %s.' %
                                 (name, source, name.split('.')[-1].upper()))
         self._sources = list(sources)
@@ -473,9 +473,9 @@ class Asset:
             except Exception as err:
                 raise ValueError('Asset %r cannot convert %r to JS:\n%s' %
                                  (self.name, ob, str(err)))
-            names.extend(list(parser.vars))
+            names.extend(list(parser.vars))  # todo: only defined vars
             self._need_pyscript_std = True
-        elif isjs and callable(ob):
+        elif isjs and isinstance(ob, (type, types.FunctionType)):
             try:
                 c = py2js(ob, inline_stdlib=False, docstrings=False)
                 self._need_pyscript_std = True

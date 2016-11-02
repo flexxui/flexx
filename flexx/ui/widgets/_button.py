@@ -107,6 +107,10 @@ class BaseButton(Widget):
             return self._create_mouse_event(e)
 
 
+def hello():
+    print('hello world from a PyScript function')
+
+
 class Button(BaseButton):
     """ A push button.
     """
@@ -119,6 +123,10 @@ class Button(BaseButton):
         @event.connect('text')
         def __text_changed(self, *events):
             self.node.innerHTML = events[-1].new_value
+        
+        @event.connect('mouse_click')
+        def __on_click(self, *events):
+            hello()
 
 
 class ToggleButton(BaseButton):

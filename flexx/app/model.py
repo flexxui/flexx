@@ -211,12 +211,12 @@ class ModelMeta(HasEventsMeta):
         cls.JS.__local_properties__ = [name for name in cls.JS.__properties__
                     if getattr(cls.JS, name) is not getattr(cls, name, None)]
         
-        # Set JS and CSS for this class
-        cls.JS.CODE = cls._get_js()
+        # Set JS, META, and CSS for this class
+        cls.JS.CODE, cls.JS.META = cls._get_js()
         cls.CSS = cls.__dict__.get('CSS', '')
     
     def _get_js(cls):
-        """ Get source code for this class.
+        """ Get source code for this class plus the meta info about the code.
         """
         # Since classes are defined in a module, we can safely name the classes
         # by their plain name. But flexx.classes.X remains the "official" 
@@ -226,6 +226,7 @@ class ModelMeta(HasEventsMeta):
         base_class = 'flexx.classes.%s.prototype' % cls.mro()[1].__name__
         code = []
         # Add JS version of HasEvents when this is the Model class
+        # todo: can we include the serializer class via the asset system?
         if cls.mro()[1] is event.HasEvents:
             c = py2js(serializer.__class__, 'flexx.Serializer', inline_stdlib=False)
             code.append(c)
@@ -233,14 +234,14 @@ class ModelMeta(HasEventsMeta):
             c = js_rename(HasEventsJS.JSCODE, 'HasEvents', 'flexx.classes.HasEvents')
             code.append(c)
         # Add this class
-        c = create_js_hasevents_class(cls.JS, cls_name, base_class)
+        c, meta = create_js_hasevents_class(cls.JS, cls_name, base_class)
         code.append(c.replace('var %s =' % cls_name,
                               'var %s = flexx.classes.%s =' % (cls_name, cls_name),
                               1))
         if cls.mro()[1] is event.HasEvents:
             code.append('flexx.serializer.add_reviver("Flexx-Model",'
                         ' flexx.classes.Model.prototype.__from_json__);\n')
-        return '\n'.join(code)
+        return '\n'.join(code), meta
 
 
 class Model(with_metaclass(ModelMeta, event.HasEvents)):

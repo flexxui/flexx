@@ -226,10 +226,14 @@ class Parser1(Parser0):
     def parse_Name(self, node):
         # node.ctx can be Load, Store, Del -> can be of use somewhere?
         name = node.name
-        if name in self.vars:
+        if self.vars.get(name, None):
             name = self.with_prefix(name)
+        elif name in self.NAME_MAP:
+            name = self.NAME_MAP[name]
         else:
-            name = self.NAME_MAP.get(name, name)
+            if not (hasattr(self, 'function_' + name) or
+                    name in ('undefined', 'window')):
+                self.vars.use(name)  # mark as used (not defined)
         return name
     
     def parse_Starred(self, node):

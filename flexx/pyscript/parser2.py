@@ -465,8 +465,7 @@ class Parser2(Parser1):
         
         # Declare iteration variables if necessary
         for t in target:
-            if t not in self.vars:
-                self.vars.add(t)
+            self.vars.add(t)
         
         if sure_is_range:  # Explicit iteration
             # Get range args
@@ -769,15 +768,16 @@ class Parser2(Parser1):
         # Wrap up
         if lambda_:
             code.append('}%s' % binder)
-            ns = self.pop_stack()  # Should conly consist of arg names
+            # ns should only consist of arg names
+            ns = self.pop_stack()
             assert not set(ns).difference(argnames)
         else:
             if not (code and code[-1].strip().startswith('return ')):
                 code.append(self.lf('return null;'))
-            # Pop stack, declare vars, but exclude our argnames
-            ns = self.pop_stack()
+            # Declare vars, but exclude our argnames
             for name in argnames:
-                ns.discard(name)
+                self.vars.discard(name)
+            ns = self.pop_stack()
             pre_code.append(self.get_declarations(ns))
         
         self._indent -= 1
