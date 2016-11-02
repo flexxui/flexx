@@ -26,6 +26,7 @@ from ..pyscript import (py2js, Parser,
                         create_js_module, get_all_std_names, get_full_std_lib)
 from . import logger
 
+pyscript_types = type, types.FunctionType  # class or function
 
 INDEX = """<!doctype html>
 <html>
@@ -222,6 +223,191 @@ def export_assets_and_data(assets, data, dirname, app_id, clear=False):
 
 
 # todo: minification ...
+
+
+# todo: naming
+# todo: create pyscript modules
+class Module:
+    """
+    A JSModule represents the JavaScript corresponding to a Python module,
+    which either defines one ore more Model classes, or is a fully PyScript
+    compatible module.
+    
+    In the former, the JS code includes: 
+    
+    * The JS code corresponding to all Model classes defined in the module.
+    * The transpiled JS from (PySript compatible) functions and classes that
+      are used in the aforementioned JS, present in the module, and
+      not defined in a PyScript-only module. This code can again "pull in"
+      other functions/classes or dependencies.
+    
+    A model can also have dependencies:
+    
+    * The modules that define the base classes of the Model classes.
+    * The modules that define Model classes that are used in the JS. -> or present in the module?
+    * PyScript modules that are present in the module.
+    * PyScript modules that define functions or classes that are used in the JS.
+    * Assets that are present in the module.
+    
+    """
+    
+    def __init__(self, pymodule):
+        if not isinstance(pymodule, types.ModuleType):
+            raise TypeError('Module needs a Python module.')
+        self._pymodule = pymodule
+        
+        # Bookkeeping content of the module
+        self._all_modules = set()  # so we can later add Model-containing module deps
+        self._all_provided_names = set()
+        self._all_imported_names = set()
+        # Stuff defined in this module (in JS)
+        self._model_classes = []
+        self._js_code = []
+        self._css_code = []
+        # Dependencies
+        self._deps = {}  # name -> [as_name, *imports]
+        self._asset_deps = set()
+        
+        # Collect code and dependencies
+        self._collect_from_module()
+        self._collect_deps_from_bases()
+        
+        # Sort js strings in same order as in Python
+        self._js_code.sort(key=lambda x: (x.meta['sorter'], x.meta['linenr']))  # sorter is defined below
+    
+    def __repr__(self):
+        return '<%s %s with %i model classes>' % (self.__class__.__name__,
+                                                  self.name,
+                                                  len(self._model_classes))
+    
+    def _collect_from_module(self):
+        """
+        Collect:
+        * Model classes in this module
+        * Dependencies on modules that define Modules present in this module
+        * Modules present in this module, for later use
+        * PyScript modules present in this module
+        """
+        
+        for name in sorted(dir(self._pymodule)):
+            if name.startswith('__'):
+                continue
+            val = getattr(self._pymodule, name)
+            
+            if isinstance(val, type) and issubclass(val, Model):
+                # Model class: define here or import
+                if val.__module__ == self._pymodule.__name__:
+                    self._all_provided_names.add(name)
+                    self._model_classes.append(val)
+                else:
+                    self._all_imported_names.add(name)
+                    imports = self._deps.setdefault(val.__module__, [val.__module__])
+                    if name == val.__name__:
+                        imports.append(val.__name__)
+                    else:
+                        imports.append(val.__name__ + ' as ' + name)
+            
+            elif isinstance(val, types.ModuleType):
+                # Model: if its a PyScript module, we import it
+                self._all_modules.add(val.__name__)  # todo: names?
+                if getattr(val, '__pyscript__', False):
+                    self._all_imported_names.add(name)
+                    imports = self._deps.setdefault(val.__name__, [None])
+                    imports[0] = name  # set/overwrite as-name
+            if isinstance(val, Asset):
+                self._all_imported_names.append(name)
+                self._asset_deps.add(val)  # todo: or val.name?
+        
+        # Sort models. Is nice, and can make a difference for CSS
+        self._model_classes.sort(key=lambda x: x.JS.CODE.meta['linenr'])
+        
+        # Process JS code
+        for cls in self._model_classes:
+            js = cls.JS.CODE
+            js.meta['sorter'] = 'B'
+            self._css_code.append(cls.CSS)
+            self._js_code.append(js)
+            self._collect_from_js(js.meta['vars_unknown'])
+    
+    def _collect_from_js(self, names):
+        """
+        Collect PySCript compatible functions/classes that are used in JS.
+        If they are definedin a PyScript module, we add that module as a
+        dependency. Otherwise the code for these objects is added.
+        """
+        jss = []  # plural of js
+        
+        for name in reversed(sorted(names)):
+            if name in self._all_provided_names or name in self._all_imported_names:
+                continue  # we've got it covered
+            val = getattr(self._pymodule, name, None)
+            if val is None:
+                continue
+            elif isinstance(val, types.ModuleType):
+                # Ignore. It could be a module with Models (e.g.``ui``),
+                # or a Python lib with a corresponding name in JS.
+                continue
+            elif isinstance(val, pyscript_types) and hasattr(val, '__module__'):
+                m = sys.modules.get(val.__module__, None)
+                
+                if m is not self._pymodule and getattr(m, '__pyscript__', False):
+                    self._all_imported_names.add(name)
+                    imports = self._deps.setdefault(m.__name__, [m.__name__])
+                    imports.append(name)
+                else:
+                    try:
+                        js = py2js(val, inline_stdlib=False, docstrings=False)
+                    except Exception as err:
+                        raise ValueError('Module %r cannot convert %r to JS:\n%s' %
+                                        (self.name, val, str(err)))
+                    jss.append(js)
+                    self._all_provided_names.add(name)
+                    # For sorting
+                    js.meta['sorter'] = 'B' if m is self._pymodule else 'A'
+            else:
+                logger.warn('Name %r is used in JS for %s but Flexx could not '
+                            'find an object for it.' % (name, self.name))
+        
+        # Store JS and recurse
+        for js in jss:
+            self._js_code.insert(0, js)
+        for js in jss:
+            self._collect_from_js(js.meta['vars_unknown'])
+    
+    def _collect_deps_from_bases(self):
+        """
+        Collect dependencies based on the base classes of the Model classes.
+        """
+        for cls in self._model_classes:
+            if cls is Model:
+                continue
+            if len(cls.__bases__) != 1:
+                raise TypeError('Model classes (currently) do not support multiple inheritance.')
+            for base_cls in cls.__bases__:
+                if base_cls.__module__ != self._pymodule:
+                    self._deps.setdefault(base_cls.__module__, [])
+                # else, the base class will also come by in this loop.
+    
+    def collect_module_deps(self):
+        """ Collect dependencies on other modules.
+        """
+        # todo: do we need proxy modules like flexx.ui? Otherwise, this method is useless, I think
+        for mod_name in self._all_modules:
+            if mod_name in assets.modules:
+                self._deps.setdefault(mod_name, [])
+    
+    @property
+    def name(self):
+        """ The (qualified) name of this module.
+        """
+        return self._pymodule.__name__
+    
+    @property
+    def deps(self):
+        """ The dependencies (names of other modules) for this module.
+        """
+        return list(sorted(self._deps.keys()))
+
 
 class Asset:
     """ Class to represent an asset (JS or CSS) to be included on the
@@ -510,6 +696,7 @@ class AssetStore:
     """
     
     def __init__(self):
+        self._modules = dict()
         self._assets = OrderedDict()
         self._data = {}
         self.add_shared_asset(Asset('reset.css', RESET, []))
@@ -527,6 +714,25 @@ class AssetStore:
         # Backward compatibility
         raise RuntimeError('create_module_assets is deprecated. Use '
                            'get_module_classes() plus add_shared_asset() instead.')
+    
+    
+    @property
+    def modules(self):
+        """ The JS modules known to the asset store. Each module corresponds to
+        a Python module.
+        """
+        return self._modules
+    
+    def collect_modules(self):
+        # todo: where to test/skip __main__??
+        new_modules = []
+        for cls in Model.CLASSES:
+            if cls.__module__ not in self._modules:
+                module = Module(sys.modules[cls.__module__])
+                self._modules[cls.__module__] = module
+                new_modules.append(module)
+        for mod in new_modules:
+            module.collect_module_deps()
     
     def get_asset(self, name):
         """ Get the asset instance corresponding to the given name or None

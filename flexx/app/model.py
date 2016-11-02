@@ -74,7 +74,7 @@ from ..event._hasevents import (with_metaclass, new_type, HasEventsMeta,
                                 finalize_hasevents_class)
 from ..event._emitters import Emitter
 from ..event._js import create_js_hasevents_class, HasEventsJS
-from ..pyscript import py2js, js_rename, window, Parser
+from ..pyscript import py2js, js_rename, window, Parser, JSString
 
 from .serialize import serializer
 from . import logger
@@ -212,7 +212,7 @@ class ModelMeta(HasEventsMeta):
                     if getattr(cls.JS, name) is not getattr(cls, name, None)]
         
         # Set JS, META, and CSS for this class
-        cls.JS.CODE, cls.JS.META = cls._get_js()
+        cls.JS.CODE = cls._get_js()
         cls.CSS = cls.__dict__.get('CSS', '')
     
     def _get_js(cls):
@@ -234,14 +234,18 @@ class ModelMeta(HasEventsMeta):
             c = js_rename(HasEventsJS.JSCODE, 'HasEvents', 'flexx.classes.HasEvents')
             code.append(c)
         # Add this class
-        c, meta = create_js_hasevents_class(cls.JS, cls_name, base_class)
+        c = create_js_hasevents_class(cls.JS, cls_name, base_class)
+        meta = c.meta
         code.append(c.replace('var %s =' % cls_name,
                               'var %s = flexx.classes.%s =' % (cls_name, cls_name),
                               1))
         if cls.mro()[1] is event.HasEvents:
             code.append('flexx.serializer.add_reviver("Flexx-Model",'
                         ' flexx.classes.Model.prototype.__from_json__);\n')
-        return '\n'.join(code), meta
+        # Return with meta info
+        js = JSString('\n'.join(code))
+        js.meta = meta
+        return js
 
 
 class Model(with_metaclass(ModelMeta, event.HasEvents)):

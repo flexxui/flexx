@@ -110,6 +110,8 @@ class BaseButton(Widget):
 def hello():
     print('hello world from a PyScript function')
 
+from . import foo
+from .foo import foooo
 
 class Button(BaseButton):
     """ A push button.
@@ -127,6 +129,8 @@ class Button(BaseButton):
         @event.connect('mouse_click')
         def __on_click(self, *events):
             hello()
+            foo.foooo()
+            foooo()
 
 
 class ToggleButton(BaseButton):

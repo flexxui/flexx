@@ -30,6 +30,8 @@ def py2js(ob=None, new_name=None, **parser_options):
         jscode (str): The JavaScript code as a special str object that
         has a ``meta`` attribute that contains the following fields:
         
+        * filename (str): the name of the file that defines the object.
+        * linenr (int): the starting linenr for the object definition.
         * pycode (str): the Python code used to generate the JS.
         * pyhash (str): a hash of the Python code.
         * vars_defined (set): names defined in the toplevel namespace.
@@ -92,6 +94,8 @@ def py2js(ob=None, new_name=None, **parser_options):
         # Wrap in JSString
         jscode = JSString(jscode)
         jscode.meta = {}
+        jscode.meta['filename'] = filename
+        jscode.meta['linenr'] = linenr
         jscode.meta['pycode'] = pycode
         jscode.meta['pyhash'] = hash
         jscode.meta['vars_defined'] = set(n for n in p.vars if p.vars[n])

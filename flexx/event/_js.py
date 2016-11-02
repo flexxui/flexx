@@ -4,7 +4,7 @@ Implementation of flexx.event in JS via PyScript.
 
 import json
 
-from flexx.pyscript import py2js as py2js_
+from flexx.pyscript import JSString, py2js as py2js_
 from flexx.pyscript.parser2 import get_class_definition
 
 from flexx.event._emitters import BaseEmitter, Property
@@ -227,11 +227,14 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
     assert cls_name != 'HasEvents'  # we need this special class above instead
     
     # Collect meta information of all code pieces that we collect
-    meta = {'vars_unknown': set(), 'std_functions': set(), 'std_methods': set()}
+    meta = {'vars_unknown': set(), 'std_functions': set(), 'std_methods': set(), 'linenr': 1e9}
     def py2js_local(*args, **kwargs):
         code = py2js(*args, **kwargs)
         for key in meta:
-            meta[key].update(code.meta[key])
+            if key == 'linenr':
+                meta[key] = min(meta[key], code.meta[key])
+            else:
+                meta[key].update(code.meta[key])
         return code
     
     handlers = []
@@ -317,7 +320,11 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
         total_code.append('')
         total_code.extend(funcs_code)
     total_code.append('')
-    return '\n'.join(total_code), meta
+    
+    # Return string with meta info (similar to what py2js returns)
+    js = JSString('\n'.join(total_code))
+    js.meta = meta
+    return js
 
 
 if __name__ == '__main__':
@@ -330,4 +337,4 @@ if __name__ == '__main__':
         
     print(HasEventsJS.JSCODE)
     print(len(HasEventsJS.JSCODE))
-    #print(create_js_hasevents_class(Foo, 'Foo'))[0]
+    #print(create_js_hasevents_class(Foo, 'Foo'))
