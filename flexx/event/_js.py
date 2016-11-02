@@ -226,6 +226,14 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
     
     assert cls_name != 'HasEvents'  # we need this special class above instead
     
+    # Collect meta information of all code pieces that we collect
+    meta = {'vars_unknown': set(), 'std_functions': set(), 'std_methods': set()}
+    def py2js_local(*args, **kwargs):
+        code = py2js(*args, **kwargs)
+        for key in meta:
+            meta[key].update(code.meta[key])
+        return code
+    
     handlers = []
     emitters = []
     properties = []
@@ -252,7 +260,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
             else:
                 emitters.append(name)
             # Add function def
-            code = py2js(val._func, cls_name + '.Ƥ.' + funcname)
+            code = py2js_local(val._func, cls_name + '.Ƥ.' + funcname)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             # Mark to not bind the func
@@ -272,7 +280,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
             funcname = name  # funcname is simply name, so that super() works
             handlers.append(name)
             # Add function def
-            code = py2js(val._func, cls_name + '.Ƥ.' + funcname)
+            code = py2js_local(val._func, cls_name + '.Ƥ.' + funcname)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             # Mark to not bind the func
@@ -283,7 +291,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
             funcs_code.append(t % (cls_name, funcname, reprs(val._connection_strings)))
             funcs_code.append('')
         elif callable(val):
-            code = py2js(val, cls_name + '.Ƥ.' + name)
+            code = py2js_local(val, cls_name + '.Ƥ.' + name)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             funcs_code.append('')
@@ -309,7 +317,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
         total_code.append('')
         total_code.extend(funcs_code)
     total_code.append('')
-    return '\n'.join(total_code)
+    return '\n'.join(total_code), meta
 
 
 if __name__ == '__main__':
@@ -322,4 +330,4 @@ if __name__ == '__main__':
         
     print(HasEventsJS.JSCODE)
     print(len(HasEventsJS.JSCODE))
-    #print(create_js_hasevents_class(Foo, 'Foo'))
+    #print(create_js_hasevents_class(Foo, 'Foo'))[0]

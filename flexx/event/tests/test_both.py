@@ -59,14 +59,14 @@ def run_in_both(cls, reference, extra_classes=()):
             # Run in JS
             code = HasEventsJS.JSCODE
             for c in extra_classes:
-                code += create_js_hasevents_class(c, c.__name__)
+                code += create_js_hasevents_class(c, c.__name__)[0]
             this_classes = []
             for c in cls.mro():
                 if c is event.HasEvents:
                     break
                 this_classes.append(c)
             for c in reversed(this_classes):
-                code += create_js_hasevents_class(c, c.__name__, c.__bases__[0].__name__+'.prototype')
+                code += create_js_hasevents_class(c, c.__name__, c.__bases__[0].__name__+'.prototype')[0]
             code += py2js(func, 'test', inline_stdlib=False, docstrings=False)
             code += 'test(%s);' % cls.__name__
             nargs, function_deps, method_deps = get_std_info(code)
