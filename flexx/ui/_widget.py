@@ -700,6 +700,11 @@ class Widget(Model):
             return self._create_key_event(e)
 
         def _create_key_event(self, e):
+            # If there are listeners for key events, prevent default events
+            # like search, print and tab switching. The tabindex is a pretty
+            # good indicator that this widget wants key events.
+            if self.tabindex is not None:
+                e.preventDefault()
             # https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent
             # key: chrome 51, ff 23, ie 9
             # code: chrome ok, ff 32, ie no
