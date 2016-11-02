@@ -20,7 +20,8 @@ def py2js(ob=None, new_name=None, **parser_options):
     """ Convert Python to JavaScript.
     
     Parameters:
-        ob (str, function, class): The code, function or class to transpile.
+        ob (str, module, function, class): The code, function or class
+            to transpile.
         new_name (str, optional): If given, renames the function or
             class. This argument is ignored if ob is a string.
         parser_options: Additional options for the parser. See Parser class
@@ -30,6 +31,8 @@ def py2js(ob=None, new_name=None, **parser_options):
         jscode (str): The JavaScript code as a special str object that
         has a ``meta`` attribute that contains the following fields:
         
+        * filename (str): the name of the file that defines the object.
+        * linenr (int): the starting linenr for the object definition.
         * pycode (str): the Python code used to generate the JS.
         * pyhash (str): a hash of the Python code.
         * vars_defined (set): names defined in the toplevel namespace.
@@ -50,20 +53,25 @@ def py2js(ob=None, new_name=None, **parser_options):
         if isinstance(ob, str):
             thetype = 'str'
             pycode = ob
-        elif isinstance(ob, (type, types.FunctionType, types.MethodType)):
             filename = None
+            linenr = 0
+        elif isinstance(ob, types.ModuleType) and hasattr(ob, '__file__'):
+            thetype = 'str'
+            filename = ob.__file__
+            linenr = 0
+            pycode = open(filename, 'rb').read().decode()
+        elif isinstance(ob, (type, types.FunctionType, types.MethodType)):
             thetype = 'class' if isinstance(ob, type) else 'def'
             # Get code
             try:
-                fname = inspect.getsourcefile(ob)
-                lines, linenr = inspect.getsourcelines(ob)
                 filename = inspect.getsourcefile(ob)
+                lines, linenr = inspect.getsourcelines(ob)
             except Exception as err:
                 raise ValueError('Could not get source code for object %r: %s' %
                                  (ob, err))
             if getattr(ob, '__name__', '') in ('', '<lambda>'):
                 raise ValueError('py2js() got anonymous function from '
-                                 '"%s", line %i, %r.' % (fname, linenr, ob))
+                                 '"%s", line %i, %r.' % (filename, linenr, ob))
             # Normalize indentation
             indent = len(lines[0]) - len(lines[0].lstrip())
             lines = [line[indent:] for line in lines]
@@ -73,7 +81,8 @@ def py2js(ob=None, new_name=None, **parser_options):
             # join lines and rename
             pycode = ''.join(lines)
         else:
-            raise ValueError('py2js() only accepts classes and real functions.')
+            raise ValueError('py2js() only accepts non-builtin modules, '
+                             'classes and functions.')
         
         # Get hash, in case we ever want to cache JS accross sessions
         h = hashlib.sha256('pyscript version 1'.encode())
@@ -95,6 +104,8 @@ def py2js(ob=None, new_name=None, **parser_options):
         # Wrap in JSString
         jscode = JSString(jscode)
         jscode.meta = {}
+        jscode.meta['filename'] = filename
+        jscode.meta['linenr'] = linenr
         jscode.meta['pycode'] = pycode
         jscode.meta['pyhash'] = hash
         jscode.meta['vars_defined'] = set(n for n in p.vars if p.vars[n])

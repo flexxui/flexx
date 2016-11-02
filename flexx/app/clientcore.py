@@ -2,13 +2,17 @@
 The client's core Flexx engine, implemented in PyScript.
 """
 
-from ..pyscript import py2js, undefined, window
+from ..pyscript import undefined, window, this_is_js
 
-flexx = location = require = module = typeof = None  # fool PyFlakes
+# This module gets transpiled to JavaScript as a whole
+__pyscript__ = True
+
+# Fool PyFlakes
+if not this_is_js():
+    flexx = location = require = module = typeof = None
 
 
-@py2js(inline_stdlib=False)
-class FlexxJS:
+class Flexx:
     """ JavaScript Flexx module. This provides the connection between
     the Python and JS (via a websocket).
     """
@@ -24,7 +28,7 @@ class FlexxJS:
         self.ws_url = ''
         # Copy attributes from temporary flexx object
         for key in window.flexx.keys():
-            self[key] = window.flexx[key]  # session_id, app_name, and more
+            self[key] = window.flexx[key]  # session_id, app_name, and maybe more
         # Init internal variables
         self.ws = None
         self.last_msg = None
@@ -110,7 +114,7 @@ class FlexxJS:
         #ws.binaryType = "arraybuffer"  # would need utf-decoding -> slow
         
         def on_ws_open(evt):
-            window.console.info('Socket connected')
+            window.console.info('Socket opened with session id ' + self.session_id)
             ws.send('hiflexx ' + self.session_id)
         def on_ws_message(evt):
             window.flexx.last_msg = msg = evt.data or evt
@@ -234,46 +238,114 @@ class FlexxJS:
             window.win1 = window.open(msg[5:], 'new', 'chrome')
         else:
             window.console.warn('Invalid command: "' + msg + '"')
-    
-    def decodeUtf8(self, arrayBuffer):
-        """
-        var result = "",
-            i = 0,
-            c = 0,
-            c1 = 0,
-            c2 = 0,
-            c3 = 0,
-            data = new Uint8Array(arrayBuffer);
-    
-        // If we have a BOM skip it
-        if (data.length >= 3 &&
-            data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) {
-            i = 3;
-        }
-    
-        while (i < data.length) {
-            c = data[i];
-    
-            if (c < 128) {
-                result += String.fromCharCode(c);
-                i += 1;
-            } else if (c > 191 && c < 224) {
-                if (i + 1 >= data.length) {
-                    throw "UTF-8 Decode failed. Two byte character was truncated.";
-                }
-                c2 = data[i + 1];
-                result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
-                i += 2;
-            } else {
-                if (i + 2 >= data.length) {
-                    throw "UTF-8 Decode failed. Multi byte character was truncated.";
-                }
-                c2 = data[i + 1];
-                c3 = data[i + 2];
-                result += String.fromCharCode(((c & 15) << 12) |
-                                              ((c2 & 63) << 6) | (c3 & 63));
-                i += 3;
+
+
+def decodeUtf8(arrayBuffer):
+    """
+    var result = "",
+        i = 0,
+        c = 0,
+        c1 = 0,
+        c2 = 0,
+        c3 = 0,
+        data = new Uint8Array(arrayBuffer);
+
+    // If we have a BOM skip it
+    if (data.length >= 3 &&
+        data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) {
+        i = 3;
+    }
+
+    while (i < data.length) {
+        c = data[i];
+
+        if (c < 128) {
+            result += String.fromCharCode(c);
+            i += 1;
+        } else if (c > 191 && c < 224) {
+            if (i + 1 >= data.length) {
+                throw "UTF-8 Decode failed. Two byte character was truncated.";
             }
+            c2 = data[i + 1];
+            result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+            i += 2;
+        } else {
+            if (i + 2 >= data.length) {
+                throw "UTF-8 Decode failed. Multi byte character was truncated.";
+            }
+            c2 = data[i + 1];
+            c3 = data[i + 2];
+            result += String.fromCharCode(((c & 15) << 12) |
+                                            ((c2 & 63) << 6) | (c3 & 63));
+            i += 3;
         }
-        return result;
-        """
+    }
+    return result;
+    """
+
+
+
+# In Python, we need some extras for the serializer to work
+if not this_is_js():
+    import json
+    
+    class JSON:
+        @staticmethod
+        def parse(text, reviver=None):
+            return json.loads(text, object_hook=reviver)
+        @staticmethod
+        def stringify(obj, replacer=None):
+            return json.dumps(obj, default=replacer)
+
+
+class Serializer:
+    
+    def __init__(self):
+        self._revivers = _revivers = {}
+    
+        def loads(text):
+            return JSON.parse(text, _reviver)
+        
+        def saves(obj):
+            return JSON.stringify(obj, _replacer)
+        
+        def add_reviver(type_name, func):
+            assert isinstance(type_name, str)
+            _revivers[type_name] = func
+        
+        def _reviver(dct, val=undefined):
+            if val is not undefined:  # pragma: no cover
+                dct = val
+            if isinstance(dct, dict):
+                type = dct.get('__type__', None)
+                if type is not None:
+                    func = _revivers.get(type, None)
+                    if func is not None:
+                        return func(dct)
+            return dct
+        
+        def _replacer(obj, val=undefined):
+            if val is undefined:  # Py
+                
+                try:
+                    return obj.__json__()  # same as in Pyramid
+                except AttributeError:
+                    raise TypeError('Cannot serialize object to JSON: %r' % obj)
+            else:  # JS - pragma: no cover
+                if (val is not None) and val.__json__ is not undefined:
+                    return val.__json__()
+                return val
+        
+        self.loads = loads
+        self.saves = saves
+        self.add_reviver = add_reviver
+
+
+## Instantiate
+
+
+serializer = Serializer()
+
+if this_is_js():
+    window.flexx = Flexx()
+    window.flexx.serializer = serializer

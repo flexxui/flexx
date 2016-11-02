@@ -258,7 +258,8 @@ class Parser(Parser3):
     pass
 
 
-from .functions import py2js, evaljs, evalpy, script2js, js_rename, create_js_module
+from .functions import py2js, evaljs, evalpy, JSString
+from .functions import script2js, js_rename, create_js_module
 from .stdlib import get_full_std_lib, get_all_std_names
 
 # Create stubs
@@ -266,7 +267,7 @@ from .stdlib import get_full_std_lib, get_all_std_names
 import sys
 
 class JSConstant:
-    def __init__(self, name):
+    def __init__(self, name='jsconstant'):
         self._name = name
     def __repr__(self):  # pragma: no cover
         return self._name
@@ -282,4 +283,4 @@ def this_is_js():
     """
     return False
 
-del sys, JSConstant
+del sys

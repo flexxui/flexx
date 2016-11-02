@@ -389,4 +389,4 @@ class Parser0:
                 res = [res]
             return res
         else:
-            raise JSError('Cannot parse %s nodes yet' % nodeType)
+            raise JSError('Cannot parse %s-nodes yet' % nodeType)

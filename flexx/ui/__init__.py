@@ -86,34 +86,39 @@ from .widgets import *
 from ._plotlayout import PlotLayout
 
 
-def _install_assets():
-    from ..app import assets, Asset
-    from ..util.getresource import get_resource
-    
-    classes = assets.get_module_classes('flexx.ui')
-    
-    assets.add_shared_asset(
-            name='flexx-ui.js',
-            sources=classes,
-            deps=['phosphor-all.js', 'flexx-app.js as flexx_app'],
-            exports=[])  # makes this a module
-    
-    assets.add_shared_asset(
-            name='flexx-ui.css',
-            sources=classes,
-            deps=['phosphor-all.css'])                     
-
-    # Defining this later, the deps will sort out the order
-    assets.add_shared_asset(
-            name='phosphor-all.js',
-            sources=get_resource('phosphor-all.js').decode(),
-            deps=[],
-            exports=None)  # make this *not* a module
-    
-    assets.add_shared_asset(
-            name='phosphor-all.css',
-            sources=get_resource('phosphor-all.css').decode(),
-            deps=[])
+# Stub widget to test bundling: there should be a flexx.ui.js and a flexx.ui-bundle.js
+class FooWidget(Widget):
+    pass
 
 
-_install_assets()
+# def _install_assets():
+#     from ..app import assets, Asset
+#     from ..util.getresource import get_resource
+#     
+#     classes = assets.get_module_classes('flexx.ui')
+#     
+#     assets.add_shared_asset(
+#             name='flexx-ui.js',
+#             sources=classes,
+#             deps=['phosphor-all.js', 'flexx-app.js as flexx_app'],
+#             exports=[])  # makes this a module
+#     
+#     assets.add_shared_asset(
+#             name='flexx-ui.css',
+#             sources=classes,
+#             deps=['phosphor-all.css'])                     
+# 
+#     # Defining this later, the deps will sort out the order
+#     assets.add_shared_asset(
+#             name='phosphor-all.js',
+#             sources=get_resource('phosphor-all.js').decode(),
+#             deps=[],
+#             exports=None)  # make this *not* a module
+#     
+#     assets.add_shared_asset(
+#             name='phosphor-all.css',
+#             sources=get_resource('phosphor-all.css').decode(),
+#             deps=[])
+# 
+# 
+# _install_assets()

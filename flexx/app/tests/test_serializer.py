@@ -3,7 +3,7 @@ from flexx.util.testing import run_tests_if_main, raises
 
 from flexx.pyscript import py2js, evaljs
 
-from flexx.app.serialize import Serializer, serializer
+from flexx.app.clientcore import Serializer, serializer
 
 
 class Foo:

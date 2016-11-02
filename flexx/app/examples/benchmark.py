@@ -153,6 +153,7 @@ def bench_str():
 class Benchmarker(app.Model):
     
     def init(self):
+        # todo: fix me
         self.session.add_asset(name='pystone.js', deps=[],
                                sources=[jscode, 'var pystone = {main: main};'])
     

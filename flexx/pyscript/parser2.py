@@ -328,6 +328,7 @@ class Parser2(Parser1):
         # Setup the catch
         code = []
         err_type = unify(self.parse(node.type_node)) if node.type_node else ''
+        self.vars.discard(err_type)
         if err_type and err_type != 'Exception':
             code.append('if (%s instanceof Error && %s.name === "%s") {' %
                         (err_name, err_name, err_type))
@@ -381,6 +382,14 @@ class Parser2(Parser1):
                 code += self.parse(stmt)
             code.append(self.lf('}'))
             return code
+        
+        # Disable body if "not this_is_js()"
+        if (True and isinstance(node.test_node, ast.UnaryOp) and
+                     node.test_node.op == 'Not' and
+                     isinstance(node.test_node.right_node, ast.Call) and
+                     isinstance(node.test_node.right_node.func_node, ast.Name) and
+                     node.test_node.right_node.func_node.name == 'this_is_js'):
+            node.body_nodes = []
         
         code = [self.lf('if (')]  # first part (popped in elif parsing)
         code.append(self._wrap_truthy(node.test_node))
@@ -611,6 +620,7 @@ class Parser2(Parser1):
     
     def parse_ListComp(self, node):
         
+        self.push_stack('function', 'listcomp')
         elt = ''.join(self.parse(node.element_node))
         code = ['(function list_comprehension () {', 'var res = [];']
         vars = []
@@ -651,6 +661,10 @@ class Parser2(Parser1):
         code.append('return res;})')  # end function
         code.append('.apply(this)')  # call function
         code.insert(2, 'var %s;' % ', '.join(vars))
+        # Clean vars
+        for var in vars:
+            self.vars.add(var)
+        self.pop_stack()
         return code
         
         # todo: apply the apply(this) trick everywhere where we use a function

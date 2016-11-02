@@ -275,14 +275,11 @@ def init_notebook():
     # Try loading assets for flexx.ui. This will only work if flexx.ui
     # is imported. This is not strictly necessary, since Flexx can
     # dynamically load the assets, but it is nicer to do it here.
-    try:
-        session.add_asset('flexx-ui.css')
-        session.add_asset('flexx-ui.js')
-    except IndexError:
-        pass
+    # todo: make the session load all imported assets, not only the used ones
+    
     
     # Get assets
-    js_assets, css_assets = session.get_assets_in_order(css_reset=False)
+    js_assets, css_assets = session.get_assets_in_order(css_reset=False, load_all=True)
     
     # Pop the first JS asset that sets flexx.app_name and flexx.session_id
     # We set these in a way that it does not end up in exported notebook.

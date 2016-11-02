@@ -62,49 +62,16 @@ specify its size.
 Asset management
 ----------------
 
-When writing code that relies on a certain JS library, that library
+When writing code that relies on a certain JS or CSS library, that library
 can be loaded in the client by adding it as an asset. This can be done using:
 
 .. code-block:: py
     
     # Normal asset
-    your_model.session.add_asset(name='mydep.js', [js_code], [dependencies])
+    your_model.session.add_asset('mydep.js', js_code)
     
     # Sometimes a more lightweight *remote* asset is prefered
-    your_model.session.add_asset('http://some.cdn/lib.js')
-
-When you write several ``Model`` subclasses, and perhaps PyScript
-functions/classes, you might want to consider packing them in a module like so:
-
-.. code-block:: py
-
-    # As an example, define a PyScipt-compatible function here
-    def foo():
-        print('hello world')
-    
-    # Get a list of classes that is defined in the given Python module
-    classes = app.assets.get_module_classes('my.module')
-    
-    # Package it up in an asset
-    assets.add_shared_asset(
-            name='my_module.js',
-            sources=[foo, 'var bar = 42;'] + classes,
-            deps=[flexx-ui.js'],
-            exports=[])
-    
-    # If your models define CSS, you might want to make a corresponding .css asset
-
-
-In the above example, one can see how we create an asset consisting of sources
-that are a mix of Model objects, PyScript-compatible objects, and
-strings of raw JS. We define that our modules depend on ``flexx-ui.js``.
-By specifying ``exports`` we're defining this as an AMD module. Note that all
-public classes that we specified in ``sources`` will automatically be added
-as an exported name.
-
-This is all that's needed. When one of your classes get instantiated, it
-will automatically trigger the use of this asset (and its dependencies)
-in the current session.
+    your_model.session.add_asset('http://some.cdn/lib.css')
 
 
 Data management
@@ -160,15 +127,15 @@ from .funcs import init_interactive, init_notebook, serve, launch, export
 from .assetstore import assets, Asset
 
 
-def _install_assets():
-    from .clientcore import FlexxJS
-    
-    classes = assets.get_module_classes('flexx.app')
-    
-    assets.add_shared_asset(
-            name='flexx-app.js',
-            sources=[FlexxJS, 'var flexx = new FlexxJS();'] + classes,
-            deps=['pyscript-std.js'],
-            exports=['flexx'])
-
-_install_assets()
+# def _install_assets():
+#     from .clientcore import FlexxJS
+#     
+#     classes = assets.get_module_classes('flexx.app')
+#     
+#     assets.add_shared_asset(
+#             name='flexx-app.js',
+#             sources=[FlexxJS, 'var flexx = new FlexxJS();'] + classes,
+#             deps=['pyscript-std.js'],
+#             exports=['flexx'])
+# 
+# _install_assets()
