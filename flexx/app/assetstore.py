@@ -244,10 +244,16 @@ class Module:
     A model can also have dependencies:
     
     * The modules that define the base classes of the Model classes.
-    * The modules that define Model classes that are used in the JS. -> or present in the module?
+    * (The modules that define Model classes that are used in the JS. -> or present in the module?)
     * PyScript modules that are present in the module.
     * PyScript modules that define functions or classes that are used in the JS.
     * Assets that are present in the module.
+    
+    The Flexx asset manager collects all modules, based on the existing Model
+    classes. The session is aware of the Model classes that it uses (initially)
+    and their base classes, and can therefore include all necessary modules.
+    The Module class therefore only needs dependencies for the base classes
+    to ensure correct load order.
     
     """
     
@@ -257,7 +263,6 @@ class Module:
         self._pymodule = pymodule
         
         # Bookkeeping content of the module
-        self._all_modules = set()  # so we can later add Model-containing module deps
         self._all_provided_names = set()
         self._all_imported_names = set()
         # Stuff defined in this module (in JS)
@@ -266,14 +271,16 @@ class Module:
         self._css_code = []
         # Dependencies
         self._deps = {}  # name -> [as_name, *imports]
-        self._asset_deps = set()
+        self._asset_deps = []
         
         # Collect code and dependencies
         self._collect_from_module()
         self._collect_deps_from_bases()
         
-        # Sort js strings in same order as in Python
+        # Sorting
         self._js_code.sort(key=lambda x: (x.meta['sorter'], x.meta['linenr']))  # sorter is defined below
+        self._dep_names = tuple(sorted(self._deps.keys()))
+        self._asset_deps = tuple(sorted(self._asset_deps, key=lambda x: x.count))
     
     def __repr__(self):
         return '<%s %s with %i model classes>' % (self.__class__.__name__,
@@ -284,8 +291,7 @@ class Module:
         """
         Collect:
         * Model classes in this module
-        * Dependencies on modules that define Modules present in this module
-        * Modules present in this module, for later use
+        * (Dependencies on modules that define Modules present in this module)
         * PyScript modules present in this module
         """
         
@@ -301,6 +307,9 @@ class Module:
                     self._model_classes.append(val)
                 else:
                     self._all_imported_names.add(name)
+                    # todo: this import is not necessary, I think, because the binding
+                    # of Model classes happens via window.flexx.classes. But it
+                    # won't harm, so leave as-is for now.
                     imports = self._deps.setdefault(val.__module__, [val.__module__])
                     if name == val.__name__:
                         imports.append(val.__name__)
@@ -309,14 +318,13 @@ class Module:
             
             elif isinstance(val, types.ModuleType):
                 # Model: if its a PyScript module, we import it
-                self._all_modules.add(val.__name__)  # todo: names?
                 if getattr(val, '__pyscript__', False):
                     self._all_imported_names.add(name)
                     imports = self._deps.setdefault(val.__name__, [None])
                     imports[0] = name  # set/overwrite as-name
             if isinstance(val, Asset):
                 self._all_imported_names.append(name)
-                self._asset_deps.add(val)  # todo: or val.name?
+                self._asset_deps.append(val)
         
         # Sort models. Is nice, and can make a difference for CSS
         self._model_classes.sort(key=lambda x: x.JS.CODE.meta['linenr'])
@@ -385,16 +393,45 @@ class Module:
                 raise TypeError('Model classes (currently) do not support multiple inheritance.')
             for base_cls in cls.__bases__:
                 if base_cls.__module__ != self._pymodule:
-                    self._deps.setdefault(base_cls.__module__, [])
+                    self._deps.setdefault(base_cls.__module__, [base_cls.__module__])
                 # else, the base class will also come by in this loop.
     
-    def collect_module_deps(self):
-        """ Collect dependencies on other modules.
+    def get_js(self):
+        """ Get the JS code for this module.
         """
-        # todo: do we need proxy modules like flexx.ui? Otherwise, this method is useless, I think
-        for mod_name in self._all_modules:
-            if mod_name in assets.modules:
-                self._deps.setdefault(mod_name, [])
+        if not hasattr(self, '_js_cache'):
+            code = list(self._js_code)
+            exports = tuple(sorted(self._all_provided_names))
+            imports = ['pyscript-std.js as _py']
+            # Handle dependency imports
+            for dep_name in reversed(sorted(self._deps)):
+                names = self._deps[dep_name]
+                mod_name = names[0].replace('.', '_')  # can still be dep_name
+                imports.append(dep_name + ' as ' + mod_name)
+                for name in names[1:]:
+                    as_name = name
+                    if ' as ' in name:
+                        name, _, as_name = name.partition(' _as ')
+                    pieces = ['%s = %s.%s' % (as_name, mod_name, name)]
+                    code.insert(0, 'var ' + (', '.join(pieces)) + ';')
+            # Import stdlib
+            # todo: either include only std of what we use, or use _py.xxx
+            func_names, method_names = get_all_std_names()
+            pre1 = ', '.join(['%s = _py.%s' % (n, n) for n in func_names])
+            pre2 = ', '.join(['%s = _py.%s' % (n, n) for n in method_names])
+            code.insert(0, 'var %s;\nvar %s;' % (pre1, pre2))
+            # Create module
+            self._js_cache = create_js_module(self.name, '\n\n'.join(code),
+                                              imports, exports, 'amd-flexx')
+            self._js_cache = HEADER + '\n\n' + self._js_cache  # Add license header
+        return self._js_cache
+    
+    def get_css(self):
+        """ Get the CSS code for this module.
+        """
+        if not hasattr(self, '_css_cache'):
+            self._css_cache = '\n\n'.join(self._css_code)
+        return self._css_cache
     
     @property
     def name(self):
@@ -404,9 +441,15 @@ class Module:
     
     @property
     def deps(self):
-        """ The dependencies (names of other modules) for this module.
+        """ A list of dependencies (names of other modules) for this module.
         """
-        return list(sorted(self._deps.keys()))
+        return self._dep_names
+    
+    @property
+    def asset_deps(self):
+        """ A list of asset names that this module depends on. """
+        # todo: assets need to be given a "count" by the asset store so we can sort them
+        return self._asset_deps
 
 
 class Asset:
@@ -724,6 +767,10 @@ class AssetStore:
         return self._modules
     
     def collect_modules(self):
+        """ Collect JS modules corresponding to Python modules that define
+        Model classes. It is safe (and pretty fast) to call this more than once
+        since only missing modules are added.
+        """
         # todo: where to test/skip __main__??
         new_modules = []
         for cls in Model.CLASSES:
@@ -731,8 +778,14 @@ class AssetStore:
                 module = Module(sys.modules[cls.__module__])
                 self._modules[cls.__module__] = module
                 new_modules.append(module)
-        for mod in new_modules:
-            module.collect_module_deps()
+        logger.info('Asset store collected %i modules.' % len(new_modules))
+        
+        # Make asset for the modules
+        # todo: optionally bundle the assets
+        for mod in self._modules.values():
+            if( mod.name + '.js') not in self._assets:
+                self.add_shared_asset(name=mod.name + '.js', sources=mod.get_js(), deps=[])
+                self.add_shared_asset(name=mod.name + '.css', sources=mod.get_css(), deps=[])
     
     def get_asset(self, name):
         """ Get the asset instance corresponding to the given name or None
@@ -860,6 +913,7 @@ class SessionAssets:
         
         # Keep track of all assets for this session. Assets that are provided
         # by the asset store have a value of None.
+        self._modules = OrderedDict()
         self._assets = OrderedDict()
         # Data for this session (in addition to the data provided by the store)
         self._data = {}
@@ -1038,6 +1092,12 @@ class SessionAssets:
             if cls2 not in self._known_classes:
                 self.register_model_class(cls2)
         
+        # We might need to collect
+        # todo: check __main__?
+        mod_name = cls.__module__
+        if mod_name not in self._store.modules:
+            self._store.collect_modules()
+        
         # Make sure that no two models have the same name, or we get problems
         # that are difficult to debug. Unless classes are defined in the notebook.
         same_name = [c for c in self._known_classes if c.__name__ == cls.__name__]
@@ -1045,39 +1105,86 @@ class SessionAssets:
             from .session import manager  # noqa - avoid circular import
             same_name.append(cls)
             is_interactive = self is manager.get_default_session()  # e.g. in notebook
-            is_dynamic_cls = not any([self._store.get_asset_for_class(c)
-                                      for c in same_name])
+            is_dynamic_cls =all([c.__module__ == '__main__' for c in same_name])  # todo: correct?
             if not (is_interactive and is_dynamic_cls):
                 raise RuntimeError('Cannot have multiple Model classes with the same '
                                    'name unless using interactive session and the '
                                    'classes are dynamically defined: %r' % same_name)
         
         logger.debug('Registering Model class %r' % cls.__name__)
-        self._known_classes.add(cls)
+        self._known_classes.add(cls)  # todo: rename to used_classes
         
-        # Check if cls is covered by our assets
-        asset_js = self._store.get_asset_for_class(cls)
-        asset_css = None
-        if asset_js:
-            asset_css = self._store.get_asset(asset_js.name[:-2] + 'css')
         
-        if asset_js:
+        js_module = self._store.modules.get(mod_name, None)
+        
+        if js_module is not None:
             # cls is present in a module, add corresponding asset (overwrite ok)
-            for asset in [asset_js, asset_css]:
-                if asset and asset.name not in self._assets:
-                    if self._served:
-                        self._register_asset(asset)
-                    else:
-                        self._assets[asset.name] = None
+            if mod_name not in self._modules:
+                if self._served:
+                    # todo: convert a module to an asset
+                    self._register_asset(asset)
+                else:
+                    self._modules[mod_name] = js_module  # todo: None or js_module?
         elif not self._served:
-            # Remember cls, will be served in the index
+            # Remember cls, will be served in session-specific asset
             self._extra_model_classes.append(cls)
         else:
             # Define class dynamically via a single-class asset
+            # todo: convert a class to an asset
             for asset in [Asset(cls.__name__ + '.js', [cls], [], []), 
                           Asset(cls.__name__ + '.css', [cls], [])]:
                 if asset.to_string().strip():
                     self._register_asset(asset)
+        # 
+        # ##
+        # 
+        # # Make sure the base classes are registered first
+        # for cls2 in cls.mro()[1:]:
+        #     if not issubclass(cls2, Model):  # True if cls2 is *the* Model class
+        #         break
+        #     if cls2 not in self._known_classes:
+        #         self.register_model_class(cls2)
+        # 
+        # # Make sure that no two models have the same name, or we get problems
+        # # that are difficult to debug. Unless classes are defined in the notebook.
+        # same_name = [c for c in self._known_classes if c.__name__ == cls.__name__]
+        # if same_name:
+        #     from .session import manager  # noqa - avoid circular import
+        #     same_name.append(cls)
+        #     is_interactive = self is manager.get_default_session()  # e.g. in notebook
+        #     is_dynamic_cls = not any([self._store.get_asset_for_class(c)
+        #                               for c in same_name])
+        #     if not (is_interactive and is_dynamic_cls):
+        #         raise RuntimeError('Cannot have multiple Model classes with the same '
+        #                            'name unless using interactive session and the '
+        #                            'classes are dynamically defined: %r' % same_name)
+        # 
+        # logger.debug('Registering Model class %r' % cls.__name__)
+        # self._known_classes.add(cls)
+        # 
+        # # Check if cls is covered by our assets
+        # asset_js = self._store.get_asset_for_class(cls)
+        # asset_css = None
+        # if asset_js:
+        #     asset_css = self._store.get_asset(asset_js.name[:-2] + 'css')
+        # 
+        # if asset_js:
+        #     # cls is present in a module, add corresponding asset (overwrite ok)
+        #     for asset in [asset_js, asset_css]:
+        #         if asset and asset.name not in self._assets:
+        #             if self._served:
+        #                 self._register_asset(asset)
+        #             else:
+        #                 self._assets[asset.name] = None
+        # elif not self._served:
+        #     # Remember cls, will be served in the index
+        #     self._extra_model_classes.append(cls)
+        # else:
+        #     # Define class dynamically via a single-class asset
+        #     for asset in [Asset(cls.__name__ + '.js', [cls], [], []), 
+        #                   Asset(cls.__name__ + '.css', [cls], [])]:
+        #         if asset.to_string().strip():
+        #             self._register_asset(asset)
     
     def get_assets_in_order(self, css_reset=False):
         """ Get two lists containing the JS assets and CSS assets,
@@ -1091,27 +1198,48 @@ class SessionAssets:
         been served and that future asset loads should be done dynamically.
         """
         
-        def flatten_tree(asset_list, asset_dict):
-            for index in range(len(asset_list)):
+        def sort_modules(modules):
+            module_names = [mod.name for mod in modules]
+            for index in range(len(module_names)):
                 seen_names = []
                 while True:
-                    # Get asset name on this position, check if its new
-                    name = asset_list[index]
+                    # Get module name on this position, check if its new
+                    name = module_names[index]
                     if name in seen_names:
-                        raise RuntimeError('Detected circular dependency in assets!')
+                        raise RuntimeError('Detected circular dependency in modules!')
                     seen_names.append(name)
                     # Move deps in front of us if necessary
-                    for dep in asset_dict[name].deps:
-                        if dep not in self._assets:
-                            logger.warn('Asset %r has unfulfilled dependency %r' %
-                                        (asset.name, dep))
+                    for dep in self._modules[name].deps:
+                        if dep not in self._modules:  # todo: self._store.modules?
+                            logger.warn('Module %r has unfulfilled dependency %r' %
+                                        (name, dep))
                         else:
-                            j = asset_list.index(dep)
+                            j = module_names.index(dep)
                             if j > index:
-                                asset_list.insert(index, asset_list.pop(j))
+                                module_names.insert(index, module_names.pop(j))
                                 break  # do this index again; the dep we just moved
                     else:
                         break  # no changes, move to next index
+            return [self._modules[name] for name in module_names]
+        
+        # Put modules in correct load order
+        modules = sorted(self._modules.values(), key=lambda x:x.name)
+        modules = sort_modules(modules)
+        
+        # Create assets from modules and their dependencies
+        # todo: what about pyscript module deps?
+        js_assets = []
+        css_assets = []
+        for mod in modules:
+            for asset in mod.asset_deps:
+                if asset.name.lower().endswith('.js'):
+                    if asset not in js_assets:
+                        js_assets.append(asset)
+                else:
+                    if asset not in css_assets:
+                        css_assets.append(asset)
+            js_assets.append(self._store.get_asset(mod.name + '.js'))
+            css_assets.append(self._store.get_asset(mod.name + '.css'))
         
         # Append code for extra classes
         if self._extra_model_classes and 'extra-classes.js' not in self._assets:
@@ -1119,26 +1247,33 @@ class SessionAssets:
                                  deps=[], exports=[]))
             self.add_asset(Asset('extra-classes.css', self._extra_model_classes, []))
         
-        # Do a round of collecting deps
-        for name in self.get_asset_names():
-            self._collect_dependencies(self.get_asset(name))
-        
-        # Collect initial assets for this session, per JS/CSS
-        js_assets, css_assets = OrderedDict(), OrderedDict()
-        for name in self._assets.keys():
-            asset = self.get_asset(name)
+        # Add assets specific to this session
+        for asset in self._assets:
             if asset.name.lower().endswith('.js'):
-                js_assets[asset.name] = asset
+                js_assets.append(asset)
             else:
-                css_assets[asset.name] = asset
+                css_assets.append(asset)
         
-        # Flatten the trees into flat lists
-        js_assets2 = list(js_assets.keys())
-        flatten_tree(js_assets2, js_assets)
-        css_assets2 = list(css_assets.keys())
-        flatten_tree(css_assets2, css_assets)
-        js_assets = [js_assets[name] for name in js_assets2]
-        css_assets = [css_assets[name] for name in css_assets2]
+        # # Do a round of collecting deps
+        # for name in self.get_asset_names():
+        #     self._collect_dependencies(self.get_asset(name))
+        # 
+        # # Collect initial assets for this session, per JS/CSS
+        # js_assets, css_assets = OrderedDict(), OrderedDict()
+        # for name in self._assets.keys():
+        #     asset = self.get_asset(name)
+        #     if asset.name.lower().endswith('.js'):
+        #         js_assets[asset.name] = asset
+        #     else:
+        #         css_assets[asset.name] = asset
+        # 
+        # # Flatten the trees into flat lists
+        # js_assets2 = list(js_assets.keys())
+        # flatten_tree(js_assets2, js_assets)
+        # css_assets2 = list(css_assets.keys())
+        # flatten_tree(css_assets2, css_assets)
+        # js_assets = [js_assets[name] for name in js_assets2]
+        # css_assets = [css_assets[name] for name in css_assets2]
         
         # Prepend reset.css
         if css_reset:
