@@ -285,26 +285,30 @@ def init_notebook():
     
     # Pop the first JS asset that sets flexx.app_name and flexx.session_id
     # We set these in a way that it does not end up in exported notebook.
-    # We set is_exported to "no" as a marker to set it to false down below.
     js_assets.pop(0)
     url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)
     flexx_pre_init = """<script>window.flexx = window.flexx || {};
                                 window.flexx.app_name = "%s";
                                 window.flexx.session_id = "%s";
                                 window.flexx.ws_url = "%s";
-                                window.flexx.is_exported = "no";
+                                window.flexx.is_live_notebook = true;
                         </script>""" % (session.app_name, session.id, url)
     
     # Check if already loaded, if so, re-connect
     if not getattr(session, 'init_notebook_done', False):
         session.init_notebook_done = True  # also used in assetstore
     else:
-        display(HTML(flexx_pre_init.replace('"no"', 'false')))
+        display(HTML(flexx_pre_init))
         clear_output()
-        display(HTML('<script>flexx.init();</script>'
-                     '<i>Flexx already loaded. Reconnected.</i>'))
+        display(HTML("""<script>
+                        flexx.is_exported = !flexx.is_live_notebook;
+                        flexx.init();
+                        </script>
+                        <i>Flexx already loaded. Reconnected.</i>
+                        """))
         return  # Don't inject Flexx twice
-    
+        # Note that exporting will not work anymore since out assets
+        # are no longer in the outputs
     
     # Install helper to make things work in exported notebooks
     NoteBookHelper(session)
@@ -314,7 +318,7 @@ def init_notebook():
     t += '\n\n'.join([asset.to_html('{}', 0) for asset in css_assets + js_assets])
     t += """<script>
             flexx.is_notebook = true;
-            flexx.is_exported = flexx.is_exported != "no";
+            flexx.is_exported = !flexx.is_live_notebook;
             /* If Phosphor is already loaded, disable our Phosphor CSS. */
             if (window.jupyter && window.jupyter.lab) {
                 document.getElementById('phosphor-all.css').disabled = true;
