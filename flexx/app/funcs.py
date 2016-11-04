@@ -315,6 +315,10 @@ def init_notebook():
     t += """<script>
             flexx.is_notebook = true;
             flexx.is_exported = flexx.is_exported != "no";
+            /* If Phosphor is already loaded, disable our Phosphor CSS. */
+            if (window.jupyter && window.jupyter.lab) {
+                document.getElementById('phosphor-all.css').disabled = true;
+            }
             flexx.init();
             </script>"""
     
