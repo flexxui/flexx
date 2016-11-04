@@ -186,6 +186,10 @@ class AppManager(event.HasEvents):
         The manager will remove the session from the list of connected
         instances.
         """
+        if session.app_name == '__default__':
+            logger.info('Default session lost connection to client.')
+            return  # The default session awaits a re-connect
+        
         _, _, pending, connected = self._appinfo[session.app_name]
         try:
             connected.remove(session)

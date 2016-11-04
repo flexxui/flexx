@@ -204,7 +204,7 @@ class NoteBookHelper:
     
     def __init__(self, session):
         self._session = session
-        self._ws = None
+        self._real_ws = None
         self._commands = []
         self.enable()
     
@@ -215,27 +215,32 @@ class NoteBookHelper:
         ip.events.register('post_execute', self.release)
     
     def capture(self):
-        if self._ws is not None:
+        if self._real_ws is not None:
             logger.warn('Notebookhelper already is in capture mode.')
         else:
-            self._ws = self._session._ws
+            assert self._session._ws is not None
+            self._real_ws = self._session._ws
             self._session._ws = self
     
     def release(self):
-        self._session._ws = self._ws
-        self._ws = None
-        
-        from IPython.display import display, Javascript
-        commands = ['flexx.command(%s);' % reprs(msg) for msg in self._commands]
-        self._commands = []
-        display(Javascript('\n'.join(commands)))
+        if self._session._ws is self:
+            self._session._ws = self._real_ws
+        self._real_ws = None
+        if self._commands:
+            from IPython.display import display, Javascript
+            commands = ['flexx.command(%s);' % reprs(msg) for msg in self._commands]
+            self._commands = []
+            display(Javascript('\n'.join(commands)))
     
     def command(self, msg):
         self._commands.append(msg)
     
     @property
     def ping_counter(self):
-        return self._ws.ping_counter
+        if self._session._ws is self:
+            return self._real_ws.ping_counter
+        else:
+            return self._session._ws.ping_counter
 
 
 def init_notebook():
@@ -248,7 +253,7 @@ def init_notebook():
     # undocumented and I could not get them to work when I tried for a bit.
     # This means though, that flexx in the notebook only works on localhost.
     
-    from IPython.display import display, HTML
+    from IPython.display import display, clear_output, HTML
     # from .. import ui  # noqa - make ui assets available
     
     # Make default log level warning instead of "info" to avoid spamming
@@ -256,18 +261,15 @@ def init_notebook():
     config.load_from_string('log_level = warning', 'init_notebook')
     set_log_level(config.log_level)
     
-    # Get session or create new, check if we already initialized notebook
+    # Get session or create new
     session = manager.get_default_session()
     if session is None:
         session = manager.create_default_session()
-    if getattr(session, 'init_notebook_done', False):
-        display(HTML("<i>Flexx already loaded</i>"))
-        return  # Don't inject twice
-    else:
-        session.init_notebook_done = True  # also used in assetstore
     
-    # Install helper to make things work in exported notebooks
-    NoteBookHelper(session)
+    # Open server - the notebook helper takes care of the JS resulting
+    # from running a cell, but any interaction goes over the websocket.
+    server = current_server()
+    host, port = server.serving
     
     # Try loading assets for flexx.ui. This will only work if flexx.ui
     # is imported. This is not strictly necessary, since Flexx can
@@ -278,27 +280,50 @@ def init_notebook():
     except IndexError:
         pass
     
-    # Open server - the notebook helper takes care of the JS resulting
-    # from running a cell, but any interaction goes over the websocket.
-    server = current_server()
-    host, port = server.serving
-    
+    # Get assets
     js_assets, css_assets = session.get_assets_in_order(css_reset=False)
-    asset_elements = [asset.to_html('{}', 0) for asset in css_assets + js_assets]
     
-    # Compose HTML to inject - we need to overload the ws url
+    # Pop the first JS asset that sets flexx.app_name and flexx.session_id
+    # We set these in a way that it does not end up in exported notebook.
+    # We set is_exported to "no" as a marker to set it to false down below.
+    js_assets.pop(0)
     url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)
+    flexx_pre_init = """<script>window.flexx = window.flexx || {};
+                                window.flexx.app_name = "%s";
+                                window.flexx.session_id = "%s";
+                                window.flexx.ws_url = "%s";
+                                window.flexx.is_exported = "no";
+                        </script>""" % (session.app_name, session.id, url)
+    
+    # Check if already loaded, if so, re-connect
+    if not getattr(session, 'init_notebook_done', False):
+        session.init_notebook_done = True  # also used in assetstore
+    else:
+        display(HTML(flexx_pre_init.replace('"no"', 'false')))
+        clear_output()
+        display(HTML('<script>flexx.init();</script>'
+                     '<i>Flexx already loaded. Reconnected.</i>'))
+        return  # Don't inject Flexx twice
+    
+    
+    # Install helper to make things work in exported notebooks
+    NoteBookHelper(session)
+    
+    # Compose HTML to inject
     t = "<i>Injecting Flexx JS and CSS</i>"
-    t += '\n\n'.join(asset_elements)
+    t += '\n\n'.join([asset.to_html('{}', 0) for asset in css_assets + js_assets])
     t += """<script>
-            window.flexx.ws_url='%s';
-            flexx.is_notebook=true;
+            flexx.is_notebook = true;
+            flexx.is_exported = flexx.is_exported != "no";
             flexx.init();
-            </script>""" % url
+            </script>"""
+    
+    display(HTML(flexx_pre_init))  # Create initial Flexx info dict
+    clear_output()  # Make sure the info dict is gone in exported notebooks
+    display(HTML(t))
     
     # Note: the Widget._repr_html_() method is responsible for making
     # the widget show up in the notebook output area.
-    display(HTML(t))
 
 
 def serve(cls, name=None, properties=None):
@@ -409,7 +434,7 @@ def export(cls, filename=None, properties=None, single=None, link=None,
     # Create session with id equal to the app name. This would not be strictly
     # necessary to make exports work, but it makes sure that exporting twice
     # generates the exact same thing (no randomly generated dir names).
-    session = manager.create_session(name, name)
+    session = manager.create_session(name, name)  # 2nd arg sets session._id
     
     # Make fake connection using exporter object
     exporter = ExporterWebSocketDummy()
