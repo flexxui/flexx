@@ -53,75 +53,69 @@ class TabPanel(Layout):
     todo: this needs a way to get/set the current order of the widgets.
     """
     
+    # This CSS is taken from the Phosphor example, but we "prefix" it, so that
+    # it does not screw up style of other Phosphor stuff on the same page.
     CSS = """
-        .p-TabBar {
+        .flx-Widget .p-TabBar {
             min-height: 24px;
             max-height: 24px;
         }
         
-        .p-TabBar-header {
-            display: none;
-        }
-        
-        .p-TabBar-footer {
-            flex: 0 0 1px;
-            background: #C0C0C0;
-        }
-        
-        .p-TabBar-content {
+        .flx-Widget .p-TabBar-content {
             min-width: 0;
+            min-height: 0;
             align-items: flex-end;
+            border-bottom: 1px solid #C0C0C0;
         }
         
-        .p-TabBar-tab {
+        .flx-Widget .p-TabBar-tab {
+            padding: 0px 10px;
+            background: #E5E5E5;
+            border: 1px solid #C0C0C0;
+            border-bottom: none;
+            font: 12px Helvetica, Arial, sans-serif;
             flex: 0 1 125px;
             min-height: 20px;
             max-height: 20px;
             min-width: 35px;
             margin-left: -1px;
-            border: 1px solid #C0C0C0;
-            border-bottom: none;
-            padding: 0px 10px;
-            background: #E5E5E5;
-            font: 12px Helvetica, Arial, sans-serif;
-        }
-        
-        .p-TabBar-tab:first-child {
-            margin-left: 0;
-        }
-        
-        .p-TabBar-tab.p-mod-current {
-            min-height: 23px;
-            max-height: 23px;
-            background: white;
-            transform: translateY(1px);
-        }
-        
-        .p-TabBar-tab:hover:not(.p-mod-current) {
-            background: #F0F0F0;
-        }
-        
-        .p-TabBar-tabIcon,
-        .p-TabBar-tabText,
-        .p-TabBar-tabCloseIcon {
             line-height: 20px;
         }
         
-        .p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon {
+        .flx-Widget .p-TabBar-tab.p-mod-current {
+            background: white;
+        }
+        
+        .flx-Widget .p-TabBar-tab:hover:not(.p-mod-current) {
+            background: #F0F0F0;
+        }
+        
+        .flx-Widget .p-TabBar-tab:first-child {
+            margin-left: 0;
+        }
+        
+        .flx-Widget .p-TabBar-tab.p-mod-current {
+            min-height: 23px;
+            max-height: 23px;
+            transform: translateY(1px);
+        }
+        
+        .flx-Widget .p-TabBar-tabIcon,
+        .flx-Widget .p-TabBar-tabLabel,
+        .flx-Widget .p-TabBar-tabCloseIcon {
+            display: inline-block;
+        }
+        
+        .flx-Widget .p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon {
             margin-left: 4px;
         }
         
-        .p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon:before {
+        .flx-Widget .p-TabBar-tab.p-mod-closable > .p-TabBar-tabCloseIcon:before {
+            content: '\f00d';
             font-family: FontAwesome;
-            content: '\f00d'; /* close */
         }
         
-        .p-TabBar-tab.p-mod-closable.jp-mod-dirty > .p-TabBar-tabCloseIcon:before {
-            font-family: FontAwesome;
-            content: '\f069'; /* asterisk */
-        }
-        
-        .p-TabBar-tab.p-mod-drag-image {
+        .flx-Widget .p-TabBar-tab.p-mod-drag-image {
             min-height: 23px;
             max-height: 23px;
             min-width: 125px;
