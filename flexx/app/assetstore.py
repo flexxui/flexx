@@ -400,10 +400,11 @@ class Asset:
             if not link:
                 return "<style id='%s'>%s</style>" % (self.name, self.to_string())
             elif link >= 2 and self._remote:
-                url = self._remote
-                return "<link rel='stylesheet' type='text/css' href='%s' id='%s' />" % (url, self.name)
+                t = "<link rel='stylesheet' type='text/css' href='%s' id='%s' />"
+                return t % (self._remote, self.name)
             else:
-                return "<link rel='stylesheet' type='text/css' href='%s' id='%s' />" % (path, self.name)
+                t = "<link rel='stylesheet' type='text/css' href='%s' id='%s' />"
+                return t % (path, self.name)
         else:  # pragma: no cover
             raise NameError('Assets must be .js or .css')
     
