@@ -39,8 +39,9 @@ class LineEdit(Widget):
     """
     
     CSS = """
-    .flx-LineEdit > input-ttt { /* gets to be too wide */
-        width: 100%;
+    .flx-LineEdit > input {
+        max-width: none;
+        min-width: 2em;
     }
     """
     

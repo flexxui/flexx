@@ -14,29 +14,22 @@ class FlexxJS:
     """
     
     def __init__(self):
+        # Init (overloadable) variables. These can be set by creating
+        # a window.flexx object *before* instantiating this class, or by
+        # setting them on this object before the init() is called.
+        self.is_notebook = False
+        self.is_exported = False
+        self.app_name = ''
+        self.session_id = ''
+        self.ws_url = ''
         # Copy attributes from temporary flexx object
         for key in window.flexx.keys():
             self[key] = window.flexx[key]  # session_id, app_name, and more
-        # Init variables
+        # Init internal variables
         self.ws = None
         self.last_msg = None
-        self.is_notebook = False  # if not, we "close" when the ws closes
-        self.is_exported = False
-        # Containers to keep track of classes and objects
         self.classes = {}
         self.instances = {}
-        # Construct url (for nodejs the location is set by the flexx nodejs runtime)
-        address = location.hostname
-        if location.port:
-            address += ':' + location.port
-        address += '/' + self.app_name
-        self.ws_url = 'ws://%s/ws' % address
-        # remove querystring ?session=x
-        try:
-            window.history.replaceState(window.history.state, '',
-                                        window.location.pathname)
-        except Exception:
-            pass  # Xul, nodejs, ...
         
         if window.is_node is True:
             # nodejs (call exit on exit and ctrl-c)
@@ -47,6 +40,7 @@ class FlexxJS:
             window.setTimeout(self.exit, 10000000)  # keep alive ~35k years
         else:
             # browser
+            # Note: flexx.init() is not auto-called when Flexx is embedded
             window.addEventListener('load', self.init, False)
             window.addEventListener('beforeunload', self.exit, False)
         window.flexx = self  # Set this as the global flexx object
@@ -54,22 +48,33 @@ class FlexxJS:
     def init(self):
         """ Called after document is loaded. """
         if window.flexx.is_exported:
-            window.flexx.runExportedApp()
-        elif window.flexx.is_notebook and not (window.IPython and 
-                                               window.IPython.notebook and 
-                                               window.IPython.notebook.session):
-            print('Flexx: hey, I am in an exported notebook!')
+            if flexx.is_notebook:
+                print('Flexx: I am in an exported notebook!')
+            else:
+                print('Flexx: I am in an exported app!')
+                window.flexx.runExportedApp()
         else:
+            print('Flexx: Initializing')
+            if not window.flexx.is_notebook:
+                window.flexx._remove_querystring()
             window.flexx.initSocket()
             window.flexx.initLogging()
-        
+    
+    def _remove_querystring(self):
+        # remove querystring ?session=x
+        try:
+            window.history.replaceState(window.history.state, '',
+                                        window.location.pathname)
+        except Exception:
+            pass  # Xul, nodejs, ...
+    
     def exit(self):
         """ Called when runtime is about to quit. """
         if self.ws:  # is not null or undefined
             self.ws.close()
             self.ws = None
     
-    def get(self, id):
+    def get(self, id):  # todo: rename this to get_instance()?
         """ Get instance of a Model class.
         """
         if id == 'body':
@@ -80,7 +85,6 @@ class FlexxJS:
     def initSocket(self):
         """ Make the connection to Python.
         """
-        
         # Check WebSocket support
         if self.nodejs:
             try:
@@ -93,6 +97,15 @@ class FlexxJS:
             if (WebSocket is undefined):
                 window.document.body.innerHTML = 'Browser does not support WebSockets'
                 raise "FAIL: need websocket"
+        
+        # Construct ws url (for nodejs the location is set by the flexx nodejs runtime)
+        if not self.ws_url:
+            address = location.hostname
+            if location.port:
+                address += ':' + location.port
+            address += '/' + self.app_name
+            self.ws_url = 'ws://%s/ws' % address
+        
         # Open web socket in binary mode
         self.ws = ws = WebSocket(window.flexx.ws_url)
         #ws.binaryType = "arraybuffer"  # would need utf-decoding -> slow

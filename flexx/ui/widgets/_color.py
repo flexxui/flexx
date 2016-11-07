@@ -54,5 +54,4 @@ class ColorSelectWidget(Widget):
             self.node.value = self.color
         
         def _color_changed_from_dom(self, e):
-            print('got event!!')
             self.color = self.node.value

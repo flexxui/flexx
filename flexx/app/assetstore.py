@@ -388,23 +388,23 @@ class Asset:
                 as a separate file). If 2 (default) remote assets remain remote.
         """
         path = path.replace('{}', self.name)
-        name_line = ('/* %s */\n' % path) if path else ''
         
         if self.name.lower().endswith('.js'):
             if not link:
-                return '<script>' + name_line + self.to_string() + '</script>'
+                return "<script id='%s'>%s</script>" % (self.name, self.to_string())
             elif link >= 2 and self._remote:
-                return "<script src='%s'></script>" % self._remote
+                return "<script src='%s' id='%s'></script>" % (self._remote, self.name)
             else:
-                return "<script src='%s'></script>" % path
+                return "<script src='%s' id='%s'></script>" % (path, self.name)
         elif self.name.lower().endswith('.css'):
             if not link:
-                return '<style>' + name_line + self.to_string() + '</style>'
+                return "<style id='%s'>%s</style>" % (self.name, self.to_string())
             elif link >= 2 and self._remote:
-                url = self._remote
-                return "<link rel='stylesheet' type='text/css' href='%s' />" % url
+                t = "<link rel='stylesheet' type='text/css' href='%s' id='%s' />"
+                return t % (self._remote, self.name)
             else:
-                return "<link rel='stylesheet' type='text/css' href='%s' />" % path
+                t = "<link rel='stylesheet' type='text/css' href='%s' id='%s' />"
+                return t % (path, self.name)
         else:  # pragma: no cover
             raise NameError('Assets must be .js or .css')
     
