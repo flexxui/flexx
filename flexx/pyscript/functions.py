@@ -51,8 +51,8 @@ def py2js(ob=None, new_name=None, **parser_options):
                 raise ValueError('Could not get source code for object %r: %s' %
                                  (ob, err))
             if getattr(ob, '__name__', '') in ('', '<lambda>'):
-                raise ValueError('py2js() got anonymous object from "%s", line %i, %r.' %
-                                 (fname, linenr, ob))
+                raise ValueError('py2js() got anonymous function from '
+                                 '"%s", line %i, %r.' % (fname, linenr, ob))
             # Normalize indentation
             indent = len(lines[0]) - len(lines[0].lstrip())
             lines = [line[indent:] for line in lines]
