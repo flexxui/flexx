@@ -683,7 +683,7 @@ class Widget(Model):
               modifier keys pressed down at the time of the event.
             """
             return self._create_key_event(e)
-
+        
         @event.emitter
         def key_up(self, e):
             """ Event emitted when a key is released while
@@ -693,18 +693,27 @@ class Widget(Model):
 
         @event.emitter
         def key_press(self, e):
-            """ Event emitted when a key is pressed down. This event
-            does not fire for the pressing of a modifier keys. See
-            key_down for details.
+            """ Event emitted when a key is pressed down. This event does not
+            fire for the pressing of a modifier keys. See key_down for details.
+            
+            A browser may associate certain actions with certain key presses.
+            If this browser action is unwanted, it can be disabled by
+            overloading this emitter:
+            
+            .. code-block:: py
+            
+                @event.emitter
+                def key_press(self, e):
+                    # Prevent browser's default reaction to function keys
+                    ev = super().key_press(e)
+                    if ev.key.startswith('F'):
+                        e.preventDefault()
+                    return ev
+            
             """
             return self._create_key_event(e)
 
         def _create_key_event(self, e):
-            # If there are listeners for key events, prevent default events
-            # like search, print and tab switching. The tabindex is a pretty
-            # good indicator that this widget wants key events.
-            if self.tabindex is not None:
-                e.preventDefault()
             # https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent
             # key: chrome 51, ff 23, ie 9
             # code: chrome ok, ff 32, ie no
