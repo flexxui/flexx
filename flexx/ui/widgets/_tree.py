@@ -170,7 +170,7 @@ class TreeWidget(Widget):
         margin-left: -1px;  /* aligns better with indentation guide */
     }
     .flx-TreeWidget .collapsed-null > .flx-collapsebut {
-        visibility: 'hidden';
+        visibility: hidden;
     }
     .flx-TreeWidget.flx-listmode .flx-collapsebut {
         display: none;

@@ -33,16 +33,6 @@ class DockPanel(Layout):
     positioning of the child widgets ...
     """
     
-    CSS = """
-    .flx-Widget .p-DockPanel-overlay {
-        background: rgba(255, 255, 255, 0.6);
-        border: 2px solid rgba(0, 0, 0, 0.6);;
-        transition-property: top, left, right, bottom;
-        transition-duration: 100ms;
-        transition-timing-function: ease;
-    }
-    """
-    
     # todo: properties for spacing (self.phosphor.spacing)
     
     class JS:
