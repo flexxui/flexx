@@ -74,5 +74,5 @@ class Label(Widget):
         def _wrap_changed(self, *events):
             wrap = self.wrap
             self.node.style['word-wrap'] = ['initial', 'normal', 'break-word'][wrap]
-            self.node.style['white-space'] = ['no-wrap', 'normal', 'normal'][wrap]
+            self.node.style['white-space'] = ['nowrap', 'normal', 'normal'][wrap]
             self._check_real_size(True)
