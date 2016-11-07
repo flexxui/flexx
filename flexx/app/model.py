@@ -74,7 +74,7 @@ from ..event._hasevents import (with_metaclass, new_type, HasEventsMeta,
                                 finalize_hasevents_class)
 from ..event._emitters import Emitter
 from ..event._js import create_js_hasevents_class, HasEventsJS
-from ..pyscript import py2js, js_rename, window, Parser
+from ..pyscript import py2js, js_rename, window, Parser, JSString
 
 from .serialize import serializer
 from . import logger
@@ -211,12 +211,12 @@ class ModelMeta(HasEventsMeta):
         cls.JS.__local_properties__ = [name for name in cls.JS.__properties__
                     if getattr(cls.JS, name) is not getattr(cls, name, None)]
         
-        # Set JS and CSS for this class
+        # Set JS, META, and CSS for this class
         cls.JS.CODE = cls._get_js()
         cls.CSS = cls.__dict__.get('CSS', '')
     
     def _get_js(cls):
-        """ Get source code for this class.
+        """ Get source code for this class plus the meta info about the code.
         """
         # Since classes are defined in a module, we can safely name the classes
         # by their plain name. But flexx.classes.X remains the "official" 
@@ -226,6 +226,7 @@ class ModelMeta(HasEventsMeta):
         base_class = 'flexx.classes.%s.prototype' % cls.mro()[1].__name__
         code = []
         # Add JS version of HasEvents when this is the Model class
+        # todo: can we include the serializer class via the asset system?
         if cls.mro()[1] is event.HasEvents:
             c = py2js(serializer.__class__, 'flexx.Serializer', inline_stdlib=False)
             code.append(c)
@@ -234,13 +235,17 @@ class ModelMeta(HasEventsMeta):
             code.append(c)
         # Add this class
         c = create_js_hasevents_class(cls.JS, cls_name, base_class)
+        meta = c.meta
         code.append(c.replace('var %s =' % cls_name,
                               'var %s = flexx.classes.%s =' % (cls_name, cls_name),
                               1))
         if cls.mro()[1] is event.HasEvents:
             code.append('flexx.serializer.add_reviver("Flexx-Model",'
                         ' flexx.classes.Model.prototype.__from_json__);\n')
-        return '\n'.join(code)
+        # Return with meta info
+        js = JSString('\n'.join(code))
+        js.meta = meta
+        return js
 
 
 class Model(with_metaclass(ModelMeta, event.HasEvents)):

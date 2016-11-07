@@ -4,7 +4,7 @@ Implementation of flexx.event in JS via PyScript.
 
 import json
 
-from flexx.pyscript import py2js as py2js_
+from flexx.pyscript import JSString, py2js as py2js_
 from flexx.pyscript.parser2 import get_class_definition
 
 from flexx.event._emitters import BaseEmitter, Property
@@ -226,6 +226,17 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
     
     assert cls_name != 'HasEvents'  # we need this special class above instead
     
+    # Collect meta information of all code pieces that we collect
+    meta = {'vars_unknown': set(), 'std_functions': set(), 'std_methods': set(), 'linenr': 1e9}
+    def py2js_local(*args, **kwargs):
+        code = py2js(*args, **kwargs)
+        for key in meta:
+            if key == 'linenr':
+                meta[key] = min(meta[key], code.meta[key])
+            else:
+                meta[key].update(code.meta[key])
+        return code
+    
     handlers = []
     emitters = []
     properties = []
@@ -252,7 +263,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
             else:
                 emitters.append(name)
             # Add function def
-            code = py2js(val._func, cls_name + '.Ƥ.' + funcname)
+            code = py2js_local(val._func, cls_name + '.Ƥ.' + funcname)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             # Mark to not bind the func
@@ -272,7 +283,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
             funcname = name  # funcname is simply name, so that super() works
             handlers.append(name)
             # Add function def
-            code = py2js(val._func, cls_name + '.Ƥ.' + funcname)
+            code = py2js_local(val._func, cls_name + '.Ƥ.' + funcname)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             # Mark to not bind the func
@@ -283,7 +294,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
             funcs_code.append(t % (cls_name, funcname, reprs(val._connection_strings)))
             funcs_code.append('')
         elif callable(val):
-            code = py2js(val, cls_name + '.Ƥ.' + name)
+            code = py2js_local(val, cls_name + '.Ƥ.' + name)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             funcs_code.append('')
@@ -309,7 +320,11 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
         total_code.append('')
         total_code.extend(funcs_code)
     total_code.append('')
-    return '\n'.join(total_code)
+    
+    # Return string with meta info (similar to what py2js returns)
+    js = JSString('\n'.join(total_code))
+    js.meta = meta
+    return js
 
 
 if __name__ == '__main__':

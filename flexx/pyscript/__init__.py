@@ -258,7 +258,8 @@ class Parser(Parser3):
     pass
 
 
-from .functions import py2js, evaljs, evalpy, script2js, js_rename, create_js_module
+from .functions import py2js, evaljs, evalpy, JSString
+from .functions import script2js, js_rename, create_js_module
 from .stdlib import get_full_std_lib, get_all_std_names
 
 # Create stubs
