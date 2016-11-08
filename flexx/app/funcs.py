@@ -286,7 +286,7 @@ def init_notebook():
     # Pop the first JS asset that sets flexx.app_name and flexx.session_id
     # We set these in a way that it does not end up in exported notebook.
     js_assets.pop(0)
-    url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)
+    url = 'ws://%s:%i/flexx/ws/%s' % (host, port, session.app_name)
     flexx_pre_init = """<script>window.flexx = window.flexx || {};
                                 window.flexx.app_name = "%s";
                                 window.flexx.session_id = "%s";

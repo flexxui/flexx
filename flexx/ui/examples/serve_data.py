@@ -9,8 +9,9 @@ is shared between sessions. In the latter, the data is specific for the
 session (the link to the data includes the session id).
 
 Note that ``add_shared_data()`` and ``add_data()`` both return the link
-to the data for convenience. Shared data is always served at
-'_data/shared/filename.ext', so we just use that explicitly here.
+to the data for convenience. Shared data is served at
+'/flexx/data/shared/filename.ext', though one can also use the relative path
+'_data/shared/filename.ext', which also works for exported apps.
 
 Similarly, the data provided by the server can be obtained using Ajax
 (i.e. XMLHttpRequest).

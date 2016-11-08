@@ -80,7 +80,7 @@ class CLI:
             return self.cmd_help('info')
         port = int(port)
         try:
-            print(http_fetch('http://localhost:%i/_cmd/info' % port))
+            print(http_fetch('http://localhost:%i/flexx/cmd/info' % port))
         except FetchError:
             print('There appears to be no local server at port %i' % port)
     
@@ -91,7 +91,7 @@ class CLI:
             return self.cmd_help('stop')
         port = int(port)
         try:
-            print(http_fetch('http://localhost:%i/_cmd/stop' % port))
+            print(http_fetch('http://localhost:%i/flexx/cmd/stop' % port))
             print('stopped server at %i' % port)
         except FetchError:
             print('There appears to be no local server at port %i' % port)
@@ -103,7 +103,7 @@ class CLI:
         if port is None:
             return self.cmd_help('log')
         print('not yet implemented')
-        #print(http_fetch('http://localhost:%i/_cmd/log' % int(port)))
+        #print(http_fetch('http://localhost:%i/flexx/cmd/log' % int(port)))
 
 
 class FetchError(Exception):
