@@ -103,8 +103,7 @@ class FlexxJS:
             address = location.hostname
             if location.port:
                 address += ':' + location.port
-            address += '/' + self.app_name
-            self.ws_url = 'ws://%s/ws' % address
+            self.ws_url = 'ws://%s/flexx/ws/%s' % (address, self.app_name)
         
         # Open web socket in binary mode
         self.ws = ws = WebSocket(window.flexx.ws_url)

@@ -613,7 +613,7 @@ class Parser2(Parser1):
     def parse_ListComp(self, node):
         
         elt = ''.join(self.parse(node.element_node))
-        code = ['(function list_comprehenson () {', 'var res = [];']
+        code = ['(function list_comprehension () {', 'var res = [];']
         vars = []
         
         for iter, comprehension in enumerate(node.comp_nodes):

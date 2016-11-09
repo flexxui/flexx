@@ -19,7 +19,7 @@ from tornado.ioloop import IOLoop
 from tornado import gen
 from tornado import netutil
 
-from .session import manager, valid_app_name
+from .session import manager
 from .assetstore import assets
 from . import logger
 from .. import config
@@ -33,6 +33,8 @@ if tornado.version_info < (4, ):
 
 # Use a binary websocket or not?
 BINARY = False
+
+IMPORT_TIME = time.time()
 
 
 def is_main_thread():
@@ -54,15 +56,16 @@ class AbstractServer:
     """
     
     def __init__(self, host, port):
-        self._open(host, port)
-        # Check that subclass set private variables
-        assert self._serving
+        self._serving = None
+        if host is not False:
+            self._open(host, port)
+            assert self._serving  # Check that subclass set private variable
         self._running = False
     
     def start(self):
         """ Start the event loop. """
         if not self._serving:
-            raise RuntimeError('Cannot start a closed server!')
+            raise RuntimeError('Cannot start a closed or non-serving server!')
         if self._running:
             raise RuntimeError('Cannot start a running server.')
         self._running = True
@@ -102,7 +105,9 @@ class AbstractServer:
     
     @property
     def serving(self):
-        """ Get a tuple (hostname, port) that is being served. """
+        """ Get a tuple (hostname, port) that is being served.
+        Or None if the server is not serving (anymore).
+        """
         return self._serving
 
 
@@ -112,10 +117,12 @@ class TornadoServer(AbstractServer):
     
     def __init__(self, host, port, new_loop):
         self._new_loop = new_loop
+        self._app = None
+        self._server = None
+        self._get_io_loop()
         super().__init__(host, port)
     
-    def _open(self, host, port):
-        
+    def _get_io_loop(self):
         # Get a new ioloop or the current ioloop for this thread
         if self._new_loop:
             self._loop = IOLoop()
@@ -123,10 +130,15 @@ class TornadoServer(AbstractServer):
             self._loop = IOLoop.current(instance=is_main_thread())
             if self._loop is None:
                 self._loop = IOLoop(make_current=True)
+    
+    def _open(self, host, port):
+        # Note: does not get called if host is False. That way we can 
+        # run Flexx in e.g. JLab's application.
         
         # Create tornado application
-        self._app = tornado.web.Application([(r"/(.*)/ws", WSHandler), 
-                                             (r"/(.*)", MainHandler), ])
+        self._app = tornado.web.Application([(r"/flexx/ws/(.*)", WSHandler),
+                                             (r"/flexx/(.*)", MainHandler),
+                                             (r"/(.*)", AppHandler), ])
         # Create tornado server, bound to our own ioloop
         self._server = tornado.httpserver.HTTPServer(self._app, io_loop=self._loop)
         
@@ -228,58 +240,81 @@ def port_hash(name):
     return 49152 + (val % 2**14)
 
 
-class MainHandler(tornado.web.RequestHandler):
-    """ Handler for http requests: serve pages
+class FlexxHandler(tornado.web.RequestHandler):
+    """ Base class for Flexx' Tornado request handlers.
     """
+    
     def initialize(self, **kwargs):
         # kwargs == dict set as third arg in url spec
         pass
     
-    def _guess_mime_type(self, fname):
-        """ Set the mimetype if we can guess it from the filename.
-        """
-        guess = mimetypes.guess_type(fname)[0]
-        if guess:
-            self.set_header("Content-Type", guess)
+    def write_error(self, status_code, **kwargs):
+        if status_code == 404:  # does not work?
+            self.write('flexx.ui wants you to connect to root (404)')
+        else:
+            msg = 'Flexx.ui encountered an error: <br /><br />'
+            try:  # try providing a useful message; tough luck if this fails
+                type, value, tb = kwargs['exc_info']
+                tb_str = ''.join(traceback.format_tb(tb))
+                msg += '<pre>%s\n%s</pre>' % (tb_str, str(value))
+            except Exception:
+                pass
+            self.write(msg)
+            super().write_error(status_code, **kwargs)
+    
+    def on_finish(self):
+        pass
+
+
+class AppHandler(FlexxHandler):
+    """ Handler for http requests to get apps.
+    """
     
     @gen.coroutine
     def get(self, full_path):
         
         logger.debug('Incoming request at %s' % full_path)
         
-        # Analyze path to derive components
-        # Note: invalid app name can mean its a path relative to the main app
+        ok_app_names = '__main__', '__default__', '__index__'
         parts = [p for p in full_path.split('/') if p]
-        if parts and valid_app_name(parts[0]):
-            app_name, path = parts[0], '/'.join(parts[1:])
-        else:
-            app_name = (manager.has_app_name('_main') or
-                        manager.has_app_name('__main__') or
-                        '_index')
-            path = '/'.join(parts)
         
+        # Try getting regular app name
+        # Note: invalid part[0] can mean its a path relative to the main app
+        app_name = None
+        path = '/'.join(parts)
+        if parts:
+            if path.lower() == 'flexx':  # reserved, redirect to other handler
+                return self.redirect('/flexx/')
+            if parts[0] in ok_app_names or manager.has_app_name(parts[0]):
+                app_name = parts[0]
+                path = '/'.join(parts[1:])
+        
+        # Maybe its the main app?
+        app_name = app_name or '__main__'
+        if app_name == '__main__':
+            app_name = manager.has_app_name('__main__')
+            
+        # Maybe the user wants an index? Otherwise error.
+        if not app_name:
+            if not parts:
+                app_name = '__index__'
+            else:
+                name = parts[0] if parts else '__main__'
+                return self.write('No app "%s" is currently hosted.' % name)
+    
         # We now have:
         # * app_name: name of the app, must be a valid identifier, names
         #   with underscrores are reserved for special things like assets,
         #   commands, etc.
         # * path: part (possibly with slashes) after app_name
-        
-        ok_app_names = '_main', '__main__', '__default__'
-        if app_name in ok_app_names or not app_name.startswith('_'):
-            self._get_app(app_name, path)  # An actual app!
-        elif app_name in ('__index__', '_index'):
+        if app_name == '__index__':
             self._get_index(app_name, path)  # Index page
-        elif app_name in ('_assets', '_assetview', '_data'):
-            self._get_asset(app_name, path)  # JS, CSS, or data
-        elif app_name in ('_cmd', '__cmd__'):
-            self._get_cmd(app_name, path)  # Execute (or ignore) command
         else:
-            self.write('Ivalid URL: apps do not start with an underscore, and '
-                       'path %r has no special meaning.' % app_name)
+            self._get_app(app_name, path)  # An actual app!
     
     def _get_index(self, app_name, path):
         if path:
-            return self.redirect('/_index')
+            return self.redirect('/flexx/__index__')
         all_apps = ['<li><a href="%s/">%s</a></li>' % (name, name) for name in 
                     manager.get_app_names()]
         the_list = '<ul>%s</ul>' % ''.join(all_apps) if all_apps else 'no apps'
@@ -289,8 +324,10 @@ class MainHandler(tornado.web.RequestHandler):
     
         # todo: send path to app somehow
         
-        if path.startswith('_data/'):
-            return self.redirect('/' + path)
+        # Allow serving data/assets relative to app so that data can use
+        # relative paths just like exported apps.
+        if path.startswith(('_data/', '_assets/')):
+            return self.redirect('/flexx/' + path[1:])
         
         # Get case-corrected app name if the app is known
         correct_app_name = manager.has_app_name(app_name)
@@ -315,8 +352,43 @@ class MainHandler(tornado.web.RequestHandler):
             # Create session - websocket will connect to it via session_id
             session = manager.create_session(app_name)
             self.write(session.get_page().encode())
+
+
+class MainHandler(tornado.web.RequestHandler):
+    """ Handler for assets, commands, etc. Basically, everything for
+    which te path is clear.
+    """
+
+    def _guess_mime_type(self, fname):
+        """ Set the mimetype if we can guess it from the filename.
+        """
+        guess = mimetypes.guess_type(fname)[0]
+        if guess:
+            self.set_header("Content-Type", guess)
     
-    def _get_asset(self, app_name, path):
+    @gen.coroutine
+    def get(self, full_path):
+        
+        logger.debug('Incoming request at %s' % full_path)
+        
+        # Analyze path to derive components
+        # Note: invalid app name can mean its a path relative to the main app
+        parts = [p for p in full_path.split('/') if p]
+        if not parts:
+            return self.write('Root url for flexx: assets, assetview, data, cmd')
+        selector = parts[0]
+        path = '/'.join(parts[1:])
+        
+        if selector in ('assets', 'assetview', 'data'):
+            self._get_asset(selector, path)  # JS, CSS, or data
+        elif selector == 'info':
+            self._get_info(selector, path)
+        elif selector == 'cmd':
+            self._get_cmd(selector, path)  # Execute (or ignore) command
+        else:
+            return self.write('Invalid url path "%s".' % full_path)
+    
+    def _get_asset(self, selector, path):
         
         # Get session id and filename
         session_id, _, filename = path.partition('/')
@@ -331,14 +403,14 @@ class MainHandler(tornado.web.RequestHandler):
         if asset_provider is None:
             return self.write('Invalid session %r' % session_id)
         if not filename:
-            return self.write('Root dir for %s/%s' % (app_name, path))
+            return self.write('Root dir for %s/%s' % (selector, path))
         
-        if app_name == '_assets':
+        if selector == 'assets':
             
             # If colon: request for a view of an asset at a certain line
             if '.js:' in filename or '.css:' in filename or filename[0] == ':':
                 fname, where = filename.split(':')[:2]
-                return self.redirect('/_assetview/%s/%s#L%s' %
+                return self.redirect('/flexx/assetview/%s/%s#L%s' %
                     (session_id or 'shared', fname.replace('/:', ':'), where))
             
             # Retrieve asset
@@ -349,7 +421,7 @@ class MainHandler(tornado.web.RequestHandler):
                 self._guess_mime_type(filename)
                 self.write(res.to_string())
         
-        elif app_name == '_assetview':
+        elif selector == 'assetview':
             
             # Retrieve asset
             res = asset_provider.get_asset(filename)
@@ -371,7 +443,7 @@ class MainHandler(tornado.web.RequestHandler):
             lines.append('</body></html>')
             return self.write('\n'.join(lines))
         
-        elif app_name == '_data':
+        elif selector == 'data':
             # todo: can/do we async write in case the data is large?
             
             # Retrieve data
@@ -383,10 +455,28 @@ class MainHandler(tornado.web.RequestHandler):
                 self.write(res)
         
         else:
-            raise RuntimeError('Invalid asset type %r' % app_name)
+            raise RuntimeError('Invalid asset type %r' % selector)
     
-    def _get_cmd(self, app_name, path):
-        # Control the server using http, but only from localhost
+    def _get_info(self, selector, info):
+        """ Provide some rudimentary information about the server.
+        Note that this is publicly accesible.
+        """
+        runtime = time.time() - IMPORT_TIME
+        napps = len(manager.get_app_names())
+        nsessions = sum([len(manager.get_connections(x))
+                         for x in manager.get_app_names()])
+        
+        info = []
+        info.append('Runtime: %1.1f s' % runtime)
+        info.append('Number of apps: %i' % napps)
+        info.append('Number of sessions: %i' % nsessions)
+        
+        info = '\n'.join(['<li>%s</li>' % i for i in info])
+        self.write('<ul>' + info + '</ul>')
+    
+    def _get_cmd(self, selector, path):
+        """ Allow control of the server using http, but only from localhost!
+        """
         if not self.request.host.startswith('localhost:'):
             self.write('403')
             return
@@ -403,26 +493,9 @@ class MainHandler(tornado.web.RequestHandler):
         elif path == 'stop':
             loop = IOLoop.current()
             loop.add_callback(loop.stop)
+            self.write("Stopping event loop.")
         else:
             self.write('unknown command %r' % path)
-    
-    def write_error(self, status_code, **kwargs):
-        if status_code == 404:  # does not work?
-            self.write('flexx.ui wants you to connect to root (404)')
-        else:
-            msg = 'Flexx.ui encountered an error: <br /><br />'
-            try:  # try providing a useful message; tough luck if this fails
-                type, value, tb = kwargs['exc_info']
-                tb_str = ''.join(traceback.format_tb(tb))
-                msg += '<pre>%s\n%s</pre>' % (tb_str, str(value))
-            except Exception:
-                pass
-            self.write(msg)
-            super().write_error(status_code, **kwargs)
-    
-    def on_finish(self):
-        pass
-
 
 
 class MessageCounter:
@@ -640,13 +713,18 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     def check_origin(self, origin):
         """ Handle cross-domain access; override default same origin policy.
         """
-        host, port = self.application._flexx_serving  # set by us
-        incoming_host = urlparse(origin).hostname
-        if host == 'localhost':
+        # http://www.tornadoweb.org/en/stable/_modules/tornado/websocket.html
+        #WebSocketHandler.check_origin
+        
+        serving_host = self.request.headers.get("Host")
+        serving_hostname = serving_host.split(':')[0]
+        connecting_host = urlparse(origin).netloc
+        
+        if serving_hostname == 'localhost':
             return True  # Safe
-        elif host == '0.0.0.0':
+        elif serving_hostname == '0.0.0.0':
             return True  # we cannot know if the origin matches
-        elif host == incoming_host:
+        elif serving_host == connecting_host:
             return True
         else:
             logger.info('Connection refused from %s' % origin)

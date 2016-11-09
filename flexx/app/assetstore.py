@@ -982,7 +982,7 @@ class SessionAssets:
     def _get_page(self, js_assets, css_assets, link, export):
         """ Compose index page.
         """
-        pre_path = '' if export else '/'
+        pre_path = '_assets' if export else '/flexx/assets'
         
         codes = []
         for assets in [css_assets, js_assets]:
@@ -993,9 +993,9 @@ class SessionAssets:
                     if asset.name.startswith('embed/'):
                         html = asset.to_html('', 0)
                     elif self._store.get_asset(asset.name) is not asset:
-                        html = asset.to_html(pre_path + '_assets/%s/{}' % self.id, link)
+                        html = asset.to_html(pre_path + '/%s/{}' % self.id, link)
                     else:
-                        html = asset.to_html(pre_path + '_assets/shared/{}', link)
+                        html = asset.to_html(pre_path + '/shared/{}', link)
                 codes.append(html)
             codes.append('')  # whitespace between css and js assets
         
