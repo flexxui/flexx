@@ -706,13 +706,18 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     def check_origin(self, origin):
         """ Handle cross-domain access; override default same origin policy.
         """
-        host, port = self.application._flexx_serving  # set by us
-        incoming_host = urlparse(origin).hostname
-        if host == 'localhost':
+        # http://www.tornadoweb.org/en/stable/_modules/tornado/websocket.html
+        #WebSocketHandler.check_origin
+        
+        serving_host = self.request.headers.get("Host")
+        serving_hostname = serving_host.split(':')[0]
+        connecting_host = urlparse(origin).netloc
+        
+        if serving_hostname == 'localhost':
             return True  # Safe
-        elif host == '0.0.0.0':
+        elif serving_hostname == '0.0.0.0':
             return True  # we cannot know if the origin matches
-        elif host == incoming_host:
+        elif serving_host == connecting_host:
             return True
         else:
             logger.info('Connection refused from %s' % origin)
