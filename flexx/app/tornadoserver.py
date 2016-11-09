@@ -56,15 +56,16 @@ class AbstractServer:
     """
     
     def __init__(self, host, port):
-        self._open(host, port)
-        # Check that subclass set private variables
-        assert self._serving
+        self._serving = None
+        if host is not False:
+            self._open(host, port)
+            assert self._serving  # Check that subclass set private variable
         self._running = False
     
     def start(self):
         """ Start the event loop. """
         if not self._serving:
-            raise RuntimeError('Cannot start a closed server!')
+            raise RuntimeError('Cannot start a closed or non-serving server!')
         if self._running:
             raise RuntimeError('Cannot start a running server.')
         self._running = True
@@ -104,7 +105,9 @@ class AbstractServer:
     
     @property
     def serving(self):
-        """ Get a tuple (hostname, port) that is being served. """
+        """ Get a tuple (hostname, port) that is being served.
+        Or None if the server is not serving (anymore).
+        """
         return self._serving
 
 
@@ -114,10 +117,12 @@ class TornadoServer(AbstractServer):
     
     def __init__(self, host, port, new_loop):
         self._new_loop = new_loop
+        self._app = None
+        self._server = None
+        self._get_io_loop()
         super().__init__(host, port)
     
-    def _open(self, host, port):
-        
+    def _get_io_loop(self):
         # Get a new ioloop or the current ioloop for this thread
         if self._new_loop:
             self._loop = IOLoop()
@@ -125,6 +130,10 @@ class TornadoServer(AbstractServer):
             self._loop = IOLoop.current(instance=is_main_thread())
             if self._loop is None:
                 self._loop = IOLoop(make_current=True)
+    
+    def _open(self, host, port):
+        # Note: does not get called if host is False. That way we can 
+        # run Flexx in e.g. JLab's application.
         
         # Create tornado application
         self._app = tornado.web.Application([(r"/flexx/ws/(.*)", WSHandler),

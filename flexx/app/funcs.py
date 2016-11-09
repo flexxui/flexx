@@ -37,7 +37,8 @@ def create_server(host=None, port=None, new_loop=False, backend='tornado'):
     
     Arguments:
         host (str): The hostname to serve on. By default
-            ``flexx.config.hostname`` is used.
+            ``flexx.config.hostname`` is used. If ``False``, do not listen
+            (e.g. when integrating with an existing Tornado application).
         port (int, str): The port number. If a string is given, it is
             hashed to an ephemeral port number. By default
             ``flexx.config.port`` is used.
