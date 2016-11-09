@@ -19,7 +19,7 @@ from tornado.ioloop import IOLoop
 from tornado import gen
 from tornado import netutil
 
-from .session import manager, valid_app_name
+from .session import manager
 from .assetstore import assets
 from . import logger
 from .. import config
@@ -275,8 +275,7 @@ class AppHandler(FlexxHandler):
         
         logger.debug('Incoming request at %s' % full_path)
         
-        # todo: ditch magics: just _main, _default, _index
-        ok_app_names = '_main', '__main__', '__default__', '_index', '__index__'
+        ok_app_names = '__main__', '__default__', '__index__'
         parts = [p for p in full_path.split('/') if p]
         
         # Try getting regular app name
@@ -291,17 +290,16 @@ class AppHandler(FlexxHandler):
                 path = '/'.join(parts[1:])
         
         # Maybe its the main app?
-        app_name = app_name or '_main'
-        if app_name in ('_main', '__main__'):
-            app_name = (manager.has_app_name('_main') or
-                        manager.has_app_name('__main__'))
+        app_name = app_name or '__main__'
+        if app_name == '__main__':
+            app_name = manager.has_app_name('__main__')
             
         # Maybe the user wants an index? Otherwise error.
         if not app_name:
             if not parts:
-                app_name = '_index'
+                app_name = '__index__'
             else:
-                name = parts[0] if parts else '_main'
+                name = parts[0] if parts else '__main__'
                 return self.write('No app "%s" is currently hosted.' % name)
     
         # We now have:
@@ -309,14 +307,14 @@ class AppHandler(FlexxHandler):
         #   with underscrores are reserved for special things like assets,
         #   commands, etc.
         # * path: part (possibly with slashes) after app_name
-        if app_name in ('__index__', '_index'):
+        if app_name == '__index__':
             self._get_index(app_name, path)  # Index page
         else:
             self._get_app(app_name, path)  # An actual app!
     
     def _get_index(self, app_name, path):
         if path:
-            return self.redirect('/_index')
+            return self.redirect('/flexx/__index__')
         all_apps = ['<li><a href="%s/">%s</a></li>' % (name, name) for name in 
                     manager.get_app_names()]
         the_list = '<ul>%s</ul>' % ''.join(all_apps) if all_apps else 'no apps'
