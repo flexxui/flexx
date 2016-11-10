@@ -320,11 +320,12 @@ class TreeWidget(Widget):
             elif self.max_selected == 1:
                 # Selecting one, deselects others
                 item = events[-1].source
-                item.selected = not item.selected
-                if item.selected:
+                gets_selected = not item.selected
+                if gets_selected:
                     for i in self.get_all_items():
                         if i.selected and i is not item:
                             i.selected = False
+                item.selected = gets_selected  # set the item last
             else:
                 # Select to a certain max
                 item = events[-1].source
