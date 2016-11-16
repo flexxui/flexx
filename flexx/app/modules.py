@@ -6,6 +6,7 @@ by including more JS or by adding a dependency on another JSModule.
 
 import sys
 import json
+import time
 import types
 
 from ..pyscript import py2js, JSConstant, create_js_module, get_all_std_names
@@ -132,6 +133,7 @@ class JSModule:
         self._deps = {}  # mod_name -> [mod_as_name, *imports]
         self._asset_deps = []  # asset objects
         # Caches
+        self._changed_time = 0
         self._js_cache = None
         self._css_cache = None
         
@@ -144,6 +146,8 @@ class JSModule:
         else:
             # Regular module, can have assets
             self._scrape_dependencies()
+        
+        self._changed_time = time.time()
     
     def __repr__(self):
         return '<%s %s with %i definitions>' % (self.__class__.__name__,
@@ -163,10 +167,11 @@ class JSModule:
         return set(self._deps.keys())
     
     @property
-    def has_changed(self):
-        """ Whether any definitions changed since ``get_js()`` was last called.
+    def changed_time(self):
+        """ The time (as in ``time.time()``) at which this module was
+        last changed.
         """
-        return self._js_cache is None
+        return self._changed_time
     
     @property
     def asset_deps(self):
@@ -203,12 +208,10 @@ class JSModule:
         for name in sorted(dir(self._pymodule)):
             if name.startswith('__'):
                 continue
-            elif name in self._imported_names:
-                continue
             
             val = getattr(self._pymodule, name)
             
-            if isinstance(val, Asset):
+            if isinstance(val, Asset) and name not in self._imported_names:
                 self._imported_names.add(name)
                 self._asset_deps.append(val)
             # Probably not a good idea, just "use" the module to get it included
@@ -255,6 +258,7 @@ class JSModule:
             return  # It's a deliberate stub!
         
         # Mark dirty
+        self._changed_time = time.time()
         self._js_cache = self._css_cache = None
         
         if isinstance(val, types.ModuleType):
@@ -263,8 +267,8 @@ class JSModule:
                 self._import(val.__name__, None, None)
                 self._deps[val.__name__][0] = name  # set/overwrite as-name
             else:
-                t = 'Cannot use module %s directly in JS unless it defines %s.'
-                raise ValueError(t % (val.__name__, '"__pyscript__"'))
+                t = 'JS in %s cannot use module %s directly unless it defines %s.'
+                raise ValueError(t % (self.name, val.__name__, '"__pyscript__"'))
         
         elif isinstance(val, type) and issubclass(val, Model):
             # Model class; we know that we can get the JS for this

@@ -53,8 +53,8 @@ def _load_bokeh_css():
 # be imported until this module (i.e. the BokehWidget) is actually used.
 # The variable names do not matter, only that the module is present, though
 # by naming it "Bokeh" it doubles as a stub for the Bokeh namespec in JS.
-Bokeh = app.Asset('bokeh.js', lazy=_load_bokeh_js)
-Bokeh_css = app.Asset('bokeh.css', lazy=_load_bokeh_css)
+Bokeh = app.Asset('bokeh.js', _load_bokeh_js)
+Bokeh_css = app.Asset('bokeh.css', _load_bokeh_css)
 
 
 class BokehWidget(Widget):

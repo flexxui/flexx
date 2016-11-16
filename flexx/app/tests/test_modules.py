@@ -5,6 +5,7 @@ Python module.
 
 import os
 import sys
+import time
 import tempfile
 import shutil
 
@@ -18,10 +19,15 @@ tempdirname = os.path.join(tempfile.gettempdir(), 'flexx_module_test')
 
 files = {}
 
+files['__init__'] = """
+    def x():
+        pass
+"""
+
 files['foo'] = """
     from flexx import app, pyscript
-    from lib3 import tan, atan
-    from lib4 import magic_number, random
+    from flxtest.lib3 import tan, atan
+    from flxtest.lib4 import magic_number, random
     
     import sys
     sas = None
@@ -44,10 +50,10 @@ files['foo'] = """
 """
 
 files['bar'] = """
-    import lib1
-    import lib2
-    from lib2 import AA
-    from foo import Foo
+    from flxtest import lib1
+    from flxtest import lib2
+    from flxtest.lib2 import AA
+    from flxtest.foo import Foo
     
     def use_lib1():
         return lib1.sin
@@ -112,11 +118,12 @@ files['lib2'] = """
 """
 
 files['lib3'] = """
-    from lib1 import sin
-    from lib2 import cos, offset
+    from flxtest.lib1 import sin
+    from flxtest.lib2 import cos, offset
+    from flxtest import x
     
     def tan(t):
-        return sin(t) / cos(t) + offset * 0
+        return sin(t) / cos(t) + offset * 0  + x()
     
     def atan(t):
         return 1/tan(t)
@@ -128,21 +135,26 @@ files['lib4'] = """
         return 1
 """
 
+files['withassets'] = """
+    from flexx import app
+    a = app.Asset('foo.js', 'woot')
+"""
 
 
 def setup_module():
+    packdirname = os.path.join(tempdirname, 'flxtest')
     if not os.path.isdir(tempdirname):
         os.makedirs(tempdirname)
+    if not os.path.isdir(packdirname):
+        os.makedirs(packdirname)
     
     sys.path.insert(0, tempdirname)
     
     for name in files:
         # Mangle names
         text = '\n'.join(line[4:] for line in files[name].splitlines())
-        for key in files:
-            text = text.replace(key, 'flexx_' + key)
         # Write code
-        filename = os.path.join(tempdirname, 'flexx_' + name + '.py')
+        filename = os.path.join(packdirname, name + '.py')
         with open(filename, 'wb') as f:
             f.write(text.encode())
 
@@ -157,11 +169,11 @@ def teardown_module():
 
 def test_modules():
     
-    import flexx_foo
+    import flxtest.foo
     
     store = {}
     
-    m = JSModule(flexx_foo, store)
+    m = JSModule('flxtest.foo', store)
     
     assert len(store) == 1
     
@@ -169,70 +181,71 @@ def test_modules():
     m.add_variable('Foo')
     
     # Modules exists
-    assert len(store) == 5
-    assert 'flexx_foo' in store
-    assert 'flexx_lib1' in store
-    assert 'flexx_lib2' in store
-    assert 'flexx_lib3' in store
-    assert 'flexx.app.model' in store
+    assert len(store) == 7
+    assert 'flxtest.foo' in store
+    assert 'flxtest.lib1' in store
+    assert 'flxtest.lib2' in store
+    assert 'flxtest.lib3' in store
+    assert 'flxtest.__init__' in store  # different from how Python works!
+    assert 'flexx.app.model' in store  # + what it depends on
     
     # CSS
-    assert 'foo-css-rule' in store['flexx_foo'].get_css()
+    assert 'foo-css-rule' in store['flxtest.foo'].get_css()
     
     # Stubs prevented loading of console
-    assert 'console =' not in store['flexx_foo'].get_js()
+    assert 'console =' not in store['flxtest.foo'].get_js()
     
     # Function defs defined
-    assert 'sin = function' in store['flexx_lib1'].get_js()
-    assert 'asin = function' in store['flexx_lib1'].get_js()  # __pyscript__
-    assert 'cos = function' in store['flexx_lib2'].get_js()
-    assert 'acos = function' not in store['flexx_lib2'].get_js()  # not __pyscript__
-    assert 'tan = function' in store['flexx_lib3'].get_js()
-    assert 'do_something = function' in store['flexx_foo'].get_js()
+    assert 'sin = function' in store['flxtest.lib1'].get_js()
+    assert 'asin = function' in store['flxtest.lib1'].get_js()  # __pyscript__
+    assert 'cos = function' in store['flxtest.lib2'].get_js()
+    assert 'acos = function' not in store['flxtest.lib2'].get_js()  # not __pyscript__
+    assert 'tan = function' in store['flxtest.lib3'].get_js()
+    assert 'do_something = function' in store['flxtest.foo'].get_js()
     
     # Function defs imported
-    assert 'sin = flexx_lib1.sin' in store['flexx_lib3'].get_js()
-    assert 'cos = flexx_lib2.cos' in store['flexx_lib3'].get_js()
-    assert 'tan = flexx_lib3.tan' in store['flexx_foo'].get_js()
+    assert 'sin = flxtest_lib1.sin' in store['flxtest.lib3'].get_js()
+    assert 'cos = flxtest_lib2.cos' in store['flxtest.lib3'].get_js()
+    assert 'tan = flxtest_lib3.tan' in store['flxtest.foo'].get_js()
     
     # Unused constants 
-    assert 'sys' not in store['flexx_foo'].get_js()
-    assert 'sas' not in store['flexx_foo'].get_js()
-    assert 'sys' not in store['flexx_lib2'].get_js()
-    assert 'sas' not in store['flexx_lib2'].get_js()
-    assert 'sas' in store['flexx_lib1'].get_js()  # __pyscript__
+    assert 'sys' not in store['flxtest.foo'].get_js()
+    assert 'sas' not in store['flxtest.foo'].get_js()
+    assert 'sys' not in store['flxtest.lib2'].get_js()
+    assert 'sas' not in store['flxtest.lib2'].get_js()
+    assert 'sas' in store['flxtest.lib1'].get_js()  # __pyscript__
     
     # Constants replicate, not import
-    assert 'offset = 3' in store['flexx_lib2'].get_js()
-    assert 'offset = 3' in store['flexx_lib3'].get_js()
+    assert 'offset = 3' in store['flxtest.lib2'].get_js()
+    assert 'offset = 3' in store['flxtest.lib3'].get_js()
     
     # So ,,, lib4 is omitted, right?
-    assert 'flexx_lib4' not in store
-    assert 'magic_number' not in store['flexx_foo'].get_js()
-    assert 'random' not in store['flexx_foo'].get_js()
-    assert 'atan' not in store['flexx_foo'].get_js()
-    assert 'atan' not in store['flexx_lib3'].get_js()
+    assert 'flxtest.lib4' not in store
+    assert 'magic_number' not in store['flxtest.foo'].get_js()
+    assert 'random' not in store['flxtest.foo'].get_js()
+    assert 'atan' not in store['flxtest.foo'].get_js()
+    assert 'atan' not in store['flxtest.lib3'].get_js()
     
     # Use more of foo module
     m.add_variable('do_more')
     
     # Now, lib4 is used
-    assert len(store) == 6
-    assert 'flexx_lib4' in store
+    assert len(store) == 8
+    assert 'flxtest.lib4' in store
     
     # And names added in foo
-    assert 'magic_number = 42' in store['flexx_foo'].get_js()
-    assert 'random' in store['flexx_foo'].get_js()
-    assert 'atan' in store['flexx_foo'].get_js()
-    assert 'atan' in store['flexx_lib3'].get_js()
+    assert 'magic_number = 42' in store['flxtest.foo'].get_js()
+    assert 'random' in store['flxtest.foo'].get_js()
+    assert 'atan' in store['flxtest.foo'].get_js()
+    assert 'atan' in store['flxtest.lib3'].get_js()
 
 
 def test_misc():
-    import flexx_foo
+    import flxtest.foo
     store = {}
     
     # repr
-    m = JSModule(flexx_foo, store)
+    m = JSModule('flxtest.foo', store)
     assert '0' in repr(m)
     m.add_variable('do_something')
     assert '1' in repr(m)
@@ -241,8 +254,8 @@ def test_misc():
     
     # Deps
     assert len(m.deps) == 2
-    assert 'flexx_lib3' in m.deps
-    assert 'flexx_lib4' in m.deps
+    assert 'flxtest.lib3' in m.deps
+    assert 'flxtest.lib4' in m.deps
     #
     m.add_variable('Foo')
     assert len(m.deps) == 3
@@ -250,123 +263,166 @@ def test_misc():
 
 
 def test_add_variable():
-    import flexx_foo
-    import flexx_bar
+    import flxtest.foo
+    import flxtest.bar
     store = {}
     
-    m = JSModule(flexx_foo, store)
+    m = JSModule('flxtest.foo', store)
+    
+    assert not m.variables
     m.add_variable('Foo')
+    assert 'Foo' in m.variables
     
     # add_variable is ignored for pyscript mods
-    assert not store['flexx_lib1'].deps
+    assert not store['flxtest.lib1'].deps
     with capture_log('info') as log:
-        store['flexx_lib1'].add_variable('spam')  
+        store['flxtest.lib1'].add_variable('spam')  
     assert not log
     
     # add_variable warns for other mods
     with capture_log('info') as log:
-        store['flexx_lib2'].add_variable('spam')  
+        store['flxtest.lib2'].add_variable('spam')  
     assert len(log) == 1 and 'does not have variable' in log[0]
     
     
-    m = JSModule(flexx_bar, store)
+    m = JSModule('flxtest.bar', store)
     
     # Can use stuff from module if its a __pyscript__ modules
-    m.add_variable('use_flexx_lib1')
+    m.add_variable('use_lib1')
     
     # Even if name makes no sense; maybe it has exports that we do not know of
-    m.add_variable('use_flexx_lib1_wrong')
+    m.add_variable('use_lib1_wrong')
     
     # But not for regular modules
     with raises(ValueError) as err:
-        m.add_variable('use_flexx_lib2')
+        m.add_variable('use_lib2')
     assert '__pyscript__' in str(err)
+    
+    
+    # Has changed flag
+    our_time = time.time(); time.sleep(0.01)
+    m = JSModule('flxtest.bar', {})
+    assert m.changed_time > our_time
+    time.sleep(0.01); our_time = time.time();
+    m.get_js()
+    assert m.changed_time < our_time
+    #
+    our_time = time.time(); time.sleep(0.01)
+    m.add_variable('use_lib1')
+    m.add_variable('AA')
+    assert m.changed_time > our_time
+    #
+    our_time = time.time(); time.sleep(0.01)
+    m.add_variable('use_lib1')  # no effect because already known
+    assert m.changed_time <= our_time
+    #
+    m.add_variable('AA')  # no effect bacause is imported name
+    assert m.changed_time <= our_time
 
 
 def test_subclasses():
     
-    import flexx_foo
-    import flexx_bar
+    import flxtest.foo
+    import flxtest.bar
     
     # Using a class CC > BB > AA > object
     store = {}
-    JSModule(flexx_foo, store).add_variable('Foo')
-    m = JSModule(flexx_bar, store)
+    JSModule('flxtest.foo', store).add_variable('Foo')
+    m = JSModule('flxtest.bar', store)
     #
     assert 'CC' not in m.get_js()
     assert 'BB' not in m.get_js()
-    assert 'AA' not in store['flexx_lib2'].get_js()
+    assert 'AA' not in store['flxtest.lib2'].get_js()
     #
     m.add_variable('CC')
     assert 'CC' in m.get_js()
     assert 'BB' in m.get_js()
-    assert 'AA' in store['flexx_lib2'].get_js()
+    assert 'AA' in store['flxtest.lib2'].get_js()
     
     # Using a class Spam > Bar > Foo > Model
     store = {}
-    m = JSModule(flexx_bar, store)
-    assert 'flexx_foo' not in store
+    m = JSModule('flxtest.bar', store)
+    assert 'flxtest.foo' not in store
     #
     m.add_variable('Spam')
-    assert 'flexx_foo' in store
+    assert 'flxtest.foo' in store
     assert 'flexx.app.model' in store
     
     # Using Foo in modules that imports it
     store = {}
-    m = JSModule(flexx_bar, store)
-    assert 'flexx_foo' not in store
+    m = JSModule('flxtest.bar', store)
+    assert 'flxtest.foo' not in store
     #
     m.add_variable('Foo')
-    assert 'flexx_foo' in store
+    assert 'flxtest.foo' in store
     assert 'flexx.app.model' in store
 
 
 def test_fails():
     
-    import flexx_foo
-    import flexx_bar
+    import flxtest.foo
+    import flxtest.bar
     
-    assert JSModule(flexx_foo, {})
+    assert JSModule('flxtest.foo', {})
     
     # Wrong init
     with raises(TypeError):
         JSModule()
     with raises(TypeError):
-        JSModule(flexx_foo)
+        JSModule('flxtest.foo')
     with raises(TypeError):
         JSModule(3, {})
     with raises(TypeError):
-        JSModule(flexx_foo, 3)
+        JSModule('flxtest.foo', 3)
     with raises(TypeError):
-        JSModule(flexx_foo, {}, 3)
+        JSModule('flxtest.foo', {}, 3)
     
+    # Name issues
+    with raises(ValueError):
+        JSModule('flxtest.doesnotexist', {})
+    with raises(ValueError):
+        JSModule('flxtest', {})  # must be flxtest.__init__
+    with raises(ValueError):
+        JSModule('flxtest.foo.__init__', {})  # only for actual package names!
+        
     # Cannot create module with same name twice (in same store)
     store = {}
-    JSModule(flexx_foo, store)
+    JSModule('flxtest.foo', store)
     with raises(RuntimeError):
-        JSModule(flexx_foo, store)
-    JSModule(flexx_foo, {})  # in alt store its ok though
+        JSModule('flxtest.foo', store)
+    JSModule('flxtest.foo', {})  # in alt store its ok though
     
     # Untranspilable
-    m = JSModule(flexx_bar, {})
+    m = JSModule('flxtest.bar', {})
     with raises(ValueError) as err:
         m.add_variable('cannot_transpile')
     assert 'cannot transpile' in str(err)
     
     # Unserializable
-    m = JSModule(flexx_bar, {})
+    m = JSModule('flxtest.bar', {})
     with raises(ValueError) as err:
         m.add_variable('cannot_serialize')
     assert 'cannot serialize' in str(err)
     
     # Un-anythingable
-    m = JSModule(flexx_bar, {})
+    m = JSModule('flxtest.bar', {})
     with raises(ValueError) as err:
         m.add_variable('cannot_do_anything')
     assert 'cannot convert' in str(err)
 
 
-if __name__ == '__main__':
+def test_assets():
+    
+    import flxtest.withassets
+    
+    m = JSModule('flxtest.withassets', {})
+    assert len(m.asset_deps) == 1
+    assert m.asset_deps[0].to_string() == 'woot'
+
+
+if True:
+    run_tests_if_main()
+elif __name__ == '__main__':
     print(tempdirname)
     teardown_module()
     setup_module()
@@ -378,4 +434,4 @@ if __name__ == '__main__':
     test_fails()
     
     
-    run_tests_if_main()
+    

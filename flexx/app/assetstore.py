@@ -19,7 +19,8 @@ from ..pyscript import create_js_module, get_all_std_names, get_full_std_lib
 from . import logger
 
 
-INDEX = """<!doctype html>
+INDEX = """
+<!doctype html>
 <html>
 <head>
     <meta charset="utf-8">
@@ -32,7 +33,7 @@ ASSET-HOOK
 
 </body>
 </html>
-"""
+""".lstrip()
 
 # todo: make this work with out-of-order assets too
 
@@ -95,7 +96,7 @@ window.flexx.require = require;
 window.flexx._modules = modules;
 
 })();
-"""
+""".lstrip()
 
 RESET = """
 /*! normalize.css v3.0.3 | MIT License | github.com/necolas/normalize.css */
@@ -144,7 +145,7 @@ textarea{overflow:auto}
 optgroup{font-weight:bold}
 table{border-collapse:collapse;border-spacing:0}
 td,th{padding:0}
-"""
+""".lstrip()
 
 reprs = json.dumps
 
@@ -400,12 +401,11 @@ class SessionAssets:
         # by the asset store have a value of None.
         self._used_classes = set()  # Model classes registered as used
         self._used_modules = set()  # module names that define used classes, plus deps
-        self._loaded_modules = set()  # module names loaded in the browser when served
         # Data for this session (in addition to the data provided by the store)
         self._assets = {}
         self._data = {}
         # Whether the page has been served already
-        self._served = False
+        self._served = 0
         self._is_interactive = None
     
     @property
@@ -437,6 +437,8 @@ class SessionAssets:
             data = self._store.get_data(name)
         return data
     
+    # todo: def get_asset(self, name): or not?
+        
     # todo: the way that we do assets now makes me wonder whether there are better ways
     # to deal with data handling ...
     
@@ -524,7 +526,8 @@ class SessionAssets:
             # was last obtained. E.g. it could be that its a new class for 
             # this session, but that it was loaded as part of the bundle.
             mod = self._store.modules[mod_name]
-            modules = [m for m in self._store.modules.values() if m.has_changed]
+            modules = [m for m in self._store.modules.values()
+                       if m.changed_time > self._served]
             modules = solve_dependencies(modules)  # sort based on deps
             if modules:
                 # Bundles - the dash makes this bundle have an empty "module name"
@@ -533,25 +536,17 @@ class SessionAssets:
                 for mod in modules:
                     js_asset.add_module(mod)
                     css_asset.add_module(mod)
-                # Load non-lazy assets of modules that were not yet loaded
-                for mod in modules:
-                    if mod.name not in self._loaded_modules:
-                        for asset in mod.asset_deps:
-                            if not asset.lazy:
-                                self._inject_asset_dynamically(asset)
-                # Load bundles
-                self._inject_asset_dynamically(css_asset)
-                self._inject_asset_dynamically(js_asset)
-                # Load lazy assets of modules that were not yet used
+                # Load assets of modules that were not yet used
                 for mod in modules:
                     if mod.name not in self._used_modules:
                         for asset in mod.asset_deps:
-                            if asset.lazy:
-                                self._inject_asset_dynamically(asset)
+                            self._inject_asset_dynamically(asset)
+                # Load bundles
+                self._inject_asset_dynamically(css_asset)
+                self._inject_asset_dynamically(js_asset)
                 # Mark the modules as used and loaded
                 for mod in modules:
                     self._used_modules.add(mod.name)
-                    self._loaded_modules.add(mod.name)
     
     def _inject_asset_dynamically(self, asset):
         """ Load an asset in a running session.
@@ -620,24 +615,13 @@ class SessionAssets:
         css_assets = [asset for asset in css_assets
                       if any([m.get_css().strip() for m in asset.modules])]
         
-        # Get what modules we loaded (we need this info in interactive mode)
-        for bundle in js_assets:
-            for mod in bundle.modules:
-                self._loaded_modules.add(mod.name)
-        
         # Collect non-module assets
-        # Normal assets are included if they are in a module that is loaded,
-        # lazy assets only get included if they are in a module that is *used*.
+        # Assets only get included if they are in a module that is *used*.
         asset_deps_before = set()
-        asset_deps_after = set()
+        # asset_deps_after = set()
         for mod_name in self._used_modules:
             for asset in self._store.modules[mod_name].asset_deps:
-                if asset.lazy:
-                    asset_deps_after.add(asset)
-        for mod_name in self._loaded_modules:
-            for asset in self._store.modules[mod_name].asset_deps:
-                if not asset.lazy:
-                    asset_deps_before.add(asset)
+                asset_deps_before.add(asset)
         
         # Push assets in the lists (sorted by the creation time)
         f = lambda a: a.i
@@ -646,12 +630,7 @@ class SessionAssets:
                 js_assets.insert(0, asset)
             else:
                 css_assets.insert(0, asset)
-        for asset in sorted(asset_deps_after, key=f):
-            if asset.name.lower().endswith('.js'):
-                js_assets.append(asset)
-            else:
-                css_assets.append(asset)
-        
+       
         # Mark all assets as used. For now, we only use assets that are available
         # in the asset store.
         for asset in js_assets + css_assets:
@@ -669,7 +648,7 @@ class SessionAssets:
         js_assets.insert(0, Asset('flexx-info.js', t % (self._app_name, self.id)))
         
         # Mark this session as served; all future asset loads are dynamic
-        self._served = True
+        self._served = time.time()
         
         # todo: fix incorrect order; loader should be able to handle it for JS
         #import random
@@ -677,12 +656,12 @@ class SessionAssets:
         
         return js_assets, css_assets
     
-    def get_page(self, link=2):
+    def get_page(self, link=3):
         """ Get the string for the HTML page to render this session's app.
         """
         js_assets, css_assets = self.get_assets_in_order(True)
         for asset in js_assets + css_assets:
-            if asset.remote and asset.remote.startswith('file://'):
+            if asset.remote and asset.source.startswith('file://'):
                 raise RuntimeError('Can only use remote assets with "file://" '
                                    'when exporting.')
         return self._get_page(js_assets, css_assets, link, False)
@@ -699,7 +678,7 @@ class SessionAssets:
         # Create a session asset for it, "-export.js" is always embedded
         export_asset = Asset('flexx-export.js', '\n'.join(lines))
         # Compose
-        bundle_level = 2 if link else 9
+        bundle_level = 2 if (link >= 2) else 9
         js_assets, css_assets = self.get_assets_in_order(css_reset=True,
                                                          bundle_level=bundle_level)
         js_assets.append(export_asset)

@@ -267,6 +267,11 @@ def init_notebook():
     if session is None:
         session = manager.create_default_session()
     
+    # trigger loading phosphor assets
+    if 'flexx.ui' in sys.modules:
+        from flexx import ui
+        session.register_model_class(ui.Widget)
+    
     # Open server - the notebook helper takes care of the JS resulting
     # from running a cell, but any interaction goes over the websocket.
     server = current_server()
@@ -403,10 +408,11 @@ def export(cls, filename=None, properties=None, single=None, link=None,
             If not given or None, will return the html as a string.
         properties (dict, optional): the initial properties for the model. The
           model is instantiated using ``Cls(**properties)``.
-        link (int): whether to link assets or embed them. If 0 (default) the
-            assets are embedded. If 1, the assets are linked and "served"
-            relative to the document. If 2, assets are linked and remote
-            assets remain remote.
+        link (int): whether to link assets or embed them:
+            * 0: all assets are embedded.
+            * 1: normal assets are embedded, remote assets remain remote.
+            * 2: all assets are linked (as separate files).
+            * 3: (default) normal assets are linked, remote assets remain remote.
         write_shared (bool): if True (default) will also write shared assets
             when linking to assets. This can be set to False when
             exporting multiple apps to the same location. The shared assets can
@@ -428,7 +434,7 @@ def export(cls, filename=None, properties=None, single=None, link=None,
         if single is not None:
             logger.warn('Export single arg is deprecated, use link instead.')
             if not single:
-                link = 2
+                link = 3
     link = int(link or 0)
     
     # Prepare name, based on exported file name (instead of cls.__name__)
