@@ -28,7 +28,7 @@ Simple example:
 import os
 
 from ... import event, app
-from ...pyscript import window
+from ...pyscript.stubs import window, Bokeh
 from . import Widget
 
 
@@ -49,12 +49,10 @@ def _load_bokeh_js():
 def _load_bokeh_css():
     return _load_bokeh('css')
 
-# Create Bokeh assets. We use the lazy approach, so that Bokeh won't
-# be imported until this module (i.e. the BokehWidget) is actually used.
-# The variable names do not matter, only that the module is present, though
-# by naming it "Bokeh" it doubles as a stub for the Bokeh namespec in JS.
-Bokeh = app.Asset('bokeh.js', _load_bokeh_js)
-Bokeh_css = app.Asset('bokeh.css', _load_bokeh_css)
+# Associate Bokeh asset, but in a "lazy" way, so that we don't attempt to
+# import bokeh until the user actually instantiates a BokehWidget.
+app.assets.associate_asset(__name__, 'bokeh.js', _load_bokeh_js)
+app.assets.associate_asset(__name__, 'bokeh.css', _load_bokeh_css)
 
 
 class BokehWidget(Widget):

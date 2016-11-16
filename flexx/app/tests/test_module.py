@@ -135,11 +135,6 @@ files['lib4'] = """
         return 1
 """
 
-files['withassets'] = """
-    from flexx import app
-    a = app.Asset('foo.js', 'woot')
-"""
-
 
 def setup_module():
     packdirname = os.path.join(tempdirname, 'flxtest')
@@ -409,15 +404,6 @@ def test_fails():
     with raises(ValueError) as err:
         m.add_variable('cannot_do_anything')
     assert 'cannot convert' in str(err)
-
-
-def test_assets():
-    
-    import flxtest.withassets
-    
-    m = JSModule('flxtest.withassets', {})
-    assert len(m.asset_deps) == 1
-    assert m.asset_deps[0].to_string() == 'woot'
 
 
 run_tests_if_main()

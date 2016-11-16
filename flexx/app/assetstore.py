@@ -222,6 +222,7 @@ class AssetStore:
     def __init__(self):
         self._modules = {}
         self._assets = {}
+        self._associated_assets = {}
         self._data = {}
         self._loaded_assets = set()  # between all sessions (for export)
         self._assets['reset.css'] = Asset('reset.css', RESET)
@@ -288,9 +289,6 @@ class AssetStore:
                 continue
             mod = self.modules[name]
             mcount += 1
-            # Register asset deps
-            for asset in mod.asset_deps:
-                self._assets[asset.name] = asset
             # Get names of bundles to add this module to
             bundle_names = []
             bundle_names.append(name)  # bundle of exactly this one module
@@ -335,6 +333,71 @@ class AssetStore:
         """ Get a list of all data names.
         """
         return list(self._data.keys())
+    
+    def add_shared_asset(self, asset_name, source=None):
+        """ Add an asset to the store so that the client can load it from the
+        server. Users typically only need this to provide an asset without
+        loading it in the main page, e.g. when the asset is loaded by a
+        secondary page, a web worker, or AJAX.
+        
+        Parameters:
+            name (str): the asset name, e.g. 'foo.js' or 'bar.css'. Can contain
+                slashes to emulate a file system. e.g. 'spam/foo.js'. If a URI
+                is given, both name and source are implicitly set (and its
+                a remote asset).
+            source (str, function): the source for this asset. Can be:
+            
+                * The source code.
+                * A URI (str starting with 'http://', 'https://' or 'file://'),
+                  making this a "remote asset". Note that ``app.export()``
+                  provides control over how (remote) assets are handled.
+                * A funcion that should return the source code, and which is
+                  called only when the asset is used. This allows defining
+                  assets without causing side effects when they're not used.
+        """
+        asset = Asset(asset_name, source)
+        if asset.name in self._assets:
+            raise ValueError('Asset %r already registered.' % asset.name)
+        self._assets[asset.name] = asset
+        return asset
+    
+    def associate_asset(self, mod_name, asset_name, source=None):
+        """ Associate an asset with the given module.
+        The assets will be loaded when the module that it is associated with
+        is used by JavaScript. Multiple assets can be associated with
+        a module, and an asset can be associated with multiple modules.
+        
+        The intended usage is to write the following inside a module that needs
+        the asset: ``app.assets.associate_asset(__name__, ...)``.
+        
+        Parameters:
+            mod_name (str): The name of the module to associate the asset with.
+            asset_name (str): The name of the asset to associate. Can be an
+                already registered asset, or a new asset.
+            source (str, callable, optional): The source for a new asset. See
+                ``add_shared_asset()`` for details. It is an error to supply a
+                source if the asset_name is already registered.
+        """
+        # Get or create asset
+        if asset_name in self._assets:
+            asset = self._assets[asset_name]
+            if source is not None:
+                t = 'associate_asset() for %s got source, but asset %r already exists.'
+                raise ValueError(t % (mod_name, asset_name))
+        else:
+            asset = self.add_shared_asset(asset_name, source)
+        # Add to the list of assets for this module
+        assets = self._associated_assets.setdefault(mod_name, [])
+        if asset.name not in [a.name for a in assets]:
+            assets.append(asset)
+            assets.sort(key=lambda x: x.i)  # sort by instantiation time
+        return asset
+    
+    def get_associated_assets(self, mod_name):
+        """ Get the associated assets corresponding to the given module name.
+        Sorted by instantiation time.
+        """
+        return tuple(self._associated_assets.get(mod_name, []))
     
     def add_shared_data(self, name, data):
         """ Add data to serve to the client (e.g. images), which is shared
@@ -531,7 +594,7 @@ class SessionAssets:
                 # Load assets of modules that were not yet used
                 for mod in modules:
                     if mod.name not in self._used_modules:
-                        for asset in mod.asset_deps:
+                        for asset in self._store.get_associated_assets(mod.name):
                             self._inject_asset_dynamically(asset)
                 # Load bundles
                 self._inject_asset_dynamically(css_asset)
@@ -612,8 +675,7 @@ class SessionAssets:
         asset_deps_before = set()
         # asset_deps_after = set()
         for mod_name in self._used_modules:
-            for asset in self._store.modules[mod_name].asset_deps:
-                asset_deps_before.add(asset)
+            asset_deps_before.update(self._store.get_associated_assets(mod_name))
         
         # Push assets in the lists (sorted by the creation time)
         f = lambda a: a.i

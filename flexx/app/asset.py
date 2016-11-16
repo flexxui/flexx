@@ -50,25 +50,8 @@ def solve_dependencies(things, warn_missing=False):
 
 class Asset:
     """ Class to represent an asset (JS or CSS) to be included on the page.
-    
-    By creating or importing an asset into a module that defines a
-    Model/Widget, it is automatically detected by Flexx. The session
-    will load the asset when (a Model class from) the module is used.
-    
-    Parameters:
-        name (str): the asset name, e.g. 'foo.js' or 'bar.css'. Can contain
-            slashes to emulate a file system. e.g. 'spam/foo.js'. If a URI
-            is given, both name and source are implicitly set (and its
-            a remote asset).
-        source (str, function): the source for this asset. Can be:
-        
-            * The source code.
-            * A URI (str starting with 'http://', 'https://' or 'file://'),
-              making this a "remote asset". Note that ``app.export()`` provides
-              control over how (remote) assets are handled.
-            * A funcion that should return the source code, and which is
-              called only when the asset is used. This allows defining assets
-              without causing side effects when they're not used.
+    Users will typically use ``app.assets.add_shared_asset()``, see the
+    corresponding docs for details.
     """
     
     # todo: we might need a way to control whether the asset is loaded before or after

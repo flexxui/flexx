@@ -129,7 +129,6 @@ class JSModule:
         self._json_values = {}
         # Dependencies
         self._deps = {}  # mod_name -> [mod_as_name, *imports]
-        self._asset_deps = []  # asset objects
         # Caches
         self._changed_time = 0
         self._js_cache = None
@@ -141,9 +140,6 @@ class JSModule:
             self._pyscript_code['__all__'] = js
             self._provided_names.update([n for n in js.meta['vars_defined']
                                          if not n.startswith('_')])
-        else:
-            # Regular module, can have assets
-            self._scrape_dependencies()
         
         self._changed_time = time.time()
     
@@ -159,6 +155,13 @@ class JSModule:
         return self._name
     
     @property
+    def filename(self):
+        """ The filename of the Python file that defines
+        (the contents of) this module.
+        """
+        return self._pymodule.__file__
+    
+    @property
     def deps(self):
         """ The set of dependencies (names of other modules) for this module.
         """
@@ -170,11 +173,6 @@ class JSModule:
         last changed.
         """
         return self._changed_time
-    
-    @property
-    def asset_deps(self):
-        """ A list of asset objects that this module depends on. """
-        return self._asset_deps
     
     def _import(self, mod_name, name, as_name):
         """ Import a name from another module. This also ensures that the
@@ -196,28 +194,6 @@ class JSModule:
             if line not in imports:
                 imports.append(line)
         return m
-    
-    def _scrape_dependencies(self):
-        """ Collect assets defined in this module.
-        """
-        # todo: I am a tiny bit unsure whether this is the best way to bind Assets
-        # Binding an asset to a module has the advantage that an asset is global,
-        # but we can still detect when its used (i.e. when the module is used).
-        for name in sorted(dir(self._pymodule)):
-            if name.startswith('__'):
-                continue
-            
-            val = getattr(self._pymodule, name)
-            
-            if isinstance(val, Asset) and val not in self._asset_deps:
-                self._asset_deps.append(val)
-            # Probably not a good idea, just "use" the module to get it included
-            # elif isinstance(val, types.ModuleType):
-            #     if getattr(val, '__pyscript__', False):
-            #         self._import(m, val.__name__, name, None)
-        
-        # Sort
-        self._asset_deps = tuple(sorted(self._asset_deps, key=lambda x: x.i))
     
     @property
     def variables(self):
@@ -250,7 +226,7 @@ class JSModule:
         try:
             val = getattr(self._pymodule, name)
         except AttributeError:
-            msg = 'Module %s does not have variable %r.' % (self.name, name)
+            msg = 'JS in "%s" uses undefined variable %r.' % (self.filename, name)
             if is_global:
                 raise ValueError(msg)
             logger.warn(msg)
@@ -260,12 +236,12 @@ class JSModule:
         if isinstance(val, (JSConstant, Asset)) or name in ('Infinity', 'NaN'):
             return
         elif val is None and not is_global:
-            logger.warn('Module %s uses variable %r that is None; '
+            logger.warn('JS in "%s" uses variable %r that is None; '
                         'I will assume its a stub and ignore it. Declare %s '
                         'as global (where it\'s used) to use it anyway, or '
                         'use "from flexx.pyscript.stubs import %s" to mark '
                         'it as a stub'
-                        % (self.name, name, name, name))
+                        % (self.filename, name, name, name))
             return
         
         # Mark dirty
@@ -278,8 +254,8 @@ class JSModule:
                 self._import(val.__name__, None, None)
                 self._deps[val.__name__][0] = name  # set/overwrite as-name
             else:
-                t = 'JS in %s cannot use module %s directly unless it defines %s.'
-                raise ValueError(t % (self.name, val.__name__, '"__pyscript__"'))
+                t = 'JS in "%s" cannot use module %s directly unless it defines %s.'
+                raise ValueError(t % (self.filename, val.__name__, '"__pyscript__"'))
         
         elif isinstance(val, type) and issubclass(val, Model):
             # Model class; we know that we can get the JS for this
@@ -303,8 +279,8 @@ class JSModule:
                 try:
                     js = py2js(val, inline_stdlib=False, docstrings=False)
                 except Exception as err:
-                    t = 'JS uses %s.%s but cannot transpile it with PyScript:\n%s'
-                    raise ValueError(t % (self.name, name, str(err)))
+                    t = 'JS in "%s" uses %r but cannot transpile it with PyScript:\n%s'
+                    raise ValueError(t % (self.filename, name, str(err)))
                 self._provided_names.add(name)
                 self._pyscript_code[name] = js
                 # Recurse
@@ -322,8 +298,8 @@ class JSModule:
             try:
                 js = json.dumps(val)
             except Exception as err:
-                t = 'JS uses %s.%s but cannot serialize that value:\n%s'
-                raise ValueError(t % (self.name, name, str(err)))
+                t = 'JS in "%s" uses %r but cannot serialize that value:\n%s'
+                raise ValueError(t % (self.filename, name, str(err)))
             self._provided_names.add(name)
             self._json_values[name] = js
         
@@ -338,8 +314,8 @@ class JSModule:
         
         else:
             # Cannot convert to JS
-            t = 'JS uses %s.%s but cannot convert %s to JS.'
-            raise ValueError(t % (self.name, name, val.__class__))
+            t = 'JS in "%s" uses %r but cannot convert %s to JS.'
+            raise ValueError(t % (self.filename, name, val.__class__))
     
     def _collect_dependencies(self, vars_unknown=None, vars_global=None, **kwargs):
         """

@@ -130,22 +130,28 @@ Asset management
 ----------------
 
 When writing code that relies on a certain JS or CSS library, that library
-can be loaded in the client by creating an asset object in the module
-that contains the Model class that needs it. Flexx will associate the asset
-with the module, and automatically load it when code from that module
-is used in JS:
+can be loaded in the client by associating it with the module that needs it.
+Flexx will then automatically load it when code from that module is used in JS:
 
 .. code-block:: py
     
-    # Normal asset
-    asset1 = app.Asset('mydep.js', js_code)
+    # Associate asset
+    app.assets.associate_asset(__name__, 'mydep.js', js_code)
     
     # Sometimes a more lightweight *remote* asset is prefered
-    asset2 = app.asset('http://some.cdn/lib.css')
+    app.assets.associate_asset(__name__, 'http://some.cdn/lib.css')
     
     # Create Model (or Widget) that needs the asset at the client
     class MyMode(app.Model):
         ....
+
+It is also possible to provide assets that are not automatically loaded
+on the main app page, e.g. for sub-pages or web workers:
+
+.. code-block:: py
+    
+    # Register asset - the url will be at '/flexx/assets/shared/mydep.js'
+    app.assets.add_shared_asset('mydep.js', js_code)
 
 Data management
 ---------------

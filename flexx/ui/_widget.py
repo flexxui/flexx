@@ -9,16 +9,16 @@
 
 """
 
-from .. import event
-from ..app import Model, get_active_model, Asset
+from .. import event, app
+from ..app import Model, get_active_model
 from ..pyscript import undefined, window
 from ..util.getresource import get_resource
 
 
-# Define Phosphor assets. By having them in this module, any code that
-# uses a Widhet will get this asset.
-phosphor = Asset('phosphor-all.js', get_resource('phosphor-all.js').decode())
-phosphor_css = Asset('phosphor-all.css', get_resource('phosphor-all.css').decode())
+# Associate Phosphor assets
+for asset_name in ('phosphor-all.css', 'phosphor-all.js'):
+    code = get_resource(asset_name).decode()
+    app.assets.associate_asset(__name__, asset_name, code)
 
 
 # To give both JS and Py a parent property without having it synced,
