@@ -592,7 +592,8 @@ class Parser1(Parser0):
             return []
         if node.root and node.root == '__future__':
             return []  # stuff to help the parser
-        
+        if node.root is 'time':
+            return []  # PyScript natively supports time() and perf_counter()
         raise JSError('PyScript does not support imports.')
     
     def parse_Module(self, node):

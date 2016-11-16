@@ -37,6 +37,7 @@ def py2js(ob=None, new_name=None, **parser_options):
         * pyhash (str): a hash of the Python code.
         * vars_defined (set): names defined in the toplevel namespace.
         * vars_unknown (set): names used in the code but not defined in it.
+        * vars_global (set): names explicitly declared global.
         * std_functions (set): stdlib functions used in this code.
         * std_method (set): stdlib methods used in this code.
     
@@ -110,6 +111,7 @@ def py2js(ob=None, new_name=None, **parser_options):
         jscode.meta['pyhash'] = hash
         jscode.meta['vars_defined'] = set(n for n in p.vars if p.vars[n])
         jscode.meta['vars_unknown'] = set(n for n in p.vars if not p.vars[n])
+        jscode.meta['vars_global'] = set(n for n in p.vars if p.vars[n] is False)
         jscode.meta['std_functions'] = p._std_functions
         jscode.meta['std_methods'] = p._std_methods
         

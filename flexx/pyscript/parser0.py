@@ -185,6 +185,7 @@ class Parser0:
                 self._methods[name[7:]] = getattr(self, name)
         
         # Prepare
+        self._globals = []
         self.push_stack('module', '')
         
         # Parse
@@ -206,6 +207,8 @@ class Parser0:
         defined_names = [n for n in ns if ns[n]]
         if defined_names:
             self._parts.insert(0, self.get_declarations(ns))
+        for name in self._globals:
+            ns[name] = False
         
         # Add part of the stdlib that was actually used
         if inline_stdlib:
@@ -270,7 +273,7 @@ class Parser0:
         """
         # Pop
         nstype, nsname, ns = self._stack.pop(-1)
-        # Leak used-but-not-defined vars into the previous stack
+        # Leak nonlocals and used-but-not-defined vars into the previous stack
         for name in [n for n in ns if not ns[n]]:
             if not ns[name]:
                 self.vars.use(name)

@@ -272,5 +272,3 @@ def this_is_js():
     on Python or JavaScript.
     """
     return False
-
-del sys

@@ -881,7 +881,10 @@ class Parser2(Parser1):
     #def parse_YieldFrom
     
     def parse_Global(self, node):
-        return self.parse_Nonlocal(node)
+        for name in node.names:
+            self._globals.append(name)  # Keep track of globals
+            self.vars.set_nonlocal(name)
+        return '' 
     
     def parse_Nonlocal(self, node):
         for name in node.names:

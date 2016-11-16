@@ -287,7 +287,7 @@ class Parser3(Parser2):
         args = [unify(self.parse(arg)) for arg in node.arg_nodes]
         end = (" + %s" % end) if (args and end and end != '\n') else ''
         combiner = ' + %s + ' % sep
-        args_concat = combiner.join(args)
+        args_concat = combiner.join(args) or '""'
         return 'console.log(' + args_concat + end + ')'
     
     def function_len(self, node):
