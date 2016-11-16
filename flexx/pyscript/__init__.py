@@ -258,28 +258,17 @@ class Parser(Parser3):
     pass
 
 
-from .functions import py2js, evaljs, evalpy, script2js, js_rename, create_js_module
+from .functions import py2js, evaljs, evalpy, JSString
+from .functions import script2js, js_rename, create_js_module
 from .stdlib import get_full_std_lib, get_all_std_names
+from .stubs import JSConstant, window, undefined
 
-# Create stubs
-
-import sys
-
-class JSConstant:
-    def __init__(self, name):
-        self._name = name
-    def __repr__(self):  # pragma: no cover
-        return self._name
-
+# Create stubs that mean something
 Infinity = float('inf')
 NaN = float('nan')
-window = JSConstant('window')
-undefined = JSConstant('undefined')
 
 def this_is_js():
     """ Function available in both JS and Py that returns whether the code is running
     on Python or JavaScript.
     """
     return False
-
-del sys, JSConstant

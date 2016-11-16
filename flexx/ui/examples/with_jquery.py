@@ -7,6 +7,19 @@ frameworks.
 
 from flexx import app, ui
 
+# Define assets needed by this app. Creating them here is enough
+jquery = app.Asset("http://code.jquery.com/jquery-1.10.2.js")
+jquery_ui = app.Asset("http://code.jquery.com/ui/1.11.4/jquery-ui.js")
+jq_css = app.Asset("http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css")
+
+# In the above notation, the assets are "remote assets"; the client will
+# load them by itself. They can also be defined in a way that makes Flexx
+# load the source and then serve it to the client:
+#
+# jquery = app.Asset("jquery.js", "http://code.jquery.com/jquery-1.10.2.js")
+#
+# When exporting an app, one has the option to embed/include remote assets.
+
 
 class DatePicker(ui.Widget):
     
@@ -25,27 +38,6 @@ class DatePicker(ui.Widget):
 class Example(ui.Widget):
     
     def init(self):
-        
-        jquery_url = "http://code.jquery.com/jquery-1.10.2.js"
-        jquery_ui_url = "http://code.jquery.com/ui/1.11.4/jquery-ui.js"
-        jquery_css = "http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css"
-        
-        # Two ways to add assets
-        if True:
-            # Remote assets: the client will load these assets from the
-            # URL's. Good for web apps.
-            self.session.add_asset(name=jquery_url)
-            self.session.add_asset(name=jquery_ui_url)
-            self.session.add_asset(name=jquery_css)
-        else:
-            # Regular assets: Flexx will download the assets and serve
-            # them to the client. Good for desktop apps.
-            self.session.add_asset(name='jquery.js', sources=jquery_url, deps=[])
-            self.session.add_asset(name='jquery-ui.js', sources=jquery_ui_url, deps=[])
-            self.session.add_asset(name='jquery-ui.css', sources=jquery_css, deps=[])
-        
-        # Note that when exporting an app, one has the option to
-        # embed/include remote assets.
         
         with ui.FormLayout():
             self.start = DatePicker(title='Start date')

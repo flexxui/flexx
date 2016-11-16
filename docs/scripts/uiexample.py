@@ -48,22 +48,25 @@ def create_ui_example(filename, to_root, height=300):
     filename_abs = os.path.join(HTML_DIR, *filename_parts)
     filename_rel = to_root + '/' + '/'.join(filename_parts)
     
-    # Import
+    # Import - mod_name must be unique, because JS modules match Py modules
     try:
+        mod_name = "app_" + fname[:-3]
         if sys.version_info >= (3, 5):
-            spec = importlib.util.spec_from_file_location("example", filename)
+            spec = importlib.util.spec_from_file_location(mod_name, filename)
             m = importlib.util.module_from_spec(spec)
+            sys.modules[mod_name] = m  # Flexx needs to be able to access the module
             spec.loader.exec_module(m)
         else:  # http://stackoverflow.com/a/67692/2271927
             from importlib.machinery import SourceFileLoader
-            m = SourceFileLoader("example", filename).load_module()
+            m = SourceFileLoader(mod_name, filename).load_module()
+            sys.modules[mod_name] = m
     except Exception as err:
         err_text = str(err)
         msg = 'Example not generated. <pre>%s</pre>' % err_text
         if os.environ.get('READTHEDOCS', False):
             msg = 'This example is not build on read-the-docs. <pre>%s</pre>' % err_text
         open(filename_abs, 'wt', encoding='utf-8').write(msg)
-        warnings.warn('Could not import ui example: %s' % err_text)
+        warnings.warn('Could not import ui example in %s: %s' % (filename, err_text))
         return get_html(filename_rel, 60)
     
     # Get class name

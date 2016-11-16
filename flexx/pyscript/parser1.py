@@ -226,10 +226,14 @@ class Parser1(Parser0):
     def parse_Name(self, node):
         # node.ctx can be Load, Store, Del -> can be of use somewhere?
         name = node.name
-        if name in self.vars:
+        if self.vars.get(name, None):
             name = self.with_prefix(name)
+        elif name in self.NAME_MAP:
+            name = self.NAME_MAP[name]
         else:
-            name = self.NAME_MAP.get(name, name)
+            if not (hasattr(self, 'function_' + name) or
+                    name in ('undefined', 'window')):
+                self.vars.use(name)  # mark as used (not defined)
         return name
     
     def parse_Starred(self, node):
@@ -581,14 +585,15 @@ class Parser1(Parser0):
 
     def parse_Import(self, node):
         
-        if node.root and node.root.endswith('pyscript'):
+        if 'pyscript' in node.root:
             # User is probably importing names from here to allow
             # writing the JS code and command to parse it in one module.
             # Ignore this import.
             return []
         if node.root and node.root == '__future__':
             return []  # stuff to help the parser
-        
+        if node.root is 'time':
+            return []  # PyScript natively supports time() and perf_counter()
         raise JSError('PyScript does not support imports.')
     
     def parse_Module(self, node):

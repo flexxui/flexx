@@ -272,17 +272,13 @@ def init_notebook():
     server = current_server()
     host, port = server.serving
     
-    # Try loading assets for flexx.ui. This will only work if flexx.ui
-    # is imported. This is not strictly necessary, since Flexx can
-    # dynamically load the assets, but it is nicer to do it here.
-    try:
-        session.add_asset('flexx-ui.css')
-        session.add_asset('flexx-ui.js')
-    except IndexError:
-        pass
+    # Trigger loading phosphor assets
+    if 'flexx.ui' in sys.modules:
+        from flexx import ui
+        session.register_model_class(ui.Widget)
     
-    # Get assets
-    js_assets, css_assets = session.get_assets_in_order(css_reset=False)
+    # Get assets, load all known modules to prevent dynamic loading as much as possible
+    js_assets, css_assets = session.get_assets_in_order(css_reset=False, load_all=True)
     
     # Pop the first JS asset that sets flexx.app_name and flexx.session_id
     # We set these in a way that it does not end up in exported notebook.
@@ -406,10 +402,12 @@ def export(cls, filename=None, properties=None, single=None, link=None,
             If not given or None, will return the html as a string.
         properties (dict, optional): the initial properties for the model. The
           model is instantiated using ``Cls(**properties)``.
-        link (int): whether to link assets or embed them. If 0 (default) the
-            assets are embedded. If 1, the assets are linked and "served"
-            relative to the document. If 2, assets are linked and remote
-            assets remain remote.
+        link (int): whether to link assets or embed them:
+        
+            * 0: all assets are embedded.
+            * 1: normal assets are embedded, remote assets remain remote.
+            * 2: all assets are linked (as separate files).
+            * 3: (default) normal assets are linked, remote assets remain remote.
         write_shared (bool): if True (default) will also write shared assets
             when linking to assets. This can be set to False when
             exporting multiple apps to the same location. The shared assets can
@@ -431,7 +429,7 @@ def export(cls, filename=None, properties=None, single=None, link=None,
         if single is not None:
             logger.warn('Export single arg is deprecated, use link instead.')
             if not single:
-                link = 2
+                link = 3
     link = int(link or 0)
     
     # Prepare name, based on exported file name (instead of cls.__name__)

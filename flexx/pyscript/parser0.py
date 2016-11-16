@@ -65,13 +65,21 @@ class NameSpace(dict):
     """
     
     def set_nonlocal(self, key):
+        """ Explicitly declare a name as nonlocal/global """
         self[key] = False  # also if already exists
     
-    def add(self, key):
+    def use(self, key):
+        """ Declare a name as used (but can be defined in higher level) """
         if key not in self:
+            self[key] = None
+    
+    def add(self, key):
+        """ Declare a name as defined in this namespace """
+        if self.get(key, None) is not False:  # overwrite if None
             self[key] = True
     
     def discard(self, key):
+        """ Discard name from this namespace """
         self.pop(key, None)
 
 
@@ -177,6 +185,7 @@ class Parser0:
                 self._methods[name[7:]] = getattr(self, name)
         
         # Prepare
+        self._globals = []
         self.push_stack('module', '')
         
         # Parse
@@ -195,8 +204,11 @@ class Parser0:
         
         # Finish
         ns = self.vars  # do not self.pop_stack() so caller can inspect module vars
-        if ns:
+        defined_names = [n for n in ns if ns[n]]
+        if defined_names:
             self._parts.insert(0, self.get_declarations(ns))
+        for name in self._globals:
+            ns[name] = False
         
         # Add part of the stdlib that was actually used
         if inline_stdlib:
@@ -259,7 +271,13 @@ class Parser0:
     def pop_stack(self):
         """ Pop the current stack and return the namespace.
         """
+        # Pop
         nstype, nsname, ns = self._stack.pop(-1)
+        # Leak nonlocals and used-but-not-defined vars into the previous stack
+        for name in [n for n in ns if not ns[n]]:
+            if not ns[name]:
+                self.vars.use(name)
+                ns.discard(name)
         return ns
     
     def get_declarations(self, ns):
@@ -374,4 +392,4 @@ class Parser0:
                 res = [res]
             return res
         else:
-            raise JSError('Cannot parse %s nodes yet' % nodeType)
+            raise JSError('Cannot parse %s-nodes yet' % nodeType)

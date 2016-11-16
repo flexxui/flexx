@@ -57,8 +57,9 @@ class Example(ui.Widget):
             # Update
             if ds:
                 window.ds = ds
-                ds.data.y = [amp*Math.sin(x*freq+phase) for x in ds.data.x]  # noqa
+                ds.data.y = [amp*window.Math.sin(x*freq+phase) for x in ds.data.x]
                 ds.trigger('change')
+
 
 if __name__ == '__main__':
     m = app.launch(Example, 'firefox')

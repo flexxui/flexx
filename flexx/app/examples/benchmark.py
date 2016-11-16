@@ -26,19 +26,19 @@ RESULTS = [(124863, 'CPython 3.4', 'blue'),
 import sys
 from time import time
 import platform
+from test.pystone import main as pystone_main
 from test import pystone
 
-from flexx import app, pyscript
+from flexx import app
+
+# Mark the pystone module to be transpiled as a whole. It uses globals
+# a lot, which somehow causes inifinite loops if its transpiled in parts.
+pystone.__pyscript__ = True
 
 # Backend selection
 BACKEND = 'xul'
 if sys.argv[1:]:
     BACKEND = sys.argv[1]
-
-# Get pystone code
-pycode = open(pystone.__file__, 'rb').read().decode()
-pycode = pycode.replace('from time import time', '')
-jscode = pyscript.py2js(pycode)
 
 
 def plot_results():
@@ -56,14 +56,17 @@ def plot_results():
     ax.set_xscale('log')
 
 
-def Float32Array(n):
-    """ Factory function. """
-    return [0.0] * n
+class window:
+    # Trick to be able to use the same code in JS and Python
+    
+    def Float32Array(n):
+        """ Factory function. """
+        return [0.0] * n
 
 
 def convolve():
     N = 400000
-    data = Float32Array(N)
+    data = window.Float32Array(N)
     support = 3
     t0 = time()
     for i in range(support, N-support):
@@ -76,27 +79,28 @@ def convolve():
 def bench_str():
     """ From http://brythonista.wordpress.com/2015/03/28
     """
+    print('String benchmarks:')
     
     t0 = time()
     for i in range(1000000):
         a = 1
-    print("assignment.py", time()-t0)
+    print("  assignment.py", time()-t0)
     
     t0 = time()
     a = 0
     for i in range(1000000):
         a += 1
-    print("augm_assign.py", time()-t0)
+    print("  augm_assign.py", time()-t0)
     
     t0 = time()
     for i in range(1000000):
         a = 1.0
-    print("assignment_float.py", time()-t0)
+    print("  assignment_float.py", time()-t0)
     
     t0 = time()
     for i in range(1000000):
         a = {0: 0}
-    print("build_dict.py", time()-t0)
+    print("  build_dict.py", time()-t0)
     
     t0 = time()
     a = {0: 0}
@@ -105,56 +109,52 @@ def bench_str():
         a[0] = i
     
     assert a[0]==999999
-    print("set_dict_item.py", time()-t0)
+    print("  set_dict_item.py", time()-t0)
     
     t0 = time()
     for i in range(1000000):
         a = [1, 2, 3]
-    print("build_list.py", time()-t0)
+    print("  build_list.py", time()-t0)
     
     t0 = time()
     a = [0]
     
     for i in range(1000000):
         a[0] = i
-    print("set_list_item.py", time()-t0)
+    print("  set_list_item.py", time()-t0)
     
     t0 = time()
     a, b, c = 1, 2, 3
     for i in range(1000000):
         a + b + c
-    print("add_integers.py", time()-t0)
+    print("  add_integers.py", time()-t0)
     
     t0 = time()
     a, b, c = 'a', 'b', 'c'
     for i in range(1000000):
         a + b + c
-    print("add_strings.py", time()-t0)
+    print("  add_strings.py", time()-t0)
     
     t0 = time()
     for _i in range(100000):
         str(_i)
-    print("str_of_int.py", time()-t0)
+    print("  str_of_int.py", time()-t0)
     
     t0 = time()
     for i in range(1000000):
         def f():
             pass
-    print("create_function.py", time()-t0)
+    print("  create_function.py", time()-t0)
     
     t0 = time()
     def g(x):
         return x
     for i in range(1000000):
         g(i)
-    print("function_call.py", time()-t0)
+    print("  function_call.py", time()-t0)
 
 
 class Benchmarker(app.Model):
-    
-    def init(self):
-        self.session.add_asset(name='pystone.js', deps=[],
-                               sources=[jscode, 'var pystone = {main: main};'])
     
     def run_js_benchmark(self):
         self.call_js('_benchmark()')
@@ -162,7 +162,7 @@ class Benchmarker(app.Model):
     def benchmark(self):
         print('\n==== Python %s %s =====\n' % (platform.python_implementation(), 
                                                platform.python_version()))
-        pystone.main()
+        pystone_main()
         convolve()
         bench_str()
         
@@ -171,17 +171,13 @@ class Benchmarker(app.Model):
     
     class JS:
         
-        BACKEND = BACKEND
-        convolve = convolve
-        bench_str = bench_str
-        
         def _benchmark(self):
             print()
-            print('==== PyScript on %s =====' % self.BACKEND)
+            print('==== PyScript on %s =====' % BACKEND)
             print()
-            pystone.main()
-            self.convolve()
-            self.bench_str()
+            pystone_main()
+            convolve()
+            bench_str()
 
 
 b = app.launch(Benchmarker, BACKEND)

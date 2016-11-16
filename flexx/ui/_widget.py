@@ -10,21 +10,15 @@
 """
 
 from .. import event
-from ..app import Model, get_active_model
+from ..app import Model, get_active_model, Asset
 from ..pyscript import undefined, window
-from . import logger
+from ..util.getresource import get_resource
 
-# todo: remove this (left for now for backward compat)
-class LiveKeeper:
-    _warned = False
-    
-    def keep(self, ob):
-        if not self._warned:
-            self._warned = True
-            logger.warn('liveKeeper is deprecated, use Session.keep_alive() instead.')
-        ob.session.keep_alive(ob)
 
-liveKeeper = LiveKeeper()
+# Define Phosphor assets. By having them in this module, any code that
+# uses a Widhet will get this asset.
+phosphor = Asset('phosphor-all.js', get_resource('phosphor-all.js').decode())
+phosphor_css = Asset('phosphor-all.css', get_resource('phosphor-all.css').decode())
 
 
 # To give both JS and Py a parent property without having it synced,
