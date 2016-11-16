@@ -10,37 +10,42 @@ from time import perf_counter
 from flexx import app
 
 
+def find_prime(n):
+    primes = []
+    
+    def isprime(x):
+        if x <= 1:
+            return False
+        elif x == 2:
+            return True
+        for i in range(2, x//2+1):
+            if x % i == 0:
+                return False
+        return True
+    
+    t0 = perf_counter()
+    i = 0
+    while len(primes) < n:
+        i += 1
+        if isprime(i):
+            primes.append(i)
+    t1 = perf_counter()
+    print(i, 'found in ', t1-t0, 'seconds')
+
+
 class PrimeFinder(app.Model):
     
     def find_prime_py(self, n):
-        self._find_prime(n)
+        find_prime(n)
     
     def find_prime_js(self, n):
         self.call_js('_find_prime(%i)' % n)
     
-    class Both:
+    class JS:
         
         def _find_prime(self, n):
-            primes = []
-            
-            def isprime(x):
-                if x <= 1:
-                    return False
-                elif x == 2:
-                    return True
-                for i in range(2, x//2+1):
-                    if x % i == 0:
-                        return False
-                return True
-            
-            t0 = perf_counter()
-            i = 0
-            while len(primes) < n:
-                i += 1
-                if isprime(i):
-                    primes.append(i)
-            t1 = perf_counter()
-            print(i, 'found in ', t1-t0, 'seconds')
+            find_prime(n)
+
 
 if __name__ == '__main__':
     

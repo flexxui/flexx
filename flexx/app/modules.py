@@ -211,8 +211,7 @@ class JSModule:
             
             val = getattr(self._pymodule, name)
             
-            if isinstance(val, Asset) and name not in self._imported_names:
-                self._imported_names.add(name)
+            if isinstance(val, Asset) and val not in self._asset_deps:
                 self._asset_deps.append(val)
             # Probably not a good idea, just "use" the module to get it included
             # elif isinstance(val, types.ModuleType):
@@ -230,7 +229,7 @@ class JSModule:
         """
         return self._provided_names
     
-    def add_variable(self, name):
+    def add_variable(self, name, is_global=False):
         """ Mark the variable with the given name as used by JavaScript.
         The corresponding object must be a module, Model, class or function,
         or a json serializable value.
@@ -238,6 +237,8 @@ class JSModule:
         If the object is defined here (or a json value) it will add JS to
         this module. Otherwise this module will import the name from 
         another module.
+        
+        If ``is_global``, the name is considered declared global in this module.
         """
         if name in self._imported_names:
             return
@@ -251,18 +252,22 @@ class JSModule:
         try:
             val = getattr(self._pymodule, name)
         except AttributeError:
-            logger.warn('Module %s does not have variable %r.' % (self.name, name))
+            msg = 'Module %s does not have variable %r.' % (self.name, name)
+            if is_global:
+                raise ValueError(msg)
+            logger.warn(msg)
             return
         
         # Stubs
-        if isinstance(val, JSConstant) or name in ('Infinity', 'NaN'):
+        if isinstance(val, (JSConstant, Asset)) or name in ('Infinity', 'NaN'):
             return
-        elif val is None:
-            logger.warn('Deprecation - module %s uses a variable that is None; '
-                        'I will assume its a stub and ignore it. In future '
-                        'versions the value may be None (null) in JS. Use '
-                        '"from flexx.pyscript.stubs import xx, yy" instead.'
-                        % self.name)
+        elif val is None and not is_global:
+            logger.warn('Module %s uses variable %r that is None; '
+                        'I will assume its a stub and ignore it. Declare %s '
+                        'as global (where it\'s used) to use it anyway, or '
+                        'use "from flexx.pyscript.stubs import %s" to mark '
+                        'it as a stub'
+                        % (self.name, name, name, name))
             return
         
         # Mark dirty
@@ -286,7 +291,7 @@ class JSModule:
                 self._model_classes[name] = val
                 # Recurse
                 self._collect_dependencies_from_bases(val)
-                self._collect_dependencies(val.JS.CODE.meta['vars_unknown'])
+                self._collect_dependencies(**val.JS.CODE.meta)
             else:
                 # Import from another module
                 # not needed per see; bound via window.flexx.classes
@@ -307,7 +312,7 @@ class JSModule:
                 # Recurse
                 if isinstance(val, type):
                     self._collect_dependencies_from_bases(val)
-                self._collect_dependencies(js.meta['vars_unknown'])
+                self._collect_dependencies(**js.meta)
             else:
                 # Import from another module
                 self._import(mod_name, val.__name__, name)
@@ -338,12 +343,13 @@ class JSModule:
             t = 'JS uses %s.%s but cannot convert %s to JS.'
             raise ValueError(t % (self.name, name, val.__class__))
     
-    def _collect_dependencies(self, names):
+    def _collect_dependencies(self, vars_unknown=None, vars_global=None, **kwargs):
         """
         Collect dependencies corresponding to names used in the JS.
         """
-        for name in reversed(sorted(names)):
-            self.add_variable(name)
+        assert not (vars_unknown is None or vars_global is None)
+        for name in reversed(sorted(vars_unknown)):
+            self.add_variable(name, name in vars_global)
     
     def _collect_dependencies_from_bases(self, cls):
         """
@@ -370,10 +376,11 @@ class JSModule:
             js.sort(key=lambda x: x.meta['linenr'])
             # todo: collect stdlib funcs here
             # Insert serialized values
+            value_lines = []
+            for key in sorted(self._json_values):
+                value_lines.append('var %s = %s;' % (key, self._json_values[key]))
             js.insert(0, '')
-            for key in reversed(sorted(self._json_values)):
-                js.insert(0, 'var %s = %s;' % (key, self._json_values[key]))
-            js.insert(0, '')
+            js.insert(0, '\n'.join(value_lines))
             # Prepare imports and exports
             exports = tuple(sorted(self._provided_names))
             imports = ['pyscript-std.js as _py']

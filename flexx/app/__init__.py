@@ -5,21 +5,88 @@ an asset (and data) management system, and provides the ``Model`` class,
 which allows definition of objects that have both a Python and JavaScript
 representation, forming the basis for widgets etc.
 
-Some background info on the server process
-------------------------------------------
+Writing code with the Model class
+---------------------------------
 
-Each server process hosts on a single URL (domain+port), but can serve
-multiple applications (via different paths). Each process uses one
-tornado IOLoop, and exactly one Tornado Application object.
+An application will typically consists of a custom Model class (or Widget).
+In the class, one can define Python behavior, JavaScript behavior, define
+properties etc. Using the event system explained in ``flexx.event``, one
+can listen for events on either side (Python or JavaScript). Check out
+the examples and this simplistic code:
 
-When a client connects to the server, it is served an HTML page, which
-contains the information needed to connect to a websocket. From there,
-all communication happens over this websocket.
+.. code-block:: py
+
+    from flexx import app, event
+    
+    class MyModel(app.Model):
+        
+        def init(self):
+            ...
+        
+        # Listen for changes of foo in Python
+        @event.connect('foo')
+        def on_foo(self, *events):
+            ...
+        
+        class Both:
+            
+            # A property that exists on both ends (and is synced)
+            @event.property
+            def foo(self, v=0):
+                return v
+        
+        class JS:
+            
+            # Listen for changes of foo in JS
+            @event.connect('foo')
+            def on_foo(self, *events):
+                ...
+
+The scope of modules
+--------------------
+
+The above demonstrates how one can write code that is executed in JavaScript.
+In this code, you can make use of functions, classes, and values that are
+defined in the same module (as long as they can be transpiled / serialized).
+
+For every Python module that defines code that is used in JS, a corresponding
+JS module is created. Flexx detects what variable names are used in the JS
+code, but not declared in it, and tries to find the corresponding object in
+the module. You can even import functions/classes from other modules.
+
+.. code-block:: py
+
+    from flexx import app
+    
+    from foo import func1
+    
+    def func2():
+        ...
+    
+    info = {'x': 1, 'y': 2}
+    
+    class MyModel(app.Model):
+    
+        class JS:
+        
+            @event.connect('some.event')
+            def handler(self, *events):
+                func1(info)
+                func2()
+
+In the code above, Flexx will include the definition of ``func2`` and
+``info`` in the same module that defines ``MyModel``, and include
+``func1`` in the JS module ``foo``. If the JS in ``MyModel`` would not
+use these functions, neither definition would be included in the JavaScript.
+
+One can also assign ``__pyscript__ = True`` to a module to make Flexx transpile
+a module as a whole.
+
 
 Applications
 ------------
 
-A ``Model`` class can be made into an application by decorating it with
+A ``Model`` class can be made into an application by passing it to
 ``app.serve``. This registers the application, so that clients can connect
 to the app based on its name (or using a custom name specified in
 ``app.serve()``). One instance of this class is created
@@ -63,34 +130,55 @@ Asset management
 ----------------
 
 When writing code that relies on a certain JS or CSS library, that library
-can be loaded in the client by adding it as an asset. This can be done using:
+can be loaded in the client by creating an asset object in the module
+that contains the Model class that needs it. Flexx will associate the asset
+with the module, and automatically load it when code from that module
+is used in JS:
 
 .. code-block:: py
     
     # Normal asset
-    your_model.session.add_asset('mydep.js', js_code)
+    asset1 = app.Asset('mydep.js', js_code)
     
     # Sometimes a more lightweight *remote* asset is prefered
-    your_model.session.add_asset('http://some.cdn/lib.css')
-
+    asset2 = app.asset('http://some.cdn/lib.css')
+    
+    # Create Model (or Widget) that needs the asset at the client
+    class MyMode(app.Model):
+        ....
 
 Data management
 ---------------
 
-Data can be provided to the client in a similar way:
+Data can be provided per session or shared between sessions:
 
 .. code-block:: py
+    
+    # Add session-specific data
+    link = your_model.session.add_data('some_name.png', binary_blob)
     
     # Add shared data
     link = app.assets.add_shared_data('some_name.png', binary_blob)
 
-    # Add session-specific data
-    link = your_model.session.add_data('some_name.png', binary_blob)
 
 Note that ``binary_blob`` can also be a string starting with ``http://`` or
 ``file://``. In the future we plan to make it easier to load arbitrary
 data in the client (mainly for scientific purposes).
 
+Note that this API for providing the client with data may change in a
+following release. If you rely on this, please make an issue so we can
+work out a smooth transition if necessary.
+
+Some background info on the server process
+------------------------------------------
+
+Each server process hosts on a single URL (domain+port), but can serve
+multiple applications (via different paths). Each process uses one
+tornado IOLoop, and exactly one Tornado Application object.
+
+When a client connects to the server, it is served an HTML page, which
+contains the information needed to connect to a websocket. From there,
+all communication happens over this websocket.
 
 """
 
@@ -98,10 +186,13 @@ _DEV_NOTES = """
 Overview of classes:
 
 * Model: the base class for creating Python-JS objects.
+* JSModule: represents a module in JS that corresponds to a Python module.
+* Asset: represents an asset.
+* Bundle: an Asset subclass to represent a collecton of JSModule's in one asset.
 * AssetStore: one instance of this class is used to provide all client
-  assets in this process (JS, CSS, images, etc.).
-* SessionAssets: base class for Session that implements the assets part.
-  Assets specific to the session are name-mangled.
+  assets in this process (JS, CSS, images, etc.). It also keeps track
+  of modules.
+* SessionAssets: base class for Session that implements the assets/data part.
 * Session: object that handles connection between Python and JS. Has a
   websocket, and optionally a reference to the runtime.
 * WebSocket: tornado WS handler.
@@ -110,7 +201,7 @@ Overview of classes:
 * Server: handles http requests. Uses manager to create new app
   instances or get the page for a pending session. Hosts assets by using
   the global asset store.
-* FlexxJS (in clientcore.py): more or less the JS side of a session.
+* Flexx class (in clientcore.py): more or less the JS side of a session.
 
 """
 
@@ -125,17 +216,3 @@ from .model import get_instance_by_id, get_model_classes
 from .funcs import create_server, current_server, run, start, stop, call_later
 from .funcs import init_interactive, init_notebook, serve, launch, export
 from .assetstore import assets, Asset, Bundle, JSModule
-
-
-# def _install_assets():
-#     from .clientcore import FlexxJS
-#     
-#     classes = assets.get_module_classes('flexx.app')
-#     
-#     assets.add_shared_asset(
-#             name='flexx-app.js',
-#             sources=[FlexxJS, 'var flexx = new FlexxJS();'] + classes,
-#             deps=['pyscript-std.js'],
-#             exports=['flexx'])
-# 
-# _install_assets()

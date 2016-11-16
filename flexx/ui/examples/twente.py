@@ -96,6 +96,9 @@ STN,YYYY,   JAN,   FEB,   MAR,   APR,   MAY,   JUN,   JUL,   AUG,   SEP,   OCT, 
 290,2014,    48,    64,    81,   118,   127,   157,   195,   157,   153,   132,    80,    41,   113
 """
 
+months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 
+            'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'total']
+
 def parse_data(raw_data):
     years, data = [], [[] for i in range(13)]
     for line in raw_data.splitlines():
@@ -133,10 +136,6 @@ class Twente(ui.Widget):
 
     class JS:
         
-        data = data
-        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 
-                  'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'total']
-        
         def init(self):
             super().init()
             self._update_plot()
@@ -145,10 +144,10 @@ class Twente(ui.Widget):
         def _update_plot(self, *events):
             month = self.month.value
             smoothing = self.smoothing.value
-            self.month_label.text = 'Month (%s)' % self.months[month]
+            self.month_label.text = 'Month (%s)' % months[month]
             self.smoothing_label.txt = 'Smoothing (%i)' % smoothing
             
-            yy1 = self.data[month]
+            yy1 = data[month]
             yy2 = []
             
             sm2 = int(smoothing / 2)

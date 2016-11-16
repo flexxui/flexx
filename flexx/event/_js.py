@@ -227,7 +227,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.Ƥ'):
     assert cls_name != 'HasEvents'  # we need this special class above instead
     
     # Collect meta information of all code pieces that we collect
-    meta = {'vars_unknown': set(), 'std_functions': set(),
+    meta = {'vars_unknown': set(), 'vars_global': set(), 'std_functions': set(),
             'std_methods': set(), 'linenr': 1e9}
     def py2js_local(*args, **kwargs):
         code = py2js(*args, **kwargs)
