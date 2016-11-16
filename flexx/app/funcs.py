@@ -403,6 +403,7 @@ def export(cls, filename=None, properties=None, single=None, link=None,
         properties (dict, optional): the initial properties for the model. The
           model is instantiated using ``Cls(**properties)``.
         link (int): whether to link assets or embed them:
+        
             * 0: all assets are embedded.
             * 1: normal assets are embedded, remote assets remain remote.
             * 2: all assets are linked (as separate files).

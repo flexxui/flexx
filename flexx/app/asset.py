@@ -61,6 +61,7 @@ class Asset:
             is given, both name and source are implicitly set (and its
             a remote asset).
         source (str, function): the source for this asset. Can be:
+        
             * The source code.
             * A URI (str starting with 'http://', 'https://' or 'file://'),
               making this a "remote asset". Note that ``app.export()`` provides
@@ -137,6 +138,7 @@ class Asset:
             path (str): the path of this asset, in which '{}' can be used as
                 a placeholder for the asset name.
             link (int): whether to link to this asset:
+            
                 * 0: the asset is embedded.
                 * 1: normal assets are embedded, remote assets remain remote.
                 * 2: the asset is linked (and served by our server).

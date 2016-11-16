@@ -297,7 +297,7 @@ class ComboBox(BaseDropdown):
                 if this_is_js():
                     keys = sorted(keys)  # Sort dict by key
                 elif isinstance(options, OrderedDict):
-                    # PyScript should not see us of OrderedDict, therefore this
+                    # PyScript should not see use of OrderedDict, therefore this
                     # is in the else clause of "if this_is_js():"
                     keys = sorted(keys)
                 options = [(k, options[k]) for k in keys]

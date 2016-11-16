@@ -420,18 +420,4 @@ def test_assets():
     assert m.asset_deps[0].to_string() == 'woot'
 
 
-if True:
-    run_tests_if_main()
-elif __name__ == '__main__':
-    print(tempdirname)
-    teardown_module()
-    setup_module()
-
-    test_modules()
-    test_misc()
-    test_add_variable()
-    test_subclasses()
-    test_fails()
-    
-    
-    
+run_tests_if_main()

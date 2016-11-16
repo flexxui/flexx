@@ -2,14 +2,11 @@
 The client's core Flexx engine, implemented in PyScript.
 """
 
-from ..pyscript import undefined, window, this_is_js
+from ..pyscript import this_is_js
+from ..pyscript.stubs import window, undefined, require
 
 # This module gets transpiled to JavaScript as a whole
 __pyscript__ = True
-
-# Fool PyFlakes
-if not this_is_js():
-    flexx = location = require = module = typeof = None
 
 
 class Flexx:
@@ -52,7 +49,7 @@ class Flexx:
     def init(self):
         """ Called after document is loaded. """
         if window.flexx.is_exported:
-            if flexx.is_notebook:
+            if window.flexx.is_notebook:
                 print('Flexx: I am in an exported notebook!')
             else:
                 print('Flexx: I am in an exported app!')
@@ -104,9 +101,9 @@ class Flexx:
         
         # Construct ws url (for nodejs the location is set by the flexx nodejs runtime)
         if not self.ws_url:
-            address = location.hostname
-            if location.port:
-                address += ':' + location.port
+            address = window.location.hostname
+            if window.location.port:
+                address += ':' + window.location.port
             self.ws_url = 'ws://%s/flexx/ws/%s' % (address, self.app_name)
         
         # Open web socket in binary mode
