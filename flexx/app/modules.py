@@ -254,8 +254,16 @@ class JSModule:
             logger.warn('Module %s does not have variable %r.' % (self.name, name))
             return
         
-        if isinstance(val, JSConstant):
-            return  # It's a deliberate stub!
+        # Stubs
+        if isinstance(val, JSConstant) or name in ('Infinity', 'NaN'):
+            return
+        elif val is None:
+            logger.warn('Deprecation - module %s uses a variable that is None; '
+                        'I will assume its a stub and ignore it. In future '
+                        'versions the value may be None (null) in JS. Use '
+                        '"from flexx.pyscript.stubs import xx, yy" instead.'
+                        % self.name)
+            return
         
         # Mark dirty
         self._changed_time = time.time()
