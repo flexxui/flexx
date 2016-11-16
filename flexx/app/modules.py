@@ -19,10 +19,8 @@ from . import logger
 pyscript_types = type, types.FunctionType  # class or function
 json_types = None.__class__, bool, int, float, str, tuple, list, dict
 
-# todo: __slots__
-
 # In essense, the idea of modules is all about propagating dependencies:
-#
+# 
 # * In PyScript we detect unresolved dependencies in JS code, and move these up
 #   the namespace stack.
 # * The create_js_hasevents_class() function and ModelMeta class collect the
@@ -46,7 +44,7 @@ def get_mod_name(ob):
     name = getattr(ob, '__pyscript__', None)
     if not (name and isinstance(name, str)):
         name = ob.__name__
-        if ob.__package__ == name:
+        if ob.__file__.rsplit('.', 1)[0].endswith('__init__'):
             name += '.__init__'
     return name
 
@@ -108,7 +106,7 @@ class JSModule:
         self._name = get_mod_name(self._pymodule)
         
         # Check if name matches the kind of module
-        is_package = self._pymodule.__package__ == self._pymodule.__name__
+        is_package = self._pymodule.__file__.rsplit('.', 1)[0].endswith('__init__')
         if is_package and not name.endswith('.__init__'):
             raise ValueError('Modules representing the __init__ of a package '
                              'should end with ".__init__".')

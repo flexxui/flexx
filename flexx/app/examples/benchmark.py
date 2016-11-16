@@ -30,7 +30,6 @@ from test.pystone import main as pystone_main
 from test import pystone
 
 from flexx import app
-from flexx.pyscript.stubs import window
 
 # Mark the pystone module to be transpiled as a whole. It uses globals
 # a lot, which somehow causes inifinite loops if its transpiled in parts.
@@ -58,6 +57,7 @@ def plot_results():
 
 
 class window:
+    # Trick to be able to use the same code in JS and Python
     
     def Float32Array(n):
         """ Factory function. """

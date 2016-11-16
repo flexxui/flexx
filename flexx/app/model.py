@@ -221,7 +221,7 @@ class ModelMeta(HasEventsMeta):
         
         # Write __jsmodule__; an optimization for our module/asset system
         cls.__jsmodule__ = cls.__module__
-        if sys.modules[cls.__module__].__package__ == cls.__module__:
+        if sys.modules[cls.__module__].__file__.rsplit('.', 1)[0].endswith('__init__'):
             cls.__jsmodule__ += '.__init__'
         
         # Set JS, META, and CSS for this class

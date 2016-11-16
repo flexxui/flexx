@@ -27,5 +27,4 @@ class Stub:
 
 
 # Seems hacky, but is supported: http://stackoverflow.com/a/7668273/2271927
-# todo: pypy too?
 sys.modules[__name__] = Stub()

@@ -201,7 +201,6 @@ def test_session_assets_data():
     # Add data
     s.add_data('xx', b'xxxx')
     s.add_data('yy', b'yyyy')
-    assert len(s.get_asset_names()) == 0
     assert len(s.get_data_names()) == 2
     assert 'xx' in s.get_data_names()
     assert 'yy' in s.get_data_names()

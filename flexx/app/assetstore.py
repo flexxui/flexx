@@ -402,6 +402,7 @@ class SessionAssets:
         self._used_classes = set()  # Model classes registered as used
         self._used_modules = set()  # module names that define used classes, plus deps
         # Data for this session (in addition to the data provided by the store)
+        # todo: get rid of session assets alltogether, or is there a use-case?
         self._assets = {}
         self._data = {}
         # Whether the page has been served already
@@ -413,13 +414,6 @@ class SessionAssets:
         """ The unique identifier of this session.
         """
         return self._id
-    
-    # todo: ditch this? if not needed by export
-    def get_asset_names(self):
-        """ Get a list of names of the assets used by this session, in
-        the order that they were added.
-        """
-        return list(sorted([a.name for a in self._assets]))
     
     def get_data_names(self):
         """ Get a list of names of the data provided by this session, in
@@ -437,8 +431,6 @@ class SessionAssets:
             data = self._store.get_data(name)
         return data
     
-    # todo: def get_asset(self, name): or not?
-        
     # todo: the way that we do assets now makes me wonder whether there are better ways
     # to deal with data handling ...
     

@@ -267,23 +267,17 @@ def init_notebook():
     if session is None:
         session = manager.create_default_session()
     
-    # trigger loading phosphor assets
-    if 'flexx.ui' in sys.modules:
-        from flexx import ui
-        session.register_model_class(ui.Widget)
-    
     # Open server - the notebook helper takes care of the JS resulting
     # from running a cell, but any interaction goes over the websocket.
     server = current_server()
     host, port = server.serving
     
-    # Try loading assets for flexx.ui. This will only work if flexx.ui
-    # is imported. This is not strictly necessary, since Flexx can
-    # dynamically load the assets, but it is nicer to do it here.
-    # todo: make the session load all imported assets, not only the used ones
+    # Trigger loading phosphor assets
+    if 'flexx.ui' in sys.modules:
+        from flexx import ui
+        session.register_model_class(ui.Widget)
     
-    
-    # Get assets
+    # Get assets, load all known modules to prevent dynamic loading as much as possible
     js_assets, css_assets = session.get_assets_in_order(css_reset=False, load_all=True)
     
     # Pop the first JS asset that sets flexx.app_name and flexx.session_id
