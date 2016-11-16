@@ -95,7 +95,7 @@ class TestHardcoreBuildins:
     
     def test_print(self):
         # Test code
-        assert py2js('print()') == 'console.log();'
+        assert py2js('print()') == 'console.log("");'
         assert py2js('print(3)') == 'console.log(3);'
         assert py2js('foo.print()') == 'foo.print();'
         

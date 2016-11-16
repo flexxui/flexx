@@ -585,7 +585,7 @@ class Parser1(Parser0):
 
     def parse_Import(self, node):
         
-        if 'pyscript' in node.root:
+        if node.root and 'pyscript' in node.root:
             # User is probably importing names from here to allow
             # writing the JS code and command to parse it in one module.
             # Ignore this import.
