@@ -11,6 +11,7 @@ from .. import webruntime, config, set_log_level
 from . import model, logger
 from .model import Model
 from .session import manager
+from .assetstore import assets
 from .tornadoserver import TornadoServer
 from ..event import _loop
 
@@ -36,7 +37,8 @@ def create_server(host=None, port=None, new_loop=False, backend='tornado'):
     
     Arguments:
         host (str): The hostname to serve on. By default
-            ``flexx.config.hostname`` is used.
+            ``flexx.config.hostname`` is used. If ``False``, do not listen
+            (e.g. when integrating with an existing Tornado application).
         port (int, str): The port number. If a string is given, it is
             hashed to an ephemeral port number. By default
             ``flexx.config.port`` is used.
@@ -163,35 +165,35 @@ def _auto_closer(*events):
 ## App functions
 
 
-
-def _deprecated_init_interactive(runtime=None, **runtime_kwargs):
-    """ Initialize Flexx for use in interactive mode.
+def init_interactive(cls=None, runtime=None):
+    """ Initialize Flexx for interactive mode. This creates a default session
+    and launches a runtime to connect to it. 
     
-    This would need a bit of code in the Widget class to automatically
-    use the default app as the parent if no parent is set. But
-    autosetting parents seems wrong, and explicitly setting parents (as
-    in hello_world1.py) seems like not too much work, and for more ease,
-    one can use a notebook. Keeping this as a reference, for now.
+    Parameters:
+        cls (None, Model): a subclass of ``app.Model`` (or ``ui.Widget``) to use
+            as the *default active model*. Only has effect the first time that
+            this function is called.
+        runtime (str): the runtime to launch the application in. Default 'xul'.
     """
     
-    session = manager.create_default_session()
-    
-    # Insert container widget
-    if 'flexx.ui' in sys.modules:
+    # Determine default model class (which is a Widget if ui is imported)
+    if cls is None and 'flexx.ui' in sys.modules:
         from .. import ui
-        session._set_app(ui.Widget(is_app=True))
+        cls = ui.Widget
     
+    # Create the default session
+    session = manager.get_default_session()
+    if session is None:
+        session = manager.create_default_session(cls)
+    else:
+        return  # default session already running
+
     # Launch web runtime, the server will wait for the connection
     server = current_server()
     host, port = server.serving
-    if runtime == 'nodejs':
-        all_js = session.get_js_only()
-        url = '%s:%i/%s/' % (host, port, session.app_name)
-        session._runtime = launch('http://' + url, runtime=runtime, code=all_js)
-    else:
-        url = '%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id)
-        session._runtime = launch('http://' + url, runtime=runtime, **runtime_kwargs)
-
+    url = '%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id)
+    session._runtime = launch('http://' + url, runtime=runtime)
+    
 
 class NoteBookHelper:
     """ Object that captures commands send to the websocket during the
@@ -203,7 +205,7 @@ class NoteBookHelper:
     
     def __init__(self, session):
         self._session = session
-        self._ws = None
+        self._real_ws = None
         self._commands = []
         self.enable()
     
@@ -214,23 +216,32 @@ class NoteBookHelper:
         ip.events.register('post_execute', self.release)
     
     def capture(self):
-        if self._ws is not None:
+        if self._real_ws is not None:
             logger.warn('Notebookhelper already is in capture mode.')
         else:
-            self._ws = self._session._ws
+            assert self._session._ws is not None
+            self._real_ws = self._session._ws
             self._session._ws = self
     
     def release(self):
-        self._session._ws = self._ws
-        self._ws = None
-        
-        from IPython.display import display, Javascript
-        commands = ['flexx.command(%s);' % reprs(msg) for msg in self._commands]
-        self._commands = []
-        display(Javascript('\n'.join(commands)))
+        if self._session._ws is self:
+            self._session._ws = self._real_ws
+        self._real_ws = None
+        if self._commands:
+            from IPython.display import display, Javascript
+            commands = ['flexx.command(%s);' % reprs(msg) for msg in self._commands]
+            self._commands = []
+            display(Javascript('\n'.join(commands)))
     
     def command(self, msg):
         self._commands.append(msg)
+    
+    @property
+    def ping_counter(self):
+        if self._session._ws is self:
+            return self._real_ws.ping_counter
+        else:
+            return self._session._ws.ping_counter
 
 
 def init_notebook():
@@ -243,7 +254,7 @@ def init_notebook():
     # undocumented and I could not get them to work when I tried for a bit.
     # This means though, that flexx in the notebook only works on localhost.
     
-    from IPython.display import display, HTML
+    from IPython.display import display, clear_output, HTML
     # from .. import ui  # noqa - make ui assets available
     
     # Make default log level warning instead of "info" to avoid spamming
@@ -251,45 +262,73 @@ def init_notebook():
     config.load_from_string('log_level = warning', 'init_notebook')
     set_log_level(config.log_level)
     
-    # Get session or create new, check if we already initialized notebook
+    # Get session or create new
     session = manager.get_default_session()
     if session is None:
         session = manager.create_default_session()
-    if getattr(session, 'init_notebook_done', False):
-        display(HTML("<i>Flexx already loaded</i>"))
-        return  # Don't inject twice
-    else:
-        session.init_notebook_done = True  # also used in assetstore
-    
-    # Install helper to make things work in exported notebooks
-    NoteBookHelper(session)
-    
-    # Try loading assets for flexx.ui. This will only work if flexx.ui
-    # is imported. This is not strictly necessary, since Flexx can
-    # dynamically load the assets, but it seems nicer to do it here.
-    try:
-        session.use_global_asset('phosphor-all.js')
-        session.use_global_asset('flexx-ui.css')
-        session.use_global_asset('flexx-ui.js')
-    except IndexError:
-        pass
     
     # Open server - the notebook helper takes care of the JS resulting
     # from running a cell, but any interaction goes over the websocket.
     server = current_server()
     host, port = server.serving
-    asset_elements = session.get_assets_as_html()
+    
+    # Trigger loading phosphor assets
+    if 'flexx.ui' in sys.modules:
+        from flexx import ui
+        session.register_model_class(ui.Widget)
+    
+    # Get assets, load all known modules to prevent dynamic loading as much as possible
+    js_assets, css_assets = session.get_assets_in_order(css_reset=False, load_all=True)
+    
+    # Pop the first JS asset that sets flexx.app_name and flexx.session_id
+    # We set these in a way that it does not end up in exported notebook.
+    js_assets.pop(0)
+    url = 'ws://%s:%i/flexx/ws/%s' % (host, port, session.app_name)
+    flexx_pre_init = """<script>window.flexx = window.flexx || {};
+                                window.flexx.app_name = "%s";
+                                window.flexx.session_id = "%s";
+                                window.flexx.ws_url = "%s";
+                                window.flexx.is_live_notebook = true;
+                        </script>""" % (session.app_name, session.id, url)
+    
+    # Check if already loaded, if so, re-connect
+    if not getattr(session, 'init_notebook_done', False):
+        session.init_notebook_done = True  # also used in assetstore
+    else:
+        display(HTML(flexx_pre_init))
+        clear_output()
+        display(HTML("""<script>
+                        flexx.is_exported = !flexx.is_live_notebook;
+                        flexx.init();
+                        </script>
+                        <i>Flexx already loaded. Reconnected.</i>
+                        """))
+        return  # Don't inject Flexx twice
+        # Note that exporting will not work anymore since out assets
+        # are no longer in the outputs
+    
+    # Install helper to make things work in exported notebooks
+    NoteBookHelper(session)
     
     # Compose HTML to inject
-    url = 'ws://%s:%i/%s/ws' % (host, port, session.app_name)
     t = "<i>Injecting Flexx JS and CSS</i>"
-    t += '\n\n'.join(asset_elements)
-    t += "<script>flexx.ws_url='%s'; " % url
-    t += "flexx.is_notebook=true; flexx.init();</script>"
+    t += '\n\n'.join([asset.to_html('{}', 0) for asset in css_assets + js_assets])
+    t += """<script>
+            flexx.is_notebook = true;
+            flexx.is_exported = !flexx.is_live_notebook;
+            /* If Phosphor is already loaded, disable our Phosphor CSS. */
+            if (window.jupyter && window.jupyter.lab) {
+                document.getElementById('phosphor-all.css').disabled = true;
+            }
+            flexx.init();
+            </script>"""
+    
+    display(HTML(flexx_pre_init))  # Create initial Flexx info dict
+    clear_output()  # Make sure the info dict is gone in exported notebooks
+    display(HTML(t))
     
     # Note: the Widget._repr_html_() method is responsible for making
     # the widget show up in the notebook output area.
-    display(HTML(t))
 
 
 def serve(cls, name=None, properties=None):
@@ -342,7 +381,8 @@ def launch(cls, runtime=None, properties=None, **runtime_kwargs):
     server = current_server()
     host, port = server.serving
     if runtime == 'nodejs':
-        all_js = session.get_js_only()
+        js_assets, _ = session.get_assets_in_order()
+        all_js = '\n\n'.join([asset.to_string() for asset in js_assets])
         url = '%s:%i/%s/' % (host, port, session.app_name)
         session._runtime = launch('http://' + url, runtime=runtime, code=all_js)
     else:
@@ -352,7 +392,8 @@ def launch(cls, runtime=None, properties=None, **runtime_kwargs):
     return session.app
 
 
-def export(cls, filename=None, properties=None, single=True):
+def export(cls, filename=None, properties=None, single=None, link=None,
+           write_shared=True):
     """ Export the given Model class to an HTML document.
     
     Arguments:
@@ -361,9 +402,16 @@ def export(cls, filename=None, properties=None, single=True):
             If not given or None, will return the html as a string.
         properties (dict, optional): the initial properties for the model. The
           model is instantiated using ``Cls(**properties)``.
-        single (bool): If True, will include all JS and CSS dependencies
-            in the HTML page. If False, you want to export all assets
-            using ``app.assets.export(dirname)``.
+        link (int): whether to link assets or embed them:
+        
+            * 0: all assets are embedded.
+            * 1: normal assets are embedded, remote assets remain remote.
+            * 2: all assets are linked (as separate files).
+            * 3: (default) normal assets are linked, remote assets remain remote.
+        write_shared (bool): if True (default) will also write shared assets
+            when linking to assets. This can be set to False when
+            exporting multiple apps to the same location. The shared assets can
+            then be exported last using ``app.assets.export(dirname)``.
     
     Returns:
         html (str): The resulting html. If a filename was specified
@@ -376,10 +424,24 @@ def export(cls, filename=None, properties=None, single=True):
     if not (isinstance(cls, type) and issubclass(cls, Model)):
         raise ValueError('runtime must be a string or Model subclass.')
     
-    # Create session
-    name = cls.__name__
+    # Backward comp - deprecate "single" argument at some point
+    if link is None:
+        if single is not None:
+            logger.warn('Export single arg is deprecated, use link instead.')
+            if not single:
+                link = 3
+    link = int(link or 0)
+    
+    # Prepare name, based on exported file name (instead of cls.__name__)
+    name = os.path.basename(filename).split('.')[0]
+    name = name.replace('-', '_').replace(' ', '_')
+    
     serve(cls, name, properties)
-    session = manager.create_session(name)
+    
+    # Create session with id equal to the app name. This would not be strictly
+    # necessary to make exports work, but it makes sure that exporting twice
+    # generates the exact same thing (no randomly generated dir names).
+    session = manager.create_session(name, name)  # 2nd arg sets session._id
     
     # Make fake connection using exporter object
     exporter = ExporterWebSocketDummy()
@@ -388,20 +450,33 @@ def export(cls, filename=None, properties=None, single=True):
     # Clean up again - NO keep in memory to ensure two sessions dont get same id
     # manager.disconnect_client(session)
     
+    # Warn if this app has data and is meant to be run standalone
+    if (not link) and session.get_data_names():
+        logger.warn('Exporting a standalone app, but it has registered data.')
+    
     # Get HTML - this may be good enough
-    html = session.get_page_for_export(exporter._commands, single)
+    html = session.get_page_for_export(exporter._commands, link)
     if filename is None:
         return html
     elif filename.lower().endswith('.hta'):
         hta_tag = '<meta http-equiv="x-ua-compatible" content="ie=edge" />'
         html = html.replace('<head>', '<head>\n    ' + hta_tag, 1)
+    elif not filename.lower().endswith(('.html', 'htm')):
+        raise ValueError('Invalid extension for exporting to %r' %
+                         os.path.basename(filename))
     
-    # Save to file
-    if filename.startswith('~'):
-        filename = os.path.expanduser(filename)
+    # Save to file. If standalone, all assets will be included in the main html
+    # file, if not, we need to export shared assets and session assets too.
+    filename = os.path.abspath(os.path.expanduser(filename))
+    if link:
+        if write_shared:
+            assets.export(os.path.dirname(filename))
+        session._export(os.path.dirname(filename))
     with open(filename, 'wb') as f:
         f.write(html.encode())
-    logger.info('Exported app to %r' % filename)
+    
+    app_type = 'standalone app' if link else 'app'
+    logger.info('Exported %s to %r' % (app_type, filename))
 
 
 class ExporterWebSocketDummy:

@@ -20,8 +20,7 @@ import sys
 import json
 
 from . import commonast as ast
-from . import stdlib
-
+from . import stdlib, logger
 
 reprs = json.dumps  # Save string representation without the u in u'xx'.
 
@@ -55,54 +54,6 @@ def unify(x):
         return '(%s)' % x
 
 
-# https://github.com/umdjs/umd/blob/master/returnExports.js
-UMD = """
-(function (root, factory) {
-    if (typeof define === 'function' && define.amd) {
-        // AMD. Register as an anonymous module.
-        define([%s], factory);
-    } else if (typeof exports !== 'undefined') {
-        // Node or CommonJS
-        module.exports = factory(%s);
-        if (typeof window === 'undefined') {
-            root.%s = module.exports;  // also create global module in Node
-        }
-    } else {
-        // Browser globals (root is window)
-        root.%s = factory(%s);
-    }
-}(this, function (%s) {
-""".lstrip()  # "dep", require("dep"), name, root.dep, dep
-
-
-UMD_LIGHT = """
-(function (root, factory) {
-    root.%s = factory();
-}(this, function () {
-""".lstrip()
-
-
-def get_module_preamble(name, deps):
-    """ Wrap code in a module compatible with UMD (Universal Module
-    Definition), making it work with AMD (i.e. require), Node, plain
-    browser.
-    
-    Parameters:
-        name (str): the name of the module
-        deps (list): dependency names
-    Returns:
-        code: a preamble to prepend the actual module code with.
-        Don't forget to return the namespace, and put ``}));`` at the end.
-    """
-    
-    dep_strings = ', '.join([reprs(dep) for dep in deps])
-    dep_requires = ', '.join(['require(%s)' % reprs(dep) for dep in deps])
-    dep_names = ', '.join(deps)
-    dep_fullnames = ', '.join('root.' + dep for dep in deps)
-    
-    return UMD % (dep_strings, dep_requires, name, name, dep_fullnames, dep_names)
-
-
 class NameSpace(dict):
     """ Variable names can be added to the namespace with or without an
     initial value.
@@ -114,13 +65,21 @@ class NameSpace(dict):
     """
     
     def set_nonlocal(self, key):
+        """ Explicitly declare a name as nonlocal/global """
         self[key] = False  # also if already exists
     
-    def add(self, key):
+    def use(self, key):
+        """ Declare a name as used (but can be defined in higher level) """
         if key not in self:
+            self[key] = None
+    
+    def add(self, key):
+        """ Declare a name as defined in this namespace """
+        if self.get(key, None) is not False:  # overwrite if None
             self[key] = True
     
     def discard(self, key):
+        """ Discard name from this namespace """
         self.pop(key, None)
 
 
@@ -186,9 +145,16 @@ class Parser0:
         'IsNot' : "!==",
     }
     
-    def __init__(self, code, module=None, indent=0, docstrings=True,
+    def __init__(self, code, pysource=None, indent=0, docstrings=True,
                  inline_stdlib=True):
         self._pycode = code  # helpfull during debugging
+        self._pysource = None
+        if isinstance(pysource, str):
+            self._pysource = pysource, 0
+        elif isinstance(pysource, tuple):
+            self._pysource = str(pysource[0]), int(pysource[1])
+        elif pysource is not None:
+            logger.warn('Parser ignores pysource; it must be str or (str, int).')
         if sys.version_info[0] == 2:
             fut = 'from __future__ import unicode_literals, print_function\n'
             code = fut + code
@@ -202,8 +168,6 @@ class Parser0:
         # To keep track of std lib usage
         self._std_functions = set()
         self._std_methods = set()
-        self._imported_objects = set()
-        self._imports = {}
         
         # To help distinguish classes from functions
         self._seen_func_names = set()
@@ -221,9 +185,8 @@ class Parser0:
                 self._methods[name[7:]] = getattr(self, name)
         
         # Prepare
-        self.push_stack('module', module or '')
-        if module:
-            self._indent += 1
+        self._globals = []
+        self.push_stack('module', '')
         
         # Parse
         try:
@@ -240,35 +203,24 @@ class Parser0:
                 raise(err)
         
         # Finish
-        ns = self.pop_stack()  # Pop module namespace
-        if ns:
+        ns = self.vars  # do not self.pop_stack() so caller can inspect module vars
+        defined_names = [n for n in ns if ns[n]]
+        if defined_names:
             self._parts.insert(0, self.get_declarations(ns))
+        for name in self._globals:
+            ns[name] = False
         
         # Add part of the stdlib that was actually used
         if inline_stdlib:
             libcode = stdlib.get_partial_std_lib(self._std_functions,
                                                  self._std_methods,
-                                                 self._imported_objects,
                                                  self._indent)
             if libcode:
                 self._parts.insert(0, libcode)
         
         # Post-process
-        if module:
-            self._indent -= 1
-            exports = [name for name in sorted(ns) if not name.startswith('_')]
-            export_keyvals = [reprs(name) + ': ' + name for name in exports]
-            code = self._parts
-            if module.endswith('+'):  # todo: document - proper UMD
-                code.insert(0, get_module_preamble(module[:-1], []))
-            else:  # Light module
-                code.insert(0, UMD_LIGHT % module)
-            code.append('\n    return {%s};\n' % ', '.join(export_keyvals))
-            code.append('}));\n')
-            
-        else:
-            if self._parts:
-                self._parts[0] = '    ' * indent + self._parts[0].lstrip()
+        if self._parts:
+            self._parts[0] = '    ' * indent + self._parts[0].lstrip()
     
     def dump(self):
         """ Get the JS code as a string.
@@ -288,15 +240,24 @@ class Parser0:
             classNode = node if isinstance(node, ast.ClassDef) else classNode
             funcNode = node if isinstance(node, ast.FunctionDef) else funcNode
         
+        # Get location as accurately as we can
+        filename = None
+        lineno = getattr(node, 'lineno', -1)
+        if self._pysource:
+            filename, lineno = self._pysource
+            lineno += node.lineno - 1
+        
         msg = 'Error processing %s-node' % (node.__class__.__name__)
         if classNode:
             msg += ' in class "%s"' % classNode.name
         if funcNode:
             msg += ' in function "%s"' % funcNode.name
+        if filename:
+            msg += ' in "%s"' % filename
         if hasattr(node, 'lineno'):
-            msg += ' on line %i' % node.lineno
+            msg += ', line %i, ' % lineno
         if hasattr(node, 'col_offset'):
-            msg += ':%i' % node.col_offset
+            msg += 'col %i' % node.col_offset
         return msg
     
     def push_stack(self, type, name):
@@ -310,7 +271,13 @@ class Parser0:
     def pop_stack(self):
         """ Pop the current stack and return the namespace.
         """
+        # Pop
         nstype, nsname, ns = self._stack.pop(-1)
+        # Leak nonlocals and used-but-not-defined vars into the previous stack
+        for name in [n for n in ns if not ns[n]]:
+            if not ns[name]:
+                self.vars.use(name)
+                ns.discard(name)
         return ns
     
     def get_declarations(self, ns):
@@ -387,11 +354,6 @@ class Parser0:
         args.insert(0, base)
         return '%s.call(%s)' % (mangled_name, ', '.join(args)) 
     
-    def use_imported_object(self, name):
-        self._handle_std_deps(stdlib.IMPORTS[name])
-        self._imported_objects.add(name)
-        return stdlib.IMPORT_PREFIX + name.replace('.', stdlib.IMPORT_DOT)
-        
     def pop_docstring(self, node):
         """ If a docstring is present, in the body of the given node,
         remove that string node and return it as a string, corrected
@@ -430,4 +392,4 @@ class Parser0:
                 res = [res]
             return res
         else:
-            raise JSError('Cannot parse %s nodes yet' % nodeType)
+            raise JSError('Cannot parse %s-nodes yet' % nodeType)

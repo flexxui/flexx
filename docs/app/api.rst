@@ -9,9 +9,11 @@ Functions related to the event loop
 
 .. autofunction:: flexx.app.run
 
-.. autofunction:: flexx.app.init_notebook
-
 .. autofunction:: flexx.app.stop
+
+.. autofunction:: flexx.app.init_interactive
+
+.. autofunction:: flexx.app.init_notebook
 
 .. autofunction:: flexx.app.call_later
 
@@ -46,17 +48,23 @@ The Model class
 Session and Assets
 ------------------
 
-The session handles the connection between Python and the JavaScript,
+An asset is represented using an ``Asset`` object that defines its sources,
+dependencies, etc. Assets can be shared or specific to the session.
+The AssetStore provides all shared assets for clients connected to the current
+process. The global store is at ``flexx.app.assets``.
+The session object handles the connection between Python and the JavaScript,
 and it allows adding client-side assets, which for instance makes it
 easy to create extensions based on existing JS libraries.
 
-The AssetStore provides all assets for clients connected to the current
-process. The global store is at ``flexx.app.assets``.
 
-.. autoclass:: flexx.app.Session
-    :inherited-members:
+
+.. autoclass:: flexx.app.Asset
     :members:
 
 
 .. autoclass:: flexx.app.assetstore.AssetStore
+    :members:
+
+.. autoclass:: flexx.app.Session
+    :inherited-members:
     :members:

@@ -27,11 +27,34 @@ Simple example:
 
 import os
 
-from ... import event
+from ... import event, app
 from ...pyscript import window
 from . import Widget
 
-Bokeh = None  # fool flakes
+
+def _load_bokeh(ext):
+    import bokeh.resources
+    dev = os.environ.get('BOKEH_RESOURCES', '') == 'relative-dev'
+    res = bokeh.resources.bokehjsdir()
+    if dev:
+        res = os.path.abspath(os.path.join(bokeh.__file__,
+                                            '..', '..', 'bokehjs', 'build'))
+    modname = 'bokeh' if dev else 'bokeh.min'
+    filename = os.path.join(res, ext, modname + '.' + ext)
+    return open(filename, 'rb').read().decode()
+
+def _load_bokeh_js():
+    return _load_bokeh('js')
+
+def _load_bokeh_css():
+    return _load_bokeh('css')
+
+# Create Bokeh assets. We use the lazy approach, so that Bokeh won't
+# be imported until this module (i.e. the BokehWidget) is actually used.
+# The variable names do not matter, only that the module is present, though
+# by naming it "Bokeh" it doubles as a stub for the Bokeh namespec in JS.
+Bokeh = app.Asset('bokeh.js', _load_bokeh_js)
+Bokeh_css = app.Asset('bokeh.css', _load_bokeh_css)
 
 
 class BokehWidget(Widget):
@@ -48,21 +71,6 @@ class BokehWidget(Widget):
         overflow: hidden;
     }
     """
-    
-    def init(self):
-        
-        # Handle client dependencies
-        import bokeh
-        dev = os.environ.get('BOKEH_RESOURCES', '') == 'relative-dev'
-        modname = 'bokeh.' if dev else 'bokeh.min.'
-        if not (modname + 'js') in self.session.get_used_asset_names():
-            res = bokeh.resources.bokehjsdir()
-            if dev:
-                res = os.path.abspath(
-                    os.path.join(bokeh.__file__, '..', '..', 'bokehjs', 'build'))
-            for x in ('css', 'js'):
-                filename = os.path.join(res, x, modname + x)
-                self.session.add_global_asset(modname + x, filename)
     
     @event.prop
     def plot(self, plot=None):

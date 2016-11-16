@@ -1,3 +1,9 @@
+"""
+Tests for Asset AssetStore and SessionAssets.
+
+Note that our docs is very much a test for our export mechanism.
+"""
+
 import os
 import sys
 import tempfile
@@ -6,224 +12,284 @@ import shutil
 from flexx.util.testing import run_tests_if_main, raises
 
 from flexx.app.assetstore import assets, AssetStore, SessionAssets
-from flexx.app.assetstore import lookslikeafilename
 
 from flexx import ui, app
 
 
+N_STANDARD_ASSETS = 3
+
 test_filename = os.path.join(tempfile.gettempdir(), 'flexx_asset_cache.test')
 
 
-def test_lookslikeafilename():
-    # Note that this code will be made legacy-ready; string lits will be ucode
-    assert lookslikeafilename('foo/bar/'*10)
-    assert lookslikeafilename('foo.js')
-    assert lookslikeafilename('http://aksjbdkjasd.com/asdasd/asdfoo.js')
-    assert lookslikeafilename('string\nso\nlooks\nlike\nfilename\x00')
+def test_asset_store_collect():
     
-    assert not lookslikeafilename(b'this is\ncode')
-    assert not lookslikeafilename(b'this is\rcode')
-    assert not lookslikeafilename(b'these are bytes\x00')
-    assert not lookslikeafilename(b'these are bytes\x0a')
-    
-    if sys.version_info[0] == 2:
-        # These are still str in legact py, and should resolve to filenames
-        assert lookslikeafilename(b'foo/bar/'*10)
-        assert lookslikeafilename(b'foo.js')
-        assert lookslikeafilename(b'http://aksjbdkjasd.com/asdasd/asdfoo.js')
-    else:
-        # But on Py3k its not
-        assert not lookslikeafilename(b'foo.js')
-    
-    # Looks like a minified file
-    assert not lookslikeafilename(b's=function(a){return a+1;}'*100)
-
-
-def test_asset_store_simple():
+    from flexx import ui
     
     s = AssetStore()
-    assert len(s.get_asset_names()) == 1  # reset.css
-    assert not s._cache
+    s.update_modules()
+    assert len(s.modules) > 10
+    assert 'flexx.ui._widget' in s.modules
+    assert 'flexx.app.model' in s.modules
     
-    raises(IndexError, s.load_asset, 'foo.js')
+    assert '.Widget =' in s.get_asset('flexx.ui._widget.js').to_string()
+    assert '.Widget =' in s.get_asset('flexx.ui.js').to_string()
+    assert '.Widget =' in s.get_asset('flexx.js').to_string()
+    assert '.Widget =' not in s.get_asset('flexx.app.js').to_string()
     
-    with open(test_filename, 'wb') as f:
-        f.write(b'bar\n')
+    assert '.Model =' in s.get_asset('flexx.app.model.js').to_string()
+    assert '.Model =' in s.get_asset('flexx.app.js').to_string()
+    assert '.Model =' in s.get_asset('flexx.js').to_string()
+    assert '.Model =' not in s.get_asset('flexx.ui.js').to_string()
+
+
+def test_asset_store_data():
     
-    s.add_asset('foo.css', b'foo\n')
-    s.add_asset('foo.js', test_filename)
+    s = AssetStore()
+    assert len(s.get_asset_names()) == N_STANDARD_ASSETS
+    assert len(s.get_data_names()) == 0
     
-    assert s.get_asset_names() == ['foo.css', 'foo.js', 'reset.css']  # alphabetically
-    assert s.load_asset('foo.css') == b'foo\n'
-    assert s.load_asset('foo.js') == b'bar\n'
+    # Add data
+    s.add_shared_data('xx', b'xxxx')
+    s.add_shared_data('yy', b'yyyy')
+    assert len(s.get_asset_names()) == N_STANDARD_ASSETS
+    assert len(s.get_data_names()) == 2
+    assert 'xx' in s.get_data_names()
+    assert 'yy' in s.get_data_names()
+    assert '2 data' in repr(s)
     
-    # Check caching
-    with open(test_filename, 'wb') as f:
-        f.write(b'foo\n')
-    assert s.load_asset('foo.js') == b'bar\n'
+    # get_data()
+    assert s.get_data('xx') == b'xxxx'
+    assert s.get_data('zz') is None
     
-    # Setting same asset
-    s.add_asset('foo.css', b'foo\n')
-    s.add_asset('foo.js', test_filename)
-    raises(ValueError, s.add_asset, 'foo.css', b'fooo\n')
-    raises(ValueError, s.add_asset, 'foo.js', b'foo\n')
-    raises(ValueError, s.add_asset, 'foo.js', b'bar\n')
+    # Add data with same name
+    with raises(ValueError):
+        s.add_shared_data('xx', b'zzzz')
     
-    # Fail add_asset
-    raises(ValueError, s.add_asset, 'xxx', 3)  # value must be str or bytes
-    raises(ValueError, s.add_asset, 'xxx', 'some file that does not exist')  # str means filename
-    raises(RuntimeError, s._cache_get, 'nonexistent.ever')  # Runtime error, because this should never happen
+    # Add url data
+    s.add_shared_data('readme', 'https://github.com/zoofIO/flexx/blob/master/README.md')
+    assert 'Flexx is' in s.get_data('readme').decode()
     
-    # Assets from http 
-    s.add_asset('webresource.js', 'http://code.jquery.com/jquery.min.js')
-    assert len(s.load_asset('webresource.js')) > 0
-    
-    # Fail load_asset
-    raises(IndexError, s.load_asset, 'nonexistent.js')
+    # Add BS data
+    with raises(TypeError):
+        s.add_shared_data('dd')  # no data
+    with raises(TypeError):
+        s.add_shared_data('dd', 4)  # not an asset
+    if sys.version_info > (3, ):
+        with raises(TypeError):
+            s.add_shared_data('dd', 'not bytes')
+        with raises(TypeError):
+            s.add_shared_data(b'dd', b'yes, bytes')  # name not str
+    with raises(TypeError):
+        s.add_shared_data(4, b'zzzz')  # name not a str
 
 
 def test_asset_store_export():
     
+    from flexx import ui
+    
     dir = os.path.join(tempfile.gettempdir(), 'flexx_export')
     if os.path.isdir(dir):
         shutil.rmtree(dir)
-    os.mkdir(dir)
     
-    s = AssetStore()
-    
-    s.export(dir)
-    assert len(os.listdir(dir)) == 1
-    assert os.path.isfile(os.path.join(dir, 'reset.css'))
-    
-    s.add_asset('foo.js', b'xx\n')
-    s.add_asset('foo.css', b'xx\n')
-    s.export(dir)
-    assert len(os.listdir(dir)) == 3
-    
-    # Fail
-    raises(ValueError, s.export, os.path.join(dir, 'doesnotexist'))
-
-
-def test_cache_submodules():
-    
-    s = AssetStore()
-    
-    s.create_module_assets('flexx.ui.widgets')
-    s.create_module_assets('flexx.ui.widgets._button')
-    s.create_module_assets('flexx.ui')
-    
-    s.get_module_name_for_model_class(ui.Slider) == 'flexx.ui.widgets'
-    s.get_module_name_for_model_class(ui.Button) == 'flexx.ui.widgets._button'
-    s.get_module_name_for_model_class(ui.BoxLayout) == 'flexx.ui'
-
-
-def test_session_assets():
+    # os.mkdir(dir) -> No, export can create this dir!
     
     store = AssetStore()
+    store.update_modules()
+    
+    # Getting an asset marks them as used
+    store.get_asset('flexx.ui.js')
+    store.get_asset('flexx.app.js')
+    store.get_asset('flexx.js')
+    store.get_asset('reset.css')
+    
+    store.add_shared_data('foo.png', b'x')
+    
+    s = SessionAssets(store)
+    s.add_data('bar.png', b'x')
+    
+    store.export(dir)
+    s._export(dir)
+    assert len(os.listdir(dir)) == 2
+    assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'reset.css'))
+    assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.ui.js'))
+    assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.app.js'))
+    assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.js'))
+    assert not os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.ui._widget.js'))
+    assert os.path.isfile(os.path.join(dir, '_data', 'shared', 'foo.png'))
+    assert os.path.isfile(os.path.join(dir, '_data', s.id, 'bar.png'))
+
+    # Will only create a dir that is one level deep
+    with raises(ValueError):
+        store.export(os.path.join(dir, 'not', 'exist'))
+
+
+# def test_session_assets():
+#     
+#     store = AssetStore()
+#     store.add_shared_asset(app.Asset('spam.css', '', []))
+#     s = SessionAssets(store)
+#     s._send_command = lambda x: None
+#     assert s.id
+#     
+#     assert len(s.get_asset_names()) == 0
+#     assert len(s.get_data_names()) == 0
+#     
+#     # Adding assets ..
+#     
+#     # Add an asset
+#     asset = app.Asset('foo.js', '-foo=7-', [])
+#     s.add_asset(asset)
+#     #
+#     assert len(s.get_asset_names()) == 1
+#     assert len(s.get_data_names()) == 0
+#     assert 'foo.js' in s.get_asset_names()
+#     
+#     # Add another asset
+#     asset = app.Asset('bar.js', '-bar=8-', [])
+#     s.add_asset(asset)
+#     #
+#     assert len(s.get_asset_names()) == 2
+#     assert 'bar.js' in s.get_asset_names()
+#     
+#     # Add asset from store
+#     s.add_asset('spam.css')
+#     assert len(s.get_asset_names()) == 3
+#     assert 'spam.css' in s.get_asset_names()
+#     
+#     # Add asset via kwargs
+#     s.add_asset(name='eggs.js', sources=['x=3'], deps=[])
+#     assert len(s.get_asset_names()) == 4
+#     assert 'eggs.js' in s.get_asset_names()
+#     
+#     # Use store asset again: ok
+#     s.add_asset('spam.css')
+#     # Use asset that's already used: ok
+#     s.add_asset(asset)
+#     
+#     # Add unknown store asset
+#     with raises(ValueError):
+#         s.add_asset('spam.js')
+#     # Not an asset instance
+#     with raises(TypeError):
+#         s.add_asset()
+#     with raises(TypeError):
+#         s.add_asset('spam.js', name='foo.j2')
+#     with raises(TypeError):
+#         s.add_asset(3)
+#     # New asset with existing name
+#     asset3 = app.Asset('bar.js', '-bar=1-', [])
+#     with raises(ValueError):
+#         s.add_asset(asset3)
+#     
+#     # get_asset()
+#     assert s.get_asset('bar.js') is asset
+#     assert s.get_asset('spam.css') is store.get_asset('spam.css')
+#     assert s.get_asset('spam.css').name == 'spam.css'
+#     assert s.get_asset('bla.css') is None
+#     with raises(ValueError):
+#         s.get_asset('fooo')  # must ends with .js or .css
+
+
+def test_session_assets_data():
+    
+    store = AssetStore()
+    store.add_shared_data('ww', b'wwww')
     s = SessionAssets(store)
     s._send_command = lambda x: None
+    assert s.id
     
-    assert not s.get_used_asset_names()
+    # Add data
+    s.add_data('xx', b'xxxx')
+    s.add_data('yy', b'yyyy')
+    assert len(s.get_data_names()) == 2
+    assert 'xx' in s.get_data_names()
+    assert 'yy' in s.get_data_names()
     
-    with open(test_filename, 'wb') as f:
-        f.write(b'bar\n')
+    # get_data()
+    assert s.get_data('xx') == b'xxxx'
+    assert s.get_data('zz') is None
+    assert s.get_data('ww') is b'wwww'
     
-    # Add assets, check mangles name
-    a1 = s.add_asset('foo.css', b'foo\n')
-    a2 = s.add_asset('foo.js', test_filename)
-    assert 'foo' in a1 and s.id in a1 and a1.endswith('.css')
-    assert 'foo' in a2 and s.id in a2 and a2.endswith('.js')
-    assert s.get_used_asset_names() == [a1, a2]  # order in which it came
+    # Add url data
+    s.add_data('readme', 'https://github.com/zoofIO/flexx/blob/master/README.md')
+    assert 'Flexx is' in s.get_data('readme').decode()
     
-    # Get the asset
-    raises(IndexError, store.load_asset, 'foo.css')
-    raises(IndexError, store.load_asset, 'foo.js')
-    assert store.load_asset(a1) == b'foo\n'
-    assert store.load_asset(a2) == b'bar\n'
+    # Add data with same name
+    with raises(ValueError):
+        s.add_data('xx', b'zzzz')
     
-    # Use asset
-    store.add_asset('spam.js', b'1234\x00')
-    s.use_global_asset('spam.js')
-    assert s.get_used_asset_names()[-1] == 'spam.js'
-    raises(IndexError, s.use_global_asset, 'unknown-asset.js')
-    raises(ValueError, s.add_asset, 3, b'a\n')
+    # Add BS data
+    with raises(TypeError):
+        s.add_data('dd')  # no data
+    with raises(TypeError):
+        s.add_data('dd', 4)  # not an asset
+    if sys.version_info > (3, ):
+        with raises(TypeError):
+            s.add_data('dd', 'not bytes')
+        with raises(TypeError):
+            s.add_data(b'dd', b'yes, bytes')  # name not str
+    with raises(TypeError):
+        s.add_data(4, b'zzzz')  # name not a str
     
-    # Add assets after loading page
-    s.get_page()
-    s.use_global_asset('spam.js')  # prints a warning, but it does work
-
-    # Global assets
-    s.add_global_asset('eggs.js', b'12345\x00')
-    assert s.get_used_asset_names()[-1] == 'eggs.js'
-    assert store.load_asset('eggs.js') == b'12345\x00'
-    raises(ValueError, s.use_global_asset, 3)
-    
-    # Remote assets
-    s.use_remote_asset('http://linked.com/not/verified.js')
-    s.use_remote_asset('http://linked.com/not/verified.css')
-    s.use_remote_asset('http://linked.com/not/verified.css')  # twice is ok
-    raises(ValueError, s.use_remote_asset, 3)
-    page = s.get_page()
-    assert 'not/verified.js' in page
-    assert 'not/verified.css' in page
+    # get_data()
+    assert s.get_data('xx') is b'xxxx'
+    assert s.get_data('ww') is store.get_data('ww')
+    assert s.get_data('ww') == b'wwww'
+    assert s.get_data('bla') is None
 
 
 def test_session_registering_model_classes():
     
+    from flexx import ui
+    
     store = AssetStore()
+    store.update_modules()
+    
     s = SessionAssets(store)
-    s._send_command = lambda x: None
-    
-    store.create_module_assets('flexx.ui.layouts')
-    
-    raises(ValueError, s.register_model_class, 4)  # must be a Model class
-    
-    s.register_model_class(ui.Slider)
-    assert len(s._known_classes) == 3  # Slider, Widget, and Model
-    s.register_model_class(ui.Slider)  # no duplicates!
-    assert len(s._known_classes) == 3
-    
-    s.register_model_class(ui.BoxLayout)
-    s.register_model_class(ui.Button)
-    
-    # Get result
-    js = s.get_js_only()
-    assert js.count('.Button = function ') == 1
-    assert js.count('.Slider = function ') == 1
-    assert js.count('.Widget = function ') == 1
-    assert js.count('.BoxLayout = function ') == 1
-    
-    # Check that module indeed only has layout widgets
-    jsmodule = store.load_asset('flexx-ui-layouts.js').decode()
-    assert jsmodule.count('.BoxLayout = function ') == 1
-    assert jsmodule.count('.Button = function ') == 0
-    assert jsmodule.count('.Widget = function ') == 0
-    
-    # Check that page contains the rest
-    page = s.get_page()
-    assert page.count('.BoxLayout = function ') == 0
-    assert page.count('.Button = function ') == 1
-    assert page.count('.Widget = function ') == 1
-    
-    # Check that a single page export has it all
-    export  = s.get_page_for_export([], True)
-    assert export.count('.BoxLayout = function ') == 1
-    assert export.count('.Button = function ') == 1
-    assert export.count('.Widget = function ') == 1
-    
-    # Patch - this func is normally provided by the Session subclass
     commands = []
     s._send_command = lambda x: commands.append(x)
+    assert not s._used_modules
     
-    # Dynamic
-    s.register_model_class(ui.BoxLayout)
-    assert len(commands) == 0  # already known
-    s.register_model_class(ui.FormLayout)
-    assert len(commands) == 0  # already in module asset
-    #
-    s.register_model_class(ui.Label)
-    assert '.Label = function' in commands[0]  # JS
-    assert 'flx-' in commands[1]  # CSS
+    # Register button, pulls in all dependent modules
+    s.register_model_class(ui.Button)
+    assert ui.Button.__jsmodule__ in s._used_modules
+    assert ui.BaseButton.__jsmodule__ in s._used_modules
+    assert ui.Widget.__jsmodule__ in s._used_modules
+    assert 'flexx.app.model' in s._used_modules
+    
+    # Get assets, level 9
+    js_assets, css_assets = s.get_assets_in_order(bundle_level=9)
+    names = [a.name for a in js_assets]
+    assert 'flexx.app.model.js' in names
+    assert 'flexx.ui.widgets._button.js' in names
+    
+    # Get assets, level 2
+    js_assets, css_assets = s.get_assets_in_order(bundle_level=2)
+    names = [a.name for a in js_assets]
+    assert 'flexx.app.js' in names
+    assert 'flexx.ui.js' in names
+    assert 'flexx.ui.widgets._button.js' not in names
+    
+    # Get assets, level 1
+    js_assets, css_assets = s.get_assets_in_order(bundle_level=1)
+    names = [a.name for a in js_assets]
+    assert 'flexx.js' in names
+    assert 'flexx.ui.js' not in names
+    assert 'flexx.ui.widgets._button.js' not in names
+    
+    # Get page
+    code = s.get_page()
+    assert '<html>' in code
+    code = s.get_page_for_export([])
+    assert '<html>' in code
+    
+    # dynamic loading ...
+    
+    # No commands so far
+    assert not commands
+    
+    s.register_model_class(ui.html.ul)
+    assert commands
 
 
 run_tests_if_main()

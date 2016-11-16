@@ -33,34 +33,6 @@ class DockPanel(Layout):
     positioning of the child widgets ...
     """
     
-    CSS = """
-    .p-DockTabPanel {
-        padding-right: 2px;
-        padding-bottom: 2px;
-    }
-    
-    .p-DockTabPanel > .p-StackedPanel {
-        padding: 10px;
-        background: white;
-        border: 1px solid #C0C0C0;
-        border-top: none;
-        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-    }
-    
-    .p-DockPanel-overlay {
-        background: rgba(255, 255, 255, 0.7);
-        border: 2px dotted #404040;
-    }
-    
-    .p-DockPanel-overlay.p-mod-root-top,
-    .p-DockPanel-overlay.p-mod-root-left,
-    .p-DockPanel-overlay.p-mod-root-right,
-    .p-DockPanel-overlay.p-mod-root-bottom,
-    .p-DockPanel-overlay.p-mod-root-center {
-        border-width: 2px;
-    }
-    """
-    
     # todo: properties for spacing (self.phosphor.spacing)
     
     class JS:

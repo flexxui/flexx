@@ -5,6 +5,8 @@ from ... import event
 from ...pyscript import window
 from .. import Widget
 
+perf_counter = None  # exists in PyScript, time.perf_counter only in Python 3.3+
+
 
 class CanvasWidget(Widget):
     """ A widget that provides an HTML5 canvas. The canvas is scaled with
@@ -47,9 +49,8 @@ class CanvasWidget(Widget):
             # This code only captures if there has not been scrolled elsewhere
             # for about half a second.
             def wheel_behavior(e):
-                import time  # noqa
                 id, t0 = window.flexx._wheel_timestamp
-                t1 = time.time()
+                t1 = perf_counter()
                 if (t1 - t0) < 0.5:
                     window.flexx._wheel_timestamp = id, t1  # keep scrolling
                 else:

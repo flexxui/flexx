@@ -62,9 +62,10 @@ class Model0(app.Model):
         
         @event.prop
         def result(self, v=None):
-            if v and not this_is_js():
-                print('stopping by ourselves', v)
-                app.call_later(TIMEOUT2, app.stop)
+            if not this_is_js():
+                if v:
+                    print('stopping by ourselves', v)
+                    app.call_later(TIMEOUT2, app.stop)
             return v
 
     class JS:

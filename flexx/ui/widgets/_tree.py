@@ -96,11 +96,11 @@ class TreeWidget(Widget):
     
     Style classes for a TreeItem's elements:
     
-    * ``flx-row`` indicates the row of an item (its text, icon, and checkbox).
-    * ``flx-collapsebut`` the element used to collapse/expand an item.
-    * ``flx-checkbut`` the element used to check/uncheck an item.
-    * ``flx-text`` the element that contains the text of the item.
-    * ``flx-title`` the element that contains the title of the item.
+    * ``flx-TreeItem`` indicates the row of an item (its text, icon, and checkbox).
+    * ``flx-TreeItem > collapsebut`` the element used to collapse/expand an item.
+    * ``flx-TreeItem > checkbut`` the element used to check/uncheck an item.
+    * ``flx-TreeItem > text`` the element that contains the text of the item.
+    * ``flx-TreeItem > title`` the element that contains the title of the item.
     
     Style classes applied to the TreeItem, corresponding to its properties:
     
@@ -129,7 +129,7 @@ class TreeWidget(Widget):
         right: 0;
     }
     
-    .flx-TreeWidget .flx-row {
+    .flx-TreeWidget .flx-TreeItem {
         display: inline-block;
         margin: 0;
         padding-left: 2px;
@@ -140,12 +140,12 @@ class TreeWidget(Widget):
         -ms-user-select: none;
     }
     
-    .flx-TreeWidget .flx-text {
+    .flx-TreeWidget .flx-TreeItem > .text {
         display: inline-block;
         position: absolute;
         right: 0;
     }
-    .flx-TreeWidget .flx-title:empty + .flx-text {
+    .flx-TreeWidget .flx-TreeItem > .title:empty + .text {
         position: initial;  /* .text width is not used*/
     }
     
@@ -155,24 +155,24 @@ class TreeWidget(Widget):
         margin: 0;
     }
     
-    .flx-TreeWidget .visible-false {
+    .flx-TreeWidget li.visible-false {
         display: none;
     }
-    .flx-TreeWidget .collapsed-true ul {
+    .flx-TreeWidget li.collapsed-true ul {
         display: none;
     }
     
     /* collapse button */
-    .flx-TreeWidget .flx-collapsebut {
+    .flx-TreeWidget .flx-TreeItem > .collapsebut {
         display: inline-block;
         width: 1.5em;  /* must match with ul padding-left */
         text-align: center;
         margin-left: -1px;  /* aligns better with indentation guide */
     }
-    .flx-TreeWidget .collapsed-null > .flx-collapsebut {
-        visibility: 'hidden';
+    .flx-TreeWidget .flx-TreeItem.collapsed-null > .collapsebut {
+        visibility: hidden;
     }
-    .flx-TreeWidget.flx-listmode .flx-collapsebut {
+    .flx-TreeWidget.flx-listmode .flx-TreeItem > .collapsebut {
         display: none;
     }
     
@@ -194,39 +194,39 @@ class TreeWidget(Widget):
         padding: 3px;
     }
     
-    .flx-TreeWidget .selected-true > .flx-row {
+    .flx-TreeItem.selected-true {
         background: rgba(128, 128, 128, 0.35);
     }
     
-    .flx-TreeWidget .collapsed-true > .flx-collapsebut::after {
+    .flx-TreeWidget .flx-TreeItem.collapsed-true > .collapsebut::after {
         content: '\\25B8';  /* small right triangle */
     }
-    .flx-TreeWidget .collapsed-false > .flx-collapsebut::after {
+    .flx-TreeWidget .flx-TreeItem.collapsed-false > .collapsebut::after {
         content: '\\25BE';  /* small down triangle */
     }
     
-    .flx-TreeWidget .flx-collapsebut {
+    .flx-TreeWidget .flx-TreeItem > .collapsebut {
         color: rgba(128, 128, 128, 0.6);
     }
-    .flx-TreeWidget .collapsed-false > ul > li {
+    .flx-TreeWidget li.collapsed-false > ul > li {
         border-left: 1px solid rgba(128, 128, 128, 0.3);
     }
-    .flx-TreeWidget .collapsed-false.selected-true > ul > li {
+    .flx-TreeWidget li.collapsed-false.selected-true > ul > li {
         border-left: 1px solid rgba(128, 128, 128, 0.6);
     }
     
-    .flx-TreeWidget .checked-null > .checkbut {
+    .flx-TreeItem.checked-null > .checkbut {
         content: '\\2611\\00a0';
        /* display: none;  /* could also be visibility: hidden */
     }
-    .flx-TreeWidget .checked-true > .checkbut::after {
+    .flx-TreeItem.checked-true > .checkbut::after {
         content: '\\2611\\00a0';
     }
-    .flx-TreeWidget .checked-false > .checkbut::after {
+    .flx-TreeItem.checked-false > .checkbut::after {
         content: '\\2610\\00a0';
     }
     
-    .flx-TreeWidget .flx-text {
+    .flx-TreeWidget .flx-TreeItem > .text {
         width: 50%;
     }
     
@@ -424,12 +424,12 @@ class TreeItem(Model):
         _HTML = ''.join([line.split('#')[0].strip() for line in """
             
             # This is the actual HTML used to generate an item
-            <span class='flx-row'>         # the row that represents the item
-                <span class='padder'></span>   # padding
-                <span class='flx-collapsebut'></span>   # the collapse button
+            <span class='flx-TreeItem'>         # the row that represents the item
+                <span class='padder'></span>    # padding
+                <span class='collapsebut'></span>   # the collapse button
                 <span class='checkbut'></span>  # the check button
-                <span class='flx-title'></span>     # the title text for this item
-                <span class='flx-text'></span>      # the text for this item
+                <span class='title'></span>     # the title text for this item
+                <span class='text'></span>      # the text for this item
                 </span>
             <ul></ul>                           # to hold sub items
             
@@ -467,7 +467,6 @@ class TreeItem(Model):
         def _on_click(self, e):
             # Handle JS mouse click event
             if e.target is self._collapsebut:
-                print('collapsing')
                 self.collapsed = not self.collapsed
             elif e.target is self._checkbut:
                 self.checked = not self.checked

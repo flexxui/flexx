@@ -2,39 +2,38 @@
 The client's core Flexx engine, implemented in PyScript.
 """
 
-from ..pyscript import py2js, undefined, window
+from ..pyscript import this_is_js
+from ..pyscript.stubs import window, undefined, require
 
-flexx = location = require = module = typeof = None  # fool PyFlakes
+# This module gets transpiled to JavaScript as a whole
+__pyscript__ = True
 
 
-@py2js(inline_stdlib=False)
-class FlexxJS:
+class Flexx:
     """ JavaScript Flexx module. This provides the connection between
     the Python and JS (via a websocket).
     """
     
     def __init__(self):
+        # Init (overloadable) variables. These can be set by creating
+        # a window.flexx object *before* instantiating this class, or by
+        # setting them on this object before the init() is called.
+        self.is_notebook = False
+        self.is_exported = False
+        self.app_name = ''
+        self.session_id = ''
+        self.ws_url = ''
         # Copy attributes from temporary flexx object
-        self.session_id = flexx.session_id
-        self.app_name = flexx.app_name
-        # Init variables
+        for key in window.flexx.keys():
+            self[key] = window.flexx[key]  # session_id, app_name, and maybe more
+        # Init internal variables
         self.ws = None
         self.last_msg = None
-        self.is_notebook = False  # if not, we "close" when the ws closes
-        self.is_exported = False
-        # Containers to keep track of classes and objects
         self.classes = {}
         self.instances = {}
-        # Construct url (for nodejs the location is set by the flexx nodejs runtime)
-        address = location.hostname
-        if location.port:
-            address += ':' + location.port
-        address += '/' + self.app_name
-        self.ws_url = 'ws://%s/ws' % address
         
-        if typeof(window) is 'undefined' and typeof(module) is 'object':
+        if window.is_node is True:
             # nodejs (call exit on exit and ctrl-c)
-            self._set_window_as_global()  # create alias
             self.nodejs = True
             window.setTimeout(self.init, 1)  # ms
             window.process.on('exit', self.exit, False)
@@ -42,33 +41,41 @@ class FlexxJS:
             window.setTimeout(self.exit, 10000000)  # keep alive ~35k years
         else:
             # browser
+            # Note: flexx.init() is not auto-called when Flexx is embedded
             window.addEventListener('load', self.init, False)
             window.addEventListener('beforeunload', self.exit, False)
         window.flexx = self  # Set this as the global flexx object
     
-    def _set_window_as_global(self):  # https://github.com/nodejs/node/pull/1838
-        """ global.window = global;
-        """
-    
     def init(self):
         """ Called after document is loaded. """
         if window.flexx.is_exported:
-            window.flexx.runExportedApp()
-        elif window.flexx.is_notebook and not (window.IPython and 
-                                               window.IPython.notebook and 
-                                               window.IPython.notebook.session):
-            print('Flexx: hey, I am in an exported notebook!')
+            if window.flexx.is_notebook:
+                print('Flexx: I am in an exported notebook!')
+            else:
+                print('Flexx: I am in an exported app!')
+                window.flexx.runExportedApp()
         else:
+            print('Flexx: Initializing')
+            if not window.flexx.is_notebook:
+                window.flexx._remove_querystring()
             window.flexx.initSocket()
             window.flexx.initLogging()
-        
+    
+    def _remove_querystring(self):
+        # remove querystring ?session=x
+        try:
+            window.history.replaceState(window.history.state, '',
+                                        window.location.pathname)
+        except Exception:
+            pass  # Xul, nodejs, ...
+    
     def exit(self):
         """ Called when runtime is about to quit. """
         if self.ws:  # is not null or undefined
             self.ws.close()
             self.ws = None
     
-    def get(self, id):
+    def get(self, id):  # todo: rename this to get_instance()?
         """ Get instance of a Model class.
         """
         if id == 'body':
@@ -79,7 +86,6 @@ class FlexxJS:
     def initSocket(self):
         """ Make the connection to Python.
         """
-        
         # Check WebSocket support
         if self.nodejs:
             try:
@@ -92,12 +98,20 @@ class FlexxJS:
             if (WebSocket is undefined):
                 window.document.body.innerHTML = 'Browser does not support WebSockets'
                 raise "FAIL: need websocket"
+        
+        # Construct ws url (for nodejs the location is set by the flexx nodejs runtime)
+        if not self.ws_url:
+            address = window.location.hostname
+            if window.location.port:
+                address += ':' + window.location.port
+            self.ws_url = 'ws://%s/flexx/ws/%s' % (address, self.app_name)
+        
         # Open web socket in binary mode
         self.ws = ws = WebSocket(window.flexx.ws_url)
         #ws.binaryType = "arraybuffer"  # would need utf-decoding -> slow
         
         def on_ws_open(evt):
-            window.console.info('Socket connected')
+            window.console.info('Socket opened with session id ' + self.session_id)
             ws.send('hiflexx ' + self.session_id)
         def on_ws_message(evt):
             window.flexx.last_msg = msg = evt.data or evt
@@ -221,46 +235,114 @@ class FlexxJS:
             window.win1 = window.open(msg[5:], 'new', 'chrome')
         else:
             window.console.warn('Invalid command: "' + msg + '"')
-    
-    def decodeUtf8(self, arrayBuffer):
-        """
-        var result = "",
-            i = 0,
-            c = 0,
-            c1 = 0,
-            c2 = 0,
-            c3 = 0,
-            data = new Uint8Array(arrayBuffer);
-    
-        // If we have a BOM skip it
-        if (data.length >= 3 &&
-            data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) {
-            i = 3;
-        }
-    
-        while (i < data.length) {
-            c = data[i];
-    
-            if (c < 128) {
-                result += String.fromCharCode(c);
-                i += 1;
-            } else if (c > 191 && c < 224) {
-                if (i + 1 >= data.length) {
-                    throw "UTF-8 Decode failed. Two byte character was truncated.";
-                }
-                c2 = data[i + 1];
-                result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
-                i += 2;
-            } else {
-                if (i + 2 >= data.length) {
-                    throw "UTF-8 Decode failed. Multi byte character was truncated.";
-                }
-                c2 = data[i + 1];
-                c3 = data[i + 2];
-                result += String.fromCharCode(((c & 15) << 12) |
-                                              ((c2 & 63) << 6) | (c3 & 63));
-                i += 3;
+
+
+def decodeUtf8(arrayBuffer):
+    """
+    var result = "",
+        i = 0,
+        c = 0,
+        c1 = 0,
+        c2 = 0,
+        c3 = 0,
+        data = new Uint8Array(arrayBuffer);
+
+    // If we have a BOM skip it
+    if (data.length >= 3 &&
+        data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) {
+        i = 3;
+    }
+
+    while (i < data.length) {
+        c = data[i];
+
+        if (c < 128) {
+            result += String.fromCharCode(c);
+            i += 1;
+        } else if (c > 191 && c < 224) {
+            if (i + 1 >= data.length) {
+                throw "UTF-8 Decode failed. Two byte character was truncated.";
             }
+            c2 = data[i + 1];
+            result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+            i += 2;
+        } else {
+            if (i + 2 >= data.length) {
+                throw "UTF-8 Decode failed. Multi byte character was truncated.";
+            }
+            c2 = data[i + 1];
+            c3 = data[i + 2];
+            result += String.fromCharCode(((c & 15) << 12) |
+                                            ((c2 & 63) << 6) | (c3 & 63));
+            i += 3;
         }
-        return result;
-        """
+    }
+    return result;
+    """
+
+
+
+# In Python, we need some extras for the serializer to work
+if not this_is_js():
+    import json
+    
+    class JSON:
+        @staticmethod
+        def parse(text, reviver=None):
+            return json.loads(text, object_hook=reviver)
+        @staticmethod
+        def stringify(obj, replacer=None):
+            return json.dumps(obj, default=replacer)
+
+
+class Serializer:
+    
+    def __init__(self):
+        self._revivers = _revivers = {}
+    
+        def loads(text):
+            return JSON.parse(text, _reviver)
+        
+        def saves(obj):
+            return JSON.stringify(obj, _replacer)
+        
+        def add_reviver(type_name, func):
+            assert isinstance(type_name, str)
+            _revivers[type_name] = func
+        
+        def _reviver(dct, val=undefined):
+            if val is not undefined:  # pragma: no cover
+                dct = val
+            if isinstance(dct, dict):
+                type = dct.get('__type__', None)
+                if type is not None:
+                    func = _revivers.get(type, None)
+                    if func is not None:
+                        return func(dct)
+            return dct
+        
+        def _replacer(obj, val=undefined):
+            if val is undefined:  # Py
+                
+                try:
+                    return obj.__json__()  # same as in Pyramid
+                except AttributeError:
+                    raise TypeError('Cannot serialize object to JSON: %r' % obj)
+            else:  # JS - pragma: no cover
+                if (val is not None) and val.__json__ is not undefined:
+                    return val.__json__()
+                return val
+        
+        self.loads = loads
+        self.saves = saves
+        self.add_reviver = add_reviver
+
+
+## Instantiate
+
+
+serializer = Serializer()
+
+if this_is_js():
+    window.flexx = Flexx()
+    window.flexx.serializer = serializer

@@ -5,6 +5,7 @@ yet.
 """
 
 import math
+from time import time
 
 from flexx import app, ui
 
@@ -37,8 +38,7 @@ class Circles(ui.Widget):
     def tick(self):
         if not self.session.status:
             return
-        import time
-        t = time.time()
+        t = time()
         for i, circle in enumerate(self._circles):
             x = math.sin(i*0.2 + t)*0.3 + 0.5
             y = math.cos(i*0.2 + t)*0.3 + 0.5

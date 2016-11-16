@@ -65,6 +65,7 @@ attributes and handlers can be created here.
 
 """
 
+import sys
 import json
 import weakref
 import threading
@@ -74,10 +75,17 @@ from ..event._hasevents import (with_metaclass, new_type, HasEventsMeta,
                                 finalize_hasevents_class)
 from ..event._emitters import Emitter
 from ..event._js import create_js_hasevents_class, HasEventsJS
-from ..pyscript import py2js, js_rename, window, Parser
-
-from .serialize import serializer
+from ..pyscript import js_rename, window, Parser, JSString
 from . import logger
+
+# The clientcore module is a PyScript module that forms the core of the
+# client-side of Flexx. We import the serializer instance, and can use
+# that name in both Python and JS. Of course, in JS it's just the
+# corresponding instance from the module that's being used.
+# By using something from clientcore in JS here, we make clientcore a
+# dependency of the the current module.
+from .clientcore import serializer
+
 
 reprs = json.dumps
 
@@ -129,6 +137,11 @@ def get_active_model():
     models = _get_active_models()
     if models:
         return models[-1]
+    else:
+        from .session import manager
+        session = manager.get_default_session()
+        if session is not None:
+            return session.app
 
 
 def stub_emitter_func_py(self, *args):
@@ -206,30 +219,42 @@ class ModelMeta(HasEventsMeta):
         cls.JS.__local_properties__ = [name for name in cls.JS.__properties__
                     if getattr(cls.JS, name) is not getattr(cls, name, None)]
         
-        # Set JS and CSS for this class
+        # Write __jsmodule__; an optimization for our module/asset system
+        cls.__jsmodule__ = cls.__module__
+        if sys.modules[cls.__module__].__file__.rsplit('.', 1)[0].endswith('__init__'):
+            cls.__jsmodule__ += '.__init__'
+        
+        # Set JS, META, and CSS for this class
         cls.JS.CODE = cls._get_js()
         cls.CSS = cls.__dict__.get('CSS', '')
     
     def _get_js(cls):
-        """ Get source code for this class.
+        """ Get source code for this class plus the meta info about the code.
         """
-        cls_name = 'flexx.classes.' + cls.__name__
+        # Since classes are defined in a module, we can safely name the classes
+        # by their plain name. But flexx.classes.X remains the "official" 
+        # namespace, so that things work easlily accross modules, and we can
+        # even re-define classes (e.g. in the notebook).
+        cls_name = cls.__name__
         base_class = 'flexx.classes.%s.prototype' % cls.mro()[1].__name__
         code = []
         # Add JS version of HasEvents when this is the Model class
         if cls.mro()[1] is event.HasEvents:
-            c = py2js(serializer.__class__, 'flexx.Serializer', inline_stdlib=False)
-            code.append(c)
-            code.append('flexx.serializer = new flexx.Serializer();\n\n')
             c = js_rename(HasEventsJS.JSCODE, 'HasEvents', 'flexx.classes.HasEvents')
             code.append(c)
         # Add this class
-        code.append(create_js_hasevents_class(cls.JS, cls_name, base_class))
+        c = create_js_hasevents_class(cls.JS, cls_name, base_class)
+        meta = c.meta
+        code.append(c.replace('var %s =' % cls_name,
+                              'var %s = flexx.classes.%s =' % (cls_name, cls_name),
+                              1))
         if cls.mro()[1] is event.HasEvents:
             code.append('flexx.serializer.add_reviver("Flexx-Model",'
                         ' flexx.classes.Model.prototype.__from_json__);\n')
-        return '\n'.join(code)
-
+        # Return with meta info
+        js = JSString('\n'.join(code))
+        js.meta = meta
+        return js
 
 
 class Model(with_metaclass(ModelMeta, event.HasEvents)):
@@ -349,9 +374,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             if active_model is not None:
                 session = active_model.session
         if session is None:
-            from .session import manager
-            session = manager.get_default_session()
-        if session is None:
             raise RuntimeError('Cannot instantiate Model %r without a session'
                                % self.id)
         self._session = session
@@ -449,7 +471,10 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         """
         if self.session.status:
             cmd = 'flexx.instances.%s = "disposed";' % self._id
-            self._session._exec(cmd)
+            try:
+                self._session._exec(cmd)
+            except Exception:
+                pass  # ws can be closed/gone if this gets invoked from __del__
         super().dispose()
     
     @property
@@ -611,7 +636,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             pass
         
         def _set_prop_from_py(self, name, text):
-            value = window.flexx.serializer.loads(text)
+            value = serializer.loads(text)
             self._set_prop(name, value, False, True)
         
         def _set_prop(self, name, value, _initial=False, frompy=False):
@@ -629,13 +654,13 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             
             if ischanged and issyncable:
                 value = self[name]
-                txt = window.flexx.serializer.saves(value)
+                txt = serializer.saves(value)
                 window.flexx.ws.send('SET_PROP ' + [self.id, name, txt].join(' '))
         
         def _handlers_changed_hook(self):
             handlers = self.__handlers
             types = [name for name in handlers.keys() if len(handlers[name])]
-            text = window.flexx.serializer.saves(types)
+            text = serializer.saves(types)
             if window.flexx.ws:
                 window.flexx.ws.send('SET_EVENT_TYPES ' + [self.id, text].join(' '))
         
@@ -643,7 +668,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             self.__event_types_py = event_types
         
         def _emit_from_py(self, type, text):
-            ev = window.flexx.serializer.loads(text)
+            ev = serializer.loads(text)
             self.emit(type, ev, True)
         
         def emit(self, type, info=None, frompy=False):
@@ -653,7 +678,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                       self._sync_props)
             
             if not frompy and not isprop and type in self.__event_types_py:
-                txt = window.flexx.serializer.saves(ev)
+                txt = serializer.saves(ev)
                 if window.flexx.ws:
                     window.flexx.ws.send('EVENT ' + [self.id, type, txt].join(' '))
 

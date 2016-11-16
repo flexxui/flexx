@@ -42,18 +42,18 @@ def test_py2js_on_function():
     # normal
     jscode = py2js(foo)
     assert jscode.startswith('var foo')
-    assert jscode.pycode.startswith('def foo')
+    assert jscode.meta['pycode'].startswith('def foo')
     
     # renamed
     jscode = py2js(foo, 'bar')
-    assert jscode.pycode.startswith('def foo')
+    assert jscode.meta['pycode'].startswith('def foo')
     assert 'foo' not in jscode
     assert jscode.startswith('var bar')
     assert 'bar = function ' in jscode
     
     # renamed 2
     jscode = py2js(foo, 'bar.bla')
-    assert jscode.pycode.startswith('def foo')
+    assert jscode.meta['pycode'].startswith('def foo')
     assert 'foo' not in jscode
     assert not 'var bar.bla' in jscode
     assert 'bar.bla = function ' in jscode
@@ -83,8 +83,8 @@ def test_py2js_on_function():
     
     assert callable(foo1)
     assert callable(foo2)
-    assert py2js(foo1).pycode.startswith('def foo')
-    assert py2js(foo2).pycode.startswith('def foo')
+    assert py2js(foo1).meta['pycode'].startswith('def foo')
+    assert py2js(foo2).meta['pycode'].startswith('def foo')
     assert foo3.startswith('var foo3')
     assert foo4.startswith('    var foo4')
 
@@ -99,17 +99,17 @@ def test_py2js_on_class():
     # normal
     jscode = py2js(Foo1, inline_stdlib=False)
     assert jscode.startswith('var Foo1')
-    assert jscode.pycode.startswith('class Foo1')
+    assert jscode.meta['pycode'].startswith('class Foo1')
     
     # renamed
     jscode = py2js(Foo1, 'Bar', inline_stdlib=False)
-    assert jscode.pycode.startswith('class Foo')
+    assert jscode.meta['pycode'].startswith('class Foo')
     assert 'Foo' not in jscode
     assert jscode.startswith('var Bar')
     
     # renamed 2
     jscode = py2js(Foo1, 'Bar.bla', inline_stdlib=False)
-    assert jscode.pycode.startswith('class Foo')
+    assert jscode.meta['pycode'].startswith('class Foo')
     assert 'Foo' not in jscode
     assert not 'var Bar.bla' in jscode
     assert 'Bar.bla = function ' in jscode
@@ -171,7 +171,7 @@ def test_scripts():
     assert 'define(' not in jscode
     
     # Convert - module light
-    script2js(pyname, 'mymodule')
+    script2js(pyname, 'mymodule', module_type='simple')
     
     # Check result
     jscode = open(jsname, 'rb').read().decode()
@@ -179,7 +179,7 @@ def test_scripts():
     assert 'define(' not in jscode
     
     # Convert - module UMD
-    script2js(pyname, 'mymodule+')  # at the moment, this is the undocumented API
+    script2js(pyname, 'mymodule', module_type='umd')
     
     # Check result
     jscode = open(jsname, 'rb').read().decode()

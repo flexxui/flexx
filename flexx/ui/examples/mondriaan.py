@@ -61,5 +61,5 @@ class Mondriaan(ui.Widget):
 
 
 if __name__ == '__main__':
-    app.launch(Mondriaan, 'firefox')
+    m = app.launch(Mondriaan, 'firefox')
     app.run()
