@@ -12,10 +12,12 @@ import shutil
 import hashlib
 from urllib.request import urlopen
 
+from ..pyscript import create_js_module, get_all_std_names, get_full_std_lib
+from .. import config
+
 from .model import Model
 from .modules import JSModule
 from .asset import Asset, Bundle, solve_dependencies, HEADER
-from ..pyscript import create_js_module, get_all_std_names, get_full_std_lib
 from . import logger
 
 
@@ -480,6 +482,7 @@ class SessionAssets:
         # by the asset store have a value of None.
         self._used_classes = set()  # Model classes registered as used
         self._used_modules = set()  # module names that define used classes, plus deps
+        self._loaded_modules = set()  # module names that were present in bundles
         # Data for this session (in addition to the data provided by the store)
         # todo: get rid of session assets alltogether, or is there a use-case?
         self._assets = {}
@@ -603,7 +606,8 @@ class SessionAssets:
             # this session, but that it was loaded as part of the bundle.
             mod = self._store.modules[mod_name]
             modules = [m for m in self._store.modules.values()
-                       if m.changed_time > self._served]
+                       if m.name not in self._loaded_modules or
+                       m.changed_time >= self._served]
             modules = solve_dependencies(modules)  # sort based on deps
             if modules:
                 # Bundles - the dash makes this bundle have an empty "module name"
@@ -645,7 +649,7 @@ class SessionAssets:
             suffix = asset.name.split('.')[-1].upper()
             self._send_command('DEFINE-%s %s' % (suffix, asset.to_string()))
     
-    def get_assets_in_order(self, css_reset=False, load_all=False, bundle_level=None):
+    def get_assets_in_order(self, css_reset=False, load_all=None, bundle_level=None):
         """ Get two lists containing the JS assets and CSS assets,
         respectively. The assets contain bundles corresponding to all modules
         being used (and their dependencies). The order of bundles is based on
@@ -660,6 +664,8 @@ class SessionAssets:
         # Make store aware of everything that we know now
         self._store.update_modules()
         
+        if load_all is None:
+            load_all = config.bundle_all
         if load_all:
             modules_to_load = self._store.modules.keys()  # e.g. notebook
         else:
@@ -681,6 +687,10 @@ class SessionAssets:
         # Get bundles
         js_assets = [self._store.get_asset(b + '.js') for b in bundle_names]
         css_assets = [self._store.get_asset(b + '.css') for b in bundle_names]
+        
+        # Get loaded modules
+        for asset in js_assets:
+            self._loaded_modules.update([m.name for m in asset.modules])
         
         # Sort bundles by name and dependency resolution
         f = lambda m: (m.name.startswith('__main__'), m.name)
