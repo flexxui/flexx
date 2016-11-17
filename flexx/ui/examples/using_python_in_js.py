@@ -12,7 +12,7 @@ Note that once running, there is no interaction with the Python side, so this
 example be exported to standalone HTML.
 """
 
-from flexx import event, app, ui
+from flexx import app, ui
 
 # Define a value. This can be used in JS as long as it can be serialized
 # using JSON (None, bool, int, float, str, list, dict).
