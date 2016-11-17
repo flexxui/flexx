@@ -150,8 +150,8 @@ on the main app page, e.g. for sub-pages or web workers:
 
 .. code-block:: py
     
-    # Register asset - the url will be at '/flexx/assets/shared/mydep.js'
-    app.assets.add_shared_asset('mydep.js', js_code)
+    # Register asset
+    asset_url = app.assets.add_shared_asset('mydep.js', js_code)
 
 Data management
 ---------------

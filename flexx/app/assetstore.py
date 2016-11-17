@@ -354,12 +354,22 @@ class AssetStore:
                 * A funcion that should return the source code, and which is
                   called only when the asset is used. This allows defining
                   assets without causing side effects when they're not used.
+        
+        Returns:
+            url: the (relative) url at which the asset can be retrieved.
+            
         """
-        asset = Asset(asset_name, source)
+        if isinstance(asset_name, Asset):
+            # undocumented feature; users will rarely use Asset objects
+            asset = asset_name
+        else:
+            asset = Asset(asset_name, source)
         if asset.name in self._assets:
             raise ValueError('Asset %r already registered.' % asset.name)
         self._assets[asset.name] = asset
-        return asset
+        # Returned url is relative so that it also works in exported apps.
+        # The server will redirect this to /flexx/assets/shared/...
+        return '_assets/shared/' + asset.name
     
     def associate_asset(self, mod_name, asset_name, source=None):
         """ Associate an asset with the given module.
@@ -377,6 +387,9 @@ class AssetStore:
             source (str, callable, optional): The source for a new asset. See
                 ``add_shared_asset()`` for details. It is an error to supply a
                 source if the asset_name is already registered.
+        
+        Returns:
+            url: the (relative) url at which the asset can be retrieved.
         """
         # Get or create asset
         if asset_name in self._assets:
@@ -385,13 +398,14 @@ class AssetStore:
                 t = 'associate_asset() for %s got source, but asset %r already exists.'
                 raise ValueError(t % (mod_name, asset_name))
         else:
-            asset = self.add_shared_asset(asset_name, source)
+            asset = Asset(asset_name, source)
+            self.add_shared_asset(asset)
         # Add to the list of assets for this module
         assets = self._associated_assets.setdefault(mod_name, [])
         if asset.name not in [a.name for a in assets]:
             assets.append(asset)
             assets.sort(key=lambda x: x.i)  # sort by instantiation time
-        return asset
+        return '_assets/shared/' + asset.name
     
     def get_associated_assets(self, mod_name):
         """ Get the associated assets corresponding to the given module name.
@@ -401,15 +415,17 @@ class AssetStore:
     
     def add_shared_data(self, name, data):
         """ Add data to serve to the client (e.g. images), which is shared
-        between sessions. It is an error to add data with a name that
-        is already registered. Returns the link at which the data can
-        be retrieved. See ``Session.add_data()`` to set data per-session.
+        between sessions. It is an error to add data with a name that is
+        already registered. See ``Session.add_data()`` to set dataper-session.
         
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. 
             data (bytes): the data blob. Can also be a uri to the blob
                 (string starting with "file://", "http://" or "https://").
-          the code is (down)loaded on the server.
+                in which case the code is (down)loaded on the server.
+        
+        Returns:
+            url: the (relative) url at which the data can be retrieved.
         """
         if not isinstance(name, str):
             raise TypeError('add_shared_data() name must be a str.')
