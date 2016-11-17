@@ -19,11 +19,13 @@ class JSConstant:
 
 class Stub:
     
+    JSConstant = JSConstant
+    
     def __getattr__(self, name):
         if name == 'JSConstant':
-            return JSConstant
+            return self.JSConstant
         else:
-            return JSConstant(name)
+            return self.JSConstant(name)
 
 
 # Seems hacky, but is supported: http://stackoverflow.com/a/7668273/2271927

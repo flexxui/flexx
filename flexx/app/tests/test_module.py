@@ -277,7 +277,7 @@ def test_add_variable():
     # add_variable warns for other mods
     with capture_log('info') as log:
         store['flxtest.lib2'].add_variable('spam')  
-    assert len(log) == 1 and 'does not have variable' in log[0]
+    assert len(log) == 1 and 'undefined variable' in log[0]
     
     
     m = JSModule('flxtest.bar', store)
