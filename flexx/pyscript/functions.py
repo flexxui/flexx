@@ -58,9 +58,11 @@ def py2js(ob=None, new_name=None, **parser_options):
             linenr = 0
         elif isinstance(ob, types.ModuleType) and hasattr(ob, '__file__'):
             thetype = 'str'
-            filename = ob.__file__
+            filename = inspect.getsourcefile(ob)
             linenr = 0
             pycode = open(filename, 'rb').read().decode()
+            if pycode.startswith('# -*- coding:'):
+                pycode = '\n' + pycode.split('\n', 1)[-1]
         elif isinstance(ob, (type, types.FunctionType, types.MethodType)):
             thetype = 'class' if isinstance(ob, type) else 'def'
             # Get code

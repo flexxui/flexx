@@ -1,7 +1,7 @@
 from flexx.util.testing import run_tests_if_main, raises
 
-from flexx.pyscript import JSError, py2js, evaljs, evalpy, Parser
 from flexx import pyscript
+from flexx.pyscript import JSError, py2js, evaljs, evalpy, Parser
 
 
 def nowhitespace(s):
@@ -328,16 +328,16 @@ class TestExpressions:
     
     def test_instantiation(self):
         # Test creating instances
-        assert 'new' in py2js('a = Foo()')
-        assert 'new' in py2js('a = x.Foo()')
+        assert 'new' in py2js('a = Bar()')
+        assert 'new' in py2js('a = x.Bar()')
         assert 'new' not in py2js('a = foo()')
         assert 'new' not in py2js('a = _foo()')
         assert 'new' not in py2js('a = _Foo()')
-        assert 'new' not in py2js('a = this.Foo()')
+        assert 'new' not in py2js('a = this.Bar()')
         assert 'new' not in py2js('a = JSON.stringify(x)')
         
-        jscode = 'function Foo() {this.x = 3}\nvar x=1;\n'
-        assert evaljs(jscode + py2js('a=Foo()\nx')) == '1'
+        jscode = 'function Bar() {this.x = 3}\nvar x=1;\n'
+        assert evaljs(jscode + py2js('a=Bar()\nx')) == '1'
         
         # Existing classes and functions are used to determine if a
         # call is an instantiation
@@ -345,9 +345,9 @@ class TestExpressions:
         assert 'new' not in py2js('class foo:pass\ndef foo():pass\na = foo()')
         assert 'new' not in py2js('def foo():pass\nclass foo:pass\na = foo()')
         #
-        assert 'new' not in py2js('def Foo():pass\na = Foo()')
-        assert 'new'     in py2js('def Foo():pass\nclass Foo:pass\na = Foo()')
-        assert 'new'     in py2js('class Foo:pass\ndef Foo():pass\na = Foo()')
+        assert 'new' not in py2js('def Bar():pass\na = Bar()')
+        assert 'new'     in py2js('def Bar():pass\nclass Bar:pass\na = Bar()')
+        assert 'new'     in py2js('class Bar:pass\ndef Bar():pass\na = Bar()')
     
     def test_pass(self):
         assert py2js('pass') == ''

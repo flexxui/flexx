@@ -75,7 +75,7 @@ from ..event._hasevents import (with_metaclass, new_type, HasEventsMeta,
                                 finalize_hasevents_class)
 from ..event._emitters import Emitter
 from ..event._js import create_js_hasevents_class, HasEventsJS
-from ..pyscript import js_rename, window, Parser, JSString
+from ..pyscript import js_rename, window, JSString
 from . import logger
 
 # The clientcore module is a PyScript module that forms the core of the
