@@ -267,7 +267,7 @@ class ComboBox(BaseDropdown):
             """
             if v is None:
                 return None
-            return int(v)
+            return max(0, int(v))
         
         @event.prop
         def selected_key(self, v=None):
@@ -309,8 +309,6 @@ class ComboBox(BaseDropdown):
                 else:
                     opt = str(opt), str(opt)
                 options2.append(opt)
-            #
-            self.selected_key = self.selected_index = None
             return tuple(options2)
         
         @event.prop
@@ -352,18 +350,21 @@ class ComboBox(BaseDropdown):
         @event.connect('selected_index')
         def __on_selected_index(self, *events):
             if self.selected_index is not None:
-                key, text = self.options[self.selected_index]
-                self.text = text 
-                self.selected_key = key
+                if self.selected_index < len(self.options):
+                    key, text = self.options[self.selected_index]
+                    self.text = text
+                    self.selected_key = key
         
         @event.connect('selected_key')
         def __on_selected_key(self, *events):
             if self.selected_key is not None:
                 key = self.selected_key
-                if self.options[self.selected_index][0] != key:
-                    for index, option in enumerate(self.options):
-                        if option[0] == key:
-                            self.selected_index = index
+                if self.options[self.selected_index]:
+                    if self.options[self.selected_index][0] == key:
+                        return
+                for index, option in enumerate(self.options):
+                    if option[0] == key:
+                        self.selected_index = index
         
         @event.connect('options')
         def __on_options(self, *events):
@@ -377,6 +378,21 @@ class ComboBox(BaseDropdown):
                 li.index = i
                 self._ul.appendChild(li)
                 strud += text + '&nbsp;&nbsp;<span class="flx-dd-space"></span><br />'
+            # Be smart about maintaining item selection
+            keys = [key_text[0] for key_text in self.options]
+            if self.selected_key in keys:
+                self.selected_index = None
+                key = self.selected_key
+                self.selected_key = None
+                self.selected_key = key
+            elif self.selected_index < len(self.options):
+                self.selected_key = None
+                index = self.selected_index
+                self.selected_index = None
+                self.selected_index = index
+            else:
+                self.selected_index = None
+                self.selected_key = None
             self._strud.innerHTML = strud
         
         @event.connect('editable')
