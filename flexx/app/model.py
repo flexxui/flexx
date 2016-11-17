@@ -76,6 +76,8 @@ from ..event._hasevents import (with_metaclass, new_type, HasEventsMeta,
 from ..event._emitters import Emitter
 from ..event._js import create_js_hasevents_class, HasEventsJS
 from ..pyscript import js_rename, window, JSString
+
+from .asset import get_mod_name
 from . import logger
 
 # The clientcore module is a PyScript module that forms the core of the
@@ -219,9 +221,7 @@ class ModelMeta(HasEventsMeta):
                     if getattr(cls.JS, name) is not getattr(cls, name, None)]
         
         # Write __jsmodule__; an optimization for our module/asset system
-        cls.__jsmodule__ = cls.__module__
-        if sys.modules[cls.__module__].__file__.rsplit('.', 1)[0].endswith('__init__'):
-            cls.__jsmodule__ += '.__init__'
+        cls.__jsmodule__ = get_mod_name(sys.modules[cls.__module__])
         
         # Set JS, META, and CSS for this class
         cls.JS.CODE = cls._get_js()

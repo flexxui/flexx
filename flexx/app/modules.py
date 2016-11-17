@@ -12,7 +12,7 @@ import types
 from ..pyscript import py2js, JSConstant, create_js_module, get_all_std_names
 
 from .model import Model
-from .asset import Asset
+from .asset import Asset, get_mod_name, module_is_package
 from . import logger
 
 
@@ -29,24 +29,6 @@ json_types = None.__class__, bool, int, float, str, tuple, list, dict
 #   module dependencies.
 # * In the Bundle class, again some dependencies are resolved due to bundling,
 #   and others propagate to dependencies between bundles.
-
-
-def get_mod_name(ob):
-    """ Get the module name of an object (the name of a module object or
-    the name of the module in which the object is defined). Our naming
-    differs slighly from Python's in that the module in ``foo/bar/__init__.py``
-    would be named ``foo.bar.__init__``, which simplifies dependency handling
-    for Flexx. Note that such modules only occur if stuff is actually defined
-    in them.
-    """
-    if not isinstance(ob, types.ModuleType):
-        ob = sys.modules[ob.__module__]
-    name = getattr(ob, '__pyscript__', None)
-    if not (name and isinstance(name, str)):
-        name = ob.__name__
-        if ob.__file__.rsplit('.', 1)[0].endswith('__init__'):
-            name += '.__init__'
-    return name
 
 
 class JSModule:
@@ -106,7 +88,7 @@ class JSModule:
         self._name = get_mod_name(self._pymodule)
         
         # Check if name matches the kind of module
-        is_package = self._pymodule.__file__.rsplit('.', 1)[0].endswith('__init__')
+        is_package = module_is_package(self._pymodule)
         if is_package and not name.endswith('.__init__'):
             raise ValueError('Modules representing the __init__ of a package '
                              'should end with ".__init__".')
@@ -157,9 +139,10 @@ class JSModule:
     @property
     def filename(self):
         """ The filename of the Python file that defines
-        (the contents of) this module.
+        (the contents of) this module. Can be '__main__'.
         """
-        return self._pymodule.__file__
+        # E.g. __main__ does not have __file__
+        return getattr(self._pymodule, '__file__', self.name)
     
     @property
     def deps(self):
