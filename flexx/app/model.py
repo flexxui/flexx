@@ -160,7 +160,6 @@ class ModelMeta(HasEventsMeta):
         
         # Register this class and make PyScript convert the name
         ModelMeta.CLASSES.append(cls)
-        Parser.NAME_MAP[cls_name] = 'flexx.classes.%s' % cls_name
         
         OK_MAGICS = '__init__', '__json__', '__from_json__'
         

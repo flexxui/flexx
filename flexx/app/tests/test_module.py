@@ -77,7 +77,7 @@ files['bar'] = """
         pass
     
     def cannot_transpile():
-        with AA():  # no with-statement in Flexx
+        with AA(object):  # no with-statement in Flexx
             pass
     
     cannot_serialize = [1, 2, use_lib1]
@@ -112,7 +112,7 @@ files['lib2'] = """
     def acos(t):
         return t - offset
     
-    class AA:
+    class AA(object):
         pass
     
 """
