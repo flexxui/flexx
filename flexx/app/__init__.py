@@ -216,6 +216,7 @@ logger = logging.getLogger(__name__)
 del logging
 
 # flake8: noqa
+from .clientcore import serializer
 from .session import manager, Session
 from .model import Model, get_active_model
 from .model import get_instance_by_id, get_model_classes
