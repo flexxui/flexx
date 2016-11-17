@@ -23,8 +23,8 @@ def write_png(im, shape=None, file=None):
     Parameters:
         im (bytes, bytearray, numpy-array): the image data to write.
         shape (tuple): the shape of the image. If ``im`` is a numpy array,
-            the shape can be omitted. The shape can be ``(N, M)`` for
-            grayscale, ``(N, M, 3)`` for RGB and ``(N, M, 4)`` for RGBA.
+            the shape can be omitted. The shape can be ``(H, W)`` for
+            grayscale, ``(H, W, 3)`` for RGB and ``(H, W, 4)`` for RGBA.
             Note that grayscale images are converted to RGB.
         file (file-like object, None): where to write the resulting
             image. If omitted or None, the result is returned as bytes.
@@ -78,7 +78,7 @@ def write_png(im, shape=None, file=None):
     f.write(b'\x89PNG\x0d\x0a\x1a\x0a')  # header
     
     # First chunk
-    w, h = shape[0], shape[1]
+    w, h = shape[1], shape[0]
     depth = 8
     ctyp = 0b0110 if shape[2] == 4 else 0b0010
     ihdr = struct.pack('>IIBBBBB', w, h, depth, ctyp, 0, 0, 0)
@@ -109,7 +109,7 @@ def read_png(f, return_ndarray=False):
         return_ndarray (bool): whether to return the result as a numpy array.
             Default False. If False, returns ``(pixel_array, shape)``,
             with ``pixel_array`` a bytearray object and shape being
-            ``(N, M, 3)`` or ``(N, M, 4)``, for RGB and RGBA, respectively.
+            ``(H, W, 3)`` or ``(H, W, 4)``, for RGB and RGBA, respectively.
     """
     # http://en.wikipedia.org/wiki/Portable_Network_Graphics
     # http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html
@@ -191,7 +191,7 @@ def read_png(f, return_ndarray=False):
         im[i:i+line_len] = line
         i += line_len
     
-    shape = width, height, bytes_per_pixel
+    shape = height, width, bytes_per_pixel
     
     # Done
     if return_ndarray:

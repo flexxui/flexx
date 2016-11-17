@@ -9,22 +9,16 @@
 
 """
 
-from .. import event
+from .. import event, app
 from ..app import Model, get_active_model
 from ..pyscript import undefined, window
-from . import logger
+from ..util.getresource import get_resource
 
-# todo: remove this (left for now for backward compat)
-class LiveKeeper:
-    _warned = False
-    
-    def keep(self, ob):
-        if not self._warned:
-            self._warned = True
-            logger.warn('liveKeeper is deprecated, use Session.keep_alive() instead.')
-        ob.session.keep_alive(ob)
 
-liveKeeper = LiveKeeper()
+# Associate Phosphor assets
+for asset_name in ('phosphor-all.css', 'phosphor-all.js'):
+    code = get_resource(asset_name).decode()
+    app.assets.associate_asset(__name__, asset_name, code)
 
 
 # To give both JS and Py a parent property without having it synced,
@@ -121,10 +115,6 @@ class Widget(Model):
 
         # Init - pass signal values via kwargs
         Model.__init__(self, *init_args, **kwargs)
-        
-        # All widgets need phosphor
-        self._session.use_global_asset('phosphor-all.js', before='flexx-ui.css')
-        self._session.use_global_asset('phosphor-all.css', before='flexx-ui.css')
     
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.

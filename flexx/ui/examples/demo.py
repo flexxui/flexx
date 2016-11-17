@@ -21,5 +21,5 @@ class Demo(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Demo)
+    m = app.launch(Demo, 'firefox')
     app.run()

@@ -27,11 +27,32 @@ Simple example:
 
 import os
 
-from ... import event
-from ...pyscript import window
+from ... import event, app
+from ...pyscript.stubs import window, Bokeh
 from . import Widget
 
-Bokeh = None  # fool flakes
+
+def _load_bokeh(ext):
+    import bokeh.resources
+    dev = os.environ.get('BOKEH_RESOURCES', '') == 'relative-dev'
+    res = bokeh.resources.bokehjsdir()
+    if dev:
+        res = os.path.abspath(os.path.join(bokeh.__file__,
+                                            '..', '..', 'bokehjs', 'build'))
+    modname = 'bokeh' if dev else 'bokeh.min'
+    filename = os.path.join(res, ext, modname + '.' + ext)
+    return open(filename, 'rb').read().decode()
+
+def _load_bokeh_js():
+    return _load_bokeh('js')
+
+def _load_bokeh_css():
+    return _load_bokeh('css')
+
+# Associate Bokeh asset, but in a "lazy" way, so that we don't attempt to
+# import bokeh until the user actually instantiates a BokehWidget.
+app.assets.associate_asset(__name__, 'bokeh.js', _load_bokeh_js)
+app.assets.associate_asset(__name__, 'bokeh.css', _load_bokeh_css)
 
 
 class BokehWidget(Widget):
@@ -48,21 +69,6 @@ class BokehWidget(Widget):
         overflow: hidden;
     }
     """
-    
-    def init(self):
-        
-        # Handle client dependencies
-        import bokeh
-        dev = os.environ.get('BOKEH_RESOURCES', '') == 'relative-dev'
-        modname = 'bokeh.' if dev else 'bokeh.min.'
-        if not (modname + 'js') in self.session.get_used_asset_names():
-            res = bokeh.resources.bokehjsdir()
-            if dev:
-                res = os.path.abspath(
-                    os.path.join(bokeh.__file__, '..', '..', 'bokehjs', 'build'))
-            for x in ('css', 'js'):
-                filename = os.path.join(res, x, modname + x)
-                self.session.add_global_asset(modname + x, filename)
     
     @event.prop
     def plot(self, plot=None):

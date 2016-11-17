@@ -1,3 +1,4 @@
+# doc-export: Example
 """
 Example to demonstrate a jQuery widget. I'm not that big a fan of
 jQuery, but this demonstrates how Flexx can interact wih other JS
@@ -5,6 +6,13 @@ frameworks.
 """
 
 from flexx import app, ui
+
+
+# Associate assets needed by this app.
+app.assets.associate_asset(__name__, "http://code.jquery.com/jquery-1.10.2.js")
+app.assets.associate_asset(__name__, "http://code.jquery.com/ui/1.11.4/jquery-ui.js")
+app.assets.associate_asset(__name__,
+    "http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css")
 
 
 class DatePicker(ui.Widget):
@@ -24,22 +32,6 @@ class DatePicker(ui.Widget):
 class Example(ui.Widget):
     
     def init(self):
-        
-        # Two ways to add assets
-        if True:
-            # The client will load these assets from the URL's. Good for web apps.
-            ura = self.session.use_remote_asset
-            ura("http://code.jquery.com/jquery-1.10.2.js")
-            ura("http://code.jquery.com/ui/1.11.4/jquery-ui.js")
-            ura("http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css")
-        else:
-            # Flexx will download the assets and serve them to the client.
-            # Good for desktop/exported apps.
-            aga = self.session.add_global_asset
-            aga("jquery.js", "http://code.jquery.com/jquery-1.10.2.js")
-            aga("jquery-ui.js", "http://code.jquery.com/ui/1.11.4/jquery-ui.js")
-            aga("jquery-ui.css", 
-                "http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css")
         
         with ui.FormLayout():
             self.start = DatePicker(title='Start date')

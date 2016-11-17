@@ -39,6 +39,7 @@ Simple example:
 
 """
 
+
 from ... import event
 from . import Widget
 
@@ -96,21 +97,17 @@ class HTMLElementFactory:
     HTML element that you'd like. These Widget classes inherit from ``Div``.
     """
     
-    def __init__(self):
-        self._cache = {}
-    
     def __getattr__(self, name):
         name = name.lower()
+        cache = globals()
         if name.startswith('_'):
             return super().__getattr__(name)
-        if name not in self._cache:
-            self._cache[name] = type(name, (Div,), {})
-            # The module name must not be 'flexx.ui', or any existing JS module,
-            # because these classes are created on the fly, so the asset manager
-            # would wrongfully assume that the classes have been defined already
-            # if that module is loaded.
-            self._cache[name].__module__ = 'flexx.extra.classes'
-        return self._cache[name]
+        if name not in cache:
+            # Create new class, put it in this module so that JSModule can find it
+            cls = type(name, (Div,), {})
+            cls.__module__ = cls.__jsmodule__ = __name__
+            cache[name] = cls
+        return cache[name]
 
 
 html = HTMLElementFactory()

@@ -11,9 +11,8 @@ sections below.
 PyScript is a tool to write JavaScript using (a subset) of the Python
 language. All relevant buildins, and the methods of list, dict and str
 are supported. Not supported are set, slicing with steps,
-``**kwargs``, ``with``, ``yield``. Importing is currently limited to
-some names in the ``time`` and ``sys`` modules. Other than that, most
-Python code should work as expected, though if you pry hard enough the
+``**kwargs``, ``with``, ``yield``. Imports are not supported. Other than that,
+most Python code should work as expected, though if you pry hard enough the
 JavaScript may shine through. As a rule of thumb, the code should behave
 as expected when correct, but error reporting may not be very Pythonic.
 
@@ -46,8 +45,6 @@ Python snippet can be converted to JS; you don't need another JS library
 to run it.
 
 PyScript can also be used to develop standalone JavaScript (AMD) modules.
-Although ``import`` is currently not yet supported. We'll have to see
-how that works out.
 
 
 PyScript is just JavaScript
@@ -126,7 +123,7 @@ Check out ``examples/app/benchmark.py``.
 
 Nevertheless, the overhead to realize the more Pythonic behavior can
 have a negative impact on performance in tight loops (in comparison to
-having writing the JS by hand). The recommended approach is to write
+writing the JS by hand). The recommended approach is to write
 performance critical code in pure JavaScript if necessary. This can be
 done by defining a function with only a docstring (containing the JS
 code).
@@ -141,7 +138,7 @@ supports/lacks.
 
 Not currently supported:
 
-* importing limited (maybe we should translate an import to a ``require()``?)
+* import (maybe we should translate an import to ``require()``?)
 * the ``set`` class (JS has no set, but we could create one?)
 * slicing with steps (JS does not support this)
 * support for ``**kwargs`` (maps badly to JS call mechanism)
@@ -169,7 +166,6 @@ Supported basics:
 * raising and catching exceptions, assertions
 * creation of "modules"
 * globals / nonlocal
-* preliminary support for importing module (only ``time`` and ``sys`` for now).
 
 Supported Python conveniences:
 
@@ -192,9 +188,17 @@ Supported Python conveniences:
 * deep comparisons.
 * class methods are bound functions (i.e. ``this`` is fixed to the
   instance).
-* functions that are defined in another function and that do not have
-  self/this as a first argument, are bound the the same instance as the
+* functions that are defined in another function (a.k.a closures) that do not
+  have self/this as a first argument, are bound the the same instance as the
   function in which it is defined.
+
+
+Other functionality
+-------------------
+
+The PyScript package provides a few other "utilities" to deal with JS code,
+such as renaming function/class definitions, and creating JS modules
+(AMD, UMD, etc.).
 
 """
 
@@ -243,8 +247,7 @@ class Parser(Parser3):
     
     Parameters:
         code (str): the Python source code.
-        module (str, optional): the module name. If given, produces a
-            UMD module.
+        pysource (tuple): the filename and line number that contain the source.
         indent (int): the base indentation level (default 0). One
             indentation level means 4 spaces.
         docstrings (bool): whether docstrings are included in JS
@@ -255,27 +258,17 @@ class Parser(Parser3):
     pass
 
 
-from .functions import py2js, evaljs, evalpy, script2js, js_rename, get_full_std_lib
+from .functions import py2js, evaljs, evalpy, JSString
+from .functions import script2js, js_rename, create_js_module
+from .stdlib import get_full_std_lib, get_all_std_names
+from .stubs import JSConstant, window, undefined
 
-# Create stubs
-
-import sys
-
-class JSConstant:
-    def __init__(self, name):
-        self._name = name
-    def __repr__(self):  # pragma: no cover
-        return self._name
-
+# Create stubs that mean something
 Infinity = float('inf')
 NaN = float('nan')
-window = JSConstant('window')
-undefined = JSConstant('undefined')
 
 def this_is_js():
     """ Function available in both JS and Py that returns whether the code is running
     on Python or JavaScript.
     """
     return False
-
-del sys, JSConstant

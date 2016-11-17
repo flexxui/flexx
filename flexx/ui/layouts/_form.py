@@ -47,15 +47,15 @@ class BaseTableLayout(Layout):
         height: auto;
     }
     
-    td.vflex, td.hflex {
+    td.flx-vflex, td.flx-hflex {
         padding: 1px;
     }
     
     /* In flexed cells, occupy the full space */
-    td.vflex > .flx-Widget {
+    td.flx-vflex > .flx-Widget {
         height: 100%;
     }
-    td.hflex > .flx-Widget {
+    td.flx-hflex > .flx-Widget {
         width: 100%;
     }
     """
@@ -166,7 +166,7 @@ class FormLayout(BaseTableLayout):
     """
     
     CSS = """
-    .flx-FormLayout .title {
+    .flx-FormLayout .flx-title {
         text-align: right;
         padding-right: 5px;
     }
@@ -186,14 +186,14 @@ class FormLayout(BaseTableLayout):
                 className += ''
             else:
                 row.style.height = vflex * 100 / cum_vflex + '%'
-                className += 'vflex'
+                className += 'flx-vflex'
             className += ' '
             if (hflex == 0):
                 col.style.width = 'auto'
                 className += ''
             else:
                 col.style.width = '100%'
-                className += 'hflex'
+                className += 'flx-hflex'
             col.className = className
         
         def _add_child(self, widget):
@@ -202,7 +202,7 @@ class FormLayout(BaseTableLayout):
             self.node.appendChild(row)
             # Create element for label
             td = window.document.createElement("td")
-            td.classList.add('title')
+            td.classList.add('flx-title')
             row.appendChild(td)
             widget._title_elem = td
             td.innerHTML = widget.title
