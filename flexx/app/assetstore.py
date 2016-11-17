@@ -538,6 +538,11 @@ class SessionAssets:
         self._data[name] = data
         return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
     
+    def remove_data(self, name):
+        """ Remove the data associated with the given name.
+        """
+        self._data.pop(name, None)
+    
     def register_model_class(self, cls):
         """ Mark the given Model class as used; ensure that the client
         knows about it.
