@@ -29,37 +29,27 @@ class AppManager(event.HasEvents):
     
     def __init__(self):
         super().__init__()
-        # name -> (ModelClass, properties, pending, connected) - lists contain Sessions
+        # name -> (app, pending, connected) - lists contain Sessions
+        # todo: name -> app, and store connections on the app instance?
         self._appinfo = {}
         self._session_map = weakref.WeakValueDictionary()
         self._last_check_time = time.time()
     
-    def register_app_class(self, cls, name, properties):
-        """ Register a Model class as being an application.
-        
-        After registering a class, it becomes possible to connect to 
-        "http://address:port/ClassName".
-        
-        Parameters:
-          cls (Model): The Model class to serv as an app.
-          name (str): The name (relative url path) by which this app can be accessed.
-          properties (dict): The model's initial properties.
+    def register_app(self, app):
+        """ Register an app (an object that wraps a model class plus init args).
+        After registering an app (and starting the server) it is
+        possible to connect to "http://address:port/app_name".
         """
-        name = cls.__name__ if name is None else name
-        assert isinstance(cls, type) and issubclass(cls, Model)
-        assert isinstance(properties, dict)
-        assert isinstance(name, str)
-        name = name or '__main__'  # empty string maps to __main__
+        from .funcs import App  # todo: put App class and manager in separate module
+        assert isinstance(app, App)
+        name = app.name or '__main__'  # empty string maps to __main__
         if not valid_app_name(name):
             raise ValueError('Given app does not have a valid name %r' % name)
         pending, connected = [], []
         if name in self._appinfo:
-            old_cls, old_properties, pending, connected = self._appinfo[name]
-            properties, new_properties = old_properties, properties
-            properties.update(new_properties)
-            if cls is not self._appinfo[name][0]:
+            if app is not self._appinfo[name][0]:
                 logger.warn('Re-registering app class %r' % name)
-        self._appinfo[name] = cls, properties, pending, connected
+        self._appinfo[name] = app, pending, connected
     
     def create_default_session(self, cls=None):
         """ Create a default session for interactive use (e.g. the notebook).
@@ -70,7 +60,7 @@ class AppManager(event.HasEvents):
         
         session = Session('__default__')
         self._session_map[session.id] = session
-        self._appinfo['__default__'] = (None, {}, [session], [])
+        self._appinfo['__default__'] = (None, [session], [])
         
         if cls is None:
             cls = Model
@@ -78,8 +68,9 @@ class AppManager(event.HasEvents):
             raise TypeError('create_default_session() needs a Model subclass.')
         
         # Create app instance
-        app = cls(session=session, is_app=True)
-        session._set_app(app)
+        # todo: wrap it in an app and set that in app_info instead of None
+        model_instance = cls(session=session, is_app=True)
+        session._set_app(model_instance)
         
         return session
     
@@ -94,7 +85,7 @@ class AppManager(event.HasEvents):
         if x is None:
             return None
         else:
-            _, _, pending, connected = x
+            _, pending, connected = x
             sessions = pending + connected
             if sessions:
                 return sessions[-1]
@@ -106,7 +97,7 @@ class AppManager(event.HasEvents):
             for name in self._appinfo:
                 if name == '__default__':
                     continue
-                _, _, pending, _ = self._appinfo[name]
+                _, pending, _ = self._appinfo[name]
                 to_remove = [s for s in pending
                              if (time.time() - s._creation_time) > 30]
                 for s in to_remove:
@@ -138,15 +129,15 @@ class AppManager(event.HasEvents):
         elif name not in self._appinfo:
             raise ValueError('Can only instantiate a session with a valid app name.')
         
-        cls, properties, pending, connected = self._appinfo[name]
+        app, pending, connected = self._appinfo[name]
         
         # Session and app class need each-other, thus the _set_app()
         session = Session(name)
         if id is not None:
             session._id = id  # used by app.export
         self._session_map[session.id] = session
-        app = cls(session=session, is_app=True, **properties)  # is_app marks it as main
-        session._set_app(app)
+        model_instance = app(session=session, is_app=True)
+        session._set_app(model_instance)  # todo: or just app?
         
         # Now wait for the client to connect. The client will be served
         # a page that contains the session_id. Upon connecting, the id
@@ -159,7 +150,7 @@ class AppManager(event.HasEvents):
     def connect_client(self, ws, name, session_id):
         """ Connect a client to a session that was previously created.
         """
-        _, _, pending, connected = self._appinfo[name]
+        _, pending, connected = self._appinfo[name]
         
         # Search for the session with the specific id
         for session in pending:
@@ -190,7 +181,7 @@ class AppManager(event.HasEvents):
             logger.info('Default session lost connection to client.')
             return  # The default session awaits a re-connect
         
-        _, _, pending, connected = self._appinfo[session.app_name]
+        _, pending, connected = self._appinfo[session.app_name]
         try:
             connected.remove(session)
         except ValueError:
@@ -224,7 +215,7 @@ class AppManager(event.HasEvents):
     def get_connections(self, name):
         """ Given an app name, return the session connected objects.
         """
-        _, _, pending, connected = self._appinfo[name]
+        _, pending, connected = self._appinfo[name]
         return list(connected)
     
     @event.emitter
