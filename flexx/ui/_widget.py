@@ -395,6 +395,8 @@ class Widget(Model):
             # All Phosphor widgets have a title
             self.phosphor.title.label = events[-1].new_value
             # todo: title also supports caption, icon, closable, and more
+            if self.parent is None and self.container == 'body':
+                window.document.title = self.title or 'Flexx app'
         
         ## Size
 
@@ -475,6 +477,7 @@ class Widget(Model):
                                                            self._check_real_size()))
             if id == 'body':
                 self.outernode.classList.add('flx-main-widget')
+                window.document.title = self.title or 'Flexx app'
             elif id:
                 # Update style. If there is stuff like min-height set (which
                 # would be common in the notebook), we need to reapply style

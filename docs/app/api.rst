@@ -25,11 +25,7 @@ Functions related to the event loop
 Functions related to us Model classes as apps
 ---------------------------------------------
 
-.. autofunction:: flexx.app.serve
-
-.. autofunction:: flexx.app.launch
-
-.. autofunction:: flexx.app.export
+.. autofunction:: flexx.app.App
 
 .. autofunction:: flexx.app.get_instance_by_id
 

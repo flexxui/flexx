@@ -195,6 +195,193 @@ def init_interactive(cls=None, runtime=None):
     session._runtime = launch('http://' + url, runtime=runtime)
     
 
+class App:
+    """ Specification of a Flexx class.
+    
+    In the strict sense, this is a container for a Model class plus the
+    args and kwargs that it is to be instantiated with.
+    
+    Arguments:
+        cls (Model): the Model class (or Widget) that represents this app.
+        args: positional arguments used to instantiate the class (and received
+            in its ``init()`` method).
+        kwargs: keyword arguments used to initialize the model's properties.
+    """
+    
+    def __init__(self, cls, *args, **kwargs):
+        if not isinstance(cls, type) and issubclass(type, Model):
+            raise ValueError('App needs a Model class as its first argument.')
+        self._cls = cls
+        self.args = args
+        self.kwargs = kwargs
+        self._path = cls.__name__  # can be overloaded by serve()
+        self._is_served = False
+    
+    def __call__(self, *args, **kwargs):
+        a = list(self.args) + list(args)
+        kw = {}
+        kw.update(self.kwargs)
+        kw.update(kwargs)
+        return self.cls(*a, **kw)
+    
+    def __repr__(self):
+        t = '<App based on class %s pre-initialized with %i args and %i kwargs>'
+        return t % (self.cls.__name__, len(self.args), len(self.kwargs))
+    
+    @property
+    def cls(self):
+        """ The Model class that is the basis of this app.
+        """
+        return self._cls
+    
+    @property
+    def is_served(self):
+        """ Whether this app is already registered by the app manager.
+        """
+        return self._is_served
+    
+    @property
+    def url(self):
+        """ The url to acces this app. This raises an error if serve() has not
+        been called yet or if Flexx' server is not yet running.
+        """
+        if not self._is_served:
+            raise RuntimeError('Cannot determine app url if app is not yet "served".')
+        elif not (_current_server and _current_server.serving):
+            raise RuntimeError('Cannot determine app url if the server is not '
+                               'yet running.')
+        else:
+            host, port = _current_server.serving
+            return 'http://%s:%i/%s' % (host, port, self.name)
+    
+    @property
+    def name(self):
+        """ The name of the app, i.e. the url path that this app is served at.
+        """
+        return self._path
+    
+    def serve(self, name=None):
+        """ Start serving this app.
+        
+        This registers the given class with the internal app manager. The
+        app can be loaded via 'http://hostname:port/app_name'.
+        
+        Arguments:
+            name (str, optional): the relative URL path to serve the app on.
+                If this is ``''`` (the empty string), this will be the main app.
+        """
+        # Note: this talks to the manager; it has nothing to do with the server
+        if self._is_served:
+            raise RuntimeError('This app (%s) is already served.' %
+                               self.name or '__main__')
+        if name is not None:
+            self._path = name
+        manager.register_app(self)
+        self._is_served = True
+    
+    def launch(self, runtime=None, **runtime_kwargs):
+        """ Launch this app as a desktop app in the given runtime.
+        
+        Arguments:
+            runtime (str): the runtime to launch the application in. Default 'xul'.
+            runtime_kwargs: kwargs to pass to the ``webruntime.launch`` function.
+        
+        Returns:
+            app (Model): an instance of the given class.
+        """
+        # Create session
+        if not self._is_served:
+            self.serve()
+        session = manager.create_session(self.name)
+        
+        # Launch web runtime, the server will wait for the connection
+        server = current_server()
+        host, port = server.serving
+        if runtime == 'nodejs':
+            js_assets, _ = session.get_assets_in_order()
+            all_js = '\n\n'.join([asset.to_string() for asset in js_assets])
+            url = '%s:%i/%s/' % (host, port, session.app_name)
+            session._runtime = launch('http://' + url, runtime=runtime, code=all_js)
+        else:
+            url = '%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id)
+            session._runtime = webruntime.launch('http://' + url,
+                                                 runtime=runtime,
+                                                 **runtime_kwargs)
+        return session.app
+    
+    def export(self, filename=None, link=None, write_shared=True):
+        """ Export the given Model class to an HTML document.
+        
+        Arguments:
+            filename (str, optional): Path to write the HTML document to.
+                If not given or None, will return the html as a string.
+            link (int): whether to link assets or embed them:
+            
+                * 0: all assets are embedded.
+                * 1: normal assets are embedded, remote assets remain remote.
+                * 2: all assets are linked (as separate files).
+                * 3: (default) normal assets are linked, remote assets remain remote.
+            write_shared (bool): if True (default) will also write shared assets
+                when linking to assets. This can be set to False when
+                exporting multiple apps to the same location. The shared assets can
+                then be exported last using ``app.assets.export(dirname)``.
+        
+        Returns:
+            html (str): The resulting html. If a filename was specified
+            this returns None.
+        
+        Notes:
+            If the given filename ends with .hta, a Windows HTML Application is
+            created.
+        """
+        
+        # Prepare name, based on exported file name (instead of cls.__name__)
+        if not self._is_served:
+            name = os.path.basename(filename).split('.')[0]
+            name = name.replace('-', '_').replace(' ', '_')
+            self.serve(name)
+        
+        # Create session with id equal to the app name. This would not be strictly
+        # necessary to make exports work, but it makes sure that exporting twice
+        # generates the exact same thing (no randomly generated dir names).
+        session = manager.create_session(self.name, self.name)
+        
+        # Make fake connection using exporter object
+        exporter = ExporterWebSocketDummy()
+        manager.connect_client(exporter, session.app_name, session.id)
+        
+        # Clean up again - NO keep in memory to ensure two sessions dont get same id
+        # manager.disconnect_client(session)
+        
+        # Warn if this app has data and is meant to be run standalone
+        if (not link) and session.get_data_names():
+            logger.warn('Exporting a standalone app, but it has registered data.')
+        
+        # Get HTML - this may be good enough
+        html = session.get_page_for_export(exporter._commands, link)
+        if filename is None:
+            return html
+        elif filename.lower().endswith('.hta'):
+            hta_tag = '<meta http-equiv="x-ua-compatible" content="ie=edge" />'
+            html = html.replace('<head>', '<head>\n    ' + hta_tag, 1)
+        elif not filename.lower().endswith(('.html', 'htm')):
+            raise ValueError('Invalid extension for exporting to %r' %
+                            os.path.basename(filename))
+        
+        # Save to file. If standalone, all assets will be included in the main html
+        # file, if not, we need to export shared assets and session assets too.
+        filename = os.path.abspath(os.path.expanduser(filename))
+        if link:
+            if write_shared:
+                assets.export(os.path.dirname(filename))
+            session._export(os.path.dirname(filename))
+        with open(filename, 'wb') as f:
+            f.write(html.encode())
+        
+        app_type = 'standalone app' if link else 'app'
+        logger.info('Exported %s to %r' % (app_type, filename))
+
+
 class NoteBookHelper:
     """ Object that captures commands send to the websocket during the
     execution of a cell, and then applies these commands using a script
@@ -331,95 +518,31 @@ def init_notebook():
     # the widget show up in the notebook output area.
 
 
+# todo: deprecate these
+
 def serve(cls, name=None, properties=None):
-    """ Serve the given Model class as a web app. Can be used as a decorator.
-    
-    This registers the given class with the internal app manager. The
-    app can be loaded via 'http://hostname:port/classname'.
-    
-    Arguments:
-        cls (Model): a subclass of ``app.Model`` (or ``ui.Widget``).
-        name (str): the relative URL path to serve the app on. If this is
-          ``''`` (the empty string), this will be the main app.
-        properties (dict, optional): the initial properties for the model. The
-          model is instantiated using ``Cls(**properties)``.
-    
-    Returns:
-        cls: The given class.
+    """ Backwards compat.
     """
     # Note: this talks to the manager; it has nothing to do with the server
-    assert isinstance(cls, type) and issubclass(cls, Model)
-    manager.register_app_class(cls, name, properties or {})
+    assert (isinstance(cls, type) and issubclass(cls, Model))
+    a = App(cls, **(properties or {}))
+    a.serve(name)
     return cls
 
 
 def launch(cls, runtime=None, properties=None, **runtime_kwargs):
-    """ Launch the given Model class as a desktop app in the given runtime.
-    
-    Arguments:
-        cls (type, str): a subclass of ``app.Model`` (or ``ui.Widget`). If this 
-            is a string, it simply calls ``webruntime.launch()``.
-        runtime (str): the runtime to launch the application in. Default 'xul'.
-        properties (dict, optional): the initial properties for the model. The
-          model is instantiated using ``Cls(**properties)``.
-        runtime_kwargs: kwargs to pass to the ``webruntime.launch`` function.
-    
-    Returns:
-        app (Model): an instance of the given class.
+    """ Backwards compat.
     """
     if isinstance(cls, str):
         return webruntime.launch(cls, runtime, **runtime_kwargs)
-    if not (isinstance(cls, type) and issubclass(cls, Model)):
-        raise ValueError('runtime must be a string or Model subclass.')
-    
-    # Create session
-    name = cls.__name__
-    serve(cls, name, properties)
-    session = manager.create_session(name)
-    
-    # Launch web runtime, the server will wait for the connection
-    server = current_server()
-    host, port = server.serving
-    if runtime == 'nodejs':
-        js_assets, _ = session.get_assets_in_order()
-        all_js = '\n\n'.join([asset.to_string() for asset in js_assets])
-        url = '%s:%i/%s/' % (host, port, session.app_name)
-        session._runtime = launch('http://' + url, runtime=runtime, code=all_js)
-    else:
-        url = '%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id)
-        session._runtime = launch('http://' + url, runtime=runtime, **runtime_kwargs)
-    
-    return session.app
+    assert (isinstance(cls, type) and issubclass(cls, Model))
+    a = App(cls, **(properties or {}))
+    return a.launch(runtime, **runtime_kwargs)
 
 
 def export(cls, filename=None, properties=None, single=None, link=None,
            write_shared=True):
-    """ Export the given Model class to an HTML document.
-    
-    Arguments:
-        cls (Model): a subclass of ``app.Model`` (or ``ui.Widget``).
-        filename (str, optional): Path to write the HTML document to.
-            If not given or None, will return the html as a string.
-        properties (dict, optional): the initial properties for the model. The
-          model is instantiated using ``Cls(**properties)``.
-        link (int): whether to link assets or embed them:
-        
-            * 0: all assets are embedded.
-            * 1: normal assets are embedded, remote assets remain remote.
-            * 2: all assets are linked (as separate files).
-            * 3: (default) normal assets are linked, remote assets remain remote.
-        write_shared (bool): if True (default) will also write shared assets
-            when linking to assets. This can be set to False when
-            exporting multiple apps to the same location. The shared assets can
-            then be exported last using ``app.assets.export(dirname)``.
-    
-    Returns:
-        html (str): The resulting html. If a filename was specified
-        this returns None.
-    
-    Notes:
-        If the given filename ends with .hta, a Windows HTML Application is
-        created.
+    """ Backward compat.
     """
     if not (isinstance(cls, type) and issubclass(cls, Model)):
         raise ValueError('runtime must be a string or Model subclass.')
@@ -432,51 +555,8 @@ def export(cls, filename=None, properties=None, single=None, link=None,
                 link = 3
     link = int(link or 0)
     
-    # Prepare name, based on exported file name (instead of cls.__name__)
-    name = os.path.basename(filename).split('.')[0]
-    name = name.replace('-', '_').replace(' ', '_')
-    
-    serve(cls, name, properties)
-    
-    # Create session with id equal to the app name. This would not be strictly
-    # necessary to make exports work, but it makes sure that exporting twice
-    # generates the exact same thing (no randomly generated dir names).
-    session = manager.create_session(name, name)  # 2nd arg sets session._id
-    
-    # Make fake connection using exporter object
-    exporter = ExporterWebSocketDummy()
-    manager.connect_client(exporter, session.app_name, session.id)
-    
-    # Clean up again - NO keep in memory to ensure two sessions dont get same id
-    # manager.disconnect_client(session)
-    
-    # Warn if this app has data and is meant to be run standalone
-    if (not link) and session.get_data_names():
-        logger.warn('Exporting a standalone app, but it has registered data.')
-    
-    # Get HTML - this may be good enough
-    html = session.get_page_for_export(exporter._commands, link)
-    if filename is None:
-        return html
-    elif filename.lower().endswith('.hta'):
-        hta_tag = '<meta http-equiv="x-ua-compatible" content="ie=edge" />'
-        html = html.replace('<head>', '<head>\n    ' + hta_tag, 1)
-    elif not filename.lower().endswith(('.html', 'htm')):
-        raise ValueError('Invalid extension for exporting to %r' %
-                         os.path.basename(filename))
-    
-    # Save to file. If standalone, all assets will be included in the main html
-    # file, if not, we need to export shared assets and session assets too.
-    filename = os.path.abspath(os.path.expanduser(filename))
-    if link:
-        if write_shared:
-            assets.export(os.path.dirname(filename))
-        session._export(os.path.dirname(filename))
-    with open(filename, 'wb') as f:
-        f.write(html.encode())
-    
-    app_type = 'standalone app' if link else 'app'
-    logger.info('Exported %s to %r' % (app_type, filename))
+    a = App(cls, **(properties or {}))
+    return a.export(filename, link=link, write_shared=write_shared)
 
 
 class ExporterWebSocketDummy:
