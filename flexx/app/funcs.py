@@ -324,7 +324,7 @@ class App:
         if not self._is_served:
             name = os.path.basename(filename).split('.')[0]
             name = name.replace('-', '_').replace(' ', '_')
-            serve(cls, name, properties)
+            self.serve(name)
         
         # Create session with id equal to the app name. This would not be strictly
         # necessary to make exports work, but it makes sure that exporting twice
