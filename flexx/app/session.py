@@ -42,7 +42,7 @@ class AppManager(event.HasEvents):
         """
         from .funcs import App  # todo: put App class and manager in separate module
         assert isinstance(app, App)
-        name = app.name or '__main__'  # empty string maps to __main__
+        name = app.name
         if not valid_app_name(name):
             raise ValueError('Given app does not have a valid name %r' % name)
         pending, connected = [], []
