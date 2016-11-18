@@ -241,6 +241,20 @@ class App:
         return self._is_served
     
     @property
+    def url(self):
+        """ The url to acces this app. This raises an error if serve() has not
+        been called yet or if Flexx' server is not yet running.
+        """
+        if not self._is_served:
+            raise RuntimeError('Cannot determine app url if app is not yet "served".')
+        elif not (_current_server and _current_server.serving):
+            raise RuntimeError('Cannot determine app url if the server is not '
+                               'yet running.')
+        else:
+            host, port = _current_server.serving
+            return 'http://%s:%i/%s' % (host, port, self.name)
+    
+    @property
     def name(self):
         """ The name of the app, i.e. the url path that this app is served at.
         """
@@ -263,6 +277,7 @@ class App:
         if name is not None:
             self._path = name
         manager.register_app(self)
+        self._is_served = True
     
     def launch(self, runtime=None, **runtime_kwargs):
         """ Launch this app as a desktop app in the given runtime.
