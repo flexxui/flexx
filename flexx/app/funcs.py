@@ -252,13 +252,13 @@ class App:
                                'yet running.')
         else:
             host, port = _current_server.serving
-            return 'http://%s:%i/%s' % (host, port, self.name)
+            return 'http://%s:%i/%s' % (host, port, self._path)
     
     @property
     def name(self):
         """ The name of the app, i.e. the url path that this app is served at.
         """
-        return self._path
+        return self._path or '__main__'
     
     def serve(self, name=None):
         """ Start serving this app.
@@ -272,8 +272,7 @@ class App:
         """
         # Note: this talks to the manager; it has nothing to do with the server
         if self._is_served:
-            raise RuntimeError('This app (%s) is already served.' %
-                               self.name or '__main__')
+            raise RuntimeError('This app (%s) is already served.' % self.name)
         if name is not None:
             self._path = name
         manager.register_app(self)
@@ -295,16 +294,14 @@ class App:
         session = manager.create_session(self.name)
         
         # Launch web runtime, the server will wait for the connection
-        server = current_server()
-        host, port = server.serving
+        current_server()  # creates server if it did not yet exist
         if runtime == 'nodejs':
             js_assets, _ = session.get_assets_in_order()
             all_js = '\n\n'.join([asset.to_string() for asset in js_assets])
-            url = '%s:%i/%s/' % (host, port, session.app_name)
-            session._runtime = launch('http://' + url, runtime=runtime, code=all_js)
+            session._runtime = launch(self.url, runtime=runtime, code=all_js)
         else:
-            url = '%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id)
-            session._runtime = webruntime.launch('http://' + url,
+            url = self.url + '?session_id=%s' % session.id
+            session._runtime = webruntime.launch(url,
                                                  runtime=runtime,
                                                  **runtime_kwargs)
         return session.app
