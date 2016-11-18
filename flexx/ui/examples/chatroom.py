@@ -82,6 +82,7 @@ class ChatRoom(ui.Widget):
 
 
 if __name__ == '__main__':
-    app.serve(ChatRoom)
-    # m = app.launch(ChatRoom)  # for use during development
+    a = app.App(ChatRoom, title='Flexx chatroom demo')
+    a.serve()
+    # a.launch()  # for use during development
     app.start()
