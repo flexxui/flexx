@@ -85,8 +85,8 @@ class Flexx:
     
     def spin(self, text='*'):
         """
-        var el = document.body.children[0];
-        window.el = el;
+        if (!window.document.body) {return;}
+        var el = window.document.body.children[0];
         if (el && el.classList.contains("flx-spinner")) {
             if (text === null) {
                 el.style.display = 'none';  // Stop the spinner
