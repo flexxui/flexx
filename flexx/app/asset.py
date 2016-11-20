@@ -282,4 +282,5 @@ class Bundle(Asset):
             source.append(s)
         source.insert(0, '/* Bundle contents:\n' + '\n'.join(toc) + '\n*/\n')
         source.insert(0, HEADER)
+        source.append('window.flexx.spin("%s ");' % ('*' * len(self.modules)))
         return '\n\n'.join(source)
