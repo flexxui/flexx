@@ -83,6 +83,19 @@ class Flexx:
         else:
             return self.instances[id]
     
+    def spin(self, text='*'):
+        """
+        if (!window.document.body) {return;}
+        var el = window.document.body.children[0];
+        if (el && el.classList.contains("flx-spinner")) {
+            if (text === null) {
+                el.style.display = 'none';  // Stop the spinner
+            } else {
+                el.children[0].innerHTML += text.replace(/\*/g, '&#9632');
+            }
+        }
+        """
+    
     def initSocket(self):
         """ Make the connection to Python.
         """
@@ -201,6 +214,8 @@ class Flexx:
         """
         if msg.startswith('PING '):
             self.ws.send('PONG ' + msg[5:])
+        elif msg == 'INIT-DONE':
+            self.spin(None)
         elif msg.startswith('PRINT '):
             window.console.ori_log(msg[6:])
         elif msg.startswith('EVAL '):

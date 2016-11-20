@@ -298,6 +298,7 @@ class Session(SessionAssets):
         # Send pending commands
         for command in self._pending_commands:
             self._ws.command(command)
+        self._ws.command('INIT-DONE')
    
     def _set_app(self, model):
         if self._model is not None:
