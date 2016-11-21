@@ -183,7 +183,7 @@ class Flexx:
             on_error(evt)
         def on_error(self, evt):
             msg = evt.message
-            if evt.error.stack:
+            if evt.error and evt.error.stack:  # evt.error can be None for syntax err
                 stack = evt.error.stack.splitlines()
                 if evt.message in stack[0]:
                     stack.pop(0)
