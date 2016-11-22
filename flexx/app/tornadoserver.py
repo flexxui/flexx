@@ -293,7 +293,9 @@ class AppHandler(FlexxHandler):
         app_name = app_name or '__main__'
         if app_name == '__main__':
             app_name = manager.has_app_name('__main__')
-            
+        elif '/' not in full_path:
+            return self.redirect('/%s/' % app_name)  # ensure slash behind name
+        
         # Maybe the user wants an index? Otherwise error.
         if not app_name:
             if not parts:
