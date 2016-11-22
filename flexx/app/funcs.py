@@ -252,7 +252,7 @@ class App:
                                'yet running.')
         else:
             host, port = _current_server.serving
-            return 'http://%s:%i/%s' % (host, port, self._path)
+            return 'http://%s:%i/%s/' % (host, port, self._path)
     
     @property
     def name(self):
