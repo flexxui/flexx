@@ -347,7 +347,7 @@ def test_connecting_and_getting_cached_event():
     assert len(res) == 1
 
 
-def test_exceptions():
+def test_exceptions1():
     h = event.HasEvents()
     
     @h.connect('foo')
@@ -370,6 +370,29 @@ def test_exceptions():
     # Its different for a direct call
     with raises(ZeroDivisionError):
         handle_foo()
+
+
+def test_exceptions2():
+    
+    class Foo(event.HasEvents):
+        def __init__(self):
+            super().__init__()
+            self.bar = event.HasEvents()
+            self.bars = [self.bar]
+    
+    f = Foo()
+    
+    # ok
+    @f.connect('bars.*.spam')
+    def handle_foo(*events):
+        pass
+    
+    # not ok
+    with raises(RuntimeError) as err:
+        @f.connect('bar.*.spam')
+        def handle_foo(*events):
+            pass
+    assert 'not a tuple' in str(err)
 
 
 def test_dispose1():

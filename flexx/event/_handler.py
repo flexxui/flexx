@@ -383,5 +383,8 @@ class Handler:
             for sub_ob in ob:
                 self._seek_event_object(index, path, sub_ob)
             return
-        
-        return self._seek_event_object(index, path, ob)
+        elif selector == '*':  # "**" is recursive, so allow more
+            t = 'Invalid connection "%s" because %s is not a tuple/list.'
+            raise RuntimeError(t % (obname_full, obname))
+        else:
+            return self._seek_event_object(index, path, ob)
