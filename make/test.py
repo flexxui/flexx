@@ -50,10 +50,9 @@ def test_unit(rel_path='.'):
         assert ROOT_DIR in os.path.abspath(m.__path__[0])
     # Start tests
     _enable_faulthandler()
-    cov_report = '--cov-report=term --cov-report=html'
     try:
-        res = pytest.main('--cov %s --cov-config=.coveragerc %s %r' % 
-                          (NAME, cov_report, test_path))
+        res = pytest.main(['--cov', NAME, '--cov-config=.coveragerc',
+                           '--cov-report=term', '--cov-report=html', test_path])
         sys.exit(res)
     finally:
         m = __import__(NAME)

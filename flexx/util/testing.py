@@ -62,9 +62,8 @@ def run_tests_if_main(show_coverage=False):
     fname = str(local_vars['__file__'])
     _clear_our_modules()
     _enable_faulthandler()
-    pytest.main('-v -x --color=yes --cov %s '
-                '--cov-config .coveragerc --cov-report html %s' %
-                (PACKAGE_NAME, repr(fname)))
+    pytest.main(['-v', '-x', '--color=yes', '--cov', PACKAGE_NAME,
+                 '--cov-config', '.coveragerc', '--cov-report', 'html', fname])
     if show_coverage:
         import webbrowser
         fname = os.path.join(ROOT_DIR, 'htmlcov', 'index.html')
