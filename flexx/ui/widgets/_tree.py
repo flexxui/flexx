@@ -283,7 +283,7 @@ class TreeWidget(Widget):
         def __check_listmode(self, *events):
             listmode = True
             for i in self.items:
-                listmode = listmode and len(i.items) == 0
+                listmode = listmode and len(i.items) == 0 and i.collapsed is None
             if listmode:
                 self.node.classList.add('flx-listmode')
             else:
