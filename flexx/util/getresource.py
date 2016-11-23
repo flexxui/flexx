@@ -27,10 +27,10 @@ except ImportError:
 RESOURCES = {
     'phosphor-all.js': (
         'https://raw.githubusercontent.com/zoofIO/phosphor-all/{}/phosphor-all.js',
-        'da2aa9a609f55'),
+        'e3a0e5193bd36'),
     'phosphor-all.css': (
         'https://raw.githubusercontent.com/zoofIO/phosphor-all/{}/phosphor-all.css',
-        'c44f596e0a54c'),
+        'e3a0e5193bd36'),
 }
 
 
