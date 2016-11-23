@@ -57,9 +57,9 @@ class ChatRoom(ui.Widget):
     def _update_participants(self):
         if not self.session.status:
             return  # and dont't invoke a new call
-        proxies = app.manager.get_connections(self.__class__.__name__)
-        names = [p.app.name.text for p in proxies]
-        del proxies
+        sessions = app.manager.get_connections(self.session.app_name)
+        names = [p._chatroom_name for p in sessions]  # _chatroom_name is what we set
+        del sessions
         text = '<br />%i persons in this chat:<br /><br />' % len(names)
         text += '<br />'.join([name or 'anonymous' for name in sorted(names)])
         self.people.text = text
@@ -72,6 +72,10 @@ class ChatRoom(ui.Widget):
             name = self.name.text or 'anonymous'
             relay.new_message('<i>%s</i>: %s' % (name, text))
             self.message.text = ''
+    
+    @event.connect('name.text')
+    def _name_changed(self, *events):
+        self.session._chatroom_name = self.name.text
     
     class JS:
         
