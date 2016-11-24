@@ -166,7 +166,7 @@ from .parser0 import Parser0, JSError, unify, reprs  # noqa
 
 
 # Define buildin stuff for which we know that it returns a bool or int
-_bool_funcs = 'hasattr', 'contains', 'all', 'any', 'equals', 'truthy'
+_bool_funcs = 'hasattr', 'all', 'any', 'op_contains', 'op_equals', 'truthy'
 _bool_meths = ('count', 'isalnum', 'isalpha', 'isidentifier', 'islower',
                'isnumeric', 'isspace', 'istitle', 'isupper', 'startswith')
 returning_bool = tuple([stdlib.FUNCTION_PREFIX + x + '(' for x in _bool_funcs] +
@@ -231,8 +231,7 @@ class Parser1(Parser0):
         elif name in self.NAME_MAP:
             name = self.NAME_MAP[name]
         else:
-            if not (hasattr(self, 'function_' + name) or
-                    name in ('undefined', 'window')):
+            if not (name in self._functions or name in ('undefined', 'window')):
                 self.vars.use(name)  # mark as used (not defined)
         return name
     
@@ -268,11 +267,11 @@ class Parser1(Parser0):
         if node.op == node.OPS.Add:
             C = ast.Num, ast.Str
             if not (isinstance(node.left_node, C) or isinstance(node.right_node, C)):
-                return self.use_std_function('add', [left, right])
+                return self.use_std_function('op_add', [left, right])
         elif node.op == node.OPS.Mult:
             C = ast.Num
             if not (isinstance(node.left_node, C) and isinstance(node.right_node, C)):
-                return self.use_std_function('mult', [left, right])
+                return self.use_std_function('op_mult', [left, right])
         elif node.op == node.OPS.Pow:
             return ["Math.pow(", left, ", ", right, ")"]
         elif node.op == node.OPS.FloorDiv:
@@ -315,7 +314,7 @@ class Parser1(Parser0):
     
     def _wrap_truthy(self, node):
         """ Wraps an operation in a truthy call, unless its not necessary. """
-        eq_name = stdlib.FUNCTION_PREFIX + 'equals'
+        eq_name = stdlib.FUNCTION_PREFIX + 'op_equals'
         test = ''.join(self.parse(node))
         if (False or test.endswith('.length') or test.startswith('!') or
                      test.isnumeric() or test == 'true' or test == 'false' or
@@ -341,13 +340,13 @@ class Parser1(Parser0):
         right = unify(self.parse(node.right_node))
         
         if node.op in (node.COMP.Eq, node.COMP.NotEq):
-            code = self.use_std_function('equals', [left, right])
+            code = self.use_std_function('op_equals', [left, right])
             if node.op == node.COMP.NotEq:
                 code = '!' + code
             return code
         elif node.op in (node.COMP.In, node.COMP.NotIn):
-            self.use_std_function('equals', [])  # trigger use of equals
-            code = self.use_std_function('contains', [left, right])
+            self.use_std_function('op_equals', [])  # trigger use of equals
+            code = self.use_std_function('op_contains', [left, right])
             if node.op == node.COMP.NotIn:
                 code = '!' + code
             return code
@@ -518,9 +517,9 @@ class Parser1(Parser0):
         
         nl = self.lf()
         if node.op == node.OPS.Add:
-            return [nl, target, '=', self.use_std_function('add', [target, value])]
+            return [nl, target, '=', self.use_std_function('op_add', [target, value])]
         elif node.op == node.OPS.Mult:
-            return [nl, target, '=', self.use_std_function('mult', [target, value])]
+            return [nl, target, '=', self.use_std_function('op_mult', [target, value])]
         elif node.op == node.OPS.Pow:
             return [nl, target, " = Math.pow(", target, ", ", value, ")"]
         elif node.op == node.OPS.FloorDiv:

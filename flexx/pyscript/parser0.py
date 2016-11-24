@@ -179,7 +179,9 @@ class Parser0:
         # Collect function and method handlers
         self._functions, self._methods = {}, {}
         for name in dir(self.__class__):
-            if name.startswith('function_'):
+            if name.startswith('function_op_'):
+                pass  # special operator function that we use explicitly
+            elif name.startswith('function_'):
                 self._functions[name[9:]] = getattr(self, name)
             elif name.startswith('method_'):
                 self._methods[name[7:]] = getattr(self, name)
