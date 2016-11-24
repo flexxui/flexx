@@ -92,6 +92,10 @@ class TestExpressions:
         assert evalpy('a = [3, 4]; a *= 2; a') == '[ 3, 4, 3, 4 ]'
         assert evalpy('a = "ab"; a *= 2; a') == 'abab'
     
+    def test_overload_funcs_dont_overload_real_funcs(self):
+        assert evalpy('def add(a, b): return a-b\n\nadd(4, 1)') == '3'
+        assert evalpy('def op_add(a, b): return a-b\n\nop_add(4, 1)') == '3'
+    
     def test_comparisons(self):
         
         assert py2js('4 > 3') == '4 > 3;'

@@ -307,7 +307,8 @@ FUNCTIONS['op_equals'] = """function op_equals (a, b) { // nargs: 2
         var akeys = Object.keys(a), bkeys = Object.keys(b);
         akeys.sort(); bkeys.sort();
         var i=0, k, iseq = op_equals(akeys, bkeys);
-        while (iseq && i < akeys.length) {k=akeys[i]; iseq = op_equals(a[k], b[k]); i+=1;}
+        while (iseq && i < akeys.length)
+            {k=akeys[i]; iseq = op_equals(a[k], b[k]); i+=1;}
         return iseq;
     } return a == b;
 }"""
@@ -453,7 +454,7 @@ METHODS['index'] = """function (x, start, stop) { // nargs: 1 2 3
     stop = Math.min(this.length, ((stop < 0) ? this.length + stop : stop));
     if (Array.isArray(this)) {
         for (var i=start; i<stop; i++) {
-            if (FUNCTION_PREFIXop_equals(this[i], x)) {return i;} // indexOf cant do this
+            if (FUNCTION_PREFIXop_equals(this[i], x)) {return i;} // indexOf cant
         }
     } else if (this.constructor === String) {
         var i = this.slice(start, stop).indexOf(x);
