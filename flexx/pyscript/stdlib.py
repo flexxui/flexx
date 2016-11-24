@@ -124,7 +124,7 @@ FUNCTIONS['time'] = """function () {return Date.now() / 1000;} // nargs: 0"""
 
 ## Hardcore functions
 
-FUNCTIONS['instantiate'] = """function (ob, args) { // nargs: 2
+FUNCTIONS['op_instantiate'] = """function (ob, args) { // nargs: 2
     if ((typeof ob === "undefined") ||
             (typeof window !== "undefined" && window === ob) ||
             (typeof global !== "undefined" && global === ob))
@@ -297,25 +297,26 @@ FUNCTIONS['truthy'] = """function (v) {
     else {return Object.getOwnPropertyNames(v).length ? v : false;}
 }"""
 
-FUNCTIONS['equals'] = """function equals (a, b) { // nargs: 2
+FUNCTIONS['op_equals'] = """function op_equals (a, b) { // nargs: 2
     if (a == null || b == null) {
     } else if (Array.isArray(a) && Array.isArray(b)) {
         var i = 0, iseq = a.length == b.length;
-        while (iseq && i < a.length) {iseq = equals(a[i], b[i]); i+=1;}
+        while (iseq && i < a.length) {iseq = op_equals(a[i], b[i]); i+=1;}
         return iseq;
     } else if (a.constructor === Object && b.constructor === Object) {
         var akeys = Object.keys(a), bkeys = Object.keys(b);
         akeys.sort(); bkeys.sort();
-        var i=0, k, iseq = equals(akeys, bkeys);
-        while (iseq && i < akeys.length) {k=akeys[i]; iseq = equals(a[k], b[k]); i+=1;}
+        var i=0, k, iseq = op_equals(akeys, bkeys);
+        while (iseq && i < akeys.length)
+            {k=akeys[i]; iseq = op_equals(a[k], b[k]); i+=1;}
         return iseq;
     } return a == b;
 }"""
 
-FUNCTIONS['contains'] = """function contains (a, b) { // nargs: 2
+FUNCTIONS['op_contains'] = """function op_contains (a, b) { // nargs: 2
     if (b == null) {
     } else if (Array.isArray(b)) {
-        for (var i=0; i<b.length; i++) {if (FUNCTION_PREFIXequals(a, b[i]))
+        for (var i=0; i<b.length; i++) {if (FUNCTION_PREFIXop_equals(a, b[i]))
                                            return true;}
         return false;
     } else if (b.constructor === Object) {
@@ -326,13 +327,13 @@ FUNCTIONS['contains'] = """function contains (a, b) { // nargs: 2
     } var e = Error('Not a container: ' + b); e.name='TypeError'; throw e;
 }"""
 
-FUNCTIONS['add'] = """function (a, b) { // nargs: 2
+FUNCTIONS['op_add'] = """function (a, b) { // nargs: 2
     if (Array.isArray(a) && Array.isArray(b)) {
         return a.concat(b);
     } return a + b;
 }"""
 
-FUNCTIONS['mult'] = """function (a, b) { // nargs: 2
+FUNCTIONS['op_mult'] = """function (a, b) { // nargs: 2
     if ((typeof a === 'number') + (typeof b === 'number') === 1) {
         if (a.constructor === String) return METHOD_PREFIXrepeat(a, b);
         if (b.constructor === String) return METHOD_PREFIXrepeat(b, a);
@@ -368,7 +369,7 @@ METHODS['insert'] = """function (i, x) { // nargs: 2
 METHODS['remove'] = """function (x) { // nargs: 1
     if (!Array.isArray(this)) return this.KEY.apply(this, arguments);
     for (var i=0; i<this.length; i++) {
-        if (FUNCTION_PREFIXequals(this[i], x)) {this.splice(i, 1); return;}
+        if (FUNCTION_PREFIXop_equals(this[i], x)) {this.splice(i, 1); return;}
     }
     var e = Error(x); e.name='ValueError'; throw e;
 }"""
@@ -433,7 +434,7 @@ METHODS['count'] = """function (x, start, stop) { // nargs: 1 2 3
     if (Array.isArray(this)) {
         var count = 0;
         for (var i=0; i<this.length; i++) { 
-            if (FUNCTION_PREFIXequals(this[i], x)) {count+=1;}
+            if (FUNCTION_PREFIXop_equals(this[i], x)) {count+=1;}
         } return count;
     } else if (this.constructor == String) {
         var count = 0, i = start;
@@ -453,7 +454,7 @@ METHODS['index'] = """function (x, start, stop) { // nargs: 1 2 3
     stop = Math.min(this.length, ((stop < 0) ? this.length + stop : stop));
     if (Array.isArray(this)) {
         for (var i=start; i<stop; i++) {
-            if (FUNCTION_PREFIXequals(this[i], x)) {return i;} // indexOf cant do this
+            if (FUNCTION_PREFIXop_equals(this[i], x)) {return i;} // indexOf cant
         }
     } else if (this.constructor === String) {
         var i = this.slice(start, stop).indexOf(x);

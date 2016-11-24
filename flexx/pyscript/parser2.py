@@ -835,7 +835,7 @@ class Parser2(Parser1):
         docstring = docstring if self._docstrings else ''
         for line in get_class_definition(node.name, base_class, docstring):
             code.append(self.lf(line))
-        self.use_std_function('instantiate', [])
+        self.use_std_function('op_instantiate', [])
         
         # Body ...
         self.vars.add(node.name)
@@ -901,7 +901,7 @@ def get_class_definition(name, base='Object', docstring=''):
     code.append('%s = function () {' % name)
     for line in docstring.splitlines():
         code.append('    // ' + line)
-    code.append('    %sinstantiate(this, arguments);' % stdlib.FUNCTION_PREFIX)
+    code.append('    %sop_instantiate(this, arguments);' % stdlib.FUNCTION_PREFIX)
     code.append('}')
     
     if base != 'Object':
