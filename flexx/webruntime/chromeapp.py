@@ -23,7 +23,7 @@ def get_chrome_exe():
     if sys.platform.startswith('win'):
         paths.append("C:\\Program Files\\Google\\Chrome\\Application")
         paths.append("C:\\Program Files (x86)\\Google\\Chrome\\Application")
-        paths.append(eu("~\\AppData\\Local\\Google\\Chrome\\chrome.exe"))
+        paths.append(eu("~\\AppData\\Local\\Google\\Chrome\\Application"))
         paths.append(eu("~\\Local Settings\\Application Data\\Google\\Chrome"))  # xp
         paths = [p + '\\chrome.exe' for p in paths]
     elif sys.platform.startswith('linux'):
