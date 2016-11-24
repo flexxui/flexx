@@ -231,6 +231,8 @@ class Bundle(Asset):
         bundles, so that bundles themselves can be sorted.
         """
         
+        ext = '.' + self.name.rsplit('.')[-1].lower()
+        
         # Check if module belongs here
         if not m.name.startswith(self._module_name):
             raise ValueError('Module %s does not belong in bundle %s.' %
@@ -241,15 +243,18 @@ class Bundle(Asset):
         self._need_sort = True
         
         # Add deps for this module
+        # Add implicit dependency of core Flexx functionality, like serializer, etc.
         deps = set()
-        for dep in m.deps:
+        module_deps = m.deps
+        if ext == '.js':
+            module_deps.add('flexx.app.clientcore')
+        for dep in module_deps:
             while '.' in dep:
                 deps.add(dep)
                 dep = dep.rsplit('.', 1)[0]
             deps.add(dep)
         
         # Clear deps that are represented by this bundle
-        ext = '.' + self.name.rsplit('.')[-1]
         for dep in deps:
             if not (dep.startswith(self._module_name) or
                     self._module_name.startswith(dep + '.')):

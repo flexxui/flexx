@@ -212,6 +212,7 @@ def test_bundle():
     assert bundle.modules == (m3, m1, m2)
     
     # Deps are agregated
+    assert 'flexx.app.clientcore.js' in bundle.deps
     assert 'flexx.app.js' in bundle.deps
     assert 'flexx.app.model.js' in bundle.deps
     assert not any('flexx.ui' in dep for dep in bundle.deps)

@@ -148,11 +148,7 @@ class JSModule:
     def deps(self):
         """ The set of dependencies (names of other modules) for this module.
         """
-        # Add implicit dependency of core Flexx functionality, like
-        # serializer, etc.
-        s = set(self._deps.keys())
-        s.add('flexx.app.clientcore')
-        return s
+        return set(self._deps.keys())
     
     @property
     def changed_time(self):
