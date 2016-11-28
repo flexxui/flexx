@@ -132,8 +132,11 @@ class JSConstant:
         return '<%s %s>' % (self.__class__.__name__, self._name)
 
 
-class Stub:
+class Stubs:
     
+    # Lool like a module
+    __name__ = __name__
+    __file__ = __file__
     JSConstant = JSConstant
     RawJS = RawJS
     
@@ -145,4 +148,4 @@ class Stub:
 
 
 # Seems hacky, but is supported: http://stackoverflow.com/a/7668273/2271927
-sys.modules[__name__] = Stub()
+sys.modules[__name__] = Stubs()
