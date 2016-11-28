@@ -95,6 +95,12 @@ define.amd = true;
 define.flexx = true;
 
 function require (name) {
+    if (name.startsWith('phosphor/')) {
+        return window.require_phosphor(name);
+    }
+    if (modules[name] === undefined) {
+        throw Error('Unknown module: ' + name);
+    }
     return modules[name];
 }
 

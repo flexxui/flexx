@@ -29,8 +29,12 @@ Example:
 """
 
 from ... import event
-from ...pyscript import window
+from ...pyscript import window, RawJS
 from . import Layout, Widget
+
+
+#_phosphor_tabbar = RawJS("flexx.require('phosphor/lib/ui/tabbar')")
+_phosphor_tabpanel = RawJS("flexx.require('phosphor/lib/ui/tabpanel')")
 
 
 # class TabBar(Widget):
@@ -38,7 +42,7 @@ from . import Layout, Widget
 #     """
 #     
 #     def _init_phosphor_and_node(self):
-#         self.phosphor = window.phosphor.ui.tabbar.TabBar()
+#         self.phosphor = _phosphor_tabbar.TabBar()
 #         self.node = self.phosphor.node
 # 
 #     def _add_child(self, widget):
@@ -66,7 +70,7 @@ class TabPanel(Layout):
     class JS:
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.ui.tabpanel.TabPanel()
+            self.phosphor = _phosphor_tabpanel.TabPanel()
             self.node = self.phosphor.node
             
             def _phosphor_changes_current(v, info):

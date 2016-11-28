@@ -20,8 +20,11 @@ Example:
 """
 
 from ... import event
-from ...pyscript import window
+from ...pyscript import RawJS
 from . import Layout
+
+
+_phosphor_splitpanel = RawJS("flexx.require('phosphor/lib/ui/splitpanel')")
 
 
 class SplitPanel(Layout):
@@ -56,7 +59,7 @@ class SplitPanel(Layout):
         _DEFAULT_ORIENTATION = 'h'
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.ui.splitpanel.SplitPanel()
+            self.phosphor = _phosphor_splitpanel.SplitPanel()
             self.node = self.phosphor.node
         
         @event.connect('orientation')

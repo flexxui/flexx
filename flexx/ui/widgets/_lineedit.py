@@ -30,8 +30,11 @@ Interactive example:
 """
 
 from ... import event
-from ...pyscript import window
+from ...pyscript import window, RawJS
 from . import Widget
+
+
+_phosphor_widget = RawJS("flexx.require('phosphor/lib/ui/widget')")
 
 
 class LineEdit(Widget):
@@ -80,7 +83,7 @@ class LineEdit(Widget):
             node = d.childNodes[0]
             
             # Wrap up in Phosphor
-            self.phosphor = window.phosphor.ui.widget.Widget({'node': node})
+            self.phosphor = _phosphor_widget.Widget({'node': node})
             self.node = self.phosphor.node
             
             self._autocomp = window.document.createElement('datalist')

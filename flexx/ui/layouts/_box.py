@@ -108,8 +108,11 @@ Interactive example:
 """
 
 from ... import event
-from ...pyscript import window
+from ...pyscript import RawJS
 from . import Layout
+
+
+_phosphor_boxpanel = RawJS("flexx.require('phosphor/lib/ui/boxpanel')")
 
 
 class BaseBoxLayout(Layout):
@@ -333,16 +336,15 @@ class BoxPanel(BaseBoxLayout):
         _DEFAULT_ORIENTATION = 'h'
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.ui.boxpanel.BoxPanel()
+            self.phosphor = _phosphor_boxpanel.BoxPanel()
             self.node = self.phosphor.node
         
         @event.connect('orientation', 'children', 'children.*.flex')
         def __set_flexes(self, *events):
             i = 0 if self.orientation in (0, 'h', 'hr') else 1
             for widget in self.children:
-                window.phosphor.ui.boxpanel.BoxPanel.setStretch(widget.phosphor,
-                                                                widget.flex[i])
-                window.phosphor.ui.boxpanel.BoxPanel.setSizeBasis(widget.phosphor, 100)
+                _phosphor_boxpanel.BoxPanel.setStretch(widget.phosphor, widget.flex[i])
+                _phosphor_boxpanel.BoxPanel.setSizeBasis(widget.phosphor, 100)
         
         @event.connect('spacing')
         def __spacing_changed(self, *events):

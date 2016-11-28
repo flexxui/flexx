@@ -27,8 +27,12 @@ Example:
 """
 
 from ... import event
-from ...pyscript import window
+from ...pyscript import RawJS
 from . import Widget, Layout
+
+
+_phosphor_stackedpanel = RawJS("flexx.require('phosphor/lib/ui/stackedpanel')")
+_phosphor_iteration = RawJS("flexx.require('phosphor/lib/algorithm/iteration')")
 
 
 class StackedPanel(Layout):
@@ -48,13 +52,12 @@ class StackedPanel(Layout):
     class JS:
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.ui.stackedpanel.StackedPanel()
+            self.phosphor = _phosphor_stackedpanel.StackedPanel()
             self.node = self.phosphor.node
         
         @event.connect('current')
         def __set_current_widget(self, *events):
             widget = events[-1].new_value
-            window.phosphor.algorithm.iteration.each(self.phosphor.widgets,
-                                                     lambda w: w.hide())
+            _phosphor_iteration.each(self.phosphor.widgets, lambda w: w.hide())
             if widget is not None:
                 widget.phosphor.show()
