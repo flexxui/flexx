@@ -101,7 +101,7 @@ function require (name) {
             if (!path.endsWith('.js')) { path = path + '.js'; }
             return window.jupyter.require(path);
         } else {
-            return window.require_phosphor(name);
+            return window.require_phosphor(name);  // provided by our Phosphor-all
         }
     }
     if (modules[name] === undefined) {
