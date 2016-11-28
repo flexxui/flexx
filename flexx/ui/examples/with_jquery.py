@@ -6,6 +6,7 @@ frameworks.
 """
 
 from flexx import app, ui
+from flexx.pyscript import RawJS
 
 
 # Associate assets needed by this app.
@@ -22,11 +23,8 @@ class DatePicker(ui.Widget):
         def _init_phosphor_and_node(self):
             self.phosphor = self._create_phosphor_widget('input')
             self.node = self.phosphor.node
-            self._make_picker(self.node)
-        
-        def _make_picker(node):
-            """ $(node).datepicker(); // we cannot use $ as a variable name in PyScript
-            """
+            
+            RawJS('$')(self.node).datepicker()
 
 
 class Example(ui.Widget):

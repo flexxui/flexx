@@ -38,7 +38,7 @@ def remove_comments(code):
             if not c:
                 break
             chars.append(c)
-            if c == c0 and chars[-1] != '\\':
+            if c == c0 and chars[-2] != '\\':
                 return
     def to_end_of_line():
         while True:
@@ -111,6 +111,7 @@ def tabbify(code):
     for line in code.splitlines():
         line2 = line.lstrip(' \t')
         indent_str = line[:len(line)-len(line2)]
-        indent_str = indent_str.replace('    ', '\t')
+        for s1, s2 in [('    ', '\t'), ('  ', '\t'), (' ', '')]:
+            indent_str = indent_str.replace(s1, s2)
         lines.append(indent_str + line2)
     return '\n'.join(lines)

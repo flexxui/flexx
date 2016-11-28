@@ -2,7 +2,7 @@ import sys
 
 from flexx.util.testing import run_tests_if_main, raises, skipif
 
-from flexx.pyscript import JSError, py2js, evaljs, evalpy
+from flexx.pyscript import RawJS, JSError, py2js, evaljs, evalpy
 
 
 def nowhitespace(s):
@@ -465,10 +465,10 @@ class TestFunctions:
     def test_raw_js(self):
         
         def func(a, b):
-            """
+            RawJS("""
             var c = 3;
             return a + b + c;
-            """
+            """)
         
         code = py2js(func)
         assert evaljs(code + 'func(100, 10)') == '113'

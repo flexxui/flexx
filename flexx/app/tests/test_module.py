@@ -101,16 +101,19 @@ files['lib1'] = """
 
 files['lib2'] = """
     
+    from flexx.pyscript import RawJS
+    
     import sys
     sas = None
     
     offset = 3
+    bias = RawJS("[]")
     
     def cos(t):
-        return t + offset
+        return t + offset + bias
     
     def acos(t):
-        return t - offset
+        return t - offset + bias
     
     class AA(object):
         pass
@@ -119,11 +122,11 @@ files['lib2'] = """
 
 files['lib3'] = """
     from flxtest.lib1 import sin
-    from flxtest.lib2 import cos, offset
+    from flxtest.lib2 import cos, offset, bias
     from flxtest import x
     
     def tan(t):
-        return sin(t) / cos(t) + offset * 0  + x()
+        return sin(t) / cos(t) + offset * 0 + bias + x()
     
     def atan(t):
         return 1/tan(t)
@@ -213,6 +216,10 @@ def test_modules():
     # Constants replicate, not import
     assert 'offset = 3' in store['flxtest.lib2'].get_js()
     assert 'offset = 3' in store['flxtest.lib3'].get_js()
+    
+    # But RawJS constants can be shared!
+    assert 'bias = []' in store['flxtest.lib2'].get_js()
+    assert 'bias = flxtest_lib2.bias' in store['flxtest.lib3'].get_js()
     
     # So ,,, lib4 is omitted, right?
     assert 'flxtest.lib4' not in store

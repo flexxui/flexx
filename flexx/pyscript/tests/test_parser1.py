@@ -92,6 +92,15 @@ class TestExpressions:
         assert evalpy('a = [3, 4]; a *= 2; a') == '[ 3, 4, 3, 4 ]'
         assert evalpy('a = "ab"; a *= 2; a') == 'abab'
     
+    def test_raw_js_overloading(self):
+        # more RawJS tests in test_parser3.py
+        s1 = 'a=3; b=4; c=1; a + b - c'
+        s2 = 'a=3; b=4; c=1; RawJS("a + b") - c'
+        assert evalpy(s1) == '6'
+        assert evalpy(s2) == '6'
+        assert 'pyfunc' in py2js(s1)
+        assert 'pyfunc' not in py2js(s2)
+    
     def test_overload_funcs_dont_overload_real_funcs(self):
         assert evalpy('def add(a, b): return a-b\n\nadd(4, 1)') == '3'
         assert evalpy('def op_add(a, b): return a-b\n\nop_add(4, 1)') == '3'
