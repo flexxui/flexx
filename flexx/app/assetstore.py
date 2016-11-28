@@ -96,7 +96,13 @@ define.flexx = true;
 
 function require (name) {
     if (name.startsWith('phosphor/')) {
-        return window.require_phosphor(name);
+        if (window.jupyter && window.jupyter.require) {
+            var path = 'phosphor@*/' + name.slice(9);
+            if (!path.endsWith('.js')) { path = path + '.js'; }
+            return window.jupyter.require(path);
+        } else {
+            return window.require_phosphor(name);
+        }
     }
     if (modules[name] === undefined) {
         throw Error('Unknown module: ' + name);
