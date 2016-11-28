@@ -135,6 +135,7 @@ class JSConstant:
 class Stubs:
     
     # Lool like a module
+    sys = sys
     __name__ = __name__
     __file__ = __file__
     JSConstant = JSConstant
