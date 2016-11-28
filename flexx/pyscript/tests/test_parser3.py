@@ -1,11 +1,39 @@
 import sys
 from flexx.util.testing import run_tests_if_main, raises, skip
 
-from flexx.pyscript import JSError, py2js, evaljs, evalpy
+from flexx.pyscript import JSError, py2js, evaljs, evalpy, RawJS
 
 
 def nowhitespace(s):
     return s.replace('\n', '').replace('\t', '').replace(' ', '')
+
+
+def foo(a, b):
+    x = RawJS('a + b')
+    y = 0
+    RawJS("""
+    for (i=0; i<8; i++) {
+        y += i * x;
+    }
+    """)
+    RawJS("""while (y>0) {
+        x += y;
+        y -= 1;
+    }
+    """)
+
+
+class TestSpecials:
+    
+    def test_rawJS(self):
+        
+        code = py2js(foo)
+        assert 'pyfunc' not in code
+        assert '    x =' in code
+        assert '    for' in code
+        assert '        y +=' in code
+        assert '    while' in code
+        assert '        y -=' in code
 
 
 class TestHardcoreBuildins:
@@ -162,6 +190,7 @@ class TestHardcoreBuildins:
         assert evalpy('list(range(2, 4))') == '[ 2, 3 ]'
         assert evalpy('list(range(2, 9, 2))') == '[ 2, 4, 6, 8 ]'
         assert evalpy('list(range(10, 3, -2))') == '[ 10, 8, 6, 4 ]'
+
 
 class TestOtherBuildins:
     

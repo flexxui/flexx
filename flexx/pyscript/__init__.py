@@ -261,7 +261,7 @@ class Parser(Parser3):
 from .functions import py2js, evaljs, evalpy, JSString
 from .functions import script2js, js_rename, create_js_module
 from .stdlib import get_full_std_lib, get_all_std_names
-from .stubs import JSConstant, window, undefined
+from .stubs import RawJS, JSConstant, window, undefined
 
 # Create stubs that mean something
 Infinity = float('inf')

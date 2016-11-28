@@ -189,6 +189,7 @@ Aside from ``window``, ``flexx.pyscript`` also provides ``undefined``,
 from . import commonast as ast
 from . import stdlib
 from .parser2 import Parser2, JSError, unify  # noqa
+from .stubs import RawJS
 
 
 # This class has several `function_foo()` and `method_bar()` methods
@@ -215,6 +216,17 @@ class Parser3(Parser2):
         if len(node.arg_nodes) != 0:
             raise JSError('this_is_js() expects zero arguments.')
         return ('"this_is_js()"')
+    
+    def function_RawJS(self, node):
+        if len(node.arg_nodes) == 1:
+            if not isinstance(node.arg_nodes[0], ast.Str):
+                raise JSError('RawJS needs a verbatim string (use multiple '
+                              'args to bypass PyScript\'s RawJS).')
+            lines = RawJS._str2lines(node.arg_nodes[0].value)
+            indent = (self._indent * 4) * ' '
+            return '\n'.join([indent + line for line in lines])
+        else:
+            return None  # maybe RawJS is a thing
     
     ## Python buildin functions
     

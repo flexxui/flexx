@@ -9,7 +9,7 @@ import json
 import time
 import types
 
-from ..pyscript import py2js, JSConstant, create_js_module, get_all_std_names
+from ..pyscript import py2js, RawJS, JSConstant, create_js_module, get_all_std_names
 
 from .model import Model
 from .asset import Asset, get_mod_name, module_is_package
@@ -108,7 +108,7 @@ class JSModule:
         # We use dicts so that we can "overwrite" them in interactive mode
         self._model_classes = {}
         self._pyscript_code = {}
-        self._json_values = {}
+        self._js_values = {}
         # Dependencies
         self._deps = {}  # mod_name -> [mod_as_name, *imports]
         # Caches
@@ -274,6 +274,14 @@ class JSModule:
                 # Import from another module
                 self._import(mod_name, val.__name__, name)
         
+        elif isinstance(val, RawJS):
+            # Verbatim JS
+            if val.__module__ == self.name:
+                self._provided_names.add(name)
+                self._js_values[name] = val.get_code()
+            else:
+                self._import(val.__module__, val.get_defined_name(name), name)
+        
         elif isinstance(val, json_types):
             # Looks like something we can serialize
             # Note: we have no way to determine where it is defined
@@ -284,7 +292,7 @@ class JSModule:
                 t = 'JS in "%s" uses %r but cannot serialize that value:\n%s'
                 raise ValueError(t % (self.filename, name, str(err)))
             self._provided_names.add(name)
-            self._json_values[name] = js
+            self._js_values[name] = js
         
         elif (getattr(val, '__module__', None) and
               getattr(sys.modules[val.__module__], '__pyscript__', False) and
@@ -334,8 +342,8 @@ class JSModule:
             # todo: collect stdlib funcs here
             # Insert serialized values
             value_lines = []
-            for key in sorted(self._json_values):
-                value_lines.append('var %s = %s;' % (key, self._json_values[key]))
+            for key in sorted(self._js_values):
+                value_lines.append('var %s = %s;' % (key, self._js_values[key]))
             js.insert(0, '')
             js.insert(0, '\n'.join(value_lines))
             # Prepare imports and exports
