@@ -458,8 +458,8 @@ class Widget(Model):
         def __container_changed(self, *events):
             id = events[-1].new_value
             self.outernode.classList.remove('flx-main-widget')
-            if self.parent:
-                return
+            if self.parent or self.phosphor.parent:
+                return  # e.g. embedded in a larger phosphor app
             # Detach
             if self.phosphor.isAttached:
                 try:
