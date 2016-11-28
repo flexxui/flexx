@@ -75,9 +75,16 @@ def py2js(ob=None, new_name=None, **parser_options):
             if getattr(ob, '__name__', '') in ('', '<lambda>'):
                 raise ValueError('py2js() got anonymous function from '
                                  '"%s", line %i, %r.' % (filename, linenr, ob))
-            # Normalize indentation
+            # Normalize indentation, based on first line
             indent = len(lines[0]) - len(lines[0].lstrip())
-            lines = [line[indent:] for line in lines]
+            for i in range(len(lines)):
+                line = lines[i]
+                line_indent = len(line) - len(line.lstrip())
+                if line_indent < indent and line.strip():
+                    assert line.lstrip().startswith('#')  # only possible for comments
+                    lines[i] = indent * ' ' + line.lstrip()
+                else:
+                    lines[i] = line[indent:]
             # Skip any decorators
             while not lines[0].lstrip().startswith(thetype):
                 lines.pop(0)
