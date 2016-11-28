@@ -59,6 +59,7 @@ class RawJS:
         except Exception as err:
             tb = getattr(err, '__traceback__', None)
             if tb is None:  # Legacy Python 2.x
+                import sys
                 _, _, tb = sys.exc_info()
             self._globals = tb.tb_frame.f_back.f_globals
             del tb
@@ -134,8 +135,6 @@ class JSConstant:
 
 class Stubs:
     
-    # Lool like a module
-    sys = sys
     __name__ = __name__
     __file__ = __file__
     JSConstant = JSConstant
