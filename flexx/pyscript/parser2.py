@@ -125,12 +125,12 @@ Defining functions
     def foo(x, *values):
         bar(x+1, *values)
     
-    # To write raw JS, define a function with only a docstring
+    # To write the function in raw JS, use the RawJS call
     def bar(a, b):
-        '''
+        RawJS('''
         var c = 4;
         return a + b + c;
-        '''
+        ''')
     
     # Lambda expressions
     foo = lambda x: x**2
@@ -214,8 +214,14 @@ Globals and nonlocal
 
 from . import commonast as ast
 from . import stdlib
+from . import logger
 from .parser1 import Parser1, JSError, unify, reprs  # noqa
 
+
+RAW_DOC_WARNING = ('Function %s only has a docstring, which used to be '
+                   'intepreted as raw JS. Wrap a call to RawJS(...) around the '
+                   'docstring, or add "pass" to the function body to prevent '
+                   'this behavior.')
 
 class Parser2(Parser1):
     """ Parser that adds control flow, functions, classes, and exceptions.
@@ -768,7 +774,8 @@ class Parser2(Parser1):
         else:
             docstring = self.pop_docstring(node)
             if docstring and not node.body_nodes:
-                # Raw JS
+                # Raw JS - but deprecated
+                logger.warn(RAW_DOC_WARNING % node.name)
                 for line in docstring.splitlines():
                     code.append(self.lf(line))
             else:

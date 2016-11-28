@@ -2,7 +2,7 @@
 The client's core Flexx engine, implemented in PyScript.
 """
 
-from ..pyscript import this_is_js
+from ..pyscript import this_is_js, RawJS
 from ..pyscript.stubs import window, undefined, require
 
 # This module gets transpiled to JavaScript as a whole
@@ -84,7 +84,7 @@ class Flexx:
             return self.instances[id]
     
     def spin(self, text='*'):
-        """
+        RawJS("""
         if (!window.document.body) {return;}
         var el = window.document.body.children[0];
         if (el && el.classList.contains("flx-spinner")) {
@@ -94,7 +94,7 @@ class Flexx:
                 el.children[0].innerHTML += text.replace(/\*/g, '&#9632');
             }
         }
-        """
+        """)
     
     def initSocket(self):
         """ Make the connection to Python.
@@ -253,7 +253,7 @@ class Flexx:
 
 
 def decodeUtf8(arrayBuffer):
-    """
+    RawJS("""
     var result = "",
         i = 0,
         c = 0,
@@ -293,7 +293,7 @@ def decodeUtf8(arrayBuffer):
         }
     }
     return result;
-    """
+    """)
 
 
 
