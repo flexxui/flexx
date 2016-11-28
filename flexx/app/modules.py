@@ -17,7 +17,11 @@ from . import logger
 
 
 pyscript_types = type, types.FunctionType  # class or function
-json_types = None.__class__, bool, int, float, str, tuple, list, dict
+
+if sys.version_info > (3, ):
+    json_types = None.__class__, bool, int, float, str, tuple, list, dict
+else:
+    json_types = None.__class__, bool, int, float, basestring, tuple, list, dict  # noqa, bah
 
 # In essense, the idea of modules is all about propagating dependencies:
 # 
