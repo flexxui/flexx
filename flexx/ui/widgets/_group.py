@@ -30,8 +30,11 @@ Interactive example:
 """
 
 from ... import event
-from ...pyscript import window
+from ...pyscript import window, RawJS
 from . import Widget
+
+
+_phosphor_panel = RawJS("flexx.require('phosphor/lib/ui/panel')")
 
 
 class GroupWidget(Widget):
@@ -45,7 +48,7 @@ class GroupWidget(Widget):
         
         def _init_phosphor_and_node(self):
             
-            self.phosphor = window.phosphor.ui.panel.Panel()
+            self.phosphor = _phosphor_panel.Panel()
             
             # Replace the internal node of the phosphor widget.
             # Bit of a hack, but I see no other way

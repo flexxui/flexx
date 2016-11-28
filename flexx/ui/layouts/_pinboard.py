@@ -16,8 +16,11 @@ Example:
 """
 
 from ... import event
-from ...pyscript import window
+from ...pyscript import RawJS
 from . import Layout
+
+
+_phosphor_panel = RawJS("flexx.require('phosphor/lib/ui/panel')")
 
 
 class PinboardLayout(Layout):
@@ -38,7 +41,7 @@ class PinboardLayout(Layout):
     
     class JS:
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.ui.panel.Panel()
+            self.phosphor = _phosphor_panel.Panel()
             self.node = self.phosphor.node
         
         @event.connect('children', 'children.*.pos')

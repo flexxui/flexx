@@ -11,7 +11,7 @@
 
 from .. import event, app
 from ..app import Model, get_active_model
-from ..pyscript import undefined, window
+from ..pyscript import undefined, window, RawJS
 from ..util.getresource import get_resource
 
 
@@ -19,6 +19,11 @@ from ..util.getresource import get_resource
 for asset_name in ('phosphor-all.css', 'phosphor-all.js'):
     code = get_resource(asset_name).decode()
     app.assets.associate_asset(__name__, asset_name, code)
+
+
+_phosphor_panel = RawJS("flexx.require('phosphor/lib/ui/panel')")
+_phosphor_widget = RawJS("flexx.require('phosphor/lib/ui/widget')")
+_phosphor_messaging = RawJS("flexx.require('phosphor/lib/core/messaging')")
 
 
 # To give both JS and Py a parent property without having it synced,
@@ -297,14 +302,16 @@ class Widget(Model):
                     pass  # not sure what close means in Phosphor
                 elif msg.type == 'child-added':
                     if msg.child.id not in window.flexx.instances:
-                        print('Phosphor child added that is not managed by Flexx.')
+                        if not msg.child.node.classList.contains('p-TabBar'):
+                            print('Phosphor child %r added to %r that is not '
+                                'managed by Flexx.' % (msg.child.id, self.id))
                     elif window.flexx.instances[msg.child.id] not in self.children:
                         print('Phosphor child %s added without Flexx knowing' %
                               msg.child.id)
                 elif msg.type == 'child-removed':
                     pass
                 return True  # resume processing the message as normal
-            window.phosphor.core.messaging.installMessageHook(self.phosphor, msg_hook)
+            _phosphor_messaging.installMessageHook(self.phosphor, msg_hook)
             
             # Keep track of Phosphor changing the title
             def _title_changed_in_phosphor(title):
@@ -327,14 +334,14 @@ class Widget(Model):
         def _init_phosphor_and_node(self):
             """ Overload this in sub widgets.
             """
-            self.phosphor = window.phosphor.ui.panel.Panel()
+            self.phosphor = _phosphor_panel.Panel()
             self.node = self.phosphor.node
         
         def _create_phosphor_widget(self, element_name='div'):
             """ Convenience func to create a Phosphor widget from a div element name.
             """
             node = window.document.createElement(element_name)
-            return window.phosphor.ui.widget.Widget({'node': node})
+            return _phosphor_widget.Widget({'node': node})
         
         @event.connect('style')
         def __style_changed(self, *events):
@@ -451,12 +458,12 @@ class Widget(Model):
         def __container_changed(self, *events):
             id = events[-1].new_value
             self.outernode.classList.remove('flx-main-widget')
-            if self.parent:
-                return
+            if self.parent or self.phosphor.parent:
+                return  # e.g. embedded in a larger phosphor app
             # Detach
             if self.phosphor.isAttached:
                 try:
-                    window.phosphor.ui.widget.Widget.detach(self.phosphor)
+                    _phosphor_widget.Widget.detach(self.phosphor)
                 except Exception as err:
                     err.message += ' (%s)' % self.id
                     raise err
@@ -469,7 +476,7 @@ class Widget(Model):
                 else:
                     el = window.document.getElementById(id)
                 try:
-                    window.phosphor.ui.widget.Widget.attach(self.phosphor, el)
+                    _phosphor_widget.Widget.attach(self.phosphor, el)
                 except Exception as err:
                     err.message += ' (%s)' % self.id
                     raise err

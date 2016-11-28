@@ -18,8 +18,11 @@ Example:
 
 """
 
-from ...pyscript import window
+from ...pyscript import RawJS
 from . import Layout
+
+
+_phosphor_dockpanel = RawJS("flexx.require('phosphor/lib/ui/dockpanel')")
 
 
 class DockPanel(Layout):
@@ -38,7 +41,7 @@ class DockPanel(Layout):
     class JS:
         
         def _init_phosphor_and_node(self):
-            self.phosphor = window.phosphor.ui.dockpanel.DockPanel()
+            self.phosphor = _phosphor_dockpanel.DockPanel()
             self.node = self.phosphor.node
         
         def _add_child(self, widget):

@@ -95,6 +95,18 @@ define.amd = true;
 define.flexx = true;
 
 function require (name) {
+    if (name.startsWith('phosphor/')) {
+        if (window.jupyter && window.jupyter.require) {
+            var path = 'phosphor@*/' + name.slice(9);
+            if (!path.endsWith('.js')) { path = path + '.js'; }
+            return window.jupyter.require(path);
+        } else {
+            return window.require_phosphor(name);  // provided by our Phosphor-all
+        }
+    }
+    if (modules[name] === undefined) {
+        throw Error('Unknown module: ' + name);
+    }
     return modules[name];
 }
 
