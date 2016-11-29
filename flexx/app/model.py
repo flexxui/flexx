@@ -470,9 +470,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         reference of the JS version of the object.
         """
         if self.session.status:
-            cmd = 'flexx.instances.%s = "disposed";' % self._id
             try:
-                self._session._exec(cmd)
+                self.call_js('dispose()')
             except Exception:
                 pass  # ws can be closed/gone if this gets invoked from __del__
         super().dispose()
@@ -623,6 +622,11 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             """ Can be overloaded by subclasses to initialize the model.
             """
             pass
+        
+        def dispose(self):
+            """ Can be overloaded by subclasses to dispose resources.
+            """
+            window.flexx.instances[self._id] = 'disposed'
         
         def _register_handler(self, *args):
             event_type = args[0].split(':')[0].strip('!')
