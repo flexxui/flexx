@@ -99,6 +99,8 @@ def main():
             # List examples
             for name in sorted(examples[sub]):
                 docs += '* :ref:`%s`\n' % name
+            if sub == 'ui':
+                docs += '\nThere is also an `overview of all ui examples (heavy page) <all_examples.html>`_'
             # Write
             filename = os.path.join(DOC_DIR, sub, 'examples.rst')
             created_files.append(filename)
@@ -114,8 +116,3 @@ def clean():
             os.remove(filename)
         elif os.path.isdir(filename) and not os.listdir(filename):
             os.rmdir(filename)
-    
-    # Bit of a hack; we do some work for the uiexamples directive here ...
-    from flexx import app
-    HTML_DIR = os.path.abspath(os.path.join(THIS_DIR, '..', '_build', 'html'))
-    app.assets.export(os.path.join(HTML_DIR, 'ui', 'examples'))

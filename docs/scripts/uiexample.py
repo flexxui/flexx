@@ -18,13 +18,6 @@ THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 ROOT_DIR = os.path.dirname(os.path.dirname(THIS_DIR))
 HTML_DIR = os.path.abspath(os.path.join(THIS_DIR, '..', '_build', 'html'))
 
-if not os.path.isdir(HTML_DIR + '/ui'):
-    os.mkdir(HTML_DIR + '/ui')
-    
-if not os.path.isdir(HTML_DIR + '/ui/examples'):
-    os.mkdir(HTML_DIR + '/ui/examples')
-
-
 SIMPLE_CODE_T = """
 from flexx import app, ui
 
@@ -32,6 +25,9 @@ class App(ui.Widget):
 
     def init(self):
         """  # mind the indentation
+
+
+all_examples = []
 
 
 class uiexample(nodes.raw): pass
@@ -99,6 +95,7 @@ def create_ui_example(filename, to_root, height=300):
         print('ERROR: Could not export ui example: %s\n%s' % (err_text, code) )
         raise err
     
+    all_examples.append((class_name, mod_name, filename_parts[-1]))
     return get_html(filename_rel, height)
 
 
@@ -183,3 +180,29 @@ def setup(Sphynx):
     
     Sphynx.add_node(uiexample, html=(visit_uiexample_html, depart_uiexample_html))
     Sphynx.add_directive('uiexample', UIExampleDirective)
+    
+    if not os.path.isdir(HTML_DIR + '/ui'):
+        os.mkdir(HTML_DIR + '/ui')
+    if not os.path.isdir(HTML_DIR + '/ui/examples'):
+        os.mkdir(HTML_DIR + '/ui/examples')
+    
+    Sphynx.connect('build-finished', finish)
+
+    
+def finish(Sphynx, *args):
+    
+    # Export assets
+    from flexx import app
+    HTML_DIR = os.path.abspath(os.path.join(THIS_DIR, '..', '_build', 'html'))
+    app.assets.export(os.path.join(HTML_DIR, 'ui', 'examples'))
+
+    # Write overview page that contains *all* examples
+    parts = []
+    for class_name, mod_name, fname in all_examples:
+        parts.append('<br /><h3>%s in %s</h3>' % (class_name, mod_name))
+        parts.append(get_html('examples/' + fname, 300))
+    parts.insert(0, '<!DOCTYPE html><html><body>This page may take a while to load ... <br />')
+    parts.append('</body></html>')
+    code = '\n'.join(parts)
+    with open(os.path.join(HTML_DIR, 'ui', 'all_examples.html'), 'wb') as file:
+        file.write(code.encode())
