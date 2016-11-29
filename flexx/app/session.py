@@ -248,6 +248,9 @@ class Session(SessionAssets):
         self._model = None  # Model instance, can be None if app_name is __default__
         self._closing = False
         
+        # A counter to generate model id's, used by the Model class
+        self._modelcounter = 0
+        
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
         self._pending_commands = []

@@ -349,9 +349,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     # Keep track of all instances, so we can easily collect al JS/CSS
     _instances = weakref.WeakValueDictionary()
     
-    # Count instances to give each instance a unique id
-    _counter = 0
-    
     # CSS for this class (no css in the base class)
     CSS = ""
     
@@ -363,11 +360,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         session = kwargs.pop('session', None)
         kwargs.pop('is_app', None)
         
-        # Set id and register this instance
-        Model._counter += 1
-        self._id = self.__class__.__name__ + str(Model._counter)
-        Model._instances[self._id] = self
-        
         # Init session
         if session is None:
             active_model = get_active_model()
@@ -377,6 +369,11 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             raise RuntimeError('Cannot instantiate Model %r without a session'
                                % self.id)
         self._session = session
+        
+        # Set id and register this instance
+        session._modelcounter += 1
+        self._id = self.__class__.__name__ + str(session._modelcounter)
+        Model._instances[self._id] = self
         self._session.register_model_class(self.__class__)
         
         # Get initial event connections
@@ -470,9 +467,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         reference of the JS version of the object.
         """
         if self.session.status:
-            cmd = 'flexx.instances.%s = "disposed";' % self._id
             try:
-                self._session._exec(cmd)
+                self.call_js('dispose()')
             except Exception:
                 pass  # ws can be closed/gone if this gets invoked from __del__
         super().dispose()
@@ -623,6 +619,11 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             """ Can be overloaded by subclasses to initialize the model.
             """
             pass
+        
+        def dispose(self):
+            """ Can be overloaded by subclasses to dispose resources.
+            """
+            window.flexx.instances[self._id] = 'disposed'
         
         def _register_handler(self, *args):
             event_type = args[0].split(':')[0].strip('!')
