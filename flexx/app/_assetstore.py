@@ -15,9 +15,9 @@ from urllib.request import urlopen
 from ..pyscript import create_js_module, get_all_std_names, get_full_std_lib
 from .. import config
 
-from .model import Model
-from .modules import JSModule
-from .asset import Asset, Bundle, solve_dependencies, HEADER
+from ._model import Model
+from ._modules import JSModule
+from ._asset import Asset, Bundle, solve_dependencies, HEADER
 from . import logger
 
 
@@ -584,7 +584,7 @@ class SessionAssets:
         
         # Ensure interactive flag - e.g. for in the notebook
         if self._is_interactive is None:
-            from .session import manager  # noqa - avoid circular import
+            from ._session import manager  # noqa - avoid circular import
             self._is_interactive = self is manager.get_default_session()
         
         # Make sure that no two models have the same name, or we get problems

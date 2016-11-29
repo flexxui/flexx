@@ -19,8 +19,8 @@ from tornado.ioloop import IOLoop
 from tornado import gen
 from tornado import netutil
 
-from .session import manager
-from .assetstore import assets
+from ._session import manager
+from ._assetstore import assets
 from . import logger
 from .. import config
 

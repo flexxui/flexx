@@ -13,7 +13,7 @@ from flexx.util.testing import run_tests_if_main, raises
 from flexx.util.logging import capture_log
 
 from flexx import ui, app
-from flexx.app.modules import JSModule
+from flexx.app._modules import JSModule
 
 tempdirname = os.path.join(tempfile.gettempdir(), 'flexx_module_test')
 
@@ -185,7 +185,7 @@ def test_modules():
     assert 'flxtest.lib2' in store
     assert 'flxtest.lib3' in store
     assert 'flxtest.__init__' in store  # different from how Python works!
-    assert 'flexx.app.model' in store  # + what it depends on
+    assert 'flexx.app._model' in store  # + what it depends on
     
     # CSS
     assert 'foo-css-rule' in store['flxtest.foo'].get_css()
@@ -261,7 +261,7 @@ def test_misc():
     #
     m.add_variable('Foo')
     assert len(m.deps) == 3
-    assert 'flexx.app.model' in m.deps
+    assert 'flexx.app._model' in m.deps
 
 
 def test_add_variable():
@@ -348,7 +348,7 @@ def test_subclasses():
     #
     m.add_variable('Spam')
     assert 'flxtest.foo' in store
-    assert 'flexx.app.model' in store
+    assert 'flexx.app._model' in store
     
     # Using Foo in modules that imports it
     store = {}
@@ -357,7 +357,7 @@ def test_subclasses():
     #
     m.add_variable('Foo')
     assert 'flxtest.foo' in store
-    assert 'flexx.app.model' in store
+    assert 'flexx.app._model' in store
 
 
 def test_fails():

@@ -8,11 +8,11 @@ import json
 
 from .. import webruntime, config, set_log_level
 
-from . import model, logger
-from .model import Model
-from .session import manager
-from .assetstore import assets
-from .tornadoserver import TornadoServer
+from . import _model, logger
+from ._model import Model
+from ._session import manager
+from ._assetstore import assets
+from ._tornadoserver import TornadoServer
 from ..event import _loop
 
 reprs = json.dumps
@@ -140,7 +140,7 @@ def call_later(delay, callback, *args, **kwargs):
 
 
 # Work around circular dependency
-model.call_later = call_later
+_model.call_later = call_later
 
 _pending_call_laters = []
 

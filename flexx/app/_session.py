@@ -6,8 +6,8 @@ import time
 import weakref
 
 from .. import event
-from .model import Model, new_type
-from .assetstore import SessionAssets
+from ._model import Model, new_type
+from ._assetstore import SessionAssets
 from . import logger
 
 # todo: thread safety
@@ -40,7 +40,7 @@ class AppManager(event.HasEvents):
         After registering an app (and starting the server) it is
         possible to connect to "http://address:port/app_name".
         """
-        from .funcs import App  # todo: put App class and manager in separate module
+        from ._funcs import App  # todo: put App class and manager in separate module
         assert isinstance(app, App)
         name = app.name
         if not valid_app_name(name):

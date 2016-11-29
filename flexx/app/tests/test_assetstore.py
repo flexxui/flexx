@@ -11,7 +11,7 @@ import shutil
 
 from flexx.util.testing import run_tests_if_main, raises
 
-from flexx.app.assetstore import assets, AssetStore, SessionAssets
+from flexx.app._assetstore import assets, AssetStore, SessionAssets
 
 from flexx import ui, app
 
@@ -29,14 +29,14 @@ def test_asset_store_collect():
     s.update_modules()
     assert len(s.modules) > 10
     assert 'flexx.ui._widget' in s.modules
-    assert 'flexx.app.model' in s.modules
+    assert 'flexx.app._model' in s.modules
     
     assert '.Widget =' in s.get_asset('flexx.ui._widget.js').to_string()
     assert '.Widget =' in s.get_asset('flexx.ui.js').to_string()
     assert '.Widget =' in s.get_asset('flexx.js').to_string()
     assert '.Widget =' not in s.get_asset('flexx.app.js').to_string()
     
-    assert '.Model =' in s.get_asset('flexx.app.model.js').to_string()
+    assert '.Model =' in s.get_asset('flexx.app._model.js').to_string()
     assert '.Model =' in s.get_asset('flexx.app.js').to_string()
     assert '.Model =' in s.get_asset('flexx.js').to_string()
     assert '.Model =' not in s.get_asset('flexx.ui.js').to_string()
@@ -255,12 +255,12 @@ def test_session_registering_model_classes():
     assert ui.Button.__jsmodule__ in s._used_modules
     assert ui.BaseButton.__jsmodule__ in s._used_modules
     assert ui.Widget.__jsmodule__ in s._used_modules
-    assert 'flexx.app.model' in s._used_modules
+    assert 'flexx.app._model' in s._used_modules
     
     # Get assets, level 9
     js_assets, css_assets = s.get_assets_in_order(bundle_level=9)
     names = [a.name for a in js_assets]
-    assert 'flexx.app.model.js' in names
+    assert 'flexx.app._model.js' in names
     assert 'flexx.ui.widgets._button.js' in names
     
     # Get assets, level 2

@@ -11,7 +11,7 @@ import shutil
 
 from flexx.util.testing import run_tests_if_main, raises
 
-from flexx.app.asset import solve_dependencies
+from flexx.app._asset import solve_dependencies
 from flexx.util.logging import capture_log
 from flexx import ui, app
 
@@ -212,9 +212,9 @@ def test_bundle():
     assert bundle.modules == (m3, m1, m2)
     
     # Deps are agregated
-    assert 'flexx.app.clientcore.js' in bundle.deps
+    assert 'flexx.app._clientcore.js' in bundle.deps
     assert 'flexx.app.js' in bundle.deps
-    assert 'flexx.app.model.js' in bundle.deps
+    assert 'flexx.app._model.js' in bundle.deps
     assert not any('flexx.ui' in dep for dep in bundle.deps)
     
     # Strings are combined
