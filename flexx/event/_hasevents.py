@@ -71,11 +71,6 @@ def finalize_hasevents_class(cls):
         elif isinstance(val, Handler):
             raise RuntimeError('Class methods can only be made handlers using '
                                '@event.connect() (handler %r)' % name)
-        elif callable(val) and name.startswith('on_'):
-            if not getattr(cls, '_HAS_ON_METHODS', False):
-                # todo: remove this between 0.3 and 0.4
-                logger.warn('Method %r is not (anymore) converted to a '
-                            'handler (on %s).' % (name, cls.__name__))
     
     # Cache prop names
     cls.__handlers__ = [name for name in sorted(handlers.keys())]
