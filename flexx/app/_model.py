@@ -118,8 +118,8 @@ _active_models_per_thread = {}  # dict of threadid -> list
 
 def _get_active_models():
     """ Get list that represents the stack of "active" models.
-    Each thread has its own stack. Should only be used inside a Model
-    context manager.
+    Each thread has its own stack. Should only be used directly inside
+    a Model context manager.
     """
     # Get thread id
     if hasattr(threading, 'current_thread'):
@@ -128,6 +128,13 @@ def _get_active_models():
         tid = id(threading.currentThread())
     # Get list of parents for this thread
     return _active_models_per_thread.setdefault(tid, [])
+
+
+def get_get_active_models():
+    """ Get a tuple of Model instance that represent the stack of "active"
+    models. Each thread has its own stack. Also see get_active_model().
+    """
+    return tuple(_get_active_models())
 
 
 def get_active_model():

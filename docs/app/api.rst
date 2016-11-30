@@ -33,6 +33,8 @@ Functions related to us Model classes as apps
 
 .. autofunction:: flexx.app.get_active_model
 
+.. autofunction:: flexx.app.get_active_models
+
 
 The Model class
 ---------------
