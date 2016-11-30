@@ -6,6 +6,7 @@ import time
 import json
 import random
 import hashlib
+import weakref
 from urllib.request import urlopen
 
 from .. import config
@@ -408,21 +409,47 @@ class Session(SessionAssets):
         self._model = None  # Model instance, can be None if app_name is __default__
         self._closing = False
         
-        # A counter to generate model id's, used by the Model class
-        self._modelcounter = 0
+        # A counter to generate model id's
+        self._model_counter = 0
+        # Known model instances in this session, so we can "deserialize" them
+        self._model_instances = weakref.WeakValueDictionary()
+        # Objects that are guarded from deletion: id: (ping_count, instance)
+        self._instances_guarded = {}
         
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
         self._pending_commands = []
-        
-        # Objects that are guarded from deletion: id: (ping_count, instance)
-        self._instances_guarded = {}
         
         self._creation_time = time.time()
     
     def __repr__(self):
         s = self.status
         return '<Session for %r (%i) at 0x%x>' % (self.app_name, s, id(self))
+    
+    def _register_model(self, model):
+        """ Called by Model to give them an id and register with the session.
+        """
+        assert isinstance(model, Model)
+        assert model.session is self
+        cls = model.__class__
+        # Set id
+        self._model_counter += 1
+        model._id = cls.__name__ + str(self._model_counter)
+        # Register the instance using a weakref
+        self._model_instances[model.id] = model
+        # Register the class to that the client has the needed definitions
+        self.register_model_class(cls)
+    
+    def get_model_instance_by_id(self, id):
+        """ Get instance of Model class corresponding to the given id,
+        or None if it does not exist.
+        """
+        try:
+            return self._model_instances[id]
+        except KeyError:
+            t = 'Model instance %r does not exist in this session (anymore).'
+            logger.warn(t % id)
+            return None  # Could we revive it? ... probably not a good idea
     
     @property
     def app_name(self):
@@ -542,17 +569,17 @@ class Session(SessionAssets):
             # todo: seems weird to deal with here. implement by registring some handler?
             # Should be better when we implement a more formal protocol
             _, id, name, txt = command.split(' ', 3)
-            ob = Model._instances.get(id, None)
+            ob = self._model_instances.get(id, None)
             if ob is not None:
                 ob._set_prop_from_js(name, txt)
         elif command.startswith('SET_EVENT_TYPES '):
             _, id, txt = command.split(' ', 3)
-            ob = Model._instances.get(id, None)
+            ob = self._model_instances.get(id, None)
             if ob is not None:
                 ob._set_event_types_js(txt)
         elif command.startswith('EVENT '):
             _, id, name, txt = command.split(' ', 3)
-            ob = Model._instances.get(id, None)
+            ob = self._model_instances.get(id, None)
             if ob is not None:
                 ob._emit_from_js(name, txt)
         else:

@@ -27,8 +27,6 @@ Functions related to us Model classes as apps
 
 .. autofunction:: flexx.app.App
 
-.. autofunction:: flexx.app.get_instance_by_id
-
 .. autofunction:: flexx.app.get_model_classes
 
 .. autofunction:: flexx.app.get_active_model

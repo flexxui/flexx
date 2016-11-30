@@ -67,7 +67,6 @@ attributes and handlers can be created here.
 
 import sys
 import json
-import weakref
 import threading
 
 from .. import event
@@ -89,6 +88,7 @@ from . import logger
 # dependency of the the current module.
 from ._clientcore import serializer
 
+manager = None  # Set by __init__ to prevent circular dependencies
 
 reprs = json.dumps
 
@@ -97,17 +97,6 @@ def get_model_classes():
     """ Get a list of all known Model subclasses.
     """
     return [c for c in ModelMeta.CLASSES if issubclass(c, Model)]
-
-
-def get_instance_by_id(id):
-    """ Get instance of Model class corresponding to the given id,
-    or None if it does not exist.
-    """
-    try:
-        return Model._instances[id]
-    except KeyError:
-        logger.warn('Model instance %r does not exist in Python (anymore).' % id)
-        return None  # Could we revive it? ... probably not a good idea
 
 
 # Keep track of a stack of "active" models for use within context
@@ -146,7 +135,6 @@ def get_active_model():
     if models:
         return models[-1]
     else:
-        from ._app import manager  # noqa - circular dependency
         session = manager.get_default_session()
         if session is not None:
             return session.app
@@ -352,9 +340,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                         ...
     """
     
-    # Keep track of all instances, so we can easily collect al JS/CSS
-    _instances = weakref.WeakValueDictionary()
-    
     # CSS for this class (no css in the base class)
     CSS = ""
     
@@ -372,15 +357,12 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             if active_model is not None:
                 session = active_model.session
         if session is None:
-            raise RuntimeError('Cannot instantiate Model %r without a session'
-                               % self.id)
+            raise RuntimeError('Cannot instantiate Model %s without a session'
+                               % self.__class__.__name__)
         self._session = session
         
-        # Set id and register this instance
-        session._modelcounter += 1
-        self._id = self.__class__.__name__ + str(session._modelcounter)
-        Model._instances[self._id] = self
-        self._session.register_model_class(self.__class__)
+        # Register this model with the session. Sets the id.
+        session._register_model(self)
         
         # Get initial event connections
         event_types_py, event_types_js = [], []
@@ -435,11 +417,14 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         return "<%s object '%s' at 0x%x>" % (clsname, self._id, id(self))
     
     def __json__(self):
-        return {'__type__': 'Flexx-Model', 'id': self.id}
+        return {'__type__': 'Flexx-Model',
+                'session_id': self.session.id,
+                'id': self.id}
     
     @staticmethod
     def __from_json__(dct):
-        return get_instance_by_id(dct['id'])
+        session = manager.get_session_by_id(dct['session_id'])
+        return session.get_model_instance_by_id(dct['id'])
     
     def __enter__(self):
         # Note that __exit__ is guaranteed to be called, so there is
@@ -594,10 +579,12 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
     class JS:
         
         def __json__(self):
-            return {'__type__': 'Flexx-Model', 'id': self.id}
+            return {'__type__': 'Flexx-Model',
+                    'id': self.id,
+                    'session_id': window.flexx.session_id}
         
         def __from_json__(dct):
-            return window.flexx.instances[dct.id]
+            return window.flexx.instances[dct.id]  # one session per page, atm
         
         def __init__(self, id, py_events=None, py_known_events=None):
             
