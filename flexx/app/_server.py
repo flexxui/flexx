@@ -1,8 +1,13 @@
-# There is always a single current server (except initially there is None)
+"""
+High level code related to the server that provides a mainloop and
+serves the pages and websocket. Also provides call_later().
+"""
 
 from ..event import _loop
 from .. import config
 
+
+# There is always a single current server (except initially there is None)
 _current_server = None
 
 
@@ -49,6 +54,7 @@ def create_server(host=None, port=None, new_loop=False, backend='tornado'):
         _current_server.close()
     # Start hosting
     _current_server = TornadoServer(host, port, new_loop)
+    assert isinstance(_current_server, AbstractServer)
     # Schedule pending calls
     _current_server.call_later(0, _loop.loop.iter)
     while _pending_call_laters:
@@ -96,3 +102,75 @@ _pending_call_laters = []
 
 # Integrate the "event-loop" of flexx.event
 _loop.loop.integrate(lambda f: call_later(0, f))
+
+
+## Server class
+
+
+class AbstractServer:
+    """ This is an attempt to generalize the server, so that in the
+    future we may have e.g. a Flask or Pyramid server.
+    
+    A server must implement this, and use the manager to instantiate,
+    connect and disconnect sessions. The assets object must be used to
+    server assets to the client.
+    
+    Arguments:
+        host (str): the hostname to serve at
+        port (int): the port to serve at. None or 0 mean to autoselect a port.
+    """
+    
+    def __init__(self, host, port):
+        self._serving = None
+        if host is not False:
+            self._open(host, port)
+            assert self._serving  # Check that subclass set private variable
+        self._running = False
+    
+    def start(self):
+        """ Start the event loop. """
+        if not self._serving:
+            raise RuntimeError('Cannot start a closed or non-serving server!')
+        if self._running:
+            raise RuntimeError('Cannot start a running server.')
+        self._running = True
+        try:
+            self._start()
+        finally:
+            self._running = False
+    
+    def stop(self):
+        """ Stop the event loop. This does not close the connection; the server
+        can be restarted. Thread safe. """
+        self.call_later(0, self._stop)
+    
+    def close(self):
+        """ Close the connection. A closed server cannot be used again. """
+        if self._running:
+            raise RuntimeError('Cannot close a running server; need to stop first.')
+        self._serving = None
+        self._close()
+    
+    def _open(self, host, port):
+        raise NotImplementedError()
+    
+    def _start(self):
+        raise NotImplementedError()
+    
+    def _stop(self):
+        raise NotImplementedError()
+    
+    def _close(self):
+        raise NotImplementedError()
+    
+    # This method must be implemented directly for performance (its used a lot)
+    def call_later(self, delay, callback, *args, **kwargs):
+        """ Call a function in a later event loop iteration. """
+        raise NotImplementedError()
+    
+    @property
+    def serving(self):
+        """ Get a tuple (hostname, port) that is being served.
+        Or None if the server is not serving (anymore).
+        """
+        return self._serving

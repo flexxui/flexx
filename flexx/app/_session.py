@@ -1,5 +1,5 @@
 """
-Definition of App class and the app manager.
+Definition of the Session class.
 """
 
 import time

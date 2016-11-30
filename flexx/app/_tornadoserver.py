@@ -1,6 +1,5 @@
 """
-Serve web page and handle web sockets. Uses Tornado, though this
-can be generalized.
+Serve web page and handle web sockets using Tornado.
 """
 
 import json
@@ -19,6 +18,7 @@ from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketHandler
 from tornado.httpserver import HTTPServer
 
+from ._server import AbstractServer
 from ._app import manager
 from ._assetstore import assets
 from . import logger
@@ -39,75 +39,6 @@ IMPORT_TIME = time.time()
 def is_main_thread():
     """ Get whether this is the main thread. """
     return isinstance(threading.current_thread(), threading._MainThread)
-
-
-class AbstractServer:
-    """ This is an attempt to generalize the server, so that in the
-    future we may have e.g. a Flask or Pyramid server.
-    
-    A server must implement this, and use the manager to instantiate,
-    connect and disconnect sessions. The assets object must be used to
-    server assets to the client.
-    
-    Arguments:
-        host (str): the hostname to serve at
-        port (int): the port to serve at. None or 0 mean to autoselect a port.
-    """
-    
-    def __init__(self, host, port):
-        self._serving = None
-        if host is not False:
-            self._open(host, port)
-            assert self._serving  # Check that subclass set private variable
-        self._running = False
-    
-    def start(self):
-        """ Start the event loop. """
-        if not self._serving:
-            raise RuntimeError('Cannot start a closed or non-serving server!')
-        if self._running:
-            raise RuntimeError('Cannot start a running server.')
-        self._running = True
-        try:
-            self._start()
-        finally:
-            self._running = False
-    
-    def stop(self):
-        """ Stop the event loop. This does not close the connection; the server
-        can be restarted. Thread safe. """
-        self.call_later(0, self._stop)
-    
-    def close(self):
-        """ Close the connection. A closed server cannot be used again. """
-        if self._running:
-            raise RuntimeError('Cannot close a running server; need to stop first.')
-        self._serving = None
-        self._close()
-    
-    def _open(self, host, port):
-        raise NotImplementedError()
-    
-    def _start(self):
-        raise NotImplementedError()
-    
-    def _stop(self):
-        raise NotImplementedError()
-    
-    def _close(self):
-        raise NotImplementedError()
-    
-    # This method must be implemented directly for performance (its used a lot)
-    def call_later(self, delay, callback, *args, **kwargs):
-        """ Call a function in a later event loop iteration. """
-        raise NotImplementedError()
-    
-    @property
-    def serving(self):
-        """ Get a tuple (hostname, port) that is being served.
-        Or None if the server is not serving (anymore).
-        """
-        return self._serving
 
 
 class TornadoServer(AbstractServer):

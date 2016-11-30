@@ -1,5 +1,5 @@
 """
-Flexx asset and data management system. The purpose of these classes
+Flexx asset and data management system. The purpose of this class
 is to provide the assets (JavaScript and CSS files) and data (images,
 etc.) needed by the applications.
 """
