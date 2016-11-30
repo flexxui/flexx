@@ -77,7 +77,8 @@ from ..event._emitters import Emitter
 from ..event._js import create_js_hasevents_class, HasEventsJS
 from ..pyscript import js_rename, window, JSString
 
-from .asset import get_mod_name
+from ._asset import get_mod_name
+from ._server import call_later
 from . import logger
 
 # The clientcore module is a PyScript module that forms the core of the
@@ -86,12 +87,10 @@ from . import logger
 # corresponding instance from the module that's being used.
 # By using something from clientcore in JS here, we make clientcore a
 # dependency of the the current module.
-from .clientcore import serializer
+from ._clientcore import serializer
 
 
 reprs = json.dumps
-
-call_later = None  # reset in func.py to deal with circular dependency
 
 
 def get_model_classes():
@@ -119,8 +118,8 @@ _active_models_per_thread = {}  # dict of threadid -> list
 
 def _get_active_models():
     """ Get list that represents the stack of "active" models.
-    Each thread has its own stack. Should only be used inside a Model
-    context manager.
+    Each thread has its own stack. Should only be used directly inside
+    a Model context manager.
     """
     # Get thread id
     if hasattr(threading, 'current_thread'):
@@ -129,6 +128,13 @@ def _get_active_models():
         tid = id(threading.currentThread())
     # Get list of parents for this thread
     return _active_models_per_thread.setdefault(tid, [])
+
+
+def get_get_active_models():
+    """ Get a tuple of Model instance that represent the stack of "active"
+    models. Each thread has its own stack. Also see get_active_model().
+    """
+    return tuple(_get_active_models())
 
 
 def get_active_model():
@@ -140,7 +146,7 @@ def get_active_model():
     if models:
         return models[-1]
     else:
-        from .session import manager
+        from ._app import manager  # noqa - circular dependency
         session = manager.get_default_session()
         if session is not None:
             return session.app

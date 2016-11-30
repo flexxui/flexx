@@ -207,7 +207,7 @@ Overview of classes:
 * Server: handles http requests. Uses manager to create new app
   instances or get the page for a pending session. Hosts assets by using
   the global asset store.
-* Flexx class (in clientcore.py): more or less the JS side of a session.
+* Flexx class (in _clientcore.py): more or less the JS side of a session.
 
 """
 
@@ -216,10 +216,15 @@ logger = logging.getLogger(__name__)
 del logging
 
 # flake8: noqa
-from .clientcore import serializer
-from .session import manager, Session
-from .model import Model, get_active_model
-from .model import get_instance_by_id, get_model_classes
-from .funcs import create_server, current_server, run, start, stop, call_later
-from .funcs import init_interactive, init_notebook, App, serve, launch, export
-from .assetstore import assets, Asset, Bundle, JSModule
+from ._app import App, manager
+from ._asset import Asset, Bundle
+from ._model import Model, get_active_model, get_get_active_models
+from ._model import get_instance_by_id, get_model_classes
+from ._funcs import run, start, stop
+from ._funcs import init_interactive, init_notebook, serve, launch, export
+from ._server import call_later, create_server, current_server
+from ._session import Session
+from ._modules import JSModule
+from ._assetstore import assets
+from ._clientcore import serializer
+from . import _tornadoserver  # import excplicitly to help tools like cx_Freeze

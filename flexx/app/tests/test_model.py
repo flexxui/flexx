@@ -8,7 +8,7 @@ import gc
 import logging
 import tornado
 
-from flexx.app.model import Model, _get_active_models
+from flexx.app._model import Model, _get_active_models
 from flexx import event, app
 
 class Foo1(Model):

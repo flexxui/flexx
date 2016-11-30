@@ -11,8 +11,8 @@ import types
 
 from ..pyscript import py2js, RawJS, JSConstant, create_js_module, get_all_std_names
 
-from .model import Model
-from .asset import Asset, get_mod_name, module_is_package
+from ._model import Model
+from ._asset import Asset, get_mod_name, module_is_package
 from . import logger
 
 

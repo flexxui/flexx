@@ -247,7 +247,7 @@ class Bundle(Asset):
         deps = set()
         module_deps = m.deps
         if ext == '.js':
-            module_deps.add('flexx.app.clientcore')
+            module_deps.add('flexx.app._clientcore')
         for dep in module_deps:
             while '.' in dep:
                 deps.add(dep)
