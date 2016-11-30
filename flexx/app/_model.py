@@ -78,6 +78,7 @@ from ..event._js import create_js_hasevents_class, HasEventsJS
 from ..pyscript import js_rename, window, JSString
 
 from ._asset import get_mod_name
+from ._server import call_later
 from . import logger
 
 # The clientcore module is a PyScript module that forms the core of the
@@ -90,8 +91,6 @@ from ._clientcore import serializer
 
 
 reprs = json.dumps
-
-call_later = None  # reset in func.py to deal with circular dependency
 
 
 def get_model_classes():
@@ -140,7 +139,7 @@ def get_active_model():
     if models:
         return models[-1]
     else:
-        from ._session import manager
+        from ._app import manager  # noqa - circular dependency
         session = manager.get_default_session()
         if session is not None:
             return session.app

@@ -12,14 +12,14 @@ import threading
 from urllib.parse import urlparse
 # from concurrent.futures import ThreadPoolExecutor
 
-import tornado.web
-import tornado.websocket
-import tornado.httpserver
+import tornado
+from tornado import gen, netutil
+from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
-from tornado import gen
-from tornado import netutil
+from tornado.websocket import WebSocketHandler
+from tornado.httpserver import HTTPServer
 
-from ._session import manager
+from ._app import manager
 from ._assetstore import assets
 from . import logger
 from .. import config
@@ -136,11 +136,11 @@ class TornadoServer(AbstractServer):
         # run Flexx in e.g. JLab's application.
         
         # Create tornado application
-        self._app = tornado.web.Application([(r"/flexx/ws/(.*)", WSHandler),
-                                             (r"/flexx/(.*)", MainHandler),
-                                             (r"/(.*)", AppHandler), ])
+        self._app = Application([(r"/flexx/ws/(.*)", WSHandler),
+                                 (r"/flexx/(.*)", MainHandler),
+                                 (r"/(.*)", AppHandler), ])
         # Create tornado server, bound to our own ioloop
-        self._server = tornado.httpserver.HTTPServer(self._app, io_loop=self._loop)
+        self._server = HTTPServer(self._app, io_loop=self._loop)
         
         # Start server (find free port number if port not given)
         if port:
@@ -240,7 +240,7 @@ def port_hash(name):
     return 49152 + (val % 2**14)
 
 
-class FlexxHandler(tornado.web.RequestHandler):
+class FlexxHandler(RequestHandler):
     """ Base class for Flexx' Tornado request handlers.
     """
     
@@ -356,7 +356,7 @@ class AppHandler(FlexxHandler):
             self.write(session.get_page().encode())
 
 
-class MainHandler(tornado.web.RequestHandler):
+class MainHandler(RequestHandler):
     """ Handler for assets, commands, etc. Basically, everything for
     which te path is clear.
     """
@@ -544,7 +544,7 @@ class MessageCounter:
         self._stop = True
 
 
-class WSHandler(tornado.websocket.WebSocketHandler):
+class WSHandler(WebSocketHandler):
     """ Handler for websocket.
     """
     
@@ -703,9 +703,9 @@ class WSHandler(tornado.websocket.WebSocketHandler):
     
     def close(self, *args):
         try:
-            tornado.websocket.WebSocketHandler.close(self, *args)
+            WebSocketHandler.close(self, *args)
         except TypeError:
-            tornado.websocket.WebSocketHandler.close(self)  # older Tornado
+            WebSocketHandler.close(self)  # older Tornado
     
     def close_this(self):
         """ Call this to close the websocket

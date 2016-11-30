@@ -2,89 +2,19 @@
 Functional API for flexx.app
 """
 
-import os
 import sys
 import json
 
 from .. import webruntime, config, set_log_level
 
-from . import _model, logger
+from ._app import App, manager
 from ._model import Model
-from ._session import manager
-from ._assetstore import assets
-from ._tornadoserver import TornadoServer
-from ..event import _loop
+from ._server import current_server
+from . import logger
 
 reprs = json.dumps
 
 ## Main loop functions
-
-
-# There is always a single current server (except initially there is None)
-_current_server = None
-
-
-def create_server(host=None, port=None, new_loop=False, backend='tornado'):
-    """
-    Create a new server object. This is automatically called; users generally
-    don't need this, unless they want to explicitly specify host/port,
-    create a fresh server in testing scenarios, or run Flexx in a thread.
-    
-    Flexx uses a notion of a single current server object. This function
-    (re)creates that object. If there already was a server object, it is
-    replaced. It is an error to call this function if the current server
-    is still running.
-    
-    Arguments:
-        host (str): The hostname to serve on. By default
-            ``flexx.config.hostname`` is used. If ``False``, do not listen
-            (e.g. when integrating with an existing Tornado application).
-        port (int, str): The port number. If a string is given, it is
-            hashed to an ephemeral port number. By default
-            ``flexx.config.port`` is used.
-        new_loop (bool): Whether to create a fresh Tornado IOLoop instance,
-            which is made current when ``start()`` is called. If ``False``
-            (default) will use the current IOLoop for this thread.
-        backend (str): Stub argument; only Tornado is currently supported.
-    
-    Returns:
-        server: The server object, see ``current_server()``.
-    """
-    global _current_server
-    if backend.lower() != 'tornado':
-        raise RuntimeError('Flexx server can only run on Tornado (for now).')
-    # Handle defaults
-    if host is None:
-        host = config.hostname
-    if port is None:
-        port = config.port
-    # Stop old server
-    if _current_server:
-        _current_server.close()
-    # Start hosting
-    _current_server = TornadoServer(host, port, new_loop)
-    # Schedule pending calls
-    _current_server.call_later(0, _loop.loop.iter)
-    while _pending_call_laters:
-        delay, callback, args, kwargs = _pending_call_laters.pop(0)
-        call_later(delay, callback, *args, **kwargs)
-    return _current_server
-
-
-def current_server():
-    """
-    Get the current server object. Creates a server if there is none.
-    Currently, this is always a TornadoServer object, which has properties:
-    
-    * serving: a tuple ``(hostname, port)`` specifying the location
-      being served (or ``None`` if the server is closed).
-    * app: the ``tornado.web.Application`` instance
-    * loop: the ``tornado.ioloop.IOLoop`` instance
-    * server: the ``tornado.httpserver.HttpServer`` instance
-    """
-    if not _current_server:
-        create_server()
-    return _current_server
 
 
 def start():
@@ -118,34 +48,6 @@ def stop():
     """
     server = current_server()
     server.stop()
-
-
-def call_later(delay, callback, *args, **kwargs):
-    """
-    Schedule a function call in the current event loop. This function is
-    thread safe.
-    
-    Arguments:
-        delay (float): the delay in seconds. If zero, the callback will
-            be executed in the next event loop iteration.
-        callback (callable): the function to call.
-        args: the positional arguments to call the callback with.
-        kwargs: the keyword arguments to call the callback with.
-    """
-    if not _current_server:
-        _pending_call_laters.append((delay, callback, args, kwargs))
-        return
-    server = current_server()
-    server.call_later(delay, callback, *args, **kwargs)
-
-
-# Work around circular dependency
-_model.call_later = call_later
-
-_pending_call_laters = []
-
-# Integrate the "event-loop" of flexx.event
-_loop.loop.integrate(lambda f: call_later(0, f))
 
 
 @manager.connect('connections_changed')
@@ -194,190 +96,6 @@ def init_interactive(cls=None, runtime=None):
     url = '%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id)
     session._runtime = launch('http://' + url, runtime=runtime)
     
-
-class App:
-    """ Specification of a Flexx class.
-    
-    In the strict sense, this is a container for a Model class plus the
-    args and kwargs that it is to be instantiated with.
-    
-    Arguments:
-        cls (Model): the Model class (or Widget) that represents this app.
-        args: positional arguments used to instantiate the class (and received
-            in its ``init()`` method).
-        kwargs: keyword arguments used to initialize the model's properties.
-    """
-    
-    def __init__(self, cls, *args, **kwargs):
-        if not isinstance(cls, type) and issubclass(type, Model):
-            raise ValueError('App needs a Model class as its first argument.')
-        self._cls = cls
-        self.args = args
-        self.kwargs = kwargs
-        self._path = cls.__name__  # can be overloaded by serve()
-        self._is_served = False
-    
-    def __call__(self, *args, **kwargs):
-        a = list(self.args) + list(args)
-        kw = {}
-        kw.update(self.kwargs)
-        kw.update(kwargs)
-        return self.cls(*a, **kw)
-    
-    def __repr__(self):
-        t = '<App based on class %s pre-initialized with %i args and %i kwargs>'
-        return t % (self.cls.__name__, len(self.args), len(self.kwargs))
-    
-    @property
-    def cls(self):
-        """ The Model class that is the basis of this app.
-        """
-        return self._cls
-    
-    @property
-    def is_served(self):
-        """ Whether this app is already registered by the app manager.
-        """
-        return self._is_served
-    
-    @property
-    def url(self):
-        """ The url to acces this app. This raises an error if serve() has not
-        been called yet or if Flexx' server is not yet running.
-        """
-        if not self._is_served:
-            raise RuntimeError('Cannot determine app url if app is not yet "served".')
-        elif not (_current_server and _current_server.serving):
-            raise RuntimeError('Cannot determine app url if the server is not '
-                               'yet running.')
-        else:
-            host, port = _current_server.serving
-            return 'http://%s:%i/%s/' % (host, port, self._path)
-    
-    @property
-    def name(self):
-        """ The name of the app, i.e. the url path that this app is served at.
-        """
-        return self._path or '__main__'
-    
-    def serve(self, name=None):
-        """ Start serving this app.
-        
-        This registers the given class with the internal app manager. The
-        app can be loaded via 'http://hostname:port/app_name'.
-        
-        Arguments:
-            name (str, optional): the relative URL path to serve the app on.
-                If this is ``''`` (the empty string), this will be the main app.
-        """
-        # Note: this talks to the manager; it has nothing to do with the server
-        if self._is_served:
-            raise RuntimeError('This app (%s) is already served.' % self.name)
-        if name is not None:
-            self._path = name
-        manager.register_app(self)
-        self._is_served = True
-    
-    def launch(self, runtime=None, **runtime_kwargs):
-        """ Launch this app as a desktop app in the given runtime.
-        
-        Arguments:
-            runtime (str): the runtime to launch the application in. Default 'xul'.
-            runtime_kwargs: kwargs to pass to the ``webruntime.launch`` function.
-        
-        Returns:
-            app (Model): an instance of the given class.
-        """
-        # Create session
-        if not self._is_served:
-            self.serve()
-        session = manager.create_session(self.name)
-        
-        # Launch web runtime, the server will wait for the connection
-        current_server()  # creates server if it did not yet exist
-        if runtime == 'nodejs':
-            js_assets, _ = session.get_assets_in_order()
-            all_js = '\n\n'.join([asset.to_string() for asset in js_assets])
-            session._runtime = launch(self.url, runtime=runtime, code=all_js)
-        else:
-            url = self.url + '?session_id=%s' % session.id
-            session._runtime = webruntime.launch(url,
-                                                 runtime=runtime,
-                                                 **runtime_kwargs)
-        return session.app
-    
-    def export(self, filename=None, link=None, write_shared=True):
-        """ Export the given Model class to an HTML document.
-        
-        Arguments:
-            filename (str, optional): Path to write the HTML document to.
-                If not given or None, will return the html as a string.
-            link (int): whether to link assets or embed them:
-            
-                * 0: all assets are embedded.
-                * 1: normal assets are embedded, remote assets remain remote.
-                * 2: all assets are linked (as separate files).
-                * 3: (default) normal assets are linked, remote assets remain remote.
-            write_shared (bool): if True (default) will also write shared assets
-                when linking to assets. This can be set to False when
-                exporting multiple apps to the same location. The shared assets can
-                then be exported last using ``app.assets.export(dirname)``.
-        
-        Returns:
-            html (str): The resulting html. If a filename was specified
-            this returns None.
-        
-        Notes:
-            If the given filename ends with .hta, a Windows HTML Application is
-            created.
-        """
-        
-        # Prepare name, based on exported file name (instead of cls.__name__)
-        if not self._is_served:
-            name = os.path.basename(filename).split('.')[0]
-            name = name.replace('-', '_').replace(' ', '_')
-            self.serve(name)
-        
-        # Create session with id equal to the app name. This would not be strictly
-        # necessary to make exports work, but it makes sure that exporting twice
-        # generates the exact same thing (no randomly generated dir names).
-        session = manager.create_session(self.name, self.name)
-        
-        # Make fake connection using exporter object
-        exporter = ExporterWebSocketDummy()
-        manager.connect_client(exporter, session.app_name, session.id)
-        
-        # Clean up again - NO keep in memory to ensure two sessions dont get same id
-        # manager.disconnect_client(session)
-        
-        # Warn if this app has data and is meant to be run standalone
-        if (not link) and session.get_data_names():
-            logger.warn('Exporting a standalone app, but it has registered data.')
-        
-        # Get HTML - this may be good enough
-        html = session.get_page_for_export(exporter._commands, link)
-        if filename is None:
-            return html
-        elif filename.lower().endswith('.hta'):
-            hta_tag = '<meta http-equiv="x-ua-compatible" content="ie=edge" />'
-            html = html.replace('<head>', '<head>\n    ' + hta_tag, 1)
-        elif not filename.lower().endswith(('.html', 'htm')):
-            raise ValueError('Invalid extension for exporting to %r' %
-                            os.path.basename(filename))
-        
-        # Save to file. If standalone, all assets will be included in the main html
-        # file, if not, we need to export shared assets and session assets too.
-        filename = os.path.abspath(os.path.expanduser(filename))
-        if link:
-            if write_shared:
-                assets.export(os.path.dirname(filename))
-            session._export(os.path.dirname(filename))
-        with open(filename, 'wb') as f:
-            f.write(html.encode())
-        
-        app_type = 'standalone app' if link else 'app'
-        logger.info('Exported %s to %r' % (app_type, filename))
-
 
 class NoteBookHelper:
     """ Object that captures commands send to the websocket during the
@@ -554,22 +272,3 @@ def export(cls, filename=None, properties=None, single=None, link=None,
     
     a = App(cls, **(properties or {}))
     return a.export(filename, link=link, write_shared=write_shared)
-
-
-class ExporterWebSocketDummy:
-    """ Object that can be used by an app inplace of the websocket to
-    export apps to standalone HTML. The object tracks the commands send
-    by the app, so that these can be re-played in the exported document.
-    """
-    close_code = None
-    
-    def __init__(self):
-        self._commands = []
-        self.ping_counter = 0
-        # todo: make icon and title work
-        #self.command('ICON %s.ico' % session.id)
-        # self.command('TITLE %s' % session._runtime_kwargs.get('title', 
-        #                                                       'Exported flexx app'))
-    
-    def command(self, cmd):
-        self._commands.append(cmd)

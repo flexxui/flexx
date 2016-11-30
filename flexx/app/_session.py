@@ -3,231 +3,391 @@ Definition of App class and the app manager.
 """
 
 import time
-import weakref
+import json
+import random
+import hashlib
+from urllib.request import urlopen
 
-from .. import event
+from .. import config
+
 from ._model import Model, new_type
-from ._assetstore import SessionAssets
+from ._asset import Asset, Bundle, solve_dependencies
+from ._assetstore import AssetStore, export_assets_and_data, INDEX
+from ._assetstore import assets as assetstore
 from . import logger
 
-# todo: thread safety
-
-def valid_app_name(name):
-    T = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789'
-    return name and name[0] in T[:-10] and all([c in T for c in name])
+reprs = json.dumps
 
 
-class AppManager(event.HasEvents):
-    """ Manage apps, or more specifically, the session objects.
+# Use the system PRNG for session id generation (if possible)
+# NOTE: secure random string generation implementation is adapted
+#       from the Django project. 
+
+def get_random_string(length=24, allowed_chars=None):
+    """ Produce a securely generated random string.
     
-    There is one AppManager class (in ``flexx.model.manager``). It's
-    purpose is to manage the application classes and instances. Intended
-    for internal use.
+    With a length of 12 with the a-z, A-Z, 0-9 character set returns
+    a 71-bit value. log_2((26+26+10)^12) =~ 71 bits
+    """
+    allowed_chars = allowed_chars or ('abcdefghijklmnopqrstuvwxyz' +
+                                      'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+    try:
+        srandom = random.SystemRandom()
+    except NotImplementedError:  # pragma: no cover
+        srandom = random
+        logger.warn('Falling back to less secure Mersenne Twister random string.')
+        bogus = "%s%s%s" % (random.getstate(), time.time(), 'sdkhfbsdkfbsdbhf')
+        random.seed(hashlib.sha256(bogus.encode()).digest())
+
+    return ''.join(srandom.choice(allowed_chars) for i in range(length))
+
+
+class SessionAssets:
+    """ Provider for assets of a specific session. Inherited by Session.
+    
+    The responsibility of this class is to keep track of what JSModules
+    are being used, to provide the associated bundles and assets, and to
+    dynamically define assets when needed. Further this class takes
+    care of per-session data.
     """
     
-    total_sessions = 0  # Keep track how many sessesions we've served in total
+    def __init__(self, store=None):  # Allow custom store for testing
+        self._store = store if (store is not None) else assetstore
+        assert isinstance(self._store, AssetStore)
+        
+        self._id = get_random_string()
+        self._app_name = ''
+        
+        # Keep track of all assets for this session. Assets that are provided
+        # by the asset store have a value of None.
+        self._used_classes = set()  # Model classes registered as used
+        self._used_modules = set()  # module names that define used classes, plus deps
+        self._loaded_modules = set()  # module names that were present in bundles
+        # Data for this session (in addition to the data provided by the store)
+        # todo: get rid of session assets alltogether, or is there a use-case?
+        self._assets = {}
+        self._data = {}
+        # Whether the page has been served already
+        self._served = 0
+        self._is_interactive = None
     
-    def __init__(self):
-        super().__init__()
-        # name -> (app, pending, connected) - lists contain Sessions
-        # todo: name -> app, and store connections on the app instance?
-        self._appinfo = {}
-        self._session_map = weakref.WeakValueDictionary()
-        self._last_check_time = time.time()
-    
-    def register_app(self, app):
-        """ Register an app (an object that wraps a model class plus init args).
-        After registering an app (and starting the server) it is
-        possible to connect to "http://address:port/app_name".
+    @property
+    def id(self):
+        """ The unique identifier of this session.
         """
-        from ._funcs import App  # todo: put App class and manager in separate module
-        assert isinstance(app, App)
-        name = app.name
-        if not valid_app_name(name):
-            raise ValueError('Given app does not have a valid name %r' % name)
-        pending, connected = [], []
-        if name in self._appinfo:
-            if app is not self._appinfo[name][0]:
-                logger.warn('Re-registering app class %r' % name)
-        self._appinfo[name] = app, pending, connected
+        return self._id
     
-    def create_default_session(self, cls=None):
-        """ Create a default session for interactive use (e.g. the notebook).
+    def get_data_names(self):
+        """ Get a list of names of the data provided by this session, in
+        the order that they were added.
         """
-        
-        if '__default__' in self._appinfo:
-            raise RuntimeError('The default session can only be created once.')
-        
-        session = Session('__default__')
-        self._session_map[session.id] = session
-        self._appinfo['__default__'] = (None, [session], [])
-        
-        if cls is None:
-            cls = Model
-        if not isinstance(cls, type) and issubclass(cls, Model):
-            raise TypeError('create_default_session() needs a Model subclass.')
-        
-        # Create app instance
-        # todo: wrap it in an app and set that in app_info instead of None
-        model_instance = cls(session=session, is_app=True)
-        session._set_app(model_instance)
-        
-        return session
+        return list(self._data.keys())  # Note: order matters
     
-    def get_default_session(self):
-        """ Get the default session that is used for interactive use.
-        Returns None unless create_default_session() was called.
-        
-        When a Model class is created without a session, this method
-        is called to get one (and will then fail if it's None).
+    def get_data(self, name):
+        """ Get the data corresponding to the given name. This can be
+        data local to the session, or global data. Returns None if data
+        by that name is unknown.
         """
-        x = self._appinfo.get('__default__', None)
-        if x is None:
-            return None
-        else:
-            _, pending, connected = x
-            sessions = pending + connected
-            if sessions:
-                return sessions[-1]
+        data = self._data.get(name, None)
+        if data is None:
+            data = self._store.get_data(name)
+        return data
     
-    def _clear_old_pending_sessions(self):
-        try:
+    # todo: the way that we do assets now makes me wonder whether there are better ways
+    # to deal with data handling ...
+    
+    def add_data(self, name, data):  # todo: add option to clear data after its loaded?
+        """ Add data to serve to the client (e.g. images), specific to this
+        session. Returns the link at which the data can be retrieved.
+        See ``app.assets.add_shared_data()`` to provide shared data.
+        
+        Parameters:
+            name (str): the name of the data, e.g. 'icon.png'. If data has
+                already been set on this name, it is overwritten.
+            data (bytes): the data blob. Can also be a uri to the blob
+                (string starting with "file://", "http://" or "https://").
+        """
+        if not isinstance(name, str):
+            raise TypeError('Session.add_data() name must be a str.')
+        if name in self._data:
+            raise ValueError('Session.add_data() got existing name %r.' % name)
+        if isinstance(data, str):
+            if data.startswith('file://'):
+                data = open(data.split('//', 1)[1], 'rb').read()
+            elif data.startswith(('http://', 'https://')):
+                data = urlopen(data, timeout=5.0).read()
+        if not isinstance(data, bytes):
+            raise TypeError('Session.add_data() data must be a bytes.')
+        self._data[name] = data
+        return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
+    
+    def remove_data(self, name):
+        """ Remove the data associated with the given name.
+        """
+        self._data.pop(name, None)
+    
+    def register_model_class(self, cls):
+        """ Mark the given Model class as used; ensure that the client
+        knows about it.
+        """
+        if not (isinstance(cls, type) and issubclass(cls, Model)):
+            raise ValueError('Not a Model class')
             
-            count = 0
-            for name in self._appinfo:
-                if name == '__default__':
-                    continue
-                _, pending, _ = self._appinfo[name]
-                to_remove = [s for s in pending
-                             if (time.time() - s._creation_time) > 30]
-                for s in to_remove:
-                    self._session_map.pop(s.id, None)
-                    pending.remove(s)
-                count += len(to_remove)
-            if count:
-                logger.warn('Cleared %i old pending sessions' % count)
+        # Early exit if we know the class already
+        if cls in self._used_classes:
+            return
         
-        except Exception as err:
-            logger.error('Error when clearing old pending sessions: %s' % str(err))
-    
-    def create_session(self, name, id=None):
-        """ Create a session for the app with the given name.
-        
-        Instantiate an app and matching session object corresponding
-        to the given name, and return the session. The client should
-        be connected later via connect_client().
-        """
-        # Called by the server when a client connects, and from the
-        # launch and export functions.
-        
-        if time.time() - self._last_check_time > 5:
-            self._last_check_time = time.time()
-            self._clear_old_pending_sessions()
-        
-        if name == '__default__':
-            raise RuntimeError('There can be only one __default__ session.')
-        elif name not in self._appinfo:
-            raise ValueError('Can only instantiate a session with a valid app name.')
-        
-        app, pending, connected = self._appinfo[name]
-        
-        # Session and app class need each-other, thus the _set_app()
-        session = Session(name)
-        if id is not None:
-            session._id = id  # used by app.export
-        self._session_map[session.id] = session
-        model_instance = app(session=session, is_app=True)
-        session._set_app(model_instance)  # todo: or just app?
-        
-        # Now wait for the client to connect. The client will be served
-        # a page that contains the session_id. Upon connecting, the id
-        # will be communicated, so it connects to the correct session.
-        pending.append(session)
-        
-        logger.debug('Instantiate app client %s' % session.app_name)
-        return session
-    
-    def connect_client(self, ws, name, session_id):
-        """ Connect a client to a session that was previously created.
-        """
-        _, pending, connected = self._appinfo[name]
-        
-        # Search for the session with the specific id
-        for session in pending:
-            if session.id == session_id:
-                pending.remove(session)
+        # Make sure the base classes are registered first
+        for cls2 in cls.mro()[1:]:
+            if not issubclass(cls2, Model):  # True if cls2 is *the* Model class
                 break
-        else:
-            raise RuntimeError('Asked for session id %r, but could not find it' %
-                               session_id)
-    
-        # Add app to connected, set ws
-        assert session.status == Session.STATUS.PENDING
-        logger.info('New session %s %s' %(name, session_id))
-        session._set_ws(ws)
-        connected.append(session)
-        AppManager.total_sessions += 1
-        self.connections_changed(session.app_name)
-        return session  # For the ws
-    
-    def disconnect_client(self, session):
-        """ Close a connection to a client.
+            if cls2 not in self._used_classes:
+                self.register_model_class(cls2)
         
-        This is called by the websocket when the connection is closed.
-        The manager will remove the session from the list of connected
-        instances.
-        """
-        if session.app_name == '__default__':
-            logger.info('Default session lost connection to client.')
-            return  # The default session awaits a re-connect
+        # Ensure interactive flag - e.g. for in the notebook
+        if self._is_interactive is None:
+            self._is_interactive = self._app_name == '__default__'
         
-        _, pending, connected = self._appinfo[session.app_name]
-        try:
-            connected.remove(session)
-        except ValueError:
-            pass
-        logger.info('Session closed %s %s' %(session.app_name, session.id))
-        session.close()
-        self.connections_changed(session.app_name)
+        # Make sure that no two models have the same name, or we get problems
+        # that are difficult to debug. Unless classes are defined in the notebook.
+        same_name = [c for c in self._used_classes if c.__name__ == cls.__name__]
+        if same_name:
+            same_name.append(cls)
+            is_dynamic_cls = all([c.__module__ == '__main__' for c in same_name])
+            if not (self._is_interactive and is_dynamic_cls):
+                raise RuntimeError('Cannot have multiple Model classes with the same '
+                                   'name unless using interactive session and the '
+                                   'classes are dynamically defined: %r' % same_name)
+        
+        # Mark the class and the module as used
+        logger.debug('Registering Model class %r' % cls.__name__)
+        self._used_classes.add(cls)
+        self._store.update_modules(cls)  # Update module definition
+        self._register_module(cls.__jsmodule__)
     
-    def has_app_name(self, name):
-        """ Returns the case-corrected name if the given name matches
-        a registered appliciation (case insensitive). Returns None if the
-        given name does not match any applications.
+    def _register_module(self, mod_name):
+        """ Mark a module (and its dependencies) as used. If the page is
+        already served, will inject the module dynamically.
         """
-        name = name.lower()
-        for key in self._appinfo.keys():
-            if key.lower() == name:
-                return key
+        
+        if not self._served:
+            # Not served yet, register asset as used so we can serve it later
+            if mod_name not in self._used_modules:
+                self._used_modules.add(mod_name)
+                mod = self._store.modules[mod_name]
+                for dep in mod.deps:
+                    self._register_module(dep)
+        
         else:
-            return None
+            # Already served, we might need to load dynamically. We simply
+            # check whether a module is new or has changed since its source
+            # was last obtained. E.g. it could be that its a new class for 
+            # this session, but that it was loaded as part of the bundle.
+            mod = self._store.modules[mod_name]
+            modules = [m for m in self._store.modules.values()
+                       if m.name not in self._loaded_modules or
+                       m.changed_time >= self._served]
+            modules = solve_dependencies(modules)  # sort based on deps
+            if modules:
+                # Bundles - the dash makes this bundle have an empty "module name"
+                js_asset = Bundle('-extra.js')
+                css_asset = Bundle('-extra.css')
+                for mod in modules:
+                    js_asset.add_module(mod)
+                    css_asset.add_module(mod)
+                # Load assets of modules that were not yet used
+                for mod in modules:
+                    if mod.name not in self._used_modules:
+                        for asset in self._store.get_associated_assets(mod.name):
+                            self._inject_asset_dynamically(asset)
+                # Load bundles
+                self._inject_asset_dynamically(css_asset)
+                self._inject_asset_dynamically(js_asset)
+                # Mark the modules as used and loaded
+                for mod in modules:
+                    self._used_modules.add(mod.name)
     
-    def get_app_names(self):
-        """ Get a list of registered application names.
+    def _inject_asset_dynamically(self, asset):
+        """ Load an asset in a running session.
+        This method assumes that this is a Session class.
         """
-        return [name for name in sorted(self._appinfo.keys())]
+        logger.debug('Dynamically loading asset %r' % asset.name)
+        
+        in_notebook = (self._is_interactive and
+                       getattr(self, 'init_notebook_done', False))
+        
+        if in_notebook:
+            # Load using IPython constructs
+            from IPython.display import display, HTML
+            if asset.name.lower().endswith('.js'):
+                display(HTML("<script>%s</script>" % asset.to_string()))
+            else:
+                display(HTML("<style>%s</style>" % asset.to_string()))
+        else:
+            # Load using Flexx construct (using Session._send_command())
+            suffix = asset.name.split('.')[-1].upper()
+            self._send_command('DEFINE-%s %s' % (suffix, asset.to_string()))
     
-    def get_session_by_id(self, id):
-        """ Get session object by its id
+    def get_assets_in_order(self, css_reset=False, load_all=None, bundle_level=None):
+        """ Get two lists containing the JS assets and CSS assets,
+        respectively. The assets contain bundles corresponding to all modules
+        being used (and their dependencies). The order of bundles is based on
+        the dependency resolution. The order of other assets is based on the
+        order in which assets were instantiated. Special assets are added, such
+        as the CSS reset and the JS module loader.
+        
+        After this function gets called, it is assumed that the assets have
+        been served and that future asset loads should be done dynamically.
         """
-        return self._session_map.get(id, None)
+        
+        # Make store aware of everything that we know now
+        self._store.update_modules()
+        
+        if load_all is None:
+            load_all = config.bundle_all
+        if load_all:
+            modules_to_load = self._store.modules.keys()  # e.g. notebook
+        else:
+            modules_to_load = self._used_modules
+        
+        # Get bundle names that contain all the used modules. We use
+        # bundledversions, which means that we load more modules than
+        # we use. In this step we can make a lot of choices with regard
+        # to how much modules we want to pack in a bundle. We could use
+        # a different depth per branch, we could create session-specific
+        # bundles, we could allow users to define a bundle, etc. For
+        # now, we just truncate at a certain level.
+        # todo: this could be configurable, e.g. 99 for dev, 1 for prod
+        level = max(1, bundle_level or 2)
+        bundle_names = set()
+        for mod_name in modules_to_load:
+            bundle_names.add('.'.join(mod_name.split('.')[:level]))
+        
+        # Get bundles
+        js_assets = [self._store.get_asset(b + '.js') for b in bundle_names]
+        css_assets = [self._store.get_asset(b + '.css') for b in bundle_names]
+        
+        # Get loaded modules
+        for asset in js_assets:
+            self._loaded_modules.update([m.name for m in asset.modules])
+        
+        # Sort bundles by name and dependency resolution
+        f = lambda m: (m.name.startswith('__main__'), m.name)
+        js_assets = solve_dependencies(sorted(js_assets, key=f))
+        css_assets = solve_dependencies(sorted(css_assets, key=f))
+        
+        # Filter out empty css bundles
+        css_assets = [asset for asset in css_assets
+                      if any([m.get_css().strip() for m in asset.modules])]
+        
+        # Collect non-module assets
+        # Assets only get included if they are in a module that is *used*.
+        asset_deps_before = set()
+        # asset_deps_after = set()
+        for mod_name in self._used_modules:
+            asset_deps_before.update(self._store.get_associated_assets(mod_name))
+        
+        # Push assets in the lists (sorted by the creation time)
+        f = lambda a: a.i
+        for asset in reversed(sorted(asset_deps_before, key=f)):
+            if asset.name.lower().endswith('.js'):
+                js_assets.insert(0, asset)
+            else:
+                css_assets.insert(0, asset)
+       
+        # Mark all assets as used. For now, we only use assets that are available
+        # in the asset store.
+        for asset in js_assets + css_assets:
+            self._assets[asset.name] = None
+        
+        
+        # Prepend reset.css
+        if css_reset:
+            css_assets.insert(0, self._store.get_asset('reset.css'))
+        
+        # Prepend flexx-info, module loader, and pyscript std
+        js_assets.insert(0, self._store.get_asset('pyscript-std.js'))
+        js_assets.insert(0, self._store.get_asset('flexx-loader.js'))
+        t = 'var flexx = {app_name: "%s", session_id: "%s"};'
+        js_assets.insert(0, Asset('flexx-info.js', t % (self._app_name, self.id)))
+        
+        # Mark this session as served; all future asset loads are dynamic
+        self._served = time.time()
+        
+        # todo: fix incorrect order; loader should be able to handle it for JS
+        #import random
+        #random.shuffle(js_assets)
+        
+        return js_assets, css_assets
     
-    def get_connections(self, name):
-        """ Given an app name, return the session connected objects.
+    def get_page(self, link=3):
+        """ Get the string for the HTML page to render this session's app.
         """
-        _, pending, connected = self._appinfo[name]
-        return list(connected)
+        js_assets, css_assets = self.get_assets_in_order(True)
+        for asset in js_assets + css_assets:
+            if asset.remote and asset.source.startswith('file://'):
+                raise RuntimeError('Can only use remote assets with "file://" '
+                                   'when exporting.')
+        return self._get_page(js_assets, css_assets, link, False)
     
-    @event.emitter
-    def connections_changed(self, name):
-        """ Emits an event with the name of the app for which a
-        connection is added or removed.
+    def get_page_for_export(self, commands, link=0):
+        """ Get the string for an exported HTML page (to run without a server).
         """
-        return {name: str(name)}
-
-
-# Create global app manager object
-manager = AppManager()
+        # Create lines to init app
+        lines = []
+        lines.append('flexx.is_exported = true;\n')
+        lines.append('flexx.runExportedApp = function () {')
+        lines.extend(['    flexx.command(%s);' % reprs(c) for c in commands])
+        lines.append('};\n')
+        # Create a session asset for it, "-export.js" is always embedded
+        export_asset = Asset('flexx-export.js', '\n'.join(lines))
+        # Compose
+        bundle_level = 2 if (link >= 2) else 9
+        js_assets, css_assets = self.get_assets_in_order(css_reset=True,
+                                                         bundle_level=bundle_level)
+        js_assets.append(export_asset)
+        return self._get_page(js_assets, css_assets, link, True)
+    
+    def _get_page(self, js_assets, css_assets, link, export):
+        """ Compose index page.
+        """
+        pre_path = '_assets' if export else '/flexx/assets'
+        
+        codes = []
+        for assets in [css_assets, js_assets]:
+            for asset in assets:
+                if not link:
+                    html = asset.to_html('{}', link)
+                else:
+                    if asset.name.endswith(('-info.js', '-export.js')):
+                        html = asset.to_html('', 0)
+                    elif self._store.get_asset(asset.name) is not asset:
+                        html = asset.to_html(pre_path + '/%s/{}' % self.id, link)
+                    else:
+                        html = asset.to_html(pre_path + '/shared/{}', link)
+                codes.append(html)
+            codes.append('')  # whitespace between css and js assets
+        
+        src = INDEX
+        if not link:
+            asset_names = [a.name for a in css_assets + js_assets]
+            toc = '<!-- Contents:\n\n- ' + '\n- '.join(asset_names) + '\n\n-->'
+            codes.insert(0, toc)
+            src = src.replace('ASSET-HOOK', '\n\n\n'.join(codes))
+        else:
+            src = src.replace('ASSET-HOOK', '\n'.join(codes))
+        
+        return src
+    
+    def _export(self, dirname, clear=False):
+        """ Export all assets and data specific to this session.
+        Private method, used by app.export().
+        """
+        # Note that self.id will have been set to the app name.
+        assets = []
+        data = [(name, self.get_data(name)) for name in self.get_data_names()]
+        export_assets_and_data(assets, data, dirname, self.id, clear)
+        logger.info('Exported assets and data for %r to %r.' % (self.id, dirname))
 
 
 class Session(SessionAssets):

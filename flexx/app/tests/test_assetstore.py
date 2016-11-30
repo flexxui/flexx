@@ -11,7 +11,8 @@ import shutil
 
 from flexx.util.testing import run_tests_if_main, raises
 
-from flexx.app._assetstore import assets, AssetStore, SessionAssets
+from flexx.app._assetstore import assets, AssetStore
+from flexx.app._session import SessionAssets
 
 from flexx import ui, app
 

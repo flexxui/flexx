@@ -4,7 +4,8 @@ from flexx.util.testing import run_tests_if_main, raises
 from flexx.util.logging import capture_log
 
 from flexx import app
-from flexx.app._assetstore import AssetStore, SessionAssets
+from flexx.app._assetstore import AssetStore
+from flexx.app._session import SessionAssets
 
 
 class FakeModule:

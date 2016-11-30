@@ -217,9 +217,13 @@ del logging
 
 # flake8: noqa
 from ._clientcore import serializer
-from ._session import manager, Session
+from ._app import App, manager
+from ._session import Session
 from ._model import Model, get_active_model
 from ._model import get_instance_by_id, get_model_classes
-from ._funcs import create_server, current_server, run, start, stop, call_later
-from ._funcs import init_interactive, init_notebook, App, serve, launch, export
-from ._assetstore import assets, Asset, Bundle, JSModule
+from ._funcs import run, start, stop
+from ._funcs import init_interactive, init_notebook, serve, launch, export
+from ._server import call_later, create_server, current_server
+from ._assetstore import assets
+from ._modules import JSModule
+from ._asset import Asset, Bundle
