@@ -32,6 +32,10 @@ def create_server(host=None, port=None, new_loop=False, backend='tornado'):
     Returns:
         server: The server object, see ``current_server()``.
     """
+    # Lazy load tornado, so that we can use anything we want there without
+    # preventing other parts of flexx.app from using *this* module.
+    from ._tornadoserver import TornadoServer  # noqa - circular dependency
+    
     global _current_server
     if backend.lower() != 'tornado':
         raise RuntimeError('Flexx server can only run on Tornado (for now).')
@@ -44,7 +48,6 @@ def create_server(host=None, port=None, new_loop=False, backend='tornado'):
     if _current_server:
         _current_server.close()
     # Start hosting
-    from ._tornadoserver import TornadoServer  # noqa - circular dependency
     _current_server = TornadoServer(host, port, new_loop)
     # Schedule pending calls
     _current_server.call_later(0, _loop.loop.iter)
@@ -56,8 +59,9 @@ def create_server(host=None, port=None, new_loop=False, backend='tornado'):
 
 def current_server(create=True):
     """
-    Get the current server object. Creates a server if there is none.
-    Currently, this is always a TornadoServer object, which has properties:
+    Get the current server object. Creates a server if there is none
+    and the ``create`` arg is True. Currently, this is always a
+    TornadoServer object, which has properties:
     
     * serving: a tuple ``(hostname, port)`` specifying the location
       being served (or ``None`` if the server is closed).
@@ -85,7 +89,6 @@ def call_later(delay, callback, *args, **kwargs):
     server = current_server(False)
     if not server:
         _pending_call_laters.append((delay, callback, args, kwargs))
-        return
     else:
         server.call_later(delay, callback, *args, **kwargs)
 

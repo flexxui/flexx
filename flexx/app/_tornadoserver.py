@@ -24,7 +24,6 @@ from ._assetstore import assets
 from . import logger
 from .. import config
 
-
 if tornado.version_info < (4, ):
     raise RuntimeError('Flexx requires Tornado v4.0 or higher.')
 

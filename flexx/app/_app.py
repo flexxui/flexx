@@ -12,7 +12,6 @@ from ._model import Model
 from ._server import current_server
 from ._session import Session
 from ._assetstore import assets
-
 from . import logger
 
 

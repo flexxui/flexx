@@ -6,6 +6,7 @@ from flexx.util.logging import capture_log
 from flexx import app
 from flexx.app._assetstore import AssetStore
 from flexx.app._session import SessionAssets
+from flexx.app._model import new_type
 
 
 class FakeModule:
@@ -34,7 +35,7 @@ def test_simple():
     
     m1 = FakeModule('module1', ())
     
-    M1 = type('M1', (FakeModel, ), {'__jsmodule__': m1.name})
+    M1 = new_type('M1', (FakeModel, ), {'__jsmodule__': m1.name})
 
 
 test_simple()
