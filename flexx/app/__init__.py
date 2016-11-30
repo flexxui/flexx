@@ -219,7 +219,7 @@ del logging
 from ._app import App, manager
 from ._asset import Asset, Bundle
 from ._model import Model, get_active_model, get_get_active_models
-from ._model import get_instance_by_id, get_model_classes
+from ._model import get_model_classes
 from ._funcs import run, start, stop
 from ._funcs import init_interactive, init_notebook, serve, launch, export
 from ._server import call_later, create_server, current_server
@@ -227,4 +227,8 @@ from ._session import Session
 from ._modules import JSModule
 from ._assetstore import assets
 from ._clientcore import serializer
-from . import _tornadoserver  # import excplicitly to help tools like cx_Freeze
+
+# Resolve cyclic dependencies, and explicit exports to help cx_Freeze
+from . import _tornadoserver
+from. import _model
+_model.manager = manager
