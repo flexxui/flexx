@@ -211,22 +211,6 @@ def test_no_duplicate_code():
     assert '.red.' in Foo4.JS.CODE
 
 
-def test_get_instance_by_id():
-    
-    # This test needs a default session
-    session = app.manager.get_default_session()
-    if session is None:
-        app.manager.create_default_session()
-    
-    m1 = Foo1()
-    m2 = Foo1()
-    
-    assert m1 is not m2
-    assert app.get_instance_by_id(m1.id) is m1
-    assert app.get_instance_by_id(m2.id) is m2
-    assert app.get_instance_by_id('blaaaa') is None
-
-
 def test_active_models():
     
     ioloop = app.create_server(port=0, new_loop=True).loop
