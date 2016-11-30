@@ -26,7 +26,7 @@ INDEX = """
 
 <body id='body'>
 
-<div class='flx-spinner' style='position:absolute; top:10%; bottom:10%;
+<div class='flx-spinner' style='position:absolute; top:25%; bottom:25%;
 left:25%; right:25%; background:#fff; color:#555; text-align:center;
 word-break: break-all; border-radius:0.5em; padding:0.5em;'>
 Starting Flexx app <div style='font-size:50%; color:#66A;'></div>
