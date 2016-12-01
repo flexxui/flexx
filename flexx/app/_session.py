@@ -63,10 +63,7 @@ class SessionAssets:
         # by the asset store have a value of None.
         self._used_classes = set()  # Model classes registered as used
         self._used_modules = set()  # module names that define used classes, plus deps
-        self._loaded_modules = set()  # module names that were present in bundles
         # Data for this session (in addition to the data provided by the store)
-        # todo: get rid of session assets alltogether, or is there a use-case?
-        self._assets = {}
         self._data = {}
         # Whether the page has been served already
         self._served = 0
@@ -127,30 +124,32 @@ class SessionAssets:
         """
         self._data.pop(name, None)
     
+    # todo: deprecated - remove this
     def register_model_class(self, cls):
+        logger.warn('register_model_class() is no more.')
+    
+    def _register_model_class(self, cls):
         """ Mark the given Model class as used; ensure that the client
-        knows about it.
+        knows about the module that it is defined in, dependencies
+        of this module, and associated assets of any of these modules.
         """
         if not (isinstance(cls, type) and issubclass(cls, Model)):
-            raise ValueError('Not a Model class')
-            
+            raise ValueError('_register_model_class() needs a Model class')
         # Early exit if we know the class already
         if cls in self._used_classes:
             return
-        
-        # Make sure the base classes are registered first
-        for cls2 in cls.mro()[1:]:
-            if not issubclass(cls2, Model):  # True if cls2 is *the* Model class
-                break
-            if cls2 not in self._used_classes:
-                self.register_model_class(cls2)
         
         # Ensure interactive flag - e.g. for in the notebook
         if self._is_interactive is None:
             self._is_interactive = self._app_name == '__default__'
         
         # Make sure that no two models have the same name, or we get problems
-        # that are difficult to debug. Unless classes are defined in the notebook.
+        # that are difficult to debug. Unless classes are defined interactively.
+        # The modules of classes that are re-registered are re-defined. The base
+        # class of such a model is assumed to be either unchanged or defined
+        # in the same module. It can also happen that a class is registered for
+        # which the module was defined earlier (e.g. ui.html). Such modules
+        # are redefined as well.
         same_name = [c for c in self._used_classes if c.__name__ == cls.__name__]
         if same_name:
             same_name.append(cls)
@@ -162,72 +161,79 @@ class SessionAssets:
         
         # Mark the class and the module as used
         logger.debug('Registering Model class %r' % cls.__name__)
-        self._used_classes.add(cls)
-        self._store.update_modules(cls)  # Update module definition
-        self._register_module(cls.__jsmodule__)
+        self._store.update_modules(cls)  # Ensure up-to-date module definition
+        self._register_module(cls.__jsmodule__, True)
     
-    def _register_module(self, mod_name):
-        """ Mark a module (and its dependencies) as used. If the page is
-        already served, will inject the module dynamically.
+    def _register_module(self, mod_name, force=False):
+        """ Register a module with the client, as well as its
+        dependencies, and associated assests of the module and its
+        dependencies. If the module was already defined, it is
+        re-defined.
         """
         
-        if not self._served:
-            # Not served yet, register asset as used so we can serve it later
-            if mod_name not in self._used_modules:
-                self._used_modules.add(mod_name)
-                mod = self._store.modules[mod_name]
+        modules = set()
+        assets = []
+        
+        def collect_module_and_deps(mod):
+            if mod.name.startswith('flexx.app'):
+                return
+            if mod.name not in self._used_modules: 
+                self._used_modules.add(mod.name)
                 for dep in mod.deps:
-                    self._register_module(dep)
+                    submod = self._store.modules[dep]
+                    collect_module_and_deps(submod)
+                modules.add(mod)
         
-        else:
-            # Already served, we might need to load dynamically. We simply
-            # check whether a module is new or has changed since its source
-            # was last obtained. E.g. it could be that its a new class for 
-            # this session, but that it was loaded as part of the bundle.
-            mod = self._store.modules[mod_name]
-            modules = [m for m in self._store.modules.values()
-                       if m.name not in self._loaded_modules or
-                       m.changed_time >= self._served]
-            modules = solve_dependencies(modules)  # sort based on deps
-            if modules:
-                # Bundles - the dash makes this bundle have an empty "module name"
-                js_asset = Bundle('-extra.js')
-                css_asset = Bundle('-extra.css')
-                for mod in modules:
-                    js_asset.add_module(mod)
-                    css_asset.add_module(mod)
-                # Load assets of modules that were not yet used
-                for mod in modules:
-                    if mod.name not in self._used_modules:
-                        for asset in self._store.get_associated_assets(mod.name):
-                            self._inject_asset_dynamically(asset)
-                # Load bundles
-                self._inject_asset_dynamically(css_asset)
-                self._inject_asset_dynamically(js_asset)
-                # Mark the modules as used and loaded
-                for mod in modules:
-                    self._used_modules.add(mod.name)
-    
-    def _inject_asset_dynamically(self, asset):
-        """ Load an asset in a running session.
-        This method assumes that this is a Session class.
-        """
-        logger.debug('Dynamically loading asset %r' % asset.name)
+        # Collect module and dependent modules that are not yet defined
+        mod = self._store.modules[mod_name]
+        collect_module_and_deps(mod)
+        f = lambda m: (m.name.startswith('__main__'), m.name)
+        modules = solve_dependencies(sorted(modules, key=f))
         
+        # Collect associated assets
+        for mod in modules:
+            assets.extend(self._store.get_associated_assets(mod.name))
+        # If the module was already defined and thus needs to be re-defined,
+        # we only redefine *this* module, no deps and no assoctated assets.
+        if not modules:
+            modules.append(mod)
+        # Collect CSS and JS assets
+        for mod in modules:
+            css = mod.get_css()
+            if css.strip():
+                assets.append(Asset(mod.name + '.css', css)) 
+        for mod in modules:
+            assets.append(Asset(mod.name + '.js', mod.get_js()))
+        
+        # Mark classes as used
+        for mod in modules:
+            for cls in mod.model_classes:
+                self._used_classes.add(cls)
+        
+        # Inject the assets into the client
         in_notebook = (self._is_interactive and
                        getattr(self, 'init_notebook_done', False))
-        
         if in_notebook:
             # Load using IPython constructs
             from IPython.display import display, HTML
-            if asset.name.lower().endswith('.js'):
-                display(HTML("<script>%s</script>" % asset.to_string()))
-            else:
-                display(HTML("<style>%s</style>" % asset.to_string()))
+            parts = []
+            for asset in assets:
+                logger.info('Loading asset %s in notebook' % asset.name)
+                if asset.name.lower().endswith('.js'):
+                    parts.append("<script>%s</script>" % asset.to_string())
+                else:
+                    parts.append("<style>%s</style>" % asset.to_string())
+            display(HTML('\n\n'.join(parts)))
         else:
             # Load using Flexx construct (using Session._send_command())
-            suffix = asset.name.split('.')[-1].upper()
-            self._send_command('DEFINE-%s %s' % (suffix, asset.to_string()))
+            for asset in assets:
+                logger.info('Loading asset %s' % asset.name)
+                if asset.name.lower().endswith('.js'):
+                    s = '//# sourceURL=/flexx/assets/shared/%s' % asset.name
+                else:
+                    s = '/*# sourceURL=/flexx/assets/shared/%s*/' % asset.name
+                suffix = asset.name.split('.')[-1].upper()
+                self._send_command('DEFINE-%s %s\n%s\n' % (suffix, asset.to_string(), s))
     
     def get_assets_in_order(self, css_reset=False, load_all=None, bundle_level=None):
         """ Get two lists containing the JS assets and CSS assets,
@@ -241,15 +247,17 @@ class SessionAssets:
         been served and that future asset loads should be done dynamically.
         """
         
-        # Make store aware of everything that we know now
-        self._store.update_modules()
+        # # Make store aware of everything that we know now
+        # self._store.update_modules()
+        # 
+        # if load_all is None:
+        #     load_all = config.bundle_all
+        # if load_all:
+        #     modules_to_load = self._store.modules.keys()  # e.g. notebook
+        # else:
+        #     modules_to_load = self._used_modules
         
-        if load_all is None:
-            load_all = config.bundle_all
-        if load_all:
-            modules_to_load = self._store.modules.keys()  # e.g. notebook
-        else:
-            modules_to_load = self._used_modules
+        modules_to_load = ['flexx.app._model']
         
         # Get bundle names that contain all the used modules. We use
         # bundledversions, which means that we load more modules than
@@ -259,7 +267,7 @@ class SessionAssets:
         # bundles, we could allow users to define a bundle, etc. For
         # now, we just truncate at a certain level.
         # todo: this could be configurable, e.g. 99 for dev, 1 for prod
-        level = max(1, bundle_level or 2)
+        level = 2#max(1, bundle_level or 2)
         bundle_names = set()
         for mod_name in modules_to_load:
             bundle_names.add('.'.join(mod_name.split('.')[:level]))
@@ -268,9 +276,9 @@ class SessionAssets:
         js_assets = [self._store.get_asset(b + '.js') for b in bundle_names]
         css_assets = [self._store.get_asset(b + '.css') for b in bundle_names]
         
-        # Get loaded modules
-        for asset in js_assets:
-            self._loaded_modules.update([m.name for m in asset.modules])
+        # # Get loaded modules
+        # for asset in js_assets:
+        #     self._loaded_modules.update([m.name for m in asset.modules])
         
         # Sort bundles by name and dependency resolution
         f = lambda m: (m.name.startswith('__main__'), m.name)
@@ -284,9 +292,9 @@ class SessionAssets:
         # Collect non-module assets
         # Assets only get included if they are in a module that is *used*.
         asset_deps_before = set()
-        # asset_deps_after = set()
-        for mod_name in self._used_modules:
-            asset_deps_before.update(self._store.get_associated_assets(mod_name))
+        # # asset_deps_after = set()
+        # for mod_name in self._used_modules:
+        #     asset_deps_before.update(self._store.get_associated_assets(mod_name))
         
         # Push assets in the lists (sorted by the creation time)
         f = lambda a: a.i
@@ -296,11 +304,11 @@ class SessionAssets:
             else:
                 css_assets.insert(0, asset)
        
-        # Mark all assets as used. For now, we only use assets that are available
-        # in the asset store.
-        for asset in js_assets + css_assets:
-            self._assets[asset.name] = None
-        
+        # # Mark all assets as used. For now, we only use assets that are available
+        # # in the asset store.
+        # for asset in js_assets + css_assets:
+        #     self._assets[asset.name] = None
+        # 
         
         # Prepend reset.css
         if css_reset:
@@ -438,7 +446,7 @@ class Session(SessionAssets):
         # Register the instance using a weakref
         self._model_instances[model.id] = model
         # Register the class to that the client has the needed definitions
-        self.register_model_class(cls)
+        self._register_model_class(cls)
     
     def get_model_instance_by_id(self, id):
         """ Get instance of Model class corresponding to the given id,

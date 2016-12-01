@@ -255,12 +255,17 @@ class Flexx:
         elif msg.startswith('EXEC '):
             eval(msg[5:])  # like eval, but do not return result
         elif msg.startswith('DEFINE-JS '):
-            eval(msg[10:])
+            address = window.location.protocol + '//' + self.ws_url.split('/')[2]
+            code = msg[10:].replace('sourceURL=/flexx/assets/',
+                                    'sourceURL=' + address + '/flexx/assets/')
+            eval(code)
             self.spin()
         elif msg.startswith('DEFINE-CSS '):
             el = window.document.createElement("style")
             el.type = "text/css"
-            el.innerHTML = msg[11:]
+            address = window.location.protocol + '//' + self.ws_url.split('/')[2]
+            el.innerHTML = msg[11:].replace('sourceURL=/flexx/assets/',
+                                            'sourceURL=' + address + '/flexx/assets/')
             self._css_node.appendChild(el)
             self.spin()
         elif msg.startswith('TITLE '):

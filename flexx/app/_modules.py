@@ -150,9 +150,16 @@ class JSModule:
     
     @property
     def deps(self):
-        """ The set of dependencies (names of other modules) for this module.
+        """ The (unsorted) set of dependencies (names of other modules) for
+        this module.
         """
         return set(self._deps.keys())
+    
+    @property
+    def model_classes(self):
+        """ The Model classes defined in this module.
+        """
+        return set(self._model_classes.values())
     
     @property
     def changed_time(self):
