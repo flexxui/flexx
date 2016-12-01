@@ -210,19 +210,32 @@ class AssetStore:
     """
     
     def __init__(self):
+        self._known_model_classes = set()
         self._modules = {}
         self._assets = {}
         self._associated_assets = {}
         self._data = {}
-        self._loaded_assets = set()  # between all sessions (for export)
-        self._assets['reset.css'] = Asset('reset.css', RESET)
-        self._assets['flexx-loader.js'] = Asset('flexx-loader.js', LOADER)
+        self._used_assets = set()  # between all sessions (for export)
         
-        # Create pyscript-std module
+        # Create standard assets
+        asset_reset = Asset('reset.css', RESET)
+        asset_loader = Asset('flexx-loader.js', LOADER)
         func_names, method_names = get_all_std_names()
         mod = create_js_module('pyscript-std.js', get_full_std_lib(),
                                [], func_names + method_names, 'amd-flexx')
-        self._assets['pyscript-std.js'] = Asset('pyscript-std.js', HEADER + mod)
+        asset_pyscript = Asset('pyscript-std.js', HEADER + mod)
+        
+        #  Create flexx-core bootstrap bundle
+        self.update_modules()  # to collect _model and _clientcore
+        asset_core = Bundle('flexx-core.js')
+        asset_core.add_asset(asset_loader)
+        asset_core.add_asset(asset_pyscript)
+        asset_core.add_module(self.modules['flexx.app._clientcore'])
+        asset_core.add_module(self.modules['flexx.app._model'])
+        
+        # Register all the avove assets
+        for a in [asset_reset, asset_loader, asset_pyscript, asset_core]:
+            self.add_shared_asset(a)
     
     def __repr__(self):
         t = '<AssetStore with %i assets, and %i data>'
@@ -240,36 +253,30 @@ class AssetStore:
         """
         return self._modules
     
-    def update_modules(self, cls=None):
+    def update_modules(self):
         """ Collect and update the JSModule instances that correspond
-        to Python modules that define Model classes. Update the module
-        corresponding to a single class (making sure that that class is
-        defined), or if not given, do an update based on all imported
-        Model classes.
-        
-        Any newly created modules get added to all corresponding assets
-        bundles (creating them if needed).
+        to Python modules that define Model classes. Any newly created
+        modules get added to all corresponding assets bundles (creating
+        them if needed).
         
         It is safe (and pretty fast) to call this more than once since
         only missing modules are added. This gets called automatically
         by the Session object.
         """
         
+        # Dependencies can drag in more modules, therefore we store
+        # what modules we know of beforehand.
         current_module_names = set(self._modules)
         
-        # Make sure we have all necessary modules. Dependencies can drag in
-        # more modules, therefore we store what modules we know of beforehand.
-        if cls is None or not self._modules:
-            # Track all known (i.e. imported classes) to get complete bundles
-            for cls in Model.CLASSES:
+        # Track all known (i.e. imported classes) Model classes. We keep track
+        # of what classes we've registered, so this is pretty efficient. This
+        # works also if a module got a new or renewed Model class.
+        for cls in Model.CLASSES:
+            if cls not in self._known_model_classes:
+                self._known_model_classes.add(cls)
                 if cls.__jsmodule__ not in self._modules:
                     JSModule(cls.__jsmodule__, self._modules)  # auto-registers
                 self._modules[cls.__jsmodule__].add_variable(cls.__name__)
-        else:
-            # Track a specific class, for interactive mode
-            if cls.__jsmodule__ not in self._modules:
-                JSModule(cls.__jsmodule__, self._modules)  # auto-registers
-            self._modules[cls.__jsmodule__].add_variable(cls.__name__)
         
         # Deal with new modules: store asset deps and bundle the modules
         mcount = 0
@@ -305,7 +312,7 @@ class AssetStore:
             raise ValueError('Asset names always end in .js or .css')
         asset = self._assets.get(name, None)
         if asset is not None:
-            self._loaded_assets.add(asset.name)
+            self._used_assets.add(asset.name)
         return asset
     
     def get_data(self, name):
@@ -440,7 +447,7 @@ class AssetStore:
             clear (bool): if given and True, the directory is first cleared.
         """
         assets = [self._assets[name] for name in self.get_asset_names()]
-        assets = [self._assets[name] for name in self._loaded_assets]
+        assets = [self._assets[name] for name in self._used_assets]
         data = [(name, self.get_data(name)) for name in self.get_data_names()]
         export_assets_and_data(assets, data, dirname, 'shared', clear)
         logger.info('Exported shared assets and data to %r.' % dirname)

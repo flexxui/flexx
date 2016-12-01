@@ -136,10 +136,9 @@ class App:
         # Launch web runtime, the server will wait for the connection
         current_server()  # creates server if it did not yet exist
         if runtime == 'nodejs':
-            js_assets, _ = session.get_assets_in_order()
-            all_js = '\n\n'.join([asset.to_string() for asset in js_assets])
+            bundle = assets.get_asset('flexx-core.js')
             session._runtime = webruntime.launch(self.url, runtime=runtime,
-                                                 code=all_js)
+                                                 code=bundle.to_string())
         else:
             url = self.url + '?session_id=%s' % session.id
             session._runtime = webruntime.launch(url,

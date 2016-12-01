@@ -10,6 +10,7 @@ from .. import webruntime, config, set_log_level
 from ._app import App, manager
 from ._model import Model
 from ._server import current_server
+from ._assetstore import assets
 from . import logger
 
 reprs = json.dumps
@@ -169,52 +170,33 @@ def init_notebook():
     if session is None:
         session = manager.create_default_session()
     
+    # Check if already loaded, if so, re-connect
+    if not getattr(session, 'init_notebook_done', False):
+        session.init_notebook_done = True
+    else:
+        display(HTML("<i>Flexx already loaded (the notebook cannot export now)</i>"))
+        return  # Don't inject Flexx twice
+    
     # Open server - the notebook helper takes care of the JS resulting
     # from running a cell, but any interaction goes over the websocket.
     server = current_server()
     host, port = server.serving
     
-    # Trigger loading phosphor assets
-    if 'flexx.ui' in sys.modules:
-        from flexx import ui
-        session.register_model_class(ui.Widget)
+    # Install helper to make things work in exported notebooks
+    NoteBookHelper(session)
     
-    # Get assets, load all known modules to prevent dynamic loading as much as possible
-    js_assets, css_assets = session.get_assets_in_order(css_reset=False, load_all=True)
-    
-    # Pop the first JS asset that sets flexx.app_name and flexx.session_id
-    # We set these in a way that it does not end up in exported notebook.
-    js_assets.pop(0)
+    # We set session_id and app_name in a way that it does not end up
+    # in exported notebook.
     url = 'ws://%s:%i/flexx/ws/%s' % (host, port, session.app_name)
-    flexx_pre_init = """<script>window.flexx = window.flexx || {};
+    flexx_pre_init = """<script>window.flexx = {};
                                 window.flexx.app_name = "%s";
                                 window.flexx.session_id = "%s";
                                 window.flexx.ws_url = "%s";
                                 window.flexx.is_live_notebook = true;
                         </script>""" % (session.app_name, session.id, url)
     
-    # Check if already loaded, if so, re-connect
-    if not getattr(session, 'init_notebook_done', False):
-        session.init_notebook_done = True  # also used in assetstore
-    else:
-        display(HTML(flexx_pre_init))
-        clear_output()
-        display(HTML("""<script>
-                        flexx.is_exported = !flexx.is_live_notebook;
-                        flexx.init();
-                        </script>
-                        <i>Flexx already loaded. Reconnected.</i>
-                        """))
-        return  # Don't inject Flexx twice
-        # Note that exporting will not work anymore since out assets
-        # are no longer in the outputs
-    
-    # Install helper to make things work in exported notebooks
-    NoteBookHelper(session)
-    
     # Compose HTML to inject
-    t = "<i>Injecting Flexx JS and CSS</i>"
-    t += '\n\n'.join([asset.to_html('{}', 0) for asset in css_assets + js_assets])
+    t = assets.get_asset('flexx-core.js').to_html('{}', 0)
     t += """<script>
             flexx.is_notebook = true;
             flexx.is_exported = !flexx.is_live_notebook;
@@ -224,6 +206,7 @@ def init_notebook():
             }
             flexx.init();
             </script>"""
+    t += "<i>Flexx is ready for use</i>\n"
     
     display(HTML(flexx_pre_init))  # Create initial Flexx info dict
     clear_output()  # Make sure the info dict is gone in exported notebooks

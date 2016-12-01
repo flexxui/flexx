@@ -231,9 +231,9 @@ class Flexx:
         while self._pending_commands is not None and len(self._pending_commands) > 0:
             msg = self._pending_commands.pop(0)
             self.command(msg)
-            if msg.startswith('DEFINE-JS'):
+            if msg.startswith('DEFINE-'):
                 self._asset_count += 1
-                if (self._asset_count % 2) == 0:
+                if (self._asset_count % 3) == 0:
                     if len(self._pending_commands):
                         window.setTimeout(self._process_commands, 0)
                     break
@@ -259,7 +259,6 @@ class Flexx:
             code = msg[10:].replace('sourceURL=/flexx/assets/',
                                     'sourceURL=' + address + '/flexx/assets/')
             eval(code)
-            self.spin()
         elif msg.startswith('DEFINE-CSS '):
             el = window.document.createElement("style")
             el.type = "text/css"
@@ -267,7 +266,6 @@ class Flexx:
             el.innerHTML = msg[11:].replace('sourceURL=/flexx/assets/',
                                             'sourceURL=' + address + '/flexx/assets/')
             self._css_node.appendChild(el)
-            self.spin()
         elif msg.startswith('TITLE '):
             if not self.nodejs:
                 window.document.title = msg[6:]

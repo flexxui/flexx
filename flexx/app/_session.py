@@ -65,8 +65,6 @@ class SessionAssets:
         self._used_modules = set()  # module names that define used classes, plus deps
         # Data for this session (in addition to the data provided by the store)
         self._data = {}
-        # Whether the page has been served already
-        self._served = 0
         self._is_interactive = None
     
     @property
@@ -161,7 +159,6 @@ class SessionAssets:
         
         # Mark the class and the module as used
         logger.debug('Registering Model class %r' % cls.__name__)
-        self._store.update_modules(cls)  # Ensure up-to-date module definition
         self._register_module(cls.__jsmodule__, True)
     
     def _register_module(self, mod_name, force=False):
@@ -176,7 +173,7 @@ class SessionAssets:
         
         def collect_module_and_deps(mod):
             if mod.name.startswith('flexx.app'):
-                return
+                return  # these are part of flexx-core asset
             if mod.name not in self._used_modules: 
                 self._used_modules.add(mod.name)
                 for dep in mod.deps:
@@ -185,6 +182,7 @@ class SessionAssets:
                 modules.add(mod)
         
         # Collect module and dependent modules that are not yet defined
+        self._store.update_modules()  # Ensure up-to-date module definition
         mod = self._store.modules[mod_name]
         collect_module_and_deps(mod)
         f = lambda m: (m.name.startswith('__main__'), m.name)
@@ -199,162 +197,69 @@ class SessionAssets:
             modules.append(mod)
         # Collect CSS and JS assets
         for mod in modules:
-            css = mod.get_css()
-            if css.strip():
-                assets.append(Asset(mod.name + '.css', css)) 
+            if mod.get_css().strip():
+                assets.append(self._store.get_asset(mod.name + '.css'))
         for mod in modules:
-            assets.append(Asset(mod.name + '.js', mod.get_js()))
+            assets.append(self._store.get_asset(mod.name + '.js'))
         
         # Mark classes as used
         for mod in modules:
             for cls in mod.model_classes:
                 self._used_classes.add(cls)
         
-        # Inject the assets into the client
-        in_notebook = (self._is_interactive and
-                       getattr(self, 'init_notebook_done', False))
-        if in_notebook:
-            # Load using IPython constructs
-            from IPython.display import display, HTML
-            parts = []
-            for asset in assets:
-                logger.info('Loading asset %s in notebook' % asset.name)
-                if asset.name.lower().endswith('.js'):
-                    parts.append("<script>%s</script>" % asset.to_string())
-                else:
-                    parts.append("<style>%s</style>" % asset.to_string())
-            display(HTML('\n\n'.join(parts)))
-        else:
-            # Load using Flexx construct (using Session._send_command())
-            for asset in assets:
-                logger.info('Loading asset %s' % asset.name)
-                if asset.name.lower().endswith('.js'):
-                    s = '//# sourceURL=/flexx/assets/shared/%s' % asset.name
-                else:
-                    s = '/*# sourceURL=/flexx/assets/shared/%s*/' % asset.name
-                suffix = asset.name.split('.')[-1].upper()
-                self._send_command('DEFINE-%s %s\n%s\n' % (suffix, asset.to_string(), s))
-    
-    def get_assets_in_order(self, css_reset=False, load_all=None, bundle_level=None):
-        """ Get two lists containing the JS assets and CSS assets,
-        respectively. The assets contain bundles corresponding to all modules
-        being used (and their dependencies). The order of bundles is based on
-        the dependency resolution. The order of other assets is based on the
-        order in which assets were instantiated. Special assets are added, such
-        as the CSS reset and the JS module loader.
-        
-        After this function gets called, it is assumed that the assets have
-        been served and that future asset loads should be done dynamically.
-        """
-        
-        # # Make store aware of everything that we know now
-        # self._store.update_modules()
-        # 
-        # if load_all is None:
-        #     load_all = config.bundle_all
-        # if load_all:
-        #     modules_to_load = self._store.modules.keys()  # e.g. notebook
-        # else:
-        #     modules_to_load = self._used_modules
-        
-        modules_to_load = ['flexx.app._model']
-        
-        # Get bundle names that contain all the used modules. We use
-        # bundledversions, which means that we load more modules than
-        # we use. In this step we can make a lot of choices with regard
-        # to how much modules we want to pack in a bundle. We could use
-        # a different depth per branch, we could create session-specific
-        # bundles, we could allow users to define a bundle, etc. For
-        # now, we just truncate at a certain level.
-        # todo: this could be configurable, e.g. 99 for dev, 1 for prod
-        level = 2#max(1, bundle_level or 2)
-        bundle_names = set()
-        for mod_name in modules_to_load:
-            bundle_names.add('.'.join(mod_name.split('.')[:level]))
-        
-        # Get bundles
-        js_assets = [self._store.get_asset(b + '.js') for b in bundle_names]
-        css_assets = [self._store.get_asset(b + '.css') for b in bundle_names]
-        
-        # # Get loaded modules
-        # for asset in js_assets:
-        #     self._loaded_modules.update([m.name for m in asset.modules])
-        
-        # Sort bundles by name and dependency resolution
-        f = lambda m: (m.name.startswith('__main__'), m.name)
-        js_assets = solve_dependencies(sorted(js_assets, key=f))
-        css_assets = solve_dependencies(sorted(css_assets, key=f))
-        
-        # Filter out empty css bundles
-        css_assets = [asset for asset in css_assets
-                      if any([m.get_css().strip() for m in asset.modules])]
-        
-        # Collect non-module assets
-        # Assets only get included if they are in a module that is *used*.
-        asset_deps_before = set()
-        # # asset_deps_after = set()
-        # for mod_name in self._used_modules:
-        #     asset_deps_before.update(self._store.get_associated_assets(mod_name))
-        
-        # Push assets in the lists (sorted by the creation time)
-        f = lambda a: a.i
-        for asset in reversed(sorted(asset_deps_before, key=f)):
+        # Push assets over the websocket. Note how this works fine with the
+        # notebook because we turn ws commands into display(HTML())
+        for asset in assets:
+            logger.info('Loading asset %s' % asset.name)
             if asset.name.lower().endswith('.js'):
-                js_assets.insert(0, asset)
+                s = '//# sourceURL=/flexx/assets/shared/%s' % asset.name
             else:
-                css_assets.insert(0, asset)
-       
-        # # Mark all assets as used. For now, we only use assets that are available
-        # # in the asset store.
-        # for asset in js_assets + css_assets:
-        #     self._assets[asset.name] = None
-        # 
-        
-        # Prepend reset.css
-        if css_reset:
-            css_assets.insert(0, self._store.get_asset('reset.css'))
-        
-        # Prepend flexx-info, module loader, and pyscript std
-        js_assets.insert(0, self._store.get_asset('pyscript-std.js'))
-        js_assets.insert(0, self._store.get_asset('flexx-loader.js'))
-        t = 'var flexx = {app_name: "%s", session_id: "%s"};'
-        js_assets.insert(0, Asset('flexx-info.js', t % (self._app_name, self.id)))
-        
-        # Mark this session as served; all future asset loads are dynamic
-        self._served = time.time()
-        
-        # todo: fix incorrect order; loader should be able to handle it for JS
-        #import random
-        #random.shuffle(js_assets)
-        
-        return js_assets, css_assets
+                s = '/*# sourceURL=/flexx/assets/shared/%s*/' % asset.name
+            suffix = asset.name.split('.')[-1].upper()
+            self._send_command('DEFINE-%s %s\n%s\n' % (suffix, asset.to_string(), s))
     
     def get_page(self, link=3):
         """ Get the string for the HTML page to render this session's app.
         """
-        js_assets, css_assets = self.get_assets_in_order(True)
-        for asset in js_assets + css_assets:
-            if asset.remote and asset.source.startswith('file://'):
-                raise RuntimeError('Can only use remote assets with "file://" '
-                                   'when exporting.')
+        css_assets = [self._store.get_asset('reset.css')]
+        js_assets = [self._store.get_asset('flexx-core.js')]
         return self._get_page(js_assets, css_assets, link, False)
     
     def get_page_for_export(self, commands, link=0):
         """ Get the string for an exported HTML page (to run without a server).
         """
-        # Create lines to init app
+        # We start as a normal page ...
+        css_assets = [self._store.get_asset('reset.css')]
+        js_assets = [self._store.get_asset('flexx-core.js')]
+        # Get all the used modules
+        modules = [self._store.modules[name] for name in self._used_modules]
+        f = lambda m: (m.name.startswith('__main__'), m.name)
+        modules = solve_dependencies(sorted(modules, key=f))
+        # First the associated assets
+        associated_assets = []
+        for mod in modules:
+            for asset in self._store.get_associated_assets(mod.name):
+                if asset.name.lower().endswith('.js'):
+                    js_assets.append(asset)
+                else:
+                    css_assets.append(asset)
+        # Then the modules themselves
+        for mod in modules:
+            if mod.get_css().strip():
+                css_assets.append(self._store.get_asset(mod.name + '.css'))
+        for mod in modules:
+            js_assets.append(self._store.get_asset(mod.name + '.js'))
+        # Create asset for launching the app (commands that normally get send
+        # over the websocket)
         lines = []
         lines.append('flexx.is_exported = true;\n')
         lines.append('flexx.runExportedApp = function () {')
-        lines.extend(['    flexx.command(%s);' % reprs(c) for c in commands])
+        lines.extend(['    flexx.command(%s);' % reprs(c) for c in commands if not c.startswith('DEFINE-')])
         lines.append('};\n')
         # Create a session asset for it, "-export.js" is always embedded
         export_asset = Asset('flexx-export.js', '\n'.join(lines))
-        # Compose
-        bundle_level = 2 if (link >= 2) else 9
-        js_assets, css_assets = self.get_assets_in_order(css_reset=True,
-                                                         bundle_level=bundle_level)
         js_assets.append(export_asset)
+        
         return self._get_page(js_assets, css_assets, link, True)
     
     def _get_page(self, js_assets, css_assets, link, export):
@@ -363,6 +268,10 @@ class SessionAssets:
         pre_path = '_assets' if export else '/flexx/assets'
         
         codes = []
+        
+        t = 'var flexx = {app_name: "%s", session_id: "%s"};'
+        codes.append('<script>%s</script>\n' % t % (self._app_name, self.id))
+        
         for assets in [css_assets, js_assets]:
             for asset in assets:
                 if not link:
