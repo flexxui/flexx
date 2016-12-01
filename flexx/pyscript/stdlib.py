@@ -732,11 +732,16 @@ METHODS['split'] = """function (sep, count) { // nargs: 0, 1 2
     if (this.constructor !== String) return this.KEY.apply(this, arguments);
     if (sep === '') {var e = Error('empty sep'); e.name='ValueError'; throw e;}
     sep = (sep === undefined) ? /\\s/ : sep;
-    count = Math.max(0, (count === undefined) ? 1e20 : count);
-    var parts = this.split(sep);
-    var limit = Math.max(0, count);
-    var res = parts.slice(0, limit);
-    if (count < parts.length) res.push(parts.slice(limit).join(sep));
+    if (count === undefined) { return this.split(sep); }
+    var res = [], i = 0, index1 = 0, index2 = 0;
+    while (i < count && index1 < this.length) {
+        index2 = this.indexOf(sep, index1);
+        if (index2 < 0) { break; }
+        res.push(this.slice(index1, index2));
+        index1 = index2 + sep.length || 1;
+        i += 1;
+    }
+    res.push(this.slice(index1));
     return res;
 }"""
 
