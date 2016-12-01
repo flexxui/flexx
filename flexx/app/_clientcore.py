@@ -37,9 +37,9 @@ class Flexx:
         self.classes = {}
         self.instances = {}
         # Create div to put dynamic CSS assets in
-        self._css_node = window.document.createElement("div")
-        self._css_node.id = 'Flexx CSS container'
-        window.document.body.appendChild(self._css_node)
+        self._asset_node = window.document.createElement("div")
+        self._asset_node.id = 'Flexx asset container'
+        window.document.body.appendChild(self._asset_node)
         
         if window.is_node is True:
             # nodejs (call exit on exit and ctrl-c)
@@ -230,7 +230,11 @@ class Flexx:
         """
         while self._pending_commands is not None and len(self._pending_commands) > 0:
             msg = self._pending_commands.pop(0)
-            self.command(msg)
+            try:
+                self.command(msg)
+            except Exception as err:
+                window.setTimeout(self._process_commands, 0)
+                raise err
             if msg.startswith('DEFINE-'):
                 self._asset_count += 1
                 if (self._asset_count % 3) == 0:
@@ -254,18 +258,26 @@ class Flexx:
             self.ws.send('RET ' + window._)  # send back result
         elif msg.startswith('EXEC '):
             eval(msg[5:])  # like eval, but do not return result
-        elif msg.startswith('DEFINE-JS '):
+        elif msg.startswith('DEFINE-JS ') or msg.startswith('DEFINE-JS-EVAL '):
+            offset = 10 if msg.startswith('DEFINE-JS ') else 15
             address = window.location.protocol + '//' + self.ws_url.split('/')[2]
-            code = msg[10:].replace('sourceURL=/flexx/assets/',
-                                    'sourceURL=' + address + '/flexx/assets/')
-            eval(code)
+            code = msg[offset:].replace('sourceURL=/flexx/assets/',
+                                        'sourceURL=' + address + '/flexx/assets/')
+            if msg.startswith('DEFINE-JS-EVAL '):
+                eval(code)
+            else:
+                # With this method, sourceURL does not work on Firefox, but eval
+                # might not work for assets that don't "use strict" (e.g. Bokeh)
+                el = window.document.createElement("script")
+                el.innerHTML = code
+                self._asset_node.appendChild(el)
         elif msg.startswith('DEFINE-CSS '):
             el = window.document.createElement("style")
             el.type = "text/css"
             address = window.location.protocol + '//' + self.ws_url.split('/')[2]
             el.innerHTML = msg[11:].replace('sourceURL=/flexx/assets/',
                                             'sourceURL=' + address + '/flexx/assets/')
-            self._css_node.appendChild(el)
+            self._asset_node.appendChild(el)
         elif msg.startswith('TITLE '):
             if not self.nodejs:
                 window.document.title = msg[6:]

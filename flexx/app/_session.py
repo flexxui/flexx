@@ -210,12 +210,17 @@ class SessionAssets:
         # Push assets over the websocket. Note how this works fine with the
         # notebook because we turn ws commands into display(HTML())
         for asset in assets:
-            logger.info('Loading asset %s' % asset.name)
+            logger.debug('Loading asset %s' % asset.name)
+            # Determine sourceURL suffix
             if asset.name.lower().endswith('.js'):
                 s = '//# sourceURL=/flexx/assets/shared/%s' % asset.name
             else:
                 s = '/*# sourceURL=/flexx/assets/shared/%s*/' % asset.name
+            # Determine command suffix. All our sources come in bundles,
+            # for which we use eval because it makes sourceURL work on FF.
             suffix = asset.name.split('.')[-1].upper()
+            if suffix == 'JS' and isinstance(asset, Bundle):
+                suffix = 'JS-EVAL'
             self._send_command('DEFINE-%s %s\n%s\n' % (suffix, asset.to_string(), s))
     
     def get_page(self, link=3):
