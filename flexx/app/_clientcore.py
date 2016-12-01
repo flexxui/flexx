@@ -259,24 +259,28 @@ class Flexx:
         elif msg.startswith('EXEC '):
             eval(msg[5:])  # like eval, but do not return result
         elif msg.startswith('DEFINE-JS ') or msg.startswith('DEFINE-JS-EVAL '):
-            offset = 10 if msg.startswith('DEFINE-JS ') else 15
+            cmd, name, code = msg.split(' ', 2)
             address = window.location.protocol + '//' + self.ws_url.split('/')[2]
-            code = msg[offset:].replace('sourceURL=/flexx/assets/',
-                                        'sourceURL=' + address + '/flexx/assets/')
+            code += '\n//# sourceURL=%s/flexx/assets/shared/%s\n' % (address, name)
             if msg.startswith('DEFINE-JS-EVAL '):
                 eval(code)
             else:
-                # With this method, sourceURL does not work on Firefox, but eval
-                # might not work for assets that don't "use strict" (e.g. Bokeh)
+                # With this method, sourceURL does not work on Firefox,
+                # but eval might not work for assets that don't "use strict"
+                # (e.g. Bokeh). Note, btw, that creating links to assets does
+                # not work because these won't be loaded on time.
                 el = window.document.createElement("script")
+                el.id = name
                 el.innerHTML = code
                 self._asset_node.appendChild(el)
         elif msg.startswith('DEFINE-CSS '):
+            cmd, name, code = msg.split(' ', 2)
+            address = window.location.protocol + '//' + self.ws_url.split('/')[2]
+            code += '\n/*# sourceURL=%s/flexx/assets/shared/%s*/\n' % (address, name)
             el = window.document.createElement("style")
             el.type = "text/css"
-            address = window.location.protocol + '//' + self.ws_url.split('/')[2]
-            el.innerHTML = msg[11:].replace('sourceURL=/flexx/assets/',
-                                            'sourceURL=' + address + '/flexx/assets/')
+            el.id = name
+            el.innerHTML = code
             self._asset_node.appendChild(el)
         elif msg.startswith('TITLE '):
             if not self.nodejs:
