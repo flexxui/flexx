@@ -3,7 +3,7 @@ The client's core Flexx engine, implemented in PyScript.
 """
 
 from ..pyscript import this_is_js, RawJS
-from ..pyscript.stubs import window, undefined, require
+from ..pyscript.stubs import window, undefined, require, time
 
 # This module gets transpiled to JavaScript as a whole
 __pyscript__ = True

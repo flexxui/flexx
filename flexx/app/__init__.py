@@ -218,7 +218,7 @@ del logging
 # flake8: noqa
 from ._app import App, manager
 from ._asset import Asset, Bundle
-from ._model import Model, get_active_model, get_get_active_models
+from ._model import Model, get_active_model, get_active_models
 from ._model import get_model_classes
 from ._funcs import run, start, stop
 from ._funcs import init_interactive, init_notebook, serve, launch, export

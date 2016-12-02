@@ -9,8 +9,6 @@ import hashlib
 import weakref
 from urllib.request import urlopen
 
-from .. import config
-
 from ._model import Model, new_type
 from ._asset import Asset, Bundle, solve_dependencies
 from ._assetstore import AssetStore, export_assets_and_data, INDEX
@@ -50,9 +48,9 @@ class Session:
     
     Responsibilities:
     
-    * Send messages to the client, and parse messages received by the client.
+    * Send messages to the client and parse messages received by the client.
     * Keep track of Model instances associated with the session.
-    * Ensure that the client has all the definitions it needs, i.e. JIT assets.
+    * Ensure that the client has all the module definitions it needs.
     * Allow the user to send data to the client.
     
     """
@@ -80,12 +78,11 @@ class Session:
         self._model = None  # Model instance, can be None if app_name is __default__
         self._closing = False  # Flag to help with shutdown
         
-        # A counter to generate model id's
+        # The session assigns model id's, keeps track of model objects and
+        # sometimes keeps them alive for a short while.
         self._model_counter = 0
-        # Known model instances in this session, so we can "deserialize" them
         self._model_instances = weakref.WeakValueDictionary()
-        # Objects that are guarded from deletion: id: (ping_count, instance)
-        self._instances_guarded = {}
+        self._instances_guarded = {}  # id: (ping_count, instance)
         
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
@@ -107,6 +104,7 @@ class Session:
         """
         return self._app_name
     
+    # todo: what about a reference to the app.App?
     @property
     def app(self):
         """ The Model instance that represents the app. Can be None if Flexx
@@ -175,7 +173,7 @@ class Session:
         if self._ws is not None:
             raise RuntimeError('Session is already connected.')
         # Set websocket object - this is what changes the status to CONNECTED
-        self._ws = ws  
+        self._ws = ws
         # todo: make icon and title work again. Also in exported docs.
         # Set some app specifics
         # self._ws.command('ICON %s.ico' % self.id)
@@ -308,7 +306,7 @@ class Session:
         of this module, and associated assets of any of these modules.
         """
         if not (isinstance(cls, type) and issubclass(cls, Model)):
-            raise ValueError('_register_model_class() needs a Model class')
+            raise TypeError('_register_model_class() needs a Model class')
         # Early exit if we know the class already
         if cls in self._used_classes:
             return
@@ -363,7 +361,8 @@ class Session:
         
         # Collect associated assets
         for mod in modules:
-            assets.extend(self._store.get_associated_assets(mod.name))
+            for asset_name in self._store.get_associated_assets(mod.name):
+                assets.append(self._store.get_asset(asset_name))
         # If the module was already defined and thus needs to be re-defined,
         # we only redefine *this* module, no deps and no assoctated assets.
         if not modules:
@@ -470,6 +469,9 @@ class Session:
         self._send_command('EVAL ' + code)
 
 
+## Functions to get page
+# These could be methods, but theses are only for internal use
+
 def get_page(session):
     """ Get the string for the HTML page to render this session's app.
     """
@@ -489,9 +491,9 @@ def get_page_for_export(session, commands, link=0):
     f = lambda m: (m.name.startswith('__main__'), m.name)
     modules = solve_dependencies(sorted(modules, key=f))
     # First the associated assets
-    associated_assets = []
     for mod in modules:
-        for asset in assetstore.get_associated_assets(mod.name):
+        for asset_name in assetstore.get_associated_assets(mod.name):
+            asset = assetstore.get_asset(asset_name)
             if asset.name.lower().endswith('.js'):
                 js_assets.append(asset)
             else:
@@ -507,13 +509,15 @@ def get_page_for_export(session, commands, link=0):
     lines = []
     lines.append('flexx.is_exported = true;\n')
     lines.append('flexx.runExportedApp = function () {')
-    lines.extend(['    flexx.command(%s);' % reprs(c) for c in commands if not c.startswith('DEFINE-')])
+    lines.extend(['    flexx.command(%s);' % reprs(c) for c in commands
+                  if not c.startswith('DEFINE-')])
     lines.append('};\n')
     # Create a session asset for it, "-export.js" is always embedded
     export_asset = Asset('flexx-export.js', '\n'.join(lines))
     js_assets.append(export_asset)
     
     return _get_page(session, js_assets, css_assets, link, True)
+
 
 def _get_page(session, js_assets, css_assets, link, export):
     """ Compose index page.

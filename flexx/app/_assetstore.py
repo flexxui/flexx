@@ -225,6 +225,13 @@ class AssetStore:
                                [], func_names + method_names, 'amd-flexx')
         asset_pyscript = Asset('pyscript-std.js', HEADER + mod)
         
+        # Add them
+        for a in [asset_reset, asset_loader, asset_pyscript]:
+            self.add_shared_asset(a)
+        
+        if getattr(self, '_test_mode', False):
+            return
+        
         #  Create flexx-core bootstrap bundle
         self.update_modules()  # to collect _model and _clientcore
         asset_core = Bundle('flexx-core.js')
@@ -232,10 +239,7 @@ class AssetStore:
         asset_core.add_asset(asset_pyscript)
         asset_core.add_module(self.modules['flexx.app._clientcore'])
         asset_core.add_module(self.modules['flexx.app._model'])
-        
-        # Register all the avove assets
-        for a in [asset_reset, asset_loader, asset_pyscript, asset_core]:
-            self.add_shared_asset(a)
+        self.add_shared_asset(asset_core)
     
     def __repr__(self):
         t = '<AssetStore with %i assets, and %i data>'
@@ -281,9 +285,7 @@ class AssetStore:
         # Deal with new modules: store asset deps and bundle the modules
         mcount = 0
         bcount = 0
-        for name in self._modules:
-            if name in current_module_names:
-                continue
+        for name in set(self._modules).difference(current_module_names):
             mod = self.modules[name]
             mcount += 1
             # Get names of bundles to add this module to
@@ -310,9 +312,11 @@ class AssetStore:
         """
         if not name.lower().endswith(('.js', '.css')):
             raise ValueError('Asset names always end in .js or .css')
-        asset = self._assets.get(name, None)
-        if asset is not None:
-            self._used_assets.add(asset.name)
+        try:
+            asset = self._assets[name]
+        except KeyError:
+            raise KeyError('Asset %r is not available in the store.' % name)
+        self._used_assets.add(asset.name)
         return asset
     
     def get_data(self, name):
@@ -393,7 +397,7 @@ class AssetStore:
             asset = self._assets[asset_name]
             if source is not None:
                 t = 'associate_asset() for %s got source, but asset %r already exists.'
-                raise ValueError(t % (mod_name, asset_name))
+                raise TypeError(t % (mod_name, asset_name))
         else:
             asset = Asset(asset_name, source)
             self.add_shared_asset(asset)
@@ -405,10 +409,11 @@ class AssetStore:
         return '_assets/shared/' + asset.name
     
     def get_associated_assets(self, mod_name):
-        """ Get the associated assets corresponding to the given module name.
+        """ Get the names of the assets associated with the given module name.
         Sorted by instantiation time.
         """
-        return tuple(self._associated_assets.get(mod_name, []))
+        assets = self._associated_assets.get(mod_name, [])
+        return tuple([a.name for a in assets])
     
     def add_shared_data(self, name, data):
         """ Add data to serve to the client (e.g. images), which is shared

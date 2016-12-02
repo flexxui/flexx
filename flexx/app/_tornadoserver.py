@@ -331,7 +331,7 @@ class MainHandler(RequestHandler):
         # Get asset provider: store or session
         asset_provider = assets
         if session_id:
-            asset_provider = manager.get_session_by_id(session_id)
+            return self.write('Only supports shared assets, not ' % filename)
         
         # Checks
         if asset_provider is None:
@@ -348,8 +348,9 @@ class MainHandler(RequestHandler):
                     (session_id or 'shared', fname.replace('/:', ':'), where))
             
             # Retrieve asset
-            res = asset_provider.get_asset(filename)
-            if res is None:
+            try:
+                res = asset_provider.get_asset(filename)
+            except KeyError:
                 self.write('Could not load asset %r' % filename)
             else:
                 self._guess_mime_type(filename)
@@ -358,8 +359,9 @@ class MainHandler(RequestHandler):
         elif selector == 'assetview':
             
             # Retrieve asset
-            res = asset_provider.get_asset(filename)
-            if res is None:
+            try:
+                res = asset_provider.get_asset(filename)
+            except KeyError:
                 return self.write('Could not load asset %r' % filename)
             else:
                 res = res.to_string()

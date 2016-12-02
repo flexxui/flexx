@@ -20,7 +20,7 @@ pyscript_types = type, types.FunctionType  # class or function
 
 if sys.version_info > (3, ):
     json_types = None.__class__, bool, int, float, str, tuple, list, dict
-else:
+else:  # pragma: no cover
     json_types = None.__class__, bool, int, float, basestring, tuple, list, dict  # noqa, bah
 
 # In essense, the idea of modules is all about propagating dependencies:
@@ -219,7 +219,7 @@ class JSModule:
         # Stubs
         if isinstance(val, (JSConstant, Asset)) or name in ('Infinity', 'NaN'):
             return
-        elif val is None and not is_global:
+        elif val is None and not is_global:  # pragma: no cover
             logger.warn('JS in "%s" uses variable %r that is None; '
                         'I will assume its a stub and ignore it. Declare %s '
                         'as global (where it\'s used) to use it anyway, or '

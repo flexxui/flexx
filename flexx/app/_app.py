@@ -23,7 +23,7 @@ class ExporterWebSocketDummy:
     close_code = None
     
     def __init__(self):
-        self._commands = []
+        self.commands = []
         self.ping_counter = 0
         # todo: make icon and title work
         #self.command('ICON %s.ico' % session.id)
@@ -31,7 +31,7 @@ class ExporterWebSocketDummy:
         #                                                       'Exported flexx app'))
     
     def command(self, cmd):
-        self._commands.append(cmd)
+        self.commands.append(cmd)
 
 
 class App:
@@ -195,7 +195,7 @@ class App:
             logger.warn('Exporting a standalone app, but it has registered data.')
         
         # Get HTML - this may be good enough
-        html = get_page_for_export(session, exporter._commands, link)
+        html = get_page_for_export(session, exporter.commands, link)
         if filename is None:
             return html
         elif filename.lower().endswith('.hta'):

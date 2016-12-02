@@ -58,7 +58,7 @@ easy to create extensions based on existing JS libraries.
     :members:
 
 
-.. autoclass:: flexx.app.assetstore.AssetStore
+.. autoclass:: flexx.app._assetstore.AssetStore
     :members:
 
 .. autoclass:: flexx.app.Session

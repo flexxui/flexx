@@ -139,8 +139,10 @@ files['lib4'] = """
 """
 
 
+PKG_NAME = 'flxtest'
+
 def setup_module():
-    packdirname = os.path.join(tempdirname, 'flxtest')
+    packdirname = os.path.join(tempdirname, PKG_NAME)
     if not os.path.isdir(tempdirname):
         os.makedirs(tempdirname)
     if not os.path.isdir(packdirname):
@@ -163,6 +165,12 @@ def teardown_module():
 
     while tempdirname in sys.path:
         sys.path.remove(tempdirname)
+    
+    # Remove trace of these classes, since their source no longer exists,
+    # Pyscript wont be able to resolve them for JS
+    for cls in list(app.Model.CLASSES):
+        if cls.__jsmodule__.startswith(PKG_NAME + '.'):
+            app.Model.CLASSES.remove(cls)
 
 
 def test_modules():
@@ -177,6 +185,9 @@ def test_modules():
     
     # Add Foo, this will bring everything else in
     m.add_variable('Foo')
+    
+    assert len(m.model_classes) == 1
+    assert m.model_classes.pop().__name__ == 'Foo'
     
     # Modules exists
     assert len(store) == 7
@@ -286,6 +297,8 @@ def test_add_variable():
         store['flxtest.lib2'].add_variable('spam')  
     assert len(log) == 1 and 'undefined variable' in log[0]
     
+    with raises(ValueError):
+        store['flxtest.lib2'].add_variable('spam', is_global=True)
     
     m = JSModule('flxtest.bar', store)
     
@@ -304,22 +317,17 @@ def test_add_variable():
     # Has changed flag
     our_time = time.time(); time.sleep(0.01)
     m = JSModule('flxtest.bar', {})
-    assert m.changed_time > our_time
     time.sleep(0.01); our_time = time.time();
     m.get_js()
-    assert m.changed_time < our_time
     #
     our_time = time.time(); time.sleep(0.01)
     m.add_variable('use_lib1')
     m.add_variable('AA')
-    assert m.changed_time > our_time
     #
     our_time = time.time(); time.sleep(0.01)
     m.add_variable('use_lib1')  # no effect because already known
-    assert m.changed_time <= our_time
     #
     m.add_variable('AA')  # no effect bacause is imported name
-    assert m.changed_time <= our_time
 
 
 def test_subclasses():

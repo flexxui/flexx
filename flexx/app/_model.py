@@ -119,7 +119,7 @@ def _get_active_models():
     return _active_models_per_thread.setdefault(tid, [])
 
 
-def get_get_active_models():
+def get_active_models():
     """ Get a tuple of Model instance that represent the stack of "active"
     models. Each thread has its own stack. Also see get_active_model().
     """
