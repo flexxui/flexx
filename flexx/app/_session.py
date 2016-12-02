@@ -66,7 +66,7 @@ class Session:
         self._app_name = app_name
         
         # To keep track of what modules are defined at the client
-        self._used_classes = set()  # Model classes registered as used
+        self._known_classes = set()  # Model classes known by the client
         self._used_modules = set()  # module names that define used classes, plus deps
         
         # Data for this session (in addition to the data provided by the store)
@@ -308,7 +308,7 @@ class Session:
         if not (isinstance(cls, type) and issubclass(cls, Model)):
             raise TypeError('_register_model_class() needs a Model class')
         # Early exit if we know the class already
-        if cls in self._used_classes:
+        if cls in self._known_classes:
             return
         
         # Make sure that no two models have the same name, or we get problems
@@ -318,7 +318,7 @@ class Session:
         # in the same module. It can also happen that a class is registered for
         # which the module was defined earlier (e.g. ui.html). Such modules
         # are redefined as well.
-        same_name = [c for c in self._used_classes if c.__name__ == cls.__name__]
+        same_name = [c for c in self._known_classes if c.__name__ == cls.__name__]
         if same_name:
             is_interactive = self._app_name == '__default__'
             same_name.append(cls)
@@ -377,7 +377,7 @@ class Session:
         # Mark classes as used
         for mod in modules:
             for cls in mod.model_classes:
-                self._used_classes.add(cls)
+                self._known_classes.add(cls)
         
         # Push assets over the websocket. Note how this works fine with the
         # notebook because we turn ws commands into display(HTML()).
@@ -539,6 +539,8 @@ def _get_page(session, js_assets, css_assets, link, export):
                 else:
                     html = asset.to_html(pre_path + '/shared/{}', link)
             codes.append(html)
+            if export:
+                codes.append('<script>window.flexx.spin();</script>')
         codes.append('')  # whitespace between css and js assets
     
     src = INDEX

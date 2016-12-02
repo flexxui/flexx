@@ -256,12 +256,8 @@ class Bundle(Asset):
         self._need_sort = True
         
         # Add deps for this module
-        # Add implicit dependency of core Flexx functionality, like serializer, etc.
         deps = set()
-        module_deps = m.deps
-        if ext == '.js':
-            module_deps.add('flexx.app._clientcore')
-        for dep in module_deps:
+        for dep in m.deps:
             while '.' in dep:
                 deps.add(dep)
                 dep = dep.rsplit('.', 1)[0]
@@ -310,6 +306,6 @@ class Bundle(Asset):
             source.append(HEADER)
             source.append(s)
         source.insert(0, '/* Bundle contents:\n' + '\n'.join(toc) + '\n*/\n')
-        if isjs:
-            source.append('window.flexx.spin("%s");' % ('*' * len(self.modules)))
+        #if isjs:
+        #    source.append('window.flexx.spin("%s");' % ('*' * len(self.modules)))
         return '\n\n'.join(source)

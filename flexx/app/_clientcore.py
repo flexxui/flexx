@@ -259,6 +259,7 @@ class Flexx:
         elif msg.startswith('EXEC '):
             eval(msg[5:])  # like eval, but do not return result
         elif msg.startswith('DEFINE-JS ') or msg.startswith('DEFINE-JS-EVAL '):
+            self.spin()
             cmd, name, code = msg.split(' ', 2)
             address = window.location.protocol + '//' + self.ws_url.split('/')[2]
             code += '\n//# sourceURL=%s/flexx/assets/shared/%s\n' % (address, name)
@@ -274,6 +275,7 @@ class Flexx:
                 el.innerHTML = code
                 self._asset_node.appendChild(el)
         elif msg.startswith('DEFINE-CSS '):
+            self.spin()
             cmd, name, code = msg.split(' ', 2)
             address = window.location.protocol + '//' + self.ws_url.split('/')[2]
             code += '\n/*# sourceURL=%s/flexx/assets/shared/%s*/\n' % (address, name)

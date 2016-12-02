@@ -103,13 +103,13 @@ def test_session_registering_model_classes():
     assert len(s.used_modules) == 2
     assert 'flexx.ui._widget' in s.used_modules
     assert 'flexx.ui.widgets._button' in s.used_modules
-    assert len(s._used_classes) == 6  # Because a module was loaded that has more widgets
-    assert ui.Button in s._used_classes
-    assert ui.RadioButton in s._used_classes
-    assert ui.CheckBox in s._used_classes
-    assert ui.ToggleButton in s._used_classes
-    assert ui.BaseButton in s._used_classes
-    assert ui.Widget in s._used_classes
+    assert len(s._known_classes) == 6  # Because a module was loaded that has more widgets
+    assert ui.Button in s._known_classes
+    assert ui.RadioButton in s._known_classes
+    assert ui.CheckBox in s._known_classes
+    assert ui.ToggleButton in s._known_classes
+    assert ui.BaseButton in s._known_classes
+    assert ui.Widget in s._known_classes
     
     with raises(TypeError):
          s._register_model_class(3)
