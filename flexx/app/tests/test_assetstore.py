@@ -1,5 +1,5 @@
 """
-Tests for Asset AssetStore and SessionAssets.
+Tests for Asset AssetStore and Session.
 
 Note that our docs is very much a test for our export mechanism.
 """
@@ -12,7 +12,7 @@ import shutil
 from flexx.util.testing import run_tests_if_main, raises
 
 from flexx.app._assetstore import assets, AssetStore
-from flexx.app._session import SessionAssets
+from flexx.app._session import Session
 
 from flexx import ui, app
 
@@ -105,7 +105,7 @@ def test_asset_store_export():
     
     store.add_shared_data('foo.png', b'x')
     
-    s = SessionAssets(store)
+    s = Session('', store)
     s.add_data('bar.png', b'x')
     
     store.export(dir)
@@ -128,7 +128,7 @@ def test_asset_store_export():
 #     
 #     store = AssetStore()
 #     store.add_shared_asset(app.Asset('spam.css', '', []))
-#     s = SessionAssets(store)
+#     s = Session('', store)
 #     s._send_command = lambda x: None
 #     assert s.id
 #     
@@ -195,7 +195,7 @@ def test_session_assets_data():
     
     store = AssetStore()
     store.add_shared_data('ww', b'wwww')
-    s = SessionAssets(store)
+    s = Session('', store)
     s._send_command = lambda x: None
     assert s.id
     
@@ -246,7 +246,7 @@ def test_session_registering_model_classes():
     store = AssetStore()
     store.update_modules()
     
-    s = SessionAssets(store)
+    s = Session('', store)
     commands = []
     s._send_command = lambda x: commands.append(x)
     assert not s._used_modules

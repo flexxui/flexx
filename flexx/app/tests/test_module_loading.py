@@ -5,7 +5,7 @@ from flexx.util.logging import capture_log
 
 from flexx import app
 from flexx.app._assetstore import AssetStore
-from flexx.app._session import SessionAssets
+from flexx.app._session import Session
 from flexx.app._model import new_type
 
 
@@ -31,7 +31,7 @@ class FakeModel:
 def test_simple():
     
     store = AssetStore()
-    s = SessionAssets(store)
+    s = Session('', store)
     
     m1 = FakeModule('module1', ())
     

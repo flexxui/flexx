@@ -116,7 +116,6 @@ class JSModule:
         # Dependencies
         self._deps = {}  # mod_name -> [mod_as_name, *imports]
         # Caches
-        self._changed_time = 0
         self._js_cache = None
         self._css_cache = None
         
@@ -126,8 +125,6 @@ class JSModule:
             self._pyscript_code['__all__'] = js
             self._provided_names.update([n for n in js.meta['vars_defined']
                                          if not n.startswith('_')])
-        
-        self._changed_time = time.time()
     
     def __repr__(self):
         return '<%s %s with %i definitions>' % (self.__class__.__name__,
@@ -160,13 +157,6 @@ class JSModule:
         """ The Model classes defined in this module.
         """
         return set(self._model_classes.values())
-    
-    @property
-    def changed_time(self):
-        """ The time (as in ``time.time()``) at which this module was
-        last changed.
-        """
-        return self._changed_time
     
     def _import(self, mod_name, name, as_name):
         """ Import a name from another module. This also ensures that the

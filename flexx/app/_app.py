@@ -10,7 +10,7 @@ from .. import event, webruntime
 
 from ._model import Model
 from ._server import current_server
-from ._session import Session
+from ._session import Session, get_page_for_export
 from ._assetstore import assets
 from . import logger
 
@@ -195,7 +195,7 @@ class App:
             logger.warn('Exporting a standalone app, but it has registered data.')
         
         # Get HTML - this may be good enough
-        html = session.get_page_for_export(exporter._commands, link)
+        html = get_page_for_export(session, exporter._commands, link)
         if filename is None:
             return html
         elif filename.lower().endswith('.hta'):
@@ -211,7 +211,7 @@ class App:
         if link:
             if write_shared:
                 assets.export(os.path.dirname(filename))
-            session._export(os.path.dirname(filename))
+            session._export_data(os.path.dirname(filename))
         with open(filename, 'wb') as f:
             f.write(html.encode())
         

@@ -18,9 +18,11 @@ from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketHandler
 from tornado.httpserver import HTTPServer
 
-from ._server import AbstractServer
 from ._app import manager
+from ._session import get_page
+from ._server import AbstractServer
 from ._assetstore import assets
+
 from . import logger
 from .. import config
 
@@ -277,13 +279,13 @@ class AppHandler(FlexxHandler):
             # If session_id matches a pending app, use that session
             session = manager.get_session_by_id(session_id)
             if session and session.status == session.STATUS.PENDING:
-                self.write(session.get_page().encode())
+                self.write(get_page(session).encode())
             else:
                 self.redirect('/%s/' % app_name)  # redirect for normal serve
         else:
             # Create session - websocket will connect to it via session_id
             session = manager.create_session(app_name)
-            self.write(session.get_page().encode())
+            self.write(get_page(session).encode())
 
 
 class MainHandler(RequestHandler):

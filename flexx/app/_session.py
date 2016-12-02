@@ -43,35 +43,160 @@ def get_random_string(length=24, allowed_chars=None):
     return ''.join(srandom.choice(allowed_chars) for i in range(length))
 
 
-class SessionAssets:
-    """ Provider for assets of a specific session. Inherited by Session.
+class Session:
+    """ A session between Python and the client runtime.
+    This class is what holds together the app widget, the web runtime,
+    and the websocket instance that connects to it.
     
-    The responsibility of this class is to keep track of what JSModules
-    are being used, to provide the associated bundles and assets, and to
-    dynamically define assets when needed. Further this class takes
-    care of per-session data.
+    Responsibilities:
+    
+    * Send messages to the client, and parse messages received by the client.
+    * Keep track of Model instances associated with the session.
+    * Ensure that the client has all the definitions it needs, i.e. JIT assets.
+    * Allow the user to send data to the client.
+    
     """
     
-    def __init__(self, store=None):  # Allow custom store for testing
+    STATUS = new_type('Enum', (), {'PENDING': 1, 'CONNECTED': 2, 'CLOSED': 0})
+    
+    def __init__(self, app_name, store=None):  # Allow custom store for testing
         self._store = store if (store is not None) else assetstore
         assert isinstance(self._store, AssetStore)
         
+        # Id and name of the app
         self._id = get_random_string()
-        self._app_name = ''
+        self._app_name = app_name
         
-        # Keep track of all assets for this session. Assets that are provided
-        # by the asset store have a value of None.
+        # To keep track of what modules are defined at the client
         self._used_classes = set()  # Model classes registered as used
         self._used_modules = set()  # module names that define used classes, plus deps
+        
         # Data for this session (in addition to the data provided by the store)
         self._data = {}
-        self._is_interactive = None
+        
+        # More vars
+        self._runtime = None  # init web runtime, will be set when used
+        self._ws = None  # init websocket, will be set when a connection is made
+        self._model = None  # Model instance, can be None if app_name is __default__
+        self._closing = False  # Flag to help with shutdown
+        
+        # A counter to generate model id's
+        self._model_counter = 0
+        # Known model instances in this session, so we can "deserialize" them
+        self._model_instances = weakref.WeakValueDictionary()
+        # Objects that are guarded from deletion: id: (ping_count, instance)
+        self._instances_guarded = {}
+        
+        # While the client is not connected, we keep a queue of
+        # commands, which are send to the client as soon as it connects
+        self._pending_commands = []
+    
+    def __repr__(self):
+        t = '<%s for %r (%i) at 0x%x>'
+        return t % (self.__class__.__name__, self.app_name, self.status, id(self))
     
     @property
     def id(self):
         """ The unique identifier of this session.
         """
         return self._id
+    
+    @property
+    def app_name(self):
+        """ The name of the application that this session represents.
+        """
+        return self._app_name
+    
+    @property
+    def app(self):
+        """ The Model instance that represents the app. Can be None if Flexx
+        is used in interactive mode (using the ``__default__`` app).
+        """
+        return self._model
+    
+    @property
+    def runtime(self):
+        """ The runtime that is rendering this app instance. Can be
+        None if the client is a browser.
+        """
+        return self._runtime
+    
+    @property
+    def status(self):
+        """ The status of this session. The lifecycle for each session is:
+        
+        * status 1: pending
+        * statys 2: connected
+        * status 0: closed
+        """
+        if self._ws is None:
+            return self.STATUS.PENDING  # not connected yet
+        elif self._ws.close_code is None:
+            return self.STATUS.CONNECTED  # alive and kicking
+        else:
+            return self.STATUS.CLOSED  # connection closed
+    
+    @property
+    def used_modules(self):
+        """ The set of module names that this session is using.
+        """
+        return set(self._used_modules)
+    
+    def close(self):
+        """ Close the session: close websocket, close runtime, dispose app.
+        """
+        # Stop guarding objects to break down any circular refs
+        for id in list(self._instances_guarded.keys()):
+            self._instances_guarded.pop(id)
+        self._closing = True  # suppress warnings for session being closed.
+        try:
+            
+            # Close the websocket
+            if self._ws:
+                self._ws.close_this()
+            # Close the runtime
+            if self._runtime:
+                self._runtime.close()
+            # Dispose the model and break the circular reference
+            if self._model:
+                self._model.dispose()
+                self._model = None
+        finally:
+            self._closing = False
+    
+    ## Hooking up with app, websocket, runtime
+    
+    def _set_ws(self, ws):
+        """ A session is always first created, so we know what page to
+        serve. The client will connect the websocket, and communicate
+        the session_id so it can be connected to the correct Session
+        via this method
+        """
+        if self._ws is not None:
+            raise RuntimeError('Session is already connected.')
+        # Set websocket object - this is what changes the status to CONNECTED
+        self._ws = ws  
+        # todo: make icon and title work again. Also in exported docs.
+        # Set some app specifics
+        # self._ws.command('ICON %s.ico' % self.id)
+        # self._ws.command('TITLE %s' % self._config.title)
+        # Send pending commands
+        for command in self._pending_commands:
+            self._ws.command(command)
+        self._ws.command('INIT-DONE')
+   
+    def _set_app(self, model):
+        if self._model is not None:
+            raise RuntimeError('Session already has an associated Model.')
+        self._model = model
+        # todo: connect to title change and icon change events
+    
+    def _set_runtime(self, runtime):
+        if self._runtime is not None:
+            raise RuntimeError('Session already has a runtime.')
+        self._runtime = runtime
+    
+    ## Data
     
     def get_data_names(self):
         """ Get a list of names of the data provided by this session, in
@@ -122,6 +247,57 @@ class SessionAssets:
         """
         self._data.pop(name, None)
     
+    def _export_data(self, dirname, clear=False):
+        """ Export all assets and data specific to this session.
+        Private method, used by app.export().
+        """
+        # Note that self.id will have been set to the app name.
+        assets = []
+        data = [(name, self.get_data(name)) for name in self.get_data_names()]
+        export_assets_and_data(assets, data, dirname, self.id, clear)
+        logger.info('Exported data for %r to %r.' % (self.id, dirname))
+
+    ## Keeping track of model objects
+    
+    def _register_model(self, model):
+        """ Called by Model to give them an id and register with the session.
+        """
+        assert isinstance(model, Model)
+        assert model.session is self
+        cls = model.__class__
+        # Set id
+        self._model_counter += 1
+        model._id = cls.__name__ + str(self._model_counter)
+        # Register the instance using a weakref
+        self._model_instances[model.id] = model
+        # Register the class to that the client has the needed definitions
+        self._register_model_class(cls)
+    
+    def get_model_instance_by_id(self, id):
+        """ Get instance of Model class corresponding to the given id,
+        or None if it does not exist.
+        """
+        try:
+            return self._model_instances[id]
+        except KeyError:
+            t = 'Model instance %r does not exist in this session (anymore).'
+            logger.warn(t % id)
+            return None  # Could we revive it? ... probably not a good idea
+    
+    def keep_alive(self, ob, iters=4):
+        """ Keep an object alive for a certain amount of time, expressed
+        in Python-JS ping roundtrips. This is intended for making Model
+        objects survive jitter due to synchronisation, though any type
+        of object can be given.
+        """
+        obid = id(ob)
+        counter = 0 if self._ws is None else self._ws.ping_counter
+        lifetime = counter + int(iters)
+        if lifetime > self._instances_guarded.get(obid, (0, ))[0]:
+            self._instances_guarded[obid] = lifetime, ob
+    
+    ## JIT asset definitions
+    
     # todo: deprecated - remove this
     def register_model_class(self, cls):
         logger.warn('register_model_class() is no more.')
@@ -137,10 +313,6 @@ class SessionAssets:
         if cls in self._used_classes:
             return
         
-        # Ensure interactive flag - e.g. for in the notebook
-        if self._is_interactive is None:
-            self._is_interactive = self._app_name == '__default__'
-        
         # Make sure that no two models have the same name, or we get problems
         # that are difficult to debug. Unless classes are defined interactively.
         # The modules of classes that are re-registered are re-defined. The base
@@ -150,9 +322,10 @@ class SessionAssets:
         # are redefined as well.
         same_name = [c for c in self._used_classes if c.__name__ == cls.__name__]
         if same_name:
+            is_interactive = self._app_name == '__default__'
             same_name.append(cls)
             is_dynamic_cls = all([c.__module__ == '__main__' for c in same_name])
-            if not (self._is_interactive and is_dynamic_cls):
+            if not (is_interactive and is_dynamic_cls):
                 raise RuntimeError('Cannot have multiple Model classes with the same '
                                    'name unless using interactive session and the '
                                    'classes are dynamically defined: %r' % same_name)
@@ -222,242 +395,7 @@ class SessionAssets:
             t = 'DEFINE-%s %s %s'
             self._send_command(t % (suffix, asset.name, asset.to_string()))
     
-    def get_page(self, link=3):
-        """ Get the string for the HTML page to render this session's app.
-        """
-        css_assets = [self._store.get_asset('reset.css')]
-        js_assets = [self._store.get_asset('flexx-core.js')]
-        return self._get_page(js_assets, css_assets, link, False)
-    
-    def get_page_for_export(self, commands, link=0):
-        """ Get the string for an exported HTML page (to run without a server).
-        """
-        # We start as a normal page ...
-        css_assets = [self._store.get_asset('reset.css')]
-        js_assets = [self._store.get_asset('flexx-core.js')]
-        # Get all the used modules
-        modules = [self._store.modules[name] for name in self._used_modules]
-        f = lambda m: (m.name.startswith('__main__'), m.name)
-        modules = solve_dependencies(sorted(modules, key=f))
-        # First the associated assets
-        associated_assets = []
-        for mod in modules:
-            for asset in self._store.get_associated_assets(mod.name):
-                if asset.name.lower().endswith('.js'):
-                    js_assets.append(asset)
-                else:
-                    css_assets.append(asset)
-        # Then the modules themselves
-        for mod in modules:
-            if mod.get_css().strip():
-                css_assets.append(self._store.get_asset(mod.name + '.css'))
-        for mod in modules:
-            js_assets.append(self._store.get_asset(mod.name + '.js'))
-        # Create asset for launching the app (commands that normally get send
-        # over the websocket)
-        lines = []
-        lines.append('flexx.is_exported = true;\n')
-        lines.append('flexx.runExportedApp = function () {')
-        lines.extend(['    flexx.command(%s);' % reprs(c) for c in commands if not c.startswith('DEFINE-')])
-        lines.append('};\n')
-        # Create a session asset for it, "-export.js" is always embedded
-        export_asset = Asset('flexx-export.js', '\n'.join(lines))
-        js_assets.append(export_asset)
-        
-        return self._get_page(js_assets, css_assets, link, True)
-    
-    def _get_page(self, js_assets, css_assets, link, export):
-        """ Compose index page.
-        """
-        pre_path = '_assets' if export else '/flexx/assets'
-        
-        codes = []
-        
-        t = 'var flexx = {app_name: "%s", session_id: "%s"};'
-        codes.append('<script>%s</script>\n' % t % (self._app_name, self.id))
-        
-        for assets in [css_assets, js_assets]:
-            for asset in assets:
-                if not link:
-                    html = asset.to_html('{}', link)
-                else:
-                    if asset.name.endswith(('-info.js', '-export.js')):
-                        html = asset.to_html('', 0)
-                    elif self._store.get_asset(asset.name) is not asset:
-                        html = asset.to_html(pre_path + '/%s/{}' % self.id, link)
-                    else:
-                        html = asset.to_html(pre_path + '/shared/{}', link)
-                codes.append(html)
-            codes.append('')  # whitespace between css and js assets
-        
-        src = INDEX
-        if not link:
-            asset_names = [a.name for a in css_assets + js_assets]
-            toc = '<!-- Contents:\n\n- ' + '\n- '.join(asset_names) + '\n\n-->'
-            codes.insert(0, toc)
-            src = src.replace('ASSET-HOOK', '\n\n\n'.join(codes))
-        else:
-            src = src.replace('ASSET-HOOK', '\n'.join(codes))
-        
-        return src
-    
-    def _export(self, dirname, clear=False):
-        """ Export all assets and data specific to this session.
-        Private method, used by app.export().
-        """
-        # Note that self.id will have been set to the app name.
-        assets = []
-        data = [(name, self.get_data(name)) for name in self.get_data_names()]
-        export_assets_and_data(assets, data, dirname, self.id, clear)
-        logger.info('Exported assets and data for %r to %r.' % (self.id, dirname))
-
-
-class Session(SessionAssets):
-    """
-    A session between Python and the client runtime.
-    This class is what holds together the app widget, the web runtime,
-    and the websocket instance that connects to it.
-    """
-    
-    STATUS = new_type('Enum', (), {'PENDING': 1, 'CONNECTED': 2, 'CLOSED': 0})
-    
-    def __init__(self, app_name):
-        super().__init__()
-        
-        self._app_name = app_name  # name of the app, available before the app itself
-        self._runtime = None  # init web runtime, will be set when used
-        self._ws = None  # init websocket, will be set when a connection is made
-        self._model = None  # Model instance, can be None if app_name is __default__
-        self._closing = False
-        
-        # A counter to generate model id's
-        self._model_counter = 0
-        # Known model instances in this session, so we can "deserialize" them
-        self._model_instances = weakref.WeakValueDictionary()
-        # Objects that are guarded from deletion: id: (ping_count, instance)
-        self._instances_guarded = {}
-        
-        # While the client is not connected, we keep a queue of
-        # commands, which are send to the client as soon as it connects
-        self._pending_commands = []
-        
-        self._creation_time = time.time()
-    
-    def __repr__(self):
-        s = self.status
-        return '<Session for %r (%i) at 0x%x>' % (self.app_name, s, id(self))
-    
-    def _register_model(self, model):
-        """ Called by Model to give them an id and register with the session.
-        """
-        assert isinstance(model, Model)
-        assert model.session is self
-        cls = model.__class__
-        # Set id
-        self._model_counter += 1
-        model._id = cls.__name__ + str(self._model_counter)
-        # Register the instance using a weakref
-        self._model_instances[model.id] = model
-        # Register the class to that the client has the needed definitions
-        self._register_model_class(cls)
-    
-    def get_model_instance_by_id(self, id):
-        """ Get instance of Model class corresponding to the given id,
-        or None if it does not exist.
-        """
-        try:
-            return self._model_instances[id]
-        except KeyError:
-            t = 'Model instance %r does not exist in this session (anymore).'
-            logger.warn(t % id)
-            return None  # Could we revive it? ... probably not a good idea
-    
-    @property
-    def app_name(self):
-        """ The name of the application that this session represents.
-        """
-        return self._app_name
-    
-    @property
-    def app(self):
-        """ The Model instance that represents the app. Can be None if Flexx
-        is used in interactive mode (using the ``__default__`` app).
-        """
-        return self._model
-    
-    @property
-    def runtime(self):
-        """ The runtime that is rendering this app instance. Can be
-        None if the client is a browser.
-        """
-        return self._runtime
-    
-    def _set_ws(self, ws):
-        """ A session is always first created, so we know what page to
-        serve. The client will connect the websocket, and communicate
-        the session_id so it can be connected to the correct Session
-        via this method
-        """
-        if self._ws is not None:
-            raise RuntimeError('Session is already connected.')
-        # Set websocket object - this is what changes the status to CONNECTED
-        self._ws = ws  
-        # todo: make icon and title work again. Also in exported docs.
-        # Set some app specifics
-        # self._ws.command('ICON %s.ico' % self.id)
-        # self._ws.command('TITLE %s' % self._config.title)
-        # Send pending commands
-        for command in self._pending_commands:
-            self._ws.command(command)
-        self._ws.command('INIT-DONE')
-   
-    def _set_app(self, model):
-        if self._model is not None:
-            raise RuntimeError('Session already has an associated Model.')
-        self._model = model
-        # todo: connect to title change and icon change events
-    
-    def _set_runtime(self, runtime):
-        if self._runtime is not None:
-            raise RuntimeError('Session already has a runtime.')
-        self._runtime = runtime
-    
-    def close(self):
-        """ Close the session: close websocket, close runtime, dispose app.
-        """
-        # Stop guarding objects to break down any circular refs
-        for id in list(self._instances_guarded.keys()):
-            self._instances_guarded.pop(id)
-        self._closing = True  # suppress warnings for session being closed.
-        try:
-            
-            # Close the websocket
-            if self._ws:
-                self._ws.close_this()
-            # Close the runtime
-            if self._runtime:
-                self._runtime.close()
-            # Dispose the model and break the circular reference
-            if self._model:
-                self._model.dispose()
-                self._model = None
-        finally:
-            self._closing = False
-    
-    @property
-    def status(self):
-        """ The status of this session. The lifecycle for each session is:
-        
-        * status 1: pending
-        * statys 2: connected
-        * status 0: closed
-        """
-        if self._ws is None:
-            return self.STATUS.PENDING  # not connected yet
-        elif self._ws.close_code is None:
-            return self.STATUS.CONNECTED  # alive and kicking
-        else:
-            return self.STATUS.CLOSED  # connection closed
+    ## Communication with the client
     
     def _send_command(self, command):
         """ Send the command, add to pending queue.
@@ -506,18 +444,6 @@ class Session(SessionAssets):
         else:
             logger.warn('Unknown command received from JS:\n%s' % command)
     
-    def keep_alive(self, ob, iters=4):
-        """ Keep an object alive for a certain amount of time, expressed
-        in Python-JS ping roundtrips. This is intended for making Model
-        objects survive jitter due to synchronisation, though any type
-        of object can be given.
-        """
-        obid = id(ob)
-        counter = 0 if self._ws is None else self._ws.ping_counter
-        lifetime = counter + int(iters)
-        if lifetime > self._instances_guarded.get(obid, (0, ))[0]:
-            self._instances_guarded[obid] = lifetime, ob
-    
     def _receive_pong(self, count):
         """ Called by ws when it gets a pong. Thus gets called about
         every sec. Clear the guarded Model instances for which the
@@ -542,3 +468,82 @@ class Session(SessionAssets):
         if self._ws is None:
             raise RuntimeError('App not connected')
         self._send_command('EVAL ' + code)
+
+
+def get_page(session):
+    """ Get the string for the HTML page to render this session's app.
+    """
+    css_assets = [assetstore.get_asset('reset.css')]
+    js_assets = [assetstore.get_asset('flexx-core.js')]
+    return _get_page(session, js_assets, css_assets, 3, False)
+
+
+def get_page_for_export(session, commands, link=0):
+    """ Get the string for an exported HTML page (to run without a server).
+    """
+    # We start as a normal page ...
+    css_assets = [assetstore.get_asset('reset.css')]
+    js_assets = [assetstore.get_asset('flexx-core.js')]
+    # Get all the used modules
+    modules = [assetstore.modules[name] for name in session.used_modules]
+    f = lambda m: (m.name.startswith('__main__'), m.name)
+    modules = solve_dependencies(sorted(modules, key=f))
+    # First the associated assets
+    associated_assets = []
+    for mod in modules:
+        for asset in assetstore.get_associated_assets(mod.name):
+            if asset.name.lower().endswith('.js'):
+                js_assets.append(asset)
+            else:
+                css_assets.append(asset)
+    # Then the modules themselves
+    for mod in modules:
+        if mod.get_css().strip():
+            css_assets.append(assetstore.get_asset(mod.name + '.css'))
+    for mod in modules:
+        js_assets.append(assetstore.get_asset(mod.name + '.js'))
+    # Create asset for launching the app (commands that normally get send
+    # over the websocket)
+    lines = []
+    lines.append('flexx.is_exported = true;\n')
+    lines.append('flexx.runExportedApp = function () {')
+    lines.extend(['    flexx.command(%s);' % reprs(c) for c in commands if not c.startswith('DEFINE-')])
+    lines.append('};\n')
+    # Create a session asset for it, "-export.js" is always embedded
+    export_asset = Asset('flexx-export.js', '\n'.join(lines))
+    js_assets.append(export_asset)
+    
+    return _get_page(session, js_assets, css_assets, link, True)
+
+def _get_page(session, js_assets, css_assets, link, export):
+    """ Compose index page.
+    """
+    pre_path = '_assets' if export else '/flexx/assets'
+    
+    codes = []
+    
+    t = 'var flexx = {app_name: "%s", session_id: "%s"};'
+    codes.append('<script>%s</script>\n' % t % (session.app_name, session.id))
+    
+    for assets in [css_assets, js_assets]:
+        for asset in assets:
+            if not link:
+                html = asset.to_html('{}', link)
+            else:
+                if asset.name.endswith(('-info.js', '-export.js')):
+                    html = asset.to_html('', 0)
+                else:
+                    html = asset.to_html(pre_path + '/shared/{}', link)
+            codes.append(html)
+        codes.append('')  # whitespace between css and js assets
+    
+    src = INDEX
+    if not link:
+        asset_names = [a.name for a in css_assets + js_assets]
+        toc = '<!-- Contents:\n\n- ' + '\n- '.join(asset_names) + '\n\n-->'
+        codes.insert(0, toc)
+        src = src.replace('ASSET-HOOK', '\n\n\n'.join(codes))
+    else:
+        src = src.replace('ASSET-HOOK', '\n'.join(codes))
+    
+    return src
