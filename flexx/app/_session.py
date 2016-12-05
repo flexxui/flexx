@@ -66,8 +66,10 @@ class Session:
         self._app_name = app_name
         
         # To keep track of what modules are defined at the client
-        self._known_classes = set()  # Model classes known by the client
-        self._used_modules = set()  # module names that define used classes, plus deps
+        self._present_classes = set()  # Model classes known by the client
+        self._present_modules = set()  # module names that define used classes, plus deps
+        self._present_assets = set()  # names of used associated assets
+        self._assets_to_ignore = set()  # user settable
         
         # Data for this session (in addition to the data provided by the store)
         self._data = {}
@@ -135,10 +137,18 @@ class Session:
             return self.STATUS.CLOSED  # connection closed
     
     @property
-    def used_modules(self):
-        """ The set of module names that this session is using.
+    def present_modules(self):
+        """ The set of module names that is (currently) available at the client.
         """
-        return set(self._used_modules)
+        return set(self._present_modules)
+    
+    @property
+    def assets_to_ignore(self):
+        """ The set of names of assets that should *not* be pushed to
+        the client, e.g. because they are already present on the page.
+        Add names to this set to prevent them from being loaded.
+        """
+        return self._assets_to_ignore
     
     def close(self):
         """ Close the session: close websocket, close runtime, dispose app.
@@ -308,7 +318,7 @@ class Session:
         if not (isinstance(cls, type) and issubclass(cls, Model)):
             raise TypeError('_register_model_class() needs a Model class')
         # Early exit if we know the class already
-        if cls in self._known_classes:
+        if cls in self._present_classes:
             return
         
         # Make sure that no two models have the same name, or we get problems
@@ -318,7 +328,7 @@ class Session:
         # in the same module. It can also happen that a class is registered for
         # which the module was defined earlier (e.g. ui.html). Such modules
         # are redefined as well.
-        same_name = [c for c in self._known_classes if c.__name__ == cls.__name__]
+        same_name = [c for c in self._present_classes if c.__name__ == cls.__name__]
         if same_name:
             is_interactive = self._app_name == '__default__'
             same_name.append(cls)
@@ -345,8 +355,8 @@ class Session:
         def collect_module_and_deps(mod):
             if mod.name.startswith('flexx.app'):
                 return  # these are part of flexx-core asset
-            if mod.name not in self._used_modules: 
-                self._used_modules.add(mod.name)
+            if mod.name not in self._present_modules: 
+                self._present_modules.add(mod.name)
                 for dep in mod.deps:
                     submod = self._store.modules[dep]
                     collect_module_and_deps(submod)
@@ -362,7 +372,9 @@ class Session:
         # Collect associated assets
         for mod in modules:
             for asset_name in self._store.get_associated_assets(mod.name):
-                assets.append(self._store.get_asset(asset_name))
+                if asset_name not in self._present_assets:
+                    self._present_assets.add(asset_name)
+                    assets.append(self._store.get_asset(asset_name))
         # If the module was already defined and thus needs to be re-defined,
         # we only redefine *this* module, no deps and no assoctated assets.
         if not modules:
@@ -377,7 +389,7 @@ class Session:
         # Mark classes as used
         for mod in modules:
             for cls in mod.model_classes:
-                self._known_classes.add(cls)
+                self._present_classes.add(cls)
         
         # Push assets over the websocket. Note how this works fine with the
         # notebook because we turn ws commands into display(HTML()).
@@ -385,7 +397,9 @@ class Session:
         # The latter allows assets that do not use strict mode, but sourceURL
         # does not work on FF. So we only want to eval our own assets.
         for asset in assets:
-            logger.debug('Loading asset %s' % asset.name)
+            if asset.name in self._assets_to_ignore:
+                continue
+            logger.info('Loading asset %s' % asset.name)
             # Determine command suffix. All our sources come in bundles,
             # for which we use eval because it makes sourceURL work on FF.
             suffix = asset.name.split('.')[-1].upper()
@@ -487,17 +501,20 @@ def get_page_for_export(session, commands, link=0):
     css_assets = [assetstore.get_asset('reset.css')]
     js_assets = [assetstore.get_asset('flexx-core.js')]
     # Get all the used modules
-    modules = [assetstore.modules[name] for name in session.used_modules]
+    modules = [assetstore.modules[name] for name in session.present_modules]
     f = lambda m: (m.name.startswith('__main__'), m.name)
     modules = solve_dependencies(sorted(modules, key=f))
     # First the associated assets
+    asset_names = set()
     for mod in modules:
         for asset_name in assetstore.get_associated_assets(mod.name):
-            asset = assetstore.get_asset(asset_name)
-            if asset.name.lower().endswith('.js'):
-                js_assets.append(asset)
-            else:
-                css_assets.append(asset)
+            if asset_name not in asset_names:
+                asset_names.add(asset_name)
+                asset = assetstore.get_asset(asset_name)
+                if asset.name.lower().endswith('.js'):
+                    js_assets.append(asset)
+                else:
+                    css_assets.append(asset)
     # Then the modules themselves
     for mod in modules:
         if mod.get_css().strip():

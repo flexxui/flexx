@@ -36,10 +36,6 @@ class Flexx:
         self.last_msg = None
         self.classes = {}
         self.instances = {}
-        # Create div to put dynamic CSS assets in
-        self._asset_node = window.document.createElement("div")
-        self._asset_node.id = 'Flexx asset container'
-        window.document.body.appendChild(self._asset_node)
         
         if window.is_node is True:
             # nodejs (call exit on exit and ctrl-c)
@@ -56,6 +52,11 @@ class Flexx:
     
     def init(self):
         """ Called after document is loaded. """
+        # Create div to put dynamic CSS assets in
+        self._asset_node = window.document.createElement("div")
+        self._asset_node.id = 'Flexx asset container'
+        window.document.body.appendChild(self._asset_node)
+        
         if self.is_exported:
             if self.is_notebook:
                 print('Flexx: I am in an exported notebook!')

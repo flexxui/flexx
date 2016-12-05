@@ -305,7 +305,8 @@ class Bundle(Asset):
             source.append('/* ' + (' %s ' % m.name).center(70, '=') + '*/')
             source.append(HEADER)
             source.append(s)
-        source.insert(0, '/* Bundle contents:\n' + '\n'.join(toc) + '\n*/\n')
+        if len(self.assets + self.modules) > 1:
+            source.insert(0, '/* Bundle contents:\n' + '\n'.join(toc) + '\n*/\n')
         #if isjs:
         #    source.append('window.flexx.spin("%s");' % ('*' * len(self.modules)))
         return '\n\n'.join(source)
