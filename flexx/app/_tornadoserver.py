@@ -47,12 +47,12 @@ class TornadoServer(AbstractServer):
     """ Flexx Server implemented in Tornado.
     """
     
-    def __init__(self, host, port, new_loop):
+    def __init__(self, host, port, new_loop, **kwargs):
         self._new_loop = new_loop
         self._app = None
         self._server = None
         self._get_io_loop()
-        super().__init__(host, port)
+        super().__init__(host, port, **kwargs)
     
     def _get_io_loop(self):
         # Get a new ioloop or the current ioloop for this thread
@@ -63,7 +63,7 @@ class TornadoServer(AbstractServer):
             if self._loop is None:
                 self._loop = IOLoop(make_current=True)
     
-    def _open(self, host, port):
+    def _open(self, host, port, **kwargs):
         # Note: does not get called if host is False. That way we can 
         # run Flexx in e.g. JLab's application.
         
@@ -72,8 +72,8 @@ class TornadoServer(AbstractServer):
                                  (r"/flexx/(.*)", MainHandler),
                                  (r"/(.*)", AppHandler), ])
         # Create tornado server, bound to our own ioloop
-        self._server = HTTPServer(self._app, io_loop=self._loop)
-        
+        self._server = HTTPServer(self._app, io_loop=self._loop, **kwargs)
+
         # Start server (find free port number if port not given)
         if port:
             # Turn port into int, use hashed port number if a string was given
@@ -100,7 +100,10 @@ class TornadoServer(AbstractServer):
         
         # Notify address, so its easy to e.g. copy and paste in the browser
         self._serving = self._app._flexx_serving = host, port
-        logger.info('Serving apps at http://%s:%i/' % (host, port))
+        proto = 'http'
+        if 'ssl_options' in kwargs:
+            proto = 'https'
+        logger.info('Serving apps at %s://%s:%i/' % (proto, host, port))
     
     def _start(self):
         # Ensure that our loop is the current loop for this thread

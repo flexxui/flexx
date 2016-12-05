@@ -123,10 +123,13 @@ class Flexx:
         
         # Construct ws url (for nodejs the location is set by the flexx nodejs runtime)
         if not self.ws_url:
+            proto = 'ws'
+            if window.location.protocol == 'https:':
+                proto = 'wss'
             address = window.location.hostname
             if window.location.port:
                 address += ':' + window.location.port
-            self.ws_url = 'ws://%s/flexx/ws/%s' % (address, self.app_name)
+            self.ws_url = '%s://%s/flexx/ws/%s' % (proto, address, self.app_name)
         
         # Open web socket in binary mode
         self.ws = ws = WebSocket(self.ws_url)
