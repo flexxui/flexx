@@ -67,7 +67,7 @@ class Session:
         
         # To keep track of what modules are defined at the client
         self._present_classes = set()  # Model classes known by the client
-        self._present_modules = set()  # module names that define used classes, plus deps
+        self._present_modules = set()  # module names that, plus deps
         self._present_assets = set()  # names of used associated assets
         self._assets_to_ignore = set()  # user settable
         

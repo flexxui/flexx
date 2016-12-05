@@ -216,42 +216,33 @@ def init_notebook():
     # the widget show up in the notebook output area.
 
 
-# todo: deprecate these
 
-def serve(cls, name=None, properties=None):
-    """ Backwards compat.
+# Keep serve and launch, they are still quite nice shorthands to quickly
+# get something done.
+
+def serve(cls, name=None):
+    """ Shorthand for ``app.App(cls).serve(name)``.
     """
     # Note: this talks to the manager; it has nothing to do with the server
     assert (isinstance(cls, type) and issubclass(cls, Model))
-    a = App(cls, **(properties or {}))
+    a = App(cls)
     a.serve(name)
     return cls
 
 
-def launch(cls, runtime=None, properties=None, **runtime_kwargs):
-    """ Backwards compat.
+def launch(cls, runtime=None, **runtime_kwargs):
+    """ Shorthand for ``app.App(cls).launch(runtime, **runtime_kwargs)``.
     """
     if isinstance(cls, str):
         return webruntime.launch(cls, runtime, **runtime_kwargs)
     assert (isinstance(cls, type) and issubclass(cls, Model))
-    a = App(cls, **(properties or {}))
+    a = App(cls)
     return a.launch(runtime, **runtime_kwargs)
 
 
-def export(cls, filename=None, properties=None, single=None, link=None,
-           write_shared=True):
-    """ Backward compat.
+def export(cls, filename, **kwargs):
+    """ Shorthand for ``app.App(cls).export(filename, ...)``.
     """
-    if not (isinstance(cls, type) and issubclass(cls, Model)):
-        raise ValueError('runtime must be a string or Model subclass.')
-    
-    # Backward comp - deprecate "single" argument at some point
-    if link is None:
-        if single is not None:
-            logger.warn('Export single arg is deprecated, use link instead.')
-            if not single:
-                link = 3
-    link = int(link or 0)
-    
-    a = App(cls, **(properties or {}))
-    return a.export(filename, link=link, write_shared=write_shared)
+    assert (isinstance(cls, type) and issubclass(cls, Model))
+    a = App(cls)
+    return a.export(filename, **kwargs)
