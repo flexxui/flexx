@@ -159,6 +159,13 @@ class TornadoServer(AbstractServer):
         """ The Tornado HttpServer object being used."""
         return self._server
 
+    @property
+    def protocol(self):
+        """ Get a string representing served protocol."""
+        if self._server.ssl_options is not None:
+            return 'https'
+
+        return 'http'
 
 def port_hash(name):
     """ Given a string, returns a port number between 49152 and 65535

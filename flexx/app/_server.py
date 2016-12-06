@@ -176,3 +176,9 @@ class AbstractServer:
         Or None if the server is not serving (anymore).
         """
         return self._serving
+
+    @property
+    def protocol(self):
+        """ Get a string representing served protocol
+        """
+        raise NotImplementedError
