@@ -11,7 +11,7 @@ import shutil
 
 from flexx.util.testing import run_tests_if_main, raises
 
-from flexx.app._asset import solve_dependencies
+from flexx.app._asset import solve_dependencies, get_mod_name, module_is_package
 from flexx.util.logging import capture_log
 from flexx import ui, app
 
@@ -23,6 +23,12 @@ test_filename = os.path.join(tempfile.gettempdir(), 'flexx_asset_cache.test')
 
 class WTF:
     pass
+
+
+def test_get_mod_name(): 
+    assert get_mod_name(app.Model) == 'flexx.app._model'
+    assert get_mod_name(app._model) == 'flexx.app._model'
+    assert get_mod_name(app) == 'flexx.app.__init__'
 
 
 def test_asset():
@@ -212,7 +218,6 @@ def test_bundle():
     assert bundle.modules == (m3, m1, m2)
     
     # Deps are agregated
-    assert 'flexx.app._clientcore.js' in bundle.deps
     assert 'flexx.app.js' in bundle.deps
     assert 'flexx.app._model.js' in bundle.deps
     assert not any('flexx.ui' in dep for dep in bundle.deps)
@@ -242,6 +247,31 @@ def test_bundle():
     bundle = app.Bundle('foo.js')
     with raises(ValueError):
         bundle.add_module(m1)
+    
+    # Assets can be bundled too
+    
+    bundle = app.Bundle('flexx.ui.css')
+    bundle.add_module(m1)
+    bundle.add_module(m2)
+    
+    a1 = app.Asset('foo.css', 'foo-xxx')
+    a2 = app.Asset('bar.css', 'bar-yyy')
+    bundle.add_asset(a1)
+    bundle.add_asset(a2)
+    
+    assert a1 in bundle.assets
+    assert a2 in bundle.assets
+
+    code = bundle.to_string()
+    assert 'foo-xxx' in code
+    assert 'bar-yyy' in code
+    
+    with raises(TypeError):
+        bundle.add_asset()
+    with raises(TypeError):
+        bundle.add_asset(3)
+    with raises(TypeError):
+        bundle.add_asset(bundle)  # no bundles
 
 
 ## Sorting

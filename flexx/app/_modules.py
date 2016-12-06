@@ -20,7 +20,7 @@ pyscript_types = type, types.FunctionType  # class or function
 
 if sys.version_info > (3, ):
     json_types = None.__class__, bool, int, float, str, tuple, list, dict
-else:
+else:  # pragma: no cover
     json_types = None.__class__, bool, int, float, basestring, tuple, list, dict  # noqa, bah
 
 # In essense, the idea of modules is all about propagating dependencies:
@@ -116,7 +116,6 @@ class JSModule:
         # Dependencies
         self._deps = {}  # mod_name -> [mod_as_name, *imports]
         # Caches
-        self._changed_time = 0
         self._js_cache = None
         self._css_cache = None
         
@@ -126,8 +125,6 @@ class JSModule:
             self._pyscript_code['__all__'] = js
             self._provided_names.update([n for n in js.meta['vars_defined']
                                          if not n.startswith('_')])
-        
-        self._changed_time = time.time()
     
     def __repr__(self):
         return '<%s %s with %i definitions>' % (self.__class__.__name__,
@@ -150,16 +147,16 @@ class JSModule:
     
     @property
     def deps(self):
-        """ The set of dependencies (names of other modules) for this module.
+        """ The (unsorted) set of dependencies (names of other modules) for
+        this module.
         """
         return set(self._deps.keys())
     
     @property
-    def changed_time(self):
-        """ The time (as in ``time.time()``) at which this module was
-        last changed.
+    def model_classes(self):
+        """ The Model classes defined in this module.
         """
-        return self._changed_time
+        return set(self._model_classes.values())
     
     def _import(self, mod_name, name, as_name):
         """ Import a name from another module. This also ensures that the
@@ -222,7 +219,7 @@ class JSModule:
         # Stubs
         if isinstance(val, (JSConstant, Asset)) or name in ('Infinity', 'NaN'):
             return
-        elif val is None and not is_global:
+        elif val is None and not is_global:  # pragma: no cover
             logger.warn('JS in "%s" uses variable %r that is None; '
                         'I will assume its a stub and ignore it. Declare %s '
                         'as global (where it\'s used) to use it anyway, or '

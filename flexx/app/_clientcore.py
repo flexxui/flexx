@@ -3,7 +3,7 @@ The client's core Flexx engine, implemented in PyScript.
 """
 
 from ..pyscript import this_is_js, RawJS
-from ..pyscript.stubs import window, undefined, require
+from ..pyscript.stubs import window, undefined, require, time
 
 # This module gets transpiled to JavaScript as a whole
 __pyscript__ = True
@@ -24,9 +24,14 @@ class Flexx:
         self.session_id = ''
         self.ws_url = ''
         # Copy attributes from temporary flexx object
+        if window.flexx.init:
+            raise RuntimeError('Should not create Flexx object more than once.')
         for key in window.flexx.keys():
             self[key] = window.flexx[key]  # session_id, app_name, and maybe more
         # Init internal variables
+        self._init_time = time()
+        self._pending_commands = []
+        self._asset_count = 0
         self.ws = None
         self.last_msg = None
         self.classes = {}
@@ -44,22 +49,26 @@ class Flexx:
             # Note: flexx.init() is not auto-called when Flexx is embedded
             window.addEventListener('load', self.init, False)
             window.addEventListener('beforeunload', self.exit, False)
-        window.flexx = self  # Set this as the global flexx object
     
     def init(self):
         """ Called after document is loaded. """
-        if window.flexx.is_exported:
-            if window.flexx.is_notebook:
+        # Create div to put dynamic CSS assets in
+        self._asset_node = window.document.createElement("div")
+        self._asset_node.id = 'Flexx asset container'
+        window.document.body.appendChild(self._asset_node)
+        
+        if self.is_exported:
+            if self.is_notebook:
                 print('Flexx: I am in an exported notebook!')
             else:
                 print('Flexx: I am in an exported app!')
-                window.flexx.runExportedApp()
+                self.runExportedApp()
         else:
             print('Flexx: Initializing')
-            if not window.flexx.is_notebook:
-                window.flexx._remove_querystring()
-            window.flexx.initSocket()
-            window.flexx.initLogging()
+            if not self.is_notebook:
+                self._remove_querystring()
+            self.initSocket()
+            self.initLogging()
     
     def _remove_querystring(self):
         # remove querystring ?session=x
@@ -120,22 +129,28 @@ class Flexx:
             self.ws_url = 'ws://%s/flexx/ws/%s' % (address, self.app_name)
         
         # Open web socket in binary mode
-        self.ws = ws = WebSocket(window.flexx.ws_url)
+        self.ws = ws = WebSocket(self.ws_url)
         #ws.binaryType = "arraybuffer"  # would need utf-decoding -> slow
         
         def on_ws_open(evt):
             window.console.info('Socket opened with session id ' + self.session_id)
             ws.send('hiflexx ' + self.session_id)
         def on_ws_message(evt):
-            window.flexx.last_msg = msg = evt.data or evt
-            #msg = window.flexx.decodeUtf8(msg)
-            window.flexx.command(msg)
+            self.last_msg = msg = evt.data or evt
+            if self._pending_commands is None:
+                # Direct mode
+                self.command(msg)
+            else:
+                # Indirect mode, to give browser draw-time during loading
+                if len(self._pending_commands) == 0:
+                    window.setTimeout(self._process_commands, 0)
+                self._pending_commands.push(msg)
         def on_ws_close(evt):
             self.ws = None
             msg = 'Lost connection with server'
             if evt and evt.reason:  # nodejs-ws does not have it?
                 msg += ': %s (%i)' % (evt.reason, evt.code)
-            if (not window.flexx.is_notebook) and (not self.nodejs):
+            if (not self.is_notebook) and (not self.nodejs):
                 window.document.body.innerHTML = msg
             else:
                 window.console.info(msg)
@@ -166,22 +181,22 @@ class Flexx:
         window.console.ori_warn = window.console.warn or window.console.log
         window.console.ori_error = window.console.error or window.console.log
         
-        def log(self, msg):
+        def log(msg):
             window.console.ori_log(msg)
-            if window.flexx.ws is not None:
-                window.flexx.ws.send("PRINT " + msg)
-        def info(self, msg):
+            if self.ws is not None:
+                self.ws.send("PRINT " + msg)
+        def info(msg):
             window.console.ori_info(msg)
-            if window.flexx.ws is not None:
-                window.flexx.ws.send("INFO " + msg)
-        def warn(self, msg):
+            if self.ws is not None:
+                self.ws.send("INFO " + msg)
+        def warn(msg):
             window.console.ori_warn(msg)
-            if window.flexx.ws is not None:
-                window.flexx.ws.send("WARN " + msg)
-        def error(self, msg):
+            if self.ws is not None:
+                self.ws.send("WARN " + msg)
+        def error(msg):
             evt = dict(message=str(msg), error=msg, preventDefault=lambda: None)
             on_error(evt)
-        def on_error(self, evt):
+        def on_error(evt):
             msg = evt.message
             if evt.error and evt.error.stack:  # evt.error can be None for syntax err
                 stack = evt.error.stack.splitlines()
@@ -195,8 +210,8 @@ class Flexx:
             # Handle error
             evt.preventDefault()  # Don't do the standard error 
             window.console.ori_error(msg)
-            if window.flexx.ws is not None:
-                window.flexx.ws.send("ERROR " + evt.message)
+            if self.ws is not None:
+                self.ws.send("ERROR " + evt.message)
         on_error = on_error.bind(self)
         # Set new versions
         window.console.log = log
@@ -209,13 +224,34 @@ class Flexx:
         else:
             window.addEventListener('error', on_error, False)
     
-    def command(self, msg):
-        """ Execute a command received from the server.
+    def _process_commands(self):
+        """ A less direct way to process commands, which gives the
+        browser time to draw about every other JS asset. This is a
+        tradeoff between a smooth spinner and fast load time.
         """
+        while self._pending_commands is not None and len(self._pending_commands) > 0:
+            msg = self._pending_commands.pop(0)
+            try:
+                self.command(msg)
+            except Exception as err:
+                window.setTimeout(self._process_commands, 0)
+                raise err
+            if msg.startswith('DEFINE-'):
+                self._asset_count += 1
+                if (self._asset_count % 3) == 0:
+                    if len(self._pending_commands):
+                        window.setTimeout(self._process_commands, 0)
+                    break
+    
+    def command(self, msg):
         if msg.startswith('PING '):
             self.ws.send('PONG ' + msg[5:])
         elif msg == 'INIT-DONE':
             self.spin(None)
+            while len(self._pending_commands):
+                self.command(self._pending_commands.pop(0))
+            self._pending_commands = None
+            # print('init took', time() - self._init_time)
         elif msg.startswith('PRINT '):
             window.console.ori_log(msg[6:])
         elif msg.startswith('EVAL '):
@@ -223,19 +259,32 @@ class Flexx:
             self.ws.send('RET ' + window._)  # send back result
         elif msg.startswith('EXEC '):
             eval(msg[5:])  # like eval, but do not return result
-        elif msg.startswith('DEFINE-JS '):
-            if self.nodejs:
-                eval(msg[10:])  # best we can do
+        elif msg.startswith('DEFINE-JS ') or msg.startswith('DEFINE-JS-EVAL '):
+            self.spin()
+            cmd, name, code = msg.split(' ', 2)
+            address = window.location.protocol + '//' + self.ws_url.split('/')[2]
+            code += '\n//# sourceURL=%s/flexx/assets/shared/%s\n' % (address, name)
+            if msg.startswith('DEFINE-JS-EVAL '):
+                eval(code)
             else:
+                # With this method, sourceURL does not work on Firefox,
+                # but eval might not work for assets that don't "use strict"
+                # (e.g. Bokeh). Note, btw, that creating links to assets does
+                # not work because these won't be loaded on time.
                 el = window.document.createElement("script")
-                el.innerHTML = msg[10:]
-                window.document.body.appendChild(el)
+                el.id = name
+                el.innerHTML = code
+                self._asset_node.appendChild(el)
         elif msg.startswith('DEFINE-CSS '):
-            # http://stackoverflow.com/a/707580/2271927
+            self.spin()
+            cmd, name, code = msg.split(' ', 2)
+            address = window.location.protocol + '//' + self.ws_url.split('/')[2]
+            code += '\n/*# sourceURL=%s/flexx/assets/shared/%s*/\n' % (address, name)
             el = window.document.createElement("style")
             el.type = "text/css"
-            el.innerHTML = msg[11:]
-            window.document.body.appendChild(el)
+            el.id = name
+            el.innerHTML = code
+            self._asset_node.appendChild(el)
         elif msg.startswith('TITLE '):
             if not self.nodejs:
                 window.document.title = msg[6:]

@@ -207,27 +207,40 @@ class Asset:
 
 
 class Bundle(Asset):
-    """ A bundle is an asset that represents a collection of JSModule objects.
-    It is a rather thin wrapper, and can therefore very easily be used to
-    represent modules at different levels in the module tree.
+    """ A bundle is an asset that represents a collection of Asset objects
+    and JSModule objects. In the output, the source for the modules occurs
+    after the sources of the assets. Dependency resolution is honoured for
+    the modules, and the bundle exposes an aggregate of the dependencies,
+    so that bundles can themselves be sorted.
     """
     
     def __init__(self, name):
         super().__init__(name, '')
+        self._assets = []
         self._module_name = name.rsplit('.', 1)[0].split('-')[0]
         self._modules = []
         self._deps = set()
         self._need_sort = False
     
     def __repr__(self):
-        return '<%s %r with %i modules at 0x%0x>' % (self.__class__.__name__,
-                                                     self._name,
-                                                     len(self._modules),
-                                                     id(self))
+        t = '<%s %r with %i assets and %i modules at 0x%0x>'
+        return t % (self.__class__.__name__, self._name,
+                    len(self._assets), len(self._modules), id(self))
+    
+    def add_asset(self, a):
+        """ Add an asset to the bundle. Assets added this way occur before the
+        code for the modules in this bundle.
+        """
+        if not isinstance(a, Asset):
+            raise TypeError('Bundles.add_asset() needs an Asset, not %s.' %
+                            a.__class__.__name__)
+        if isinstance(a, Bundle):
+            raise TypeError('Bundles can contain assets and modules, but not bundles.')
+        self._assets.append(a)
     
     def add_module(self, m):
         """ Add a module to the bundle. This will (lazily) invoke a
-        sort of the list of moduldes, and add dependencies to other
+        sort of the list of modules, and define dependencies to other
         bundles, so that bundles themselves can be sorted.
         """
         
@@ -243,12 +256,8 @@ class Bundle(Asset):
         self._need_sort = True
         
         # Add deps for this module
-        # Add implicit dependency of core Flexx functionality, like serializer, etc.
         deps = set()
-        module_deps = m.deps
-        if ext == '.js':
-            module_deps.add('flexx.app._clientcore')
-        for dep in module_deps:
+        for dep in m.deps:
             while '.' in dep:
                 deps.add(dep)
                 dep = dep.rsplit('.', 1)[0]
@@ -260,6 +269,12 @@ class Bundle(Asset):
                     self._module_name.startswith(dep + '.')):
                 self._deps.add(dep + ext)
    
+    @property
+    def assets(self):
+        """ The list of assets in this bundle (excluding modules).
+        """
+        return tuple(self._assets)
+    
     @property
     def modules(self):
         """ The list of modules, sorted by name and dependencies.
@@ -280,12 +295,18 @@ class Bundle(Asset):
         isjs = self.name.lower().endswith('.js')
         toc = []
         source = []
+        for a in self.assets:
+            toc.append('- asset ' + a.name)
+            source.append('/* ' + (' %s ' % a.name).center(70, '=') + '*/')
+            source.append(a.to_string())
         for m in self.modules:
             s = m.get_js() if isjs else m.get_css()
-            toc.append('- ' + m.name)
+            toc.append('- module ' + m.name)
             source.append('/* ' + (' %s ' % m.name).center(70, '=') + '*/')
+            source.append(HEADER)
             source.append(s)
-        source.insert(0, '/* Bundle contents:\n' + '\n'.join(toc) + '\n*/\n')
-        source.insert(0, HEADER)
-        source.append('window.flexx.spin("%s ");' % ('*' * len(self.modules)))
+        if len(self.assets + self.modules) > 1:
+            source.insert(0, '/* Bundle contents:\n' + '\n'.join(toc) + '\n*/\n')
+        #if isjs:
+        #    source.append('window.flexx.spin("%s");' % ('*' * len(self.modules)))
         return '\n\n'.join(source)

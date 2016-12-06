@@ -26,7 +26,7 @@ INDEX = """
 
 <body id='body'>
 
-<div class='flx-spinner' style='position:absolute; top:10%; bottom:10%;
+<div class='flx-spinner' style='position:absolute; top:25%; bottom:25%;
 left:25%; right:25%; background:#fff; color:#555; text-align:center;
 word-break: break-all; border-radius:0.5em; padding:0.5em;'>
 Starting Flexx app <div style='font-size:50%; color:#66A;'></div>
@@ -210,19 +210,36 @@ class AssetStore:
     """
     
     def __init__(self):
+        self._known_model_classes = set()
         self._modules = {}
         self._assets = {}
         self._associated_assets = {}
         self._data = {}
-        self._loaded_assets = set()  # between all sessions (for export)
-        self._assets['reset.css'] = Asset('reset.css', RESET)
-        self._assets['flexx-loader.js'] = Asset('flexx-loader.js', LOADER)
+        self._used_assets = set()  # between all sessions (for export)
         
-        # Create pyscript-std module
+        # Create standard assets
+        asset_reset = Asset('reset.css', RESET)
+        asset_loader = Asset('flexx-loader.js', LOADER)
         func_names, method_names = get_all_std_names()
         mod = create_js_module('pyscript-std.js', get_full_std_lib(),
                                [], func_names + method_names, 'amd-flexx')
-        self._assets['pyscript-std.js'] = Asset('pyscript-std.js', HEADER + mod)
+        asset_pyscript = Asset('pyscript-std.js', HEADER + mod)
+        
+        # Add them
+        for a in [asset_reset, asset_loader, asset_pyscript]:
+            self.add_shared_asset(a)
+        
+        if getattr(self, '_test_mode', False):
+            return
+        
+        #  Create flexx-core bootstrap bundle
+        self.update_modules()  # to collect _model and _clientcore
+        asset_core = Bundle('flexx-core.js')
+        asset_core.add_asset(asset_loader)
+        asset_core.add_asset(asset_pyscript)
+        asset_core.add_module(self.modules['flexx.app._clientcore'])
+        asset_core.add_module(self.modules['flexx.app._model'])
+        self.add_shared_asset(asset_core)
     
     def __repr__(self):
         t = '<AssetStore with %i assets, and %i data>'
@@ -240,43 +257,35 @@ class AssetStore:
         """
         return self._modules
     
-    def update_modules(self, cls=None):
+    def update_modules(self):
         """ Collect and update the JSModule instances that correspond
-        to Python modules that define Model classes. Update the module
-        corresponding to a single class (making sure that that class is
-        defined), or if not given, do an update based on all imported
-        Model classes.
-        
-        Any newly created modules get added to all corresponding assets
-        bundles (creating them if needed).
+        to Python modules that define Model classes. Any newly created
+        modules get added to all corresponding assets bundles (creating
+        them if needed).
         
         It is safe (and pretty fast) to call this more than once since
         only missing modules are added. This gets called automatically
         by the Session object.
         """
         
+        # Dependencies can drag in more modules, therefore we store
+        # what modules we know of beforehand.
         current_module_names = set(self._modules)
         
-        # Make sure we have all necessary modules. Dependencies can drag in
-        # more modules, therefore we store what modules we know of beforehand.
-        if cls is None or not self._modules:
-            # Track all known (i.e. imported classes) to get complete bundles
-            for cls in Model.CLASSES:
+        # Track all known (i.e. imported classes) Model classes. We keep track
+        # of what classes we've registered, so this is pretty efficient. This
+        # works also if a module got a new or renewed Model class.
+        for cls in Model.CLASSES:
+            if cls not in self._known_model_classes:
+                self._known_model_classes.add(cls)
                 if cls.__jsmodule__ not in self._modules:
                     JSModule(cls.__jsmodule__, self._modules)  # auto-registers
                 self._modules[cls.__jsmodule__].add_variable(cls.__name__)
-        else:
-            # Track a specific class, for interactive mode
-            if cls.__jsmodule__ not in self._modules:
-                JSModule(cls.__jsmodule__, self._modules)  # auto-registers
-            self._modules[cls.__jsmodule__].add_variable(cls.__name__)
         
         # Deal with new modules: store asset deps and bundle the modules
         mcount = 0
         bcount = 0
-        for name in self._modules:
-            if name in current_module_names:
-                continue
+        for name in set(self._modules).difference(current_module_names):
             mod = self.modules[name]
             mcount += 1
             # Get names of bundles to add this module to
@@ -303,9 +312,11 @@ class AssetStore:
         """
         if not name.lower().endswith(('.js', '.css')):
             raise ValueError('Asset names always end in .js or .css')
-        asset = self._assets.get(name, None)
-        if asset is not None:
-            self._loaded_assets.add(asset.name)
+        try:
+            asset = self._assets[name]
+        except KeyError:
+            raise KeyError('Asset %r is not available in the store.' % name)
+        self._used_assets.add(asset.name)
         return asset
     
     def get_data(self, name):
@@ -386,7 +397,7 @@ class AssetStore:
             asset = self._assets[asset_name]
             if source is not None:
                 t = 'associate_asset() for %s got source, but asset %r already exists.'
-                raise ValueError(t % (mod_name, asset_name))
+                raise TypeError(t % (mod_name, asset_name))
         else:
             asset = Asset(asset_name, source)
             self.add_shared_asset(asset)
@@ -398,10 +409,11 @@ class AssetStore:
         return '_assets/shared/' + asset.name
     
     def get_associated_assets(self, mod_name):
-        """ Get the associated assets corresponding to the given module name.
+        """ Get the names of the assets associated with the given module name.
         Sorted by instantiation time.
         """
-        return tuple(self._associated_assets.get(mod_name, []))
+        assets = self._associated_assets.get(mod_name, [])
+        return tuple([a.name for a in assets])
     
     def add_shared_data(self, name, data):
         """ Add data to serve to the client (e.g. images), which is shared
@@ -440,7 +452,7 @@ class AssetStore:
             clear (bool): if given and True, the directory is first cleared.
         """
         assets = [self._assets[name] for name in self.get_asset_names()]
-        assets = [self._assets[name] for name in self._loaded_assets]
+        assets = [self._assets[name] for name in self._used_assets]
         data = [(name, self.get_data(name)) for name in self.get_data_names()]
         export_assets_and_data(assets, data, dirname, 'shared', clear)
         logger.info('Exported shared assets and data to %r.' % dirname)

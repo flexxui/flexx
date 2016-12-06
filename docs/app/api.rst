@@ -27,6 +27,12 @@ Functions related to us Model classes as apps
 
 .. autofunction:: flexx.app.App
 
+.. autofunction:: flexx.app.serve
+
+.. autofunction:: flexx.app.launch
+
+.. autofunction:: flexx.app.export
+
 .. autofunction:: flexx.app.get_model_classes
 
 .. autofunction:: flexx.app.get_active_model
@@ -58,7 +64,7 @@ easy to create extensions based on existing JS libraries.
     :members:
 
 
-.. autoclass:: flexx.app.assetstore.AssetStore
+.. autoclass:: flexx.app._assetstore.AssetStore
     :members:
 
 .. autoclass:: flexx.app.Session

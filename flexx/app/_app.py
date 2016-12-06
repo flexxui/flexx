@@ -10,7 +10,7 @@ from .. import event, webruntime
 
 from ._model import Model
 from ._server import current_server
-from ._session import Session
+from ._session import Session, get_page_for_export
 from ._assetstore import assets
 from . import logger
 
@@ -23,7 +23,7 @@ class ExporterWebSocketDummy:
     close_code = None
     
     def __init__(self):
-        self._commands = []
+        self.commands = []
         self.ping_counter = 0
         # todo: make icon and title work
         #self.command('ICON %s.ico' % session.id)
@@ -31,7 +31,7 @@ class ExporterWebSocketDummy:
         #                                                       'Exported flexx app'))
     
     def command(self, cmd):
-        self._commands.append(cmd)
+        self.commands.append(cmd)
 
 
 class App:
@@ -136,10 +136,9 @@ class App:
         # Launch web runtime, the server will wait for the connection
         current_server()  # creates server if it did not yet exist
         if runtime == 'nodejs':
-            js_assets, _ = session.get_assets_in_order()
-            all_js = '\n\n'.join([asset.to_string() for asset in js_assets])
+            bundle = assets.get_asset('flexx-core.js')
             session._runtime = webruntime.launch(self.url, runtime=runtime,
-                                                 code=all_js)
+                                                 code=bundle.to_string())
         else:
             url = self.url + '?session_id=%s' % session.id
             session._runtime = webruntime.launch(url,
@@ -196,7 +195,7 @@ class App:
             logger.warn('Exporting a standalone app, but it has registered data.')
         
         # Get HTML - this may be good enough
-        html = session.get_page_for_export(exporter._commands, link)
+        html = get_page_for_export(session, exporter.commands, link)
         if filename is None:
             return html
         elif filename.lower().endswith('.hta'):
@@ -212,7 +211,7 @@ class App:
         if link:
             if write_shared:
                 assets.export(os.path.dirname(filename))
-            session._export(os.path.dirname(filename))
+            session._export_data(os.path.dirname(filename))
         with open(filename, 'wb') as f:
             f.write(html.encode())
         
