@@ -93,9 +93,11 @@ def init_interactive(cls=None, runtime=None):
 
     # Launch web runtime, the server will wait for the connection
     server = current_server()
+    proto = server.protocol
     host, port = server.serving
-    url = '%s:%i/%s/?session_id=%s' % (host, port, session.app_name, session.id)
-    session._runtime = launch('http://' + url, runtime=runtime)
+    url = '%s://%s:%i/%s/?session_id=%s' % (proto, host, port, session.app_name,
+                                            session.id)
+    session._runtime = launch(url, runtime=runtime)
     
 
 class NoteBookHelper:
