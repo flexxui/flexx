@@ -384,7 +384,9 @@ class Handler:
                 self._seek_event_object(index, path, sub_ob)
             return
         elif selector == '*':  # "**" is recursive, so allow more
-            t = "Invalid connection {obname_full} because {obname} is not a tuple/list.";
-            raise RuntimeError(t.replace("{opname_full}", obname_full).replace("{opname}", obname))
+            t = "Invalid connection {obname_full} because {obname} \
+                is not a tuple/list."
+            raise RuntimeError(t.replace("{opname_full}", obname_full)
+                .replace("{opname}", obname))
         else:
             return self._seek_event_object(index, path, ob)
