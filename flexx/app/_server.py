@@ -11,7 +11,8 @@ from .. import config
 _current_server = None
 
 
-def create_server(host=None, port=None, new_loop=False, backend='tornado', **server_kwargs):
+def create_server(host=None, port=None, new_loop=False, backend='tornado',
+                  **server_kwargs):
     """
     Create a new server object. This is automatically called; users generally
     don't need this, unless they want to explicitly specify host/port,
