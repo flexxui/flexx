@@ -575,6 +575,25 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         cmd = 'flexx.instances.%s.%s;' % (self._id, call)
         self._session._exec(cmd)
     
+    def send_data(self, data, meta=None):
+        """ Send data to the JS side, where ``receive_data()`` will be called
+        with the corresponding data and meta data.
+        
+        Parameters:
+            data (bytes, str): the data, represented as a blob of bytes,
+                a uri to an online resource, or a uri to a file local to the
+                server.
+            meta (dict, optional): information associated with the data
+                that the JS side can use to interpret the data. This function
+                will add an "id" field to the meta data.
+        """
+        meta = {} if meta is None else meta
+        if not isinstance(meta, dict):
+            raise TypeError('session.send_data() meta must be a dict.')
+        meta = meta.copy()
+        meta['id'] = self.id
+        self.session.send_data(data, meta)
+    
     
     class JS:
         
@@ -675,6 +694,16 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 txt = serializer.saves(ev)
                 if window.flexx.ws:
                     window.flexx.ws.send('EVENT ' + [self.id, type, txt].join(' '))
+        
+        def receive_data(self, data, meta):
+            """ Function that gets called when data is send to it. Models that
+            want to receive data must overload this in order to process the
+            received data. The ``data`` is an ``ArrayBuffer``, and ``meta`` is
+            a ``dict`` as given in ``send_data()``.
+            """
+            self._last_data = data
+            self._last_meta = meta
+            print(self.id, 'received data', meta)
 
 
 # Make model objects de-serializable

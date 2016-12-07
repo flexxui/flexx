@@ -330,8 +330,10 @@ class MainHandler(RequestHandler):
         
         # Get asset provider: store or session
         asset_provider = assets
-        if session_id:
+        if session_id and selector != 'data':
             return self.write('Only supports shared assets, not ' % filename)
+        elif session_id:
+            asset_provider = manager.get_session_by_id(session_id)
         
         # Checks
         if asset_provider is None:
@@ -385,7 +387,7 @@ class MainHandler(RequestHandler):
             # Retrieve data
             res = asset_provider.get_data(filename)
             if res is None:
-                self.write('Could not load data %r' % filename)
+                return self.send_error(404)
             else:
                 self._guess_mime_type(filename)  # so that images show up
                 self.write(res)

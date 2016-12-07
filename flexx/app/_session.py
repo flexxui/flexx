@@ -73,6 +73,7 @@ class Session:
         
         # Data for this session (in addition to the data provided by the store)
         self._data = {}
+        self._data_volatile = {}  # deleted after retrieving
         
         # More vars
         self._runtime = None  # init web runtime, will be set when used
@@ -206,18 +207,51 @@ class Session:
     
     ## Data
     
-    def get_data_names(self):
-        """ Get a list of names of the data provided by this session, in
-        the order that they were added.
+    def send_data(self, data, meta):
+        """ Send data to a model on the JS side. The corresponding object's
+        receive_data() method is called when the data is available in JS.
+        This is called by ``Model.send_data()`` and works in the same way except
+        that ``meta`` must have an "id" field corresponding to a valid model.
         """
-        return list(self._data.keys())  # Note: order matters
+        # Check meta and meta.id
+        if not isinstance(meta, dict):
+            raise TypeError('session.send_data() meta must be a dict.')
+        id = meta.get('id', None)
+        if not isinstance(id, str):
+            raise TypeError('session.send_data() meta must have an id (str).')
+        if self._model_instances.get(id, None) is None:
+            raise TypeError('session.send_data() meta["id"] is %r, which does '
+                            'not correspond to an existing model.' % id)
+        # Check data - uri or blob
+        if isinstance(data, str):
+            # Uri: tell client to retrieve it with AJAX
+            url = data
+            self._exec('window.flexx.retrieve_data("%s", %s);' % (url, reprs(meta)))
+        elif isinstance(data, bytes):
+            # Blob: store it, and tell client to retieve it with AJAX
+            # todo: have a second ws connection for pushing data
+            name = 'blob-' + get_random_string()
+            self._data_volatile[name] = data
+            url = '/flexx/data/%s/%s' % (self.id, name)
+            self._exec('window.flexx.retrieve_data("%s", %s);' % (url, reprs(meta)))
+        else:
+            raise TypeError('session.send_data() data must be a bob of bytes, '
+                            'not %s.' % data.__class__.__name__)
+
+    def get_data_names(self):
+        """ Get a list of names of the data provided by this session.
+        """
+        return list(self._data.keys())
     
     def get_data(self, name):
         """ Get the data corresponding to the given name. This can be
         data local to the session, or global data. Returns None if data
         by that name is unknown.
         """
-        data = self._data.get(name, None)
+        if True:
+            data = self._data_volatile.pop(name, None)
+        if data is None:
+            data = self.data.get(name, None)
         if data is None:
             data = self._store.get_data(name)
         return data
@@ -250,10 +284,10 @@ class Session:
         self._data[name] = data
         return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
     
-    def remove_data(self, name):
-        """ Remove the data associated with the given name.
-        """
-        self._data.pop(name, None)
+    # def remove_data(self, name):
+    #     """ Remove the data associated with the given name.
+    #     """
+    #     self._data.pop(name, None)
     
     def _export_data(self, dirname, clear=False):
         """ Export all assets and data specific to this session.
@@ -399,7 +433,7 @@ class Session:
         for asset in assets:
             if asset.name in self._assets_to_ignore:
                 continue
-            logger.info('Loading asset %s' % asset.name)
+            logger.debug('Loading asset %s' % asset.name)
             # Determine command suffix. All our sources come in bundles,
             # for which we use eval because it makes sourceURL work on FF.
             suffix = asset.name.split('.')[-1].upper()
