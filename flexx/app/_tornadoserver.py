@@ -478,14 +478,15 @@ class FileHandler(StaticFileHandler):
             return res[7:]
     
     def validate_absolute_path(self, root, path):
-        # Our validation consist mainly of whether the path is listed
-        # as data in the session or assetstore. The assetstore and session
-        # ensure that only files inside "data dirs" are used.
+        # Our validation consist of checking whether the file is inside
+        # a registered data dir. In principal this is always true, because
+        # assetstore.add_shared_data() and session.add_data() already check
+        # this, but better safe than sorry.
         import os
         if not os.path.exists(path):
             raise HTTPError(404)
-        if not os.path.isfile(path):
-            raise HTTPError(403, "%s is not a file", path)
+        if not assets.in_data_dir(path):
+            raise HTTPError(403)
         return path
 
 

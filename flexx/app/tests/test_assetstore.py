@@ -163,8 +163,9 @@ def test_data_dir():
         s.add_shared_data('testfile3', 'file://' + filename)
     
     # Add local file without "file://" prefix
-    with raises(TypeError):
-        s.add_shared_data('testfile4', filename)
+    if sys.version_info > (3, ):
+        with raises(TypeError):
+            s.add_shared_data('testfile4', filename)
     
     # Datadir fails
     with raises(TypeError):
