@@ -441,6 +441,12 @@ class AssetStore:
         
         Returns:
             url: the (relative) url at which the data can be retrieved.
+        
+        Note:
+            A note on using this to serve static files on the server: this uses
+            Tornado's StaticFileHandler, which is pretty efficient (it never
+            loads a whole file in memory), but for heavy trafic you might want
+            to consider a dedicated static file server (like nginx or Apache).
         """
         if not isinstance(name, str):
             raise TypeError('add_shared_data() name must be a str.')

@@ -576,12 +576,16 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         self._session._exec(cmd)
     
     def send_data(self, data, meta=None):
-        """ Send data to the JS side, where ``receive_data()`` will be called
-        with the corresponding data and meta data.
+        """ Send data to the JS side, where ``retreive_data()`` will be called,
+        which will eventually call ``receive_data()`` with the corresponding
+        data and meta data.
+        
+        AJAX is used to retrieve the data. In the future we may want to use
+        a dedicated binary websocket for better performance.
         
         Parameters:
             data (bytes, str): the data blob. Can also be a uri to the blob
-                (string starting with "file://", "http://" or "https://").
+                (a string starting with "file://", "http://" or "https://").
                 in which case the server will redirect to that source. In case
                 of "file://", the file must be in a registered data dir using
                 ``app.assets.add_data_dir()``.
