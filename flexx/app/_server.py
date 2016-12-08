@@ -50,6 +50,8 @@ def create_server(host=None, port=None, new_loop=False, backend='tornado',
             app.serve(Example, 'Example')
             app.run()
 
+        Alternately, cert and key files can be provided through
+           ``ssl_certfile`` and ``ssl_keyfile`` configuration variables.
     """
     # Lazy load tornado, so that we can use anything we want there without
     # preventing other parts of flexx.app from using *this* module.
