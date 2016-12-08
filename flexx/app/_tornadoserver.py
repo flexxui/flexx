@@ -66,7 +66,20 @@ class TornadoServer(AbstractServer):
     def _open(self, host, port, **kwargs):
         # Note: does not get called if host is False. That way we can 
         # run Flexx in e.g. JLab's application.
-        
+
+        # handle ssl, wether from configuration or given args
+        if 'ssl_certfile' in config and config.ssl_certfile:
+            if 'ssl_options' not in kwargs:
+                kwargs['ssl_options'] = {}
+            if 'certfile' not in kwargs['ssl_options']:
+                kwargs['ssl_options']['certfile'] = config.ssl_certfile
+
+        if 'ssl_keyfile' in config and config.ssl_keyfile:
+            if 'ssl_options' not in kwargs:
+                kwargs['ssl_options'] = {}
+            if 'keyfile' not in kwargs['ssl_options']:
+                kwargs['ssl_options']['keyfile'] = config.ssl_keyfile
+                
         # Create tornado application
         self._app = Application([(r"/flexx/ws/(.*)", WSHandler),
                                  (r"/flexx/(.*)", MainHandler),
