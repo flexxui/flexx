@@ -18,6 +18,9 @@ Similarly, the data provided by the server can be obtained using Ajax
 
 Note that this example will only load random images if its live (i.e.
 not exported).
+
+See video_viewer.py for an example on providing data without reading it
+in memory, and send_data.py for one-shot sending of data from Python to JS.
 """
 
 import random
@@ -61,6 +64,7 @@ class Example(ui.Widget):
 
 if __name__ == '__main__':
     # Launch the app twice to show how different sessions have different data
-    m1 = app.launch(Example, 'browser')
-    m2 = app.launch(Example, 'browser')
+    a = app.App(Example)
+    m1 = a.launch('browser')
+    m2 = a.launch('browser')
     app.run()
