@@ -117,7 +117,8 @@ def test_asset_store_data():
     
     # Add url data
     s.add_shared_data('readme', 'https://github.com/zoofIO/flexx/blob/master/README.md')
-    assert 'Flexx is' in s.get_data('readme').decode()
+    # assert 'Flexx is' in s.get_data('readme').decode()
+    assert s.get_data('readme').startswith('https://github')
     
     # Add BS data
     with raises(TypeError):
@@ -131,6 +132,47 @@ def test_asset_store_data():
             s.add_shared_data(b'dd', b'yes, bytes')  # name not str
     with raises(TypeError):
         s.add_shared_data(4, b'zzzz')  # name not a str
+
+
+def test_data_dir():
+    
+    s = AssetStore()
+    
+    # Register a dir
+    s.add_data_dir(os.path.dirname(test_filename))
+    
+    # Method is pretty forgiving
+    s.add_data_dir(os.path.dirname(test_filename))
+    s.add_data_dir('file://' + os.path.dirname(test_filename))
+    
+    # set is underneath
+    assert len(s._data_dirs) == 1
+    
+    # Add shared data from local file
+    s.add_shared_data('testfile', 'file://' + test_filename)
+    assert s.get_data('testfile').endswith(test_filename)
+    
+    # Add shared data from local file that does not exist
+    with raises(ValueError):
+        s.add_shared_data('testfile2', 'file://' + test_filename + 'xxxx')
+    
+    # Add shared data from local file not in a data dir
+    filename = __file__
+    assert os.path.isfile(filename)
+    with raises(ValueError):
+        s.add_shared_data('testfile3', 'file://' + filename)
+    
+    # Add local file without "file://" prefix
+    with raises(TypeError):
+        s.add_shared_data('testfile4', filename)
+    
+    # Datadir fails
+    with raises(TypeError):
+        s.add_data_dir(3)  # not a str
+    with raises(TypeError):
+        s.add_data_dir(test_filename) # not a dir
+    with raises(TypeError):
+        s.in_data_dir(3) # not a str
 
 
 def test_asset_store_export():

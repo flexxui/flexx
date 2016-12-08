@@ -299,30 +299,6 @@ class Flexx:
             window.win1 = window.open(msg[5:], 'new', 'chrome')
         else:
             window.console.warn('Invalid command: "' + msg + '"')
-    
-    def retrieve_data(self, url, meta):
-        """ Make an AJAX call to retrieve a blob of data intended for a
-        specific model, specified by meta.id. When the data is received,
-        calls the model's receive_data() method.
-        """
-        # Get model
-        model = self.instances[meta.id]
-        if not model:
-            raise RuntimeError('Cannot retrieve data for object that does not '
-                               'exist: %r' % meta.id)
-        # Define handler
-        def process_response():
-            if xhr.status == 200:
-                model.receive_data(xhr.response, meta)
-            else:
-                raise RuntimeError("Retrieving data failed with "
-                                   "HTTP status %s" % xhr.status)
-        # Make AJAX call
-        xhr = window.XMLHttpRequest()
-        xhr.open("GET", url)
-        xhr.responseType = "arraybuffer"
-        xhr.onload = process_response
-        xhr.send()
 
 
 def decodeUtf8(arrayBuffer):

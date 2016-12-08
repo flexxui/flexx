@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 
 import tornado
 from tornado import gen, netutil
-from tornado.web import Application, RequestHandler
+from tornado.web import Application, RequestHandler, StaticFileHandler, HTTPError
 from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketHandler
 from tornado.httpserver import HTTPServer
@@ -69,6 +69,7 @@ class TornadoServer(AbstractServer):
         
         # Create tornado application
         self._app = Application([(r"/flexx/ws/(.*)", WSHandler),
+                                 (r"/flexx/static/(.*)", FileHandler),
                                  (r"/flexx/(.*)", MainHandler),
                                  (r"/(.*)", AppHandler), ])
         # Create tornado server, bound to our own ioloop
@@ -388,9 +389,13 @@ class MainHandler(RequestHandler):
             res = asset_provider.get_data(filename)
             if res is None:
                 return self.send_error(404)
+            elif isinstance(res, str) and res.startswith('file://'):
+                return self.redirect('/flexx/static/' + path)
+            elif isinstance(res, str) and res.startswith(('http://', 'https://')):
+                return self.redirect(res)
             else:
                 self._guess_mime_type(filename)  # so that images show up
-                self.write(res)
+                return self.write(res)
         
         else:
             raise RuntimeError('Invalid asset type %r' % selector)
@@ -434,6 +439,54 @@ class MainHandler(RequestHandler):
             self.write("Stopping event loop.")
         else:
             self.write('unknown command %r' % path)
+
+
+class FileHandler(StaticFileHandler):
+    
+    _guess_mime_type = MainHandler._guess_mime_type
+    
+    def initialize(self):
+        super().initialize('')  # we don't use the "root" 
+    
+    def parse_url_path(self, url_path):
+        return url_path  # do not replace slashes
+    
+    @classmethod
+    def get_absolute_path(cls, root, path):
+        # Get session id and filename
+        session_id, _, filename = path.partition('/')
+        session_id = '' if session_id == 'shared' else session_id
+        
+        # Get asset provider: store or session
+        asset_provider = assets
+        if session_id:
+            asset_provider = manager.get_session_by_id(session_id)
+        
+        # Checks
+        if asset_provider is None:
+            raise HTTPError(403, 'invalid session')
+        if not filename:
+            raise HTTPError(403, 'root dir')
+        
+        # Retrieve data
+        res = asset_provider.get_data(filename)
+        if res is None:
+            raise HTTPError(404)
+        elif not (isinstance(res, str) and res.startswith('file://')):
+            raise HTTPError(404)
+        else:
+            return res[7:]
+    
+    def validate_absolute_path(self, root, path):
+        # Our validation consist mainly of whether the path is listed
+        # as data in the session or assetstore. The assetstore and session
+        # ensure that only files inside "data dirs" are used.
+        import os
+        if not os.path.exists(path):
+            raise HTTPError(404)
+        if not os.path.isfile(path):
+            raise HTTPError(403, "%s is not a file", path)
+        return path
 
 
 class MessageCounter:

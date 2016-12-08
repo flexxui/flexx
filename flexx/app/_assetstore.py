@@ -192,8 +192,18 @@ def export_assets_and_data(assets, data, dirname, app_id, clear=False):
         dname = os.path.dirname(filename)
         if not os.path.isdir(dname):
             os.makedirs(dname)
-        with open(filename, 'wb') as f:
-            f.write(d)
+        if isinstance(d, str) and d.startswith('file://'):
+            shutil.copy(d[7:], filename)
+        elif isinstance(d, str) and d.startswith(('http://', 'https://')):
+            with urlopen(d) as f1:
+                with open(filename, 'wb') as f2:
+                    chunk = True
+                    while chunk:
+                        chunk = f1.read(8192)
+                        f2.write(chunk)
+        else:
+            with open(filename, 'wb') as f:
+                f.write(d)
 
 
 class AssetStore:
@@ -215,6 +225,7 @@ class AssetStore:
         self._assets = {}
         self._associated_assets = {}
         self._data = {}
+        self._data_dirs = set()
         self._used_assets = set()  # between all sessions (for export)
         
         # Create standard assets
@@ -418,13 +429,15 @@ class AssetStore:
     def add_shared_data(self, name, data):
         """ Add data to serve to the client (e.g. images), which is shared
         between sessions. It is an error to add data with a name that is
-        already registered. See ``Session.add_data()`` to set dataper-session.
+        already registered. See ``Session.add_data()`` to set data per-session
+        and `Session.send_data()`` to send data to Model objects directly.
         
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. 
-            data (bytes): the data blob. Can also be a uri to the blob
+            data (bytes, str): the data blob. Can also be a uri to the blob
                 (string starting with "file://", "http://" or "https://").
-                in which case the code is (down)loaded on the server.
+                in which case the server will redirect to that source. In case
+                of "file://", the file must be in a registered data dir.
         
         Returns:
             url: the (relative) url at which the data can be retrieved.
@@ -433,15 +446,48 @@ class AssetStore:
             raise TypeError('add_shared_data() name must be a str.')
         if name in self._data:
             raise ValueError('add_shared_data() got existing name %r.' % name)
-        if isinstance(data, str):
-            if data.startswith('file://'):
-                data = open(data.split('//', 1)[1], 'rb').read()
-            elif data.startswith(('http://', 'https://')):
-                data = urlopen(data, timeout=5.0).read()
-        if not isinstance(data, bytes):
-            raise TypeError('add_shared_data() data must be bytes.')
+        if isinstance(data, str) and data.startswith('file://'):
+            if not self.in_data_dir(data):
+                raise ValueError('add_shared_data() with a local file must exist '
+                                 'and be inside a data dir (see add_data_dir().')
+        elif isinstance(data, str) and data.startswith(('http://', 'https://')):
+            pass  # data = urlopen(data, timeout=5.0).read()
+        elif not isinstance(data, bytes):
+            raise TypeError('add_shared_data() data must be bytes or a URI.')
         self._data[name] = data
         return '_data/shared/%s' % name  # relative path so it works /w export
+    
+    def add_data_dir(self, path):
+        """ Mark a directory as a data dir. For security reasons,
+        ``app.assets.add_shared_data()``, ``Session.add_data()`` and
+        ``Model.send_data()`` can only use "file://" uri's that are relative
+        to one of the data dirs.
+        """
+        if not isinstance(path, str):
+            raise TypeError('add_data_dir() needs a string path.')
+        if path.startswith('file://'):
+            path = path[7:]
+        path = os.path.normcase(os.path.normpath(os.path.abspath(path)))
+        if not os.path.isdir(path):
+            raise TypeError('add_data_dir() needs a valid directory name.')
+        self._data_dirs.add(path)
+    
+    def in_data_dir(self, path):
+        """ Get whether the given filename (or uri starting with "file://"
+        is a valid file inside one of the given data dirs.
+        """
+        if not isinstance(path, str):
+            raise TypeError('in_data_dir() needs a string path.')
+        if path.startswith('file://'):
+            path = path[7:]
+        path = os.path.normcase(os.path.normpath(os.path.abspath(path)))
+        if not os.path.isfile(path):
+            return False
+        for d in self._data_dirs:
+            if path.startswith(d):
+                return True
+        else:
+            return False
     
     def export(self, dirname, clear=False):
         """ Write all shared data and used assets to the given directory.

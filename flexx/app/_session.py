@@ -7,7 +7,6 @@ import json
 import random
 import hashlib
 import weakref
-from urllib.request import urlopen
 
 from ._model import Model, new_type
 from ._asset import Asset, Bundle, solve_dependencies
@@ -207,37 +206,88 @@ class Session:
     
     ## Data
     
-    def send_data(self, data, meta):
+    def _send_data(self, id, data, meta):
         """ Send data to a model on the JS side. The corresponding object's
         receive_data() method is called when the data is available in JS.
-        This is called by ``Model.send_data()`` and works in the same way except
-        that ``meta`` must have an "id" field corresponding to a valid model.
+        This is called by ``Model.send_data()`` and works in the same way.
         """
-        # Check meta and meta.id
+        # Check id
+        if not isinstance(id, str):
+            raise TypeError('session.send_data() first arg must be a str id.')
+        if not self._model_instances.get(id, None):
+            raise ValueError('session.send_data() first arg must be an id '
+                             'corresponding to an existing model: %r' % id)
+        # Check meta
         if not isinstance(meta, dict):
             raise TypeError('session.send_data() meta must be a dict.')
-        id = meta.get('id', None)
-        if not isinstance(id, str):
-            raise TypeError('session.send_data() meta must have an id (str).')
-        if self._model_instances.get(id, None) is None:
-            raise TypeError('session.send_data() meta["id"] is %r, which does '
-                            'not correspond to an existing model.' % id)
         # Check data - uri or blob
-        if isinstance(data, str):
+        data_name = None
+        if isinstance(data, str) and data.startswith(('http://', 'https://')):
             # Uri: tell client to retrieve it with AJAX
             url = data
-            self._exec('window.flexx.retrieve_data("%s", %s);' % (url, reprs(meta)))
+        elif isinstance(data, str) and data.startswith('file://'):
+            # Local file, use our static file handler
+            if not self._store.in_data_dir(data):
+                raise RuntimeError('send_data() with a local file must exist and '
+                                    'be inside a data dir (see add_data_dir().')
+            data_name = 'blob-' + get_random_string()
+            url = '/flexx/static/%s/%s' % (self.id, data_name)  # safes one redirect
+            if self.id == self.app_name:  # Maintain data if we're being exported
+                self._data[data_name.replace('/static/', '/data/')] = data
         elif isinstance(data, bytes):
             # Blob: store it, and tell client to retieve it with AJAX
             # todo: have a second ws connection for pushing data
-            name = 'blob-' + get_random_string()
-            self._data_volatile[name] = data
-            url = '/flexx/data/%s/%s' % (self.id, name)
-            self._exec('window.flexx.retrieve_data("%s", %s);' % (url, reprs(meta)))
+            data_name = 'blob-' + get_random_string()
+            url = '/flexx/data/%s/%s' % (self.id, data_name)
+            self._data_volatile[data_name] = data
+            if self.id == self.app_name:  # Maintain data if we're being exported
+                self._data[data_name] = data
         else:
-            raise TypeError('session.send_data() data must be a bob of bytes, '
+            raise TypeError('session.send_data() data must be a bytes or a URI, '
                             'not %s.' % data.__class__.__name__)
-
+        
+        # Tell JS to retrieve data
+        t = 'window.flexx.instances.%s.retrieve_data("%s", %s);'
+        self._exec(t % (id, url, reprs(meta)))
+    
+    def add_data(self, name, data):
+        """ Add data to serve to the client (e.g. images), specific to this
+        session. Returns the link at which the data can be retrieved.
+        See ``Session.send_data()`` for a send-and-forget mechanism, and
+        ``app.assets.add_shared_data()`` to provide shared data.
+        
+        Parameters:
+            name (str): the name of the data, e.g. 'icon.png'. If data has
+                already been set on this name, it is overwritten.
+            data (bytes, str): the data blob. Can also be a uri to the blob
+                (string starting with "file://", "http://" or "https://").
+                in which case the server will redirect to that source. In case
+                of "file://", the file must be in a registered data dir using
+                ``app.assets.add_data_dir()``.
+        
+        Returns:
+            url: the (relative) url at which the data can be retrieved.
+        """
+        if not isinstance(name, str):
+            raise TypeError('Session.add_data() name must be a str.')
+        if name in self._data:
+            raise ValueError('Session.add_data() got existing name %r.' % name)
+        if isinstance(data, str) and data.startswith('file://'):
+            if not self._store.in_data_dir(data):
+                raise RuntimeError('add_data() with a local file must exist and '
+                                    'be inside a data dir (see add_data_dir().')
+        elif isinstance(data, str) and data.startswith(('http://', 'https://')):
+            pass  # data = urlopen(data, timeout=5.0).read()
+        elif not isinstance(data, bytes):
+            raise TypeError('Session.add_data() data must be bytes or a URI.')
+        self._data[name] = data
+        return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
+    
+    # def remove_data(self, name):
+    #     """ Remove the data associated with the given name.
+    #     """
+    #     self._data.pop(name, None)
+    
     def get_data_names(self):
         """ Get a list of names of the data provided by this session.
         """
@@ -251,43 +301,10 @@ class Session:
         if True:
             data = self._data_volatile.pop(name, None)
         if data is None:
-            data = self.data.get(name, None)
+            data = self._data.get(name, None)
         if data is None:
             data = self._store.get_data(name)
         return data
-    
-    # todo: the way that we do assets now makes me wonder whether there are better ways
-    # to deal with data handling ...
-    
-    def add_data(self, name, data):  # todo: add option to clear data after its loaded?
-        """ Add data to serve to the client (e.g. images), specific to this
-        session. Returns the link at which the data can be retrieved.
-        See ``app.assets.add_shared_data()`` to provide shared data.
-        
-        Parameters:
-            name (str): the name of the data, e.g. 'icon.png'. If data has
-                already been set on this name, it is overwritten.
-            data (bytes): the data blob. Can also be a uri to the blob
-                (string starting with "file://", "http://" or "https://").
-        """
-        if not isinstance(name, str):
-            raise TypeError('Session.add_data() name must be a str.')
-        if name in self._data:
-            raise ValueError('Session.add_data() got existing name %r.' % name)
-        if isinstance(data, str):
-            if data.startswith('file://'):
-                data = open(data.split('//', 1)[1], 'rb').read()
-            elif data.startswith(('http://', 'https://')):
-                data = urlopen(data, timeout=5.0).read()
-        if not isinstance(data, bytes):
-            raise TypeError('Session.add_data() data must be a bytes.')
-        self._data[name] = data
-        return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
-    
-    # def remove_data(self, name):
-    #     """ Remove the data associated with the given name.
-    #     """
-    #     self._data.pop(name, None)
     
     def _export_data(self, dirname, clear=False):
         """ Export all assets and data specific to this session.
@@ -590,7 +607,7 @@ def _get_page(session, js_assets, css_assets, link, export):
                 else:
                     html = asset.to_html(pre_path + '/shared/{}', link)
             codes.append(html)
-            if export:
+            if export and assets is js_assets:
                 codes.append('<script>window.flexx.spin();</script>')
         codes.append('')  # whitespace between css and js assets
     
