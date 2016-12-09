@@ -3,18 +3,18 @@
 Simple example:
 
 .. UIExample:: 50
-    
+
     b = ui.Button(text="Push me")
 
 
 Example with interaction:
 
 .. UIExample:: 200
-    
+
     from flexx import app, ui, event
-    
+
     class Example(ui.BoxPanel):
-        
+
         def init(self):
             with ui.VBox():
                 self.b1 = ui.Button(text='apple')
@@ -31,21 +31,21 @@ Example with interaction:
                 self.c2 = ui.CheckBox(text='banana')
                 self.c3 = ui.CheckBox(text='pear')
                 self.checklabel = ui.Label(text='...')
-        
+
         class JS:
-            
+
             @event.connect('b1.mouse_click', 'b2.mouse_click','b3.mouse_click',  )
             def _button_clicked(self, *events):
                 ev = events[-1]
                 self.buttonlabel.text = 'Clicked on the ' + ev.source.text
-            
+
             @event.connect('r1.checked', 'r2.checked','r3.checked')
             def _radio_changed(self, *events):
                 # There will also be events for radio buttons being unchecked, but
                 # Flexx ensures that the last event is for the one being checked
                 ev = events[-1]
                 self.radiolabel.text = 'Selected the ' + ev.source.text
-        
+
             @event.connect('c1.checked', 'c2.checked','c3.checked',  )
             def _check_changed(self, *events):
                 selected = [c.text for c in (self.c1, self.c2, self.c3) if c.checked]
@@ -63,45 +63,51 @@ from . import Widget
 class BaseButton(Widget):
     """ Abstract button class.
     """
-    
+
     CSS = """
-    
+
     .flx-BaseButton {
         white-space: nowrap;
     }
-    
+
     .flx-RadioButton, .flx-CheckBox {
         margin-left: 0.5em;
         margin-right: 0.5em;
     }
-    
+
     .flx-RadioButton label, .flx-CheckBox label {
         margin-left: 0.2em;
     }
-    
+
     """
-    
+
     class Both:
-            
+
         @event.prop
         def text(self, v=''):
             """ The text on the button.
             """
             return str(v)
-        
+
         @event.prop
         def checked(self, v=False):
             """ Whether the button is checked. Applicable for CheckBox,
             RadioButton and ToggleButton.
             """
             return bool(v)
-    
+
+        @event.prop
+        def disabled(self, v=False):
+            """ Whether the button is disabled.
+            """
+            return bool(v)
+
     class JS:
-        
+
         @event.emitter
         def mouse_click(self, e):
             """ Event emitted when the mouse is clicked.
-            
+
             See mouse_down() for a description of the event object.
             """
             return self._create_mouse_event(e)
@@ -115,10 +121,17 @@ class Button(BaseButton):
             self.phosphor = self._create_phosphor_widget('button')
             self.node = self.phosphor.node
             self.node.addEventListener('click', self.mouse_click, 0)
-        
+
         @event.connect('text')
         def __text_changed(self, *events):
             self.node.innerHTML = events[-1].new_value
+
+        @event.connect('disabled')
+        def __disabled_changed(self, *events):
+            if events[-1].new_value:
+                self.node.setAttribute("disabled", "disabled")
+            else:
+                self.node.removeAttribute("disabled")
 
 
 class ToggleButton(BaseButton):
@@ -131,21 +144,21 @@ class ToggleButton(BaseButton):
             font-weight: bolder;
         }
     """
-    
+
     class JS:
         def _init_phosphor_and_node(self):
             self.phosphor = self._create_phosphor_widget('button')
             self.node = self.phosphor.node
             self.node.addEventListener('click', self.mouse_click, 0)
-        
+
         @event.connect('text')
         def __text_changed(self, *events):
             self.node.innerHTML = events[-1].new_value
-        
+
         @event.connect('mouse_click')
         def __toggle_checked(self, *events):
             self.checked = not self.checked
-            
+
         @event.connect('checked')
         def __check_changed(self, *events):
             if self.checked:
@@ -158,7 +171,7 @@ class RadioButton(BaseButton):
     """ A radio button. Of any group of radio buttons that share the
     same parent, only one can be active.
     """
-    
+
     class JS:
         def _init_phosphor_and_node(self):
             self.phosphor = p = self._create_phosphor_widget('div')
@@ -166,27 +179,27 @@ class RadioButton(BaseButton):
             p.node.innerHTML = template.replace('ID', self.id)
             self.node = p.node.childNodes[0]
             self.text_node = p.node.childNodes[1]
-            
+
             self.node.addEventListener('click', self._check_radio_click, 0)
-        
+
         @event.connect('parent')
         def __update_group(self, *events):
             if self.parent:
                 self.node.name = self.parent.id
-        
+
         @event.connect('text')
         def __text_changed(self, *events):
             #self.node.innerHTML = events[-1].new_value
             self.text_node.innerHTML = events[-1].new_value
-        
+
         @event.connect('checked')
         def __check_changed(self, *events):
             self.node.checked = self.checked
-        
+
         def _check_radio_click(self, ev):
             """ This method is called on JS a click event. We *first* update
             the checked properties, and then emit the Flexx click event.
-            That way, one can connect to the click event and have an 
+            That way, one can connect to the click event and have an
             up-to-date checked props (even on Py).
             """
             # Turn off any radio buttons in the same group
@@ -203,7 +216,7 @@ class RadioButton(BaseButton):
 class CheckBox(BaseButton):
     """ A checkbox button.
     """
-    
+
     class JS:
         def _init_phosphor_and_node(self):
             self.phosphor = p = self._create_phosphor_widget('div')
@@ -211,18 +224,18 @@ class CheckBox(BaseButton):
             p.node.innerHTML = template.replace('ID', self.id)
             self.node = p.node.childNodes[0]
             self.text_node = p.node.childNodes[1]
-            
+
             self.node.addEventListener('click', self.mouse_click, 0)
             self.node.addEventListener('change', self._check_changed_from_dom, 0)
-        
+
         @event.connect('text')
         def __text_changed(self, *events):
             #self.node.innerHTML = events[-1].new_value
             self.text_node.innerHTML = events[-1].new_value
-        
+
         @event.connect('checked')
         def __check_changed(self, *events):
             self.node.checked = self.checked
-        
+
         def _check_changed_from_dom(self, ev):
             self.checked = self.node.checked
