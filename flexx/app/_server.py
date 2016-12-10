@@ -38,20 +38,6 @@ def create_server(host=None, port=None, new_loop=False, backend='tornado',
     
     Returns:
         server: The server object, see ``current_server()``.
-
-    Examples:
-
-        Configuring the server to use HTTPS with Tornado server:
-    
-        .. code-block:: py
-        
-            app.create_server(ssl_options = {'certfile' : '/path/to/certfile',
-                                             'keyfile' : '/path/to/keyfile'})
-            app.serve(Example, 'Example')
-            app.run()
-
-        Alternately, cert and key files can be provided through
-           ``ssl_certfile`` and ``ssl_keyfile`` configuration variables.
     """
     # Lazy load tornado, so that we can use anything we want there without
     # preventing other parts of flexx.app from using *this* module.
