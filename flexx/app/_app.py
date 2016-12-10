@@ -91,8 +91,9 @@ class App:
             raise RuntimeError('Cannot determine app url if the server is not '
                                'yet running.')
         else:
+            proto = server.protocol
             host, port = server.serving
-            return 'http://%s:%i/%s/' % (host, port, self._path)
+            return '%s://%s:%i/%s/' % (proto, host, port, self._path)
     
     @property
     def name(self):

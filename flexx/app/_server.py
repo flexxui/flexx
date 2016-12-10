@@ -11,7 +11,8 @@ from .. import config
 _current_server = None
 
 
-def create_server(host=None, port=None, new_loop=False, backend='tornado'):
+def create_server(host=None, port=None, new_loop=False, backend='tornado',
+                  **server_kwargs):
     """
     Create a new server object. This is automatically called; users generally
     don't need this, unless they want to explicitly specify host/port,
@@ -33,6 +34,7 @@ def create_server(host=None, port=None, new_loop=False, backend='tornado'):
             which is made current when ``start()`` is called. If ``False``
             (default) will use the current IOLoop for this thread.
         backend (str): Stub argument; only Tornado is currently supported.
+        **server_kwargs: keyword arguments passed to the server constructor.
     
     Returns:
         server: The server object, see ``current_server()``.
@@ -53,7 +55,7 @@ def create_server(host=None, port=None, new_loop=False, backend='tornado'):
     if _current_server:
         _current_server.close()
     # Start hosting
-    _current_server = TornadoServer(host, port, new_loop)
+    _current_server = TornadoServer(host, port, new_loop, **server_kwargs)
     assert isinstance(_current_server, AbstractServer)
     # Schedule pending calls
     _current_server.call_later(0, _loop.loop.iter)
@@ -120,10 +122,10 @@ class AbstractServer:
         port (int): the port to serve at. None or 0 mean to autoselect a port.
     """
     
-    def __init__(self, host, port):
+    def __init__(self, host, port, **kwargs):
         self._serving = None
         if host is not False:
-            self._open(host, port)
+            self._open(host, port, **kwargs)
             assert self._serving  # Check that subclass set private variable
         self._running = False
     
@@ -151,7 +153,7 @@ class AbstractServer:
         self._serving = None
         self._close()
     
-    def _open(self, host, port):
+    def _open(self, host, port, **kwargs):
         raise NotImplementedError()
     
     def _start(self):
@@ -174,3 +176,9 @@ class AbstractServer:
         Or None if the server is not serving (anymore).
         """
         return self._serving
+
+    @property
+    def protocol(self):
+        """ Get a string representing served protocol
+        """
+        raise NotImplementedError
