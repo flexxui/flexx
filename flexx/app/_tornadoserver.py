@@ -68,13 +68,13 @@ class TornadoServer(AbstractServer):
         # run Flexx in e.g. JLab's application.
 
         # handle ssl, wether from configuration or given args
-        if 'ssl_certfile' in config and config.ssl_certfile:
+        if config.ssl_certfile:
             if 'ssl_options' not in kwargs:
                 kwargs['ssl_options'] = {}
             if 'certfile' not in kwargs['ssl_options']:
                 kwargs['ssl_options']['certfile'] = config.ssl_certfile
 
-        if 'ssl_keyfile' in config and config.ssl_keyfile:
+        if config.ssl_keyfile:
             if 'ssl_options' not in kwargs:
                 kwargs['ssl_options'] = {}
             if 'keyfile' not in kwargs['ssl_options']:
