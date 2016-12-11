@@ -189,7 +189,12 @@ def init_notebook():
     
     # We set session_id and app_name in a way that it does not end up
     # in exported notebook.
-    url = 'ws://%s:%i/flexx/ws/%s' % (host, port, session.app_name)
+    if config.ssl_certfile != '' or config.ssl_keyfile != '':
+        # Connect over SSL
+        url = 'wss://%s:%i/flexx/ws/%s' % (host, port, session.app_name)
+    else:
+        url = 'ws://%s:%i/flexx/ws/%s' % (host, port, session.app_name)
+
     flexx_pre_init = """<script>window.flexx = {};
                                 window.flexx.app_name = "%s";
                                 window.flexx.session_id = "%s";
