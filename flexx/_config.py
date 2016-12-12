@@ -9,5 +9,6 @@ config = Config('flexx', '~appdata/.flexx.cfg',
                          'it is closed.'),
     ssl_certfile=('', str, 'cert file for https server.'),
     ssl_keyfile=('', str, 'key file for https server.'),
-    hosts_whitelist=('', str, 'Comma separated list of allowed <host>:<port> values to pass cross-origin checks.'),
+    hosts_whitelist=('', str, 'Comma separated list of allowed <host>:<port> '
+                              'values to pass cross-origin checks.'),
     )
