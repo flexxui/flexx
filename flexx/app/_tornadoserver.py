@@ -676,8 +676,8 @@ class WSHandler(WebSocketHandler):
         #WebSocketHandler.check_origin
         
         serving_host = self.request.headers.get("Host")
-        serving_hostname = serving_host.split(':')[0].lower()
-        connecting_host = urlparse(origin).netloc.lower()
+        serving_hostname = serving_host.split(':')[0]
+        connecting_host = urlparse(origin).netloc
 
         
         if serving_hostname == 'localhost':
@@ -686,7 +686,7 @@ class WSHandler(WebSocketHandler):
             return True  # we cannot know if the origin matches
         elif serving_host == connecting_host:
             return True
-        elif connecting_host in config.hosts_whitelist.lower():
+        elif connecting_host in config.hosts_whitelist:
             return True
         else:
             logger.info('Connection refused from %s' % origin)
