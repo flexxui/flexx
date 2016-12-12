@@ -676,9 +676,9 @@ class WSHandler(WebSocketHandler):
         #WebSocketHandler.check_origin
         
         serving_host = self.request.headers.get("Host")
-        serving_hostname = serving_host.split(':')[0]
-        connecting_host = urlparse(origin).netloc
-        connecting_hostname = connecting_host.split(':')[0]
+        serving_hostname = serving_host.split(':')[0].lower()
+        connecting_host = urlparse(origin).netloc.lower()
+
         
         if serving_hostname == 'localhost':
             return True  # Safe
@@ -686,9 +686,7 @@ class WSHandler(WebSocketHandler):
             return True  # we cannot know if the origin matches
         elif serving_host == connecting_host:
             return True
-        elif serving_hostname == connecting_hostname:
-            # Comparing hostnames in case of Jupyter notebooks
-            # connecting_host and serving_host have same host names but different ports
+        elif connecting_host in config.hosts_whitelist.lower():
             return True
         else:
             logger.info('Connection refused from %s' % origin)
