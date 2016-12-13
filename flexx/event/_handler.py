@@ -366,6 +366,7 @@ class Handler:
         obname_full, path = path[0], path[1:]
         obname = obname_full.rstrip('*')
         selector = obname_full[len(obname):]
+
         # Internally, 3-star notation is used for optional selectors
         if selector == '***':
             self._seek_event_object(index, path, ob)
@@ -384,9 +385,8 @@ class Handler:
                 self._seek_event_object(index, path, sub_ob)
             return
         elif selector == '*':  # "**" is recursive, so allow more
-            t = "Invalid connection {obname_full} because {obname} \
-                is not a tuple/list."
-            raise RuntimeError(t.replace("{opname_full}", obname_full)
-                .replace("{opname}", obname))
+            t = "Invalid connection {name_full} because {name} is not a tuple/list."
+            raise RuntimeError(t.replace("{name_full}", obname_full)
+                .replace("{name}", obname))
         else:
             return self._seek_event_object(index, path, ob)
