@@ -575,6 +575,25 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         cmd = 'flexx.instances.%s.%s;' % (self._id, call)
         self._session._exec(cmd)
     
+    def send_data(self, data, meta=None):
+        """ Send data to the JS side, where ``retreive_data()`` will be called,
+        which will eventually call ``receive_data()`` with the corresponding
+        data and meta data.
+        
+        AJAX is used to retrieve the data. In the future we may want to use
+        a dedicated binary websocket for better performance.
+        
+        Parameters:
+            data (bytes, str): the data blob. Can also be a URL
+                (a string starting with "http://" or "https://") where the
+                client can download the data from.
+            meta (dict, optional): information associated with the data
+                that the JS side can use to interpret the data. This function
+                will add an "id" field to the meta data.
+        """
+        meta = {} if meta is None else meta
+        return self.session._send_data(self.id, data, meta)
+    
     
     class JS:
         
@@ -675,6 +694,33 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 txt = serializer.saves(ev)
                 if window.flexx.ws:
                     window.flexx.ws.send('EVENT ' + [self.id, type, txt].join(' '))
+        
+        def retrieve_data(self, url, meta):
+            """ Make an AJAX call to retrieve a blob of data. When the
+            data is received, receive_data() is called.
+            """
+            # Define handler
+            # print('retrieving data for', self.id, 'from', url)
+            def process_response():
+                if xhr.status == 200:
+                    self.receive_data(xhr.response, meta)
+                else:
+                    raise RuntimeError("Retrieving data for %s failed with "
+                                       "HTTP status %s" % (self.id, xhr.status))
+            # Make AJAX call
+            xhr = window.XMLHttpRequest()
+            xhr.open("GET", url)
+            xhr.responseType = "arraybuffer"
+            xhr.onload = process_response
+            xhr.send()
+        
+        def receive_data(self, data, meta):
+            """ Function that gets called when data is send to it. Models that
+            want to receive data must overload this in order to process the
+            received data. The ``data`` is an ``ArrayBuffer``, and ``meta`` is
+            a ``dict`` as given in ``send_data()``.
+            """
+            print(self.id, 'received data but did not handle it')
 
 
 # Make model objects de-serializable

@@ -115,9 +115,10 @@ def test_asset_store_data():
     with raises(ValueError):
         s.add_shared_data('xx', b'zzzz')
     
-    # Add url data
-    s.add_shared_data('readme', 'https://github.com/zoofIO/flexx/blob/master/README.md')
-    assert 'Flexx is' in s.get_data('readme').decode()
+    # # Add url data
+    # s.add_shared_data('readme', 'https://github.com/zoofIO/flexx/blob/master/README.md')
+    # # assert 'Flexx is' in s.get_data('readme').decode()
+    # assert s.get_data('readme').startswith('https://github')
     
     # Add BS data
     with raises(TypeError):
@@ -131,6 +132,26 @@ def test_asset_store_data():
             s.add_shared_data(b'dd', b'yes, bytes')  # name not str
     with raises(TypeError):
         s.add_shared_data(4, b'zzzz')  # name not a str
+
+
+def test_not_allowing_local_files():
+    """ At some point, flexx allowed adding local files as data, but
+    this was removed for its potential security whole. This test
+    is a remnant to ensure its gone.
+    """
+    
+    s = AssetStore()
+    
+    # Add shared data from local file, dont allow!
+    filename = __file__
+    assert os.path.isfile(filename)
+    with raises(TypeError):
+        s.add_shared_data('testfile3', 'file://' + filename)
+    
+    # Add local file without "file://" prefix
+    if sys.version_info > (3, ):
+        with raises(TypeError):
+            s.add_shared_data('testfile4', filename)
 
 
 def test_asset_store_export():

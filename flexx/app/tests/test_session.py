@@ -59,9 +59,10 @@ def test_session_assets_data():
     assert s.get_data('zz') is None
     assert s.get_data('ww') is b'wwww'
     
-    # Add url data
-    s.add_data('readme', 'https://github.com/zoofIO/flexx/blob/master/README.md')
-    assert 'Flexx is' in s.get_data('readme').decode()
+    # # Add url data
+    # s.add_data('readme', 'https://github.com/zoofIO/flexx/blob/master/README.md')
+    # #assert 'Flexx is' in s.get_data('readme').decode()
+    # assert s.get_data('readme').startswith('https://github')
     
     # Add data with same name
     with raises(ValueError):

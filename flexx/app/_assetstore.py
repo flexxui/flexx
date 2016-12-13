@@ -6,7 +6,6 @@ etc.) needed by the applications.
 
 import os
 import shutil
-from urllib.request import urlopen
 
 from ..pyscript import create_js_module, get_all_std_names, get_full_std_lib
 
@@ -343,13 +342,13 @@ class AssetStore:
         
         Parameters:
             name (str): the asset name, e.g. 'foo.js' or 'bar.css'. Can contain
-                slashes to emulate a file system. e.g. 'spam/foo.js'. If a URI
+                slashes to emulate a file system. e.g. 'spam/foo.js'. If a URL
                 is given, both name and source are implicitly set (and its
                 a remote asset).
             source (str, function): the source for this asset. Can be:
             
                 * The source code.
-                * A URI (str starting with 'http://', 'https://' or 'file://'),
+                * A URL (str starting with 'http://' or 'https://'),
                   making this a "remote asset". Note that ``app.export()``
                   provides control over how (remote) assets are handled.
                 * A funcion that should return the source code, and which is
@@ -418,26 +417,21 @@ class AssetStore:
     def add_shared_data(self, name, data):
         """ Add data to serve to the client (e.g. images), which is shared
         between sessions. It is an error to add data with a name that is
-        already registered. See ``Session.add_data()`` to set dataper-session.
+        already registered. See ``Session.add_data()`` to set data per-session
+        and `Model.send_data()`` to send data to Model objects directly.
         
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. 
-            data (bytes): the data blob. Can also be a uri to the blob
-                (string starting with "file://", "http://" or "https://").
-                in which case the code is (down)loaded on the server.
+            data (bytes): the data blob.
         
         Returns:
             url: the (relative) url at which the data can be retrieved.
+        
         """
         if not isinstance(name, str):
             raise TypeError('add_shared_data() name must be a str.')
         if name in self._data:
             raise ValueError('add_shared_data() got existing name %r.' % name)
-        if isinstance(data, str):
-            if data.startswith('file://'):
-                data = open(data.split('//', 1)[1], 'rb').read()
-            elif data.startswith(('http://', 'https://')):
-                data = urlopen(data, timeout=5.0).read()
         if not isinstance(data, bytes):
             raise TypeError('add_shared_data() data must be bytes.')
         self._data[name] = data

@@ -38,10 +38,8 @@ Video example:
                     self.vid2 = ui.YoutubeWidget(source='dhRUe-gz690')
 """
 
-import os
-
 from ... import event
-from ...pyscript import window, this_is_js
+from ...pyscript import window
 from . import Widget
 
 
@@ -56,16 +54,8 @@ class ImageWidget(Widget):
         @event.prop
         def source(self, v=''):
             """ The source of the image, This can be anything that an HTML
-            img element supports. Also supported are images on the server,
-            these will be added as data assets so the client can request them.
+            img element supports.
             """
-            if not this_is_js():
-                # Is it an image on the server that we need to serve up?
-                if v.endswith(('.png', '.jpg', '.svg', '.gif')):
-                    if v.startswith('file://') or os.path.isfile(v):
-                        ImageWidget._sequence += 1
-                        fname = 'im' + str(ImageWidget._sequence)
-                        return self.session.add_data(fname, 'file://' + v)
             return str(v)
         
         @event.prop
