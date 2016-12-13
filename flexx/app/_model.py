@@ -487,9 +487,10 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         self.call_js('_sync_props = true' if v else '_sync_props = false')
         return v
     
-    # todo: limit this to within init()?
     def __setattr__(self, name, value):
-        # Sync attributes that are Model instances, and not properties
+        # Sync attributes that are Model instances, and not properties.
+        # This is mostly intended for attributes set during init() but works
+        # at any time.
         event.HasEvents.__setattr__(self, name, value)
         if isinstance(value, Model):
             if not (name in self.__properties__ or

@@ -37,10 +37,9 @@ ASSET-HOOK
 </html>
 """.lstrip()
 
-# todo: make this work with out-of-order assets too
-
-# This is our loader for AMD modules. It invokes the modules immediately,
-# since we want Flexx to be ready to use so we can execute commands via the
+# This is our loader for AMD modules. It invokes the modules immediately and
+# does not resolve dependency order, since the server takes care of that and
+# we want Flexx to be ready to use so we can execute commands via the
 # websocket. It also allows redefining modules so that one can interactively
 # (re)define module classes. The loader is itself wrapped in a IIFE to
 # create a private namespace. The modules must follow this pattern:
