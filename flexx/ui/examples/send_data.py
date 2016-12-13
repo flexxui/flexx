@@ -3,16 +3,17 @@
 Example that demonstrates sending binray data from Python to JS. The
 ``Model.send_data()`` mechanism can be a powerful tool to send
 (scientific) data, especially for large amounts of data. The method
-accepts bytes or a URI ("file://", "http://" or "https://") where the
+accepts bytes or a URL ("http://" or "https://") where the
 data can be retrieved. At his point AJAX is used to retrieve the data.
 In the future we might push the data over a dedicated binary websocket
 for greater performance.
 
 If you find that you have a property that is a large list of numbers, maybe
-that should not be considered a property, but data. 
+that should be considered data instead of a property. 
 
-Exported apps that use ``send_data()` work, but only if they are served (by a
-static server), because browsers don't allow AJAX requests for "file://...".
+Exported apps that use ``send_data()` work, but only if they are served
+(e.g. on a blog, readthedocs or S3), because browsers typically refuse
+to load local files via AJAX.
 """
 
 from flexx import ui, app

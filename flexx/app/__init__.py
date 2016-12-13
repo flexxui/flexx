@@ -166,14 +166,25 @@ Data can be provided per session or shared between sessions:
     # Add shared data
     link = app.assets.add_shared_data('some_name.png', binary_blob)
 
-
 Note that ``binary_blob`` can also be a string starting with ``http://`` or
-``file://``. In the future we plan to make it easier to load arbitrary
-data in the client (mainly for scientific purposes).
+``https://``. Futher, it is possible to send data from Python to JS
+within a model class:
 
-Note that this API for providing the client with data may change in a
-following release. If you rely on this, please make an issue so we can
-work out a smooth transition if necessary.
+
+.. code-block:: py
+
+    class MyModel(app.Model):
+    
+        def some_method(self):
+            self.send_data(binary_blob, meta_dict)
+        
+        class JS:
+        
+            def receive_data(self, array_buffer, meta_dict):
+                # This gets called when the data arrives.
+                
+                ...  # handle the data
+
 
 Some background info on the server process
 ------------------------------------------

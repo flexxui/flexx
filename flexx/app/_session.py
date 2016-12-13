@@ -9,7 +9,7 @@ import hashlib
 import weakref
 
 from ._model import Model, new_type
-from ._asset import Asset, Bundle, solve_dependencies
+from ._asset import url_starts, Asset, Bundle, solve_dependencies
 from ._assetstore import AssetStore, export_assets_and_data, INDEX
 from ._assetstore import assets as assetstore
 from . import logger
@@ -220,20 +220,11 @@ class Session:
         # Check meta
         if not isinstance(meta, dict):
             raise TypeError('session.send_data() meta must be a dict.')
-        # Check data - uri or blob
+        # Check data - url or blob
         data_name = None
-        if isinstance(data, str) and data.startswith(('http://', 'https://')):
-            # Uri: tell client to retrieve it with AJAX
+        if isinstance(data, str) and data.startswith(url_starts):
+            # URL: tell client to retrieve it with AJAX
             url = data
-        elif isinstance(data, str) and data.startswith('file://'):
-            # Local file, use our static file handler
-            if not self._store.in_data_dir(data):
-                raise RuntimeError('send_data() with a local file must exist and '
-                                    'be inside a data dir (see add_data_dir().')
-            data_name = 'blob-' + get_random_string()
-            url = '/flexx/static/%s/%s' % (self.id, data_name)  # safes one redirect
-            if self.id == self.app_name:  # Maintain data if we're being exported
-                self._data[data_name.replace('/static/', '/data/')] = data
         elif isinstance(data, bytes):
             # Blob: store it, and tell client to retieve it with AJAX
             # todo: have a second ws connection for pushing data
@@ -243,7 +234,7 @@ class Session:
             if self.id == self.app_name:  # Maintain data if we're being exported
                 self._data[data_name] = data
         else:
-            raise TypeError('session.send_data() data must be a bytes or a URI, '
+            raise TypeError('session.send_data() data must be a bytes or a URL, '
                             'not %s.' % data.__class__.__name__)
         
         # Tell JS to retrieve data
@@ -259,11 +250,9 @@ class Session:
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. If data has
                 already been set on this name, it is overwritten.
-            data (bytes, str): the data blob. Can also be a uri to the blob
-                (string starting with "file://", "http://" or "https://").
-                in which case the server will redirect to that source. In case
-                of "file://", the file must be in a registered data dir using
-                ``app.assets.add_data_dir()``.
+            data (bytes, str): the data blob. Can also be a URL to the blob
+                (string starting with "http://" or "https://") in which case
+                the server will redirect to that source.
         
         Returns:
             url: the (relative) url at which the data can be retrieved.
@@ -272,14 +261,10 @@ class Session:
             raise TypeError('Session.add_data() name must be a str.')
         if name in self._data:
             raise ValueError('Session.add_data() got existing name %r.' % name)
-        if isinstance(data, str) and data.startswith('file://'):
-            if not self._store.in_data_dir(data):
-                raise RuntimeError('add_data() with a local file must exist and '
-                                    'be inside a data dir (see add_data_dir().')
-        elif isinstance(data, str) and data.startswith(('http://', 'https://')):
+        if isinstance(data, str) and data.startswith(url_starts):
             pass  # data = urlopen(data, timeout=5.0).read()
         elif not isinstance(data, bytes):
-            raise TypeError('Session.add_data() data must be bytes or a URI.')
+            raise TypeError('Session.add_data() data must be bytes or a URL.')
         self._data[name] = data
         return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
     

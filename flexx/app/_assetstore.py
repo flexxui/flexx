@@ -11,7 +11,7 @@ from urllib.request import urlopen
 from ..pyscript import create_js_module, get_all_std_names, get_full_std_lib
 
 from ._model import Model
-from ._asset import Asset, Bundle, HEADER
+from ._asset import url_starts, Asset, Bundle, HEADER
 from ._modules import JSModule
 from . import logger
 
@@ -192,10 +192,8 @@ def export_assets_and_data(assets, data, dirname, app_id, clear=False):
         dname = os.path.dirname(filename)
         if not os.path.isdir(dname):
             os.makedirs(dname)
-        if isinstance(d, str) and d.startswith('file://'):
-            shutil.copy(d[7:], filename)
-        elif isinstance(d, str) and d.startswith(('http://', 'https://')):
-            with urlopen(d) as f1:
+        if isinstance(d, str) and d.startswith(url_starts):
+            with urlopen(d, timeout=5.0) as f1:
                 with open(filename, 'wb') as f2:
                     chunk = True
                     while chunk:
@@ -225,7 +223,6 @@ class AssetStore:
         self._assets = {}
         self._associated_assets = {}
         self._data = {}
-        self._data_dirs = set()
         self._used_assets = set()  # between all sessions (for export)
         
         # Create standard assets
@@ -354,13 +351,13 @@ class AssetStore:
         
         Parameters:
             name (str): the asset name, e.g. 'foo.js' or 'bar.css'. Can contain
-                slashes to emulate a file system. e.g. 'spam/foo.js'. If a URI
+                slashes to emulate a file system. e.g. 'spam/foo.js'. If a URL
                 is given, both name and source are implicitly set (and its
                 a remote asset).
             source (str, function): the source for this asset. Can be:
             
                 * The source code.
-                * A URI (str starting with 'http://', 'https://' or 'file://'),
+                * A URL (str starting with 'http://' or 'https://'),
                   making this a "remote asset". Note that ``app.export()``
                   provides control over how (remote) assets are handled.
                 * A funcion that should return the source code, and which is
@@ -434,66 +431,24 @@ class AssetStore:
         
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. 
-            data (bytes, str): the data blob. Can also be a uri to the blob
-                (string starting with "file://", "http://" or "https://").
-                in which case the server will redirect to that source. In case
-                of "file://", the file must be in a registered data dir.
+            data (bytes, str): the data blob. Can also be a URL to the blob
+                (string starting with "http://" or "https://") in which case
+                the server will redirect to that source.
         
         Returns:
             url: the (relative) url at which the data can be retrieved.
         
-        Note:
-            A note on using this to serve static files on the server: this uses
-            Tornado's StaticFileHandler, which is pretty efficient (it never
-            loads a whole file in memory), but for heavy trafic you might want
-            to consider a dedicated static file server (like nginx or Apache).
         """
         if not isinstance(name, str):
             raise TypeError('add_shared_data() name must be a str.')
         if name in self._data:
             raise ValueError('add_shared_data() got existing name %r.' % name)
-        if isinstance(data, str) and data.startswith('file://'):
-            if not self.in_data_dir(data):
-                raise ValueError('add_shared_data() with a local file must exist '
-                                 'and be inside a data dir (see add_data_dir().')
-        elif isinstance(data, str) and data.startswith(('http://', 'https://')):
+        if isinstance(data, str) and data.startswith(url_starts):
             pass  # data = urlopen(data, timeout=5.0).read()
         elif not isinstance(data, bytes):
-            raise TypeError('add_shared_data() data must be bytes or a URI.')
+            raise TypeError('add_shared_data() data must be bytes or a URL.')
         self._data[name] = data
         return '_data/shared/%s' % name  # relative path so it works /w export
-    
-    def add_data_dir(self, path):
-        """ Mark a directory as a data dir. For security reasons,
-        ``app.assets.add_shared_data()``, ``Session.add_data()`` and
-        ``Model.send_data()`` can only use "file://" uri's that are relative
-        to one of the data dirs.
-        """
-        if not isinstance(path, str):
-            raise TypeError('add_data_dir() needs a string path.')
-        if path.startswith('file://'):
-            path = path[7:]
-        path = os.path.normcase(os.path.normpath(os.path.abspath(path)))
-        if not os.path.isdir(path):
-            raise TypeError('add_data_dir() needs a valid directory name.')
-        self._data_dirs.add(path)
-    
-    def in_data_dir(self, path):
-        """ Get whether the given filename (or uri starting with "file://"
-        is a valid file inside one of the given data dirs.
-        """
-        if not isinstance(path, str):
-            raise TypeError('in_data_dir() needs a string path.')
-        if path.startswith('file://'):
-            path = path[7:]
-        path = os.path.normcase(os.path.normpath(os.path.abspath(path)))
-        if not os.path.isfile(path):
-            return False
-        for d in self._data_dirs:
-            if path.startswith(d):
-                return True
-        else:
-            return False
     
     def export(self, dirname, clear=False):
         """ Write all shared data and used assets to the given directory.

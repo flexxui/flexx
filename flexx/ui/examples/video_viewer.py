@@ -1,44 +1,47 @@
 # doc-export: VideoViewer
 """
-This example demonstrates how data can be provided to the client with the
-Flexx asset management system. In this case video data.
+This example demonstrates how static files can be served by making use
+of a static file server.
 
-Other than the serve_data.py example, the data is not loaded in memory,
-but linked.
+If you intend to create a web application, note that using a static
+server is a potential security risk. Use only when needed. Other options
+that scale better for large websites are e.g. Nginx, Apache, or 3d party
+services like Azure Storage or Amazon S3.
 
+When exported, any links to local files wont work, but the remote links will.
 """
 
 import os
 
 from flexx import app, ui, event
 
+from tornado.web import StaticFileHandler
 
-# Dict of names to uri's
-videos = {}
 
-# Collect videos 
+# The directory to load video's from
 dirname = os.path.expanduser('~/Videos')
-app.assets.add_data_dir(dirname)  # mark this dir as safe to load data from
-for fname in os.listdir(dirname):
-    if fname.endswith(('.mp4', '.avi')):
-        filename = os.path.join(dirname, fname)
-        url = app.assets.add_shared_data(fname, 'file://' + filename)
-        videos[fname] = url
 
-# Add some online videos too
+# Collect videos that look like they can be read in html5
+videos = {}
+for fname in os.listdir(dirname):
+    if fname.endswith('.mp4'):
+        videos[fname] = '/videos/' + fname
+
+# Add some online videos too, for fun
 videos['bbb.mp4 (online)'] = 'http://www.w3schools.com/tags/mov_bbb.mp4'
 videos['ice-age.mp4 (online)'] = ('https://dl.dropboxusercontent.com/u/1463853/'
                                   'ice%20age%204%20trailer.mp4')
 
-# Alternatively, remote data can be registed as shared data, in which
-# case, the exported app will include the data.
-# videos['bbb.mp4 (online)'] = app.assets.add_shared_data('bbb.mp4',
-#     'http://www.w3schools.com/tags/mov_bbb.mp4')
+# Make use of Tornado's static file handler
+tornado_app = app.create_server().app
+tornado_app.add_handlers(r".*", [
+    (r"/videos/(.*)", StaticFileHandler, {"path": dirname}),
+    ])
 
 
 class VideoViewer(ui.Widget):
     """ A simple videoviewer that displays a list of videos found on the
-    server's computer, plus a few inline videos. Note that not all videos
+    server's computer, plus a few online videos. Note that not all videos
     may be playable in HTML5.
     """
     

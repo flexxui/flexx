@@ -96,12 +96,11 @@ def test_asset():
     assert '\n' not in code  # becasue its a link
     
     # Test asset via uri
-    with open(test_filename, 'wb') as f:
-        f.write('var blablabla=7;'.encode())
-    asset = app.Asset('bar.css', 'file://' + test_filename)
-    assert 'blablabla=7' in asset.to_string()
-    asset = app.Asset('bar.css', 'http://code.jquery.com/jquery-3.1.1.slim.min.js')
-    assert 'jQuery v3.1.1' in asset.to_string()
+    fname = 'file:///home/xx/foobar.css'
+    with raises(TypeError):
+        app.Asset('bar.css', fname)
+    with raises(TypeError):
+        app.Asset(fname)
 
 
 def test_remote_asset():
@@ -147,16 +146,9 @@ def test_remote_asset():
     assert 'http://' not in asset.to_html('{}', 2)
     assert 'http://' in asset.to_html('{}', 3)
     
-    # JS from file
-    asset = app.Asset('file://' + test_filename + '.js')
-    assert asset.remote
-    assert test_filename in asset.source
-    assert 'blablabla=7' in asset.to_string()
-    assert 'blablabla=7' in asset.to_html('{}', 0)
-    assert 'blablabla=7' not in asset.to_html('{}', 1)
-    assert 'blablabla=7' not in asset.to_html('{}', 2)
-    assert 'blablabla=7' not in asset.to_html('{}', 3)
-    
+    # Falis
+    with raises(TypeError):  # JS from file - not allowed
+        app.Asset('file://' + test_filename + '.js')
     with raises(TypeError):
          app.Asset(jquery_url, 'foo=3')  # no sources for remote asset
     with raises(TypeError):
