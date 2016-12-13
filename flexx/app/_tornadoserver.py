@@ -680,12 +680,15 @@ class WSHandler(WebSocketHandler):
         serving_host = self.request.headers.get("Host")
         serving_hostname = serving_host.split(':')[0]
         connecting_host = urlparse(origin).netloc
+
         
         if serving_hostname == 'localhost':
             return True  # Safe
         elif serving_hostname == '0.0.0.0':
             return True  # we cannot know if the origin matches
         elif serving_host == connecting_host:
+            return True
+        elif connecting_host in config.host_whitelist:
             return True
         else:
             logger.info('Connection refused from %s' % origin)
