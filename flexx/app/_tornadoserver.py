@@ -686,7 +686,7 @@ class WSHandler(WebSocketHandler):
             return True  # we cannot know if the origin matches
         elif serving_host == connecting_host:
             return True
-        elif connecting_host in config.hosts_whitelist:
+        elif connecting_host in config.host_whitelist:
             return True
         else:
             logger.info('Connection refused from %s' % origin)
