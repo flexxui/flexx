@@ -109,8 +109,7 @@ class Session:
     # todo: what about a reference to the app.App?
     @property
     def app(self):
-        """ The Model instance that represents the app. Can be None if Flexx
-        is used in interactive mode (using the ``__default__`` app).
+        """ The Model instance that represents the app.
         """
         return self._model
     
