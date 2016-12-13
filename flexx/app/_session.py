@@ -169,6 +169,9 @@ class Session:
             if self._model:
                 self._model.dispose()
                 self._model = None
+            # Discard data
+            self._data = {}
+            self._data_volatile = {}
         finally:
             self._closing = False
     
@@ -268,10 +271,12 @@ class Session:
         self._data[name] = data
         return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
     
-    # def remove_data(self, name):
-    #     """ Remove the data associated with the given name.
-    #     """
-    #     self._data.pop(name, None)
+    def remove_data(self, name):
+        """ Remove the data associated with the given name. If you need this,
+        also consider ``send_data()``. Also note that data is automatically
+        released when the session is closed.
+        """
+        self._data.pop(name, None)
     
     def get_data_names(self):
         """ Get a list of names of the data provided by this session.
