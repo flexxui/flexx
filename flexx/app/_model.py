@@ -584,9 +584,9 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         a dedicated binary websocket for better performance.
         
         Parameters:
-            data (bytes, str): the data blob. Can also be a URL to the blob
-                (a string starting with "http://" or "https://") in which case
-                the server will redirect to that source. 
+            data (bytes, str): the data blob. Can also be a URL
+                (a string starting with "http://" or "https://") where the
+                client can download the data from.
             meta (dict, optional): information associated with the data
                 that the JS side can use to interpret the data. This function
                 will add an "id" field to the meta data.

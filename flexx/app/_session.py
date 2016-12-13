@@ -253,9 +253,7 @@ class Session:
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. If data has
                 already been set on this name, it is overwritten.
-            data (bytes, str): the data blob. Can also be a URL to the blob
-                (string starting with "http://" or "https://") in which case
-                the server will redirect to that source.
+            data (bytes, str): the data blob.
         
         Returns:
             url: the (relative) url at which the data can be retrieved.
@@ -264,10 +262,8 @@ class Session:
             raise TypeError('Session.add_data() name must be a str.')
         if name in self._data:
             raise ValueError('Session.add_data() got existing name %r.' % name)
-        if isinstance(data, str) and data.startswith(url_starts):
-            pass  # data = urlopen(data, timeout=5.0).read()
-        elif not isinstance(data, bytes):
-            raise TypeError('Session.add_data() data must be bytes or a URL.')
+        if not isinstance(data, bytes):
+            raise TypeError('Session.add_data() data must be bytes.')
         self._data[name] = data
         return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
     

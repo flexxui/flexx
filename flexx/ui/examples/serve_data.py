@@ -24,23 +24,28 @@ in memory, and send_data.py for one-shot sending of data from Python to JS.
 """
 
 import random
-
-import imageio
+from urllib.request import urlopen
 
 from flexx import app, ui
-from flexx.util import png
 
 
 # Define names of standard images
-imageio_standard_images = ['clock.png', 'page.png', 'camera.png', 'coins.png',
-                           'hubble_deep_field.png', 'text.png', 'chelsea.png',
-                           'coffee.png', 'horse.png', 'wikkie.png', 'moon.png',
-                           'astronaut.png', 'immunohistochemistry.png']
+image_names = ['clock.png', 'page.png', 'camera.png', 'coins.png',
+               'hubble_deep_field.png', 'text.png', 'chelsea.png',
+               'coffee.png', 'horse.png', 'wikkie.png', 'moon.png',
+               'astronaut.png', 'immunohistochemistry.png']
+
+
+def get_img_blob(name):
+    """ Given an image name, download the raw bytes from imageio's repository
+    of standard images.
+    """
+    url_root = 'https://github.com/imageio/imageio-binaries/raw/master/images/'
+    return urlopen(url_root + name, timeout=2.0).read()
+
 
 # Randomly select a shared image
-fname = random.choice(imageio_standard_images)
-image_data = png.write_png(imageio.imread(fname))
-app.assets.add_shared_data('image.png', image_data)
+app.assets.add_shared_data('image.png', get_img_blob(random.choice(image_names)))
 
 
 class Example(ui.Widget):
@@ -48,9 +53,8 @@ class Example(ui.Widget):
     def init(self):
         
         # Randomly select image - different between sessions
-        fname = random.choice(imageio_standard_images)
-        image_data = png.write_png(imageio.imread(fname))
-        link = self.session.add_data('image.png', image_data)
+        link = self.session.add_data('image.png',
+                                     get_img_blob(random.choice(image_names)))
 
         # Create HTML with the two images
         html = '<p>Hit F5 to reload the page (i.e. create a new session'

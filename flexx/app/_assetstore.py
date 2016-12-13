@@ -6,12 +6,11 @@ etc.) needed by the applications.
 
 import os
 import shutil
-from urllib.request import urlopen
 
 from ..pyscript import create_js_module, get_all_std_names, get_full_std_lib
 
 from ._model import Model
-from ._asset import url_starts, Asset, Bundle, HEADER
+from ._asset import Asset, Bundle, HEADER
 from ._modules import JSModule
 from . import logger
 
@@ -192,16 +191,8 @@ def export_assets_and_data(assets, data, dirname, app_id, clear=False):
         dname = os.path.dirname(filename)
         if not os.path.isdir(dname):
             os.makedirs(dname)
-        if isinstance(d, str) and d.startswith(url_starts):
-            with urlopen(d, timeout=5.0) as f1:
-                with open(filename, 'wb') as f2:
-                    chunk = True
-                    while chunk:
-                        chunk = f1.read(8192)
-                        f2.write(chunk)
-        else:
-            with open(filename, 'wb') as f:
-                f.write(d)
+        with open(filename, 'wb') as f:
+            f.write(d)
 
 
 class AssetStore:
@@ -427,13 +418,11 @@ class AssetStore:
         """ Add data to serve to the client (e.g. images), which is shared
         between sessions. It is an error to add data with a name that is
         already registered. See ``Session.add_data()`` to set data per-session
-        and `Session.send_data()`` to send data to Model objects directly.
+        and `Model.send_data()`` to send data to Model objects directly.
         
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. 
-            data (bytes, str): the data blob. Can also be a URL to the blob
-                (string starting with "http://" or "https://") in which case
-                the server will redirect to that source.
+            data (bytes, str): the data blob.
         
         Returns:
             url: the (relative) url at which the data can be retrieved.
@@ -443,10 +432,8 @@ class AssetStore:
             raise TypeError('add_shared_data() name must be a str.')
         if name in self._data:
             raise ValueError('add_shared_data() got existing name %r.' % name)
-        if isinstance(data, str) and data.startswith(url_starts):
-            pass  # data = urlopen(data, timeout=5.0).read()
-        elif not isinstance(data, bytes):
-            raise TypeError('add_shared_data() data must be bytes or a URL.')
+        if not isinstance(data, bytes):
+            raise TypeError('add_shared_data() data must be bytes.')
         self._data[name] = data
         return '_data/shared/%s' % name  # relative path so it works /w export
     
