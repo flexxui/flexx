@@ -253,7 +253,7 @@ class Session:
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. If data has
                 already been set on this name, it is overwritten.
-            data (bytes, str): the data blob.
+            data (bytes): the data blob.
         
         Returns:
             url: the (relative) url at which the data can be retrieved.

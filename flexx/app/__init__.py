@@ -166,9 +166,7 @@ Data can be provided per session or shared between sessions:
     # Add shared data
     link = app.assets.add_shared_data('some_name.png', binary_blob)
 
-Note that ``binary_blob`` can also be a string starting with ``http://`` or
-``https://``. Futher, it is possible to send data from Python to JS
-within a model class:
+Futher, it is possible to send data from Python to JS within a model class:
 
 
 .. code-block:: py
@@ -184,6 +182,9 @@ within a model class:
                 # This gets called when the data arrives.
                 
                 ...  # handle the data
+
+In this case, ``binary_blob`` can also be a URL where the client should
+download the binary data from.
 
 
 Some background info on the server process

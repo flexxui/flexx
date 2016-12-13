@@ -388,8 +388,6 @@ class MainHandler(RequestHandler):
             res = asset_provider.get_data(filename)
             if res is None:
                 return self.send_error(404)
-            elif isinstance(res, str) and res.startswith(('http://', 'https://')):
-                return self.redirect(res)
             else:
                 self._guess_mime_type(filename)  # so that images show up
                 return self.write(res)
