@@ -223,9 +223,12 @@ def init_notebook():
 # Keep serve and launch, they are still quite nice shorthands to quickly
 # get something done.
 
-def serve(cls, name=None):
+def serve(cls, name=None, properties=None):
     """ Shorthand for ``app.App(cls).serve(name)``.
     """
+    if properties is not None:
+        raise RuntimeError('serve(... properties) is deprecated, '
+                           'use app.App().serve() instead.')
     # Note: this talks to the manager; it has nothing to do with the server
     assert (isinstance(cls, type) and issubclass(cls, Model))
     a = App(cls)
@@ -233,9 +236,12 @@ def serve(cls, name=None):
     return cls
 
 
-def launch(cls, runtime=None, **runtime_kwargs):
+def launch(cls, runtime=None, properties=None, **runtime_kwargs):
     """ Shorthand for ``app.App(cls).launch(runtime, **runtime_kwargs)``.
     """
+    if properties is not None:
+        raise RuntimeError('launch(... properties) is deprecated, '
+                           'use app.App().launch() instead.')
     if isinstance(cls, str):
         return webruntime.launch(cls, runtime, **runtime_kwargs)
     assert (isinstance(cls, type) and issubclass(cls, Model))
@@ -243,9 +249,12 @@ def launch(cls, runtime=None, **runtime_kwargs):
     return a.launch(runtime, **runtime_kwargs)
 
 
-def export(cls, filename, **kwargs):
+def export(cls, filename, properties=None, **kwargs):
     """ Shorthand for ``app.App(cls).export(filename, ...)``.
     """
+    if properties is not None:
+        raise RuntimeError('export(... properties) is deprecated, '
+                           'use app.App(...).export() instead.')
     assert (isinstance(cls, type) and issubclass(cls, Model))
     a = App(cls)
     return a.export(filename, **kwargs)
