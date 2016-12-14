@@ -18,7 +18,6 @@ docs of the runtime classes below.
 * browser - The default browser.
 * browser-X - Where X should be supported by Python's webbrowser module.
 * selenium-X - Where X should be supported by Selenium.
-* nodejs - A runtime based on Chrome's V8 JavaScript engine. No UI.
 
 Runtimes currently not supported:
 
@@ -48,7 +47,6 @@ from .nodewebkit import NodeWebkitRuntime
 from .browser import BrowserRuntime
 from .qtwebkit import PyQtRuntime
 from .chromeapp import ChromeAppRuntime
-from .nodejs import NodejsRuntime
 from .selenium import SeleniumRuntime
 
 # todo: make a 'desktop' runtime option that will try xul, nwjs, chromeapp, trident
@@ -62,7 +60,6 @@ _runtimes = [
     ('browser', BrowserRuntime),
     ('browser-X', BrowserRuntime),
     ('selenium-X', SeleniumRuntime),
-    ('nodejs', NodejsRuntime),
     ]
 
 
