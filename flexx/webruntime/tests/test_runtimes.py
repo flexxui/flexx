@@ -115,13 +115,6 @@ def test_chomeapp():
     p.close()
 
 
-def test_nodejs():
-    code = 'console.log("hello!")'
-    p = launch(URL, 'nodejs', code=code)
-    assert p._proc
-    p.close()
-
-
 def test_browser():
     p = launch(URL, 'browser')
     assert p._proc is None

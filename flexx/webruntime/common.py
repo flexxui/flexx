@@ -131,8 +131,6 @@ class StreamReader(threading.Thread):
                 msg = msg.decode('utf-8', 'ignore')
             msg = msg.rstrip()
             # Process the message
-            if msg == '> undefined' or not msg:
-                continue  # nodejs stubs
             msgs.append(msg)
             msgs[:-32] = []
             logger.debug('from runtime: ' + msg)
