@@ -51,8 +51,7 @@ LOADER = """
 (function(){
 
 if (typeof window === 'undefined' && typeof module == 'object') {
-    global.window = global; // https://github.com/nodejs/node/pull/1838
-    window.is_node = true;
+    throw Error('flexx.app does not run on NodeJS!');
 }
 if (typeof flexx == 'undefined') {
     window.flexx = {};

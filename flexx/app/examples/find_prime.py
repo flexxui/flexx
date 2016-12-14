@@ -1,8 +1,7 @@
 """
-This example demonstrates how Python code can be run in NodeJS (or
-Firefox), which is for many things faster than CPython. We run the exact
-same code to find the n-th prime on both Python and JS and measure the
-performance.
+This example demonstrates how Python code can be run in a browser, which
+is for many things faster than CPython. We run the exact same code to find
+the n-th prime on both Python and JS and measure the performance.
 """
 
 from time import perf_counter

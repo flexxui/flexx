@@ -36,19 +36,9 @@ class Flexx:
         self.last_msg = None
         self.classes = {}
         self.instances = {}
-        
-        if window.is_node is True:
-            # nodejs (call exit on exit and ctrl-c)
-            self.nodejs = True
-            window.setTimeout(self.init, 1)  # ms
-            window.process.on('exit', self.exit, False)
-            window.process.on('SIGINT', self.exit, False)
-            window.setTimeout(self.exit, 10000000)  # keep alive ~35k years
-        else:
-            # browser
-            # Note: flexx.init() is not auto-called when Flexx is embedded
-            window.addEventListener('load', self.init, False)
-            window.addEventListener('beforeunload', self.exit, False)
+        # Note: flexx.init() is not auto-called when Flexx is embedded
+        window.addEventListener('load', self.init, False)
+        window.addEventListener('beforeunload', self.exit, False)
     
     def init(self):
         """ Called after document is loaded. """
@@ -76,7 +66,7 @@ class Flexx:
             window.history.replaceState(window.history.state, '',
                                         window.location.pathname)
         except Exception:
-            pass  # Xul, nodejs, ...
+            pass  # e.g. Xul
     
     def exit(self):
         """ Called when runtime is about to quit. """
@@ -109,19 +99,12 @@ class Flexx:
         """ Make the connection to Python.
         """
         # Check WebSocket support
-        if self.nodejs:
-            try:
-                WebSocket = require('ws')
-            except Exception:
-                # Better error message
-                raise "FAIL: you need to 'npm install -g ws' (or 'websocket')."
-        else:
-            WebSocket = window.WebSocket
-            if (WebSocket is undefined):
-                window.document.body.innerHTML = 'Browser does not support WebSockets'
-                raise "FAIL: need websocket"
+        WebSocket = window.WebSocket
+        if (WebSocket is undefined):
+            window.document.body.innerHTML = 'Browser does not support WebSockets'
+            raise "FAIL: need websocket"
         
-        # Construct ws url (for nodejs the location is set by the flexx nodejs runtime)
+        # Construct ws url
         if not self.ws_url:
             proto = 'ws'
             if window.location.protocol == 'https:':
@@ -151,9 +134,9 @@ class Flexx:
         def on_ws_close(evt):
             self.ws = None
             msg = 'Lost connection with server'
-            if evt and evt.reason:  # nodejs-ws does not have it?
+            if evt and evt.reason:
                 msg += ': %s (%i)' % (evt.reason, evt.code)
-            if (not self.is_notebook) and (not self.nodejs):
+            if not self.is_notebook:
                 window.document.body.innerHTML = msg
             else:
                 window.console.info(msg)
@@ -162,16 +145,10 @@ class Flexx:
             window.console.error('Socket error')
         
         # Connect
-        if self.nodejs:
-            ws.on('open', on_ws_open)
-            ws.on('message', on_ws_message)
-            ws.on('close', on_ws_close)
-            ws.on('error', on_ws_error)
-        else:
-            ws.onopen = on_ws_open
-            ws.onmessage = on_ws_message
-            ws.onclose = on_ws_close
-            ws.onerror = on_ws_error
+        ws.onopen = on_ws_open
+        ws.onmessage = on_ws_message
+        ws.onclose = on_ws_close
+        ws.onerror = on_ws_error
     
     def initLogging(self):
         """ Setup logging so that messages are proxied to Python.
@@ -208,7 +185,7 @@ class Flexx:
                 msg += '\n' + '\n'.join(stack)
                 session_needle = '?session_id=' + self.session_id
                 msg = msg.replace('@', ' @ ').replace(session_needle, '')  # Firefox
-            elif evt.message and evt.lineno:  # message, url, linenumber (not in nodejs)
+            elif evt.message and evt.lineno:  # message, url, linenumber
                 msg += "\nIn %s:%i" % (evt.filename, evt.lineno)
             # Handle error
             evt.preventDefault()  # Don't do the standard error 
@@ -222,10 +199,7 @@ class Flexx:
         window.console.warn = warn
         window.console.error = error
         # Create error handler, so that JS errors get into Python
-        if self.nodejs:
-            window.process.on('uncaughtException', on_error, False)
-        else:
-            window.addEventListener('error', on_error, False)
+        window.addEventListener('error', on_error, False)
     
     def _process_commands(self):
         """ A less direct way to process commands, which gives the
@@ -289,15 +263,13 @@ class Flexx:
             el.innerHTML = code
             self._asset_node.appendChild(el)
         elif msg.startswith('TITLE '):
-            if not self.nodejs:
-                window.document.title = msg[6:]
+            window.document.title = msg[6:]
         elif msg.startswith('ICON '):
-            if not self.nodejs:
-                link = window.document.createElement('link')
-                link.rel = 'icon'
-                link.href = msg[5:]
-                window.document.head.appendChild(link)
-                #window.document.getElementsByTagName('head')[0].appendChild(link);
+            link = window.document.createElement('link')
+            link.rel = 'icon'
+            link.href = msg[5:]
+            window.document.head.appendChild(link)
+            #window.document.getElementsByTagName('head')[0].appendChild(link);
         elif msg.startswith('OPEN '):
             window.win1 = window.open(msg[5:], 'new', 'chrome')
         else:
