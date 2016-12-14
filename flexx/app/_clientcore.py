@@ -371,7 +371,13 @@ class Serializer:
             return JSON.parse(text, _reviver)
         
         def saves(obj):
-            return JSON.stringify(obj, _replacer)
+            try:
+                res = JSON.stringify(obj, _replacer)
+                if res is undefined:
+                    raise TypeError()
+                return res
+            except TypeError:
+                raise TypeError('Cannot serialize object to JSON: %r' % obj)
         
         def add_reviver(type_name, func):
             assert isinstance(type_name, str)
