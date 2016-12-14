@@ -415,8 +415,12 @@ class AssetStore:
     def add_shared_data(self, name, data):
         """ Add data to serve to the client (e.g. images), which is shared
         between sessions. It is an error to add data with a name that is
-        already registered. See ``Session.add_data()`` to set data per-session
-        and `Model.send_data()`` to send data to Model objects directly.
+        already registered. The data remains available until it is removed via
+        ``remove_data()`` or until the server stops.
+        
+        Consider using `Model.send_data()`` to send data to the JS side
+        of a Model object directly, or ``Session.add_data()`` to set
+        per-session data that is released when the session is closed.
         
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. 
@@ -434,6 +438,16 @@ class AssetStore:
             raise TypeError('add_shared_data() data must be bytes.')
         self._data[name] = data
         return '_data/shared/%s' % name  # relative path so it works /w export
+    
+    def remove_data(self, name):
+        """ Remove the data with the given name. Use this function with
+        care; the specified data will become inaccessible for all apps served
+        from this process.
+        
+        Parameters:
+            name (str): name that was used to add the data.
+        """
+        self._data.pop(name, None)
     
     def export(self, dirname, clear=False):
         """ Write all shared data and used assets to the given directory.

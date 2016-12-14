@@ -266,8 +266,8 @@ class Session:
     
     def remove_data(self, name):
         """ Remove the data associated with the given name. If you need this,
-        also consider ``send_data()``. Also note that data is automatically
-        released when the session is closed.
+        also consider ``send_data()``. Also note that all session data is
+        automatically released when the session is closed.
         """
         self._data.pop(name, None)
     

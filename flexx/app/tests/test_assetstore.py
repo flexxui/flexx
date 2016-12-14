@@ -115,6 +115,10 @@ def test_asset_store_data():
     with raises(ValueError):
         s.add_shared_data('xx', b'zzzz')
     
+    # Remove data
+    s.remove_data('xx')
+    assert s.get_data('xx') is None
+    
     # # Add url data
     # s.add_shared_data('readme', 'https://github.com/zoofIO/flexx/blob/master/README.md')
     # # assert 'Flexx is' in s.get_data('readme').decode()
