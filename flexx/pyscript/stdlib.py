@@ -213,7 +213,11 @@ FUNCTIONS['float'] = 'Number // nargs: 1'
 
 FUNCTIONS['str'] = 'String // nargs: 0 1'
 
-FUNCTIONS['repr'] = 'JSON.stringify // nargs: 1'
+FUNCTIONS['repr'] = """function (x) { // nargs: 1
+    var res = JSON.stringify(x);
+    if (typeof res === 'undefined') { res = String(x); }
+    return res;
+}"""
 
 FUNCTIONS['bool'] = """function (x) { // nargs: 1
     return Boolean(FUNCTION_PREFIXtruthy(x));

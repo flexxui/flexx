@@ -81,9 +81,6 @@ class Asset:
     corresponding docs for details.
     """
     
-    # todo: we might need a way to control whether the asset is loaded before or after
-    # the module bundles. Now we load before. Works ok for now.
-    
     _counter = 0
     
     def __init__(self, name, source=None):

@@ -106,11 +106,9 @@ class Session:
         """
         return self._app_name
     
-    # todo: what about a reference to the app.App?
     @property
     def app(self):
-        """ The Model instance that represents the app. Can be None if Flexx
-        is used in interactive mode (using the ``__default__`` app).
+        """ The Model instance that represents the app.
         """
         return self._model
     
@@ -200,7 +198,6 @@ class Session:
         if self._model is not None:
             raise RuntimeError('Session already has an associated Model.')
         self._model = model
-        # todo: connect to title change and icon change events
     
     def _set_runtime(self, runtime):
         if self._runtime is not None:
@@ -475,8 +472,6 @@ class Session:
         elif command.startswith('INFO '):
             logger.info('JS - ' + command[5:].strip())
         elif command.startswith('SET_PROP '):
-            # todo: seems weird to deal with here. implement by registring some handler?
-            # Should be better when we implement a more formal protocol
             _, id, name, txt = command.split(' ', 3)
             ob = self._model_instances.get(id, None)
             if ob is not None:

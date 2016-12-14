@@ -305,7 +305,7 @@ class Parser1(Parser0):
                 code.append(' + ' + items[i] + ' + ')
             elif fmt == '%r':
                 code.append(sep + left[start:m.start()] + sep)
-                code.append(' + JSON.stringify(%s) + ' % items[i])
+                code.append(' + %s + ' % self.use_std_function('repr', [items[i]]))
             else:
                 raise JSError('Unsupported string formatting %r' % fmt)
             start = m.end()

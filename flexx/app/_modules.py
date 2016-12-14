@@ -285,8 +285,7 @@ class JSModule:
         
         elif isinstance(val, json_types):
             # Looks like something we can serialize
-            # Note: we have no way to determine where it is defined
-            # todo: or do we, if we analyze the source, check other modules, etc?
+            # Unlike with RawJS, we have no way to determine where it is defined
             try:
                 js = json.dumps(val)
             except Exception as err:

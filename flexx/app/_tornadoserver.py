@@ -678,18 +678,18 @@ class WSHandler(WebSocketHandler):
         #WebSocketHandler.check_origin
         
         serving_host = self.request.headers.get("Host")
-        serving_hostname = serving_host.split(':')[0]
+        serving_hostname, serving_port = serving_host.split(':', 1)
         connecting_host = urlparse(origin).netloc
-
+        connecting_hostname, connecting_port = connecting_host.split(':', 1)
         
         if serving_hostname == 'localhost':
             return True  # Safe
-        elif serving_hostname == '0.0.0.0':
-            return True  # we cannot know if the origin matches
         elif serving_host == connecting_host:
-            return True
+            return True  # Passed most strict test, hooray!
+        elif serving_hostname == '0.0.0.0' and serving_port == connecting_port:
+            return True  # host on all addressses; best we can do is check port
         elif connecting_host in config.host_whitelist:
             return True
         else:
-            logger.info('Connection refused from %s' % origin)
+            logger.warn('Connection refused from %s' % origin)
             return False

@@ -239,8 +239,7 @@ class AppManager(event.HasEvents):
     
     def __init__(self):
         super().__init__()
-        # name -> (app, pending, connected) - lists contain Sessions
-        # todo: name -> app, and store connections on the app instance?
+        # name -> (app, pending, connected) - lists contain Session objects
         self._appinfo = {}
         self._session_map = weakref.WeakValueDictionary()
         self._last_check_time = time.time()
@@ -268,25 +267,30 @@ class AppManager(event.HasEvents):
         if '__default__' in self._appinfo:
             raise RuntimeError('The default session can only be created once.')
         
-        session = Session('__default__')
-        self._session_map[session.id] = session
-        self._appinfo['__default__'] = (None, [session], [])
-        
         if cls is None:
             cls = Model
         if not isinstance(cls, type) and issubclass(cls, Model):
             raise TypeError('create_default_session() needs a Model subclass.')
         
-        # Create app instance
-        # todo: wrap it in an app and set that in app_info instead of None
-        model_instance = cls(session=session, is_app=True)
+        # Create app and register it by __default__ name
+        app = App(cls)
+        app.serve('__default__')  # calls register_app()
+        
+        # Create the session instance and register it
+        session = Session('__default__')
+        self._session_map[session.id] = session
+        _, pending, connected = self._appinfo['__default__']
+        pending.append(session)
+        
+        # Instantiate the model
+        model_instance = app(session=session, is_app=True)
         session._set_app(model_instance)
         
         return session
     
     def get_default_session(self):
         """ Get the default session that is used for interactive use.
-        Returns None unless create_default_session() was called.
+        Returns None unless create_default_session() was called earlier.
         
         When a Model class is created without a session, this method
         is called to get one (and will then fail if it's None).
@@ -341,13 +345,16 @@ class AppManager(event.HasEvents):
         
         app, pending, connected = self._appinfo[name]
         
-        # Session and app class need each-other, thus the _set_app()
+        # Create the session
         session = Session(name)
         if id is not None:
             session._id = id  # used by app.export
         self._session_map[session.id] = session
+        # Instantiate the model
+        # This represents the "instance" of the App object (Model class + args)
         model_instance = app(session=session, is_app=True)
-        session._set_app(model_instance)  # todo: or just app?
+        # Session and app model need each-other, thus the _set_app()
+        session._set_app(model_instance)
         
         # Now wait for the client to connect. The client will be served
         # a page that contains the session_id. Upon connecting, the id
