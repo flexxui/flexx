@@ -60,7 +60,13 @@ class Slider(Widget):
         def value(self, v=0):
             """ The current slider value (settable)."""
             return float(min(self.max, max(self.min, v)))
-    
+
+        @event.prop
+        def disabled(self, v=False):
+            """ Whether the slider is disabled.
+            """
+            return bool(v)
+
     class JS:
         
         def _init_phosphor_and_node(self):
@@ -95,3 +101,10 @@ class Slider(Widget):
         @event.connect('max')
         def __max_changed(self, *events):
             self.node.max = events[-1].new_value
+
+        @event.connect('disabled')
+        def __disabled_changed(self, *events):
+            if events[-1].new_value:
+                self.node.setAttribute("disabled", "disabled")
+            else:
+                self.node.removeAttribute("disabled")

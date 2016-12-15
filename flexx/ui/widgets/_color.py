@@ -40,7 +40,13 @@ class ColorSelectWidget(Widget):
                 raise ValueError('%s.color must be in #rrggbb format, not %r' %
                                  (self.id, v))
             return str(v)
-    
+
+        @event.prop
+        def disabled(self, v=False):
+            """ Whether the color select is disabled.
+            """
+            return bool(v)
+
     class JS:
     
         def _init_phosphor_and_node(self):
@@ -55,3 +61,10 @@ class ColorSelectWidget(Widget):
         
         def _color_changed_from_dom(self, e):
             self.color = self.node.value
+
+        @event.connect('disabled')
+        def __disabled_changed(self, *events):
+            if events[-1].new_value:
+                self.node.setAttribute("disabled", "disabled")
+            else:
+                self.node.removeAttribute("disabled")
