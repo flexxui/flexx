@@ -681,6 +681,20 @@ class Widget(Model):
               a key name like "Escape", "Alt", "Enter".
             * modifiers: list of strings "Alt", "Shift", "Ctrl", "Meta" for
               modifier keys pressed down at the time of the event.
+            
+            A browser may associate certain actions with certain key presses.
+            If this browser action is unwanted, it can be disabled by
+            overloading this emitter:
+            
+            .. code-block:: py
+            
+                @event.emitter
+                def key_down(self, e):
+                    # Prevent browser's default reaction to function keys
+                    ev = super().key_press(e)
+                    if ev.key.startswith('F'):
+                        e.preventDefault()
+                    return ev
             """
             return self._create_key_event(e)
         
@@ -695,21 +709,6 @@ class Widget(Model):
         def key_press(self, e):
             """ Event emitted when a key is pressed down. This event does not
             fire for the pressing of a modifier keys. See key_down for details.
-            
-            A browser may associate certain actions with certain key presses.
-            If this browser action is unwanted, it can be disabled by
-            overloading this emitter:
-            
-            .. code-block:: py
-            
-                @event.emitter
-                def key_press(self, e):
-                    # Prevent browser's default reaction to function keys
-                    ev = super().key_press(e)
-                    if ev.key.startswith('F'):
-                        e.preventDefault()
-                    return ev
-            
             """
             return self._create_key_event(e)
 
