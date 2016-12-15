@@ -88,10 +88,10 @@ define.flexx = true;
 
 function require (name) {
     if (name.startsWith('phosphor/')) {
-        if (window.jupyter && window.jupyter.require) {
+        if (window.jupyter && window.jupyter.lab && window.jupyter.lab.loader) {
             var path = 'phosphor@*/' + name.slice(9);
             if (!path.endsWith('.js')) { path = path + '.js'; }
-            return window.jupyter.require(path);
+            return window.jupyter.lab.loader.require(path);
         } else {
             return window.require_phosphor(name);  // provided by our Phosphor-all
         }

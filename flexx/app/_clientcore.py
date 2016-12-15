@@ -28,6 +28,16 @@ class Flexx:
             raise RuntimeError('Should not create Flexx object more than once.')
         for key in window.flexx.keys():
             self[key] = window.flexx[key]  # session_id, app_name, and maybe more
+        # Maybe this is JLab
+        if not self.session_id:
+            jconfig = window.document.getElementById('jupyter-config-data')
+            if jconfig:
+                try:
+                    config = JSON.parse(jconfig.innerText)
+                    self.session_id = config.flexx_session_id
+                    self.app_name = config.flexx_app_name
+                except Exception as err:
+                    print(err)
         # Init internal variables
         self._init_time = time()
         self._pending_commands = []
@@ -113,7 +123,8 @@ class Flexx:
             if window.location.port:
                 address += ':' + window.location.port
             self.ws_url = '%s://%s/flexx/ws/%s' % (proto, address, self.app_name)
-        
+        # Resolve public hostname
+        self.ws_url = self.ws_url.replace('0.0.0.0', window.location.hostname)
         # Open web socket in binary mode
         self.ws = ws = WebSocket(self.ws_url)
         #ws.binaryType = "arraybuffer"  # would need utf-decoding -> slow
