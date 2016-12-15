@@ -6,7 +6,7 @@ This example demonstrates a code editor widget based on CodeMirror.
 # todo: Maybe this should be a widget in the library (flexx.ui.CodeMirror) ?
 
 from flexx import ui, app, event
-from flexx.pyscript.stubs import window
+from flexx.pyscript import window
 
 # Associate CodeMirror's assets with this module so that Flexx will load
 # them when (things from) this module is used.
