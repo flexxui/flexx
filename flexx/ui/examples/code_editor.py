@@ -8,13 +8,15 @@ This example demonstrates a code editor widget based on CodeMirror.
 from flexx import ui, app, event
 from flexx.pyscript.stubs import window
 
-
 # Associate CodeMirror's assets with this module so that Flexx will load
 # them when (things from) this module is used.
 base_url = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/'
 app.assets.associate_asset(__name__, base_url + '5.21.0/codemirror.min.css')
 app.assets.associate_asset(__name__, base_url + '5.21.0/codemirror.min.js')
-
+app.assets.associate_asset(__name__, base_url + '5.21.0/mode/python/python.js')
+app.assets.associate_asset(__name__, base_url + '5.21.0/theme/solarized.css')
+app.assets.associate_asset(__name__, base_url + '5.21.0/addon/selection/active-line.js')
+app.assets.associate_asset(__name__, base_url + '5.21.0/addon/edit/matchbrackets.js')
 
 class CodeEditor(ui.Widget):
     """ A CodeEditor widget based on CodeMirror.
@@ -31,9 +33,12 @@ class CodeEditor(ui.Widget):
         
         def init(self):
             # https://codemirror.net/doc/manual.html
-            options = dict(value='type code here ...',
+            options = dict(value='from flexx import ui, app, event',
                            mode='python',
-                           theme='default',
+                           theme='solarized dark',
+                           autofocus=True,
+                           styleActiveLine=True,
+                           matchBrackets=True,
                            indentUnit=4,
                            smartIndent=True,
                            lineWrapping=True,
