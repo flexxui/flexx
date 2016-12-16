@@ -85,7 +85,7 @@ just use ``for ev in events: ...``.
 In most cases, you will connect to events that are known beforehand,
 like those they correspond to properties, readonlies and emitters. 
 If you connect to an event that is not known (as in the example above)
-it might be a typo and Flexx will display a warning. Use `'!foo'` as a
+it might be a typo and Flexx will display a warning. Use `'foo!'` as a
 connection string (i.e. prepend an exclamation mark) to suppress such
 warnings.
 
@@ -196,8 +196,30 @@ which will get emitted as an event, with the event type matching the name
 of the emitter.
 
 
+Connection string syntax
+------------------------
+
+The strings used to connect events follow a few simple syntax rules:
+
+* The string optionally has a label suffix separated by a colon. The
+  label itself may consist of any chars.
+* The string can have a "!" at the end to suppres warnings for
+  connections to unknown event types. If the string has a label,
+  the exclamation mark comes before it.
+* Connection strings consist of parts separated by dots, thus forming a path.
+  If an element on the path is a property, the connection will automatically
+  reset when that property changes (a.k.a. dynamism, more on this below).
+* Each part can end with one star ('*'), indicating that the part is a list
+  and that a connection should be made for each item in the list. 
+* With two stars, the connection is made *recursively*, e.g. "children**"
+  connects to "children" and the children's children, etc.
+* Stripped of '*', each part must be a valid identifier (ASCII).
+
+To clarify the order of the special characters: an extreme example would be
+``"foo.bar**!:label"``.
+
 Labels
-------
+======
 
 Labels are a feature that makes it possible to infuence the order by
 which event handlers are called, and provide a means to disconnect
@@ -239,7 +261,7 @@ The label can also be used in the
 
 
 Dynamism
---------
+========
 
 Dynamism is a concept that allows one to connect to events for which
 the source can change. For the following example, assume that ``Node``
