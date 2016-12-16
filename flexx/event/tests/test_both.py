@@ -29,24 +29,6 @@ def this_is_js():
     return False
 
 
-def reduce_code(code):
-    # On Windows we can pass up to 2**15 chars
-    # over the command line before getting filename-too-long error.
-    # Doing this gives us just enough to be able to run our tests :)
-    if sys.platform.startswith('win') and len(code.encode('utf-8')) > 2**15:
-        code = code.replace('    ', '')
-        code = code.replace('_pyfunc_', 'pf_').replace('_pymeth_', 'pm_')
-        code = code.replace('stub', 'l')  # we know that we don't use varnames with only an l
-        code_len = len(code.encode('utf-8'))
-        if code_len > 2**15:
-            raise RuntimeError('Cannot run this code on Windows: too long '
-                               '(%i - 2**15 = %i)!' % (code_len, code_len - 2**15))
-        else:
-            pass  # note that we also need to include length of command, so it may still fail
-    code = code.replace('    ', '\t')
-    return code
-
-
 def run_in_both(cls, reference, extra_classes=()):
     """ The test decorator.
     """
@@ -68,11 +50,10 @@ def run_in_both(cls, reference, extra_classes=()):
             for c in reversed(this_classes):
                 code += create_js_hasevents_class(c, c.__name__, c.__bases__[0].__name__+'.prototype')
             code += py2js(func, 'test', inline_stdlib=False, docstrings=False)
-            code += 'test(%s);' % cls.__name__
+            code += 'console.log(test(%s));' % cls.__name__
             nargs, function_deps, method_deps = get_std_info(code)
             code = get_partial_std_lib(function_deps, method_deps, []) + code
-            code = reduce_code(code)
-            jsresult = evaljs(code)
+            jsresult = evaljs(code, print_result=False)  # allow using file
             jsresult = jsresult.replace('[ ', '[').replace(' ]', ']').replace('\n  ', ' ')
             jsresult = jsresult.replace('"', "'").split('!!!!')[-1]
             print('js:', jsresult)
@@ -906,7 +887,7 @@ def test_handler_get_name(Person):
     return res1
 
 
-@run_in_both(Person, "[['first_name', ['first_name']], ['last_name', ['last_name']]]")
+@run_in_both(Person, "[['first_name', ['first_name:func1']], ['last_name', ['last_name:func1']]]")
 def test_handler_get_connection_info(Person):
     res1 = []
     
@@ -1130,7 +1111,7 @@ class Node(event.HasEvents):
             else:
                 self._r1.append(None)
     
-    @event.connect('children.*.val')
+    @event.connect('children*.val')
     def handle_children_val(self, *events):
         for ev in events:
             if isinstance(ev.new_value, (int, float)):
@@ -1293,7 +1274,7 @@ def test_dynamism4a(Node):
                 res.append(ev.new_value)
             else:
                 res.append('null')
-    handler = n.connect(func, 'children.*.val')
+    handler = n.connect(func, 'children*.val')
     
     loop.iter()
     
@@ -1333,7 +1314,7 @@ def test_dynamism4b(Node):
                 res.append(ev.new_value)
             else:
                 res.append('null')
-    handler = n.connect(func, 'children', 'children.*.val')  # also connect children
+    handler = n.connect(func, 'children', 'children*.val')  # also connect children
     
     loop.iter()
     

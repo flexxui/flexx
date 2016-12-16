@@ -10,7 +10,8 @@ from ._loop import loop
 from . import logger
 
 
-console = window = None
+window = None
+console = logger
 
 
 def this_is_js():
@@ -171,17 +172,60 @@ class Handler:
         self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
 
         self._init(connection_strings)
-
+    
     def _init(self, connection_strings):
         """ Init of this handler that is compatible with PyScript.
         """
-        # Init connections
+        
+        ichars = '0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
         self._connections = []
-        for s in connection_strings:
+        
+        # Notes on connection strings:
+        # * The string can have a label suffix separated by a colon. The
+        #   label may consist of any chars.
+        # * The string can have a "!" at the end to suppres warnings for
+        #   connections to unknown event types. If the string has a label,
+        #   the exclamation mark comes before it.
+        # * Connection strings consist of parts separated by dots.
+        # * Each part can end with one star ('*'), indicating that connections
+        #   should be made for each item in the list, or two stars, indicating
+        #   that connections should be made *recursively* for each item in the
+        #   list (a.k.a. a deep connector).
+        # * Stripped of '*', each part must be a valid identifier.
+        # * An extreme example: "foo.bar*.spam.eggs**!:meh"
+        
+        for fullname in connection_strings:
+            # Separate label and exclamation mark from the string path
+            s, _, label = fullname.partition(':')
+            force = '!' if s.endswith('!') else ''
+            s = s.rstrip('!')
+            # Backwards compat: "foo.*.bar* becomes "foo*.bar"
+            if '.*.' in s + '.':
+                s = s.replace('.*', '*')
+                console.warn('Connection string syntax "foo.*.bar" is '
+                             'deprecated, use "foo*.bar" instead.')
+            # Help put exclamation at the end
+            if '!' in s:
+                s = s.replace('!', '')
+                force = '!'
+                console.warn('Exclamation marks in connection strings must'
+                             'come at the end, e.g. "foo.bar!" or "bar!:label".')
+            # Check that all parts are identifiers
+            parts = s.split('.')
+            for part in parts:
+                part = part.rstrip('*')
+                is_identifier = bool(part)
+                for c in part:
+                    is_identifier = is_identifier and (c in ichars)
+                if not is_identifier:
+                    raise ValueError('Connection string %r contains '
+                                     'non-identifier part %r' % (s, part))
+            # Init connection
             d = Dict()  # don't do Dict(foo=x) bc PyScript only supports that for dict
             self._connections.append(d)
-            d.fullname = s
-            d.type = s.split('.')[-1].rstrip('*')
+            d.fullname = fullname  # original, used in logs, so is searchable
+            d.parts = parts
+            d.type = parts[-1].rstrip('*') + force + ':' + (label or self._name)
             d.objects = []
 
         # Pending events for this handler
@@ -306,8 +350,8 @@ class Handler:
             logger.debug('Disposing Handler %r ' % self)
         for connection in self._connections:
             while len(connection.objects):
-                ob, name = connection.objects.pop(0)
-                ob.disconnect(name, self)
+                ob, type = connection.objects.pop(0)
+                ob.disconnect(type, self)
         while len(self._pending):
             self._pending.pop()  # no list.clear on legacy py
 
@@ -332,15 +376,13 @@ class Handler:
 
         # Disconnect
         while len(connection.objects):
-            ob, name = connection.objects.pop(0)
-            ob.disconnect(name, self)
-
-        path = connection.fullname.replace('.*', '*').split('.')
+            ob, type = connection.objects.pop(0)
+            ob.disconnect(type, self)
 
         # Obtain root object and setup connections
         ob = self._ob1()
         if ob is not None:
-            self._seek_event_object(index, path, ob)
+            self._seek_event_object(index, connection.parts, ob)
 
         # Verify
         if not connection.objects:
@@ -380,14 +422,14 @@ class Handler:
         if hasattr(ob, '_IS_HASEVENTS') and obname in ob.__properties__:
             name_label = obname + ':reconnect_' + str(index)
             connection.objects.append((ob, name_label))
-            ob = getattr(ob, obname, None)
+            new_ob = getattr(ob, obname, None)
         else:
-            ob = getattr(ob, obname, None)
+            new_ob = getattr(ob, obname, None)
         # Look inside?
-        if selector in '***' and isinstance(ob, (tuple, list)):
+        if len(selector) and selector in '***' and isinstance(new_ob, (tuple, list)):
             if len(selector) > 1:
                 path = [obname + '***'] + path  # recurse (avoid insert for space)
-            for sub_ob in ob:
+            for sub_ob in new_ob:
                 self._seek_event_object(index, path, sub_ob)
             return
         elif selector == '*':  # "**" is recursive, so allow more
@@ -395,4 +437,4 @@ class Handler:
             raise RuntimeError(t.replace("{name_full}", obname_full)
                 .replace("{name}", obname))
         else:
-            return self._seek_event_object(index, path, ob)
+            return self._seek_event_object(index, path, new_ob)

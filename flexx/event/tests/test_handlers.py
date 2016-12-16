@@ -9,6 +9,7 @@ import sys
 import weakref
 
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
+from flexx.util.logging import capture_log
 
 from flexx import event
 
@@ -39,8 +40,8 @@ def test_method_handlers():
     assert repr(foo.handle1)
     assert hasattr(foo.handle1, 'dispose')
     assert foo.handle1.get_name() == 'handle1'
-    assert foo.handle1.get_connection_info() == [('x1', ['x1', ])]
-    assert foo.handle2.get_connection_info() == [('x1', ['x1', ]), ('x2', ['x2', ])]
+    assert foo.handle1.get_connection_info() == [('x1', ['x1:handle1', ])]
+    assert foo.handle2.get_connection_info() == [('x1', ['x1:handle2', ]), ('x2', ['x2:handle2', ])]
     
     # Can't touch this
     with raises(AttributeError):
@@ -111,8 +112,8 @@ def test_func_handlers():
     assert repr(handle1)
     assert hasattr(handle1, 'dispose')
     assert handle1.get_name() == 'handle1'
-    assert handle1.get_connection_info() == [('x1', ['x1', ])]
-    assert handle2.get_connection_info() == [('x1', ['x1', ]), ('x2', ['x2', ])]
+    assert handle1.get_connection_info() == [('x1', ['x1:handle1', ])]
+    assert handle2.get_connection_info() == [('x1', ['x1:handle2', ]), ('x2', ['x2:handle2', ])]
 
 
 def test_func_handlers_nodecorator():
@@ -393,6 +394,120 @@ def test_exceptions2():
         def handle_foo(*events):
             pass
     assert 'not a tuple' in str(err)
+
+
+class MyHasEvents(event.HasEvents):
+    @event.prop
+    def a(self, v):
+        return v
+    
+    @event.prop
+    def aa(self, v):
+        return tuple(v)
+
+def test_connectors1():
+    """ test connectors """
+    
+    x = MyHasEvents()
+    
+    def foo(*events):
+        pass
+    
+    # Can haz any char in label
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'a:+asdkjb&^*!')
+    type = h.get_connection_info()[0][1][0]
+    assert type.startswith('a:')
+    assert not log
+    
+    # Warn if no known event
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'b')
+    assert log
+    x._HasEvents__handlers.pop('b')
+    
+    # Supress warn
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'b!')
+    assert not log
+    x._HasEvents__handlers.pop('b')
+    
+    # Supress warn, with label
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'b!:meh')
+    assert not log
+    x._HasEvents__handlers.pop('b')
+    
+    # Supress warn, with label - not like this
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'b:meh!')
+    assert log
+    x._HasEvents__handlers.pop('b')
+    
+    # Invalid syntax - but fix and warn
+    with capture_log('warning') as log:
+        h = x.connect(foo, '!b:meh')
+    assert log
+
+
+def test_connectors2():
+    """ test connectors with sub """
+    
+    x = MyHasEvents()
+    y = MyHasEvents()
+    x.sub = [y]
+    
+    def foo(*events):
+        pass
+    
+    # Warn if no known event
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'sub*.b')
+    assert log
+    y._HasEvents__handlers.pop('b')
+    
+    # Supress warn
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'sub*.b!')
+    assert not log
+    y._HasEvents__handlers.pop('b')
+    
+    # Supress warn, with label
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'sub*.b!:meh')
+    assert not log
+    y._HasEvents__handlers.pop('b')
+    
+    # Invalid syntax - but fix and warn
+    with capture_log('warning') as log:
+        h = x.connect(foo, '!sub*.b:meh')
+    assert log
+    y._HasEvents__handlers.pop('b')
+    
+    # Position of *
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'sub*.a')
+    assert not log
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'sub.*.a')
+    assert log
+    with raises(ValueError):
+        h = x.connect(foo, 'sub.*a')  # fail
+
+    # No star, no connection, fail!
+    with raises(RuntimeError):
+        h = x.connect(foo, 'sub.b')
+    
+    # Mix it
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'aa*!')
+    assert not log
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'aa**!')
+    assert not log
+    with capture_log('warning') as log:
+        h = x.connect(foo, 'aa**!:meh')  # why not
+    assert not log
 
 
 def test_dispose1():

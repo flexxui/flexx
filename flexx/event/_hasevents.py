@@ -213,15 +213,16 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # This is called from Handler objects at initialization and when
         # they reconnect (dynamism).
         type, _, label = event_type.partition(':')
-        type = type.lstrip('!')
+        force = type.endswith('!')
+        type = type.strip('!')
         label = label or handler._name
         handlers = self.__handlers.get(type, None)
         if handlers is None:  # i.e. type not in self.__handlers
             handlers = []
             self.__handlers[type] = handlers
-            if not event_type.startswith('!'):  # ! means force
+            if not force:  # ! means force
                 msg = ('Event type "{}" does not exist. ' +
-                       'Use "!{}" to suppress this warning.')
+                       'Use "{}!" to suppress this warning.')
                 msg = msg.replace('{}', type)
                 if hasattr(self, 'id'):
                     msg = msg.replace('exist.', 'exist on %s.' % self.id)  # Model
@@ -239,7 +240,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         if self.__pending_events is not None:
             if not label.startswith('reconnect_'):
                 for ev in self.__pending_events.get(type, []):
-                    handler._add_pending_event(type + ":" + label, ev)  # friend class
+                    handler._add_pending_event(type + ":" + label, ev)  # todo: only label, right??
         # Send an event to communicate the value of a property
         # if type in self.__properties__:
         #     if self.__props_ever_set.get(type, False):
@@ -264,6 +265,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # This is called from Handler objects when they dispose and when
         # they reconnect (dynamism).
         type, _, label = type.partition(':')
+        type = type.strip('!')
         handlers = self.__handlers.get(type, ())
         for i in range(len(handlers)-1, -1, -1):
             entry = handlers[i]
@@ -283,6 +285,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         """
         info = {} if info is None else info
         type, _, label = type.partition(':')
+        type = type.rstrip('!')
         if len(label):
             raise ValueError('The type given to emit() should not include a label.')
         # Prepare event
@@ -375,6 +378,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         if not type:
             raise TypeError('get_event_handlers() missing "type" argument.')
         type, _, label = type.partition(':')
+        type = type.rstrip('!')
         if len(label):
             raise ValueError('The type given to get_event_handlers() '
                              'should not include a label.')
@@ -420,7 +424,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         
         for s in connection_strings:
             if not (isinstance(s, str) and len(s) > 0):
-                raise ValueError('Connection string must be nonempty strings.')
+                raise ValueError('Connection string must be nonempty string.')
         
         def _connect(func):
             if not callable(func):

@@ -95,7 +95,8 @@ class HasEventsJS:
             if not (isinstance(s, str) and len(s)):
                 raise ValueError('Connection string must be nonempty strings.')
         
-        return self.__create_Handler(func, func.name or 'anonymous', connection_strings)
+        name = func.name[6:] if func.name.startswith('bound ') else func.name
+        return self.__create_Handler(func, name or 'anonymous', connection_strings)
     
     def __create_PyProperty(self, name):
         self.__create_Property(name)
