@@ -1,4 +1,4 @@
-# doc-export: CodeEditor
+# doc-export: CodeEditor_CodeMirror
 """
 This example demonstrates a code editor widget based on CodeMirror.
 """
