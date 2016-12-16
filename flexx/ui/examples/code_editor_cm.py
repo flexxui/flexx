@@ -33,7 +33,7 @@ class CodeEditor(ui.Widget):
         
         def init(self):
             # https://codemirror.net/doc/manual.html
-            options = dict(value='from flexx import ui, app, event',
+            options = dict(value='import os\n\ndirs = os.walk',
                            mode='python',
                            theme='solarized dark',
                            autofocus=True,
