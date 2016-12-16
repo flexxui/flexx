@@ -72,7 +72,13 @@ class LineEdit(Widget):
             in all browsers.
             """
             return tuple([str(i) for i in v])
-        
+
+        @event.prop
+        def disabled(self, v=False):
+            """ Whether the line edit is disabled.
+            """
+            return bool(v)
+
     class JS:
     
         def _init_phosphor_and_node(self):
@@ -135,3 +141,10 @@ class LineEdit(Widget):
                 op = window.document.createElement('option')
                 op.value = option
                 self._autocomp.appendChild(op)
+
+        @event.connect('disabled')
+        def __disabled_changed(self, *events):
+            if events[-1].new_value:
+                self.node.setAttribute("disabled", "disabled")
+            else:
+                self.node.removeAttribute("disabled")
