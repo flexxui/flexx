@@ -240,7 +240,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         if self.__pending_events is not None:
             if not label.startswith('reconnect_'):
                 for ev in self.__pending_events.get(type, []):
-                    handler._add_pending_event(type + ":" + label, ev)  # todo: only label, right??
+                    handler._add_pending_event(label, ev)
         # Send an event to communicate the value of a property
         # if type in self.__properties__:
         #     if self.__props_ever_set.get(type, False):
