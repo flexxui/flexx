@@ -887,7 +887,7 @@ def test_handler_get_name(Person):
     return res1
 
 
-@run_in_both(Person, "[['first_name', ['first_name:func1']], ['last_name', ['last_name:func1']]]")
+@run_in_both(Person, "[['first_name', ['first_name']], ['last_name', ['last_name']]]")
 def test_handler_get_connection_info(Person):
     res1 = []
     
@@ -898,7 +898,12 @@ def test_handler_get_connection_info(Person):
     name = Person()
     handler1 = name.connect(func1, 'first_name', 'last_name')
     
-    return handler1.get_connection_info()
+    info = handler1.get_connection_info()
+    
+    # Strip the labels, because on CI the func name becomes "anonymous"
+    info[0][1][0] = info[0][1][0].split(':')[0]
+    info[1][1][0] = info[1][1][0].split(':')[0]
+    return info
 
 
 class Simple1(event.HasEvents):
