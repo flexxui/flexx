@@ -143,7 +143,8 @@ def js_rename(jscode, cur_name, new_name):
     Returns:
         jscode (str): the modified JavaScript source code
     """
-    
+    jscode = jscode.replace('function %s' % cur_name,
+                            'function %s' % (new_name.split('.')[-1]), 1)
     jscode = jscode.replace('%s = function' % cur_name, 
                             '%s = function' % (new_name), 1)
     jscode = jscode.replace('%s.prototype' % cur_name, 
