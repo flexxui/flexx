@@ -3,6 +3,7 @@ import sys
 import types
 import inspect
 import hashlib
+import tempfile
 import subprocess
 
 from . import Parser
@@ -178,33 +179,61 @@ def get_node_exe():
     return NODE_EXE
 
 
-def evaljs(jscode, whitespace=True):
+_eval_count = 0
+
+def evaljs(jscode, whitespace=True, print_result=True):
     """ Evaluate JavaScript code in Node.js.
     
     parameters:
         jscode (str): the JavaScript code to evaluate.
         whitespace (bool): if whitespace is False, the whitespace
             is removed from the result. Default True.
+        print_result (bool): whether to print the result of the evaluation.
+            Default True. If False, larger pieces of code can be evaluated
+            because we can use file-mode.
+    
     returns:
         result (str): the last result as a string.
     """
+    global _eval_count
+    
+    # Prepare command
+    if len(jscode) > 2**14:
+        if print_result:
+            # Strictly speaking, this is a limitation of Windows, but come-on!
+            raise RuntimeError('evaljs() wont send more than 16 kB of code '
+                               'over the command line, but cannot use a file '
+                               'unless print_result is False.')
+        _eval_count += 1
+        fname = 'pyscript_%i_%i.js' % (os.getpid(), _eval_count)
+        filename = os.path.join(tempfile.gettempdir(), fname)
+        with open(filename, 'wb') as f:
+            f.write(jscode.encode())
+        cmd = [get_node_exe(), '--use_strict', filename]
+    else:
+        filename = None
+        p_or_e = ['-p', '-e'] if print_result else ['-e']
+        cmd = [get_node_exe(), '--use_strict'] + p_or_e + [jscode]
+        if sys.version_info[0] < 3:
+            cmd = [c.encode('raw_unicode_escape') for c in cmd]
     
     # Call node
-    cmd = [get_node_exe(), '--use_strict', '-p', '-e', jscode]
-    if sys.version_info[0] < 3:
-        cmd = [c.encode('raw_unicode_escape') for c in cmd]
     try:
         res = subprocess.check_output(cmd)
-    except FileNotFoundError as err:
-        raise Exception('%s - The code is probably too big' % str(err))
     except Exception as err:
         err = err.output.decode()
         err = err[:200] + '...' if len(err) > 200 else err
         raise Exception(err)
+    finally:
+        if filename is not None:
+            try:
+                os.remove(filename)
+            except Exception:
+                pass
     
-    # process
+    # Process result
     res = res.decode().rstrip()
-    if res.endswith('undefined'):
+    if print_result and res.endswith('undefined'):
         res = res[:-9].rstrip()
     if not whitespace:
         res = res.replace('\n', '').replace('\t', '').replace(' ', '')
