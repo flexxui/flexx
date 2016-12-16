@@ -701,7 +701,9 @@ class Parser2(Parser1):
         
         # Init function definition
         code = []
+        func_name = ''
         if not lambda_:
+            func_name = node.name
             prefixed = self.with_prefix(node.name)
             if prefixed == node.name:  # normal function vs method
                 self.vars.add(node.name)
@@ -709,9 +711,9 @@ class Parser2(Parser1):
             code.append(self.lf('%s = ' % prefixed))
             #code.append('function %s (' % node.name)
         if binder:
-            code.append('(function (')
+            code.append('(function %s (' % func_name)
         else:
-            code.append('function (')
+            code.append('function %s (' % func_name)
         
         # Collect args
         argnames = []
