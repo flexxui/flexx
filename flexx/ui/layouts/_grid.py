@@ -90,8 +90,8 @@ class GridPanel(Layout):
                 return False
             _phosphor_messaging.installMessageHook(self.phosphor, msg_hook)
         
-        @event.connect('children', 'children.*.pos',
-                       'children.*.flex', 'children.*.base_size')
+        @event.connect('children', 'children*.pos',
+                       'children*.flex', 'children*.base_size')
         def __update_positions(self, *events):
             self._child_limits_changed()
         
