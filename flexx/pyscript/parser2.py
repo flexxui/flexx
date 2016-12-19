@@ -227,7 +227,8 @@ JS_RESERVED_WORDS = set()
 
 
 # https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar
-RESERVED = { # Reserved keywords as of ECMAScript 6
+RESERVED = {'true', 'false', 'null',
+            # Reserved keywords as of ECMAScript 6
             'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger',
             'default', 'delete', 'do', 'else', 'export', 'extends', 'finally',
             'for', 'function', 'if', 'import', 'in', 'instanceof', 'new',
@@ -237,9 +238,8 @@ RESERVED = { # Reserved keywords as of ECMAScript 6
             'implements', 'interface', 'let', 'package', 'private',
             'protected', 'public', 'static', 'enum',
             'await',  # only in module code
-            'true', 'false', 'null',
             }
- 
+
  
 class Parser2(Parser1):
     """ Parser that adds control flow, functions, classes, and exceptions.

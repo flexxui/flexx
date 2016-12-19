@@ -208,7 +208,7 @@ class Handler:
             if '!' in s:
                 s = s.replace('!', '')
                 force = '!'
-                console.warn('Exclamation marks in connection strings must'
+                console.warn('Exclamation marks in connection strings must '
                              'come at the end, e.g. "foo.bar!" or "bar!:label".')
             # Check that all parts are identifiers
             parts = s.split('.')
