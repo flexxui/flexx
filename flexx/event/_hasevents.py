@@ -207,14 +207,12 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # Called when the handlers changed, can be implemented in subclasses
         pass
     
-    def _register_handler(self, event_type, handler):
+    def _register_handler(self, event_type, handler, force=False):
         # Register a handler for the given event type. The type
         # can include a label, e.g. 'mouse_down:foo'.
         # This is called from Handler objects at initialization and when
         # they reconnect (dynamism).
         type, _, label = event_type.partition(':')
-        force = type.endswith('!')
-        type = type.strip('!')
         label = label or handler._name
         handlers = self.__handlers.get(type, None)
         if handlers is None:  # i.e. type not in self.__handlers
@@ -222,7 +220,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             self.__handlers[type] = handlers
             if not force:  # ! means force
                 msg = ('Event type "{}" does not exist. ' +
-                       'Use "{}!" to suppress this warning.')
+                       'Use "!{}" or "!foo.bar.{}" to suppress this warning.')
                 msg = msg.replace('{}', type)
                 if hasattr(self, 'id'):
                     msg = msg.replace('exist.', 'exist on %s.' % self.id)  # Model
@@ -265,7 +263,6 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # This is called from Handler objects when they dispose and when
         # they reconnect (dynamism).
         type, _, label = type.partition(':')
-        type = type.strip('!')
         handlers = self.__handlers.get(type, ())
         for i in range(len(handlers)-1, -1, -1):
             entry = handlers[i]
@@ -285,7 +282,6 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         """
         info = {} if info is None else info
         type, _, label = type.partition(':')
-        type = type.rstrip('!')
         if len(label):
             raise ValueError('The type given to emit() should not include a label.')
         # Prepare event
@@ -378,7 +374,6 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         if not type:
             raise TypeError('get_event_handlers() missing "type" argument.')
         type, _, label = type.partition(':')
-        type = type.rstrip('!')
         if len(label):
             raise ValueError('The type given to get_event_handlers() '
                              'should not include a label.')

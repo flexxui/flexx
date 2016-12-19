@@ -201,11 +201,6 @@ Connection string syntax
 
 The strings used to connect events follow a few simple syntax rules:
 
-* The string optionally has a label suffix separated by a colon. The
-  label itself may consist of any chars.
-* The string can have a "!" at the end to suppres warnings for
-  connections to unknown event types. If the string has a label,
-  the exclamation mark comes before it.
 * Connection strings consist of parts separated by dots, thus forming a path.
   If an element on the path is a property, the connection will automatically
   reset when that property changes (a.k.a. dynamism, more on this below).
@@ -214,9 +209,16 @@ The strings used to connect events follow a few simple syntax rules:
 * With two stars, the connection is made *recursively*, e.g. "children**"
   connects to "children" and the children's children, etc.
 * Stripped of '*', each part must be a valid identifier (ASCII).
+* The total string optionally has a label suffix separated by a colon. The
+  label itself may consist of any chars.
+* The string can have a "!" at the very start to suppress warnings for
+  connections to event types that Flexx is not aware of at initialization
+  time (i.e. not corresponding to a property or emitter).
 
-To clarify the order of the special characters: an extreme example would be
-``"foo.bar**!:label"``.
+An extreme example could be ``"!foo.children**.text:mylabel"``, which connects
+to the "text" event of the children (or their children, or their children's
+children etc.) of the ``foo`` attribute. The "!" can be common in cases like
+this to suppress warnings if not all children have a ``text`` event/property.
 
 Labels
 ======

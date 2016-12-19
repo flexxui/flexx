@@ -428,13 +428,13 @@ def test_connectors1():
     
     # Supress warn
     with capture_log('warning') as log:
-        h = x.connect(foo, 'b!')
+        h = x.connect(foo, '!b')
     assert not log
     x._HasEvents__handlers.pop('b')
     
     # Supress warn, with label
     with capture_log('warning') as log:
-        h = x.connect(foo, 'b!:meh')
+        h = x.connect(foo, '!b:meh')
     assert not log
     x._HasEvents__handlers.pop('b')
     
@@ -442,12 +442,14 @@ def test_connectors1():
     with capture_log('warning') as log:
         h = x.connect(foo, 'b:meh!')
     assert log
+    assert 'does not exist' in log[0]
     x._HasEvents__handlers.pop('b')
     
     # Invalid syntax - but fix and warn
     with capture_log('warning') as log:
-        h = x.connect(foo, '!b:meh')
+        h = x.connect(foo, 'b!:meh')
     assert log
+    assert 'Exclamation mark' in log[0]
 
 
 def test_connectors2():
@@ -468,20 +470,21 @@ def test_connectors2():
     
     # Supress warn
     with capture_log('warning') as log:
-        h = x.connect(foo, 'sub*.b!')
+        h = x.connect(foo, '!sub*.b')
     assert not log
     y._HasEvents__handlers.pop('b')
     
     # Supress warn, with label
     with capture_log('warning') as log:
-        h = x.connect(foo, 'sub*.b!:meh')
+        h = x.connect(foo, '!sub*.b:meh')
     assert not log
     y._HasEvents__handlers.pop('b')
     
     # Invalid syntax - but fix and warn
     with capture_log('warning') as log:
-        h = x.connect(foo, '!sub*.b:meh')
+        h = x.connect(foo, 'sub*.!b:meh')
     assert log
+    assert 'Exclamation mark' in log[0]
     y._HasEvents__handlers.pop('b')
     
     # Position of *
@@ -500,13 +503,13 @@ def test_connectors2():
     
     # Mix it
     with capture_log('warning') as log:
-        h = x.connect(foo, 'aa*!')
+        h = x.connect(foo, '!aa*')
     assert not log
     with capture_log('warning') as log:
-        h = x.connect(foo, 'aa**!')
+        h = x.connect(foo, '!aa**')
     assert not log
     with capture_log('warning') as log:
-        h = x.connect(foo, 'aa**!:meh')  # why not
+        h = x.connect(foo, '!aa**:meh')  # why not
     assert not log
 
 

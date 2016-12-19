@@ -181,35 +181,33 @@ class Handler:
         self._connections = []
         
         # Notes on connection strings:
+        # * The string can have a "!" at the start to suppress warnings for
+        #   connections to unknown event types.
         # * The string can have a label suffix separated by a colon. The
         #   label may consist of any chars.
-        # * The string can have a "!" at the end to suppres warnings for
-        #   connections to unknown event types. If the string has a label,
-        #   the exclamation mark comes before it.
         # * Connection strings consist of parts separated by dots.
         # * Each part can end with one star ('*'), indicating that connections
         #   should be made for each item in the list, or two stars, indicating
         #   that connections should be made *recursively* for each item in the
         #   list (a.k.a. a deep connector).
         # * Stripped of '*', each part must be a valid identifier.
-        # * An extreme example: "foo.bar*.spam.eggs**!:meh"
+        # * An extreme example: "!foo.bar*.spam.eggs**:meh"
         
         for fullname in connection_strings:
             # Separate label and exclamation mark from the string path
-            s, _, label = fullname.partition(':')
-            force = '!' if s.endswith('!') else ''
-            s = s.rstrip('!')
+            force = fullname.startswith('!')
+            s, _, label = fullname.lstrip('!').partition(':')
             # Backwards compat: "foo.*.bar* becomes "foo*.bar"
             if '.*.' in s + '.':
                 s = s.replace('.*', '*')
                 console.warn('Connection string syntax "foo.*.bar" is '
                              'deprecated, use "foo*.bar" instead.')
-            # Help put exclamation at the end
+            # Help put exclamation at the start
             if '!' in s:
                 s = s.replace('!', '')
-                force = '!'
+                force = True
                 console.warn('Exclamation marks in connection strings must '
-                             'come at the end, e.g. "foo.bar!" or "bar!:label".')
+                             'come at the very start, e.g. "!foo.bar".')
             # Check that all parts are identifiers
             parts = s.split('.')
             for part in parts:
@@ -225,7 +223,8 @@ class Handler:
             self._connections.append(d)
             d.fullname = fullname  # original, used in logs, so is searchable
             d.parts = parts
-            d.type = parts[-1].rstrip('*') + force + ':' + (label or self._name)
+            d.type = parts[-1].rstrip('*') + ':' + (label or self._name)
+            d.force = force
             d.objects = []
 
         # Pending events for this handler
@@ -390,7 +389,7 @@ class Handler:
 
         # Connect
         for ob, type in connection.objects:
-            ob._register_handler(type, self)
+            ob._register_handler(type, self, connection.force)
 
     def _seek_event_object(self, index, path, ob):
         """ Seek an event object based on the name (PyScript compatible).
