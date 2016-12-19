@@ -166,14 +166,16 @@ Str methods
     "foobar".upper()
 
 
-Using JS specicic functionality
+Using JS specific functionality
 -------------------------------
 
 When writing PyScript inside Python modules, we recommend that where
 specific JavaScript functionality is used, that the references are
-prefixed with ``window.``. This helps make it clear that the
-functionality is specific to JS, and also helps static code analysis
-tools like flake8.
+prefixed with ``window.`` Where ``window`` represents the global JS 
+namespace. All global JavaScript objects, functions, and variables
+automatically become members of the ``window`` object. This helps
+make it clear that the functionality is specific to JS, and also
+helps static code analysis tools like flake8.
 
 .. pyscript_example::
     
