@@ -1,4 +1,4 @@
-# doc-export: CodeEditor_CodeMirror
+# doc-export: CodeEditor
 """
 This example demonstrates a code editor widget based on CodeMirror.
 """
@@ -30,7 +30,6 @@ class CodeEditor(ui.Widget):
     """
     
     class JS:
-        
         def init(self):
             # https://codemirror.net/doc/manual.html
             options = dict(value='import os\n\ndirs = os.walk',
@@ -51,7 +50,6 @@ class CodeEditor(ui.Widget):
         @event.connect('size')
         def __on_size(self, *events):
             self.cm.refresh()
-
 
 if __name__ == '__main__':
     app.launch(CodeEditor, 'xul')
