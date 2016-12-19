@@ -197,17 +197,17 @@ class Handler:
             # Separate label and exclamation mark from the string path
             force = fullname.startswith('!')
             s, _, label = fullname.lstrip('!').partition(':')
+            s0 = s
             # Backwards compat: "foo.*.bar* becomes "foo*.bar"
             if '.*.' in s + '.':
-                s = s.replace('.*', '*')
-                console.warn('Connection string syntax "foo.*.bar" is '
-                             'deprecated, use "foo*.bar" instead.')
+                console.warn('Connection string syntax "foo.*.bar" is deprecated, '
+                             'use "%s" instead of "%s":.' % (s, s0))
             # Help put exclamation at the start
             if '!' in s:
                 s = s.replace('!', '')
                 force = True
-                console.warn('Exclamation marks in connection strings must '
-                             'come at the very start, e.g. "!foo.bar".')
+                console.warn('Exclamation marks in connection strings must come at '
+                             'the very start, use "!%s" instead of "%s".' % (s, s0))
             # Check that all parts are identifiers
             parts = s.split('.')
             for part in parts:
@@ -403,6 +403,7 @@ class Handler:
             return  # We cannot seek further
         if len(path) == 1:
             # Path only consists of event type now: make connection
+            # connection.type consists of event type name (no stars) plus a label
             if hasattr(ob, '_IS_HASEVENTS'):
                 connection.objects.append((ob, connection.type))
             # Reached end or continue?

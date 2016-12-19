@@ -85,7 +85,7 @@ just use ``for ev in events: ...``.
 In most cases, you will connect to events that are known beforehand,
 like those they correspond to properties, readonlies and emitters. 
 If you connect to an event that is not known (as in the example above)
-it might be a typo and Flexx will display a warning. Use `'foo!'` as a
+it might be a typo and Flexx will display a warning. Use `'!foo'` as a
 connection string (i.e. prepend an exclamation mark) to suppress such
 warnings.
 
@@ -216,8 +216,8 @@ The strings used to connect events follow a few simple syntax rules:
   time (i.e. not corresponding to a property or emitter).
 
 An extreme example could be ``"!foo.children**.text:mylabel"``, which connects
-to the "text" event of the children (or their children, or their children's
-children etc.) of the ``foo`` attribute. The "!" can be common in cases like
+to the "text" event of the children (and their children, and their children's
+children etc.) of the ``foo`` attribute. The "!" is common in cases like
 this to suppress warnings if not all children have a ``text`` event/property.
 
 Labels
