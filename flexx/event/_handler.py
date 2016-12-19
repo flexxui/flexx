@@ -200,6 +200,7 @@ class Handler:
             s0 = s
             # Backwards compat: "foo.*.bar* becomes "foo*.bar"
             if '.*.' in s + '.':
+                s = s.replace('.*', '*')
                 console.warn('Connection string syntax "foo.*.bar" is deprecated, '
                              'use "%s" instead of "%s":.' % (s, s0))
             # Help put exclamation at the start
