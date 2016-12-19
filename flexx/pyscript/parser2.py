@@ -223,6 +223,24 @@ RAW_DOC_WARNING = ('Function %s only has a docstring, which used to be '
                    'docstring, or add "pass" to the function body to prevent '
                    'this behavior.')
 
+JS_RESERVED_WORDS = set()
+
+
+# https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar
+RESERVED = { # Reserved keywords as of ECMAScript 6
+            'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger',
+            'default', 'delete', 'do', 'else', 'export', 'extends', 'finally',
+            'for', 'function', 'if', 'import', 'in', 'instanceof', 'new',
+            'return', 'super', 'switch', 'this', 'throw', 'try', 'typeof',
+            'var', 'void', 'while', 'with', 'yield',
+            # Future reserved keywords
+            'implements', 'interface', 'let', 'package', 'private',
+            'protected', 'public', 'static', 'enum',
+            'await',  # only in module code
+            'true', 'false', 'null',
+            }
+ 
+ 
 class Parser2(Parser1):
     """ Parser that adds control flow, functions, classes, and exceptions.
     """
@@ -703,17 +721,16 @@ class Parser2(Parser1):
         code = []
         func_name = ''
         if not lambda_:
-            func_name = node.name
+            func_name = '' if node.name in RESERVED else node.name
             prefixed = self.with_prefix(node.name)
             if prefixed == node.name:  # normal function vs method
                 self.vars.add(node.name)
                 self._seen_func_names.add(node.name)
             code.append(self.lf('%s = ' % prefixed))
             #code.append('function %s (' % node.name)
-        if binder:
-            code.append('(function %s (' % func_name)
-        else:
-            code.append('function %s (' % func_name)
+        code.append('%sfunction %s%s(' % ('(' if binder else '',
+                                          func_name,
+                                          ' ' if func_name else ''))
         
         # Collect args
         argnames = []
