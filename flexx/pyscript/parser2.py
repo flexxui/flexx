@@ -223,6 +223,24 @@ RAW_DOC_WARNING = ('Function %s only has a docstring, which used to be '
                    'docstring, or add "pass" to the function body to prevent '
                    'this behavior.')
 
+JS_RESERVED_WORDS = set()
+
+
+# https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar
+RESERVED = {'true', 'false', 'null',
+            # Reserved keywords as of ECMAScript 6
+            'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger',
+            'default', 'delete', 'do', 'else', 'export', 'extends', 'finally',
+            'for', 'function', 'if', 'import', 'in', 'instanceof', 'new',
+            'return', 'super', 'switch', 'this', 'throw', 'try', 'typeof',
+            'var', 'void', 'while', 'with', 'yield',
+            # Future reserved keywords
+            'implements', 'interface', 'let', 'package', 'private',
+            'protected', 'public', 'static', 'enum',
+            'await',  # only in module code
+            }
+
+ 
 class Parser2(Parser1):
     """ Parser that adds control flow, functions, classes, and exceptions.
     """
@@ -701,17 +719,18 @@ class Parser2(Parser1):
         
         # Init function definition
         code = []
+        func_name = ''
         if not lambda_:
+            func_name = '' if node.name in RESERVED else node.name
             prefixed = self.with_prefix(node.name)
             if prefixed == node.name:  # normal function vs method
                 self.vars.add(node.name)
                 self._seen_func_names.add(node.name)
             code.append(self.lf('%s = ' % prefixed))
             #code.append('function %s (' % node.name)
-        if binder:
-            code.append('(function (')
-        else:
-            code.append('function (')
+        code.append('%sfunction %s%s(' % ('(' if binder else '',
+                                          func_name,
+                                          ' ' if func_name else ''))
         
         # Collect args
         argnames = []
@@ -834,7 +853,7 @@ class Parser2(Parser1):
         elif base_class.lower() == 'object':  # maybe Python "object"
             base_class = 'Object'
         else:
-            base_class = base_class + '.Ƥ'
+            base_class = base_class + '.prototype'
         
         # Define function that acts as class constructor
         code = []
@@ -878,7 +897,7 @@ class Parser2(Parser1):
             raise JSError('can only use super() inside a method.')
         
         base_class = nsname2
-        return '%s.Ƥ._base_class' % base_class
+        return '%s.prototype._base_class' % base_class
     
     
     #def parse_With
@@ -912,11 +931,9 @@ def get_class_definition(name, base='Object', docstring=''):
     code.append('}')
     
     if base != 'Object':
-        code.append('%s.Ƥ = %s.prototype = Object.create(%s);' % (name, name, base))
-    else:
-        code.append('%s.Ƥ = %s.prototype;' % (name, name))
-    code.append('%s.Ƥ._base_class = %s;' % (name, base))
-    code.append('%s.Ƥ._class_name = %s;' % (name, reprs(name.split('.')[-1])))
+        code.append('%s.prototype = Object.create(%s);' % (name, base))
+    code.append('%s.prototype._base_class = %s;' % (name, base))
+    code.append('%s.prototype._class_name = %s;' % (name, reprs(name.split('.')[-1])))
     
     code.append('')
     return code

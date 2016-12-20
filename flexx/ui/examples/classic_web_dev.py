@@ -18,7 +18,7 @@ be styled either using their ``style`` property, or by providing CSS
 and using the ``css_class`` property.
 
 A programmer can build content using these html widgets (as in list 1),
-or embed plain of HTML inside one such widget (as in list 2). In the
+or embed plain HTML inside one such widget (as in list 2). In the
 first approach the widgets can still be used in the Flexx way, but the
 second approach is a bit "lighter" (e.g. the elements don't have a
 representation on the Python side).

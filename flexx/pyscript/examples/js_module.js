@@ -21,7 +21,7 @@
 var _pyfunc_hasattr = function (ob, name) { // nargs: 2
     return (ob !== undefined) && (ob !== null) && (ob[name] !== undefined);
 };
-var _pyfunc_instantiate = function (ob, args) { // nargs: 2
+var _pyfunc_op_instantiate = function (ob, args) { // nargs: 2
     if ((typeof ob === "undefined") ||
             (typeof window !== "undefined" && window === ob) ||
             (typeof global !== "undefined" && global === ob))
@@ -36,7 +36,7 @@ var _pyfunc_instantiate = function (ob, args) { // nargs: 2
         ob.__init__.apply(ob, args);
     }
 };
-var _pyfunc_mult = function (a, b) { // nargs: 2
+var _pyfunc_op_mult = function (a, b) { // nargs: 2
     if ((typeof a === 'number') + (typeof b === 'number') === 1) {
         if (a.constructor === String) return _pymeth_repeat.call(a, b);
         if (b.constructor === String) return _pymeth_repeat.call(b, a);
@@ -64,38 +64,37 @@ var Bar, Foo;
 // and in combination with browserify and related tools.
 
 Foo = function () {
-    _pyfunc_instantiate(this, arguments);
+    _pyfunc_op_instantiate(this, arguments);
 }
-Foo.Ƥ = Foo.prototype;
-Foo.Ƥ._base_class = Object;
-Foo.Ƥ._class_name = "Foo";
+Foo.prototype._base_class = Object;
+Foo.prototype._class_name = "Foo";
 
-Foo.Ƥ.a_constant = [1, 2, 3];
-Foo.Ƥ.ham = function (x) {
+Foo.prototype.a_constant = [1, 2, 3];
+Foo.prototype.ham = function ham (x) {
     this.x = x;
     return null;
 };
 
-Foo.Ƥ.eggs = function (y) {
-    this.y = _pyfunc_mult(this.x, y);
+Foo.prototype.eggs = function eggs (y) {
+    this.y = _pyfunc_op_mult(this.x, y);
     _pyfunc_hasattr(y, str);
     return null;
 };
 
 
 Bar = function () {
-    _pyfunc_instantiate(this, arguments);
+    _pyfunc_op_instantiate(this, arguments);
 }
-Bar.Ƥ = Bar.prototype = Object.create(Foo.Ƥ);
-Bar.Ƥ._base_class = Foo.Ƥ;
-Bar.Ƥ._class_name = "Bar";
+Bar.prototype = Object.create(Foo.prototype);
+Bar.prototype._base_class = Foo.prototype;
+Bar.prototype._class_name = "Bar";
 
-Bar.Ƥ.bla = function (z) {
+Bar.prototype.bla = function bla (z) {
     console.log(z);
     return null;
 };
 
 
 
-return {Bar, Foo};
+return {};
 })); 

@@ -297,7 +297,7 @@ class TestFunctions:
         lines = [line for line in code.split('\n') if line]
         
         assert len(lines) == 4  # only three lines + definition
-        assert lines[1] == 'func1 = function () {'  # no args
+        assert lines[1] == 'func1 = function func1 () {'  # no args
         assert lines[2].startswith('  ')  # indented
         assert lines[3] == '};'  # dedented
     
@@ -310,7 +310,7 @@ class TestFunctions:
         lines = [line for line in code.split('\n') if line]
         
         assert len(lines) == 4  # only three lines + definition
-        assert lines[1] == 'method1 = function () {'  # no args, no self/this
+        assert lines[1] == 'method1 = function method1 () {'  # no args, no self/this
         assert lines[2].startswith('  ')  # indented
         assert lines[3] == '};'  # dedented
     
@@ -322,7 +322,7 @@ class TestFunctions:
         code = py2js(func)
         lines = [line for line in code.split('\n') if line]
         
-        assert lines[1] == 'func = function (foo, bar) {'
+        assert lines[1] == 'func = function func (foo, bar) {'
         assert '2' in code
         
         assert evaljs(code + 'func(2)') == '0'

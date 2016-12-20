@@ -29,24 +29,6 @@ def this_is_js():
     return False
 
 
-def reduce_code(code):
-    # On Windows we can pass up to 2**15 chars
-    # over the command line before getting filename-too-long error.
-    # Doing this gives us just enough to be able to run our tests :)
-    if sys.platform.startswith('win') and len(code.encode('utf-8')) > 2**15:
-        code = code.replace('    ', '')
-        code = code.replace('_pyfunc_', 'pf_').replace('_pymeth_', 'pm_')
-        code = code.replace('stub', 'l')  # we know that we don't use varnames with only an l
-        code_len = len(code.encode('utf-8'))
-        if code_len > 2**15:
-            raise RuntimeError('Cannot run this code on Windows: too long '
-                               '(%i - 2**15 = %i)!' % (code_len, code_len - 2**15))
-        else:
-            pass  # note that we also need to include length of command, so it may still fail
-    code = code.replace('    ', '\t')
-    return code
-
-
 def run_in_both(cls, reference, extra_classes=()):
     """ The test decorator.
     """
@@ -68,11 +50,10 @@ def run_in_both(cls, reference, extra_classes=()):
             for c in reversed(this_classes):
                 code += create_js_hasevents_class(c, c.__name__, c.__bases__[0].__name__+'.prototype')
             code += py2js(func, 'test', inline_stdlib=False, docstrings=False)
-            code += 'test(%s);' % cls.__name__
+            code += 'console.log(test(%s));' % cls.__name__
             nargs, function_deps, method_deps = get_std_info(code)
             code = get_partial_std_lib(function_deps, method_deps, []) + code
-            code = reduce_code(code)
-            jsresult = evaljs(code)
+            jsresult = evaljs(code, print_result=False)  # allow using file
             jsresult = jsresult.replace('[ ', '[').replace(' ]', ']').replace('\n  ', ' ')
             jsresult = jsresult.replace('"', "'").split('!!!!')[-1]
             print('js:', jsresult)
@@ -917,7 +898,12 @@ def test_handler_get_connection_info(Person):
     name = Person()
     handler1 = name.connect(func1, 'first_name', 'last_name')
     
-    return handler1.get_connection_info()
+    info = handler1.get_connection_info()
+    
+    # Strip the labels, because on CI the func name becomes "anonymous"
+    info[0][1][0] = info[0][1][0].split(':')[0]
+    info[1][1][0] = info[1][1][0].split(':')[0]
+    return info
 
 
 class Simple1(event.HasEvents):
@@ -1130,7 +1116,7 @@ class Node(event.HasEvents):
             else:
                 self._r1.append(None)
     
-    @event.connect('children.*.val')
+    @event.connect('children*.val')
     def handle_children_val(self, *events):
         for ev in events:
             if isinstance(ev.new_value, (int, float)):
@@ -1293,7 +1279,7 @@ def test_dynamism4a(Node):
                 res.append(ev.new_value)
             else:
                 res.append('null')
-    handler = n.connect(func, 'children.*.val')
+    handler = n.connect(func, 'children*.val')
     
     loop.iter()
     
@@ -1333,7 +1319,7 @@ def test_dynamism4b(Node):
                 res.append(ev.new_value)
             else:
                 res.append('null')
-    handler = n.connect(func, 'children', 'children.*.val')  # also connect children
+    handler = n.connect(func, 'children', 'children*.val')  # also connect children
     
     loop.iter()
     
@@ -1386,6 +1372,93 @@ def test_dynamism5(Node):
     handler.handle_now()
     n1.val = 19
     handler.handle_now()
+    return res
+
+
+@run_in_both(Node, "[7, 8, 17]")
+def test_deep1(Node):
+    # deep connectors
+    
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    n.children = Node(), n1
+    n.children[0].children = Node(), n2
+    
+    loop.iter()
+    
+    res = []
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                if ev.new_value:
+                    res.append(ev.new_value)
+            else:
+                res.append('null')
+    handler = n.connect(func, 'children**.val')
+    
+    loop.iter()
+    
+    # We want these
+    n1.val = 7
+    handler.handle_now()
+    n2.val = 8
+    handler.handle_now()
+    # But not these
+    n.val = 42
+    handler.handle_now()
+    n1.children = Node(), Node()
+    n.children[0].children = []
+    # again ...
+    n1.val = 17
+    handler.handle_now()
+    n2.val = 18  # n2 is no longer in the tree
+    handler.handle_now()
+    return res
+
+
+@run_in_both(Node, "['id12', 'id11', 'id10', 'id11']")
+def test_deep2(Node):
+    # deep connectors - string ends in deep connector
+    
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    n.children = Node(), n1
+    n.children[0].children = Node(), n2
+    
+    loop.iter()
+    
+    res = []
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                res.append(ev.new_value)
+            elif ev.type == 'children':
+                if ev.source.val:
+                    res.append('id%i' % ev.source.val)
+            else:
+                res.append('null')
+    handler = n.connect(func, 'children**')
+    
+    loop.iter()
+    
+    # Give val to id by - these should have no effect on res though
+    n.val = 10
+    handler.handle_now()
+    n1.val = 11
+    handler.handle_now()
+    n2.val = 12
+    handler.handle_now()
+    # Change children
+    n2.children = Node(), Node(), Node()
+    n1.children = Node(), Node()
+    n.children = Node(), n1, Node()
+    handler.handle_now()
+    n2.children = []  # no longer in the tree
+    n1.children = []
+    handler.handle_now()
+    
     return res
 
 

@@ -532,7 +532,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             self._session._exec(cmd)
     
     def _register_handler(self, *args):
-        event_type = args[0].split(':')[0].strip('!')
+        event_type = args[0].split(':')[0]
         if not self.get_event_handlers(event_type):
             self.call_js('_new_event_type_hook("%s")' % event_type)
         return super()._register_handler(*args)
@@ -639,7 +639,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             window.flexx.instances[self._id] = 'disposed'
         
         def _register_handler(self, *args):
-            event_type = args[0].split(':')[0].strip('!')
+            event_type = args[0].split(':')[0]
             if not self.get_event_handlers(event_type):
                 self._new_event_type_hook(event_type)
             return super()._register_handler(*args)

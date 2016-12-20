@@ -207,21 +207,20 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         # Called when the handlers changed, can be implemented in subclasses
         pass
     
-    def _register_handler(self, event_type, handler):
+    def _register_handler(self, event_type, handler, force=False):
         # Register a handler for the given event type. The type
         # can include a label, e.g. 'mouse_down:foo'.
         # This is called from Handler objects at initialization and when
         # they reconnect (dynamism).
         type, _, label = event_type.partition(':')
-        type = type.lstrip('!')
         label = label or handler._name
         handlers = self.__handlers.get(type, None)
         if handlers is None:  # i.e. type not in self.__handlers
             handlers = []
             self.__handlers[type] = handlers
-            if not event_type.startswith('!'):  # ! means force
+            if not force:  # ! means force
                 msg = ('Event type "{}" does not exist. ' +
-                       'Use "!{}" to suppress this warning.')
+                       'Use "!{}" or "!foo.bar.{}" to suppress this warning.')
                 msg = msg.replace('{}', type)
                 if hasattr(self, 'id'):
                     msg = msg.replace('exist.', 'exist on %s.' % self.id)  # Model
@@ -239,7 +238,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         if self.__pending_events is not None:
             if not label.startswith('reconnect_'):
                 for ev in self.__pending_events.get(type, []):
-                    handler._add_pending_event(type + ":" + label, ev)  # friend class
+                    handler._add_pending_event(label, ev)
         # Send an event to communicate the value of a property
         # if type in self.__properties__:
         #     if self.__props_ever_set.get(type, False):
@@ -420,7 +419,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         
         for s in connection_strings:
             if not (isinstance(s, str) and len(s) > 0):
-                raise ValueError('Connection string must be nonempty strings.')
+                raise ValueError('Connection string must be nonempty string.')
         
         def _connect(func):
             if not callable(func):

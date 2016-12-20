@@ -307,7 +307,7 @@ class TreeWidget(Widget):
                     for i in self.items:
                         i.selected = False
         
-        @event.connect('items**.!mouse_click')
+        @event.connect('!items**.mouse_click')
         def __item_clicked(self, *events):
             if self.max_selected == 0:
                 # No selection allowed
