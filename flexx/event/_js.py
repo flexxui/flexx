@@ -95,8 +95,10 @@ class HasEventsJS:
             if not (isinstance(s, str) and len(s)):
                 raise ValueError('Connection string must be nonempty strings.')
         
-        name = func.name[6:] if func.name.startswith('bound ') else func.name
-        return self.__create_Handler(func, name or 'anonymous', connection_strings)
+        # Get function name (Flexx sets __name__ on methods)
+        name = func.__name__ or func.name or 'anonymous'
+        name = name.split(' ')[-1].split('flx_')[-1]
+        return self.__create_Handler(func, name, connection_strings)
     
     def __create_PyProperty(self, name):
         self.__create_Property(name)

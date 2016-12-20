@@ -711,23 +711,29 @@ class Parser2(Parser1):
     def parse_FunctionDef(self, node, lambda_=False):
         # Common code for the FunctionDef and Lambda nodes.
         
+        has_self = node.arg_nodes and node.arg_nodes[0].name in ('self', 'this')
+        
         # Bind if this function is inside a function, and does not have self
         binder = ''  # code to add to the end
         if len(self._stack) >= 1 and self._stack[-1][0] == 'function':
-            if not (node.arg_nodes and node.arg_nodes[0].name in ('self', 'this')):
+            if not has_self:
                 binder = ').bind(this)'
         
         # Init function definition
+        # Non-anonymouse functions get a name so that they are debugged more
+        # easily and resolve to the correct event labels in flexx.event. However,
+        # we cannot use the exact name, since we don't want to actually *use* it.
+        # Classes give their methods a __name__, so no need to name these.
         code = []
         func_name = ''
         if not lambda_:
-            func_name = '' if node.name in RESERVED else node.name
+            if not has_self:
+                func_name = 'flx_' + node.name
             prefixed = self.with_prefix(node.name)
             if prefixed == node.name:  # normal function vs method
                 self.vars.add(node.name)
                 self._seen_func_names.add(node.name)
             code.append(self.lf('%s = ' % prefixed))
-            #code.append('function %s (' % node.name)
         code.append('%sfunction %s%s(' % ('(' if binder else '',
                                           func_name,
                                           ' ' if func_name else ''))
