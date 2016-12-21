@@ -22,6 +22,7 @@ from flexx.event._js import create_js_hasevents_class, HasEventsJS, reprs
 from flexx.pyscript.functions import py2js, evaljs, evalpy, js_rename
 from flexx.pyscript.stdlib import get_std_info, get_partial_std_lib
 
+import os
 import sys
 from math import isnan as isNaN
 
@@ -971,6 +972,7 @@ def test_event_order1(Order1):
     
     return m.r
 
+
 @run_in_both(Order1, "['p', 'b', 'w', 'm']")
 def test_event_order2(Order1):
     
@@ -992,7 +994,8 @@ def test_event_order2(Order1):
     
     return m.r
 
-@run_in_both(Order1, "['p', 'b', '!', 'w', 'm']")
+
+@run_in_both(Order1, "['p', 'b', 'c', 'w', 'm']")
 def test_event_order3(Order1):
     
     # monkey patch JS event system
@@ -1005,7 +1008,7 @@ def test_event_order3(Order1):
     m = Order1()
     def myfunc(*events):
         for ev in events:
-            m.r.append('!')
+            m.r.append('c')
     m.connect(myfunc, 'foo:ccc')
     m.emit('foo', {})
     
@@ -1016,6 +1019,35 @@ def test_event_order3(Order1):
         event.loop.iter()
     
     return m.r
+
+
+if not os.getenv('TRAVIS'):
+    # Meeh, specific version of Node?
+    
+    @run_in_both(Order1, "['p', 'b', 'c', 'w', 'm']")
+    def test_event_order4(Order1):
+        
+        # monkey patch JS event system
+        if this_is_js():
+            pending_funcs = []
+            def setTimeout(func):
+                pending_funcs.append(func)
+            root.setTimeout = setTimeout
+        
+        m = Order1()
+        def ccc(*events):
+            for ev in events:
+                m.r.append('c')
+        m.connect(ccc, 'foo')  # use name of function
+        m.emit('foo', {})
+        
+        if this_is_js():
+            for func in pending_funcs:
+                func()
+        else:
+            event.loop.iter()
+        
+        return m.r
 
 
 class ConnectFail(event.HasEvents):

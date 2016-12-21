@@ -133,6 +133,7 @@ FUNCTIONS['op_instantiate'] = """function (ob, args) { // nargs: 2
         if (Object[name] === undefined &&
             typeof ob[name] === 'function' && !ob[name].nobind) {
             ob[name] = ob[name].bind(ob);
+            ob[name].__name__ = name;
         }
     }
     if (ob.__init__) {

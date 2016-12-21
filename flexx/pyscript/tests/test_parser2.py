@@ -297,7 +297,7 @@ class TestFunctions:
         lines = [line for line in code.split('\n') if line]
         
         assert len(lines) == 4  # only three lines + definition
-        assert lines[1] == 'func1 = function func1 () {'  # no args
+        assert lines[1] == 'func1 = function flx_func1 () {'  # no args
         assert lines[2].startswith('  ')  # indented
         assert lines[3] == '};'  # dedented
     
@@ -310,7 +310,7 @@ class TestFunctions:
         lines = [line for line in code.split('\n') if line]
         
         assert len(lines) == 4  # only three lines + definition
-        assert lines[1] == 'method1 = function method1 () {'  # no args, no self/this
+        assert lines[1] == 'method1 = function () {'  # no args, no self/this
         assert lines[2].startswith('  ')  # indented
         assert lines[3] == '};'  # dedented
     
@@ -322,7 +322,7 @@ class TestFunctions:
         code = py2js(func)
         lines = [line for line in code.split('\n') if line]
         
-        assert lines[1] == 'func = function func (foo, bar) {'
+        assert lines[1] == 'func = function (foo, bar) {'
         assert '2' in code
         
         assert evaljs(code + 'func(2)') == '0'
@@ -426,6 +426,18 @@ class TestFunctions:
         assert 'var x' in py2js(func1)
         assert 'var x' in py2js(func2)
         assert 'var x' in py2js(func3)
+    
+    def test_recursion(self=None):
+        
+        code = 'def f(i): i *= 2; return i if i > 10 else f(i)\n\n'
+        assert evalpy(code + 'f(1)') == '16'
+        
+        clscode = 'class G:\n  def __init__(self): self.i = 1\n\n'
+        code = clscode + '  def f(self): self.i *= 2; return self.i if self.i > 10 else self.f()\n\n'
+        assert evalpy(code + 'g = G(); g.f()') == '16'
+        
+        code = clscode + '  def f(self):\n    def h(): self.i *= 2; return self.i if self.i > 10 else h()\n\n'
+        assert evalpy(code + '    return h()\n\ng = G(); g.f()') == '16'
     
     def test_global(self):
         assert py2js('global foo;foo = 3').strip() == 'foo = 3;'

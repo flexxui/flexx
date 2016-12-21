@@ -152,8 +152,9 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
             dd = getattr(self.__class__, name)._defaults
             if dd:
                 self._set_prop(name, dd[0], True)
-        for name, value in property_values.items():
+        for name in sorted(property_values):  # sort for deterministic order
             if name in self.__properties__:
+                value = property_values[name]
                 setattr(self, name, value)  # should raise error whith readonly
             else:
                 cname = self.__class__.__name__
