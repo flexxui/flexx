@@ -224,7 +224,7 @@ class Session:
         data_name = None
         if isinstance(data, str):
             # Perhaps a URL: tell client to retrieve it with AJAX
-            if data.startswith('https://', 'http://', '/flexx/data/'):
+            if data.startswith(('https://', 'http://', '/flexx/data/')):
                 url = data
             elif data.startswith('_data/'):
                 url = '/flexx/' + data[1:]  # prevent one redirect
