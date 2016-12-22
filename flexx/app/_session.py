@@ -9,7 +9,7 @@ import hashlib
 import weakref
 
 from ._model import Model, new_type
-from ._asset import url_starts, Asset, Bundle, solve_dependencies
+from ._asset import Asset, Bundle, solve_dependencies
 from ._assetstore import AssetStore, export_assets_and_data, INDEX
 from ._assetstore import assets as assetstore
 from . import logger
@@ -222,9 +222,15 @@ class Session:
             raise TypeError('session.send_data() meta must be a dict.')
         # Check data - url or blob
         data_name = None
-        if isinstance(data, str) and data.startswith(url_starts):
-            # URL: tell client to retrieve it with AJAX
-            url = data
+        if isinstance(data, str):
+            # Perhaps a URL: tell client to retrieve it with AJAX
+            if data.startswith('https://', 'http://', '/flexx/data/'):
+                url = data
+            elif data.startswith('_data/'):
+                url = '/flexx/' + data[1:]  # prevent one redirect
+            else:
+                raise TypeError('session.send_data() got a string, but does '
+                                'not look like a URL: %r' % data)
         elif isinstance(data, bytes):
             # Blob: store it, and tell client to retieve it with AJAX
             # todo: have a second ws connection for pushing data
