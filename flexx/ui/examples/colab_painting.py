@@ -34,8 +34,8 @@ class ColabPainting(ui.Widget):
     """
     
     CSS = """
-    .flx-Widget { background: #ddd; }
-    .flx-CanvasWidget {
+    .flx-ColabPainting { background: #ddd; }
+    .flx-ColabPainting .flx-CanvasWidget {
         background: #fff;
         border: 10px solid #000;
         min-width: 400px; max-width: 400px;
