@@ -678,9 +678,12 @@ class WSHandler(WebSocketHandler):
         #WebSocketHandler.check_origin
         
         serving_host = self.request.headers.get("Host")
-        serving_hostname, serving_port = serving_host.split(':', 1)
+        serving_hostname, _, serving_port = serving_host.partition(':')
         connecting_host = urlparse(origin).netloc
-        connecting_hostname, connecting_port = connecting_host.split(':', 1)
+        connecting_hostname, _, connecting_port = connecting_host.partition(':')
+        
+        serving_port = serving_port or '80'
+        connecting_port = connecting_port or '80'
         
         if serving_hostname == 'localhost':
             return True  # Safe
