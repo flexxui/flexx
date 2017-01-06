@@ -1,26 +1,53 @@
-""" Make API documentation.
-Subcommands:
-* html - build html
-* show - show the docs in your browser
-"""
-
 import os
 import sys
+import os.path as op
+import shutil
 
-from make import run, DOC_DIR, DOC_BUILD_DIR
-from make._sphinx import sphinx_clean, sphinx_build, sphinx_show
+from invoke import task
+from ._config import DOC_DIR, DOC_BUILD_DIR
 
-def docs(arg=''):
-    
+
+@task(help=dict(build='build html docs',
+                show='show the docs in the browser.'))
+def docs(ctx, build=False, show=False, **kwargs):
+    """ make API documentation
+    """
     # Prepare
     
-    if not arg:
-        return run('help', 'docs')
-    # Go
-    if 'html' == arg:
+    if not build and not show:
+        sys.exit('Task "docs" must be called with --build or --show')
+    
+    if build:
         sphinx_clean(DOC_BUILD_DIR)
         sphinx_build(DOC_DIR, DOC_BUILD_DIR)
-    elif 'show' == arg:
+    
+    if show:
         sphinx_show(os.path.join(DOC_BUILD_DIR, 'html'))
-    else:
-        sys.exit('Command "docs" does not have subcommand "%s"' % arg)
+
+
+def sphinx_clean(build_dir):
+    if op.isdir(build_dir):
+        shutil.rmtree(build_dir)
+    os.mkdir(build_dir)
+    print('Cleared build directory.')
+
+
+def sphinx_build(src_dir, build_dir):
+    import sphinx
+    ret = sphinx.build_main(['sphinx-build',  # Dummy
+                             '-b', 'html',
+                             '-d', op.join(build_dir, 'doctrees'),
+                             src_dir,  # Source
+                             op.join(build_dir, 'html'),  # Dest
+                             ])
+    if ret != 0:
+        raise RuntimeError('Sphinx error: %s' % ret)
+    print("Build finished. The HTML pages are in %s/html." % build_dir)
+
+
+def sphinx_show(html_dir):
+    index_html = op.join(html_dir, 'index.html')
+    if not op.isfile(index_html):
+        sys.exit('Cannot show pages, build the html first.')
+    import webbrowser
+    webbrowser.open_new_tab(index_html)

@@ -1,15 +1,16 @@
-""" Clear all .pyc modules and __pycache__ dirs
-"""
-
 import os
 import shutil
 import fnmatch
 
-from make import ROOT_DIR, NAME
+from invoke import task
+
+from ._config import ROOT_DIR, NAME
 
 
-def clean():
-    
+@task
+def clean(ctx):
+    """ clear all .pyc modules and __pycache__ dirs
+    """
     count1, count2 = 0, 0
     
     for root, dirnames, filenames in os.walk(ROOT_DIR):

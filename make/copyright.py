@@ -1,20 +1,27 @@
-""" Update all copyright notices to the current year.
-Does a search for a specific copyright notice of last year and replaces
-it with a version for this year. Other copyright mentionings are listed,
-but left unmodified.
-
-If an argument is given, use that as the name of the copyright holder,
-otherwise use the name specifief in `make/__init__.py`.
-"""
-
 import os
 import time
 
-from make import ROOT_DIR, NAME
+from ._config import ROOT_DIR, NAME
+
+from invoke import task
+
+# todo: it might not be best to always update this to the latest year;
+# the earliest year might be better. Or maybe a range.
 
 
-def copyright(name=''):
+@task(help=dict(name='the name of the copyright holder (optional)',
+                dry='dry run (print changes, but do not apply them)'))
+def copyright(ctx, name='', dry=False):
+    """ update all copyright notices to the current year
     
+    Does a search for a specific copyright notice of last year and replaces
+    it with a version for this year. Other copyright mentionings are listed,
+    but left unmodified.
+    
+    If the name argument is given, use that as the name of the copyright holder,
+    otherwise use the name specifief in `tasks/_config.py`.
+    """
+
     # Initialize
     if not name:
         name = '%s Development Team' % NAME
@@ -47,7 +54,8 @@ def copyright(name=''):
                 count_ok += 1
             elif OLDTEXT in text:
                 text = text.replace(OLDTEXT, NEWTEXT)
-                open(filename, 'wt', encoding='utf-8').write(text)
+                if not dry:
+                    open(filename, 'wt', encoding='utf-8').write(text)
                 print(
                     '  Update copyright year in %s/%s' %
                     (reldirpath, fname))
