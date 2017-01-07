@@ -7,18 +7,21 @@ from invoke import task
 from ._config import DOC_DIR, DOC_BUILD_DIR
 
 
-@task(help=dict(build='build html docs',
+@task(help=dict(clean='clear the doc output; start fresh',
+                build='build html docs',
                 show='show the docs in the browser.'))
-def docs(ctx, build=False, show=False, **kwargs):
+def docs(ctx, clean=False, build=False, show=False, **kwargs):
     """ make API documentation
     """
     # Prepare
     
-    if not build and not show:
-        sys.exit('Task "docs" must be called with --build or --show')
+    if not (clean or build or show):
+        sys.exit('Task "docs" must be called with --clean, --build or --show')
+    
+    if clean:
+        sphinx_clean(DOC_BUILD_DIR)
     
     if build:
-        sphinx_clean(DOC_BUILD_DIR)
         sphinx_build(DOC_DIR, DOC_BUILD_DIR)
     
     if show:

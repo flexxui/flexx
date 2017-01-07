@@ -17,7 +17,7 @@ def lint(ctx):
       help=dict(unit='run unit tests (pytest) on given subdir (default ".")',
                 style='run style tests (flake8) on given subdir (default ".")',
                 cover='show test coverage'))
-def test(ctx, unit='', style=False, cover=False):
+def test(ctx, unit='', style='', cover=False):
     """ run tests (unit, style)
     """
     
