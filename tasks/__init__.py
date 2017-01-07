@@ -22,8 +22,6 @@ for fname in os.listdir(THIS_DIR):
     if fname.startswith('_') or not fname.endswith('.py'):
         continue
     modname = fname[:-3]
-    if not modname.isidentifier():
-        continue
     # Import it
     m = __import__(modname, level=1, fromlist=[], globals=globals())
     # Collect all tasks and collections
