@@ -1,7 +1,6 @@
 import os
-import time
 
-from ._config import ROOT_DIR, NAME
+from ._config import ROOT_DIR
 
 from invoke import task
 

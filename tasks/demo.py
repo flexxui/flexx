@@ -6,5 +6,5 @@ def demo(ctx):
     """
     from flexx.ui.examples.demo import Demo
     from flexx import app
-    m = app.launch(Demo)
+    app.launch(Demo)
     app.run()
