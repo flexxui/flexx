@@ -59,7 +59,8 @@ def plot_results():
 class window:
     # Trick to be able to use the same code in JS and Python
     
-    def Float32Array(n):
+    @classmethod
+    def Float32Array(cls, n):
         """ Factory function. """
         return [0.0] * n
 
