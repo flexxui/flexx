@@ -64,6 +64,7 @@ before_install:
 # Install dependencies
 install:
     - cd ${SRC_DIR}
+    - pip install invoke
     - if [ "${TEST_UNIT}" == "1" ]; then
         pip install pytest-cov;
         pip install tornado;
@@ -92,14 +93,14 @@ script:
     - cd ${SRC_DIR};
     - python -c "import sys; print(sys.version, '\n', sys.prefix)"
     - if [ "${TEST_UNIT}" == "1" ]; then
-        python make test unit;
+        invoke test --unit;
       fi;
     - if [ "${TEST_DOCS}" == "1" ]; then
         python -c 'import flexx.ui'
-        python make docs html;
+        invoke docs --build;
       fi;
     - if [ "${TEST_STYLE}" == "1" ]; then
-        python make test style;
+        invoke test --style;
         fi;
     - if [ "${TEST_STYLE}" == "1" ]; then
         echo "Size difference ${SIZE_DIFF} kB";

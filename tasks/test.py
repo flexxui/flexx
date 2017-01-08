@@ -1,30 +1,34 @@
-""" Run tests.
-* unit - run unit tests
-* style - flake style testing (PEP8 and more)
-* cover - open html coverage report in web browser
-
-For 'unit' and 'style' the relative dir to test can be specified as an
-additional argument.
-"""
-
 import os
 import sys
 
-from make import ROOT_DIR, NAME, run
+from invoke import task
+
+from ._config import ROOT_DIR, NAME
 
 
-def test(arg='', *args):
-   
-    if not arg:
-        return run('help', 'test')
-    elif arg == 'unit':
-        test_unit(*args)
-    elif arg in ('style', 'flake', 'flake8'):
-        test_style(*args)
-    elif arg in ('cover', 'coverage'):
-        show_coverage_html(*args)
-    else:
-        sys.exit('invalid test mode %r' % arg)
+@task
+def lint(ctx):
+    """ alias for "invoke test --style"
+    """
+    test_style()
+
+
+@task(optional=['unit', 'style'],
+      help=dict(unit='run unit tests (pytest) on given subdir (default ".")',
+                style='run style tests (flake8) on given subdir (default ".")',
+                cover='show test coverage'))
+def test(ctx, unit='', style='', cover=False):
+    """ run tests (unit, style)
+    """
+    
+    if not (unit or style or cover):
+        sys.exit('Test task needs --unit, --style or --cover')
+    if unit:
+        test_unit('.' if not isinstance(unit, str) else unit)
+    if style:
+        test_style('.' if not isinstance(style, str) else style)
+    if cover:
+        show_coverage_html()
 
 
 def test_unit(rel_path='.'):
