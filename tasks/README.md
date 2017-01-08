@@ -14,8 +14,8 @@ calls. This package is set up so that new tasks can be added simply by adding
 a module that defines one or more tasks, this makes it easy to share tasks
 between projects.
 
-Each project must implements its own _config.py, so that the tasks themselves
-can be project agnostic.
+Each project must implement its own _config.py, so that the tasks themselves
+can be project-agnostic.
 
 Names that you can `from ._config import ...`:
 

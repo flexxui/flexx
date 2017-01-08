@@ -1,4 +1,6 @@
-# Make this module itself executable as an alias for invoke
+"""
+Make this module itself executable as an alias for invoke.
+"""
 
 import sys
 import subprocess

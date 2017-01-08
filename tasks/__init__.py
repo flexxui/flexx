@@ -1,8 +1,6 @@
-# License: consider this public domain
-
 """
 Main file for invoke tasks. We auto-import all modules here, so that
-one can simply add files to add tasks.
+one can simply add tasks by adding files.
 """
 
 import os
