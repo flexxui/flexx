@@ -1,14 +1,22 @@
 import os
+import tempfile
 import subprocess
 
 from ._base import BaseApp
 
-
-THIS_DIR = os.path.abspath(os.path.dirname(__file__))
-FLEXX_RESOURCES_DIR = os.path.abspath(os.path.join(THIS_DIR, '..', 'resources'))
-scriptfile = os.path.join(FLEXX_RESOURCES_DIR, 'dialite_windows.js')
-
 # Note: confirmed this to work on Windows XP and Windows 10
+# Docs: https://msdn.microsoft.com/en-us/library/x83z1d9f(v=vs.84).aspx
+
+script = """
+// Script used by the Python package dialite to display simple dialogs
+var timeout = 0;  // no timeout
+var type = WScript.arguments(0);
+var title = WScript.arguments(1);
+var message = WScript.arguments(2);
+var sh = new ActiveXObject('WScript.Shell');
+var ret = sh.Popup(message, timeout, title, type);
+WScript.Echo(ret);
+""".lstrip()
 
 
 class WindowsApp(BaseApp):
@@ -16,21 +24,31 @@ class WindowsApp(BaseApp):
     Host (cscript.exe), and JScript as the ActiveX language.
     """
     
+    def __init__(self, *args, **kwargs):
+        BaseApp.__init__(self, *args, **kwargs)
+        self._filename = os.path.join(tempfile.gettempdir(), 'dialite_win.js')
+        with open(self._filename, 'wb') as f:
+            f.write(script.encode())
+    
     def fail(self, title, message):
         # 4096 makes it system modal
-        return self._message(16 + 0 + 4096, title, message)
+        self._message(16 + 0 + 4096, title, message)
+        return True
     
     def warn(self, title, message):
-        return self._message(48 + 0, title, message)
+        self._message(48 + 0, title, message)
+        return True
     
     def inform(self, title, message):
-        return self._message(64 + 0, title, message)
+        self._message(64 + 0, title, message)
+        return True
     
     def ask(self, title, message):
         return self._message(32 + 4, title, message)
     
     def _message(self, type, title, message):
-        res = subprocess.check_output(['cscript', '//Nologo',  scriptfile, str(type), title, message])
+        res = subprocess.check_output(['cscript', '//Nologo',  self._filename,
+                                       str(type), title, message])
         res = int(res.decode().strip())
         res = {0: False, 1: True, 6: True, 7: False}.get(res, res)
         print(res)
