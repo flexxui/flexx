@@ -1,12 +1,8 @@
 """
-Dialite: a lightweight Python package for cross-platform dialogs.
-
-Dialite provides a handful of functions, each one a noun, that can be
+Dialite is a lightweight Python package for cross-platform dialogs.
+It provides a handful of functions, each one a verb, that can be
 used to inform(), warn() or fail() the user, or to confirm() something
 or ask() a yes-no question.
-
-Dialite is pure Python, has no dependencies, works on Windows, Linux
-and OS X. and is friendly to tools like cx_Freeze.
 """
 
 from __future__ import print_function, division, absolute_import
