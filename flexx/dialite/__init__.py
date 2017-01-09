@@ -28,15 +28,12 @@ def fail(title='Error', message=''):
     Parameters:
         title (str): the text to show as the window title.
         message (str): the message to show in the body of the dialog.
-    
-    Returns:
-        result (bool): True
     """
     if not isinstance(title, str):
         raise TypeError('fail() title must be a string.')
     if not isinstance(message, str):
         raise TypeError('fail() message must be a string.')
-    return _the_app.fail(title, message)
+    _the_app.fail(title, message)
 
 
 def warn(title='Warning', message=''):
@@ -45,15 +42,12 @@ def warn(title='Warning', message=''):
     Parameters:
         title (str): the text to show as the window title.
         message (str): the message to show in the body of the dialog.
-    
-    Returns:
-        result (bool): True
     """
     if not isinstance(title, str):
         raise TypeError('warn() title must be a string.')
     if not isinstance(message, str):
         raise TypeError('warn() message must be a string.')
-    return _the_app.warn(title, message)
+    _the_app.warn(title, message)
 
 
 def inform(title='Information', message=''):
@@ -62,26 +56,40 @@ def inform(title='Information', message=''):
     Parameters:
         title (str): the text to show as the window title.
         message (str): the message to show in the body of the dialog.
-    
-    Returns:
-        result (bool): True
     """
     if not isinstance(title, str):
         raise TypeError('inform() title must be a string.')
     if not isinstance(message, str):
         raise TypeError('inform() message must be a string.')
-    return _the_app.inform(title, message)
+    _the_app.inform(title, message)
 
 
-def ask(title='Question', message=''):
-    """ Ask the user a question.
+def verify(title='Verify', message=''):
+    """ Ask the user to verify something via an ok-cancel question.
     
     Parameters:
         title (str): the text to show as the window title.
         message (str): the message to show in the body of the dialog.
     
     Returns:
-        DONT KNOW YET EXACTLY
+        result (bool): Whether the user selected "OK".
+    """
+    if not isinstance(title, str):
+        raise TypeError('ask() title must be a string.')
+    if not isinstance(message, str):
+        raise TypeError('ask() message must be a string.')
+    return _the_app.verify(title, message)
+
+
+def ask(title='Question', message=''):
+    """ Ask the user a yes-no question.
+    
+    Parameters:
+        title (str): the text to show as the window title.
+        message (str): the message to show in the body of the dialog.
+    
+    Returns:
+        result (bool):  Whether the user selected "Yes".
     """
     if not isinstance(title, str):
         raise TypeError('ask() title must be a string.')
@@ -90,7 +98,3 @@ def ask(title='Question', message=''):
     return _the_app.ask(title, message)
 
 
-# todo: what kind of questions do we allow asking?
-#- Windows supports: ok+cancel, yes+no, yes+no+cancel, abort+retry+ignore, retry+cancel, cancel+tryagain+continue
-#- Linux/zenity support yes+no, but labels can be modified, so we can also do ok+cancel, etc. as long as its two buttons
-#- osascript allows any number of button with labels of choice

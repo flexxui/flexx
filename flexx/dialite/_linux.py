@@ -14,23 +14,25 @@ class LinuxApp(BaseApp):
     
     def fail(self, title, message):
         self._message('--error', title, message)
-        return True
     
     def warn(self, title, message):
         self._message('--warning', title, message)
-        return True
     
     def inform(self, title, message):
         self._message('--info', title, message)
-        return True
+    
+    def verify(self, title, message):
+        return self._message('--question', title, message,
+                             '--ok-label', 'OK', '--cancel-label', 'Cancel')
     
     def ask(self, title, message):
-        return self._message('--question', title, message)
+        return self._message('--question', title, message,
+                             '--ok-label', 'Yes', '--cancel-label', 'No')
     
     def _message(self, type, title, message, *more):
         message = message.replace('"', '\u201C').replace("'", '\u2018')
-        res = subprocess.call(['zenity', type,
-                               '--title', title, '--text', message] + list(more))
+        res = subprocess.call(['zenity', type, '--title', title,
+                               '--text', message] + list(more))
         res = not res  # an exit-code of zero means yes/ok
         print(res)
         return res

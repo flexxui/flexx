@@ -7,5 +7,8 @@ dialite.warn('Flexx warning', 'Oops, this does not look good ...')
 
 dialite.fail('Flexx error', 'Oh oh... fail!')
 
+dialite.verify('Proceed', 'We will now erase your computer.')
+
 dialite.ask('Flexx needs some info', 'Do you like Flexx'*10 + '\n' + 'asdasdasas' + '\n\n' + 'asdasasd')
+
 

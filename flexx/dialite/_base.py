@@ -14,9 +14,12 @@ class BaseApp(object):
     def inform(self, title, message):
         raise NotImplementedError()
     
+    def verify(self, title, message):
+        raise NotImplementedError()
+    
     def ask(self, title, message):
         raise NotImplementedError()
-
+    
     # def get_int()
     # 
     # def get_float()
@@ -37,13 +40,16 @@ class StubApp(BaseApp):
         raise RuntimeError(t % (kind, sys.platform, title, message))
     
     def fail(self, title, message):
-        self._error('fail', title. message)
+        self._error('fail', title, message)
     
     def warn(self, title, message):
-        self._error('warn', title. message)
+        self._error('warn', title, message)
         
     def inform(self, title, message):
-        self._error('inform', title. message)
+        self._error('inform', title, message)
+    
+    def verify(self, title, message):
+        self._error('verify', title, message)
     
     def ask(self, title, message):
-        self._error('ask', title. message)
+        self._error('ask', title, message)

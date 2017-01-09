@@ -33,15 +33,15 @@ class WindowsApp(BaseApp):
     def fail(self, title, message):
         # 4096 makes it system modal
         self._message(16 + 0 + 4096, title, message)
-        return True
     
     def warn(self, title, message):
         self._message(48 + 0, title, message)
-        return True
     
     def inform(self, title, message):
         self._message(64 + 0, title, message)
-        return True
+    
+    def verify(self, title, message):
+        return self._message(32 + 1, title, message)
     
     def ask(self, title, message):
         return self._message(32 + 4, title, message)
@@ -50,7 +50,7 @@ class WindowsApp(BaseApp):
         message = message.replace('"', '\u201C').replace("'", '\u2018')
         res = subprocess.check_output(['cscript', '//Nologo',  self._filename,
                                        str(type), title, message])
-        res = int(res.decode().strip())
-        res = {0: False, 1: True, 6: True, 7: False}.get(res, res)
+        resmap = {'0': False, '1': True, '2': False, '6': True, '7': False}
+        res = resmap.get(res.decode().strip(), None)
         print(res)
         return res

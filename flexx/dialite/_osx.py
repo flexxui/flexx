@@ -9,15 +9,15 @@ class OSXApp(BaseApp):
     
     def fail(self, title, message):
         self._message(title, message, 'with icon stop', 'buttons {"OK"}')
-        return True
     
     def warn(self, title, message):
         self._message(title, message, 'with icon caution', 'buttons {"OK"}')
-        return True
     
     def inform(self, title, message):
         self._message(title, message, 'buttons {"OK"}')
-        return True
+    
+    def verify(self, title, message):
+        return self._message(title, message, 'buttons {"Ok", "Cancel"}')
     
     def ask(self, title, message):
         return self._message(title, message, 'buttons {"Yes", "No"}')
@@ -28,8 +28,7 @@ class OSXApp(BaseApp):
         t += 'to display dialog "%s" with title "%s"'
         t += ' ' + ' '.join(more)
         res = subprocess.check_output(['osascript', '-e', t % (message, title)])
-        res = res.decode().strip()
-        res = res.split(':')[-1].lower()
-        res = {'ok': True, 'yes': True, 'no': False}.get(res, False)
+        resmap = {'ok': True, 'yes': True, 'no': False, 'cancel': False}
+        res = resmap.get(res.decode().strip().split(':')[-1].lower(), None)
         print(res)
         return res
