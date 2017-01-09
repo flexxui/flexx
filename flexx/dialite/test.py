@@ -1,6 +1,7 @@
 from flexx import dialite
 
-dialite.inform('Flexx info', 'Hey, just calling to say hi ...')
+# dialite.inform('Flexx info', 'Hey, just calling to say hi ...')
+dialite.inform('Flexx info', 'Do \' and \" and € work?...')
 
 dialite.warn('Flexx warning', 'Oops, this does not look good ...')
 

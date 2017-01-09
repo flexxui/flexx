@@ -29,7 +29,7 @@ class LinuxApp(BaseApp):
     
     def _message(self, type, title, message, *more):
         res = subprocess.call(['zenity', type,
-                               '--title', title, '--text', message, *more])
+                               '--title', title, '--text', message] + list(more))
         res = not res  # an exit-code of zero means yes/ok
         print(res)
         return res

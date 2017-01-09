@@ -19,6 +19,7 @@ else:
 
 # todo: write a test that verifies that all backends implement each method of BaseApp
 # todo: think about fallbacks
+# todo: validation / escape of quotes / unicode in message and title
 
 
 def fail(title='Error', message=''):
@@ -92,3 +93,4 @@ def ask(title='Question', message=''):
 # todo: what kind of questions do we allow asking?
 #- Windows supports: ok+cancel, yes+no, yes+no+cancel, abort+retry+ignore, retry+cancel, cancel+tryagain+continue
 #- Linux/zenity support yes+no, but labels can be modified, so we can also do ok+cancel, etc. as long as its two buttons
+#- osascript allows any number of button with labels of choice
