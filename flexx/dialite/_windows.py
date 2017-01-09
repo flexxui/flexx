@@ -42,7 +42,7 @@ class WindowsApp(BaseApp):
     def inform(self, title, message):
         self._message(64 + 0, title, message)
     
-    def verify(self, title, message):
+    def confirm(self, title, message):
         return self._message(32 + 1, title, message)
     
     def ask(self, title, message):

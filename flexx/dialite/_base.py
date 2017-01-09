@@ -19,7 +19,7 @@ class BaseApp(object):
     def inform(self, title, message):
         raise NotImplementedError()
     
-    def verify(self, title, message):
+    def confirm(self, title, message):
         raise NotImplementedError()
     
     def ask(self, title, message):
@@ -44,8 +44,8 @@ class StubApp(BaseApp):
     def inform(self, title, message):
         self._error('inform', title, message)
     
-    def verify(self, title, message):
-        self._error('verify', title, message)
+    def confirm(self, title, message):
+        self._error('confirm', title, message)
     
     def ask(self, title, message):
         self._error('ask', title, message)

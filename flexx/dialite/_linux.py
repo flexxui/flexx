@@ -23,7 +23,7 @@ class LinuxApp(BaseApp):
     def inform(self, title, message):
         self._message('--info', title, message)
     
-    def verify(self, title, message):
+    def confirm(self, title, message):
         return self._message('--question', title, message,
                              '--ok-label', 'OK', '--cancel-label', 'Cancel')
     

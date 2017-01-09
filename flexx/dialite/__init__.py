@@ -2,7 +2,7 @@
 Dialite: a lightweight Python package for cross-platform dialogs.
 
 Dialite provides a handful of functions, each one a noun, that can be
-used to inform(), warn() or fail() the user, or to verify() something
+used to inform(), warn() or fail() the user, or to confirm() something
 or ask() a yes-no question.
 
 Dialite is pure Python, has no dependencies, works on Windows, Linux
@@ -83,8 +83,8 @@ def inform(title='Info', message=''):
     _the_app.inform(title, message)
 
 
-def verify(title='Verify', message=''):
-    """ Ask the user to verify something via an ok-cancel question.
+def confirm(title='Confirm', message=''):
+    """ Ask the user to confirm something via an ok-cancel question.
     
     Parameters:
         title (str): the text to show as the window title.
@@ -97,7 +97,7 @@ def verify(title='Verify', message=''):
         raise TypeError('ask() title must be a string.')
     if not isinstance(message, str):
         raise TypeError('ask() message must be a string.')
-    return _the_app.verify(title, message)
+    return _the_app.confirm(title, message)
 
 
 def ask(title='Question', message=''):

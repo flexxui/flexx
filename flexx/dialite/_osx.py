@@ -18,7 +18,7 @@ class OSXApp(BaseApp):
     def inform(self, title, message):
         self._message(title, message, 'buttons {"OK"}')
     
-    def verify(self, title, message):
+    def confirm(self, title, message):
         # The extra space in "Cancel " is to prevent osascript from
         # seeing it as a cancel button. Otherwise clicking it would
         # produce a nonzero error code because the user "cancelled".

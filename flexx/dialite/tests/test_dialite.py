@@ -30,7 +30,7 @@ class NoopApp(BaseApp):
         self.res.append(title)
         return True
     
-    def verify(self, title, message):
+    def confirm(self, title, message):
         self.res.append(title)
         return True
     
@@ -58,22 +58,22 @@ def test_main_funcs():
         # No args
         dialite._the_app = app = NoopApp()
         for func in (dialite.inform, dialite.warn, dialite.fail,
-                     dialite.verify, dialite.ask):
+                     dialite.confirm, dialite.ask):
             func()
         #
-        assert app.res == ['Info', 'Warning', 'Error', 'Verify', 'Question']
+        assert app.res == ['Info', 'Warning', 'Error', 'Confirm', 'Question']
         
         # With args
         dialite._the_app = app = NoopApp()
         for func in (dialite.inform, dialite.warn, dialite.fail,
-                     dialite.verify, dialite.ask):
+                     dialite.confirm, dialite.ask):
             func(func.__name__, 'meh bla')
         #
-        assert app.res == ['inform', 'warn', 'fail', 'verify', 'ask']
+        assert app.res == ['inform', 'warn', 'fail', 'confirm', 'ask']
         
         # Fails
         for func in (dialite.inform, dialite.warn, dialite.fail,
-                     dialite.verify, dialite.ask):
+                     dialite.confirm, dialite.ask):
             with raises(TypeError):
                 func(3, 'meh')
             with raises(TypeError):
@@ -111,7 +111,7 @@ def test_unsupported_platform():
             dialite.fail()
         
         with raises(RuntimeError):
-            dialite.verify()
+            dialite.confirm()
         
         with raises(RuntimeError):
             dialite.ask()

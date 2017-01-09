@@ -50,9 +50,9 @@ res = dialite.ask(PREFIX + 'check',
                   'warning, and error dialog?')
 assert res is True
 
-# Check verify
+# Check confirm
 
-res = dialite.verify(PREFIX + 'verify',
+res = dialite.confirm(PREFIX + 'confirm',
                      'Great, I am going to asume all tests passed then!'
                      'Press OK to continue.')
 assert res is True
@@ -61,11 +61,11 @@ res = dialite.ask(PREFIX + 'check',
                   'Did you just see two buttons saying "OK" and "Cancel"?')
 assert res is True
 
-res = dialite.verify(PREFIX + 'verify',
-                     'This one is a bit weird. I want you to press Cancel, '
-                     'but I don\'t want you to agree and accidentally press '
-                     'OK. Therefore, imagine this:\n\nWe will now proceed '
-                     'with erasing all your data.')
+res = dialite.confirm(PREFIX + 'confirm',
+                      'This one is a bit weird. I want you to press Cancel, '
+                      'but I don\'t want you to agree and accidentally press '
+                      'OK. Therefore, imagine this:\n\nWe will now proceed '
+                      'with erasing all your data.')
 assert res is False
 
 # Done
