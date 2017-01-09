@@ -28,6 +28,7 @@ class LinuxApp(BaseApp):
         return self._message('--question', title, message)
     
     def _message(self, type, title, message, *more):
+        message = message.replace('"', '\u201C').replace("'", '\u2018')
         res = subprocess.call(['zenity', type,
                                '--title', title, '--text', message] + list(more))
         res = not res  # an exit-code of zero means yes/ok

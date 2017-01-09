@@ -19,7 +19,7 @@ else:
 
 # todo: write a test that verifies that all backends implement each method of BaseApp
 # todo: think about fallbacks
-# todo: validation / escape of quotes / unicode in message and title
+# todo: test validation / escape of quotes / unicode in message and title
 
 
 def fail(title='Error', message=''):

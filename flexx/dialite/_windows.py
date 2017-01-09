@@ -47,6 +47,7 @@ class WindowsApp(BaseApp):
         return self._message(32 + 4, title, message)
     
     def _message(self, type, title, message):
+        message = message.replace('"', '\u201C').replace("'", '\u2018')
         res = subprocess.check_output(['cscript', '//Nologo',  self._filename,
                                        str(type), title, message])
         res = int(res.decode().strip())
