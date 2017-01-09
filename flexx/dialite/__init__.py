@@ -21,21 +21,24 @@ from ._linux import LinuxApp
 from ._osx import OSXApp
 
 
-# Select the app
-_the_app = None
-if sys.platform.startswith('win'):
-    _the_app = WindowsApp()
-elif sys.platform.startswith('linux'):
-    _the_app = LinuxApp()
-elif sys.platform.startswith('darwin'):
-    _the_app = OSXApp()
-else:
-    _the_app = StubApp()
+def _select_app():
+    if sys.platform.startswith('win'):
+        return WindowsApp()
+    elif sys.platform.startswith('linux'):
+        return LinuxApp()
+    elif sys.platform.startswith('darwin'):
+        return OSXApp()
+    else:
+        return StubApp()
+
+_the_app = _select_app()
 assert isinstance(_the_app, BaseApp)
 
-# todo: write a test that verifies that all backends implement each method of BaseApp
-# todo: think about fallbacks
-# todo: test validation / escape of quotes / unicode in message and title
+
+def is_supported():
+    """ Get whether Dialite is supported for the current platform.
+    """
+    return not isinstance(_the_app, StubApp)
 
 
 def fail(title='Error', message=''):
@@ -66,7 +69,7 @@ def warn(title='Warning', message=''):
     _the_app.warn(title, message)
 
 
-def inform(title='Information', message=''):
+def inform(title='Info', message=''):
     """ Inform the user about something.
     
     Parameters:

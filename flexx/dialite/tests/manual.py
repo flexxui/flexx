@@ -1,3 +1,7 @@
+"""
+Manual test. Should be run on each supported platform.
+"""
+
 from flexx import dialite
 
 PREFIX = 'DIALITE TEST: '
