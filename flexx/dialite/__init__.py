@@ -23,7 +23,7 @@ else:
 
 
 def fail(title='Error', message=''):
-    """ Show a message to let the user know that we failed in some way.
+    """ Show a message to let the user know that something failed.
     
     Parameters:
         title (str): the text to show as the window title.
