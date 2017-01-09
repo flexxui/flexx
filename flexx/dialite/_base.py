@@ -2,8 +2,13 @@ from __future__ import print_function, division, absolute_import
 
 import sys
 
+# Other dialog ideas: get_int, get_float, get_item, get_text, progress.
+
 
 class BaseApp(object):
+    """ The base app class. Acts as a placeholder to define the API
+    that subclasses must implement.
+    """
     
     def fail(self, title, message):
         raise NotImplementedError()
@@ -19,21 +24,12 @@ class BaseApp(object):
     
     def ask(self, title, message):
         raise NotImplementedError()
-    
-    # def get_int()
-    # 
-    # def get_float()
-    # 
-    # def get_choice()  # or question
-    # 
-    # def get_item()
-    # 
-    # def get_text()
-    # 
-    # def progress()
-    # 
+
 
 class StubApp(BaseApp):
+    """ A stub application class for platforms that we do not support.
+    It always fails.
+    """
     
     def _error(self, kind, title, message):
         t = 'Cannot show %s-dialog on platform %s.\n  %s: %s'

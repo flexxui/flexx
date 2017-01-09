@@ -1,3 +1,5 @@
+from __future__ import print_function, division, absolute_import
+
 import subprocess
 
 from ._base import BaseApp
@@ -17,7 +19,10 @@ class OSXApp(BaseApp):
         self._message(title, message, 'buttons {"OK"}')
     
     def verify(self, title, message):
-        return self._message(title, message, 'buttons {"Ok", "Cancel"}')
+        # The extra space in "Cancel " is to prevent osascript from
+        # seeing it as a cancel button. Otherwise clicking it would
+        # produce a nonzero error code because the user "cancelled".
+        return self._message(title, message, 'buttons {"OK", "Cancel "}')
     
     def ask(self, title, message):
         return self._message(title, message, 'buttons {"Yes", "No"}')
@@ -27,8 +32,7 @@ class OSXApp(BaseApp):
         t = 'tell app (path to frontmost application as text) '
         t += 'to display dialog "%s" with title "%s"'
         t += ' ' + ' '.join(more)
-        res = subprocess.check_output(['osascript', '-e', t % (message, title)])
+        res = subprocess.check_output(['osascript', '-e',
+                                       t % (message, title)])
         resmap = {'ok': True, 'yes': True, 'no': False, 'cancel': False}
-        res = resmap.get(res.decode().strip().split(':')[-1].lower(), None)
-        print(res)
-        return res
+        return resmap.get(res.decode().strip().split(':')[-1].lower(), None)

@@ -1,10 +1,25 @@
+"""
+Dialite: a lightweight Python package for cross-platform dialogs.
+
+Dialite provides a handful of functions, each one a noun, that can be
+used to inform(), warn() or fail() the user, or to verify() something
+or ask() a yes-no question.
+
+Dialite is pure Python, has no dependencies, works on Windows, Linux
+and OS X. and is friendly to tools like cx_Freeze.
+"""
+
+from __future__ import print_function, division, absolute_import
+
 import sys
 
-# We import all modules, to make it easy for tools like cx_Freeze
+# We import all modules; no dynamic loading. That will only complicate things,
+# e.g. for tools like cx_Freeze.
 from ._base import BaseApp, StubApp
 from ._windows import WindowsApp
 from ._linux import LinuxApp
 from ._osx import OSXApp
+
 
 # Select the app
 _the_app = None
@@ -16,6 +31,7 @@ elif sys.platform.startswith('darwin'):
     _the_app = OSXApp()
 else:
     _the_app = StubApp()
+assert isinstance(_the_app, BaseApp)
 
 # todo: write a test that verifies that all backends implement each method of BaseApp
 # todo: think about fallbacks
@@ -96,5 +112,3 @@ def ask(title='Question', message=''):
     if not isinstance(message, str):
         raise TypeError('ask() message must be a string.')
     return _the_app.ask(title, message)
-
-

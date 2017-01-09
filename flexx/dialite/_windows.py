@@ -1,3 +1,5 @@
+from __future__ import print_function, division, absolute_import
+
 import os
 import tempfile
 import subprocess
@@ -48,9 +50,7 @@ class WindowsApp(BaseApp):
     
     def _message(self, type, title, message):
         message = message.replace('"', '\u201C').replace("'", '\u2018')
-        res = subprocess.check_output(['cscript', '//Nologo',  self._filename,
+        res = subprocess.check_output(['cscript', '//Nologo', self._filename,
                                        str(type), title, message])
         resmap = {'0': False, '1': True, '2': False, '6': True, '7': False}
-        res = resmap.get(res.decode().strip(), None)
-        print(res)
-        return res
+        return resmap.get(res.decode().strip(), None)

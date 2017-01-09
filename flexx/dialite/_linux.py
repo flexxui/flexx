@@ -1,3 +1,5 @@
+from __future__ import print_function, division, absolute_import
+
 import subprocess
 
 from ._base import BaseApp
@@ -33,6 +35,4 @@ class LinuxApp(BaseApp):
         message = message.replace('"', '\u201C').replace("'", '\u2018')
         res = subprocess.call(['zenity', type, '--title', title,
                                '--text', message] + list(more))
-        res = not res  # an exit-code of zero means yes/ok
-        print(res)
-        return res
+        return not res  # an exit-code of zero means yes/ok
