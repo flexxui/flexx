@@ -1,8 +1,14 @@
 """
 The box layout classes provide a simple mechanism to horizontally
-or vertically stack child widgets. There is a BoxLayout for laying out
-leaf content taking into account natural size, and a BoxPanel for
-higher-level layout.
+or vertically stack child widgets. The ``BoxLayout`` (and ``HBox`` and
+``VBox``) are intended for laying out leaf content taking into account the
+natural size of the child widgets. The ``BoxPanel`` (and ``HBoxPanel`` and 
+``VBoxPanel``) are intended for higher-level layout. Instead of the "natural"
+size of a widget, the widgets ``base_size`` property is used as the
+"reference" size.
+
+In chosing between these two kinds of layouts, one could ask oneself whether
+the layout can be replaced by a ``SplitPanel``. If it can, use a ``BoxPanel``.
 
 
 Example for BoxLayout:
@@ -146,9 +152,13 @@ class BaseBoxLayout(Layout):
 class BoxLayout(BaseBoxLayout):
     """ Layout to distribute space for widgets horizontally or vertically. 
     
-    This layout implements CSS flexbox. The space that each widget takes
-    is determined by its minimal required size and the flex value of
-    each widget. Also see ``VBox`` and ``HBox`` for shorthands.
+    This layout implements CSS flexbox. The reference size of each child
+    widget is based on its natural size (e.g. a button's natural size
+    depends on its text). Further, the minimum and maximum size (set
+    via styling) are taken into account. Extra space is divided
+    according to the flex property of the child widgets.
+    
+    Also see VBox and HBox for shorthands.
     """
     
     _DEFAULT_ORIENTATION = 'h'
@@ -303,15 +313,18 @@ class BoxLayout(BaseBoxLayout):
 
 
 class HBox(BoxLayout):
-    """ BoxLayout with default horizontal layout.
+    """ BoxLayout with horizontal layout. Consider using HBoxPanel if
+    you're using this for high-level layout.
     """
     _DEFAULT_ORIENTATION = 'h'
     
     class JS:
         _DEFAULT_ORIENTATION = 'h'
 
+
 class VBox(BoxLayout):
-    """ BoxLayout with default vertical layout.
+    """ BoxLayout with vertical layout. Consider using VBoxPanel if
+    you're using this for high-level layout.
     """
     _DEFAULT_ORIENTATION = 'v'
     
@@ -323,10 +336,20 @@ class VBox(BoxLayout):
 class BoxPanel(BaseBoxLayout):
     """ Layout to distribute space for widgets horizontally or vertically.
     
-    The BoxPanel differs from the Box layout in that the natural size
-    of widgets is *not* taken into account. Only the minimum, maximum
-    and base size are used to do the layout. It is therefore more
-    suited for high-level layout.
+    This layout is implemented using absolute positioning. The reference
+    size of each child widget is based on its ``base_size`` property.
+    When this value is zero, an attempt is made to measure the natural size
+    of the children, but this is not very reliable.
+    Further, the minimum and maximum size (set via styling) are taken
+    into account. Extra space is divided according to the flex property
+    of the child widgets.
+    
+    The BoxPanel differs from the BoxLayout in that the natural size
+    of widgets is *not* taken into account. It is therefore more
+    suited for high-level layout or for child widgets that do not have
+    a natural size.
+    
+    Also see VBoxPanel and HBoxPanel for shorthands.
     """
     
     _DEFAULT_ORIENTATION = 'h'
@@ -339,12 +362,15 @@ class BoxPanel(BaseBoxLayout):
             self.phosphor = _phosphor_boxpanel.BoxPanel()
             self.node = self.phosphor.node
         
-        @event.connect('orientation', 'children', 'children*.flex')
+        @event.connect('orientation', 'children',
+                       'children*.flex', 'children*.base_size')
         def __set_flexes(self, *events):
             i = 0 if self.orientation in (0, 'h', 'hr') else 1
             for widget in self.children:
-                _phosphor_boxpanel.BoxPanel.setStretch(widget.phosphor, widget.flex[i])
-                _phosphor_boxpanel.BoxPanel.setSizeBasis(widget.phosphor, 100)
+                _phosphor_boxpanel.BoxPanel.setStretch(widget.phosphor,
+                                                       widget.flex[i])
+                _phosphor_boxpanel.BoxPanel.setSizeBasis(widget.phosphor,
+                                                         widget.base_size[i])
         
         @event.connect('spacing')
         def __spacing_changed(self, *events):
@@ -363,3 +389,25 @@ class BoxPanel(BaseBoxLayout):
                 self.phosphor.direction = 'bottom-to-top'
             else:
                 raise ValueError('Invalid boxpanel orientation: ' + ori)
+
+
+class HBoxPanel(BoxPanel):
+    """ BoxPanel with horizontal layout. Consider using HBox if you're using
+    this for low-level layout and the children have a "natural" size.
+    """
+    
+    _DEFAULT_ORIENTATION = 'h'
+    
+    class JS:
+        _DEFAULT_ORIENTATION = 'h'
+
+
+class VBoxPanel(BoxPanel):
+    """ BoxPanel with vertical layout. Consider using VBox if you're using
+    this for low-level layout and the children have a "natural" size.
+    """
+    
+    _DEFAULT_ORIENTATION = 'v'
+    
+    class JS:
+        _DEFAULT_ORIENTATION = 'v'

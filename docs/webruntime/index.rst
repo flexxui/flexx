@@ -39,7 +39,3 @@ Webruntime API
 
 .. autoclass:: flexx.webruntime.SeleniumRuntime
   :members:
-
-.. autoclass:: flexx.webruntime.NodejsRuntime
-  :members:
-

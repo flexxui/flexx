@@ -94,7 +94,7 @@ the whole ui toolkit and app framework (nor Tornado).
 The image above outlines the structure of Flexx. The sole purpose of
 the *webruntime* module is to launch a runtime to execute the app in.
 This can be a browser, or a XUL application that looks like a desktop
-app, or e.g. nodejs.
+app.
 The *event* module provides a powerful property and event system that
 makes it easy to connect different parts of your application.
 The *pyscript* module provides a system for translating Python code to

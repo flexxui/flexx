@@ -211,10 +211,10 @@ class Widget(Model):
             return float(v[0]), float(v[1])
     
         @event.prop
-        def base_size(self, v=(0, 0)):
+        def base_size(self, v=(32, 32)):
             """ The given size of the widget when it is in a layout that
             allows explicit sizing, or the base-size in a BoxPanel or
-            GridPanel. A value <= 0 is interpreted as auto-size.
+            GridPanel.
             """
             return float(v[0]), float(v[1])
     
@@ -759,9 +759,10 @@ class Widget(Model):
                 children = self.children
                 if len(children) == 1:
                     subClassName = children[0].outernode.className
-                    if 'flx-VBox' in subClassName:
-                        self.outernode.classList.add('flx-hbox')
-                    elif 'flx-HBox' in subClassName:
-                        self.outernode.classList.add('flx-vbox')
+                    if 'flx-BoxLayout' in subClassName:
+                        if 'flx-VBox' in subClassName:
+                            self.outernode.classList.add('flx-hbox')
+                        else:
+                            self.outernode.classList.add('flx-vbox')
                     elif 'flx-BoxPanel' in subClassName:
                         self.outernode.classList.add('flx-abs-children')

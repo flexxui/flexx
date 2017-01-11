@@ -6,7 +6,7 @@
 from .._widget import Widget
 
 from ._layout import Layout
-from ._box import BoxLayout, HBox, VBox, BoxPanel
+from ._box import BoxLayout, HBox, VBox, BoxPanel, HBoxPanel, VBoxPanel
 from ._split import SplitPanel
 from ._dock import DockPanel
 from ._tabs import TabPanel
