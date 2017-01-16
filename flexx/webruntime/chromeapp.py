@@ -2,6 +2,14 @@
 
 In contrast to running in the chrome browser, this makes the app have
 more the look and feel of a desktop app.
+
+It is possible to make a chrome app with a custom icon on Windows (because
+it uses the (initial) favicon of the page) and OS X (because how apps work).
+I tried hard to make it work on Linux via a .desktop file, but the problem
+is that Chome explicitly sets its icon (Chromium does not). Further, both
+Chrome and Chromium reset the process name (arg zero), causing the app to be
+grouped with Chrome. This makes Chrome not an ideal runtime for apps; use
+the NW runtime to effectively make use of the Chromium runtime.
 """
 
 import os
