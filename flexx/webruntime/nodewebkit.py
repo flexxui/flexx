@@ -7,8 +7,12 @@ https://github.com/nwjs/nw.js
 # todo: needs more work to discover the nw executable.
 
 import os
+import re
 import sys
 import json
+import struct
+import shutil
+from urllib.request import urlopen
 
 from .common import DesktopRuntime, create_temp_app_dir
 
@@ -90,6 +94,7 @@ def get_nodewebkit_exe():
             exes.sort()
             return exes[-1]
     
+    return r'C:\dev\tools\nwjs-v0.19.5-win-x64\nw.exe'
     return None
 
 
@@ -100,6 +105,9 @@ class NodeWebkitRuntime(DesktopRuntime):
     """
     
     _app_count = 0
+    
+    def _get_name(self):
+        return 'nw'
     
     def _launch(self):
         NodeWebkitRuntime._app_count += 1
@@ -123,8 +131,7 @@ class NodeWebkitRuntime(DesktopRuntime):
             icon = self._kwargs.get('icon')
             icon_path = os.path.join(app_path, 'app.png')  # nw can handle ico
             icon.write(icon_path)
-            smallest = '%i.png' % icon.image_sizes()[0]
-            D['window']['icon'] = icon_path.rsplit('.', 1)[0] + smallest
+            D['window']['icon'] = 'app%i.png' % icon.image_sizes()[0]
         
         # Write
         with open(os.path.join(app_path, 'package.json'), 'wb') as f:
@@ -138,5 +145,44 @@ class NodeWebkitRuntime(DesktopRuntime):
         
         # Launch
         exe = get_nodewebkit_exe() or 'nw'
-        cmd = [exe, app_path] 
+        cmd = [exe, app_path, '--enable-unsafe-es3-apis']  # with webgl2!
         self._start_subprocess(cmd, LD_LIBRARY_PATH=llp)
+    ##
+    def get_latest_version(self):
+        # return '0.19.5' ? hardcoded by Flexx?
+        
+        text = urlopen('https://dl.nwjs.io/').read().decode('utf-8', 'ignore')
+        versions = re.findall('href\=\"v(.+?)\"', text)
+        versions_int = []
+        for v in versions:
+            v = v.strip('/')
+            try:
+                versions_int.append(tuple([int(i) for i in v.split('.')]))
+            except Exception:
+                pass
+        versions_int.sort()
+        return '.'.join([str(i) for i in versions_int[-1]])
+    
+    def get_url(self, version, platform=None):
+        """ Given a version, get the url where it can be downloaded.
+        """
+        platform = platform or sys.platform
+        if platform.startswith('win'):
+            plat = '-win'
+            ext = '.zip'
+        elif platform.startswith('linux'):
+            plat = '-linux'
+            ext = '.tar.gz'
+        elif platform.startswith('darwin'):
+            plat = '-osx'
+            ext = '.zip'
+        else:
+            raise RuntimeError('Unsupported platform')  # todo: detect earlier
+        if struct.calcsize('P') == 8:
+            plat += '-x64'
+        else:
+            plat += '-ia32'
+        return 'https://dl.nwjs.io/v' + version + '/nwjs-v' + version + plat + ext
+    ##
+    
+    
