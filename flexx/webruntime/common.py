@@ -145,7 +145,7 @@ class DesktopRuntime(BaseRuntime):
         """ Get the directory where (our local version of) the runtime is
         located. If necessary, the runtime is installed or updated.
         """
-        cur_version = self.get_current_version()
+        cur_version = self.get_current_version() or ''
         path = os.path.join(RUNTIME_DIR, self.get_name() + '_' + cur_version)
         
         if not cur_version:
