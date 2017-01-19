@@ -2,7 +2,7 @@
 Code related to managing runtimes and temporary app directories.
 
 We follow a convetion by which files and dirs can be associated with a
-certain process by giving it a suffix "#pid". That way, we can detect
+certain process by giving it a suffix "~pid". That way, we can detect
 when dirs are not in use and have them removed. We also rename files/dirs
 that ought to be removed, so that if deletion fails, we can try again later.
 """
@@ -74,7 +74,7 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
 APPDATA_DIR = appdata_dir('flexx')
 RUNTIME_DIR = os.path.join(APPDATA_DIR, 'webruntimes')
 TEMP_APP_DIR = os.path.join(APPDATA_DIR, 'temp_apps')
-DELETE_PREFIX = 'todelete#'
+DELETE_PREFIX = 'todelete~'
 
 
 # maybe a bit overkill, but hey, it works!
@@ -130,7 +130,7 @@ def get_pid_list():
         cmd = ['tasklist']
         index = 1
     else:  # Posix
-        cmd = ['ps', '-U', 0]
+        cmd = ['ps', '-U', '0']
         index = 0
     
     out = subprocess.check_output(cmd).decode()
@@ -206,12 +206,12 @@ def clean():
     # Remove files dirs that are marked for deletion or associated with a pid
     # that does not exist.
     for name, path in dirs:
-        if '#' in name:
+        if '~' in name:
             if name.startswith(DELETE_PREFIX):
                 remove(path)
             else:
                 try:
-                    pid = int(name.split('#')[-1])
+                    pid = int(name.split('~')[-1])
                 except ValueError:
                     continue  # we probably did not make this
                 if pid not in pids:
@@ -243,7 +243,7 @@ def create_temp_app_dir(prefix, cleanup=60):
     _app_count += 1
     
     prefix = prefix.strip(' _-')
-    name = '%s_%i_%i#%i' % (prefix, time.time(), _app_count, os.getpid())
+    name = '%s_%i_%i~%i' % (prefix, time.time(), _app_count, os.getpid())
     path = os.path.join(TEMP_APP_DIR, name)
     os.mkdir(path)
     return path
@@ -253,9 +253,9 @@ def download_runtime(runtime_name, version, url):
     """
     Function for downloading a runtime.
     
-    * Download archive as xxx.zip#pid
+    * Download archive as xxx.zip~pid
     * On download complete, rename to xxx.zip
-    * Extract to yyy#pid
+    * Extract to yyy~pid
     * When extract is done, rename to yyy
     
     For downloading, we compare the pid to current list of pids to see
@@ -265,7 +265,7 @@ def download_runtime(runtime_name, version, url):
     """
 
     # Calculate file system locations
-    fname = url.split('?')[0].split('#')[0].split('/')[-1].lower()
+    fname = url.split('?')[0].split('~')[0].split('/')[-1].lower()
     archive_name = os.path.join(RUNTIME_DIR, fname)
     dir_name = os.path.join(RUNTIME_DIR, runtime_name + '_' + version)
     
@@ -294,7 +294,7 @@ def download_runtime(runtime_name, version, url):
 def _download(url, archive_name):
     """ Download the archive.
     """
-    temp_archive_name = archive_name + '#' + str(os.getpid())
+    temp_archive_name = archive_name + '~' + str(os.getpid())
     
     # Clean, just to be sure
     remove(temp_archive_name)
@@ -310,7 +310,7 @@ def _download(url, archive_name):
         filename = os.path.join(RUNTIME_DIR, name)
         if filename.startswith(archive_name):
             try:
-                pid = int(name.split('#')[-1])
+                pid = int(name.split('~')[-1])
             except ValueError:
                 continue  # what is this? not ours, probably
             if pid and pid in pids:
@@ -367,7 +367,7 @@ def _download(url, archive_name):
 def _extract(archive_name, dir_name, arch_func):
     """ Extract an archive that contains a runtime.
     """
-    temp_dir_name = dir_name + '#' + str(os.getpid())
+    temp_dir_name = dir_name + '~' + str(os.getpid())
     
     # Maybe the dir is already there ...
     if os.path.isdir(dir_name):
