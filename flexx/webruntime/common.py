@@ -340,6 +340,17 @@ class StreamReader(threading.Thread):
                           (code, '\n'.join(msgs)))
 
 
+def find_osx_exe(app_id):
+    """ Find the xxx.app of an application via its app id,
+    se.g. 'com.google.Chrome'.
+    """
+    try:
+        osx_search_arg = 'kMDItemCFBundleIdentifier==%s' % app_id
+        return subprocess.check_output(['mdfind', osx_search_arg]).rstrip().decode()
+    except (OSError, subprocess.CalledProcessError):
+        pass
+
+
 ## Icon stuff
 
 
