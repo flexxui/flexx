@@ -12,10 +12,12 @@ grouped with Chrome. This makes Chrome not an ideal runtime for apps; use
 the NW runtime to effectively make use of the Chromium runtime.
 """
 
+import os.path as op
 import os
 import sys
+import subprocess
 
-from .common import DesktopRuntime
+from .common import DesktopRuntime, find_osx_exe
 from ._manage import RUNTIME_DIR
 
 
@@ -43,8 +45,15 @@ def get_chrome_exe():
         paths.append('/usr/bin/google-chrome-beta')
         paths.append('/usr/bin/google-chrome-dev')
     elif sys.platform.startswith('darwin'):
-        paths.append('/Applications/Chrome.app')
-        paths.append('/Applications/Google Chrome.app')
+        app_dirs = ['~/Applications/Chrome', '~/Applications/Google Chrome',
+                    '/Applications/Chrome', '/Applications/Google Chrome',
+                    find_osx_exe('com.google.Chrome')]
+        for dir in app_dirs:
+            if dir:
+                dir = os.path.expanduser(dir)
+                if op.isdir(dir):
+                    paths.append(op.join(dir, 'Contents/MacOS/Chrome'))
+                    paths.append(op.join(dir, 'Contents/MacOS/Google Chrome'))
     
     # Try location until we find one that exists
     for path in paths:
@@ -73,7 +82,14 @@ def get_chromium_exe():
         paths.append('/usr/bin/chromium')
         paths.append('/usr/bin/chromium-browser')
     elif sys.platform.startswith('darwin'):
-        paths.append('/Applications/Chromium.app')
+        app_dirs = ['~/Applications/Chromium', '~/Applications/Chromium',
+                    find_osx_exe('org.chromium.Chromium')]
+        for dir in app_dirs:
+            if dir:
+                dir = os.path.expanduser(dir)
+                if op.isdir(dir):
+                    paths.append(op.join(dir, 'Contents/MacOS/Chromium'))
+                    paths.append(op.join(dir, 'Contents/MacOS/Chromium Browser'))
     
     # Try location until we find one that exists
     for path in paths:
