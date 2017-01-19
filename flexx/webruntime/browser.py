@@ -22,6 +22,9 @@ class BrowserRuntime(BaseRuntime):
     webbrowser module cannot.
     """
     
+    def _get_name(self):
+        return 'browser'
+    
     def _launch(self):
         
         # Get url and browser type
