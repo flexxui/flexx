@@ -1,7 +1,23 @@
 """
 Common code for all runtimes.
+
+Note on app runtimes (i.e. for desktop apps): it is assumed that runtimes
+are backward compatible. This is a reasonable assumption since we
+use only the web stuff, which browsers generally keep working.
+
+We also don't make a point of always having the latest version, because
+some runtimes release almost every week. Having the user confirm a
+download such often is way too much a burden, and auto-update too
+complex / error-prone. These updates are mostly for security reasons,
+which is generally less an issue for us because we only connect them
+to known sources which are on localhost for desktop apps anyway.
+
+Therefore, Flexx has a hardcoded minimal version for runtimes where this
+makes sense, which is configurable by the user in cases where its needed.
+
 """
 
+import os.path as op
 import os
 import sys
 import time
@@ -9,10 +25,11 @@ import atexit
 import shutil
 import threading
 import subprocess
-from urllib.request import urlopen, Request
 
-# from . import logger
-# from ..util.icon import Icon
+from . import logger
+from ..util.icon import Icon
+
+from ._manage import RUNTIME_DIR, clean, versionstring
 
 
 class BaseRuntime:
@@ -27,15 +44,17 @@ class BaseRuntime:
         self._kwargs = kwargs
         self._proc = None
         self._streamreader = None
+        self._lockerfile = None
         atexit.register(self.close)
-
+        
+        clean()  # tidy up
+        
         logger.info('launching %s' % self.__class__.__name__)
         self._launch()
 
-    def _get_name(self):
-        raise NotImplementedError()
-    
     def get_name(self):
+        """ Get the name of the runtime.
+        """
         return self._get_name()
     
     def close(self):
@@ -60,7 +79,11 @@ class BaseRuntime:
                 self._proc.kill()
         # Discart process
         self._proc = None
-
+        # Close locker file
+        if self._lockerfile is not None:
+            self._lockerfile.close()
+            self._lockerfile = None
+    
     def _start_subprocess(self, cmd, shell=False, **env):
         """ Start subclasses, store handle, and launch a thread to read
         stdout for the process. Intended for web runtimes that are "bound"
@@ -83,8 +106,17 @@ class BaseRuntime:
         except OSError as err:  # pragma: no cover
             raise RuntimeError('Could not start runtime with command %r:\n%s' %
                                (cmd[0], str(err)))
-        
+    
+    ## To implement in subclasses
+    
+    def _get_name(self):
+        """ Just make this return a string name.
+        """
+        raise NotImplementedError()
+    
     def _launch(self):
+        """ Function to implement launching the runtime.
+        """
         raise NotImplementedError()
 
 
@@ -105,277 +137,165 @@ class DesktopRuntime(BaseRuntime):
 
         icon = kwargs.get('icon', None)
         kwargs['icon'] = iconize(icon)
+    
         BaseRuntime.__init__(self, **kwargs)
-        
-        self._runtimedir = op.join(appdata_dir('flexx'), 'webruntimes')
     
     
-    def _launch(self, version=None):
+    def get_runtime(self, min_version=None):
+        """ Get the directory where (our local version of) the runtime is
+        located. If necessary, the runtime is installed or updated.
+        """
+        cur_version = self.get_current_version()
+        path = os.path.join(RUNTIME_DIR, self.get_name() + '_' + cur_version)
         
-        self.clean()
-        
-        versions = self.get_versions()
-        # todo: xul does not allow a specific verion
-        if version:
-            # We need a specific version
-            if version in versions:
-                pass
-            else:
-                self._download(version)
-        elif versions:
-            # Just use the latest that we have, but maybe ask for an update
-            version = versions[-1]
-            # get age of version
-            # if older than X weeks, ask to download newer once
-        else:
-            # We don't have any runtime yet, we *need* a download
+        if not cur_version:
+            # Need to install
+            path = self._meh_install_runtime(True)
+        elif not min_version:
+            # No specific version required, e.g. because can assume that we
+            # have an up-to-date version, like with Chrome.
             pass
-            
-        # Get url to download
-        if version is None:
-            version = self.get_latest_version()
-        url = self.get_url(version)
-        
-        # Mark used version as used
-        # Mark downloaded version as downloaded (so we can establish age later)
-        # cleanup
-        # launch!
-    
-    def _download(self, version, now=True):
-        url = self.get_url(version)
-        d = Downloader(self._runtimedir, self.get_name(), version, url, now)
-        if now:
-            d.run()  # in main thread
+        elif versionstring(cur_version) < versionstring(min_version):
+            # Need update
+            path = self._meh_install_runtime()
         else:
-            d.start()  # download in the background
-            self._downloader = d  # keep a ref
-    
-    def get_versions(self):
-        """ Get the versions of the runtime that we currently have.
-        """
-        versions = []
-        for dname in os.listdir(self._runtimedir):
-            dirname = os.path.join(self._runtimedir, dname)
-            if os.path.isdir(dirname) and dname.startswith(self.get_name() + '_'):
-                versions.append(dname.split('_')[-1])
-        versions.sort()
-        return versions
-    
-    def get_latest_version(self):
-        raise NotImplementedError()
-    
-    def get_url(self, version):
-        raise NotImplementedError()
-    
-    def clean(self):
-        """ Clean up the webruntime dir.
-        """
-        # todo: where do I make sure that this exists?
-        dir = op.join(appdata_dir('flexx'), 'webruntimes')
-        pids = get_pid_list()
+            # Our version is up to date
+            pass
         
-        for name in os.listdir(dir):
-            filename = os.path.join(dir, name)
-            if '#' in name:
-                if name.startswith(_delete_prefix):
-                    remove(filename)
-                else:
-                    try:
-                        pid = int(name.split('#')[-1])
-                    except ValueError:
-                        continue
-                    if pid not in pids:
-                        remove(filename)
-        
-    def cleanup(self):
-        
-        for dname in os.listdir(self._runtimedir):
-            dirname = os.path.join(self._runtimedir, dname)
-            if os.path.isdir(dirname) and dname.startswith(self.get_name() + '_'):
-                version = dname.split('_')[-1]
-                testfile = os.path.join(dirname, 'last_access.txt')
-                if os.path.isfile(testfile):
-                    s = open(testfile, 'rb').read().decode().strip()
-                    # dt = datetime ......
-                else:
-                    self._use_version(version)
-    
-    def _use_version(self, version):
-        pass
-        
-            
-##
-class Downloader(threading.Thread):
-    """
-    Helper class for downloading a runtime.
-    
-    * Download archive as xxx.zip#pid
-    * On download complete, rename to xxx.zip
-    * Extract to yyy#pid
-    * When extract is done, rename to yyy
-    
-    For downloading, we compare the pid to current list of pids to see
-    if perhaps another process is already downloading it (though its no
-    guarantee, as pids are reused). If there is an archive in progess,
-    which has "stalled", we rename the archive and continue downloading.
-    
-    Files to delete are first renamed todelete#... and an attempt is made
-    to delete them. If that fails, we can delete them at a later time.
-    """
-    
-    def __init__(self, dir, prefix, version, url, force=False):
-        super().__init__()
-        self._dir = dir
-        self._prefix = prefix
-        self._version = version
-        self._url = url
-        self._force = force
-        self.isDaemon = True
-        
-        # Calculate file system locations
-        fname = url.split('?')[0].split('#')[0].split('/')[-1].lower()
-        self._archive_name = os.path.join(self._dir, fname)
-        self._dir_name = os.path.join(self._dir, prefix + '_' + version)
-        
-        # Get func to open archive
-        import tarfile
-        import zipfile
-        if fname.endswith(('.tar', '.tar.gz', '.tar.bz2')):
-            self._arch_func = tarfile.open
-        elif fname.endswith('.zip'):
-            self._arch_func = zipfile.ZipFile
-        else:
-            raise ValueError('Dont know how to extract from %s' % fname)
-    
-    def run(self):
-        """ Main function of thread, or call this directly from main thread.
-        """
-        # Get names
-        archive_name = self._archive_name
-        dir_name = self._dir_name
-        
-        # Our own special names
-        temp_archive_name = archive_name + '#' + str(os.getpid())
-        temp_dir_name = dir_name + '#' + str(os.getpid())
-        
-        # Go!
-        if os.path.isdir(dir_name):
-            return
-        if self.download(temp_archive_name, archive_name):
-            self.extract(archive_name, temp_dir_name, dir_name)
-        
-        # Remove archive
-        remove(archive_name)
-        
-        # todo: delete version if it seems corrupt?
-    
-    def download(self, temp_archive_name, archive_name):
-        """ Download the archive.
-        """
-        # Clean, just to be sure
-        remove(temp_archive_name)
-        
-        # Maybe the archive is already there ...
-        if os.path.isfile(archive_name):
-            return True
-        
-        # Get whether the downloading is already in progress by another process
-        pids = get_pid_list()
-        archives = []  # that do not correspond to an existing pid
-        for name in os.listdir(self._dir):
-            filename = os.path.join(self._dir, name)
-            if filename.startswith(archive_name):
-                try:
-                    pid = int(name.split('#')[-1])
-                except ValueError:
-                    continue  # what is this? not ours, probably
-                if pid and pid in pids:
-                    # another process might be working on it
-                    if not self._force:
-                        return
-                else:
-                    archives.append(filename)
-        
-        # Touch file to clear it and tell other processes that we're loading it,
-        # or proceed with existing (partial) file.
-        print(archives)
-        if not archives:
-            with open(temp_archive_name, 'wb'):
+        # Lock the directory (at least on windows)
+        # todo: on Linux, maybe clean() should test whether that file is deletable
+        lockerfile = os.path.join(path, 'locker.file')
+        if not os.path.isfile(lockerfile):
+            with open(lockerfile, 'wb'):
                 pass
-        else:
-            try:
-                shutil.move(archives[0], temp_archive_name)
-            except FileNotFoundError:
-                return  # another process was just a wee bit earlier?
+        self._lockerfile = open(lockerfile, 'rb')
         
-        # Open local file ...
-        t0 = time.time()
-        with open(temp_archive_name, 'ab') as f_dst:
-            nbytes = f_dst.tell()
-            
-            # Open remote resource
-            try:
-                r = Request(self._url)
-                r.headers['Range'] = 'bytes=%i-' % f_dst.tell()
-                f_src = urlopen(r, timeout=5)
-            except Exception:
-                if self._force:
-                    raise
-                return
-            file_size = nbytes + int(f_src.headers['Content-Length'].strip())
-            chunksize = 64 * 1024
-            # Download in chunks
-            while True:
-                chunk = f_src.read(chunksize)
-                if not chunk:
-                    break
-                nbytes += len(chunk)
-                f_dst.write(chunk)
-                f_dst.flush()
-                print('downloading: %03.1f%%\r' % (100 * nbytes / file_size), end='')
-        print('Downloaded %s in %1.f s' % (self._url, time.time() - t0))
-        
-        # Mark archive as done
-        if os.path.isfile(archive_name):
-            pass  # another process beat us to it
-        else:
-            shutil.move(temp_archive_name, archive_name)
-        return True
+        return path
     
-    def extract(self, archive_name, temp_dir_name, dir_name):
-        """Extract the archive.
-        """
-        # Maybe the dir is already there ...
-        if os.path.isdir(dir_name):
-            return
+    def _meh_install_runtime(self, fresh=False):
         
-        # Extract it
+        if fresh:
+            print('Installing %s runtime' % self.get_name())
+        else:
+            print('Updating %s runtime' % self.get_name())
+        # todo: this should be a confirmation dialog
+        
         try:
-            print('Extracting ...', end='')
-            with self._arch_func(archive_name, mode='r') as archive:
-                archive.extractall(temp_dir_name)
+            self._install_runtime()
         except Exception:
-            remove(archive_name)  # it might be corrupt
+            # todo: show dialog
             raise
         
-        # Pop out empty dirs
-        while len(os.listdir(temp_dir_name)) == 1:
-            pop_dir = os.listdir(temp_dir_name)[0]
-            for name in os.listdir(os.path.join(temp_dir_name, pop_dir)):
-                shutil.move(os.path.join(temp_dir_name, pop_dir, name),
-                            os.path.join(temp_dir_name, name))
-            os.rmdir(os.path.join(temp_dir_name, pop_dir))
+        return os.path.join(RUNTIME_DIR, self.get_name() + '_' + self.get_current_version())
         
-        print('done')
-        
-        # Mark dir as done
-        if os.path.isdir(dir_name):
-            pass  # another process beat us to it
+    
+    def get_current_version(self):
+        """ Get the (highest) version of this runtime that we currently have.
+        """
+        versions = []
+        for dname in os.listdir(RUNTIME_DIR):
+            dirname = os.path.join(RUNTIME_DIR, dname)
+            if os.path.isdir(dirname) and dname.startswith(self.get_name() + '_'):
+                versions.append(dname.split('_')[-1])
+        versions.sort(key=versionstring)
+        if versions:
+            return versions[-1]
+    
+    def _get_app_exe(self, runtime_exe, app_path):
+        """ Get the executable to run our app. This should take care
+        that the runtime process shows up in the task manager with the
+        correct exe_name.
+
+        * exe: the location of the runtime executable (can be a symlink)
+        * app_path: the location of the temp app (the app.json or whatever)
+
+        """
+
+        if sys.platform.startswith('darwin'):
+            # OSX: create an app, the name of the exe does not matter
+            # much but the name to give the application does. We set
+            # the latter to the title, because title and process name
+            # seem the same thing in osx.
+            app_exe = op.join(app_path, 'runtime.app')
+            title = self._kwargs['title']
+            self._osx_create_app(op.realpath(runtime_exe), app_exe, title)
+            app_exe += '/Contents/MacOS/runtime'
         else:
-            shutil.move(temp_dir_name, dir_name)
-        return True
+            # Define process name, so that our window is not grouped with
+            # ff, and has a more meaningful name in the task manager. Using
+            # sys.executable also works well when frozen.
+            exe_name, ext = op.splitext(op.basename(sys.executable))
+            exe_name = exe_name + '-ui' + ext
+            if sys.platform.startswith('win'):
+                # Windows: make a copy of the executable
+                app_exe = op.join(op.dirname(runtime_exe), exe_name)
+                if not op.isfile(app_exe):
+                    shutil.copy2(runtime_exe, app_exe)
+            else:
+                # Linux, create a symlink
+                app_exe = op.join(app_path, exe_name)
+                if not op.isfile(app_exe):
+                    os.symlink(op.realpath(runtime_exe), app_exe)
+
+        return app_exe
 
 
+    def _osx_create_app(self, exe, path, title):
+        """ Create osx app
+
+        * exe: path to executable of runtime (not the symlink)
+        * path: location of the .app directory to create.
+        * title: the title of the window *and* the process name
+        """
+
+        # Get app of firefox
+        if 'Contents/MacOS' not in exe:
+            raise NotImplementedError('Need  meeh!')  # todo: h
+        xul_app = op.dirname(op.dirname(op.dirname(exe)))
+        if not xul_app.endswith('.app'):
+            raise TypeError('The xulrunner application must end in .app.')
+
+        # Clear destination
+        if op.isdir(path):
+            shutil.rmtree(path)
+        os.mkdir(path)
+
+        # Make dir structure
+        os.mkdir(op.join(path, 'Contents'))
+        os.mkdir(op.join(path, 'Contents', 'MacOS'))
+        os.mkdir(op.join(path, 'Contents', 'Resources'))
+
+        # Make a link for all the files
+        for dirpath, dirnames, filenames in os.walk(xul_app):
+            relpath = op.relpath(dirpath, xul_app)
+            if '.app' in relpath:
+                continue
+            if relpath.endswith('MacOS') or relpath.endswith('Resources'):
+                for fname in filenames:
+                    filename1 = op.join(xul_app, relpath, fname)
+                    filename2 = op.join(path, relpath, fname)
+                    os.symlink(filename1, filename2)
+        # Make xulrunner exe
+        os.symlink(op.join(xul_app, 'Contents', 'MacOS', 'firefox'),
+                   op.join(path, 'Contents', 'MacOS', 'runtime'))
+        # Make info.plist
+        info = INFO_PLIST.format(name=title)
+        with open(op.join(path, 'Contents', 'info.plist'), 'wb') as f:
+            f.write(info.encode())
+        # Make icon - ensured by launch function
+        if self._kwargs.get('icon'):
+            icon = self._kwargs.get('icon')
+            icon.write(op.join(path, 'Contents', 'Resources', 'app.icns'))
+    
+    ## To implenent in subclasses
+    
+    def _install_runtime(self):
+        """ Install a local copy of the latest runtime. Called when needed.
+        """
+        raise NotImplementedError()
+
+
+# todo: ditch this? I've never found a use for it
 class StreamReader(threading.Thread):
     """ Reads stdout of process and log
 
@@ -430,152 +350,7 @@ class StreamReader(threading.Thread):
                           (code, '\n'.join(msgs)))
 
 
-#
-
-def get_pid_list():
-    """ Get list of pids.
-    """
-    if sys.platform.startswith('win'):
-        cmd = ['tasklist']
-        index = 1
-    else:  # Posix
-        cmd = ['ps', '-U', 0]
-        index = 0
-    
-    out = subprocess.check_output(cmd).decode()
-    pids = []
-    for line in out.splitlines():
-        parts = [i.strip() for i in line.replace('\t', ' ').split(' ') if i]
-        if len(parts) >= index:
-            try:
-                pids.append(int(parts[1]))
-            except ValueError:
-                pass
-    pids.sort()
-    return pids
-
-
-_delete_prefix = 'todelete#'
-
-def remove(path1):
-    """ Mark a file or directory for removal and try to remove it.
-    If it fails, that's ok; we'll remove it later.
-    """
-    if not os.path.exists(path1):
-        return
-    # Rename if we must/can
-    if path1.startswith(_delete_prefix):
-        path2 = path1
-    else:
-        for i in range(100):
-            path2 = _delete_prefix + str(i) + path1
-            try:
-                shutil.move(path1, path2)
-                break
-            except Exception:
-                pass
-        else:
-            path2 = path1
-    # Delete if we can
-    try:
-        if os.path.isfile(path2):
-            os.remove(path2)
-        elif os.path.isdir(path2):
-            shutil.rmtree(path2)
-    except Exception:
-        pass
-
-
-def create_temp_app_dir(prefix, suffix='', cleanup=60):
-    """ Create a temporary direrctory and return path
-
-    The directory will be named "<prefix>_<timestamp>_<pid>_<suffix>".
-    Will clean up directories with the same prefix which are older than
-    cleanup seconds.
-    """
-
-    # Select main dir
-    maindir = os.path.join(appdata_dir('flexx'), 'temp_apps')
-    if not os.path.isdir(maindir):  # pragma: no cover
-        os.mkdir(maindir)
-
-    prefix = prefix.strip(' _-') + '_'
-    suffix = '' if not suffix else '_' + suffix.strip(' _-')
-
-    # Clear any old files
-    for dname in os.listdir(maindir):
-        if dname.startswith(prefix):
-            dirname = os.path.join(maindir, dname)
-            if os.path.isdir(dirname):
-                try:
-                    dirtime = int(dname.split('_')[1])
-                except Exception:  # pragma: no cover
-                    pass
-                if (time.time() - dirtime) > cleanup:  # pragma: no cover
-                    try:
-                        shutil.rmtree(dirname)
-                    except (OSError, IOError):
-                        pass
-
-    # Return new dir
-    id = '%i_%i' % (time.time(), os.getpid())
-    path = os.path.join(maindir, prefix + id + suffix)
-    os.mkdir(path)
-    return path
-
-
-# From pyzolib/paths.py (https://bitbucket.org/pyzo/pyzolib/src/tip/paths.py)
-def appdata_dir(appname=None, roaming=False, macAsLinux=False):
-    """ appdata_dir(appname=None, roaming=False,  macAsLinux=False)
-    Get the path to the application directory, where applications are allowed
-    to write user specific files (e.g. configurations). For non-user specific
-    data, consider using common_appdata_dir().
-    If appname is given, a subdir is appended (and created if necessary).
-    If roaming is True, will prefer a roaming directory (Windows Vista/7).
-    If macAsLinux is True, will return the Linux-like location on Mac.
-    """
-
-    # Define default user directory
-    userDir = os.path.expanduser('~')
-
-    # Get system app data dir
-    path = None
-    if sys.platform.startswith('win'):
-        path1, path2 = os.getenv('LOCALAPPDATA'), os.getenv('APPDATA')
-        path = (path2 or path1) if roaming else (path1 or path2)
-    elif sys.platform.startswith('darwin') and not macAsLinux:
-        path = os.path.join(userDir, 'Library', 'Application Support')
-    # On Linux and as fallback
-    if not (path and os.path.isdir(path)):
-        path = userDir
-
-    # Maybe we should store things local to the executable (in case of a
-    # portable distro or a frozen application that wants to be portable)
-    prefix = sys.prefix
-    if getattr(sys, 'frozen', None):  # See application_dir() function
-        prefix = os.path.abspath(os.path.dirname(sys.executable))
-    for reldir in ('settings', '../settings'):
-        localpath = os.path.abspath(os.path.join(prefix, reldir))
-        if os.path.isdir(localpath):  # pragma: no cover
-            try:
-                open(os.path.join(localpath, 'test.write'), 'wb').close()
-                os.remove(os.path.join(localpath, 'test.write'))
-            except IOError:
-                pass  # We cannot write in this directory
-            else:
-                path = localpath
-                break
-
-    # Get path specific for this app
-    if appname:
-        if path == userDir:
-            appname = '.' + appname.lstrip('.')  # Make it a hidden directory
-        path = os.path.join(path, appname)
-        if not os.path.isdir(path):  # pragma: no cover
-            os.mkdir(path)
-
-    # Done
-    return path
+## Icon stuff
 
 
 _icon_template = """
@@ -624,4 +399,4 @@ def iconize(icon):
     return icon
 
 
-Downloader(r'C:\Users\Almar\AppData\Local\flexx\webruntimes', 'nw', '0.19.5', 'https://dl.nwjs.io/v0.19.5/nwjs-v0.19.5-win-x64.zip', force=1).start()
+# Downloader(r'C:\Users\Almar\AppData\Local\flexx\webruntimes', 'nw', '0.19.5', 'https://dl.nwjs.io/v0.19.5/nwjs-v0.19.5-win-x64.zip', force=1).start()

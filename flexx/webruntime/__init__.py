@@ -41,6 +41,7 @@ del logging
 
 from .. import config
 
+from ._manage import RUNTIME_DIR
 from .common import BaseRuntime, DesktopRuntime  # noqa
 from .xul import XulRuntime, has_firefox
 from .nodewebkit import NodeWebkitRuntime
