@@ -130,7 +130,9 @@ def get_pid_list():
         cmd = ['tasklist']
         index = 1
     else:  # Posix
-        cmd = ['ps', '-U', '0']
+        # Show all process that are not root (-N negates selection)
+        # https://www.cyberciti.biz/faq/show-all-running-processes-in-linux/
+        cmd = ['ps', '-U', 'root', '-u', 'root', '-N']
         index = 0
     
     out = subprocess.check_output(cmd).decode()
@@ -139,10 +141,10 @@ def get_pid_list():
         parts = [i.strip() for i in line.replace('\t', ' ').split(' ') if i]
         if len(parts) >= index:
             try:
-                pids.append(int(parts[1]))
+                pids.append(int(parts[index]))
             except ValueError:
                 pass
-    pids.sort()
+    pids.sort()  # helps in debugging
     return pids
 
 
@@ -158,17 +160,16 @@ def remove(path1, nowarn=False):
     if name.startswith(DELETE_PREFIX):
         path2 = path1
     else:
-        for i in range(10):
+        for i in range(100):
             path2 = os.path.join(dirname, DELETE_PREFIX + str(i) + name)
-            try:
-                os.rename(path1, path2)
+            if not os.path.exists(path2):
                 break
-            except Exception as e:
-                pass
-        else:
-            path2 = path1
+        try:
+            os.rename(path1, path2)
+        except Exception:
             if not nowarn:
-                logger.warn('could not clean up: ' + str(path1))
+                logger.warn('could not clean up %r' % path1)
+            return  # if we cannot rename, we cannot delete
     
     # Delete if we can
     try:
