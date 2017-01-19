@@ -29,7 +29,7 @@ import subprocess
 from . import logger
 from ..util.icon import Icon
 
-from ._manage import RUNTIME_DIR, clean, versionstring
+from ._manage import RUNTIME_DIR, clean, lock_runtime_dir, versionstring
 
 
 class BaseRuntime:
@@ -44,7 +44,6 @@ class BaseRuntime:
         self._kwargs = kwargs
         self._proc = None
         self._streamreader = None
-        self._lockerfile = None
         atexit.register(self.close)
         
         clean()  # tidy up
@@ -79,10 +78,6 @@ class BaseRuntime:
                 self._proc.kill()
         # Discart process
         self._proc = None
-        # Close locker file
-        if self._lockerfile is not None:
-            self._lockerfile.close()
-            self._lockerfile = None
     
     def _start_subprocess(self, cmd, shell=False, **env):
         """ Start subclasses, store handle, and launch a thread to read
@@ -162,13 +157,8 @@ class DesktopRuntime(BaseRuntime):
             # Our version is up to date
             pass
         
-        # Lock the directory (at least on windows)
-        # todo: on Linux, maybe clean() should test whether that file is deletable
-        lockerfile = os.path.join(path, 'locker.file')
-        if not os.path.isfile(lockerfile):
-            with open(lockerfile, 'wb'):
-                pass
-        self._lockerfile = open(lockerfile, 'rb')
+        # Prevent the runtime dir from deletion while this process is running
+        lock_runtime_dir(path)
         
         return path
     

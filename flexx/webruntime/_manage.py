@@ -193,20 +193,30 @@ def clean():
     if not os.path.isdir(TEMP_APP_DIR):
         os.mkdir(TEMP_APP_DIR)
     
-    # Collect dirs
-    dirs = []
+    # Collect dirs/files and lockfiles
+    items = []
+    lockfiles = []
     for dir in (RUNTIME_DIR, TEMP_APP_DIR):
         for name in os.listdir(dir):
             path = os.path.join(dir, name)
-            dirs.append((name, path))
+            items.append((name, path))
+            
+            if dir == RUNTIME_DIR:
+                for lockfilename in os.listdir(path):
+                    if lockfilename.startswith('lock~'):
+                        try:
+                            pid = int(lockfilename.split('~')[-1])
+                        except ValueError:
+                            continue
+                        lockfiles.append((pid, path, lockfilename))
     
-    # Get pids, after collecting dirs, so that we don't remove dirs for pids
+    # Get pids, after collecting items, so that we don't remove items for pids
     # that instantiate after getting our list of pids.
     pids = get_pid_list()
     
-    # Remove files dirs that are marked for deletion or associated with a pid
+    # Remove files/dirs that are marked for deletion or associated with a pid
     # that does not exist.
-    for name, path in dirs:
+    for name, path in items:
         if '~' in name:
             if name.startswith(DELETE_PREFIX):
                 remove(path)
@@ -218,7 +228,21 @@ def clean():
                 if pid not in pids:
                     remove(path)
     
-    # Try removing old runtimes
+    # Remove lockfiles in runtime dirs
+    dirs_with_lockfiles = set()
+    for pid, dir, fname in lockfiles:
+        if pid not in pids:
+            try:
+                os.remove(os.path.join(dir, fname))
+                continue  # i.e. dont mark dir
+            except Exception:
+                pass
+        dirs_with_lockfiles.add(dir)
+    
+    # Removing old runtimes that are not used (i.e. have no lock files).
+    # In theory, a new process could have spawned since we collected the
+    # lock files, but because we always use the latest version of a runtime,
+    # this should not be a problem.
     runtimes = {}
     for dname in os.listdir(RUNTIME_DIR):
         name, _, version = dname.partition('_')
@@ -228,7 +252,19 @@ def clean():
         versions = runtimes[name]
         versions.sort(key=versionstring)
         for version in versions[:-1]:
-            remove(os.path.join(RUNTIME_DIR, name + '_' + version), True)
+            dir = os.path.join(RUNTIME_DIR, name + '_' + version)
+            if dir not in dirs_with_lockfiles:
+                remove(dir, True)
+
+
+def lock_runtime_dir(path):
+    """ Lock a runtime dir for this process.
+    """
+    assert path.startswith(RUNTIME_DIR)
+    lockfile = os.path.join(path, 'lock~%i' % os.getpid())
+    if not os.path.isfile(lockfile):
+        with open(lockfile, 'wb'):
+            pass
 
 
 _app_count = 0
