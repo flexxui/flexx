@@ -13,6 +13,9 @@ class SeleniumRuntime(BaseRuntime):
     "selenium" to be installed.
     """
     
+    def _get_name(self):
+        return 'selenium'
+    
     def _launch(self):
         
         # Get url and browser type
