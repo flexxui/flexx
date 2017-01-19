@@ -128,23 +128,21 @@ def get_pid_list():
     """
     if sys.platform.startswith('win'):
         cmd = ['tasklist']
-        index = 1
     else:  # Posix
-        # Show all process that are not root (-N negates selection)
-        # https://www.cyberciti.biz/faq/show-all-running-processes-in-linux/
-        cmd = ['ps', '-U', 'root', '-u', 'root', '-N']
-        index = 0
+        cmd = ['ps', 'aux']  # Not "-u root -N" cause -N does not work on OS X
     
     out = subprocess.check_output(cmd).decode()
     pids = []
     for line in out.splitlines():
         parts = [i.strip() for i in line.replace('\t', ' ').split(' ') if i]
-        if len(parts) >= index:
+        if len(parts) >= 2 and parts[0] != 'root':
             try:
-                pids.append(int(parts[index]))
+                pids.append(int(parts[1]))
             except ValueError:
                 pass
     pids.sort()  # helps in debugging
+    if not pids:
+        logger.warn('get_pid_list() found zero pids.')
     return pids
 
 
