@@ -2,6 +2,21 @@
 
 https://github.com/nwjs/nw.js
 
+
+Dev notes
+---------
+
+Apps must have a way to be "unique", so that if you create 2 apps with Flexx,
+they won't group on the taskbar, and are preferably easily discovered in the
+process manager.
+
+The "name" in the manifest is one option. Note that an appdata dir is
+created for each used name, unless one sets --user-data-dir, as we do.
+
+The "description" in the manifest, not sure where that turns up.
+
+The name of the executable is the main thing to change.
+
 """
 
 import os.path as op
@@ -17,11 +32,12 @@ from .common import DesktopRuntime
 from ._manage import download_runtime, create_temp_app_dir
 
 
+# http://docs.nwjs.io/en/latest/References/Manifest%20Format
 def get_manifest_template():
-    return {"name": "flexx_ui_app",
+    return {"name": "flexx_nw_app",
             "main": "",
             "nodejs": False,
-            "single-instance": False,
+            # "single-instance": False,  # Deprecated; is always True
             "description": "an app made with Flexx ui",
             "version": "1.0",
             "keywords": [],
@@ -52,7 +68,11 @@ def get_manifest_template():
                 "java": False
                 },
             
-            "chromium-args": '',
+            # Tweak chromium: es3 == webgl2, single process makes things
+            # more compact, but does not work on OS X.
+            "chromium-args": ' '.join(['--enable-unsafe-es3-apis',
+                                       # '--single-process',
+                                       ]),
             }
 
 
@@ -138,6 +158,11 @@ class NodeWebkitRuntime(DesktopRuntime):
         app_path = create_temp_app_dir('nw')
         id = os.path.basename(app_path).split('_', 1)[1]
         
+        # Prepare profile dir for NW/Chromium to use which gets auto-cleared 
+        profile_dir = os.path.join(app_path, 'stub_profile')
+        if not os.path.isdir(profile_dir):
+            os.mkdir(profile_dir)
+        
         # Get minimal required version
         min_version = '0.19.5'
         # todo: allow configuration
@@ -161,10 +186,12 @@ class NodeWebkitRuntime(DesktopRuntime):
         
         # Populate app definition
         # name must be a unique, lowercase alpha-numeric name without spaces.
-        # It may include "." or "_" or "-" characters.
+        # It may include "." or "_" or "-" characters. Normally, NW.js stores
+        # the app's profile data under the directory named name, but we
+        # overload user-data-dir.
         D = get_manifest_template()
-        D['name'] = 'app' + id
-        # todo: D['name'] = 'flexx_app' # todo: + 'name-of-app-class'
+        # D['name'] = normalize('name-of-app-class')
+        D['description'] += ' (%s)' % id
         D['main'] = self._kwargs['url']
         D['window']['title'] = self._kwargs.get('title', 'nw.js runtime')
         
@@ -179,12 +206,6 @@ class NodeWebkitRuntime(DesktopRuntime):
             icon.write(icon_path)
             D['window']['icon'] = 'app%i.png' % icon.image_sizes()[0]
         
-        # Configure Chromium
-        args = ['--enable-unsafe-es3-apis',  # enable webgl2
-                #'--single-process',  # Be more compact, does not work on OS X!
-                ]
-        D['chromium-args'] = ' '.join(args)
-        
         # Write app manifest
         with open(os.path.join(app_path, 'package.json'), 'wb') as f:
             f.write(json.dumps(D, indent=4).encode())
@@ -196,4 +217,5 @@ class NodeWebkitRuntime(DesktopRuntime):
             llp = app_path + os.pathsep + llp
         
         # Launch
-        self._start_subprocess([exe, app_path], LD_LIBRARY_PATH=llp)
+        cmd = [exe, app_path, '--user-data-dir=' + profile_dir]
+        self._start_subprocess(cmd, LD_LIBRARY_PATH=llp)
