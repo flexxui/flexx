@@ -43,7 +43,7 @@ INFO_PLIST = """
     <key>CFBundleDevelopmentRegion</key>
     <string>English</string>
     <key>CFBundleExecutable</key>
-    <string>runtime</string>
+    <string>{exe}</string>
     <key>CFBundleName</key>
     <string>{name}</string>
 </dict>
@@ -223,22 +223,23 @@ class DesktopRuntime(BaseRuntime):
         * app_path: the location of the temp app (the app.json or whatever)
 
         """
-
+        # Define process name, so that our window is not grouped with
+        # Firefox, NW.js or whatever, and has a more meaningful name in the
+        # task manager. Using sys.executable also works well when frozen.
+        exe_name, ext = op.splitext(op.basename(sys.executable))
+        exe_name = exe_name + '-ui' + ext
+        
         if sys.platform.startswith('darwin'):
             # OSX: create an app, the name of the exe does not matter
             # much but the name to give the application does. We set
             # the latter to the title, because title and process name
             # seem the same thing in osx.
-            app_exe = op.join(app_path, 'runtime.app')
+            app_exe = op.join(app_path, exe_name + '.app')
             title = self._kwargs['title']
             self._osx_create_app(op.realpath(runtime_exe), app_exe, title)
-            app_exe += '/Contents/MacOS/runtime'
+            app_exe += '/Contents/MacOS/' + exe_name
         else:
-            # Define process name, so that our window is not grouped with
-            # ff, and has a more meaningful name in the task manager. Using
-            # sys.executable also works well when frozen.
-            exe_name, ext = op.splitext(op.basename(sys.executable))
-            exe_name = exe_name + '-ui' + ext
+            
             if sys.platform.startswith('win'):
                 # Windows: make a copy of the executable
                 app_exe = op.join(op.dirname(runtime_exe), exe_name)
@@ -257,12 +258,13 @@ class DesktopRuntime(BaseRuntime):
         """ Create osx app
 
         * exe: path to executable of runtime (not the symlink)
-        * dst_dir: location of the .app directory to create.
+        * dst_dir: path of the .app directory to create.
         * title: the title of the window *and* the process name
         """
 
         # Get original app to copy it from
-        exe_name = os.path.basename(exe)
+        exe_name_src = os.path.basename(exe)
+        exe_name_dst = os.path.basename(dst_dir).split('.')[0]
         if 'Contents/MacOS' not in exe:
             raise NotImplementedError('Can only create OS X app from existing app')
         src_dir = op.dirname(op.dirname(op.dirname(exe)))
@@ -289,10 +291,10 @@ class DesktopRuntime(BaseRuntime):
                     os.link(op.join(src_dir, relpath, fname),
                             op.join(dst_dir, relpath, fname))
         # Make runtime exe
-        os.link(op.realpath(op.join(src_dir, 'Contents', 'MacOS', exe_name)),
-                op.join(dst_dir, 'Contents', 'MacOS', 'runtime'))
+        os.link(op.realpath(op.join(src_dir, 'Contents', 'MacOS', exe_name_src)),
+                op.join(dst_dir, 'Contents', 'MacOS', exe_name_dst))
         # Make info.plist
-        info = INFO_PLIST.format(name=title)
+        info = INFO_PLIST.format(name=title, exe=exe_name_dst)
         with open(op.join(dst_dir, 'Contents', 'info.plist'), 'wb') as f:
             f.write(info.encode())
         # Make icon - ensured by launch function
