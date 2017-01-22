@@ -199,7 +199,7 @@ def clean():
             path = os.path.join(dir, name)
             items.append((name, path))
             
-            if dir == RUNTIME_DIR:
+            if dir == RUNTIME_DIR and '_' in path and os.path.isdir(path):
                 for lockfilename in os.listdir(path):
                     if lockfilename.startswith('lock~'):
                         try:
@@ -340,7 +340,8 @@ def _download(url, archive_name):
     
     # Get whether the downloading is already in progress by another process
     pids = get_pid_list()
-    archives = []  # that do not correspond to an existing pid
+    # pids.remove(os.getpid())
+    archives = []  # that do not correspond to an existing pid other than us
     for name in os.listdir(RUNTIME_DIR):
         filename = os.path.join(RUNTIME_DIR, name)
         if filename.startswith(archive_name):
@@ -369,26 +370,36 @@ def _download(url, archive_name):
     # Open local file ...
     t0 = time.time()
     with open(temp_archive_name, 'ab') as f_dst:
-        nbytes = f_dst.tell()
-        
-        # Open remote resource
-        try:
-            r = Request(url)
-            r.headers['Range'] = 'bytes=%i-' % f_dst.tell()
-            f_src = urlopen(r, timeout=5)
-        except Exception:
-            raise  # for a silent update we can just return here
-        file_size = nbytes + int(f_src.headers['Content-Length'].strip())
-        chunksize = 64 * 1024
-        # Download in chunks
-        while True:
-            chunk = f_src.read(chunksize)
-            if not chunk:
-                break
-            nbytes += len(chunk)
-            f_dst.write(chunk)
-            f_dst.flush()
-            print('downloading: %03.1f%%\r' % (100 * nbytes / file_size), end='')
+        tries = 0
+        while tries < 5:
+            tries += 1
+            
+            try:
+                nbytes = f_dst.tell()
+                # Open remote resource
+                r = Request(url)
+                r.headers['Range'] = 'bytes=%i-' % nbytes
+                f_src = urlopen(r, timeout=5)
+                file_size = nbytes + int(f_src.headers['Content-Length'].strip())
+                chunksize = 64 * 1024
+                # Download in chunks
+                while True:
+                    chunk = f_src.read(chunksize)
+                    if not chunk:
+                        break
+                    nbytes += len(chunk)
+                    f_dst.write(chunk)
+                    f_dst.flush()
+                    print('downloading: %03.1f%%\r' % (100 * nbytes / file_size), end='')
+            
+            except (OSError, IOError) as err:
+                if tries < 4:
+                    logger.warn('%s. Retrying. ..' % str(err))
+                    time.sleep(0.2)
+                    continue
+                raise
+            break  # retry loop
+    
     print('Downloaded %s in %1.f s' % (url, time.time() - t0))
     
     # Mark archive as done
@@ -418,14 +429,29 @@ def _extract(archive_name, dir_name, arch_func):
         raise
     
     # Pop out empty dirs
-    while len(os.listdir(temp_dir_name)) == 1:
-        pop_dir = os.listdir(temp_dir_name)[0]
-        for name in os.listdir(os.path.join(temp_dir_name, pop_dir)):
-            os.rename(os.path.join(temp_dir_name, pop_dir, name),
-                      os.path.join(temp_dir_name, name))
-        os.rmdir(os.path.join(temp_dir_name, pop_dir))
+    while True:
+        subdirs = os.listdir(temp_dir_name)
+        if len(subdirs) != 1 or os.path.isfile(subdirs[0]) or '.app' in subdirs[0]:
+            break
+        else:
+            pop_dir = subdirs[0] + '~temp'
+            os.rename(os.path.join(temp_dir_name, subdirs[0]),
+                      os.path.join(temp_dir_name, pop_dir))
+            for name in os.listdir(os.path.join(temp_dir_name, pop_dir)):
+                os.rename(os.path.join(temp_dir_name, pop_dir, name),
+                          os.path.join(temp_dir_name, name))
+            os.rmdir(os.path.join(temp_dir_name, pop_dir))
     
     print('done')
+    
+    # Enable executables for OS X
+    import stat
+    for dirpath, dirnames, filenames in os.walk(temp_dir_name):
+        if dirpath.endswith('/Contents/MacOS'):
+            for fname in filenames:
+                if '.' not in fname:
+                    filename = os.path.join(dirpath, fname)
+                    os.chmod(filename, os.stat(filename).st_mode | stat.S_IEXEC)
     
     # Mark dir as done
     if os.path.isdir(dir_name):
