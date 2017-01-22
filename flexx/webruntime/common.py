@@ -32,6 +32,25 @@ from ..util.icon import Icon
 from ._manage import RUNTIME_DIR, clean, lock_runtime_dir, versionstring
 
 
+INFO_PLIST = """
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" NONL
+"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIconFile</key>
+    <string>app.icns</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>English</string>
+    <key>CFBundleExecutable</key>
+    <string>runtime</string>
+    <key>CFBundleName</key>
+    <string>{name}</string>
+</dict>
+</plist>
+""".lstrip().replace('    ', '\t').replace('NONL\n', '')
+
+
 class BaseRuntime:
     """ Base class for all runtimes.
     """
@@ -46,7 +65,11 @@ class BaseRuntime:
         self._streamreader = None
         atexit.register(self.close)
         
-        clean()  # tidy up
+        # Tidy up, but don't make us wait for it, also give main thread
+        # time to e.g. continue incomplete downloads (e.g. for NW.js runtime)
+        t = threading.Thread(target=lambda:time.sleep(4) or clean())
+        t.setDaemon(True)
+        t.start()  # tidy up
         
         logger.info('launching %s' % self.__class__.__name__)
         self._launch()
@@ -230,52 +253,55 @@ class DesktopRuntime(BaseRuntime):
         return app_exe
 
 
-    def _osx_create_app(self, exe, path, title):
+    def _osx_create_app(self, exe, dst_dir, title):
         """ Create osx app
 
         * exe: path to executable of runtime (not the symlink)
-        * path: location of the .app directory to create.
+        * dst_dir: location of the .app directory to create.
         * title: the title of the window *and* the process name
         """
 
-        # Get app of firefox
+        # Get original app to copy it from
+        exe_name = os.path.basename(exe)
         if 'Contents/MacOS' not in exe:
-            raise NotImplementedError('Need  meeh!')  # todo: h
-        xul_app = op.dirname(op.dirname(op.dirname(exe)))
-        if not xul_app.endswith('.app'):
-            raise TypeError('The xulrunner application must end in .app.')
+            raise NotImplementedError('Can only create OS X app from existing app')
+        src_dir = op.dirname(op.dirname(op.dirname(exe)))
+        if not src_dir.endswith('.app'):
+            raise TypeError('The original OS X application must end in .app.')
 
         # Clear destination
-        if op.isdir(path):
-            shutil.rmtree(path)
-        os.mkdir(path)
+        if op.isdir(dst_dir):
+            shutil.rmtree(dst_dir)
+        os.mkdir(dst_dir)
 
         # Make dir structure
-        os.mkdir(op.join(path, 'Contents'))
-        os.mkdir(op.join(path, 'Contents', 'MacOS'))
-        os.mkdir(op.join(path, 'Contents', 'Resources'))
+        os.mkdir(op.join(dst_dir, 'Contents'))
+        os.mkdir(op.join(dst_dir, 'Contents', 'MacOS'))
 
         # Make a link for all the files
-        for dirpath, dirnames, filenames in os.walk(xul_app):
-            relpath = op.relpath(dirpath, xul_app)
-            if '.app' in relpath:
-                continue
-            if relpath.endswith('MacOS') or relpath.endswith('Resources'):
+        for dirpath, dirnames, filenames in os.walk(src_dir):
+            relpath = op.relpath(dirpath, src_dir)
+            if relpath.startswith(('Contents/MacOS', 'Contents/Resources',
+                                   'Contents/Versions')):
+                if not os.path.isdir(op.join(dst_dir, relpath)):
+                    os.mkdir(op.join(dst_dir, relpath))
                 for fname in filenames:
-                    filename1 = op.join(xul_app, relpath, fname)
-                    filename2 = op.join(path, relpath, fname)
-                    os.symlink(filename1, filename2)
-        # Make xulrunner exe
-        os.symlink(op.join(xul_app, 'Contents', 'MacOS', 'firefox'),
-                   op.join(path, 'Contents', 'MacOS', 'runtime'))
+                    os.link(op.join(src_dir, relpath, fname),
+                            op.join(dst_dir, relpath, fname))
+        # Make runtime exe
+        os.link(op.realpath(op.join(src_dir, 'Contents', 'MacOS', exe_name)),
+                op.join(dst_dir, 'Contents', 'MacOS', 'runtime'))
         # Make info.plist
         info = INFO_PLIST.format(name=title)
-        with open(op.join(path, 'Contents', 'info.plist'), 'wb') as f:
+        with open(op.join(dst_dir, 'Contents', 'info.plist'), 'wb') as f:
             f.write(info.encode())
         # Make icon - ensured by launch function
         if self._kwargs.get('icon'):
             icon = self._kwargs.get('icon')
-            icon.write(op.join(path, 'Contents', 'Resources', 'app.icns'))
+            iconfile = op.join(dst_dir, 'Contents', 'Resources', 'app.icns')
+            if os.path.exists(iconfile):
+                os.unlink(iconfile)  # remove first, since its a hard link!
+            icon.write(iconfile)
     
     ## To implenent in subclasses
     
@@ -285,7 +311,8 @@ class DesktopRuntime(BaseRuntime):
         raise NotImplementedError()
 
 
-# todo: ditch this? I've never found a use for it
+# This does not seem to do much, most of the time, but when things break it
+# usually does give some usefull output!
 class StreamReader(threading.Thread):
     """ Reads stdout of process and log
 
@@ -398,6 +425,3 @@ def iconize(icon):
         raise ValueError('Icon must be an Icon, a filename or None, not %r' %
                          type(icon))
     return icon
-
-
-# Downloader(r'C:\Users\Almar\AppData\Local\flexx\webruntimes', 'nw', '0.19.5', 'https://dl.nwjs.io/v0.19.5/nwjs-v0.19.5-win-x64.zip', force=1).start()

@@ -17,7 +17,7 @@ from .common import DesktopRuntime
 from ._manage import download_runtime, create_temp_app_dir
 
 
-def get_template():
+def get_manifest_template():
     return {"name": "flexx_ui_app",
             "main": "",
             "nodejs": False,
@@ -50,7 +50,9 @@ def get_template():
             "webkit": {
                 "plugin": True,
                 "java": False
-                }
+                },
+            
+            "chromium-args": '',
             }
 
 
@@ -140,19 +142,29 @@ class NodeWebkitRuntime(DesktopRuntime):
         min_version = '0.19.5'
         # todo: allow configuration
         
+        self._kwargs['title'] = self._kwargs.get('title', 'NW.js runtime')
+        
         # Get runtime exe
         if False:  # todo: flexx.config.nw_exe
             exe = flexx.config.nw_exe
         else:
-            exe = os.path.join(self.get_runtime(min_version), 'nw')
-            exe += '.exe' * sys.platform.startswith('win')
+            exe = self.get_runtime(min_version)
+            if sys.platform.startswith('win'):
+                exe = os.path.join(exe, 'nw.exe')
+            elif sys.platform.startswith('darwin'):
+                exe = os.path.join(exe, 'nwjs.app', 'Contents', 'MacOS', 'nwjs')
+            else:
+                exe = os.path.join(exe, 'nw')
             # Change exe to avoid grouping + easier recognition in task manager
             if exe and op.isfile(op.realpath(exe)):
                 exe = self._get_app_exe(exe, app_path)
         
         # Populate app definition
-        D = get_template()
+        # name must be a unique, lowercase alpha-numeric name without spaces.
+        # It may include "." or "_" or "-" characters.
+        D = get_manifest_template()
         D['name'] = 'app' + id
+        # todo: D['name'] = 'flexx_app' # todo: + 'name-of-app-class'
         D['main'] = self._kwargs['url']
         D['window']['title'] = self._kwargs.get('title', 'nw.js runtime')
         
@@ -160,14 +172,20 @@ class NodeWebkitRuntime(DesktopRuntime):
         size = self._kwargs.get('size', (640, 480))
         D['window']['width'], D['window']['height'] = size[0], size[1]
         
-        # Icon?
+        # Icon (note that icon is "overloaded" if nw is wrapped in a runtime.app)
         if self._kwargs.get('icon'):
             icon = self._kwargs.get('icon')
             icon_path = os.path.join(app_path, 'app.png')  # nw can handle ico
             icon.write(icon_path)
             D['window']['icon'] = 'app%i.png' % icon.image_sizes()[0]
         
-        # Write
+        # Configure Chromium
+        args = ['--enable-unsafe-es3-apis',  # enable webgl2
+                #'--single-process',  # Be more compact, does not work on OS X!
+                ]
+        D['chromium-args'] = ' '.join(args)
+        
+        # Write app manifest
         with open(os.path.join(app_path, 'package.json'), 'wb') as f:
             f.write(json.dumps(D, indent=4).encode())
         
@@ -177,9 +195,5 @@ class NodeWebkitRuntime(DesktopRuntime):
             fix_libudef(app_path)
             llp = app_path + os.pathsep + llp
         
-        # chrome args, enable webgl2, be more compact
-        args = ['--enable-unsafe-es3-apis', '--single-process']
-        
         # Launch
-        cmd = [exe, app_path] + args
-        self._start_subprocess(cmd, LD_LIBRARY_PATH=llp)
+        self._start_subprocess([exe, app_path], LD_LIBRARY_PATH=llp)
