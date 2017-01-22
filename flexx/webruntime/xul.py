@@ -130,25 +130,6 @@ pref("nglayout.debug.disable_xul_fastload", false);
 """
 
 
-INFO_PLIST = """
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" NONL
-"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleIconFile</key>
-    <string>app.icns</string>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>English</string>
-    <key>CFBundleExecutable</key>
-    <string>xulrunner</string>
-    <key>CFBundleName</key>
-    <string>{name}</string>
-</dict>
-</plist>
-""".lstrip().replace('    ', '\t').replace('NONL\n', '')
-
-
 ## Functions
 
 
