@@ -30,7 +30,7 @@ def get_chrome_exe():
     If the path could not be found, returns None.
     """
     paths = []
-    eu = os.path.expanduser
+    eu = op.expanduser
     
     # Collect possible locations
     if sys.platform.startswith('win'):
@@ -50,14 +50,14 @@ def get_chrome_exe():
                     find_osx_exe('com.google.Chrome')]
         for dir in app_dirs:
             if dir:
-                dir = os.path.expanduser(dir)
+                dir = op.expanduser(dir)
                 if op.isdir(dir):
                     paths.append(op.join(dir, 'Contents/MacOS/Chrome'))
                     paths.append(op.join(dir, 'Contents/MacOS/Google Chrome'))
     
     # Try location until we find one that exists
     for path in paths:
-        if os.path.isfile(path):
+        if op.isfile(path):
             return path
     else:
         return None
@@ -69,7 +69,7 @@ def get_chromium_exe():
     If the path could not be found, returns None.
     """
     paths = []
-    eu = os.path.expanduser
+    eu = op.expanduser
     
     # Collect possible locations
     if sys.platform.startswith('win'):
@@ -86,14 +86,14 @@ def get_chromium_exe():
                     find_osx_exe('org.chromium.Chromium')]
         for dir in app_dirs:
             if dir:
-                dir = os.path.expanduser(dir)
+                dir = op.expanduser(dir)
                 if op.isdir(dir):
                     paths.append(op.join(dir, 'Contents/MacOS/Chromium'))
                     paths.append(op.join(dir, 'Contents/MacOS/Chromium Browser'))
     
     # Try location until we find one that exists
     for path in paths:
-        if os.path.isfile(path):
+        if op.isfile(path):
             return path
     else:
         return None
@@ -112,10 +112,10 @@ class ChromeAppRuntime(DesktopRuntime):
     
     def _install_runtime(self):
         version = 'latest'
-        path = os.path.join(RUNTIME_DIR, self.get_name() + '_' + version)
-        if not os.path.isdir(path):
+        path = op.join(RUNTIME_DIR, self.get_name() + '_' + version)
+        if not op.isdir(path):
             os.mkdir(path)
-        with open(os.path.join(path, 'stub.txt'), 'wb') as f:
+        with open(op.join(path, 'stub.txt'), 'wb') as f:
             f.write('Flexx uses the system Chrome'.encode())
     
     def _launch(self):

@@ -26,12 +26,12 @@ care to clean up the old ones. On Linux and OSX the runtime app
 
 """
 
+import os.path as op
 import os
 import sys
 import time
 import shutil
 import subprocess
-import os.path as op
 
 from . import logger
 from .common import DesktopRuntime
@@ -276,7 +276,7 @@ class XulRuntime(DesktopRuntime):
             raise RuntimeError('You need to install Firefox')
             # todo: dialite
         
-        path = os.path.join(RUNTIME_DIR, self.get_name() + '_' + version)
+        path = op.join(RUNTIME_DIR, self.get_name() + '_' + version)
         if sys.platform.startswith('win'):
             # Windows: copy the whole tuntime
             copy_xul_runtime(op.dirname(exe), path)

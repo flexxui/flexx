@@ -88,9 +88,9 @@ def fix_libudef(dest):
              "/lib/i386-linux-gnu/libudev.so.1",  # Ubuntu 32bit
              ]
     
-    target = os.path.join(dest, 'libudev.so.0')
+    target = op.join(dest, 'libudev.so.0')
     for path in paths:
-        if os.path.isfile(path) and not os.path.isfile(target):
+        if op.isfile(path) and not op.isfile(target):
             os.symlink(path, target)
 
 
@@ -156,11 +156,11 @@ class NodeWebkitRuntime(DesktopRuntime):
         
         # Get dir to store app definition
         app_path = create_temp_app_dir('nw')
-        id = os.path.basename(app_path).split('_', 1)[1]
+        id = op.basename(app_path).split('_', 1)[1]
         
         # Prepare profile dir for NW/Chromium to use which gets auto-cleared 
-        profile_dir = os.path.join(app_path, 'stub_profile')
-        if not os.path.isdir(profile_dir):
+        profile_dir = op.join(app_path, 'stub_profile')
+        if not op.isdir(profile_dir):
             os.mkdir(profile_dir)
         
         # Get minimal required version
@@ -175,11 +175,11 @@ class NodeWebkitRuntime(DesktopRuntime):
         else:
             exe = self.get_runtime(min_version)
             if sys.platform.startswith('win'):
-                exe = os.path.join(exe, 'nw.exe')
+                exe = op.join(exe, 'nw.exe')
             elif sys.platform.startswith('darwin'):
-                exe = os.path.join(exe, 'nwjs.app', 'Contents', 'MacOS', 'nwjs')
+                exe = op.join(exe, 'nwjs.app', 'Contents', 'MacOS', 'nwjs')
             else:
-                exe = os.path.join(exe, 'nw')
+                exe = op.join(exe, 'nw')
             # Change exe to avoid grouping + easier recognition in task manager
             if exe and op.isfile(op.realpath(exe)):
                 exe = self._get_app_exe(exe, app_path)
@@ -202,12 +202,12 @@ class NodeWebkitRuntime(DesktopRuntime):
         # Icon (note that icon is "overloaded" if nw is wrapped in a runtime.app)
         if self._kwargs.get('icon'):
             icon = self._kwargs.get('icon')
-            icon_path = os.path.join(app_path, 'app.png')  # nw can handle ico
+            icon_path = op.join(app_path, 'app.png')  # nw can handle ico
             icon.write(icon_path)
             D['window']['icon'] = 'app%i.png' % icon.image_sizes()[0]
         
         # Write app manifest
-        with open(os.path.join(app_path, 'package.json'), 'wb') as f:
+        with open(op.join(app_path, 'package.json'), 'wb') as f:
             f.write(json.dumps(D, indent=4).encode())
         
         # Fix libudef bug
