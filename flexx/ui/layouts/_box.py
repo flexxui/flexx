@@ -226,6 +226,7 @@ class BoxLayout(BaseBoxLayout):
        a flex container (done with JS in Widget class), and scale here */
     .flx-Widget > .flx-BoxLayout {
         flex-grow: 1;
+        flex-shrink: 1;
     }
     """
     
@@ -253,6 +254,8 @@ class BoxLayout(BaseBoxLayout):
             i = 0 if ori in (0, 'h', 'hr') else 1
             for widget in self.children:
                 self._applyBoxStyle(widget.outernode, 'flex-grow', widget.flex[i])
+                self._applyBoxStyle(widget.outernode, 'flex-shrink',
+                                    widget.flex[i] or 1)  # default value is 1
             for widget in self.children:
                 widget._check_real_size()
         
