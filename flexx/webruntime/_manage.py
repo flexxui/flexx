@@ -295,7 +295,7 @@ def download_runtime(runtime_name, version, url):
     
     For downloading, we compare the pid to current list of pids to see
     if perhaps another process is already downloading it (though its no
-    guarantee, as pids are reused). If there is an archive in progess,
+    guarantee, as pids are reused). If there is an archive in progress,
     which has "stalled", we rename the archive and continue downloading.
     """
 
@@ -329,7 +329,7 @@ def download_runtime(runtime_name, version, url):
 def _download(url, archive_name):
     """ Download the archive.
     """
-    temp_archive_name = archive_name + '~' + str(os.getpid())
+    temp_archive_name = '%s~%i' % (archive_name, os.getpid())
     
     # Clean, just to be sure
     remove(temp_archive_name)
@@ -367,10 +367,20 @@ def _download(url, archive_name):
         except FileNotFoundError:
             raise  # another process was just a wee bit earlier?
     
+    # Open folder in native file explorer for user to see progress
+    _open_folder(os.path.dirname(archive_name))
+    
+    # Create a file that we keep renaming to indicate progress
+    progress_name_t = '%s~ progress %%0.0f %%%% ~%i' % (archive_name, os.getpid())
+    progress_name = progress_name_t % 0
+    with open(progress_name, 'wb'):
+        pass
+    
     # Open local file ...
     t0 = time.time()
     with open(temp_archive_name, 'ab') as f_dst:
         tries = 0
+        
         while tries < 5:
             tries += 1
             
@@ -390,17 +400,33 @@ def _download(url, archive_name):
                     nbytes += len(chunk)
                     f_dst.write(chunk)
                     f_dst.flush()
-                    print('downloading: %03.1f%%\r' % (100 * nbytes / file_size), end='')
+                    # Show percentage done in console
+                    percentage = 100 * nbytes / file_size
+                    print('downloading: %03.1f%%\r' % percentage, end='')
+                    # Show percentahe done in FS
+                    progress_name2 = progress_name_t % percentage
+                    if progress_name2 != progress_name:
+                        try:
+                            os.rename(progress_name, progress_name2)
+                            progress_name = progress_name2
+                        except Exception:
+                            pass
             
             except (OSError, IOError) as err:
                 if tries < 4:
-                    logger.warn('%s. Retrying. ..' % str(err))
+                    logger.warn('%s. Retrying ...' % str(err))
                     time.sleep(0.2)
                     continue
                 raise
             break  # retry loop
     
     print('Downloaded %s in %1.f s' % (url, time.time() - t0))
+    
+    if os.path.isfile(progress_name):
+        try:
+            os.remove(progress_name)
+        except Exception:
+            pass
     
     # Mark archive as done
     if os.path.isfile(archive_name):
@@ -459,3 +485,14 @@ def _extract(archive_name, dir_name, arch_func):
     else:
         os.rename(temp_dir_name, dir_name)
     return True
+
+
+def _open_folder(path):
+    """ Open folder in native file explorer, on Windows, OS X and Linux.
+    """
+    if sys.platform.startswith('win'):
+        os.startfile(path)
+    elif  sys.platform.startswith('darwin'):
+        subprocess.Popen(["open", path])
+    else:
+        subprocess.Popen(["xdg-open", path])
