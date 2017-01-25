@@ -7,6 +7,7 @@ when dirs are not in use and have them removed. We also rename files/dirs
 that ought to be removed, so that if deletion fails, we can try again later.
 """
 
+import os.path as op
 import os
 import sys
 import time
@@ -29,7 +30,7 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
     """
 
     # Define default user directory
-    userDir = os.path.expanduser('~')
+    userDir = op.expanduser('~')
 
     # Get system app data dir
     path = None
@@ -37,22 +38,22 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
         path1, path2 = os.getenv('LOCALAPPDATA'), os.getenv('APPDATA')
         path = (path2 or path1) if roaming else (path1 or path2)
     elif sys.platform.startswith('darwin') and not macAsLinux:
-        path = os.path.join(userDir, 'Library', 'Application Support')
+        path = op.join(userDir, 'Library', 'Application Support')
     # On Linux and as fallback
-    if not (path and os.path.isdir(path)):
+    if not (path and op.isdir(path)):
         path = userDir
 
     # Maybe we should store things local to the executable (in case of a
     # portable distro or a frozen application that wants to be portable)
     prefix = sys.prefix
     if getattr(sys, 'frozen', None):  # See application_dir() function
-        prefix = os.path.abspath(os.path.dirname(sys.executable))
+        prefix = op.abspath(op.dirname(sys.executable))
     for reldir in ('settings', '../settings'):
-        localpath = os.path.abspath(os.path.join(prefix, reldir))
-        if os.path.isdir(localpath):  # pragma: no cover
+        localpath = op.abspath(op.join(prefix, reldir))
+        if op.isdir(localpath):  # pragma: no cover
             try:
-                open(os.path.join(localpath, 'test.write'), 'wb').close()
-                os.remove(os.path.join(localpath, 'test.write'))
+                open(op.join(localpath, 'test.write'), 'wb').close()
+                os.remove(op.join(localpath, 'test.write'))
             except IOError:
                 pass  # We cannot write in this directory
             else:
@@ -63,8 +64,8 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
     if appname:
         if path == userDir:
             appname = '.' + appname.lstrip('.')  # Make it a hidden directory
-        path = os.path.join(path, appname)
-        if not os.path.isdir(path):  # pragma: no cover
+        path = op.join(path, appname)
+        if not op.isdir(path):  # pragma: no cover
             os.mkdir(path)
 
     # Done
@@ -72,8 +73,8 @@ def appdata_dir(appname=None, roaming=False, macAsLinux=False):
 
 
 APPDATA_DIR = appdata_dir('flexx')
-RUNTIME_DIR = os.path.join(APPDATA_DIR, 'webruntimes')
-TEMP_APP_DIR = os.path.join(APPDATA_DIR, 'temp_apps')
+RUNTIME_DIR = op.join(APPDATA_DIR, 'webruntimes')
+TEMP_APP_DIR = op.join(APPDATA_DIR, 'temp_apps')
 DELETE_PREFIX = 'todelete~'
 
 
@@ -150,17 +151,17 @@ def remove(path1, nowarn=False):
     """ Mark a file or directory for removal (by renaming it) and try
     to remove it. If it fails, that's ok; we'll remove it later.
     """
-    if not os.path.exists(path1):
+    if not op.exists(path1):
         return
-    dirname, name = os.path.split(path1)
+    dirname, name = op.split(path1)
     
     # Rename if we must/can
     if name.startswith(DELETE_PREFIX):
         path2 = path1
     else:
         for i in range(100):
-            path2 = os.path.join(dirname, DELETE_PREFIX + str(i) + name)
-            if not os.path.exists(path2):
+            path2 = op.join(dirname, DELETE_PREFIX + str(i) + name)
+            if not op.exists(path2):
                 break
         try:
             os.rename(path1, path2)
@@ -171,9 +172,9 @@ def remove(path1, nowarn=False):
     
     # Delete if we can
     try:
-        if os.path.isfile(path2):
+        if op.isfile(path2):
             os.remove(path2)
-        elif os.path.isdir(path2):
+        elif op.isdir(path2):
             shutil.rmtree(path2)
     except Exception:
         pass
@@ -184,11 +185,11 @@ def clean():
     """
     
     # Ensure that directories exist
-    if not os.path.isdir(APPDATA_DIR):
+    if not op.isdir(APPDATA_DIR):
         os.mkdir(APPDATA_DIR)
-    if not os.path.isdir(RUNTIME_DIR):
+    if not op.isdir(RUNTIME_DIR):
         os.mkdir(RUNTIME_DIR)
-    if not os.path.isdir(TEMP_APP_DIR):
+    if not op.isdir(TEMP_APP_DIR):
         os.mkdir(TEMP_APP_DIR)
     
     # Collect dirs/files and lockfiles
@@ -196,10 +197,10 @@ def clean():
     lockfiles = []
     for dir in (RUNTIME_DIR, TEMP_APP_DIR):
         for name in os.listdir(dir):
-            path = os.path.join(dir, name)
+            path = op.join(dir, name)
             items.append((name, path))
             
-            if dir == RUNTIME_DIR and '_' in path and os.path.isdir(path):
+            if dir == RUNTIME_DIR and '_' in path and op.isdir(path):
                 for lockfilename in os.listdir(path):
                     if lockfilename.startswith('lock~'):
                         try:
@@ -231,7 +232,7 @@ def clean():
     for pid, dir, fname in lockfiles:
         if pid not in pids:
             try:
-                os.remove(os.path.join(dir, fname))
+                os.remove(op.join(dir, fname))
                 continue  # i.e. dont mark dir
             except Exception:
                 pass
@@ -250,7 +251,7 @@ def clean():
         versions = runtimes[name]
         versions.sort(key=versionstring)
         for version in versions[:-1]:
-            dir = os.path.join(RUNTIME_DIR, name + '_' + version)
+            dir = op.join(RUNTIME_DIR, name + '_' + version)
             if dir not in dirs_with_lockfiles:
                 remove(dir, True)
 
@@ -259,8 +260,8 @@ def lock_runtime_dir(path):
     """ Lock a runtime dir for this process.
     """
     assert path.startswith(RUNTIME_DIR)
-    lockfile = os.path.join(path, 'lock~%i' % os.getpid())
-    if not os.path.isfile(lockfile):
+    lockfile = op.join(path, 'lock~%i' % os.getpid())
+    if not op.isfile(lockfile):
         with open(lockfile, 'wb'):
             pass
 
@@ -279,7 +280,7 @@ def create_temp_app_dir(prefix, cleanup=60):
     
     prefix = prefix.strip(' _-')
     name = '%s_%i_%i~%i' % (prefix, time.time(), _app_count, os.getpid())
-    path = os.path.join(TEMP_APP_DIR, name)
+    path = op.join(TEMP_APP_DIR, name)
     os.mkdir(path)
     return path
 
@@ -301,8 +302,8 @@ def download_runtime(runtime_name, version, url):
 
     # Calculate file system locations
     fname = url.split('?')[0].split('~')[0].split('/')[-1].lower()
-    archive_name = os.path.join(RUNTIME_DIR, fname)
-    dir_name = os.path.join(RUNTIME_DIR, runtime_name + '_' + version)
+    archive_name = op.join(RUNTIME_DIR, fname)
+    dir_name = op.join(RUNTIME_DIR, runtime_name + '_' + version)
     
     # Get func to open archive
     import tarfile
@@ -315,7 +316,7 @@ def download_runtime(runtime_name, version, url):
         raise ValueError('Dont know how to extract from %s' % fname)
     
     # Go!
-    if os.path.isdir(dir_name):
+    if op.isdir(dir_name):
         return
     if _download(url, archive_name):
         _extract(archive_name, dir_name, arch_func)
@@ -335,7 +336,7 @@ def _download(url, archive_name):
     remove(temp_archive_name)
     
     # Maybe the archive is already there ...
-    if os.path.isfile(archive_name):
+    if op.isfile(archive_name):
         return True
     
     # Get whether the downloading is already in progress by another process
@@ -343,7 +344,7 @@ def _download(url, archive_name):
     # pids.remove(os.getpid())
     archives = []  # that do not correspond to an existing pid other than us
     for name in os.listdir(RUNTIME_DIR):
-        filename = os.path.join(RUNTIME_DIR, name)
+        filename = op.join(RUNTIME_DIR, name)
         if filename.startswith(archive_name):
             try:
                 pid = int(name.split('~')[-1])
@@ -368,7 +369,7 @@ def _download(url, archive_name):
             raise  # another process was just a wee bit earlier?
     
     # Open folder in native file explorer for user to see progress
-    _open_folder(os.path.dirname(archive_name))
+    _open_folder(op.dirname(archive_name))
     
     # Create a file that we keep renaming to indicate progress
     progress_name_t = '%s~ progress %%0.0f %%%% ~%i' % (archive_name, os.getpid())
@@ -422,14 +423,14 @@ def _download(url, archive_name):
     
     print('Downloaded %s in %1.f s' % (url, time.time() - t0))
     
-    if os.path.isfile(progress_name):
+    if op.isfile(progress_name):
         try:
             os.remove(progress_name)
         except Exception:
             pass
     
     # Mark archive as done
-    if os.path.isfile(archive_name):
+    if op.isfile(archive_name):
         pass  # another process beat us to it
     else:
         os.rename(temp_archive_name, archive_name)
@@ -442,7 +443,7 @@ def _extract(archive_name, dir_name, arch_func):
     temp_dir_name = dir_name + '~' + str(os.getpid())
     
     # Maybe the dir is already there ...
-    if os.path.isdir(dir_name):
+    if op.isdir(dir_name):
         return
     
     # Extract it
@@ -457,16 +458,16 @@ def _extract(archive_name, dir_name, arch_func):
     # Pop out empty dirs
     while True:
         subdirs = os.listdir(temp_dir_name)
-        if len(subdirs) != 1 or os.path.isfile(subdirs[0]) or '.app' in subdirs[0]:
+        if len(subdirs) != 1 or op.isfile(subdirs[0]) or '.app' in subdirs[0]:
             break
         else:
             pop_dir = subdirs[0] + '~temp'
-            os.rename(os.path.join(temp_dir_name, subdirs[0]),
-                      os.path.join(temp_dir_name, pop_dir))
-            for name in os.listdir(os.path.join(temp_dir_name, pop_dir)):
-                os.rename(os.path.join(temp_dir_name, pop_dir, name),
-                          os.path.join(temp_dir_name, name))
-            os.rmdir(os.path.join(temp_dir_name, pop_dir))
+            os.rename(op.join(temp_dir_name, subdirs[0]),
+                      op.join(temp_dir_name, pop_dir))
+            for name in os.listdir(op.join(temp_dir_name, pop_dir)):
+                os.rename(op.join(temp_dir_name, pop_dir, name),
+                          op.join(temp_dir_name, name))
+            os.rmdir(op.join(temp_dir_name, pop_dir))
     
     print('done')
     
@@ -476,11 +477,11 @@ def _extract(archive_name, dir_name, arch_func):
         if dirpath.endswith('/Contents/MacOS'):
             for fname in filenames:
                 if '.' not in fname:
-                    filename = os.path.join(dirpath, fname)
+                    filename = op.join(dirpath, fname)
                     os.chmod(filename, os.stat(filename).st_mode | stat.S_IEXEC)
     
     # Mark dir as done
-    if os.path.isdir(dir_name):
+    if op.isdir(dir_name):
         pass  # another process beat us to it
     else:
         os.rename(temp_dir_name, dir_name)

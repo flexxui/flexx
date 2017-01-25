@@ -164,7 +164,7 @@ class DesktopRuntime(BaseRuntime):
         located. If necessary, the runtime is installed or updated.
         """
         cur_version = self.get_current_version() or ''
-        path = os.path.join(RUNTIME_DIR, self.get_name() + '_' + cur_version)
+        path = op.join(RUNTIME_DIR, self.get_name() + '_' + cur_version)
         
         if not cur_version:
             # Need to install
@@ -199,7 +199,7 @@ class DesktopRuntime(BaseRuntime):
             # todo: show dialog
             raise
         
-        return os.path.join(RUNTIME_DIR, self.get_name() + '_' + self.get_current_version())
+        return op.join(RUNTIME_DIR, self.get_name() + '_' + self.get_current_version())
         
     
     def get_current_version(self):
@@ -207,8 +207,8 @@ class DesktopRuntime(BaseRuntime):
         """
         versions = []
         for dname in os.listdir(RUNTIME_DIR):
-            dirname = os.path.join(RUNTIME_DIR, dname)
-            if os.path.isdir(dirname) and dname.startswith(self.get_name() + '_'):
+            dirname = op.join(RUNTIME_DIR, dname)
+            if op.isdir(dirname) and dname.startswith(self.get_name() + '_'):
                 versions.append(dname.split('_')[-1])
         versions.sort(key=versionstring)
         if versions:
@@ -263,8 +263,8 @@ class DesktopRuntime(BaseRuntime):
         """
 
         # Get original app to copy it from
-        exe_name_src = os.path.basename(exe)
-        exe_name_dst = os.path.basename(dst_dir).split('.')[0]
+        exe_name_src = op.basename(exe)
+        exe_name_dst = op.basename(dst_dir).split('.')[0]
         if 'Contents/MacOS' not in exe:
             raise NotImplementedError('Can only create OS X app from existing app')
         src_dir = op.dirname(op.dirname(op.dirname(exe)))
@@ -285,7 +285,7 @@ class DesktopRuntime(BaseRuntime):
             relpath = op.relpath(dirpath, src_dir)
             if relpath.startswith(('Contents/MacOS', 'Contents/Resources',
                                    'Contents/Versions')):
-                if not os.path.isdir(op.join(dst_dir, relpath)):
+                if not op.isdir(op.join(dst_dir, relpath)):
                     os.mkdir(op.join(dst_dir, relpath))
                 for fname in filenames:
                     os.link(op.join(src_dir, relpath, fname),
@@ -301,7 +301,7 @@ class DesktopRuntime(BaseRuntime):
         if self._kwargs.get('icon'):
             icon = self._kwargs.get('icon')
             iconfile = op.join(dst_dir, 'Contents', 'Resources', 'app.icns')
-            if os.path.exists(iconfile):
+            if op.exists(iconfile):
                 os.unlink(iconfile)  # remove first, since its a hard link!
             icon.write(iconfile)
     
