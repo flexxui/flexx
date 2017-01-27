@@ -6,6 +6,8 @@ __pycache__/
 exp/html_examples.txt
 flexx/resources/phosphor-all.*.js
 flexx/resources/phosphor-all.*.css
+flexx/resources/leaflet.*.js
+flexx/resources/leaflet.*.css
 _flexx-notebooks
 _flexx-book
 _feedstock
