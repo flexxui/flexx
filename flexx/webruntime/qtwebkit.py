@@ -77,7 +77,19 @@ class PyQtRuntime(DesktopRuntime):
     def _get_name(self):
         return 'pyqt'
     
-    def _launch(self):
+    def _get_exe(self):
+        return sys.executable
+        # todo: perhaps we should test whether pyqt is available, but
+        # don't want to do that by importing it... meeh, this runtime
+        # is not that serious anyway.
+    
+    def _get_version(self):
+        return None  # we could report the Qt version here (or pyqt version?)
+    
+    def _launch_tab(self, url):
+        raise RuntimeError('PyQt runtime cannot launch tabs.')
+    
+    def _launch_app(self, url):
         
         # We don't call self.get_runtime() so we don't need to implement
         # _install_runtime()
@@ -90,11 +102,11 @@ class PyQtRuntime(DesktopRuntime):
             iconfile = os.path.join(app_path, 'icon.png')
             icon.write(iconfile)
         
-        code = CODE_TO_RUN.format(url=repr(self._kwargs['url']),
+        code = CODE_TO_RUN.format(url=repr(url),
                                   title=repr(self._kwargs.get('title',
                                                               'QWebkit runtime')),
                                   icon=repr(iconfile),
                                   size=repr(self._kwargs.get('size', None)),
                                   pos=repr(self._kwargs.get('pos', None)),
                                   )
-        self._start_subprocess([sys.executable, '-c', code])
+        self._start_subprocess([self.get_exe(), '-c', code])

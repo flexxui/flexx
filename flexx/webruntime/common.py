@@ -56,10 +56,11 @@ class BaseRuntime:
     """
     
     def __init__(self, **kwargs):
-        if 'url' not in kwargs:
-            raise KeyError('No url provided for runtime.')
         
         assert self.get_name()
+        self._exe = None
+        
+        # todo: meeh kwargs
         self._kwargs = kwargs
         self._proc = None
         self._streamreader = None
@@ -70,19 +71,60 @@ class BaseRuntime:
         t = threading.Thread(target=lambda:time.sleep(4) or clean())
         t.setDaemon(True)
         t.start()  # tidy up
-        
-        logger.info('launching %s' % self.__class__.__name__)
-        self._launch()
-
+    
     def get_name(self):
         """ Get the name of the runtime.
         """
         return self._get_name()
     
+    def get_exe(self):
+        """ Get the executable corresponding to the runtime. This is usually
+        the path to an executable file, but it can also be a command. Is None
+        if the runeime is not available on this machine.
+        """
+        if not self._exe:
+            self._exe = self._get_exe()
+        return self._exe
+    
+    def get_version(self):
+        """ Get the current version of the runtime (as a string). Can be None
+        if the version cannot be retrieved (e.g. for Edge and IE), or if the
+        runtime is not available on this system.
+        """
+        if not self._version:
+            self._version = self._get_version()
+        return self._version
+    
+    def is_available(self):
+        """ Get whether this runtime appears to be available on this machine.
+        """
+        return self.get_exe()
+    
+    def launch_tab(self, url):
+        """ Launch the given url in a new browser tab. Only works for runtimes
+        that are browsers (e.g. not NW).
+        """
+        if not self.is_available():
+            t = 'Cannot launch tab, because %s runtime is not available'
+            raise RuntimeError(t % self.get_name())
+        self._launch_tab(url)
+        logger.info('launched in %s tab: %s' % (self.get_name(), url))
+    
+    def launch_app(self, url):
+        """ Launch the given url as a desktop application. Only works for
+        runtimes that derive from DeskopRuntime (e.g. not Edge). Apps launched
+        this way can usually be terminated using the ``close()`` method.
+        """
+        if not self.is_available():
+            t = 'Cannot launch app, because %s runtime is not available'
+            raise RuntimeError(t % self.get_name())
+        self._launch_app(url)
+        logger.info('launched as %s app: %s' % (self.get_name(), url))
+    
     def close(self):
         """ Close the runtime, or kill it if the process does not
-        respond. Note that closing does not work when the runtime is a
-        browser, because we need a process handle.
+        respond. Note that closing only works for runtimes launched as
+        an app (using ``launch_app()``).
         """
         if self._proc is None:
             return
@@ -102,11 +144,16 @@ class BaseRuntime:
         # Discart process
         self._proc = None
     
+    ## Utilities that this class provides for subclasses
+    
     def _start_subprocess(self, cmd, shell=False, **env):
         """ Start subclasses, store handle, and launch a thread to read
         stdout for the process. Intended for web runtimes that are "bound"
         to this process.
         """
+        if self._proc:
+            t = 'Cannot launch %s app twice with same runtime instance.'
+            raise RuntimeError(t % self.get_name())
         self._proc = self._spawn_subprocess(cmd, shell, **env)
         self._streamreader = StreamReader(self._proc)
         self._streamreader.start()
@@ -125,15 +172,31 @@ class BaseRuntime:
             raise RuntimeError('Could not start runtime with command %r:\n%s' %
                                (cmd[0], str(err)))
     
-    ## To implement in subclasses
+    ## Methods to implement in subclasses
     
     def _get_name(self):
         """ Just make this return a string name.
         """
         raise NotImplementedError()
     
-    def _launch(self):
-        """ Function to implement launching the runtime.
+    def _get_exe(self):
+        """ String executable name, preferably an absolute path. Should return
+        something if the runtime appears to be available.
+        """
+        raise NotImplementedError()
+    
+    def _get_version(self):
+        """ String version, can return None if version cannot be retrieved.
+        """
+        raise NotImplementedError()
+    
+    def _launch_tab(self, url):
+        """ Function to implement launching the url in a new tab.
+        """
+        raise NotImplementedError()
+    
+    def _launch_app(self, url):
+        """ Function to implement launching the url as a desktop app.
         """
         raise NotImplementedError()
 

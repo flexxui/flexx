@@ -33,6 +33,7 @@ import time
 import shutil
 import subprocess
 
+from .. import config
 from . import logger
 from .common import DesktopRuntime
 from ._manage import create_temp_app_dir, RUNTIME_DIR
@@ -130,70 +131,13 @@ pref("nglayout.debug.disable_xul_fastload", false);
 """
 
 
-## Functions
-
-
-def get_firefox_exe():
-    """ Get the path of the Firefox executable
-
-    If the path could not be found, returns None. You may still be able
-    to launch using "firefox" though.
-    """
-    paths = []
-    
-    # Collect possible locations
-    if sys.platform.startswith('win'):
-        for basepath in ('C:\\Program Files\\', 'C:\\Program Files (x86)\\'):
-            paths.append(basepath + 'Mozilla Firefox\\firefox.exe')
-            paths.append(basepath + 'Mozilla\\Firefox\\firefox.exe')
-            paths.append(basepath + 'Firefox\\firefox.exe')
-    elif sys.platform.startswith('linux'):
-        paths.append('/usr/lib/firefox/firefox')
-        paths.append('/usr/lib64/firefox/firefox')
-        paths.append('/usr/lib/iceweasel/iceweasel')
-        paths.append('/usr/lib64/iceweasel/iceweasel')
-    elif sys.platform.startswith('darwin'):
-        osx_user_apps = op.expanduser('~/Applications')
-        osx_root_apps = '/Applications'
-        paths.append(op.join(osx_user_apps, 'Firefox.app/Contents/MacOS/firefox'))
-        paths.append(op.join(osx_root_apps, 'Firefox.app/Contents/MacOS/firefox'))
-        if not any([op.isfile(path) for path in paths]):
-            # Try harder - use app-id to get the .app path
-            try:
-                osx_search_arg='kMDItemCFBundleIdentifier==org.mozilla.firefox'
-                basepath = subprocess.check_output(['mdfind', osx_search_arg]).rstrip()
-                if basepath:
-                    paths.append(op.join(basepath, 'Contents/MacOS/firefox'))
-            except (OSError, subprocess.CalledProcessError):
-                pass
-
-    # Try location until we find one that exists
-    for path in paths:
-        if op.isfile(path):
-            return path
-    else:
-        return None
-
-
-def has_firefox():
-    """ Get whether firefox is installed.
-    """
-    exe = get_firefox_exe()
-    if exe:
-        return exe
-    
-    try:
-        subprocess.check_output(['firefox', '--version'])
-        return 'firefox'
-    except Exception:
-        return False
-
-
-def get_firefox_version(exe):
-    """Get the version of the given Firefox runtime, or None, if None is given.
+# Keep this just in case
+def get_firefox_version_unused(exe):
+    """Get the version of the given Firefox executable, or None, if the given
+    exe does not represent a valid filename.
     """
     version = None
-    if exe:
+    if exe and op.isfile(exe):
         if 'Contents/MacOS/' in exe:
             inifile = op.join(op.dirname(exe),
                                 '../Resources/application.ini')
@@ -206,54 +150,94 @@ def get_firefox_version(exe):
     return version
 
 
-def copy_xul_runtime(dir1, dir2):
-    """ Copy the firefox/xulrunner runtime to a new folder, in which
-    we rename the firefox exe to xulrunner. This thus creates a xul
-    runtime in a location where we have write access. Used to be able
-    to set the process name on Windows, and maybe used to distribute
-    apps *with* the runtime.
-    """
-    t0 = time.time()
-    # Get extension
-    ext = '.exe' if sys.platform.startswith('win') else ''
-    # On Rasberry Pi, the xul runtime is in a (linked) subdir
-    if op.isdir(op.join(dir1, 'xulrunner')):
-        dir1 = op.join(dir1, 'xulrunner')
-    # Clear
-    if op.isdir(dir2):
-        shutil.rmtree(dir2)
-    os.mkdir(dir2)
-    try:
-        # Copy all files except dirs
-        for fname in os.listdir(dir1):
-            filename1 = op.join(dir1, fname)
-            filename2 = op.join(dir2, fname)
-            if op.isfile(filename1):
-                shutil.copy2(filename1, filename2)
-        # Copy firefox exe -> xulrunner
-        for exe_name in ('firefox', 'iceweasel', 'xulrunner', 'firefox'):
-            exe = op.join(dir1, exe_name + ext)
-            if op.isfile(exe):
-                break
-        shutil.copy2(exe, op.join(dir2, 'xulrunner' + ext))
-        logger.info('Copied firefox (in %1.2f s)' % (time.time()-t0))
-    except Exception:
-        # Clean up
-        shutil.rmtree(dir2)
-        raise
-
-
-class XulRuntime(DesktopRuntime):
-    """ Desktop runtime based on Mozilla's XUL framework. Xul is
-    available wherever Firefox is installed, and uses the same engine (Gecko).
+class FirefoxRuntime(DesktopRuntime):
+    """ Runtime based on Mozilla Firefox. Can be used to open an app in
+    Firefox, as well as launch desktop-like apps via Mozilla's XUL framework
+    (available if Firefox is installed).
     
     This runtime is visible in the task manager under a custom process name
-    (``sys,executable + '-ui'``), making it easy to spot in the task manager,
-    and avoids task-bar grouping.
+    (``sys.executable + '-ui'``), making it easy to spot in the task manager,
+    and avoids task-bar grouping. Compared to the NW runtime, this runtime
+    is leaner in terms of memory and number of processes.
     """
 
     def _get_name(self):
         return 'xul'
+        
+    def _get_exe(self):
+        
+        # Return user-specified version?
+        if config.firefox_exe and self._get_version(config.firefox_exe):
+            return config.firefox_exe
+        
+        paths = []
+        
+        # Collect possible locations
+        if sys.platform.startswith('win'):
+            for basepath in ('C:\\Program Files\\', 'C:\\Program Files (x86)\\'):
+                paths.append(basepath + 'Mozilla Firefox\\firefox.exe')
+                paths.append(basepath + 'Mozilla\\Firefox\\firefox.exe')
+                paths.append(basepath + 'Firefox\\firefox.exe')
+        elif sys.platform.startswith('linux'):
+            paths.append('/usr/lib/firefox/firefox')
+            paths.append('/usr/lib64/firefox/firefox')
+            paths.append('/usr/lib/iceweasel/iceweasel')
+            paths.append('/usr/lib64/iceweasel/iceweasel')
+        elif sys.platform.startswith('darwin'):
+            osx_user_apps = op.expanduser('~/Applications')
+            osx_root_apps = '/Applications'
+            paths.append(op.join(osx_user_apps, 'Firefox.app/Contents/MacOS/firefox'))
+            paths.append(op.join(osx_root_apps, 'Firefox.app/Contents/MacOS/firefox'))
+            if not any([op.isfile(path) for path in paths]):
+                # Try harder - use app-id to get the .app path
+                try:
+                    osx_search_arg='kMDItemCFBundleIdentifier==org.mozilla.firefox'
+                    basepath = subprocess.check_output(['mdfind', osx_search_arg]).rstrip()
+                    if basepath:
+                        paths.append(op.join(basepath, 'Contents/MacOS/firefox'))
+                except (OSError, subprocess.CalledProcessError):
+                    pass
+    
+        # Try location until we find one that exists
+        for path in paths:
+            if op.isfile(path):
+                return path
+        
+        # Getting desperate ...
+        for path in os.getenv('PATH', '').split(os.pathsep):
+            if 'firefox' in path.lower() or 'moz' in path.lower():
+                for name in ('firefox.exe', 'firefox', 'iceweasel'):
+                    if op.isfile(op.join(path, name)):
+                        return op.join(path, name)
+        
+        # Maybe just ... firefox as a command?
+        if self._get_version('firefox'):
+            return 'firefox'
+        
+        # We cannot find it
+        return None
+    
+    def _get_version(self, exe=None):
+        if exe is None:
+            exe = self.get_exe()
+            if exe is None:
+                return
+        
+        # Get raw version string (as bytes)
+        if sys.platform.startswith('win'):
+            if not op.isfile(exe):
+                return
+            version = subprocess.check_output(['wmic', 'datafile', 'where',
+                                               'name=%r' % exe,
+                                               'get', 'Version', '/value'])
+        else:
+            version = subprocess.check_output([exe, '--version'])
+        
+        # Clean up
+        parts = version.decode().strip().replace('=', ' ').split(' ')
+        for part in parts:
+            if part and part[0].isnumeric():
+                return part
     
     def _install_runtime(self):
         """ Make a local "copy" of the firefox runtime. This should put
@@ -270,8 +254,8 @@ class XulRuntime(DesktopRuntime):
         files in the firefox runtime. The symlink that we create here
         is only for reference, and does not actually work.
         """
-        exe = get_firefox_exe()
-        version = get_firefox_version(exe)
+        exe = self.get_exe()
+        version = self._get_version(exe)
         if not exe:
             raise RuntimeError('You need to install Firefox')
             # todo: dialite
@@ -279,13 +263,13 @@ class XulRuntime(DesktopRuntime):
         path = op.join(RUNTIME_DIR, self.get_name() + '_' + version)
         if sys.platform.startswith('win'):
             # Windows: copy the whole tuntime
-            copy_xul_runtime(op.dirname(exe), path)
+            self._copy_xul_runtime(op.dirname(exe), path)
         else:
             # OSX / Linux: create a symlink to xul runtime exe
             os.mkdir(path)
             os.symlink(exe, op.join(path, 'xulrunner'))
     
-    def _launch(self):
+    def _launch_app(self, url):
         
         self._check_compat()
 
@@ -306,19 +290,18 @@ class XulRuntime(DesktopRuntime):
 
         # Create files for app
         self._create_xul_app(app_path, id, windowfeatures=windowfeatures,
-                             **self._kwargs)
+                             url=url, **self._kwargs)
 
         # Get executable for xul runtime (may be None)
-        ff_exe = has_firefox()
-        if False:  # todo: flexx.config.ff_exe
-            # Custom firefox exe
-            exe = flexx.config.firefox_exe
-        elif ff_exe == 'firefox':
-            # We don't know location of exe, but we can make this work
+        ff_exe = self.get_exe()
+        if not ff_exe:
+            raise RuntimeError('Firefox needs to be installed')  # todo: dialite
+        elif not op.isfile(ff_exe):
+            # We have no way to wrap things up in a custom app
             exe = ff_exe
         else:
             # We make sure the runtime is "installed" and mangle the name
-            version = get_firefox_version(ff_exe)
+            version = self._get_version(ff_exe)
             xul_exe = op.join(self.get_runtime(version), 'xulrunner')
             xul_exe += '.exe' * sys.platform.startswith('win')
             exe = self._get_app_exe(xul_exe, app_path)
@@ -326,7 +309,10 @@ class XulRuntime(DesktopRuntime):
         # Launch
         cmd = [exe, '-app', op.join(app_path, 'application.ini')]
         self._start_subprocess(cmd)
-
+    
+    def _launch_tab(self, url):
+        self._spawn_subprocess([self.get_exe(), url])
+    
     def _check_compat(self):
         qts = 'PySide', 'PyQt4', 'PyQt5'
         if any([name+'.QtCore' in sys.modules for name in qts]):
@@ -393,3 +379,39 @@ class XulRuntime(DesktopRuntime):
             icon_name = op.join(path, 'chrome/icons/default/' + D['windowid'])
             icon.write(icon_name + '.ico')
             icon.write(icon_name + '.png')
+    
+    def _copy_xul_runtime(self, dir1, dir2):
+        """ Copy the firefox/xulrunner runtime to a new folder, in which
+        we rename the firefox exe to xulrunner. This thus creates a xul
+        runtime in a location where we have write access. Used to be able
+        to set the process name on Windows, and maybe used to distribute
+        apps *with* the runtime.
+        """
+        t0 = time.time()
+        # Get extension
+        ext = '.exe' if sys.platform.startswith('win') else ''
+        # On Rasberry Pi, the xul runtime is in a (linked) subdir
+        if op.isdir(op.join(dir1, 'xulrunner')):
+            dir1 = op.join(dir1, 'xulrunner')
+        # Clear
+        if op.isdir(dir2):
+            shutil.rmtree(dir2)
+        os.mkdir(dir2)
+        try:
+            # Copy all files except dirs
+            for fname in os.listdir(dir1):
+                filename1 = op.join(dir1, fname)
+                filename2 = op.join(dir2, fname)
+                if op.isfile(filename1):
+                    shutil.copy2(filename1, filename2)
+            # Copy firefox exe -> xulrunner
+            for exe_name in ('firefox', 'iceweasel', 'xulrunner', 'firefox'):
+                exe = op.join(dir1, exe_name + ext)
+                if op.isfile(exe):
+                    break
+            shutil.copy2(exe, op.join(dir2, 'xulrunner' + ext))
+            logger.info('Copied firefox (in %1.2f s)' % (time.time()-t0))
+        except Exception:
+            # Clean up
+            shutil.rmtree(dir2)
+            raise
