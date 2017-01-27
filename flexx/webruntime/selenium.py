@@ -10,16 +10,28 @@ from .common import BaseRuntime
 class SeleniumRuntime(BaseRuntime):
     """ Runtime based on Selenium (http://www.seleniumhq.org/), a tool
     to automate browsers, e.g. for testing. Requires the Python package
-    "selenium" to be installed.
+    "selenium" to be installed. It's possible that this runtime is currently
+    broken.
     """
     
     def _get_name(self):
         return 'selenium'
     
-    def _launch(self):
+    def _get_exe(self):
+        try:
+            import selenium
+            return selenium.__file__
+        except ImportError:
+            return None
+    
+    def _get_version(self):
+        if self._get_exe():
+            import selenium
+            return selenium.__version__
+    
+    def _launch_tab(self, url):
         
         # Get url and browser type
-        url = self._kwargs['url']
         type = self._kwargs.get('type', '')
         
         self._driver = None
@@ -51,14 +63,18 @@ class SeleniumRuntime(BaseRuntime):
         
         # Open page
         self._driver.get(url)
-        
+    
+    def _launch_app(self, url):
+        raise RuntimeError('Selenium runtime cannot run as an app.')
+    
     def close(self):
+        """ Close the Selenium driver.
+        """
         if self._driver:
             self._driver.close()
             self._driver = None
     
-    @property
-    def driver(self):
-        """ The Selenium webdriver object. Use this to control the browser.
+    def get_driver(self):
+        """ Get the Selenium webdriver object. Use this to control the browser.
         """
         return self._driver
