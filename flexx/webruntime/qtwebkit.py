@@ -15,7 +15,7 @@ CODE_TO_RUN = """
 import sys
 
 qt = None
-for iter in range(3):
+for iter in range(4):
     try:
         if iter == 0:
             from PyQt5 import QtCore, QtGui, QtWebKit, QtWidgets, QtWebKitWidgets
@@ -26,6 +26,9 @@ for iter in range(3):
         elif iter == 2:
             from PySide import QtCore, QtGui, QtWebKit
             qt = 'pyside'
+        elif iter == 3:
+            from PySide2 import QtCore, QtGui, QtWebKit, QtWidgets, QtWebKitWidgets
+            qt = 'pyside2'
         break
     except ImportError:
         pass
@@ -39,7 +42,7 @@ icon = {icon}
 size = {size}
 pos = {pos}
 
-if qt != 'pyqt5':
+if qt not in ['pyqt5', 'pyside2']:
     app = QtGui.QApplication([])
     m = QtWebKit.QWebView(None)
     
