@@ -8,6 +8,9 @@ import webbrowser
 from . import logger
 from .common import BaseRuntime
 
+# from .xul import FirefoxRuntime
+# from .chromeapp import ChromeRuntime, ChromiumRuntime
+# from .mshtml import IERuntime, EdgeRuntime
 
 BROWSER_MAP = {'chrome': ['google-chrome', 'chrome', 
                           'chromium-browser', 'chromium'],
@@ -15,71 +18,73 @@ BROWSER_MAP = {'chrome': ['google-chrome', 'chrome',
                'default': [],
                }
 
+# RUNTIME_MAP = {'firefox': FirefoxRuntime,
+#                'chrome': ChromeRuntime,
+#                'chromium': ChromiumRuntime,
+#                'ie': IERuntime,
+#                'edge': EdgeRuntime,
+#                }
+
 
 class BrowserRuntime(BaseRuntime):
-    """ Runtime based on the Python webbrowser module. For Firefox,
-    Chrome and Chromium the runtime can often be loaded even if Python's
-    webbrowser module cannot.
+    """ Runtime based on the Python webbrowser module. This runtime is used
+    to attempt to handle a given runtime name that is unknown (maybe its
+    a browser that webbrowser knows about). But mostly, it allows opening
+    an url in the system default browser.
     """
     
     def _get_name(self):
         return 'browser'
     
-    def _launch(self):
-        
-        # Get url and browser type
-        url = self._kwargs['url']
+    def _get_exe(self):
         type = self._kwargs.get('type', '')
+        b, errors = self._get_openers(type)
+        if not type:
+            return 'stub_exe_default_browser'
+        elif b:
+            return 'stub_exe_%s_browser' % type
         
+        # # If that did not work, maybe we should try harder
+        # # In particular on Windows, the exes may simply not be on the path
+        # cls = RUNTIME_MAP.get(type, None)
+        # if cls:
+        #     try:
+        #         cls().launch_tab(url)
+        #         return
+        #     except Exception as err:
+        #         errors.append(str(err))
+    
+    
+    def _get_version(self):
+        return None
+    
+    def _launch_tab(self, url):
+        
+        b, errors = self._get_openers(self._kwargs.get('type', ''))
+        if b:
+            b.open(url)
+        else:
+            if errors:
+                logger.warn('Given browser %r not valid/available;\n'
+                            'Falling back to the default browser.' % type)
+            # Run default
+            webbrowser.open(url)
+    
+    def _launch_app(self, url):
+        raise RuntimeError('Browser runtime cannot run as an app.')
+    
+    def _get_openers(self, type):
         # Get alternative types
         types = BROWSER_MAP.get(type, [type])
         types = [t for t in types if t]
         
         # Try to open all possibilities
         errors = []
+        b = None
         for t in types:
             try:
                 b = webbrowser.get(t)
+                break
             except webbrowser.Error as err:
                 errors.append(str(err))
-            else:
-                b.open(url)
-                return
-        
-        # If that did not work, maybe we should try harder
-        # In particular on Windows, the exes may simply not be on the path
-        if type == 'firefox':  # pragma: no cover
-            from .xul import get_firefox_exe
-            exe = get_firefox_exe() or 'firefox'
-            self._spawn_subprocess([exe, url])
-            self._proc = None  # Prevent closing
-            return
-        elif type == 'chrome':  # pragma: no cover
-            from .chromeapp import get_chrome_exe
-            exe = get_chrome_exe() or 'google-chrome'
-            self._spawn_subprocess([exe, url])
-            self._proc = None  # Prevent closing
-            return
-        elif type == 'chromium':  # pragma: no cover
-            from .chromeapp import get_chromium_exe
-            exe = get_chromium_exe() or 'chromium-browser'
-            self._spawn_subprocess([exe, url])
-            self._proc = None  # Prevent closing
-            return
-        elif type in ('ie', 'iexplore'):
-            from .mshtml import get_ie_exe
-            exe = get_ie_exe() or 'iexplore.exe'
-            self._spawn_subprocess([exe, url])
-            self._proc = None  # Prevent closing
-            return
-        elif type in ('edge', ):
-            self._spawn_subprocess(['start', 'microsoft-edge:'+url], shell=True)
-            self._proc = None  # Prevent closing
-            return
-        
-        if errors:
-            logger.warn('Given browser %r not valid/available;\n'
-                        'Falling back to the default browser.' % type)
-        
-        # Run default
-        webbrowser.open(url)
+        return b, errors

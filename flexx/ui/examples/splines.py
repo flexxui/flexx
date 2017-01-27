@@ -360,5 +360,7 @@ class Splines(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Splines, 'xul')
+    import flexx
+    # flexx.config.chrome_exe = 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+    m = app.launch(Splines, )
     app.start()
