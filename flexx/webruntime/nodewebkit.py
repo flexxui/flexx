@@ -182,13 +182,6 @@ class NWRuntime(DesktopRuntime):
         app_path = create_temp_app_dir('nw')
         id = op.basename(app_path).split('_', 1)[1]
         
-        # Prepare profile dir for NW/Chromium to let --user-data-dir point to.
-        # This dir is unique for each instance of the app, but because it is
-        # inside the app_path, it gets automatically cleaned up.
-        profile_dir = op.join(app_path, 'stub_profile')
-        if not op.isdir(profile_dir):
-            os.mkdir(profile_dir)
-        
         self._kwargs['title'] = self._kwargs.get('title', 'NW.js runtime')
         
         # Get runtime exe
@@ -234,6 +227,13 @@ class NWRuntime(DesktopRuntime):
         if sys.platform.startswith('linux'):
             fix_libudef(app_path)
             llp = app_path + os.pathsep + llp
+        
+        # Prepare profile dir for NW/Chromium to let --user-data-dir point to.
+        # This dir is unique for each instance of the app, but because it is
+        # inside the app_path, it gets automatically cleaned up.
+        profile_dir = op.join(app_path, 'stub_profile')
+        if not op.isdir(profile_dir):
+            os.mkdir(profile_dir)
         
         # Launch
         cmd = [exe, app_path, '--user-data-dir=' + profile_dir]
