@@ -180,17 +180,22 @@ def remove(path1, nowarn=False):
         pass
 
 
-def clean():
-    """ Clean up the webruntime dir and temp app dir.
+def init_dirs():
+    """ Ensure that directories exist.
     """
-    
-    # Ensure that directories exist
     if not op.isdir(APPDATA_DIR):
         os.mkdir(APPDATA_DIR)
     if not op.isdir(RUNTIME_DIR):
         os.mkdir(RUNTIME_DIR)
     if not op.isdir(TEMP_APP_DIR):
         os.mkdir(TEMP_APP_DIR)
+
+
+def clean_dirs():
+    """ Clean up the webruntime dir and temp app dir.
+    """
+    
+    init_dirs()
     
     # Collect dirs/files and lockfiles
     items = []
