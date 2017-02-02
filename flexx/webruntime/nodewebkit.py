@@ -198,7 +198,7 @@ class NWRuntime(DesktopRuntime):
         else:
             # We install the runtime, based on a minimal required version
             exe = self._get_exe_name(self.get_runtime(config.nw_min_version))
-`           
+            
             # Change exe to avoid grouping + easier recognition in task manager
             if exe and op.isfile(op.realpath(exe)):
                 exe = self._get_app_exe(exe, app_path)
