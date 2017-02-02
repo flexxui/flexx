@@ -277,13 +277,6 @@ class FirefoxRuntime(DesktopRuntime):
         app_path = create_temp_app_dir('xul')
         id = op.basename(app_path).split('_', 1)[1]
 
-        # Prepare profile dir for Xul to let -profile dir point to.
-        # This dir is unique for each instance of the app, but because it is
-        # inside the app_path, it gets automatically cleaned up.
-        profile_dir = op.join(app_path, 'stub_profile')
-        if not op.isdir(profile_dir):
-            os.mkdir(profile_dir)
-        
         # Set size and position
         size = self._kwargs.get('size', (640, 480))
         pos = self._kwargs.get('pos', None)
@@ -312,6 +305,13 @@ class FirefoxRuntime(DesktopRuntime):
             xul_exe = op.join(self.get_runtime(version), 'xulrunner')
             xul_exe += '.exe' * sys.platform.startswith('win')
             exe = self._get_app_exe(xul_exe, app_path)
+        
+        # Prepare profile dir for Xul to let -profile dir point to.
+        # This dir is unique for each instance of the app, but because it is
+        # inside the app_path, it gets automatically cleaned up.
+        profile_dir = op.join(app_path, 'stub_profile')
+        if not op.isdir(profile_dir):
+            os.mkdir(profile_dir)
         
         # Launch
         cmd = [exe, '-app', op.join(app_path, 'application.ini'),
