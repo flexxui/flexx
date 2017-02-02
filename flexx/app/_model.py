@@ -592,9 +592,14 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 that the JS side can use to interpret the data. This function
                 will add an "id" field to the meta data.
         """
+        # Note that when send_data() is used from the init(), on the JS side
+        # retrieve_data() is called before init(), unless we use call-later.
+        # However, I've found that data is loaded much slower (or later) if
+        # we delay the send_data call, probably because the browser can 
+        # start loading the data asynchronously.
         meta = {} if meta is None else meta
+        # call_later(0, self.session._send_data, self.id, data, meta)
         return self.session._send_data(self.id, data, meta)
-    
     
     class JS:
         
