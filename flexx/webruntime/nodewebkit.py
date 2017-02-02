@@ -182,7 +182,9 @@ class NWRuntime(DesktopRuntime):
         app_path = create_temp_app_dir('nw')
         id = op.basename(app_path).split('_', 1)[1]
         
-        # Prepare profile dir for NW/Chromium to use which gets auto-cleared 
+        # Prepare profile dir for NW/Chromium to let --user-data-dir point to.
+        # This dir is unique for each instance of the app, but because it is
+        # inside the app_path, it gets automatically cleaned up.
         profile_dir = op.join(app_path, 'stub_profile')
         if not op.isdir(profile_dir):
             os.mkdir(profile_dir)
@@ -196,6 +198,7 @@ class NWRuntime(DesktopRuntime):
         else:
             # We install the runtime, based on a minimal required version
             exe = self._get_exe_name(self.get_runtime(config.nw_min_version))
+`           
             # Change exe to avoid grouping + easier recognition in task manager
             if exe and op.isfile(op.realpath(exe)):
                 exe = self._get_app_exe(exe, app_path)
