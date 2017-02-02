@@ -187,7 +187,8 @@ class NWRuntime(DesktopRuntime):
         # inside the app_path, it gets automatically cleaned up.
         profile_dir = op.join(app_path, 'stub_profile')
         if not op.isdir(profile_dir):
-
+            os.mkdir(profile_dir)
+        
         self._kwargs['title'] = self._kwargs.get('title', 'NW.js runtime')
         
         # Get runtime exe
@@ -195,13 +196,8 @@ class NWRuntime(DesktopRuntime):
             # User specifies the executable, we're not going to worry about version
             exe = flexx.config.nw_exe
         else:
-            exe = self.get_runtime(min_version)
-            if sys.platform.startswith('win'):
-                exe = op.join(exe, 'nw.exe')
-            elif sys.platform.startswith('darwin'):
-                exe = op.join(exe, 'nwjs.app', 'Contents', 'MacOS', 'nwjs')
-            else:
-                exe = op.join(exe, 'nw')
+            # We install the runtime, based on a minimal required version
+            exe = self._get_exe_name(self.get_runtime(config.nw_min_version))
 `           
             # Change exe to avoid grouping + easier recognition in task manager
             if exe and op.isfile(op.realpath(exe)):
