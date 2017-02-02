@@ -22,7 +22,7 @@ del logging
 
 from .. import config
 
-from ._manage import RUNTIME_DIR
+from ._manage import RUNTIME_DIR, TEMP_APP_DIR
 from .common import BaseRuntime, DesktopRuntime  # noqa
 from .xul import FirefoxRuntime
 from .nodewebkit import NWRuntime
