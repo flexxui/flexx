@@ -1,7 +1,23 @@
 """
 Common code for all runtimes.
+
+Note on app runtimes (i.e. for desktop apps): it is assumed that runtimes
+are backward compatible. This is a reasonable assumption since we
+use only the web stuff, which browsers generally keep working.
+
+We also don't make a point of always having the latest version, because
+some runtimes release almost every week. Having the user confirm a
+download such often is way too much a burden, and auto-update too
+complex / error-prone. These updates are mostly for security reasons,
+which is generally less an issue for us because we only connect them
+to known sources which are on localhost for desktop apps anyway.
+
+Therefore, Flexx has a hardcoded minimal version for runtimes where this
+makes sense, which is configurable by the user in cases where its needed.
+
 """
 
+import os.path as op
 import os
 import sys
 import time
@@ -13,23 +29,56 @@ import subprocess
 from . import logger
 from ..util.icon import Icon
 
+from ._manage import RUNTIME_DIR, clean, lock_runtime_dir, versionstring
+
+
+INFO_PLIST = """
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" NONL
+"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIconFile</key>
+    <string>app.icns</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>English</string>
+    <key>CFBundleExecutable</key>
+    <string>{exe}</string>
+    <key>CFBundleName</key>
+    <string>{name}</string>
+</dict>
+</plist>
+""".lstrip().replace('    ', '\t').replace('NONL\n', '')
+
 
 class BaseRuntime:
     """ Base class for all runtimes.
     """
-
+    
     def __init__(self, **kwargs):
         if 'url' not in kwargs:
             raise KeyError('No url provided for runtime.')
-
+        
+        assert self.get_name()
         self._kwargs = kwargs
         self._proc = None
         self._streamreader = None
         atexit.register(self.close)
-
+        
+        # Tidy up, but don't make us wait for it, also give main thread
+        # time to e.g. continue incomplete downloads (e.g. for NW.js runtime)
+        t = threading.Thread(target=lambda:time.sleep(4) or clean())
+        t.setDaemon(True)
+        t.start()  # tidy up
+        
         logger.info('launching %s' % self.__class__.__name__)
         self._launch()
 
+    def get_name(self):
+        """ Get the name of the runtime.
+        """
+        return self._get_name()
+    
     def close(self):
         """ Close the runtime, or kill it if the process does not
         respond. Note that closing does not work when the runtime is a
@@ -52,7 +101,7 @@ class BaseRuntime:
                 self._proc.kill()
         # Discart process
         self._proc = None
-
+    
     def _start_subprocess(self, cmd, shell=False, **env):
         """ Start subclasses, store handle, and launch a thread to read
         stdout for the process. Intended for web runtimes that are "bound"
@@ -75,8 +124,17 @@ class BaseRuntime:
         except OSError as err:  # pragma: no cover
             raise RuntimeError('Could not start runtime with command %r:\n%s' %
                                (cmd[0], str(err)))
-        
+    
+    ## To implement in subclasses
+    
+    def _get_name(self):
+        """ Just make this return a string name.
+        """
+        raise NotImplementedError()
+    
     def _launch(self):
+        """ Function to implement launching the runtime.
+        """
         raise NotImplementedError()
 
 
@@ -97,9 +155,166 @@ class DesktopRuntime(BaseRuntime):
 
         icon = kwargs.get('icon', None)
         kwargs['icon'] = iconize(icon)
+    
         BaseRuntime.__init__(self, **kwargs)
+    
+    
+    def get_runtime(self, min_version=None):
+        """ Get the directory where (our local version of) the runtime is
+        located. If necessary, the runtime is installed or updated.
+        """
+        cur_version = self.get_current_version() or ''
+        path = os.path.join(RUNTIME_DIR, self.get_name() + '_' + cur_version)
+        
+        if not cur_version:
+            # Need to install
+            path = self._meh_install_runtime(True)
+        elif not min_version:
+            # No specific version required, e.g. because can assume that we
+            # have an up-to-date version, like with Chrome.
+            pass
+        elif versionstring(cur_version) < versionstring(min_version):
+            # Need update
+            path = self._meh_install_runtime()
+        else:
+            # Our version is up to date
+            pass
+        
+        # Prevent the runtime dir from deletion while this process is running
+        lock_runtime_dir(path)
+        
+        return path
+    
+    def _meh_install_runtime(self, fresh=False):
+        
+        if fresh:
+            print('Installing %s runtime' % self.get_name())
+        else:
+            print('Updating %s runtime' % self.get_name())
+        # todo: this should be a confirmation dialog
+        
+        try:
+            self._install_runtime()
+        except Exception:
+            # todo: show dialog
+            raise
+        
+        return os.path.join(RUNTIME_DIR, self.get_name() + '_' + self.get_current_version())
+        
+    
+    def get_current_version(self):
+        """ Get the (highest) version of this runtime that we currently have.
+        """
+        versions = []
+        for dname in os.listdir(RUNTIME_DIR):
+            dirname = os.path.join(RUNTIME_DIR, dname)
+            if os.path.isdir(dirname) and dname.startswith(self.get_name() + '_'):
+                versions.append(dname.split('_')[-1])
+        versions.sort(key=versionstring)
+        if versions:
+            return versions[-1]
+    
+    def _get_app_exe(self, runtime_exe, app_path):
+        """ Get the executable to run our app. This should take care
+        that the runtime process shows up in the task manager with the
+        correct exe_name.
+
+        * exe: the location of the runtime executable (can be a symlink)
+        * app_path: the location of the temp app (the app.json or whatever)
+
+        """
+        # Define process name, so that our window is not grouped with
+        # Firefox, NW.js or whatever, and has a more meaningful name in the
+        # task manager. Using sys.executable also works well when frozen.
+        exe_name, ext = op.splitext(op.basename(sys.executable))
+        exe_name = exe_name + '-ui' + ext
+        
+        if sys.platform.startswith('darwin'):
+            # OSX: create an app, the name of the exe does not matter
+            # much but the name to give the application does. We set
+            # the latter to the title, because title and process name
+            # seem the same thing in osx.
+            app_exe = op.join(app_path, exe_name + '.app')
+            title = self._kwargs['title']
+            self._osx_create_app(op.realpath(runtime_exe), app_exe, title)
+            app_exe += '/Contents/MacOS/' + exe_name
+        else:
+            
+            if sys.platform.startswith('win'):
+                # Windows: make a copy of the executable
+                app_exe = op.join(op.dirname(runtime_exe), exe_name)
+                if not op.isfile(app_exe):
+                    shutil.copy2(runtime_exe, app_exe)
+            else:
+                # Linux, create a symlink
+                app_exe = op.join(app_path, exe_name)
+                if not op.isfile(app_exe):
+                    os.symlink(op.realpath(runtime_exe), app_exe)
+
+        return app_exe
 
 
+    def _osx_create_app(self, exe, dst_dir, title):
+        """ Create osx app
+
+        * exe: path to executable of runtime (not the symlink)
+        * dst_dir: path of the .app directory to create.
+        * title: the title of the window *and* the process name
+        """
+
+        # Get original app to copy it from
+        exe_name_src = os.path.basename(exe)
+        exe_name_dst = os.path.basename(dst_dir).split('.')[0]
+        if 'Contents/MacOS' not in exe:
+            raise NotImplementedError('Can only create OS X app from existing app')
+        src_dir = op.dirname(op.dirname(op.dirname(exe)))
+        if not src_dir.endswith('.app'):
+            raise TypeError('The original OS X application must end in .app.')
+
+        # Clear destination
+        if op.isdir(dst_dir):
+            shutil.rmtree(dst_dir)
+        os.mkdir(dst_dir)
+
+        # Make dir structure
+        os.mkdir(op.join(dst_dir, 'Contents'))
+        os.mkdir(op.join(dst_dir, 'Contents', 'MacOS'))
+
+        # Make a link for all the files
+        for dirpath, dirnames, filenames in os.walk(src_dir):
+            relpath = op.relpath(dirpath, src_dir)
+            if relpath.startswith(('Contents/MacOS', 'Contents/Resources',
+                                   'Contents/Versions')):
+                if not os.path.isdir(op.join(dst_dir, relpath)):
+                    os.mkdir(op.join(dst_dir, relpath))
+                for fname in filenames:
+                    os.link(op.join(src_dir, relpath, fname),
+                            op.join(dst_dir, relpath, fname))
+        # Make runtime exe
+        os.link(op.realpath(op.join(src_dir, 'Contents', 'MacOS', exe_name_src)),
+                op.join(dst_dir, 'Contents', 'MacOS', exe_name_dst))
+        # Make info.plist
+        info = INFO_PLIST.format(name=title, exe=exe_name_dst)
+        with open(op.join(dst_dir, 'Contents', 'info.plist'), 'wb') as f:
+            f.write(info.encode())
+        # Make icon - ensured by launch function
+        if self._kwargs.get('icon'):
+            icon = self._kwargs.get('icon')
+            iconfile = op.join(dst_dir, 'Contents', 'Resources', 'app.icns')
+            if os.path.exists(iconfile):
+                os.unlink(iconfile)  # remove first, since its a hard link!
+            icon.write(iconfile)
+    
+    ## To implenent in subclasses
+    
+    def _install_runtime(self):
+        """ Install a local copy of the latest runtime. Called when needed.
+        """
+        raise NotImplementedError()
+
+
+# This does not seem to do much, most of the time, but when things break it
+# usually does give some usefull output!
 class StreamReader(threading.Thread):
     """ Reads stdout of process and log
 
@@ -154,96 +369,18 @@ class StreamReader(threading.Thread):
                           (code, '\n'.join(msgs)))
 
 
-def create_temp_app_dir(prefix, suffix='', cleanup=60):
-    """ Create a temporary direrctory and return path
-
-    The directory will be named "<prefix>_<timestamp>_<pid>_<suffix>".
-    Will clean up directories with the same prefix which are older than
-    cleanup seconds.
+def find_osx_exe(app_id):
+    """ Find the xxx.app of an application via its app id,
+    se.g. 'com.google.Chrome'.
     """
-
-    # Select main dir
-    maindir = os.path.join(appdata_dir('flexx'), 'temp_apps')
-    if not os.path.isdir(maindir):  # pragma: no cover
-        os.mkdir(maindir)
-
-    prefix = prefix.strip(' _-') + '_'
-    suffix = '' if not suffix else '_' + suffix.strip(' _-')
-
-    # Clear any old files
-    for dname in os.listdir(maindir):
-        if dname.startswith(prefix):
-            dirname = os.path.join(maindir, dname)
-            if os.path.isdir(dirname):
-                try:
-                    dirtime = int(dname.split('_')[1])
-                except Exception:  # pragma: no cover
-                    pass
-                if (time.time() - dirtime) > cleanup:  # pragma: no cover
-                    try:
-                        shutil.rmtree(dirname)
-                    except (OSError, IOError):
-                        pass
-
-    # Return new dir
-    id = '%i_%i' % (time.time(), os.getpid())
-    path = os.path.join(maindir, prefix + id + suffix)
-    os.mkdir(path)
-    return path
+    try:
+        osx_search_arg = 'kMDItemCFBundleIdentifier==%s' % app_id
+        return subprocess.check_output(['mdfind', osx_search_arg]).rstrip().decode()
+    except (OSError, subprocess.CalledProcessError):
+        pass
 
 
-# From pyzolib/paths.py (https://bitbucket.org/pyzo/pyzolib/src/tip/paths.py)
-def appdata_dir(appname=None, roaming=False, macAsLinux=False):
-    """ appdata_dir(appname=None, roaming=False,  macAsLinux=False)
-    Get the path to the application directory, where applications are allowed
-    to write user specific files (e.g. configurations). For non-user specific
-    data, consider using common_appdata_dir().
-    If appname is given, a subdir is appended (and created if necessary).
-    If roaming is True, will prefer a roaming directory (Windows Vista/7).
-    If macAsLinux is True, will return the Linux-like location on Mac.
-    """
-
-    # Define default user directory
-    userDir = os.path.expanduser('~')
-
-    # Get system app data dir
-    path = None
-    if sys.platform.startswith('win'):
-        path1, path2 = os.getenv('LOCALAPPDATA'), os.getenv('APPDATA')
-        path = (path2 or path1) if roaming else (path1 or path2)
-    elif sys.platform.startswith('darwin') and not macAsLinux:
-        path = os.path.join(userDir, 'Library', 'Application Support')
-    # On Linux and as fallback
-    if not (path and os.path.isdir(path)):
-        path = userDir
-
-    # Maybe we should store things local to the executable (in case of a
-    # portable distro or a frozen application that wants to be portable)
-    prefix = sys.prefix
-    if getattr(sys, 'frozen', None):  # See application_dir() function
-        prefix = os.path.abspath(os.path.dirname(sys.executable))
-    for reldir in ('settings', '../settings'):
-        localpath = os.path.abspath(os.path.join(prefix, reldir))
-        if os.path.isdir(localpath):  # pragma: no cover
-            try:
-                open(os.path.join(localpath, 'test.write'), 'wb').close()
-                os.remove(os.path.join(localpath, 'test.write'))
-            except IOError:
-                pass  # We cannot write in this directory
-            else:
-                path = localpath
-                break
-
-    # Get path specific for this app
-    if appname:
-        if path == userDir:
-            appname = '.' + appname.lstrip('.')  # Make it a hidden directory
-        path = os.path.join(path, appname)
-        if not os.path.isdir(path):  # pragma: no cover
-            os.mkdir(path)
-
-    # Done
-    return path
+## Icon stuff
 
 
 _icon_template = """
