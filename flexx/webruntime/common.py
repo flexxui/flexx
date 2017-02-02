@@ -29,7 +29,8 @@ import subprocess
 from . import logger
 from ..util.icon import Icon
 
-from ._manage import RUNTIME_DIR, clean, lock_runtime_dir, versionstring
+from ._manage import RUNTIME_DIR
+from ._manage import init_dirs, clean_dirs, lock_runtime_dir, versionstring
 
 
 INFO_PLIST = """
@@ -68,7 +69,8 @@ class BaseRuntime:
         
         # Tidy up, but don't make us wait for it, also give main thread
         # time to e.g. continue incomplete downloads (e.g. for NW.js runtime)
-        t = threading.Thread(target=lambda:time.sleep(4) or clean())
+        init_dirs()
+        t = threading.Thread(target=lambda:time.sleep(4) or clean_dirs())
         t.setDaemon(True)
         t.start()  # tidy up
     
