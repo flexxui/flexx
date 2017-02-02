@@ -278,12 +278,13 @@ class FirefoxRuntime(DesktopRuntime):
         id = op.basename(app_path).split('_', 1)[1]
 
         # Set size and position
+        # Maybe interesting window features: alwaysRaised
         size = self._kwargs.get('size', (640, 480))
         pos = self._kwargs.get('pos', None)
-        windowfeatures = 'resizable,'
-        windowfeatures += 'width=%i, height=%i' % (size[0], size[1])
+        windowfeatures = 'resizable=1,minimizable=1,dialog=0,'
+        windowfeatures += 'width=%i,height=%i' % (size[0], size[1])
         if pos:
-            windowfeatures += ', top=%i, left=%i' % (pos[0], pos[1])
+            windowfeatures += ',top=%i,left=%i' % (pos[0], pos[1])
 
         # More preparing
         self._kwargs['title'] = self._kwargs.get('title', 'XUL runtime')

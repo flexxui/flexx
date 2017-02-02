@@ -125,6 +125,8 @@ class NWRuntime(DesktopRuntime):
             if op.isfile(exe):
                 return exe
     
+    # todo: if not installedm is_available is false, giving not chance to install
+    
     def _get_version(self):
         return self.get_current_version()  # todo: rename to _get_chached_version or something
     
