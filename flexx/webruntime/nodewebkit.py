@@ -28,8 +28,9 @@ import struct
 import shutil
 from urllib.request import urlopen
 
+from .. import config
 from .common import DesktopRuntime
-from ._manage import download_runtime, create_temp_app_dir
+from ._manage import RUNTIME_DIR, download_runtime, create_temp_app_dir
 
 
 # http://docs.nwjs.io/en/latest/References/Manifest%20Format
@@ -88,24 +89,44 @@ def fix_libudef(dest):
              "/lib/i386-linux-gnu/libudev.so.1",  # Ubuntu 32bit
              ]
     
-    target = os.path.join(dest, 'libudev.so.0')
+    target = op.join(dest, 'libudev.so.0')
     for path in paths:
-        if os.path.isfile(path) and not os.path.isfile(target):
+        if op.isfile(path) and not op.isfile(target):
             os.symlink(path, target)
 
 
-class NodeWebkitRuntime(DesktopRuntime):
+class NWRuntime(DesktopRuntime):
     """ Desktop runtime based on NW.js (http://nwjs.io/, formerly
     node-webkit), which uses the Chromium engine. Flexx takes
     care of downloading (and updating) the runtime when needed.
     
     This runtime is visible in the task manager under a custom process name
-    (``sys,executable + '-ui'``), making it easy to spot in the task manager,
-    and avoids task-bar grouping.
+    (``sys.executable + '-ui'``), making it easy to spot in the task manager,
+    and avoids task-bar grouping. Compared to the Firefox app runtime,
+    this runtime uses more processes and memory, but is generally faster.
     """
     
     def _get_name(self):
         return 'nw'
+    
+    def _get_exe_name(self, dir):
+        if sys.platform.startswith('win'):
+            return op.join(dir, 'nw.exe')
+        elif sys.platform.startswith('darwin'):
+            return op.join(dir, 'nwjs.app', 'Contents', 'MacOS', 'nwjs')
+        else:
+            return op.join(dir, 'nw')
+    
+    def _get_exe(self):
+        cur_version = self.get_current_version() or ''
+        if cur_version:
+            dir = op.join(RUNTIME_DIR, self.get_name() + '_' + cur_version)
+            exe = op.realpath(self._get_exe_name(dir))
+            if op.isfile(exe):
+                return exe
+    
+    def _get_version(self):
+        return self.get_current_version()  # todo: rename to _get_chached_version or something
     
     def _get_latest_version(self):
         """" Get latest version of the NW runtime.
@@ -122,7 +143,7 @@ class NodeWebkitRuntime(DesktopRuntime):
         versions_int.sort()
         return '.'.join([str(i) for i in versions_int[-1]])
     
-    def _get_url(self, version, platform=None):
+    def _get_download_url(self, version, platform=None):
         """ Given a version, get the url where it can be downloaded.
         """
         platform = platform or sys.platform
@@ -139,7 +160,7 @@ class NodeWebkitRuntime(DesktopRuntime):
     
     def _install_runtime(self):
         latest_version = self._get_latest_version()
-        url = self._get_url(latest_version)
+        url = self._get_download_url(latest_version)
         download_runtime(self.get_name(), latest_version, url)
     
     def _test_platform(self):
@@ -150,36 +171,31 @@ class NodeWebkitRuntime(DesktopRuntime):
                                sys.platform)
             # todo: show GUI? that wont work either, but if dialite has a nice fallback, we might as well use that to notify the user
     
-    def _launch(self):
+    def _launch_tab(self, url):
+        raise RuntimeError('NW runtime cannot launch tabs.')
+    
+    def _launch_app(self, url):
         
         self._test_platform()
         
         # Get dir to store app definition
         app_path = create_temp_app_dir('nw')
-        id = os.path.basename(app_path).split('_', 1)[1]
+        id = op.basename(app_path).split('_', 1)[1]
         
         # Prepare profile dir for NW/Chromium to use which gets auto-cleared 
-        profile_dir = os.path.join(app_path, 'stub_profile')
-        if not os.path.isdir(profile_dir):
+        profile_dir = op.join(app_path, 'stub_profile')
+        if not op.isdir(profile_dir):
             os.mkdir(profile_dir)
-        
-        # Get minimal required version
-        min_version = '0.19.5'
-        # todo: allow configuration
         
         self._kwargs['title'] = self._kwargs.get('title', 'NW.js runtime')
         
         # Get runtime exe
-        if False:  # todo: flexx.config.nw_exe
+        if config.nw_exe:
+            # User specifies the executable, we're not going to worry about version
             exe = flexx.config.nw_exe
         else:
-            exe = self.get_runtime(min_version)
-            if sys.platform.startswith('win'):
-                exe = os.path.join(exe, 'nw.exe')
-            elif sys.platform.startswith('darwin'):
-                exe = os.path.join(exe, 'nwjs.app', 'Contents', 'MacOS', 'nwjs')
-            else:
-                exe = os.path.join(exe, 'nw')
+            # We install the runtime, based on a minimal required version
+            exe = self._get_exe_name(self.get_runtime(config.nw_min_version))
             # Change exe to avoid grouping + easier recognition in task manager
             if exe and op.isfile(op.realpath(exe)):
                 exe = self._get_app_exe(exe, app_path)
@@ -192,7 +208,7 @@ class NodeWebkitRuntime(DesktopRuntime):
         D = get_manifest_template()
         # D['name'] = normalize('name-of-app-class')
         D['description'] += ' (%s)' % id
-        D['main'] = self._kwargs['url']
+        D['main'] = url
         D['window']['title'] = self._kwargs.get('title', 'nw.js runtime')
         
         # Set size (position can be null, center, mouse)
@@ -202,12 +218,12 @@ class NodeWebkitRuntime(DesktopRuntime):
         # Icon (note that icon is "overloaded" if nw is wrapped in a runtime.app)
         if self._kwargs.get('icon'):
             icon = self._kwargs.get('icon')
-            icon_path = os.path.join(app_path, 'app.png')  # nw can handle ico
+            icon_path = op.join(app_path, 'app.png')  # nw can handle ico
             icon.write(icon_path)
             D['window']['icon'] = 'app%i.png' % icon.image_sizes()[0]
         
         # Write app manifest
-        with open(os.path.join(app_path, 'package.json'), 'wb') as f:
+        with open(op.join(app_path, 'package.json'), 'wb') as f:
             f.write(json.dumps(D, indent=4).encode())
         
         # Fix libudef bug

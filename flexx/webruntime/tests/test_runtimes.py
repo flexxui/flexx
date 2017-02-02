@@ -146,7 +146,7 @@ def test_unknown():
 
 def test_default():
     p = launch(URL)
-    assert p.__class__.__name__ == 'XulRuntime'
+    assert p.__class__.__name__ == 'FirefoxRuntime'
     p.close()
 
 
