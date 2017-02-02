@@ -134,7 +134,7 @@ class BaseRuntime:
             if self._proc.stdin:  # pragma: no cover
                 self._proc.stdin.close()
             self._proc.terminate()
-            timeout = time.time() + 0.25
+            timeout = time.time() + 0.2
             while time.time() < timeout:
                 time.sleep(0.02)
                 if self._proc.poll() is not None:
