@@ -1,6 +1,6 @@
 """
 Verify that the app runtimes do not leave profile directories around. We've
-had xul spam the  user directory before, and we want to make sure that does not
+had firefox-app spam the  user directory before, and we want to make sure that does not
 happen again.
 """
 
@@ -33,7 +33,7 @@ def notrailtester(runtime, n=4):
     before = index()
     
     for i in range(n):
-        x = webruntime.launch(html_filename, 'xul')
+        x = webruntime.launch(html_filename, runtime)
         time.sleep(1.5)
         x.close()
         time.sleep(0.5)
@@ -49,12 +49,12 @@ def notrailtester(runtime, n=4):
     assert len(extra_files2) < n
 
 
-def test_notrail_xul():
-    notrailtester('xul')
+def test_notrail_firefox():
+    notrailtester('firefox-app')
 
 
-def test_notrail_xul():
-    notrailtester('nwjs')
+def test_notrail_nw():
+    notrailtester('nw-app')
 
 
 run_tests_if_main()
