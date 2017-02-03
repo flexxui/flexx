@@ -38,5 +38,5 @@ class Example(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Example, 'firefox')
+    m = app.launch(Example, 'browser')
     app.run()
