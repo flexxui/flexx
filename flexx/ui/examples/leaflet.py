@@ -60,10 +60,11 @@ def _get_data(item_or_url):
     return urlopen(req).read()
 
 
-def _embed_css_resources(css):
+def _embed_css_resources(css, types=('.png',)):
     """ Replace urls in css with data urls 
     """
-    rx = re.compile('(url\s*\(\s*(.*(\.png|\.jpg|\.svg))\s*\))')
+    type_str = '|'.join('\%s' % t for t in types)
+    rx = re.compile('(url\s*\(\s*(.*(%s))\s*\))' % type_str)
     found = rx.findall(css)
     for match, item, ext in found:
         data = base64.b64encode(_get_data(item)).decode()
