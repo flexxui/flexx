@@ -22,14 +22,14 @@ del logging
 from .. import config
 
 from ._manage import RUNTIME_DIR, TEMP_APP_DIR
-from .common import BaseRuntime, DesktopRuntime  # noqa
-from .xul import FirefoxRuntime
-from .nodewebkit import NWRuntime
-from .browser import BrowserRuntime
-from .qtwebkit import PyQtRuntime
-from .chromeapp import ChromeRuntime, GoogleChromeRuntime, ChromiumRuntime
-from .mshtml import IERuntime, EdgeRuntime
-from .selenium import SeleniumRuntime
+from ._common import BaseRuntime, DesktopRuntime  # noqa
+from ._firefox import FirefoxRuntime
+from ._nw import NWRuntime
+from ._browser import BrowserRuntime
+from ._qt import PyQtRuntime
+from ._chrome import ChromeRuntime, GoogleChromeRuntime, ChromiumRuntime
+from ._ms import IERuntime, EdgeRuntime
+from ._selenium import SeleniumRuntime
 
 
 # Definition of all runtime names and their order

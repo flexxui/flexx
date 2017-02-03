@@ -6,7 +6,7 @@ Opens browser via webbrowser module.
 import webbrowser
 
 from . import logger
-from .common import BaseRuntime
+from ._common import BaseRuntime
 
 
 BROWSER_MAP = {'chrome': ['google-chrome', 'chrome', 

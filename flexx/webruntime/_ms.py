@@ -5,7 +5,7 @@ import os.path as op
 import os
 import sys
 
-from .common import BaseRuntime
+from ._common import BaseRuntime
 
 
 class MicrosoftRuntime(BaseRuntime):
