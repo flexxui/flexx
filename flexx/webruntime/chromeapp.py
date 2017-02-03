@@ -19,9 +19,13 @@ from .common import DesktopRuntime, find_osx_exe
 from ._manage import RUNTIME_DIR
 
 
-class ChromishRuntime(DesktopRuntime):
-    """ Base runtime based on the Chrome/Chromium browser.
+class ChromeRuntime(DesktopRuntime):
+    """ Runtime representing either the Google Chrome or Chromium browser.
     """
+    # Note, this is not an abstract class, but a proxy class for either browser
+    
+    def _get_name(self):
+        return 'chrome'
     
     def _get_version(self, exe=None):
         if exe is None:
@@ -77,20 +81,11 @@ class ChromishRuntime(DesktopRuntime):
         # Launch url
         #self._start_subprocess([exe, '--app=%s' % url] + opts)
         self._spawn_subprocess([exe, '--app=%s' % url] + opts)
-
-
-class ChromeRuntime(ChromishRuntime):
-    """ Runtime based on the Chrome browser. This runtime does support
-    desktop-like apps, but it is somewhat limited in that it has a
-    Chrome icon on Linux, the app tends to group on the taskbar with
-    the Chrome/Chromium browser, and it cannot be closed with the
-    ``close()`` method.
-    """
-    
-    def _get_name(self):
-        return 'chrome'
     
     def _get_exe(self):
+        return self._get_google_chrome_exe() or self._get_chromium_exe()
+    
+    def _get_google_chrome_exe(self):
         
         # Return user-specified version?
         # Note that its perfectly fine to specify a chromium exe here 
@@ -137,19 +132,8 @@ class ChromeRuntime(ChromishRuntime):
         # We cannot find it
         return None
 
-
-class ChromiumRuntime(ChromishRuntime):
-    """ Runtime based on the Chromium browser. This runtime does support
-    desktop-like apps, but it is somewhat limited in that it has a
-    Chrome icon on Linux, the app tends to group on the taskbar with
-    the Chrome/Chromium browser, and it cannot be closed with the
-    ``close()`` method.
-    """
     
-    def _get_name(self):
-        return 'chromium'
-    
-    def _get_exe(self):
+    def _get_chromium_exe(self):
         paths = []
         
         # Collect possible locations
@@ -188,3 +172,33 @@ class ChromiumRuntime(ChromishRuntime):
         
         # We cannot find it
         return None
+
+
+class GoogleChromeRuntime(ChromeRuntime):
+    """ Runtime based on the Google Chrome browser. This runtime does support
+    desktop-like apps, but it is somewhat limited in that it has a
+    Chrome icon on Linux, the app tends to group on the taskbar with
+    the Chrome/Chromium browser, and it cannot be closed with the
+    ``close()`` method.
+    """
+    
+    def _get_name(self):
+        return 'googlechrome'
+    
+    def _get_exe(self):
+        return self._get_google_chrome_exe()
+
+
+class ChromiumRuntime(ChromeRuntime):
+    """ Runtime based on the Chromium browser. This runtime does support
+    desktop-like apps, but it is somewhat limited in that it has a
+    Chrome icon on Linux, the app tends to group on the taskbar with
+    the Chrome/Chromium browser, and it cannot be closed with the
+    ``close()`` method.
+    """
+    
+    def _get_name(self):
+        return 'chromium'
+    
+    def _get_exe(self):
+        return self._get_chromium_exe()
