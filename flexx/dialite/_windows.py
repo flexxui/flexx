@@ -32,6 +32,13 @@ class WindowsApp(BaseApp):
         with open(self._filename, 'wb') as f:
             f.write(script.encode())
     
+    def works(self):
+        try:
+            subprocess.check_output(['cscript'])
+            return True
+        except Exception:
+            return False
+    
     def fail(self, title, message):
         # 4096 makes it system modal
         self._message(16 + 0 + 4096, title, message)

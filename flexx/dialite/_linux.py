@@ -14,6 +14,13 @@ class LinuxApp(BaseApp):
     """ Implementation of dialogs for Linux, by making use of Zenity.
     """
     
+    def works(self):
+        try:
+            subprocess.check_output(['zenity', '--version'])
+            return True
+        except Exception:
+            return False
+    
     def fail(self, title, message):
         self._message('--error', title, message)
     

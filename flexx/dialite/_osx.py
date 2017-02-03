@@ -9,6 +9,13 @@ class OSXApp(BaseApp):
     """ Implementation of dialogs for OS X, by making use of osascript.
     """
     
+    def works(self):
+        try:
+            subprocess.check_output(['osascript', '-e', 'return "hi"'])
+            return True
+        except Exception:
+            return False
+    
     def fail(self, title, message):
         self._message(title, message, 'with icon stop', 'buttons {"OK"}')
     

@@ -15,6 +15,9 @@ class BaseApp(object):
     that subclasses must implement.
     """
     
+    def works(self):
+        raise NotImplementedError()  # to test whether the app actually works
+    
     def fail(self, title, message):
         raise NotImplementedError()
     
@@ -29,9 +32,6 @@ class BaseApp(object):
     
     def ask(self, title, message):
         raise NotImplementedError()
-    
-    def works(self):
-        return True
 
 
 class TerminalApp(BaseApp):
@@ -76,6 +76,9 @@ class StubApp(BaseApp):
     where no tty is available. Pass warning() and inform(), fail for anything
     else.
     """
+    
+    def works(self):
+        return True
     
     def _error(self, kind, title, message):
         # Show error in browser, because user may not be able to see exception
