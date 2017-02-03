@@ -42,14 +42,16 @@ mimetypes.init()
 
 
 def _get_code(item):
-    """ Get a text item from _base_url """
+    """ Get a text item from _base_url 
+    """
     url = '%s/%s' % (_base_url, item)
     req = Request(url, headers={'User-Agent': 'flexx/%s' % flexx.__version__})
     return urlopen(req).read().decode()
 
 
 def _get_data(item_or_url):
-    """ Get a binary item from url or _base_url """
+    """ Get a binary item from url or _base_url 
+    """
     if '://' in item_or_url:
         url = item_or_url
     else:
@@ -59,7 +61,8 @@ def _get_data(item_or_url):
 
 
 def _embed_css_resources(css):
-    """ Replace urls in css with data urls """
+    """ Replace urls in css with data urls 
+    """
     rx = re.compile('(url\s*\(\s*(.*(\.png|\.jpg|\.svg))\s*\))')
     found = rx.findall(css)
     for match, item, ext in found:
@@ -121,7 +124,7 @@ class LeafletWidget(Widget):
         @event.prop
         def zoom(self, zoom=8):
             """ Zoom level for the map. This property is defined in Python and
-            JS because the zoomlevel can be adjust by the server as well as by
+            JS because the zoomlevel can be adjusted by the server as well as by
             the user through the map widget.
             """
             return int(zoom)
@@ -135,11 +138,14 @@ class LeafletWidget(Widget):
 
         @event.prop
         def show_layers(self, show_layers=False):
-            """ Show layers icon on the top-right of the map """
+            """ Show layers icon on the top-right of the map 
+            """
             return bool(show_layers)
 
         @event.prop
         def show_scale(self, show_scale=False):
+            """ Show scale at bottom-left of map
+            """
             return bool(show_scale)
 
     class JS:
@@ -156,6 +162,7 @@ class LeafletWidget(Widget):
             self.map = L.map(self.mapnode)
             self.map.on('zoomend', self.map_handle_zoom)
             self.map.on('moveend', self.map_handle_move)
+            # Container to keep track of leaflet layer objects
             self.layer_container = []
             self.layer_control = L.control.layers()
             self.scale = L.control.scale({'imperial': False, 'maxWidth': 200})
