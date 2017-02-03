@@ -332,7 +332,7 @@ def download_runtime(runtime_name, version, url):
     # Note, if for some reason the runtime is corrupt, the user can goto
     # flexx.webruntime.RUNTIME_DIR and delete it. This solution works for
     # devs but less so for end-users. So frozen apps should either ship the
-    # runtime along, or use the xul runtime.
+    # runtime along, or use the firefox-app runtime.
 
 
 def _download(url, archive_name):
