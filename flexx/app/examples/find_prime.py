@@ -49,7 +49,7 @@ class PrimeFinder(app.Model):
 if __name__ == '__main__':
     
     # Create app instance
-    finder = app.launch(PrimeFinder, 'xul')  # can also use Firefox or Chrome
+    finder = app.launch(PrimeFinder, 'app or chrome-app')
     
     finder.find_prime_py(2000)  # 0.7 s
     finder.find_prime_js(2000)  # 0.2 s

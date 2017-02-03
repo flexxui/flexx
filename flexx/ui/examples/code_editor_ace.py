@@ -40,5 +40,5 @@ class CodeEditor(ui.Widget):
             self.ace.resize()
 
 if __name__ == '__main__':
-    app.launch(CodeEditor, 'xul')
+    app.launch(CodeEditor, 'app')
     app.run()

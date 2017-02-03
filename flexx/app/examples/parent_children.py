@@ -68,7 +68,7 @@ class Node(app.Model):
             print('parent of %s changed to %s in JS' % (self._id, parent_id))
 
 
-n1 = app.launch(Node, 'xul')
+n1 = app.launch(Node, 'app')
 
 # Create other nodes in context of n1, so they share the same session
 with n1:

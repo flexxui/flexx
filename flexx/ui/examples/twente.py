@@ -166,7 +166,7 @@ class Twente(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Twente, runtime='xul', title='Temperature 1951 - 2014',
+    m = app.launch(Twente, runtime='app', title='Temperature 1951 - 2014',
                    size=(900, 400))
     m.style = 'background:#eee;'  # more desktop-like
     app.run()
