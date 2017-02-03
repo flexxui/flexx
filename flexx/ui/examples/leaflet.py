@@ -8,12 +8,20 @@ Simple example:
 
         def init(self):
             with ui.BoxPanel():
-                ui.MapWidget(layers=['http://t1.openstreetmap.org/'],
-                             zoom=8, center=[52.0, 5.5])
+                ui.MapWidget(
+                    layers=[('http://t1.openstreetmap.org/', 'OpenStreetMap')],
+                    zoom=8,
+                    center=[52.0, 5.5]
+                )
 
 """
 
-from urllib.request import urlopen
+
+import os
+from urllib.request import urlopen, Request
+import re
+import base64
+import mimetypes
 
 import flexx
 from flexx import event, app
@@ -22,24 +30,57 @@ from flexx.ui import Widget
 from flexx.util.getresource import get_resource
 
 
-_base_url = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/'
+_leaflet_url = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/'
 _leaflet_version = '1.0.3'
-_assets = (
-    'leaflet.css',
+
+
+if 'LEAFLET_DIR' in os.environ:
+    _base_url = 'file://%s' % os.environ['LEAFLET_DIR']
+else:
+    _base_url = '%s/%s' % (_leaflet_url, _leaflet_version)
+mimetypes.init()
+
+
+def _get_code(item):
+    """ Get a text item from _base_url """
+    url = '%s/%s' % (_base_url, item)
+    req = Request(url, headers={'User-Agent': 'flexx/%s' % flexx.__version__})
+    return urlopen(req).read().decode()
+
+
+def _get_data(item_or_url):
+    """ Get a binary item from url or _base_url """
+    if '://' in item_or_url:
+        url = item_or_url
+    else:
+        url = '%s/%s' % (_base_url, item_or_url)
+    req = Request(url, headers={'User-Agent': 'flexx/%s' % flexx.__version__})
+    return urlopen(req).read()
+
+
+def _embed_css_resources(css):
+    """ Replace urls in css with data urls """
+    rx = re.compile('(url\s*\(\s*(.*(\.png|\.jpg|\.svg))\s*\))')
+    found = rx.findall(css)
+    for match, item, ext in found:
+        data = base64.b64encode(_get_data(item)).decode()
+        mime = mimetypes.types_map[ext]
+        repl = 'url(data:%s;base64,%s)' % (mime, data)
+        css = css.replace(match, repl)
+    return css
+
+
+app.assets.associate_asset(
+    __name__,
     'leaflet.js',
-    # Image assets are not (yet) supported (See #71)
-    #    'images/marker-icon.png',
-    #    'images/marker-icon-2x.png',
-    #    'images/marker-shadow.png',
-    #    'images/layers.png',
-    #    'images/layers-2x.png',
+    lambda: _get_code('leaflet.js'),
 )
 
-for asset in _assets:
-    app.assets.associate_asset(
-        __name__,
-        '%s/%s/%s' % (_base_url, _leaflet_version, asset)
-    )
+app.assets.associate_asset(
+    __name__,
+    'leaflet.css',
+    lambda: _embed_css_resources(_get_code('leaflet.css')),
+)
 
 
 class LeafletWidget(Widget):
@@ -54,6 +95,13 @@ class LeafletWidget(Widget):
         # this can be a python only property
         if layers is None:
             layers = []
+        if isinstance(layers, str):
+            layers = [(layers, 'Layer')]
+        if not isinstance(layers, list):
+            layers = list(layers)
+        for i, layer in enumerate(layers):
+            if not isinstance(layer, tuple) and not isinstance(layer, list):
+                layers[i] = (layer, 'Layer')
         return layers
 
     @event.prop
@@ -85,6 +133,15 @@ class LeafletWidget(Widget):
             """
             return float(center[0]), float(center[1])
 
+        @event.prop
+        def show_layers(self, show_layers=False):
+            """ Show layers icon on the top-right of the map """
+            return bool(show_layers)
+
+        @event.prop
+        def show_scale(self, show_scale=False):
+            return bool(show_scale)
+
     class JS:
 
         def _init_phosphor_and_node(self):
@@ -99,6 +156,9 @@ class LeafletWidget(Widget):
             self.map = L.map(self.mapnode)
             self.map.on('zoomend', self.map_handle_zoom)
             self.map.on('moveend', self.map_handle_move)
+            self.layer_container = []
+            self.layer_control = L.control.layers()
+            self.scale = L.control.scale({'imperial': False, 'maxWidth': 200})
 
         def map_handle_zoom(self, e):
             zoom = self.map.getZoom()
@@ -115,7 +175,7 @@ class LeafletWidget(Widget):
 
         @event.connect('zoom')
         def _handle_zoom(self, *events):
-            self.map.setZoom(self.zoom)
+            self.map.setZoom(events[-1].new_value)
 
         @event.connect('min_zoom')
         def _handle_min_zoom(self, *events):
@@ -127,7 +187,21 @@ class LeafletWidget(Widget):
 
         @event.connect('center')
         def _handle_center(self, *events):
-            self.map.panTo(self.center)
+            self.map.panTo(events[-1].new_value)
+
+        @event.connect('show_layers')
+        def _handle_show_layers(self, *events):
+            if events[-1].new_value:
+                self.map.addControl(self.layer_control)
+            else:
+                self.map.removeControl(self.layer_control)
+
+        @event.connect('show_scale')
+        def _handle_show_scale(self, *events):
+            if events[-1].new_value:
+                self.map.addControl(self.scale)
+            else:
+                self.map.removeControl(self.scale)
 
         @event.connect('size')
         def _size_changed(self, *events):
@@ -140,21 +214,19 @@ class LeafletWidget(Widget):
 
         @event.connect('layers')
         def _layers_changed(self, *events):
-            layers = []
-
-            def add_layer_to_list(layer):
-                layers.append(layer)
-
-            self.map.eachLayer(add_layer_to_list)
-            for layer in layers:
-                self.map.removeLayer(layer)
-            for layer in events[-1].new_value:
-                if not layer.endswith('.png'):
-                    if not layer.endswith('/'):
-                        layer += '/'
-                    layer += '{z}/{x}/{y}.png'
-                lyr = L.tileLayer(layer)
-                lyr.addTo(self.map)
+            for layer in self.layer_container:
+                self.layer_control.removeLayer(layer)
+                if self.map.hasLayer(layer):
+                    self.map.removeLayer(layer)
+            for layer_url, layer_name in events[-1].new_value:
+                if not layer_url.endswith('.png'):
+                    if not layer_url.endswith('/'):
+                        layer_url += '/'
+                    layer_url += '{z}/{x}/{y}.png'
+                new_layer = L.tileLayer(layer_url)
+                self.layer_container.append(new_layer)
+                self.map.addLayer(new_layer)
+                self.layer_control.addOverlay(new_layer, layer_name)
 
 
 if __name__ == '__main__':
@@ -172,16 +244,27 @@ if __name__ == '__main__':
                 with flexx.ui.VBox():
                     self.btna = flexx.ui.Button(text='Add SeaMap')
                     self.btnr = flexx.ui.Button(text='Remove SeaMap')
+                    self.cbs = flexx.ui.CheckBox(text='Show scale')
+                    self.cbl = flexx.ui.CheckBox(text='Show layers')
                     flexx.ui.Widget(flex=1)
 
         @event.connect('btna.mouse_click')
         def handle_seamap_add(self, *events):
-            self.map.layers = ['http://a.tile.openstreetmap.org/',
-                               'http://t1.openseamap.org/seamark/']
+            self.map.layers = [
+                ('http://a.tile.openstreetmap.org/', 'OpenStreetMap'),
+                ('http://t1.openseamap.org/seamark/', 'OpenSeaMap'),
+            ]
 
         @event.connect('btnr.mouse_click')
         def handle_seamap_remove(self, *events):
-            self.map.layers = ['http://a.tile.openstreetmap.org/']
+            self.map.layers = [
+                ('http://a.tile.openstreetmap.org/', 'OpenStreetMap'),
+            ]
+
+        @event.connect('cbs.checked', 'cbl.checked')
+        def handle_checkboxes(self, *events):
+            self.map.show_scale = self.cbs.checked
+            self.map.show_layers = self.cbl.checked
 
     app.launch(MapWidget, 'xul')
     app.run()
