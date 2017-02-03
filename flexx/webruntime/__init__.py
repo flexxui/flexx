@@ -117,8 +117,8 @@ def launch(url, runtime=None, **kwargs):
         logger.warn('Runtime name %s is deprecated, use %s instead.' %
                     (runtime, _aliases_compat[runtime]))
         runtime = _aliases_compat[runtime]
-    if not runtime:
-        runtime = config.webruntime
+    if not runtime or '!' in config.webruntime:
+        runtime = config.webruntime.strip('!')
     if not runtime:
         runtime = 'app or browser'
     
