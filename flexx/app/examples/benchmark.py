@@ -36,7 +36,7 @@ from flexx import app
 pystone.__pyscript__ = True
 
 # Backend selection
-BACKEND = 'xul'
+BACKEND = 'firefox-app or chrome-app'
 if sys.argv[1:]:
     BACKEND = sys.argv[1]
 

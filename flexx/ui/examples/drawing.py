@@ -73,5 +73,5 @@ class Main(ui.Widget):
             ui.Widget(flex=1)
 
 if __name__ == '__main__':
-    m = app.launch(Main, 'xul')
+    m = app.launch(Main, 'app')
     app.start()
