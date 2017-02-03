@@ -8,22 +8,12 @@ import webbrowser
 from . import logger
 from .common import BaseRuntime
 
-# from .xul import FirefoxRuntime
-# from .chromeapp import ChromeRuntime, ChromiumRuntime
-# from .mshtml import IERuntime, EdgeRuntime
 
 BROWSER_MAP = {'chrome': ['google-chrome', 'chrome', 
                           'chromium-browser', 'chromium'],
                'chromium': ['chromium-browser', 'chromium'],
                'default': [],
                }
-
-# RUNTIME_MAP = {'firefox': FirefoxRuntime,
-#                'chrome': ChromeRuntime,
-#                'chromium': ChromiumRuntime,
-#                'ie': IERuntime,
-#                'edge': EdgeRuntime,
-#                }
 
 
 class BrowserRuntime(BaseRuntime):
@@ -43,17 +33,6 @@ class BrowserRuntime(BaseRuntime):
             return 'stub_exe_default_browser'
         elif b:
             return 'stub_exe_%s_browser' % type
-        
-        # # If that did not work, maybe we should try harder
-        # # In particular on Windows, the exes may simply not be on the path
-        # cls = RUNTIME_MAP.get(type, None)
-        # if cls:
-        #     try:
-        #         cls().launch_tab(url)
-        #         return
-        #     except Exception as err:
-        #         errors.append(str(err))
-    
     
     def _get_version(self):
         return None
@@ -77,6 +56,10 @@ class BrowserRuntime(BaseRuntime):
         # Get alternative types
         types = BROWSER_MAP.get(type, [type])
         types = [t for t in types if t]
+        
+        # Use default browser
+        if not types:
+            return webbrowser, []
         
         # Try to open all possibilities
         errors = []
