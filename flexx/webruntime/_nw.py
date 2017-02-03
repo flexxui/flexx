@@ -29,7 +29,7 @@ import shutil
 from urllib.request import urlopen
 
 from .. import config
-from .common import DesktopRuntime
+from ._common import DesktopRuntime
 from ._manage import RUNTIME_DIR, download_runtime, create_temp_app_dir
 
 

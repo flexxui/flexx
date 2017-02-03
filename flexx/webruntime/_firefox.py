@@ -35,7 +35,7 @@ import subprocess
 
 from .. import config
 from . import logger
-from .common import DesktopRuntime
+from ._common import DesktopRuntime
 from ._manage import create_temp_app_dir, RUNTIME_DIR
 
 

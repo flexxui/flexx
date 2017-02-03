@@ -15,7 +15,7 @@ import sys
 import subprocess
 
 from .. import config
-from .common import DesktopRuntime, find_osx_exe
+from ._common import DesktopRuntime, find_osx_exe
 from ._manage import RUNTIME_DIR
 
 
