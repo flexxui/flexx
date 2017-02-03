@@ -4,7 +4,7 @@ Selenium is a Python library to automate browsers.
 
 """
 
-from .common import BaseRuntime
+from ._common import BaseRuntime
 
 
 class SeleniumRuntime(BaseRuntime):

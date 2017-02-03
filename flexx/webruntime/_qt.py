@@ -4,7 +4,7 @@
 import os
 import sys
 
-from .common import DesktopRuntime
+from ._common import DesktopRuntime
 from ._manage import create_temp_app_dir
 
 # Note that setting icon on Ubuntu (and possibly on other OS-es is broken for PyQt)
