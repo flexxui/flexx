@@ -5,7 +5,7 @@ from flexx.util.testing import run_tests_if_main, raises, skipif
 
 
 from flexx.webruntime._manage import versionstring
-
+from flexx.webruntime import _expand_runtime_name
 
 def test_versionstring():
     
@@ -43,5 +43,11 @@ def test_versionstring():
     # Latest is special
     assert versionstring('latest') > versionstring('999.999.999')
 
+
+
+def test_expand_runtime_name():
+    assert 'nw-app' in _expand_runtime_name('app')
+    assert 'firefox-app' in _expand_runtime_name('app')
+    
 
 run_tests_if_main()
