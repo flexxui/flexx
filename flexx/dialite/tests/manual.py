@@ -9,7 +9,7 @@ PREFIX = 'DIALITE TEST: '
 # Calibrate
 
 res = dialite.ask(PREFIX + 'yes-no',
-                  'Do you see two buttons saying "Yes and "no"? '
+                  'Do you see two options saying "Yes and "no"? '
                   'If not this test failed before it really started ...')
 assert res is True
 
@@ -42,7 +42,7 @@ assert res is None
 # Check results
 
 res = dialite.ask(PREFIX + 'check',
-                  'Did the past three boxes only have 1 OK button?')
+                  'Did the past three dialogs only have 1 OK button?')
 assert res is True
 
 res = dialite.ask(PREFIX + 'check',
