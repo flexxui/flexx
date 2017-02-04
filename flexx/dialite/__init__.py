@@ -1,8 +1,17 @@
 """
-Dialite is a lightweight Python package for cross-platform dialogs.
-It provides a handful of functions, each one a verb, that can be
-used to inform(), warn() or fail() the user, or to confirm() something
-or ask() a yes-no question.
+Dialite is a pure Python package to show dialogs. It is lightweight,
+cross-platform, and has no dependencies. It provides a handful of
+functions, each a verb, that can be used to inform(), warn() or fail()
+the user, or to confirm() something or ask() a yes-no question.
+
+Dialite works on Window, OS X and Linux, and falls back to a terminal
+interface otherwise (or if dialogs are unavailable, e.g. with an SSH
+connection).
+
+On Windows, it uses Windows Script Host (cscript.exe). On OS X it uses
+osascript to show a dialog from the frontmost application. On Linux it
+uses Zenity.
+
 """
 
 from __future__ import print_function, division, absolute_import
