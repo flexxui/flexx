@@ -42,4 +42,4 @@ class OSXApp(BaseApp):
         retcode, res = check_output(['osascript', '-e',
                                      t % (message, title)])
         resmap = {'ok': True, 'yes': True, 'no': False, 'cancel': False}
-        return resmap.get(res.decode().strip().split(':')[-1].lower(), None)
+        return resmap.get(res.strip().split(':')[-1].lower(), None)

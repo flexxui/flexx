@@ -31,7 +31,7 @@ class WindowsApp(BaseApp):
         BaseApp.__init__(self, *args, **kwargs)
         self._filename = os.path.join(tempfile.gettempdir(), 'dialite_win.js')
         with open(self._filename, 'wb') as f:
-            f.write(script.encode())
+            f.write(script.encode('utf-8'))
     
     def works(self):
         try:

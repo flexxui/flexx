@@ -151,7 +151,7 @@ def show_error_via_browser():
     # Write file
     try:
         with open(filename, 'wb') as f:
-            f.write(error_html.encode())
+            f.write(error_html.encode('utf-8'))
     except Exception:
         return  # no user directory, or rights to write there?
     # Open it in a browser
