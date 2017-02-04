@@ -2,6 +2,8 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import sys
+import time
+import subprocess
 import webbrowser
 
 from . import logger
@@ -101,6 +103,24 @@ class StubApp(BaseApp):
     
     def ask(self, title, message):
         self._error('ask', title, message)
+
+
+def check_output(*args, **kwargs):
+    """ Call a subprocess, return return-code and stdout.
+    When *this* process exits, kills the subprocess.
+    """
+    kwargs['stdout'] = subprocess.PIPE
+    kwargs['stderr'] = subprocess.STDOUT
+    
+    p = subprocess.Popen(*args, **kwargs)
+    
+    try:
+        while p.poll() is None:
+            time.sleep(0.002)
+        return p.poll(), p.stdout.read().decode('utf-8', 'ignore')
+    finally:
+        if p.poll() is None:
+            p.kill()
 
 
 def hastty():

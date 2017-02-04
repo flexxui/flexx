@@ -1,10 +1,11 @@
 from __future__ import print_function, division, absolute_import
 
 import os
+import time
 import tempfile
 import subprocess
 
-from ._base import BaseApp
+from ._base import BaseApp, check_output
 
 # Note: confirmed this to work on Windows XP and Windows 10
 # Docs: https://msdn.microsoft.com/en-us/library/x83z1d9f(v=vs.84).aspx
@@ -57,7 +58,8 @@ class WindowsApp(BaseApp):
     
     def _message(self, type, title, message):
         message = message.replace('"', '\u201C').replace("'", '\u2018')
-        res = subprocess.check_output(['cscript', '//Nologo', self._filename,
-                                       str(type), title, message])
+        retcode, res = check_output(['cscript', '//Nologo', self._filename,
+                                     str(type), title, message])
+        assert retcode == 0
         resmap = {'0': False, '1': True, '2': False, '6': True, '7': False}
-        return resmap.get(res.decode().strip(), None)
+        return resmap.get(res.strip(), None)

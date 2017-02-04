@@ -2,7 +2,7 @@ from __future__ import print_function, division, absolute_import
 
 import subprocess
 
-from ._base import BaseApp
+from ._base import BaseApp, check_output
 
 
 # Note: zenity returns 1 (i.e. False) when the dialig is closed by
@@ -40,6 +40,6 @@ class LinuxApp(BaseApp):
     
     def _message(self, type, title, message, *more):
         message = message.replace('"', '\u201C').replace("'", '\u2018')
-        res = subprocess.call(['zenity', type, '--title', title,
+        res, _ = check_output(['zenity', type, '--title', title,
                                '--text', message] + list(more))
         return not res  # an exit-code of zero means yes/ok

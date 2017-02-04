@@ -2,7 +2,7 @@ from __future__ import print_function, division, absolute_import
 
 import subprocess
 
-from ._base import BaseApp
+from ._base import BaseApp, check_output
 
 
 class OSXApp(BaseApp):
@@ -39,7 +39,7 @@ class OSXApp(BaseApp):
         t = 'tell app (path to frontmost application as text) '
         t += 'to display dialog "%s" with title "%s"'
         t += ' ' + ' '.join(more)
-        res = subprocess.check_output(['osascript', '-e',
-                                       t % (message, title)])
+        retcode, res = check_output(['osascript', '-e',
+                                     t % (message, title)])
         resmap = {'ok': True, 'yes': True, 'no': False, 'cancel': False}
         return resmap.get(res.decode().strip().split(':')[-1].lower(), None)
