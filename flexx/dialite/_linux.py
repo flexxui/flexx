@@ -1,5 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
+import os
 import subprocess
 
 from ._base import BaseApp, check_output
@@ -39,7 +40,9 @@ class LinuxApp(BaseApp):
                              '--ok-label', 'Yes', '--cancel-label', 'No')
     
     def _message(self, type, title, message, *more):
+        env = os.environ.copy()
+        env['WINDOWID'] = ''
         message = message.replace('"', '\u201C').replace("'", '\u2018')
         res, _ = check_output(['zenity', type, '--title', title,
-                               '--text', message] + list(more))
+                               '--text', message] + list(more), env=env)
         return not res  # an exit-code of zero means yes/ok
