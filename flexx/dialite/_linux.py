@@ -31,11 +31,15 @@ class LinuxApp(BaseApp):
     def inform(self, title, message):
         self._message('--info', title, message)
     
-    def confirm(self, title, message):
+    def ask_ok(self, title, message):
         return self._message('--question', title, message,
                              '--ok-label', 'OK', '--cancel-label', 'Cancel')
     
-    def ask(self, title, message):
+    def ask_retry(self, title, message):
+        return self._message('--question', title, message,
+                             '--ok-label', 'Retry', '--cancel-label', 'Cancel')
+    
+    def ask_yesno(self, title, message):
         return self._message('--question', title, message,
                              '--ok-label', 'Yes', '--cancel-label', 'No')
     

@@ -8,20 +8,23 @@ PREFIX = 'DIALITE TEST: '
 
 # Calibrate
 
-res = dialite.ask(PREFIX + 'yes-no',
+res = dialite.ask_yesno(PREFIX + 'yes-no',
                   'Do you see two options saying "Yes and "no"? '
                   'If not this test failed before it really started ...')
 assert res is True
 
-res = dialite.ask(PREFIX + 'yes-no', 'Make me a sandwich.')
+res = dialite.ask_yesno(PREFIX + 'yes-no', 'Make me a sandwich.')
 assert res is False
 
-res = dialite.ask(PREFIX + 'yes-no', 'Sudo make me a sandwich.')
+res = dialite.ask_retry(PREFIX + 'retry', 'Please let me try that again ...')
+assert res is True
+
+res = dialite.ask_yesno(PREFIX + 'yes-no', 'Sudo make me a sandwich.')
 assert res is True
 
 # Unicode
 
-res = dialite.ask(PREFIX + 'unicode',
+res = dialite.ask_yesno(PREFIX + 'unicode',
                   'Do you see "double quotes", \'single quotes\', '
                   'a euro symbol (€), pi symbol (π), an A with a roof (Â)?')
 assert res is True
@@ -41,27 +44,23 @@ assert res is None
 
 # Check results
 
-res = dialite.ask(PREFIX + 'check',
-                  'Did the past three dialogs only have 1 OK button?')
-assert res is True
-
-res = dialite.ask(PREFIX + 'check',
+res = dialite.ask_yesno(PREFIX + 'check',
                   'Did the past three boxes look something like an info, '
-                  'warning, and error dialog?')
+                  'warning, and error dialog, and have only an OK option?')
 assert res is True
 
 # Check confirm
 
-res = dialite.confirm(PREFIX + 'confirm',
+res = dialite.ask_ok(PREFIX + 'confirm',
                      'Great, I am going to asume all tests passed then!'
                      'Press OK to continue.')
 assert res is True
 
-res = dialite.ask(PREFIX + 'check',
+res = dialite.ask_yesno(PREFIX + 'check',
                   'Did you just see two buttons saying "OK" and "Cancel"?')
 assert res is True
 
-res = dialite.confirm(PREFIX + 'confirm',
+res = dialite.ask_ok(PREFIX + 'confirm',
                       'This one is a bit weird. I want you to press Cancel, '
                       'but I don\'t want you to agree and accidentally press '
                       'OK. Therefore, imagine this:\n\nWe will now proceed '

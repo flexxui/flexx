@@ -1,7 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
 import os
-import time
 import tempfile
 import subprocess
 
@@ -50,10 +49,13 @@ class WindowsApp(BaseApp):
     def inform(self, title, message):
         self._message(64 + 0, title, message)
     
-    def confirm(self, title, message):
+    def ask_ok(self, title, message):
         return self._message(32 + 1, title, message)
     
-    def ask(self, title, message):
+    def ask_retry(self, title, message):
+        return self._message(32 + 5, title, message)
+    
+    def ask_yesno(self, title, message):
         return self._message(32 + 4, title, message)
     
     def _message(self, type, title, message):
@@ -61,5 +63,6 @@ class WindowsApp(BaseApp):
         retcode, res = check_output(['cscript', '//Nologo', self._filename,
                                      str(type), title, message])
         assert retcode == 0
-        resmap = {'0': False, '1': True, '2': False, '6': True, '7': False}
+        resmap = {'0': False, '2': False, '7': False,
+                  '1': True, '4': True, '6': True}
         return resmap.get(res.strip(), None)

@@ -30,11 +30,15 @@ class NoopApp(BaseApp):
         self.res.append(title)
         return True
     
-    def confirm(self, title, message):
+    def ask_ok(self, title, message):
         self.res.append(title)
         return True
     
-    def ask(self, title, message):
+    def ask_retry(self, title, message):
+        self.res.append(title)
+        return True
+    
+    def ask_yesno(self, title, message):
         self.res.append(title)
         return True
 
@@ -58,22 +62,24 @@ def test_main_funcs():
         # No args
         dialite._the_app = app = NoopApp()
         for func in (dialite.inform, dialite.warn, dialite.fail,
-                     dialite.confirm, dialite.ask):
+                     dialite.ask_ok, dialite.ask_retry, dialite.ask_yesno):
             func()
         #
-        assert app.res == ['Info', 'Warning', 'Error', 'Confirm', 'Question']
+        assert app.res == ['Info', 'Warning', 'Error',
+                           'Confirm', 'Retry', 'Question']
         
         # With args
         dialite._the_app = app = NoopApp()
         for func in (dialite.inform, dialite.warn, dialite.fail,
-                     dialite.confirm, dialite.ask):
+                     dialite.ask_ok, dialite.ask_retry, dialite.ask_yesno):
             func(func.__name__, 'meh bla')
         #
-        assert app.res == ['inform', 'warn', 'fail', 'confirm', 'ask']
+        assert app.res == ['inform', 'warn', 'fail',
+                           'ask_ok', 'ask_retry', 'ask_yesno']
         
         # Fails
         for func in (dialite.inform, dialite.warn, dialite.fail,
-                     dialite.confirm, dialite.ask):
+                     dialite.ask_ok, dialite.ask_retry, dialite.ask_yesno):
             with raises(TypeError):
                 func(3, 'meh')
             with raises(TypeError):
@@ -88,8 +94,10 @@ def test_main_funcs():
 def test_unsupported_platform():
     
     o_platform = sys.platform
+    o_stdin = sys.stdin
     o_app = dialite._the_app
     sys.platform = 'meh'
+    sys.stdin = None
     
     try:
         
@@ -101,21 +109,33 @@ def test_unsupported_platform():
         
         assert not dialite.is_supported()
         
-        with raises(RuntimeError):
-            dialite.inform()
+        # with raises(RuntimeError):
+        #     dialite.inform()
+        dialite.inform()  # no problem
         
-        with raises(RuntimeError):
-            dialite.warn()
+        # with raises(RuntimeError):
+        #     dialite.warn()
+        dialite.warn()  # no problem
         
         with raises(RuntimeError):
             dialite.fail()
         
         with raises(RuntimeError):
-            dialite.confirm()
+            dialite.ask_ok()
         
         with raises(RuntimeError):
-            dialite.ask()
+            dialite.ask_retry()
+            
+        with raises(RuntimeError):
+            dialite.ask_yesno()
     
     finally:
         sys.platform = o_platform
+        sys.stdin = o_stdin
         dialite._the_app = o_app
+
+
+if __name__ == '__main__':
+    test_all_backends_are_complete()
+    test_main_funcs()
+    test_unsupported_platform()

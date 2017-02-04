@@ -2,7 +2,7 @@
 Dialite is a pure Python package to show dialogs. It is lightweight,
 cross-platform, and has no dependencies. It provides a handful of
 functions, each a verb, that can be used to inform(), warn() or fail()
-the user, or to confirm() something or ask() a yes-no question.
+the user, or to ask_ok(), ask_retry() or ask_yesno().
 
 Dialite works on Window, OS X and Linux, and falls back to a terminal
 interface otherwise (or if dialogs are unavailable, e.g. with an SSH
@@ -31,9 +31,9 @@ from ._osx import OSXApp
 
 
 if sys.version_info > (3, ):
-    string_types = str,
+    string_types = str,  # noqa
 else:
-    string_types = basestring,
+    string_types = basestring,  # noqa
 
 
 def _select_app():
@@ -106,7 +106,7 @@ def inform(title='Info', message=''):
     _the_app.inform(title, message)
 
 
-def confirm(title='Confirm', message=''):
+def ask_ok(title='Confirm', message=''):
     """ Ask the user to confirm something via an ok-cancel question.
     
     Parameters:
@@ -117,13 +117,30 @@ def confirm(title='Confirm', message=''):
         result (bool): Whether the user selected "OK".
     """
     if not isinstance(title, string_types):
-        raise TypeError('ask() title must be a string.')
+        raise TypeError('ask_ok() title must be a string.')
     if not isinstance(message, string_types):
-        raise TypeError('ask() message must be a string.')
-    return _the_app.confirm(title, message)
+        raise TypeError('ask_ok() message must be a string.')
+    return _the_app.ask_ok(title, message)
 
 
-def ask(title='Question', message=''):
+def ask_retry(title='Retry', message=''):
+    """ Ask the user whether to retry something via a retry-cancel question.
+    
+    Parameters:
+        title (str): the text to show as the window title.
+        message (str): the message to show in the body of the dialog.
+    
+    Returns:
+        result (bool): Whether the user selected "Retry".
+    """
+    if not isinstance(title, string_types):
+        raise TypeError('ask_retry() title must be a string.')
+    if not isinstance(message, string_types):
+        raise TypeError('ask_retry() message must be a string.')
+    return _the_app.ask_retry(title, message)
+
+
+def ask_yesno(title='Question', message=''):
     """ Ask the user a yes-no question.
     
     Parameters:
@@ -134,7 +151,7 @@ def ask(title='Question', message=''):
         result (bool):  Whether the user selected "Yes".
     """
     if not isinstance(title, string_types):
-        raise TypeError('ask() title must be a string.')
+        raise TypeError('ask_yesno() title must be a string.')
     if not isinstance(message, string_types):
-        raise TypeError('ask() message must be a string.')
-    return _the_app.ask(title, message)
+        raise TypeError('ask_yesno() message must be a string.')
+    return _the_app.ask_yesno(title, message)

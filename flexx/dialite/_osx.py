@@ -25,13 +25,16 @@ class OSXApp(BaseApp):
     def inform(self, title, message):
         self._message(title, message, 'buttons {"OK"}')
     
-    def confirm(self, title, message):
+    def ask_ok(self, title, message):
         # The extra space in "Cancel " is to prevent osascript from
         # seeing it as a cancel button. Otherwise clicking it would
         # produce a nonzero error code because the user "cancelled".
         return self._message(title, message, 'buttons {"OK", "Cancel "}')
     
-    def ask(self, title, message):
+    def ask_retry(self, title, message):
+        return self._message(title, message, 'buttons {"Retry", "Cancel "}')
+    
+    def ask_yesno(self, title, message):
         return self._message(title, message, 'buttons {"Yes", "No"}')
     
     def _message(self, title, message, *more):
@@ -41,5 +44,6 @@ class OSXApp(BaseApp):
         t += ' ' + ' '.join(more)
         retcode, res = check_output(['osascript', '-e',
                                      t % (message, title)])
-        resmap = {'ok': True, 'yes': True, 'no': False, 'cancel': False}
+        resmap = {'no': False, 'cancel': False,
+                  'ok': True, 'retry': True, 'yes': True}
         return resmap.get(res.strip().split(':')[-1].lower(), None)

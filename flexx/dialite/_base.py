@@ -29,10 +29,13 @@ class BaseApp(object):
     def inform(self, title, message):
         raise NotImplementedError()
     
-    def confirm(self, title, message):
+    def ask_ok(self, title, message):
         raise NotImplementedError()
     
-    def ask(self, title, message):
+    def ask_retry(self, title, message):
+        raise NotImplementedError()
+    
+    def ask_yesno(self, title, message):
         raise NotImplementedError()
 
 
@@ -52,12 +55,17 @@ class TerminalApp(BaseApp):
     def inform(self, title, message):
         logger.info('%s: %s' % (title, message))
     
-    def confirm(self, title, message):
+    def ask_ok(self, title, message):
         text = '%s: %s' % (title, message)
-        text += '\nproceed ([y]/n)? '
+        text += '\nconfirm ([y]/n)? '
         return self._ask_yes_no(text)
     
-    def ask(self, title, message):
+    def ask_retry(self, title, message):
+        text = '%s: %s' % (title, message)
+        text += '\nretry ([y]/n)? '
+        return self._ask_yes_no(text)
+    
+    def ask_yesno(self, title, message):
         text = '%s: %s' % (title, message)
         text += '\nanswer ([y]/n)? '
         return self._ask_yes_no(text)
@@ -96,13 +104,16 @@ class StubApp(BaseApp):
         logger.warning('%s: %s' % (title, message))
     
     def inform(self, title, message):
-        logger.inform('%s: %s' % (title, message))
+        logger.info('%s: %s' % (title, message))
     
-    def confirm(self, title, message):
+    def ask_ok(self, title, message):
         self._error('confirm', title, message)
     
-    def ask(self, title, message):
-        self._error('ask', title, message)
+    def ask_retry(self, title, message):
+        self._error('retry', title, message)
+    
+    def ask_yesno(self, title, message):
+        self._error('yesno', title, message)
 
 
 def check_output(*args, **kwargs):
