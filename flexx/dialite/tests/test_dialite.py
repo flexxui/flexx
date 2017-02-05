@@ -3,6 +3,7 @@ Automatic test for dialite. There's not that much code, really, so the manual
 test is way more important...
 """
 
+import os
 import sys
 
 from flexx.util.testing import raises
@@ -101,7 +102,8 @@ def test_unsupported_platform():
     
     try:
         
-        assert dialite.is_supported()
+        if not os.getenv('CI'):
+            assert dialite.is_supported()
         
         app = dialite._select_app()
         assert isinstance(app, StubApp)
@@ -109,25 +111,30 @@ def test_unsupported_platform():
         
         assert not dialite.is_supported()
         
-        # with raises(RuntimeError):
+        # with raises(SystemExit):
         #     dialite.inform()
         dialite.inform()  # no problem
         
-        # with raises(RuntimeError):
+        # with raises(SystemExit):
         #     dialite.warn()
         dialite.warn()  # no problem
         
-        with raises(RuntimeError):
+        with raises(SystemExit):
             dialite.fail()
         
-        with raises(RuntimeError):
+        with raises(SystemExit):
             dialite.ask_ok()
         
-        with raises(RuntimeError):
+        with raises(SystemExit):
             dialite.ask_retry()
             
-        with raises(RuntimeError):
+        with raises(SystemExit):
             dialite.ask_yesno()
+    
+    except SystemExit:
+        # mmm, SystemExit can fall through silently under certain circumstances
+        # in an interactive IDE
+        raise RuntimeError('Test tried to exit!')
     
     finally:
         sys.platform = o_platform
