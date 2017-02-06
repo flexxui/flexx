@@ -276,6 +276,7 @@ class FirefoxRuntime(DesktopRuntime):
         # Get dir to store app definition
         app_path = create_temp_app_dir('xul')
         id = op.basename(app_path).split('_', 1)[1]
+        # todo: exclude ~
 
         # Set size and position
         # Maybe interesting window features: alwaysRaised
