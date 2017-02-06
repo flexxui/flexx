@@ -70,7 +70,7 @@ class BaseRuntime:
         # Tidy up, but don't make us wait for it, also give main thread
         # time to e.g. continue incomplete downloads (e.g. for NW.js runtime)
         init_dirs()
-        t = threading.Thread(target=lambda:time.sleep(4) or clean_dirs())
+        t = threading.Thread(target=lambda: time.sleep(4) or clean_dirs())
         t.setDaemon(True)
         t.start()  # tidy up
     
@@ -217,9 +217,10 @@ class DesktopRuntime(BaseRuntime):
     """
 
     def __init__(self, **kwargs):
-
+        
+        # Convert whatever icon we have to an Icon object
         icon = kwargs.get('icon', None)
-        kwargs['icon'] = iconize(icon)
+        kwargs['icon'] = iconize(icon or None)
     
         BaseRuntime.__init__(self, **kwargs)
     
@@ -448,47 +449,29 @@ def find_osx_exe(app_id):
 ## Icon stuff
 
 
-_icon_template = """
-xx x  xx x x x x
-x  x  x  x x x x
-xx x  xx  x   x
-x  x  x  x x x x
-x  xx xx x x x x
-
- xx   xxx   xxx
-x  x  x  x  x  x
-xxxx  xxx   xxx
-x  x  x     x
-"""
-
-
-def default_icon():
-    """ Generate a default icon object.
-    """
-    im = bytearray(4*16*16)
-    for y, line in enumerate(_icon_template.splitlines()):
-        y += 5
-        if y < 16:
-            for x, c in enumerate(line):
-                if c == 'x':
-                    i = (y * 16 + x) * 4
-                    im[i:i+4] = [0, 0, 150, 255]
-
-    icon = Icon()
-    icon.add(im)
-    return icon
-
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def iconize(icon):
     """ Given a filename Icon object or None, return Icon object.
     """
+    
+    # Get default icon?
     if icon is None:
-        icon = default_icon()
-    elif isinstance(icon, Icon):
+        icon = os.path.join(os.path.dirname(THIS_DIR), 'resources', 'flexx.ico')
+    
+    if isinstance(icon, Icon):
         pass
     elif isinstance(icon, str):
-        icon = Icon(icon)
+        if icon.startswith('_data/shared'):
+            # Icon as an asset in Flexx' asset store
+            from ..app import assets  # noqa
+            bb = assets.get_data(icon.split('/', 2)[-1])
+            icon = Icon()
+            icon.from_bytes('.ico', bb)
+        else:
+            # Filename, url, base64 string - handled by Icon class
+            icon = Icon(icon)
     else:
-        raise ValueError('Icon must be an Icon, a filename or None, not %r' %
+        raise ValueError('Icon must be an Icon, str, or None, not %r' %
                          type(icon))
     return icon
