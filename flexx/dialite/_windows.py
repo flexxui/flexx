@@ -2,9 +2,8 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import tempfile
-import subprocess
 
-from ._base import BaseApp, check_output
+from ._base import BaseApp, check_output, test_call
 
 # Note: confirmed this to work on Windows XP and Windows 10
 # Docs: https://msdn.microsoft.com/en-us/library/x83z1d9f(v=vs.84).aspx
@@ -33,11 +32,7 @@ class WindowsApp(BaseApp):
             f.write(script.encode('utf-8'))
     
     def works(self):
-        try:
-            subprocess.check_output(['cscript'])
-            return True
-        except Exception:
-            return False
+        return test_call(['cscript'])
     
     def fail(self, title, message):
         # 4096 makes it system modal

@@ -8,7 +8,7 @@ import webbrowser
 
 from . import logger
 
-if sys.version_info < (3, ):
+if sys.version_info < (3, ):  # pragma: no cover
     input = raw_input  # noqa
 
 
@@ -130,8 +130,18 @@ def check_output(*args, **kwargs):
             time.sleep(0.002)
         return p.poll(), p.stdout.read().decode('utf-8', 'ignore')
     finally:
-        if p.poll() is None:
+        if p.poll() is None:  # pragma: no cover
             p.kill()
+
+
+def test_call(*args, **kwargs):
+    """ Test whether a subprocess call succeeds.
+    """
+    try:
+        subprocess.check_output(*args, **kwargs)
+        return True
+    except Exception:
+        return False
 
 
 def hastty():
@@ -139,7 +149,7 @@ def hastty():
     """
     try:
         return sys.stdin and sys.stdin.isatty()
-    except Exception:
+    except Exception:  # pragma: no cover
         return False  # i.e. no isatty method?
 
 
@@ -163,10 +173,10 @@ def show_error_via_browser():
     try:
         with open(filename, 'wb') as f:
             f.write(error_html.encode('utf-8'))
-    except Exception:
+    except Exception:  # pragma: no cover
         return  # no user directory, or rights to write there?
     # Open it in a browser
     try:
         webbrowser.open(filename)
-    except Exception:
+    except Exception:  # pragma: no cover
         return  # no browser?
