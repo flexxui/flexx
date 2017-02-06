@@ -32,7 +32,7 @@ from ._osx import OSXApp
 
 if sys.version_info > (3, ):
     string_types = str,  # noqa
-else:
+else:  # pragma: no cover
     string_types = basestring,  # noqa
 
 

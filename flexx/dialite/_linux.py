@@ -1,9 +1,8 @@
 from __future__ import print_function, division, absolute_import
 
 import os
-import subprocess
 
-from ._base import BaseApp, check_output
+from ._base import BaseApp, check_output, test_call
 
 
 # Note: zenity returns 1 (i.e. False) when the dialig is closed by
@@ -16,11 +15,7 @@ class LinuxApp(BaseApp):
     """
     
     def works(self):
-        try:
-            subprocess.check_output(['zenity', '--version'])
-            return True
-        except Exception:
-            return False
+        return test_call(['zenity', '--version'])
     
     def fail(self, title, message):
         self._message('--error', title, message)

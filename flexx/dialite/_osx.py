@@ -1,8 +1,6 @@
 from __future__ import print_function, division, absolute_import
 
-import subprocess
-
-from ._base import BaseApp, check_output
+from ._base import BaseApp, check_output, test_call
 
 
 class OSXApp(BaseApp):
@@ -10,11 +8,7 @@ class OSXApp(BaseApp):
     """
     
     def works(self):
-        try:
-            subprocess.check_output(['osascript', '-e', 'return "hi"'])
-            return True
-        except Exception:
-            return False
+        return test_call(['osascript', '-e', 'return "hi"'])
     
     def fail(self, title, message):
         self._message(title, message, 'with icon stop', 'buttons {"OK"}')
