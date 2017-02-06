@@ -92,6 +92,14 @@ def test_reading_from_url():
     icon.write(os.path.join(tempdir, 'gh.icns'))
 
 
+def test_reading_from_base64():
+    black_png = ('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAIUlEQVR42mNgY'
+                 'GD4TyEeTAacOHGCKDxqwKgBtDVgaGYmAD/v6XAYiQl7AAAAAElFTkSuQmCC')
+    
+    icon = Icon('data:image/png;base64,' + black_png)
+    assert icon.image_sizes() == (16, )
+
+
 def test_export():
     
     # Test using some icons over which I have some control

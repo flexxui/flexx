@@ -16,9 +16,13 @@ from .png import read_png, write_png
 
 if sys.version_info[0] >= 3:
     basestring = str  # noqa
+    from base64 import decodebytes
+else:
+    from base64 import decodestring as decodebytes
 
 
-VALID_SIZES = 16, 32, 48, 64, 128, 256
+# Note: up to 256 is support by our .ico exporter
+VALID_SIZES = 16, 32, 48, 64, 128, 256, 512, 1024
 
 # Little endian int encoding (for bmp/icon writing)
 w1 = lambda x: struct.pack('<B', x)
@@ -79,20 +83,31 @@ class Icon(object):
         if not isinstance(filename, basestring):
             raise TypeError('Icon.read() needs a file name')
         
-        if filename.startswith('http'):
+        if filename.startswith(('http://', 'https://')):
+            # Remote resource
             try:
                 from urllib.request import urlopen  # Python 3.x
             except ImportError:
                 from urllib2 import urlopen  # Python 2.x
             data = urlopen(filename, timeout=2.0).read()
+        elif filename.startswith('data:image/') and 'base64' in filename[:32]:
+            # Base64 encoded asset
+            data = decodebytes(filename.split(',', 1)[-1].encode())
+            filename = '.' + filename.split(';')[0].split('/')[-1]
         else:
             data = open(filename, 'rb').read()
         
-        if filename.lower().endswith('.ico'):
+        self.from_bytes(filename, data)
+    
+    def from_bytes(self, ext, data):
+        """ Read an image from the raw bytes of the encoded image. The format
+        is specified by the extension (or filename).
+        """
+        if ext.lower().endswith('.ico'):
             self._from_ico(data)
-        elif filename.lower().endswith('.png'):
+        elif ext.lower().endswith('.png'):
             self._from_png(data)
-        elif filename.lower().endswith('.bmp'):
+        elif ext.lower().endswith('.bmp'):
             self._from_bmp(data)
         else:
             raise ValueError('Can only load from png, bmp, or ico')
@@ -188,7 +203,9 @@ class Icon(object):
         # Directory (header for each image)
         for size in sorted(self._ims):
             im = self._ims[size]
-            if size >= 64:
+            if size > 256:
+                continue
+            elif size >= 64:
                 imdata = self._to_png(im)
             else:
                 imdata = self._to_bmp(im)
@@ -206,6 +223,10 @@ class Icon(object):
             bb += w4(offset)
             # Set offset pointer
             offset += len(imdata)
+        
+        if not imdatas:
+            raise RuntimeError('Exported icon is empty '
+                               '(none of the sizes was supported).')
         
         return b''.join([bb] + imdatas)
     
