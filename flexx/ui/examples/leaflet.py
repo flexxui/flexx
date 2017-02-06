@@ -28,7 +28,6 @@ import flexx
 from flexx import event, app
 from flexx.pyscript.stubs import window, L
 from flexx.ui import Widget
-from flexx.util.getresource import get_resource
 
 
 _leaflet_url = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/'
@@ -299,8 +298,7 @@ if __name__ == '__main__':
         def handle_leaflet_mouse(self, *events):
             ev = events[-1]
             latlng = tuple(ev['latlng'])
-            w = flexx.ui.Label(text='%.5f, %.5f' % tuple(latlng),
-                               parent=self.list)
+            flexx.ui.Label(text='%.5f, %.5f' % tuple(latlng), parent=self.list)
 
         class JS:
             @event.connect('leaflet.mouse_event')
