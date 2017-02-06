@@ -33,6 +33,11 @@ from flexx.util.getresource import get_resource
 
 _leaflet_url = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/'
 _leaflet_version = '1.0.3'
+_leaflet_icons = [
+    'marker-icon.png',
+    'marker-icon-2x.png',
+    'marker-shadow.png',
+]
 
 
 if 'LEAFLET_DIR' in os.environ:
@@ -43,7 +48,7 @@ mimetypes.init()
 
 
 def _get_code(item):
-    """ Get a text item from _base_url 
+    """ Get a text item from _base_url
     """
     url = '%s/%s' % (_base_url, item)
     req = Request(url, headers={'User-Agent': 'flexx/%s' % flexx.__version__})
@@ -51,7 +56,7 @@ def _get_code(item):
 
 
 def _get_data(item_or_url):
-    """ Get a binary item from url or _base_url 
+    """ Get a binary item from url or _base_url
     """
     if '://' in item_or_url:
         url = item_or_url
@@ -62,7 +67,7 @@ def _get_data(item_or_url):
 
 
 def _embed_css_resources(css, types=('.png',)):
-    """ Replace urls in css with data urls 
+    """ Replace urls in css with data urls
     """
     type_str = '|'.join('\%s' % t for t in types)
     rx = re.compile('(url\s*\(\s*(.*(%s))\s*\))' % type_str)
@@ -80,12 +85,13 @@ app.assets.associate_asset(
     'leaflet.js',
     lambda: _get_code('leaflet.js'),
 )
-
 app.assets.associate_asset(
     __name__,
     'leaflet.css',
     lambda: _embed_css_resources(_get_code('leaflet.css')),
 )
+for icon in _leaflet_icons:
+    app.assets.add_shared_data(icon, _get_data('images/%s' % icon))
 
 
 class LeafletWidget(Widget):
@@ -126,8 +132,8 @@ class LeafletWidget(Widget):
         @event.prop
         def zoom(self, zoom=8):
             """ Zoom level for the map. This property is defined in Python and
-            JS because the zoomlevel can be adjusted by the server as well as by
-            the user through the map widget.
+            JS because the zoomlevel can be adjusted by the server as well as
+            by the user through the map widget.
             """
             return int(zoom)
 
@@ -140,7 +146,7 @@ class LeafletWidget(Widget):
 
         @event.prop
         def show_layers(self, show_layers=False):
-            """ Show layers icon on the top-right of the map 
+            """ Show layers icon on the top-right of the map
             """
             return bool(show_layers)
 
@@ -164,10 +170,14 @@ class LeafletWidget(Widget):
             self.map = L.map(self.mapnode)
             self.map.on('zoomend', self.map_handle_zoom)
             self.map.on('moveend', self.map_handle_move)
+            self.map.on('click', self.map_handle_mouse)
+            self.map.on('dblclick', self.map_handle_mouse)
             # Container to keep track of leaflet layer objects
             self.layer_container = []
             self.layer_control = L.control.layers()
             self.scale = L.control.scale({'imperial': False, 'maxWidth': 200})
+            # Set the path for icon images
+            L.Icon.Default.prototype.options.imagePath = '_data/shared/'
 
         def map_handle_zoom(self, e):
             zoom = self.map.getZoom()
@@ -181,6 +191,15 @@ class LeafletWidget(Widget):
             center = center_coord.lat, center_coord.lng
             if center != self.center:
                 self.center = center
+
+        def map_handle_mouse(self, e):
+            latlng = [e.latlng.lat, e.latlng.lng]
+            xy = [e.layerPoint.x, e.layerPoint.y]
+            self.mouse_event(e.type, latlng, xy)
+
+        @event.emitter
+        def mouse_event(self, event, latlng, xy):
+            return {'event': event, 'latlng': latlng, 'xy': xy}
 
         @event.connect('zoom')
         def _handle_zoom(self, *events):
@@ -244,7 +263,7 @@ if __name__ == '__main__':
 
         def init(self):
             with flexx.ui.HBox():
-                self.map = LeafletWidget(
+                self.leaflet = LeafletWidget(
                     flex=1,
                     layers=['http://a.tile.openstreetmap.org/'],
                     center=(52, 4.1),
@@ -255,25 +274,43 @@ if __name__ == '__main__':
                     self.btnr = flexx.ui.Button(text='Remove SeaMap')
                     self.cbs = flexx.ui.CheckBox(text='Show scale')
                     self.cbl = flexx.ui.CheckBox(text='Show layers')
+                    self.list = flexx.ui.VBox()
                     flexx.ui.Widget(flex=1)
 
         @event.connect('btna.mouse_click')
         def handle_seamap_add(self, *events):
-            self.map.layers = [
+            self.leaflet.layers = [
                 ('http://a.tile.openstreetmap.org/', 'OpenStreetMap'),
                 ('http://t1.openseamap.org/seamark/', 'OpenSeaMap'),
             ]
 
         @event.connect('btnr.mouse_click')
         def handle_seamap_remove(self, *events):
-            self.map.layers = [
+            self.leaflet.layers = [
                 ('http://a.tile.openstreetmap.org/', 'OpenStreetMap'),
             ]
 
         @event.connect('cbs.checked', 'cbl.checked')
         def handle_checkboxes(self, *events):
-            self.map.show_scale = self.cbs.checked
-            self.map.show_layers = self.cbl.checked
+            self.leaflet.show_scale = self.cbs.checked
+            self.leaflet.show_layers = self.cbl.checked
+
+        @event.connect('leaflet.mouse_event')
+        def handle_leaflet_mouse(self, *events):
+            ev = events[-1]
+            latlng = tuple(ev['latlng'])
+            w = flexx.ui.Label(text='%.5f, %.5f' % tuple(latlng),
+                               parent=self.list)
+
+        class JS:
+            @event.connect('leaflet.mouse_event')
+            def handle_leaflet_mouse(self, *events):
+                ev = events[-1]
+                latlng = tuple(ev['latlng'])
+                if ev['event'] == 'click':
+                    m = L.marker(ev['latlng'])
+                    m.bindTooltip('%f, %f' % (latlng[0], latlng[1]))
+                    m.addTo(self.leaflet.map)
 
     app.launch(MapWidget, 'xul')
     app.run()
