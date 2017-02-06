@@ -1,3 +1,4 @@
+# doc-export: Leaflet
 """
 Simple example:
 
