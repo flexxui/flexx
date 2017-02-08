@@ -216,6 +216,8 @@ class Widget(Model):
             allows explicit sizing, or the base-size in a BoxPanel or
             GridPanel.
             """
+            if isinstance(v, (int, float)):
+                v = v, v
             return float(v[0]), float(v[1])
     
         @event.prop
