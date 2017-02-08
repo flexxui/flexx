@@ -1,20 +1,6 @@
 # doc-export: Leaflet
 """
-Simple example:
-
-.. UIExample:: 300
-
-
-    class Example(ui.Widget):
-
-        def init(self):
-            with ui.BoxPanel():
-                ui.MapWidget(
-                    layers=[('http://t1.openstreetmap.org/', 'OpenStreetMap')],
-                    zoom=8,
-                    center=[52.0, 5.5]
-                )
-
+This example demonstrates the use of Leaflet to display a slippy map.
 """
 
 
