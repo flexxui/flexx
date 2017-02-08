@@ -57,22 +57,22 @@ A similar example using a BoxPanel:
     
     class Example(ui.Widget):
         def init(self):
-            with ui.BoxPanel(orientation='v'):
+            with ui.VBoxPanel():
                 
                 ui.Label(text='Flex 0 0 0', style='')
-                with ui.BoxPanel(flex=0):
+                with ui.HBoxPanel(flex=0):
                     self.b1 = ui.Button(text='Hola', flex=0)
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=0)
                 
                 ui.Label(text='Flex 1 0 3')
-                with ui.BoxPanel(flex=0):
+                with ui.HBoxPanel(flex=0):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=3)
                 
                 ui.Label(text='spacing 10 (inter-widget)')
-                with ui.BoxPanel(flex=0, spacing=20):
+                with ui.HBoxPanel(flex=0, spacing=20):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=1)
                     self.b3 = ui.Button(text='Foo bar', flex=1)
@@ -80,7 +80,7 @@ A similar example using a BoxPanel:
                 ui.Widget(flex=1)
 
 
-Interactive example:
+Interactive BoxLayout example:
 
 .. UIExample:: 200
     
@@ -110,6 +110,42 @@ Interactive example:
             @event.connect('b4.mouse_down')
             def _to_vertical_r(self, *events):
                 self.orientation = 'vr'
+
+
+A classic high level layout:
+
+
+.. UIExample:: 300
+
+    from flexx import ui
+    
+    
+    class Content(ui.Widget):
+        def init(self):
+                # Here we use BoxLayout, because we care about natural size
+                
+                with ui.HBox():
+                    ui.Widget(flex=1)  # spacer
+                    ui.Button(text='hello')
+                    ui.Widget(flex=1)  # spacer
+    
+    
+    class SideWidget(ui.Label):
+        CSS = '.flx-SideWidget {background: #aaf; border: 2px solid black;}'
+    
+    
+    class Example(ui.Widget):
+    
+        def init(self):
+            # Here we use BoxPanel, because we define high-level layout
+            
+            with ui.VBoxPanel():
+                SideWidget(text='Header', flex=0, base_size=100)
+                with ui.HBoxPanel(flex=1):
+                    SideWidget(text='Left', flex=0, base_size=100)
+                    Content(flex=1)
+                    SideWidget(text='Right', flex=0, base_size=100)
+                SideWidget(text='Bottom', flex=0, base_size=100)
 
 """
 
