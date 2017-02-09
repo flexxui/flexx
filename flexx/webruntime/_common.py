@@ -15,6 +15,23 @@ to known sources which are on localhost for desktop apps anyway.
 Therefore, Flexx has a hardcoded minimal version for runtimes where this
 makes sense, which is configurable by the user in cases where its needed.
 
+For deskop runtimes we have the following important attributes:
+
+* icon: the application icon for the app. This will usually come from the
+  main widget's icon property (as a string), and is converted to an Icon
+  object here, so that each runtime can export the required .ico, .icns or .png
+  files.
+* title: the title to display on the apps title bar. This will usually come from
+  the main widget's title property.
+* exe_name: the name of the executable of the runtime, chosing this helps
+  find the process in the task manager, but more importantly, avoids task
+  grouping, or helps wanted grouping.
+* name: the name of the application, used as a name in the manifests. It seemed
+  to make sense to let the flexx.app Model class name leak into the webruntime
+  somehow, but its hardly used/useful.
+* id: a unique application id, generated and used internally to creat unique
+  temporary app dirs and application manifests.
+
 """
 
 import os.path as op
@@ -208,12 +225,13 @@ class DesktopRuntime(BaseRuntime):
 
     Arguments:
         title (str): Text shown in title bar.
+        icon (str | Icon): Icon instance or path to an icon file (png or ico).
+            The icon will be automatically converted to png/ico/icns,
+            depending on what's needed by the runtime and platform.
+        name (str, optional): simple alphanumeric lowercase name without spaces.
+            Used internally by some backend, but you wont see much of it.
         size (tuple of ints): The size in pixels of the window.
         pos (tuple of ints): The position of the window.
-        icon (str | Icon): Icon instance or path to an icon file (png or
-            ico). The icon will be automatically converted to
-            png/ico/icns, depending on what's needed by the runtime and
-            platform.
     """
 
     def __init__(self, **kwargs):
@@ -221,9 +239,16 @@ class DesktopRuntime(BaseRuntime):
         # Convert whatever icon we have to an Icon object
         icon = kwargs.get('icon', None)
         kwargs['icon'] = iconize(icon or None)
-    
+        # Make sure we have a title
+        default_title = 'Flexx %s runtime' % self.get_name()
+        kwargs['title'] = kwargs.get('title', None) or default_title
+        # Make sure we have a name
+        name = ''.join(c.lower() for c in  kwargs.get('name', '') if c.isalnum())
+        kwargs['name'] = name or 'flexx_%s_app' % self.get_name()
+        # Make sure we have a size
+        kwargs['size'] = kwargs.get('size', (640, 480))
+        
         BaseRuntime.__init__(self, **kwargs)
-    
     
     def get_runtime(self, min_version=None):
         """ Get the directory where (our local version of) the runtime is
@@ -285,7 +310,7 @@ class DesktopRuntime(BaseRuntime):
         that the runtime process shows up in the task manager with the
         correct exe_name.
 
-        * exe: the location of the runtime executable (can be a symlink)
+        * runtime_exe: the location of the runtime executable (can be a symlink)
         * app_path: the location of the temp app (the app.json or whatever)
 
         """
@@ -293,7 +318,9 @@ class DesktopRuntime(BaseRuntime):
         # Firefox, NW.js or whatever, and has a more meaningful name in the
         # task manager. Using sys.executable also works well when frozen.
         exe_name, ext = op.splitext(op.basename(sys.executable))
-        exe_name = exe_name + '-ui' + ext
+        # todo: What kind of exe name? test with freezing on different OS's
+        # exe_name = exe_name + '-ui' + ext
+        exe_name = exe_name + ext
         
         if sys.platform.startswith('darwin'):
             # OSX: create an app, the name of the exe does not matter
@@ -301,7 +328,8 @@ class DesktopRuntime(BaseRuntime):
             # the latter to the title, because title and process name
             # seem the same thing in osx.
             app_exe = op.join(app_path, exe_name + '.app')
-            title = self._kwargs['title']
+            title = self._kwargs['title']  # title is ensured by DesktopRuntime
+            # todo: double check to make sure if title makes the most sense here
             self._osx_create_app(op.realpath(runtime_exe), app_exe, title)
             app_exe += '/Contents/MacOS/' + exe_name
         else:
@@ -363,13 +391,12 @@ class DesktopRuntime(BaseRuntime):
         info = INFO_PLIST.format(name=title, exe=exe_name_dst)
         with open(op.join(dst_dir, 'Contents', 'info.plist'), 'wb') as f:
             f.write(info.encode())
-        # Make icon - ensured by launch function
-        if self._kwargs.get('icon'):
-            icon = self._kwargs.get('icon')
-            iconfile = op.join(dst_dir, 'Contents', 'Resources', 'app.icns')
-            if op.exists(iconfile):
-                os.unlink(iconfile)  # remove first, since its a hard link!
-            icon.write(iconfile)
+        # Make icon - DesktopRuntime ensures that there is an icon and title
+        icon = self._kwargs['icon']
+        iconfile = op.join(dst_dir, 'Contents', 'Resources', 'app.icns')
+        if op.exists(iconfile):
+            os.unlink(iconfile)  # remove first, since its a hard link!
+        icon.write(iconfile)
     
     ## To implenent in subclasses
     
