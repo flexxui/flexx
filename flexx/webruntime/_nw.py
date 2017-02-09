@@ -182,9 +182,7 @@ class NWRuntime(DesktopRuntime):
         
         # Get dir to store app definition
         app_path = create_temp_app_dir('nw')
-        id = op.basename(app_path).split('_', 1)[1]
-        
-        self._kwargs['title'] = self._kwargs.get('title', 'NW.js runtime')
+        id = op.basename(app_path).split('_', 1)[1].replace('~', '_')
         
         # Get runtime exe
         if config.nw_exe:
@@ -204,21 +202,20 @@ class NWRuntime(DesktopRuntime):
         # the app's profile data under the directory named name, but we
         # overload user-data-dir.
         D = get_manifest_template()
-        # D['name'] = normalize('name-of-app-class')
+        D['name'] = self._kwargs['name'] + '_' + id
         D['description'] += ' (%s)' % id
         D['main'] = url
-        D['window']['title'] = self._kwargs.get('title', 'nw.js runtime')
+        D['window']['title'] = self._kwargs['title']  # ensured by DesktopRuntime
         
         # Set size (position can be null, center, mouse)
-        size = self._kwargs.get('size', (640, 480))
+        size = self._kwargs['size']
         D['window']['width'], D['window']['height'] = size[0], size[1]
         
         # Icon (note that icon is "overloaded" if nw is wrapped in a runtime.app)
-        if self._kwargs.get('icon'):
-            icon = self._kwargs.get('icon')
-            icon_path = op.join(app_path, 'app.png')  # nw can handle ico
-            icon.write(icon_path)
-            D['window']['icon'] = 'app%i.png' % icon.image_sizes()[0]
+        icon = self._kwargs['icon']
+        icon.write(op.join(app_path, 'app.png'))  # ico does not work
+        size = [i for i in icon.image_sizes() if i <= 64][-1]
+        D['window']['icon'] = 'app%i.png' % size
         
         # Write app manifest
         with open(op.join(app_path, 'package.json'), 'wb') as f:

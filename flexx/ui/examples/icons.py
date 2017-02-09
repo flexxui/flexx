@@ -37,5 +37,5 @@ if __name__ == '__main__':
     # icon = 'data:image/png;base64,' + black_png
     # icon = fname
     
-    m = app.App(Icons, title='Icon demo', icon=icon).launch('firefox-browser')
+    m = app.App(Icons, title='Icon demo', icon=icon).launch('firefox-app')
     app.start()

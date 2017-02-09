@@ -154,6 +154,8 @@ class App:
             runtime_kwargs['title'] = self.kwargs['title']
         if runtime_kwargs.get('icon', None) is None and 'icon' in self.kwargs:
             runtime_kwargs['icon'] = self.kwargs['icon']
+        if runtime_kwargs.get('name', None) is None:
+            runtime_kwargs['name'] = self._cls.__name__.lower()
         
         # Launch web runtime, the server will wait for the connection
         current_server()  # creates server if it did not yet exist

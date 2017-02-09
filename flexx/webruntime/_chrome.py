@@ -68,8 +68,13 @@ class ChromeRuntime(DesktopRuntime):
             raise RuntimeError('Chrome or Chromium browser was not detected.')
             # todo: dialite
         
+        # No way to set icon and title. On Windows, Chrome uses document
+        # title/icon. On OS X we create an app. On Linux ... tough luck
+        # _kwargs['title']
+        # _kwargs['icon']
+        
         # Options
-        size = self._kwargs.get('size', (640, 480))
+        size = self._kwargs['size']  # always available
         pos = self._kwargs.get('pos', None)
         #
         opts = ['--incognito']
@@ -78,9 +83,9 @@ class ChromeRuntime(DesktopRuntime):
         if pos:
             opts.append('--window-position=%i,%i' %  (pos[0], pos[1]))
         
-        # Launch url
-        #self._start_subprocess([exe, '--app=%s' % url] + opts)
-        self._spawn_subprocess([exe, '--app=%s' % url] + opts)
+        # Launch url, important to put opts before --app=xx
+        self._start_subprocess([exe] + opts + ['--app=%s' % url])
+        # self._spawn_subprocess([exe] + opts + ['--app=%s' % url])
     
     def _get_exe(self):
         return self._get_google_chrome_exe() or self._get_chromium_exe()

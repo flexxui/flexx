@@ -97,19 +97,16 @@ class PyQtRuntime(DesktopRuntime):
         # We don't call self.get_runtime() so we don't need to implement
         # _install_runtime()
         
-        # Write icon
-        iconfile = ''
-        if self._kwargs.get('icon'):
-            app_path = create_temp_app_dir('qwebkit')
-            icon = self._kwargs.get('icon')
-            iconfile = os.path.join(app_path, 'icon.png')
-            icon.write(iconfile)
+        # Write icon - assume that we have a 16x16 icon
+        app_path = create_temp_app_dir('pyqt')
+        icon = self._kwargs['icon']
+        icon.write(os.path.join(app_path, 'icon.png'))
+        iconfile = os.path.join(app_path, 'icon%i.png' % icon.image_sizes()[0])
         
         code = CODE_TO_RUN.format(url=repr(url),
-                                  title=repr(self._kwargs.get('title',
-                                                              'QWebkit runtime')),
+                                  title=repr(self._kwargs['title']),
                                   icon=repr(iconfile),
-                                  size=repr(self._kwargs.get('size', None)),
+                                  size=repr(self._kwargs['size']),
                                   pos=repr(self._kwargs.get('pos', None)),
                                   )
         self._start_subprocess([self.get_exe(), '-c', code])

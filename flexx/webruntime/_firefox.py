@@ -162,7 +162,7 @@ class FirefoxRuntime(DesktopRuntime):
     """
 
     def _get_name(self):
-        return 'xul'
+        return 'firefox'
         
     def _get_exe(self):
         
@@ -274,21 +274,17 @@ class FirefoxRuntime(DesktopRuntime):
         self._check_compat()
 
         # Get dir to store app definition
-        app_path = create_temp_app_dir('xul')
-        id = op.basename(app_path).split('_', 1)[1]
-        # todo: exclude ~
-
+        app_path = create_temp_app_dir('firefox')
+        id = op.basename(app_path).split('_', 1)[1].replace('~', '_')
+        
         # Set size and position
         # Maybe interesting window features: alwaysRaised
-        size = self._kwargs.get('size', (640, 480))
+        size = self._kwargs['size']  # ensured by DesktopLayout
         pos = self._kwargs.get('pos', None)
         windowfeatures = 'resizable=1,minimizable=1,dialog=0,'
         windowfeatures += 'width=%i,height=%i' % (size[0], size[1])
         if pos:
             windowfeatures += ',top=%i,left=%i' % (pos[0], pos[1])
-
-        # More preparing
-        self._kwargs['title'] = self._kwargs.get('title', 'XUL runtime')
 
         # Create files for app
         self._create_xul_app(app_path, id, windowfeatures=windowfeatures,
@@ -326,7 +322,7 @@ class FirefoxRuntime(DesktopRuntime):
     def _check_compat(self):
         qts = 'PySide', 'PyQt4', 'PyQt5'
         if any([name+'.QtCore' in sys.modules for name in qts]):
-            logger.warn("Using Flexx' Xul runtime and Qt (PySide/PyQt4/PyQt5) "
+            logger.warn("Using Flexx' Firefox runtime and Qt (PySide/PyQt4/PyQt5) "
                         "together may cause problems.")
 
     def _create_xul_app(self, path, id, **kwargs):
@@ -341,14 +337,14 @@ class FirefoxRuntime(DesktopRuntime):
                  buildid='1',
                  id='some.app@flexx.io',
                  windowid='xx',
-                 title='XUL app runtime',
+                 title='XUL app runtime',  # Is always set
                  url='http://example.com',
                  windowfeatures='', )
         D.update(kwargs)
 
         # Create values that need to be unique
         D['windowid'] = 'W' + id
-        D['name'] = 'app_' + id
+        D['name'] = self._kwargs['name']  + '_' + id
         D['id'] = 'app_' + id + '@flexx.io'
 
         # Fill in arguments in file contents
@@ -383,12 +379,11 @@ class FirefoxRuntime(DesktopRuntime):
                 f.write(text.encode())
 
         # Icon - use Icon class to write a png (Unix) and an ico (Windows)
-        # The launch function ensures that there always is an icon
-        if kwargs.get('icon'):
-            icon = kwargs.get('icon')
-            icon_name = op.join(path, 'chrome/icons/default/' + D['windowid'])
-            icon.write(icon_name + '.ico')
-            icon.write(icon_name + '.png')
+        # The DesktopRuntime ensures that there always is an icon
+        icon = kwargs['icon']
+        icon_name = op.join(path, 'chrome/icons/default/' + D['windowid'])
+        icon.write(icon_name + '.ico')
+        icon.write(icon_name + '.png')
     
     def _copy_xul_runtime(self, dir1, dir2):
         """ Copy the firefox/xulrunner runtime to a new folder, in which
