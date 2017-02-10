@@ -103,11 +103,6 @@ class NWRuntime(DesktopRuntime):
     (``sys.executable + '-ui'``), making it easy to spot in the task manager,
     and avoids task-bar grouping. Compared to the Firefox app runtime,
     this runtime uses more processes and memory, but is generally faster.
-    
-    Arguments inherited from DesktopRuntime: title, icon, name, size, pos.
-    
-    Arguments:
-        windowmode (str): Can be 'normal' (default), 'fullscreen' or 'kiosk'.
     """
     
     def _get_name(self):
@@ -205,8 +200,12 @@ class NWRuntime(DesktopRuntime):
         # It may include "." or "_" or "-" characters. Normally, NW.js stores
         # the app's profile data under the directory named name, but we
         # overload user-data-dir.
+        
+        # From 0.20.0, even with --user-data-dir, a profile dir with "name" is
+        # still created (at least on Windows). Fortunately. the name does not
+        # have to be unique, perhaps because we define a custom profile dir.
         D = get_manifest_template()
-        D['name'] = self._app_name + '_' + id
+        D['name'] = 'flexx_stub_nw_profile'
         D['description'] += ' (%s)' % id
         D['main'] = url
         D['window']['title'] = self._title
@@ -239,5 +238,5 @@ class NWRuntime(DesktopRuntime):
             os.mkdir(profile_dir)
         
         # Launch
-        cmd = [exe, app_path, '--user-data-dir=' + profile_dir]
+        cmd = [exe, '--user-data-dir=' + profile_dir, app_path]
         self._start_subprocess(cmd, LD_LIBRARY_PATH=llp)

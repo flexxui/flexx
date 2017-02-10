@@ -21,7 +21,14 @@ from ._manage import RUNTIME_DIR
 
 class ChromeRuntime(DesktopRuntime):
     """ Runtime representing either the Google Chrome or Chromium browser.
+    This runtime does support desktop-like apps, which works pretty well on
+    Windows, but not so much on OS X and Linux:
+
+    * On Linux it has the Chrome/Chromium icon.
+    * On OSX and Linux it groups with the Chrome/Chromium browser.
+    * Fullscreen mode does not work on OS X.
     """
+    
     # Note, this is not an abstract class, but a proxy class for either browser
     
     def _get_name(self):
@@ -48,27 +55,47 @@ class ChromeRuntime(DesktopRuntime):
         for part in parts:
             if part and part[0].isnumeric():
                 return part
-    
+   
     def _install_runtime(self):
-        version = 'latest'
+        """ Symlink on Unix. Stub in Windows. In contrast to XUL, exe
+        renaming is not needed to avoid grouping on Windows. Plus the
+        firewall would asks permission for each new exe that we use
+        this way. Ironically, there seems to be nothing we can do to avoid
+        grouping on Linux and OS X.
+        """
+        exe = self.get_exe()
+        version = self._get_version(exe)
+        if not exe:
+            raise RuntimeError('You need to install Chrome / Chromium')
+            # todo: dialite
+        
         path = op.join(RUNTIME_DIR, self.get_name() + '_' + version)
-        if not op.isdir(path):
+        if sys.platform.startswith('win'):
             os.mkdir(path)
-        with open(op.join(path, 'stub.txt'), 'wb') as f:
-            f.write('Flexx uses the system Chrome'.encode())
+            with open(op.join(path, 'stub.txt'), 'wb') as f:
+                f.write('Flexx uses the system Chrome'.encode())
+        else:
+            # This makes a nice icon on OS X, but it still groups with Chrome!
+            os.mkdir(path)
+            os.symlink(exe, op.join(path, 'chrome'))
     
     def _launch_tab(self, url):
         self._spawn_subprocess([self.get_exe(), url])
     
     def _launch_app(self, url):
+        
+        # Don't bother with create_temp_app_dir(); its only advantage would be
+        # having an icon on OS X, but since it's grouped with Chrome, leave it.
+        
         # Get chrome executable
-        self.get_runtime('latest')
+        self.get_runtime(self.get_version())
+        
         exe = self.get_exe()
         if exe is None:
             raise RuntimeError('Chrome or Chromium browser was not detected.')
             # todo: dialite
         
-        # No way to set icon and title. On Windows, Chrome uses document
+        # No way to set icon and title. On Wi,ndows, Chrome uses document
         # title/icon. On OS X we create an app. On Linux ... tough luck
         # self._title ...
         # self._icon ...
@@ -183,11 +210,7 @@ class ChromeRuntime(DesktopRuntime):
 
 
 class GoogleChromeRuntime(ChromeRuntime):
-    """ Runtime based on the Google Chrome browser. This runtime does support
-    desktop-like apps, but it is somewhat limited in that it has a
-    Chrome icon on Linux, the app tends to group on the taskbar with
-    the Chrome/Chromium browser, and it cannot be closed with the
-    ``close()`` method.
+    """ Runtime based on the Google Chrome browser. Derives from ChromeRuntime.
     """
     
     def _get_name(self):
@@ -198,11 +221,7 @@ class GoogleChromeRuntime(ChromeRuntime):
 
 
 class ChromiumRuntime(ChromeRuntime):
-    """ Runtime based on the Chromium browser. This runtime does support
-    desktop-like apps, but it is somewhat limited in that it has a
-    Chrome icon on Linux, the app tends to group on the taskbar with
-    the Chrome/Chromium browser, and it cannot be closed with the
-    ``close()`` method.
+    """ Runtime based on the Chromium browser. Derives from ChromeRuntime.
     """
     
     def _get_name(self):

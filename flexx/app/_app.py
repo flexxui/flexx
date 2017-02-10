@@ -58,16 +58,14 @@ class App:
         self._is_served = False
         
         # Handle good defaults
-        if hasattr(cls, 'title'):  # Widget, not a Model
-            if self.kwargs.get('title', None) is None:
-                self.kwargs['title'] = 'Flexx app - ' + cls.__name__
-        if hasattr(cls, 'icon'):  # Widget, not a Model
-            if self.kwargs.get('icon', None) is None:
-                # Set icon as base64 str; exported apps can still be standalone
-                fname = os.path.abspath(os.path.join(__file__, '..', '..',
-                                                     'resources', 'flexx.ico'))
-                icon_str = encodebytes(open(fname, 'rb').read()).decode()
-                self.kwargs['icon'] = 'data:image/ico;base64,' + icon_str
+        if hasattr(cls, 'title') and self.kwargs.get('title', None) is None:
+            self.kwargs['title'] = 'Flexx app - ' + cls.__name__
+        if hasattr(cls, 'icon') and self.kwargs.get('icon', None) is None:
+            # Set icon as base64 str; exported apps can still be standalone
+            fname = os.path.abspath(os.path.join(__file__, '..', '..',
+                                                    'resources', 'flexx.ico'))
+            icon_str = encodebytes(open(fname, 'rb').read()).decode()
+            self.kwargs['icon'] = 'data:image/ico;base64,' + icon_str
     
     def __call__(self, *args, **kwargs):
         a = list(self.args) + list(args)
@@ -137,9 +135,9 @@ class App:
         
         Arguments:
             runtime (str): the runtime to launch the application in. Default 'xul'.
-            runtime_kwargs: kwargs to pass to the ``webruntime.launch``
-                function. Note that the 'title' and 'icon' kwargs passed to the
-                ``App()`` constructor are also passed to the runtime.
+            runtime_kwargs: kwargs to pass to the ``webruntime.launch`` function.
+                A few names are passed to runtime kwargs if not already present
+                ('title' and 'icon').
         
         Returns:
             app (Model): an instance of the given class.
@@ -154,8 +152,6 @@ class App:
             runtime_kwargs['title'] = self.kwargs['title']
         if runtime_kwargs.get('icon', None) is None and 'icon' in self.kwargs:
             runtime_kwargs['icon'] = self.kwargs['icon']
-        if runtime_kwargs.get('name', None) is None:
-            runtime_kwargs['name'] = self._cls.__name__.lower()
         
         # Launch web runtime, the server will wait for the connection
         current_server()  # creates server if it did not yet exist
