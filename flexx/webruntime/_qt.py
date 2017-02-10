@@ -67,6 +67,9 @@ m.show()
 app.exec_()
 """
 
+# todo: maximized / fullscreen can certainly be implemented,
+# but I don't care much about this runtime now, so I did not do it yet.
+
 
 class PyQtRuntime(DesktopRuntime):
     """ Desktop runtime based on qt-webkit. Launches a new Python
@@ -99,14 +102,13 @@ class PyQtRuntime(DesktopRuntime):
         
         # Write icon - assume that we have a 16x16 icon
         app_path = create_temp_app_dir('pyqt')
-        icon = self._kwargs['icon']
-        icon.write(os.path.join(app_path, 'icon.png'))
-        iconfile = os.path.join(app_path, 'icon%i.png' % icon.image_sizes()[0])
+        self._icon.write(os.path.join(app_path, 'icon.png'))
+        iconfile = os.path.join(app_path, 'icon%i.png' % self._icon.image_sizes()[0])
         
         code = CODE_TO_RUN.format(url=repr(url),
-                                  title=repr(self._kwargs['title']),
+                                  title=repr(self._title),
                                   icon=repr(iconfile),
-                                  size=repr(self._kwargs['size']),
-                                  pos=repr(self._kwargs.get('pos', None)),
+                                  size=repr(self._size),
+                                  pos=repr(self._pos),
                                   )
         self._start_subprocess([self.get_exe(), '-c', code])

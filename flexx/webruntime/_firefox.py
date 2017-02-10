@@ -1,4 +1,5 @@
-""" Web runtime based on XUL (i.e. Mozilla's Firefox browser engine)
+"""
+Web runtime based on Mozilla's Firefox browser engine
 
 This is a well-developed runtime, with tested good behavior on
 Windows, OSX, Linux and Raspberry Pi.
@@ -6,23 +7,9 @@ Windows, OSX, Linux and Raspberry Pi.
 Developer notes
 ---------------
 
-We keep track of runtimes in appdata/flexx/webruntimes, Xul runtimes
-have a 'xul_' prefix. In principle we have just one, the one that is
-most up to date. We symlink to Firefox (or on Windows copy the whole
-Firefox runtime). 
-
-After selecting the runtime, we create an executable to run it in a way
-that avoids taskbar grouping (e.g. with Firefox), and provide a more
-meaningful process name in the task manager. Handling of this bit differs
-per platform. On Linux we make a symlink, and on Windows a copy of the
-Firefox executable. On OSX we make a new runtime.app that
-mimics the entire runtime via symlinks.
-
-Xul wants a specific directory structure with a few files that define
-the app. We write this on the fly to appdata/flexx/temp_apps. We create
-a new app for each time we launch an application. We also take good
-care to clean up the old ones. On Linux and OSX the runtime app
-(symlink) is also stored in this directory.
+For this runtime we symlink to the Firefox application on Unix, and copy
+the Firefox directory on Windows. That way we can make a symlink/copy of the
+executable with a name of our chosing, so that we can avoid taskbar grouping.
 
 """
 
@@ -71,7 +58,7 @@ MAIN_XUL = """
     windowtype="flexxui:main"
     width="640"
     height="480"
-    sizemode="normal"
+    sizemode="{sizemode}"
     >
     <script type="application/javascript"
             src="chrome://{name}/content/main.js" />
@@ -85,31 +72,9 @@ MAIN_XUL = """
 """.lstrip()
 
 MAIN_JS = """
-window.addEventListener("load", startup, false);
-window.addEventListener("resize", resizefunc, false);
-
-var thebrowser;
-
-function startup() {
-    //thebrowser = document.createElement("browser");
-    //window.document.body.appendChild(thebrowser);
-
-    document.getElementById("content").open = function() {
-    window.alert('haha open ' + arguments[0]);
-        //window.open(arguments[0], arguments[1], "chrome," + arguments[2]);
-    };
-    //document.getElementById("thebrowser").open = window.open;
-    //window.open("http://python.org", "hello", "chrome,width=400,height=300");
-}
-
-var resizefunc = function(ev) {
-    window.resizeTo(100, 100);
-    window.alert("resize");
-};
-
-
 """
-# persist="screenX screenY width height sizemode"
+
+# todo: persist="screenX screenY width height sizemode"
 
 
 PREFS_JS = """
@@ -159,8 +124,14 @@ class FirefoxRuntime(DesktopRuntime):
     (``sys.executable + '-ui'``), making it easy to spot in the task manager,
     and avoids task-bar grouping. Compared to the NW runtime, this runtime
     is leaner in terms of memory and number of processes.
+    
+    Arguments inherited from DesktopRuntime: title, icon, name, size, pos.
+    
+    Arguments:
+        maximized (bool): If True, load maximized.
+        fullscreen (bool): If True, load in full-screen mode.
     """
-
+    
     def _get_name(self):
         return 'firefox'
         
@@ -192,7 +163,8 @@ class FirefoxRuntime(DesktopRuntime):
                 # Try harder - use app-id to get the .app path
                 try:
                     osx_search_arg='kMDItemCFBundleIdentifier==org.mozilla.firefox'
-                    basepath = subprocess.check_output(['mdfind', osx_search_arg]).rstrip()
+                    basepath = subprocess.check_output(['mdfind', osx_search_arg])
+                    basepath = basepath.rstrip()
                     if basepath:
                         paths.append(op.join(basepath, 'Contents/MacOS/firefox'))
                 except (OSError, subprocess.CalledProcessError):
@@ -279,16 +251,14 @@ class FirefoxRuntime(DesktopRuntime):
         
         # Set size and position
         # Maybe interesting window features: alwaysRaised
-        size = self._kwargs['size']  # ensured by DesktopLayout
-        pos = self._kwargs.get('pos', None)
         windowfeatures = 'resizable=1,minimizable=1,dialog=0,'
-        windowfeatures += 'width=%i,height=%i' % (size[0], size[1])
-        if pos:
-            windowfeatures += ',top=%i,left=%i' % (pos[0], pos[1])
+        if self._windowmode == 'normal':
+            windowfeatures += 'width=%i,height=%i' % self._size
+            if self._pos:
+                windowfeatures += ',left=%i,top=%i' % self._pos
 
         # Create files for app
-        self._create_xul_app(app_path, id, windowfeatures=windowfeatures,
-                             url=url, **self._kwargs)
+        self._create_xul_app(app_path, id, url, windowfeatures)
 
         # Get executable for xul runtime (may be None)
         ff_exe = self.get_exe()
@@ -325,28 +295,29 @@ class FirefoxRuntime(DesktopRuntime):
             logger.warn("Using Flexx' Firefox runtime and Qt (PySide/PyQt4/PyQt5) "
                         "together may cause problems.")
 
-    def _create_xul_app(self, path, id, **kwargs):
+    def _create_xul_app(self, path, id, url, windowfeatures):
         """ Create the files that determine the XUL app to launch.
         """
-
+        
+        modemap = {'kiosk': 'fullscreen'}
+        
         # Dict with all values that are injected in the file templates
-        # All values can be overriden via kwargs
         D = dict(vendor='Flexx',
                  name='flexx_ui_app',
                  version='1.0',
                  buildid='1',
                  id='some.app@flexx.io',
                  windowid='xx',
-                 title='XUL app runtime',  # Is always set
-                 url='http://example.com',
-                 windowfeatures='', )
-        D.update(kwargs)
-
+                 title=self._title,
+                 url=url,
+                 sizemode=modemap.get(self._windowmode, self._windowmode),
+                 windowfeatures=windowfeatures)
+        
         # Create values that need to be unique
         D['windowid'] = 'W' + id
-        D['name'] = self._kwargs['name']  + '_' + id
+        D['name'] = self._app_name + '_' + id
         D['id'] = 'app_' + id + '@flexx.io'
-
+        
         # Fill in arguments in file contents
         manifest_link = 'manifest chrome/chrome.manifest'
         manifest = 'content {name} content/'.format(**D)
@@ -380,10 +351,9 @@ class FirefoxRuntime(DesktopRuntime):
 
         # Icon - use Icon class to write a png (Unix) and an ico (Windows)
         # The DesktopRuntime ensures that there always is an icon
-        icon = kwargs['icon']
         icon_name = op.join(path, 'chrome/icons/default/' + D['windowid'])
-        icon.write(icon_name + '.ico')
-        icon.write(icon_name + '.png')
+        self._icon.write(icon_name + '.ico')
+        self._icon.write(icon_name + '.png')
     
     def _copy_xul_runtime(self, dir1, dir2):
         """ Copy the firefox/xulrunner runtime to a new folder, in which
