@@ -1,9 +1,18 @@
 """
 Common code for all runtimes.
 
-Note on app runtimes (i.e. for desktop apps): it is assumed that runtimes
-are backward compatible. This is a reasonable assumption since we
-use only the web stuff, which browsers generally keep working.
+Desktop runtimes provide a way to load a page as desktop application. To do
+so, we may cache or link to an existing runtime (like Firefox) or even
+keep a local copy of a runtime (like NW.js). Some runtimes (e.g. Firefox)
+needs a whole directory structure as its app definition. Others need just
+one manifest file (NW.js) and perhaps some icons. Others need nothing (Chrome).
+In all cases we improve the app experience by making use of a custom named
+executable to control task bar grouping, and on OS X we build an actual
+application (xx.app directory).
+
+It is assumed that desktop runtimes are backward compatible. This is a
+reasonable assumption since we use only the web stuff, which browsers
+generally keep working.
 
 We also don't make a point of always having the latest version, because
 some runtimes release almost every week. Having the user confirm a
@@ -14,6 +23,20 @@ to known sources which are on localhost for desktop apps anyway.
 
 Therefore, Flexx has a hardcoded minimal version for runtimes where this
 makes sense, which is configurable by the user in cases where its needed.
+
+For deskop runtimes we have the following important attributes:
+
+* icon: the application icon for the app. This will usually come from the
+  main widget's icon property (as a string), and is converted to an Icon
+  object here, so that each runtime can export the required .ico, .icns or .png
+  files.
+* title: the title to display on the apps title bar. This will usually come from
+  the main widget's title property.
+* exe_name: the name of the executable of the runtime, chosing this helps
+  find the process in the task manager, but more importantly, avoids task
+  grouping, or helps wanted grouping.
+* id: a unique application id, generated and used internally to creat unique
+  temporary app dirs and application manifests.
 
 """
 
@@ -58,19 +81,22 @@ class BaseRuntime:
     
     def __init__(self, **kwargs):
         
-        assert self.get_name()
-        self._exe = None
+        # nomnom, we eat all kwargs, because different runtimes use
+        # different kwargs, and we want it to be easy to switch runtimes
+        self._leftover_kwargs = kwargs
         
-        # todo: meeh kwargs
-        self._kwargs = kwargs
+        assert self.get_name()
+        atexit.register(self.close)
+        
+        self._exe = None
+        self._version = None
         self._proc = None
         self._streamreader = None
-        atexit.register(self.close)
         
         # Tidy up, but don't make us wait for it, also give main thread
         # time to e.g. continue incomplete downloads (e.g. for NW.js runtime)
         init_dirs()
-        t = threading.Thread(target=lambda:time.sleep(4) or clean_dirs())
+        t = threading.Thread(target=lambda: time.sleep(4) or clean_dirs())
         t.setDaemon(True)
         t.start()  # tidy up
     
@@ -208,21 +234,36 @@ class DesktopRuntime(BaseRuntime):
 
     Arguments:
         title (str): Text shown in title bar.
+        icon (str | Icon): Icon instance or path to an icon file (png or ico).
+            The icon will be automatically converted to png/ico/icns,
+            depending on what's needed by the runtime and platform.
         size (tuple of ints): The size in pixels of the window.
         pos (tuple of ints): The position of the window.
-        icon (str | Icon): Icon instance or path to an icon file (png or
-            ico). The icon will be automatically converted to
-            png/ico/icns, depending on what's needed by the runtime and
-            platform.
+        windowmode (str): the initial window mode, e.g. 'normal', 'maximized',
+            'fullscreen', 'kiosk'. Not all modes are supported by all runtimes.
     """
 
-    def __init__(self, **kwargs):
-
-        icon = kwargs.get('icon', None)
-        kwargs['icon'] = iconize(icon)
-    
-        BaseRuntime.__init__(self, **kwargs)
-    
+    def __init__(self, icon=None, title=None,
+                 size=None, pos=None, windowmode=None, **kwargs):
+        
+        self._icon = iconize(icon or None)
+        assert isinstance(self._icon, Icon)
+        
+        self._title = title or 'Flexx %s runtime' % self.get_name()
+        assert isinstance(self._title, str)
+        
+        self._size = size or (640, 480)
+        assert isinstance(self._size, tuple) and len(self._size) == 2
+        
+        self._pos = pos
+        assert self._pos is None or (isinstance(self._pos, tuple) and
+                                     len(self._pos) == 2)
+        
+        self._windowmode = windowmode or 'normal'
+        assert isinstance(self._windowmode, str)
+        assert self._windowmode in ('normal', 'maximized', 'fullscreen', 'kiosk')
+        
+        super().__init__(**kwargs)
     
     def get_runtime(self, min_version=None):
         """ Get the directory where (our local version of) the runtime is
@@ -284,7 +325,7 @@ class DesktopRuntime(BaseRuntime):
         that the runtime process shows up in the task manager with the
         correct exe_name.
 
-        * exe: the location of the runtime executable (can be a symlink)
+        * runtime_exe: the location of the runtime executable (can be a symlink)
         * app_path: the location of the temp app (the app.json or whatever)
 
         """
@@ -292,7 +333,11 @@ class DesktopRuntime(BaseRuntime):
         # Firefox, NW.js or whatever, and has a more meaningful name in the
         # task manager. Using sys.executable also works well when frozen.
         exe_name, ext = op.splitext(op.basename(sys.executable))
+        # todo: What kind of exe name? test with freezing on different OS's
         exe_name = exe_name + '-ui' + ext
+        # exe_name = exe_name + ext
+        
+        assert runtime_exe.startswith(RUNTIME_DIR)
         
         if sys.platform.startswith('darwin'):
             # OSX: create an app, the name of the exe does not matter
@@ -300,8 +345,8 @@ class DesktopRuntime(BaseRuntime):
             # the latter to the title, because title and process name
             # seem the same thing in osx.
             app_exe = op.join(app_path, exe_name + '.app')
-            title = self._kwargs['title']
-            self._osx_create_app(op.realpath(runtime_exe), app_exe, title)
+            # todo: double check to make sure if title makes the most sense here
+            self._osx_create_app(op.realpath(runtime_exe), app_exe, self._title)
             app_exe += '/Contents/MacOS/' + exe_name
         else:
             
@@ -356,19 +401,18 @@ class DesktopRuntime(BaseRuntime):
                     os.link(op.join(src_dir, relpath, fname),
                             op.join(dst_dir, relpath, fname))
         # Make runtime exe
-        os.link(op.realpath(op.join(src_dir, 'Contents', 'MacOS', exe_name_src)),
-                op.join(dst_dir, 'Contents', 'MacOS', exe_name_dst))
+        os.link(  # or shutil.copy2(
+            op.realpath(op.join(src_dir, 'Contents', 'MacOS', exe_name_src)),
+            op.join(dst_dir, 'Contents', 'MacOS', exe_name_dst))
         # Make info.plist
         info = INFO_PLIST.format(name=title, exe=exe_name_dst)
         with open(op.join(dst_dir, 'Contents', 'info.plist'), 'wb') as f:
             f.write(info.encode())
-        # Make icon - ensured by launch function
-        if self._kwargs.get('icon'):
-            icon = self._kwargs.get('icon')
-            iconfile = op.join(dst_dir, 'Contents', 'Resources', 'app.icns')
-            if op.exists(iconfile):
-                os.unlink(iconfile)  # remove first, since its a hard link!
-            icon.write(iconfile)
+        # Make icon - DesktopRuntime ensures that there is an icon and title
+        iconfile = op.join(dst_dir, 'Contents', 'Resources', 'app.icns')
+        if op.exists(iconfile):
+            os.unlink(iconfile)  # remove first, since its a hard link!
+        self._icon.write(iconfile)
     
     ## To implenent in subclasses
     
@@ -448,47 +492,29 @@ def find_osx_exe(app_id):
 ## Icon stuff
 
 
-_icon_template = """
-xx x  xx x x x x
-x  x  x  x x x x
-xx x  xx  x   x
-x  x  x  x x x x
-x  xx xx x x x x
-
- xx   xxx   xxx
-x  x  x  x  x  x
-xxxx  xxx   xxx
-x  x  x     x
-"""
-
-
-def default_icon():
-    """ Generate a default icon object.
-    """
-    im = bytearray(4*16*16)
-    for y, line in enumerate(_icon_template.splitlines()):
-        y += 5
-        if y < 16:
-            for x, c in enumerate(line):
-                if c == 'x':
-                    i = (y * 16 + x) * 4
-                    im[i:i+4] = [0, 0, 150, 255]
-
-    icon = Icon()
-    icon.add(im)
-    return icon
-
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def iconize(icon):
     """ Given a filename Icon object or None, return Icon object.
     """
+    
+    # Get default icon?
     if icon is None:
-        icon = default_icon()
-    elif isinstance(icon, Icon):
+        icon = os.path.join(os.path.dirname(THIS_DIR), 'resources', 'flexx.ico')
+    
+    if isinstance(icon, Icon):
         pass
     elif isinstance(icon, str):
-        icon = Icon(icon)
+        if icon.startswith('_data/shared'):
+            # Icon as an asset in Flexx' asset store
+            from ..app import assets  # noqa
+            bb = assets.get_data(icon.split('/', 2)[-1])
+            icon = Icon()
+            icon.from_bytes('.ico', bb)
+        else:
+            # Filename, url, base64 string - handled by Icon class
+            icon = Icon(icon)
     else:
-        raise ValueError('Icon must be an Icon, a filename or None, not %r' %
+        raise ValueError('Icon must be an Icon, str, or None, not %r' %
                          type(icon))
     return icon

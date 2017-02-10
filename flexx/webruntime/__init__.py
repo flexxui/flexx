@@ -21,7 +21,7 @@ del logging
 
 from .. import config
 
-from ._manage import RUNTIME_DIR, TEMP_APP_DIR
+from ._manage import RUNTIME_DIR, TEMP_APP_DIR  # noqa
 from ._common import BaseRuntime, DesktopRuntime  # noqa
 from ._firefox import FirefoxRuntime
 from ._nw import NWRuntime

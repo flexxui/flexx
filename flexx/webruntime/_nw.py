@@ -25,7 +25,6 @@ import re
 import sys
 import json
 import struct
-import shutil
 from urllib.request import urlopen
 
 from .. import config
@@ -128,7 +127,7 @@ class NWRuntime(DesktopRuntime):
     # todo: if not installedm is_available is false, giving not chance to install
     
     def _get_version(self):
-        return self.get_current_version()  # todo: rename to _get_chached_version or something
+        return self.get_current_version()
     
     def _get_latest_version(self):
         """" Get latest version of the NW runtime.
@@ -182,14 +181,12 @@ class NWRuntime(DesktopRuntime):
         
         # Get dir to store app definition
         app_path = create_temp_app_dir('nw')
-        id = op.basename(app_path).split('_', 1)[1]
-        
-        self._kwargs['title'] = self._kwargs.get('title', 'NW.js runtime')
+        id = op.basename(app_path).split('_', 1)[1].replace('~', '_')
         
         # Get runtime exe
         if config.nw_exe:
             # User specifies the executable, we're not going to worry about version
-            exe = flexx.config.nw_exe
+            exe = config.nw_exe
         else:
             # We install the runtime, based on a minimal required version
             exe = self._get_exe_name(self.get_runtime(config.nw_min_version))
@@ -203,22 +200,25 @@ class NWRuntime(DesktopRuntime):
         # It may include "." or "_" or "-" characters. Normally, NW.js stores
         # the app's profile data under the directory named name, but we
         # overload user-data-dir.
+        
+        # From 0.20.0, even with --user-data-dir, a profile dir with "name" is
+        # still created (at least on Windows). Fortunately. the name does not
+        # have to be unique, perhaps because we define a custom profile dir.
         D = get_manifest_template()
-        # D['name'] = normalize('name-of-app-class')
+        D['name'] = 'flexx_stub_nw_profile'
         D['description'] += ' (%s)' % id
         D['main'] = url
-        D['window']['title'] = self._kwargs.get('title', 'nw.js runtime')
+        D['window']['title'] = self._title
         
         # Set size (position can be null, center, mouse)
-        size = self._kwargs.get('size', (640, 480))
-        D['window']['width'], D['window']['height'] = size[0], size[1]
+        D['window']['kiosk'] = self._windowmode == 'kiosk'
+        D['window']['fullscreen'] = self._windowmode == 'fullscreen'
+        D['window']['width'], D['window']['height'] = self._size
         
         # Icon (note that icon is "overloaded" if nw is wrapped in a runtime.app)
-        if self._kwargs.get('icon'):
-            icon = self._kwargs.get('icon')
-            icon_path = op.join(app_path, 'app.png')  # nw can handle ico
-            icon.write(icon_path)
-            D['window']['icon'] = 'app%i.png' % icon.image_sizes()[0]
+        self._icon.write(op.join(app_path, 'app.png'))  # ico does not work
+        size = [i for i in self._icon.image_sizes() if i <= 64][-1]
+        D['window']['icon'] = 'app%i.png' % size
         
         # Write app manifest
         with open(op.join(app_path, 'package.json'), 'wb') as f:
@@ -238,5 +238,5 @@ class NWRuntime(DesktopRuntime):
             os.mkdir(profile_dir)
         
         # Launch
-        cmd = [exe, app_path, '--user-data-dir=' + profile_dir]
+        cmd = [exe, '--user-data-dir=' + profile_dir, app_path]
         self._start_subprocess(cmd, LD_LIBRARY_PATH=llp)

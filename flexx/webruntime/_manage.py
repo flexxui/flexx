@@ -277,8 +277,6 @@ def create_temp_app_dir(prefix, cleanup=60):
     """ Create a temporary direrctory and return its path.
 
     The directory will be named "<prefix>_<timestamp>_<pid>_<suffix>".
-    Will clean up directories with the same prefix which are older than
-    cleanup seconds.
     """
     global _app_count
     _app_count += 1
@@ -501,7 +499,7 @@ def _open_folder(path):
     """
     if sys.platform.startswith('win'):
         os.startfile(path)
-    elif  sys.platform.startswith('darwin'):
+    elif sys.platform.startswith('darwin'):
         subprocess.Popen(["open", path])
     else:
         subprocess.Popen(["xdg-open", path])

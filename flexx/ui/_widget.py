@@ -160,8 +160,20 @@ class Widget(Model):
         
         @event.prop
         def title(self, v=''):
-            """ The title of this widget. This is used to mark the widget
-            in e.g. a tab layout or form layout.
+            """ The string title of this widget. This is used to mark
+            the widget in e.g. a tab layout or form layout, and is used
+            as the app's title if this is the main widget.
+            """
+            return str(v)
+        
+        @event.prop
+        def icon(self, v=''):
+            """ The icon for this widget. This is used is some widgets classes,
+            and is used as the app's icon if this is the main widget.
+            
+            Can be a url, a relative url to a shared asset, or a base64
+            encoded image. In the future this may also support names in
+            icon packs like fontaweome.
             """
             return str(v)
         
@@ -404,6 +416,20 @@ class Widget(Model):
             # todo: title also supports caption, icon, closable, and more
             if self.parent is None and self.container == 'body':
                 window.document.title = self.title or 'Flexx app'
+        
+        @event.connect('icon')
+        def __icon_changed(self, *events):
+            if self.parent is None and self.container == 'body':
+                window.document.title = self.title or 'Flexx app'
+                
+                link = window.document.createElement('link')
+                oldLink = window.document.getElementById('flexx-favicon')
+                link.id = 'flexx-favicon'
+                link.rel = 'shortcut icon'
+                link.href = events[-1].new_value
+                if oldLink:
+                    window.document.head.removeChild(oldLink)
+                window.document.head.appendChild(link)
         
         ## Size
 

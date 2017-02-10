@@ -23,23 +23,26 @@ class BrowserRuntime(BaseRuntime):
     an url in the system default browser.
     """
     
+    def __init__(self, type=None, **kwargs):
+        self._type = type or ''
+        super().__init__(**kwargs)
+    
     def _get_name(self):
         return 'browser'
     
     def _get_exe(self):
-        type = self._kwargs.get('type', '')
-        b, errors = self._get_openers(type)
-        if not type:
+        b, errors = self._get_openers(self._type)
+        if not self._type:
             return 'stub_exe_default_browser'
         elif b:
-            return 'stub_exe_%s_browser' % type
+            return 'stub_exe_%s_browser' % self._type
     
     def _get_version(self):
         return None
     
     def _launch_tab(self, url):
         
-        b, errors = self._get_openers(self._kwargs.get('type', ''))
+        b, errors = self._get_openers(self._type)
         if b:
             b.open(url)
         else:
