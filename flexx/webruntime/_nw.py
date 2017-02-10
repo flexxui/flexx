@@ -25,7 +25,6 @@ import re
 import sys
 import json
 import struct
-import shutil
 from urllib.request import urlopen
 
 from .. import config
@@ -104,6 +103,11 @@ class NWRuntime(DesktopRuntime):
     (``sys.executable + '-ui'``), making it easy to spot in the task manager,
     and avoids task-bar grouping. Compared to the Firefox app runtime,
     this runtime uses more processes and memory, but is generally faster.
+    
+    Arguments inherited from DesktopRuntime: title, icon, name, size, pos.
+    
+    Arguments:
+        windowmode (str): Can be 'normal' (default), 'fullscreen' or 'kiosk'.
     """
     
     def _get_name(self):
@@ -128,7 +132,7 @@ class NWRuntime(DesktopRuntime):
     # todo: if not installedm is_available is false, giving not chance to install
     
     def _get_version(self):
-        return self.get_current_version()  # todo: rename to _get_chached_version or something
+        return self.get_current_version()
     
     def _get_latest_version(self):
         """" Get latest version of the NW runtime.
@@ -187,7 +191,7 @@ class NWRuntime(DesktopRuntime):
         # Get runtime exe
         if config.nw_exe:
             # User specifies the executable, we're not going to worry about version
-            exe = flexx.config.nw_exe
+            exe = config.nw_exe
         else:
             # We install the runtime, based on a minimal required version
             exe = self._get_exe_name(self.get_runtime(config.nw_min_version))
@@ -202,19 +206,19 @@ class NWRuntime(DesktopRuntime):
         # the app's profile data under the directory named name, but we
         # overload user-data-dir.
         D = get_manifest_template()
-        D['name'] = self._kwargs['name'] + '_' + id
+        D['name'] = self._app_name + '_' + id
         D['description'] += ' (%s)' % id
         D['main'] = url
-        D['window']['title'] = self._kwargs['title']  # ensured by DesktopRuntime
+        D['window']['title'] = self._title
         
         # Set size (position can be null, center, mouse)
-        size = self._kwargs['size']
-        D['window']['width'], D['window']['height'] = size[0], size[1]
+        D['window']['kiosk'] = self._windowmode == 'kiosk'
+        D['window']['fullscreen'] = self._windowmode == 'fullscreen'
+        D['window']['width'], D['window']['height'] = self._size
         
         # Icon (note that icon is "overloaded" if nw is wrapped in a runtime.app)
-        icon = self._kwargs['icon']
-        icon.write(op.join(app_path, 'app.png'))  # ico does not work
-        size = [i for i in icon.image_sizes() if i <= 64][-1]
+        self._icon.write(op.join(app_path, 'app.png'))  # ico does not work
+        size = [i for i in self._icon.image_sizes() if i <= 64][-1]
         D['window']['icon'] = 'app%i.png' % size
         
         # Write app manifest

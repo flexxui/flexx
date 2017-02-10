@@ -14,6 +14,10 @@ class SeleniumRuntime(BaseRuntime):
     broken.
     """
     
+    def __init__(self, type=None, **kwargs):
+        self._type = type or ''
+        super().__init__(**kwargs)
+    
     def _get_name(self):
         return 'selenium'
     
@@ -32,8 +36,7 @@ class SeleniumRuntime(BaseRuntime):
     def _launch_tab(self, url):
         
         # Get url and browser type
-        type = self._kwargs.get('type', '')
-        
+        type = self._type
         self._driver = None
         
         # Import here; selenium is an optional dependency

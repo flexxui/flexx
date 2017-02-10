@@ -499,7 +499,7 @@ def _open_folder(path):
     """
     if sys.platform.startswith('win'):
         os.startfile(path)
-    elif  sys.platform.startswith('darwin'):
+    elif sys.platform.startswith('darwin'):
         subprocess.Popen(["open", path])
     else:
         subprocess.Popen(["xdg-open", path])

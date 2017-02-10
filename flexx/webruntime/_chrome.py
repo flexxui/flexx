@@ -70,18 +70,21 @@ class ChromeRuntime(DesktopRuntime):
         
         # No way to set icon and title. On Windows, Chrome uses document
         # title/icon. On OS X we create an app. On Linux ... tough luck
-        # _kwargs['title']
-        # _kwargs['icon']
+        # self._title ...
+        # self._icon ...
         
         # Options
-        size = self._kwargs['size']  # always available
-        pos = self._kwargs.get('pos', None)
-        #
         opts = ['--incognito']
         opts.append('--enable-unsafe-es3-apis')  # enable webgl2
-        opts.append('--window-size=%i,%i' %  (size[0], size[1]))
-        if pos:
-            opts.append('--window-position=%i,%i' %  (pos[0], pos[1]))
+        opts.append('--window-size=%i,%i' % self._size)
+        if self._pos:
+            opts.append('--window-position=%i,%i' % self._pos)
+        if self._windowmode == 'kiosk':
+            opts.append('--kiosk')
+        elif self._windowmode == 'fullscreen':
+            opts.append('--start-fullscreen')
+        elif self._windowmode == 'maximized':
+            opts.append('--start-maximized')
         
         # Launch url, important to put opts before --app=xx
         self._start_subprocess([exe] + opts + ['--app=%s' % url])

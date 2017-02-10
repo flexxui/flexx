@@ -1,9 +1,18 @@
 """
 Common code for all runtimes.
 
-Note on app runtimes (i.e. for desktop apps): it is assumed that runtimes
-are backward compatible. This is a reasonable assumption since we
-use only the web stuff, which browsers generally keep working.
+Desktop runtimes provide a way to load a page as desktop application. To do
+so, we may cache or link to an existing runtime (like Firefox) or even
+keep a local copy of a runtime (like NW.js). Some runtimes (e.g. Firefox)
+needs a whole directory structure as its app definition. Others need just
+one manifest file (NW.js) and perhaps some icons. Others need nothing (Chrome).
+In all cases we improve the app experience by making use of a custom named
+executable to control task bar grouping, and on OS X we build an actual
+application (xx.app directory).
+
+It is assumed that desktop runtimes are backward compatible. This is a
+reasonable assumption since we use only the web stuff, which browsers
+generally keep working.
 
 We also don't make a point of always having the latest version, because
 some runtimes release almost every week. Having the user confirm a
@@ -75,14 +84,16 @@ class BaseRuntime:
     
     def __init__(self, **kwargs):
         
-        assert self.get_name()
-        self._exe = None
+        # nomnom, we eat all kwargs, because different runtimes use
+        # different kwargs, and we want it to be easy to switch runtimes
+        self._leftover_kwargs = kwargs
         
-        # todo: meeh kwargs
-        self._kwargs = kwargs
+        assert self.get_name()
+        atexit.register(self.close)
+        
+        self._exe = None
         self._proc = None
         self._streamreader = None
-        atexit.register(self.close)
         
         # Tidy up, but don't make us wait for it, also give main thread
         # time to e.g. continue incomplete downloads (e.g. for NW.js runtime)
@@ -232,23 +243,35 @@ class DesktopRuntime(BaseRuntime):
             Used internally by some backend, but you wont see much of it.
         size (tuple of ints): The size in pixels of the window.
         pos (tuple of ints): The position of the window.
+        windowmode (str): the initial window mode, e.g. 'normal', 'maximized',
+            'fullscreen', 'kiosk'. Not all modes are supported by all runtimes.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, icon=None, title=None, name=None,
+                      size=None, pos=None, windowmode=None, **kwargs):
         
-        # Convert whatever icon we have to an Icon object
-        icon = kwargs.get('icon', None)
-        kwargs['icon'] = iconize(icon or None)
-        # Make sure we have a title
-        default_title = 'Flexx %s runtime' % self.get_name()
-        kwargs['title'] = kwargs.get('title', None) or default_title
-        # Make sure we have a name
-        name = ''.join(c.lower() for c in  kwargs.get('name', '') if c.isalnum())
-        kwargs['name'] = name or 'flexx_%s_app' % self.get_name()
-        # Make sure we have a size
-        kwargs['size'] = kwargs.get('size', (640, 480))
+        self._icon = iconize(icon or None)
+        assert isinstance(self._icon, Icon)
         
-        BaseRuntime.__init__(self, **kwargs)
+        self._title = title or 'Flexx %s runtime' % self.get_name()
+        assert isinstance(self._title, str)
+        
+        name = name or 'flexx_%s_app' % self.get_name()
+        self._app_name = ''.join(c.lower() for c in name if c.isalnum())
+        assert isinstance(self._app_name, str)
+        
+        self._size = size or (640, 480)
+        assert isinstance(self._size, tuple) and len(self._size) == 2
+        
+        self._pos = pos
+        assert self._pos is None or (isinstance(self._pos, tuple) and
+                                     len(self._pos) == 2)
+        
+        self._windowmode = windowmode or 'normal'
+        assert isinstance(self._windowmode, str)
+        assert self._windowmode in ('normal', 'maximized', 'fullscreen', 'kiosk')
+        
+        super().__init__(**kwargs)
     
     def get_runtime(self, min_version=None):
         """ Get the directory where (our local version of) the runtime is
@@ -328,9 +351,8 @@ class DesktopRuntime(BaseRuntime):
             # the latter to the title, because title and process name
             # seem the same thing in osx.
             app_exe = op.join(app_path, exe_name + '.app')
-            title = self._kwargs['title']  # title is ensured by DesktopRuntime
             # todo: double check to make sure if title makes the most sense here
-            self._osx_create_app(op.realpath(runtime_exe), app_exe, title)
+            self._osx_create_app(op.realpath(runtime_exe), app_exe, self._title)
             app_exe += '/Contents/MacOS/' + exe_name
         else:
             
@@ -392,11 +414,10 @@ class DesktopRuntime(BaseRuntime):
         with open(op.join(dst_dir, 'Contents', 'info.plist'), 'wb') as f:
             f.write(info.encode())
         # Make icon - DesktopRuntime ensures that there is an icon and title
-        icon = self._kwargs['icon']
         iconfile = op.join(dst_dir, 'Contents', 'Resources', 'app.icns')
         if op.exists(iconfile):
             os.unlink(iconfile)  # remove first, since its a hard link!
-        icon.write(iconfile)
+        self._icon.write(iconfile)
     
     ## To implenent in subclasses
     
