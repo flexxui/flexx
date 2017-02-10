@@ -1,3 +1,7 @@
+"""
+Simple script to generate Flexx' icon for different sizes.
+"""
+
 import os
 import base64
 

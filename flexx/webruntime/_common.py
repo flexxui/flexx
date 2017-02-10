@@ -35,9 +35,6 @@ For deskop runtimes we have the following important attributes:
 * exe_name: the name of the executable of the runtime, chosing this helps
   find the process in the task manager, but more importantly, avoids task
   grouping, or helps wanted grouping.
-* name: the name of the application, used as a name in the manifests. It seemed
-  to make sense to let the flexx.app Model class name leak into the webruntime
-  somehow, but its hardly used/useful.
 * id: a unique application id, generated and used internally to creat unique
   temporary app dirs and application manifests.
 
@@ -92,6 +89,7 @@ class BaseRuntime:
         atexit.register(self.close)
         
         self._exe = None
+        self._version = None
         self._proc = None
         self._streamreader = None
         
@@ -239,26 +237,20 @@ class DesktopRuntime(BaseRuntime):
         icon (str | Icon): Icon instance or path to an icon file (png or ico).
             The icon will be automatically converted to png/ico/icns,
             depending on what's needed by the runtime and platform.
-        name (str, optional): simple alphanumeric lowercase name without spaces.
-            Used internally by some backend, but you wont see much of it.
         size (tuple of ints): The size in pixels of the window.
         pos (tuple of ints): The position of the window.
         windowmode (str): the initial window mode, e.g. 'normal', 'maximized',
             'fullscreen', 'kiosk'. Not all modes are supported by all runtimes.
     """
 
-    def __init__(self, icon=None, title=None, name=None,
-                      size=None, pos=None, windowmode=None, **kwargs):
+    def __init__(self, icon=None, title=None,
+                 size=None, pos=None, windowmode=None, **kwargs):
         
         self._icon = iconize(icon or None)
         assert isinstance(self._icon, Icon)
         
         self._title = title or 'Flexx %s runtime' % self.get_name()
         assert isinstance(self._title, str)
-        
-        name = name or 'flexx_%s_app' % self.get_name()
-        self._app_name = ''.join(c.lower() for c in name if c.isalnum())
-        assert isinstance(self._app_name, str)
         
         self._size = size or (640, 480)
         assert isinstance(self._size, tuple) and len(self._size) == 2
@@ -342,8 +334,10 @@ class DesktopRuntime(BaseRuntime):
         # task manager. Using sys.executable also works well when frozen.
         exe_name, ext = op.splitext(op.basename(sys.executable))
         # todo: What kind of exe name? test with freezing on different OS's
-        # exe_name = exe_name + '-ui' + ext
-        exe_name = exe_name + ext
+        exe_name = exe_name + '-ui' + ext
+        # exe_name = exe_name + ext
+        
+        assert runtime_exe.startswith(RUNTIME_DIR)
         
         if sys.platform.startswith('darwin'):
             # OSX: create an app, the name of the exe does not matter
@@ -407,8 +401,9 @@ class DesktopRuntime(BaseRuntime):
                     os.link(op.join(src_dir, relpath, fname),
                             op.join(dst_dir, relpath, fname))
         # Make runtime exe
-        os.link(op.realpath(op.join(src_dir, 'Contents', 'MacOS', exe_name_src)),
-                op.join(dst_dir, 'Contents', 'MacOS', exe_name_dst))
+        os.link(  # or shutil.copy2(
+            op.realpath(op.join(src_dir, 'Contents', 'MacOS', exe_name_src)),
+            op.join(dst_dir, 'Contents', 'MacOS', exe_name_dst))
         # Make info.plist
         info = INFO_PLIST.format(name=title, exe=exe_name_dst)
         with open(op.join(dst_dir, 'Contents', 'info.plist'), 'wb') as f:

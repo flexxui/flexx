@@ -124,12 +124,6 @@ class FirefoxRuntime(DesktopRuntime):
     (``sys.executable + '-ui'``), making it easy to spot in the task manager,
     and avoids task-bar grouping. Compared to the NW runtime, this runtime
     is leaner in terms of memory and number of processes.
-    
-    Arguments inherited from DesktopRuntime: title, icon, name, size, pos.
-    
-    Arguments:
-        maximized (bool): If True, load maximized.
-        fullscreen (bool): If True, load in full-screen mode.
     """
     
     def _get_name(self):
@@ -314,8 +308,11 @@ class FirefoxRuntime(DesktopRuntime):
                  windowfeatures=windowfeatures)
         
         # Create values that need to be unique
+        # Looks like name does not have to be unique, perhapse because we use
+        # a custom profile dir. If possible, use static name to avoid XUL from
+        # spamming profile dirs (NW did this, so let's be on safe side).
+        D['name'] = 'flexx_stub_xul_profile'
         D['windowid'] = 'W' + id
-        D['name'] = self._app_name + '_' + id
         D['id'] = 'app_' + id + '@flexx.io'
         
         # Fill in arguments in file contents
