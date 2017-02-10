@@ -16,7 +16,8 @@ config = Config('flexx', '~appdata/.flexx.cfg',
         ssl_keyfile=('', str, 'The key file for https server.'),
         
         # flexx.webruntime
-        webruntime=('', str, 'The default web runtime to use. Default is xul/browser.'),
+        webruntime=('', str, 'The default web runtime to use. '
+                    'Default is "app or browser".'),
         firefox_exe=('', str, 'The location of the Firefox executable. '
                      'Auto-detect by default.'),
         chrome_exe=('', str, 'The location of the Chrome/Chromium executable. '

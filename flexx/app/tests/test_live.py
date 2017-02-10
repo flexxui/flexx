@@ -25,7 +25,7 @@ def runner(cls):
     # Run with a fresh server
     server = app.create_server(port=0, new_loop=True)
     
-    t = app.launch(cls, 'xul')
+    t = app.launch(cls, 'firefox-app')
     t.test_init()
     t.test_set_result()
     # Install failsafe. Use a closure so failsafe wont spoil a future test

@@ -296,5 +296,5 @@ if __name__ == '__main__':
                     m.bindTooltip('%f, %f' % (latlng[0], latlng[1]))
                     m.addTo(self.leaflet.map)
 
-    app.launch(MapWidget, 'xul')
+    app.launch(MapWidget, 'app')
     app.run()

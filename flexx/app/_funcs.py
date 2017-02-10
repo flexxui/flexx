@@ -76,7 +76,8 @@ def init_interactive(cls=None, runtime=None):
         cls (None, Model): a subclass of ``app.Model`` (or ``ui.Widget``) to use
             as the *default active model*. Only has effect the first time that
             this function is called.
-        runtime (str): the runtime to launch the application in. Default 'xul'.
+        runtime (str): the runtime to launch the application in.
+            Default 'app or browser'.
     """
     
     # Determine default model class (which is a Widget if ui is imported)

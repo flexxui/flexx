@@ -76,7 +76,7 @@ class Flexx:
             window.history.replaceState(window.history.state, '',
                                         window.location.pathname)
         except Exception:
-            pass  # e.g. Xul
+            pass  # e.g. firefox-app/nw
     
     def exit(self):
         """ Called when runtime is about to quit. """
