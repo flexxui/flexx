@@ -127,57 +127,18 @@ def launch(url, runtime=None, **kwargs):
     
     # Normalize runtime, apply aliases
     runtimes = _expand_runtime_name(runtime)
-    runtime_obs = []
+    tried_runtimes = []
+    errors = []
     
+    # Attempt to launch runtimes, one by one
     for runtime in runtimes: 
-    
-        if runtime.endswith('-app'):
-            # Desktop-like app runtime
-            runtime = runtime.split('-')[0]
-            Runtime = _runtimes.get(runtime, None)
-            if Runtime is None:
-                logger.warn('Unknown app runtime %r.' % runtime)
-                continue
-            else:
-                rt = Runtime(**kwargs)
-                runtime_obs.append(rt)
-                if not rt.is_available():
-                    continue
-                rt.launch_app(url)
-                return rt
-        
-        elif runtime.startswith('selenium-'):
-            # Selenium runtime - always try or fail
-            if '-' in runtime:
-                kwargs['type'] = runtime.split('-', 1)[1]
-            rt = SeleniumRuntime(**kwargs)
-            rt.launch_tab(url)
-            return rt
-        
-        elif runtime.endswith('-browser'):
-            # Browser runtime
-            runtime = runtime.split('-')[0]
-            
-            # Try using our own runtimes to open in tab, because
-            # the webbrowser module is not that good at opening specific browsers.
-            Runtime = _runtimes.get(runtime, None)
-            if Runtime is not None:
-                rt = Runtime(**kwargs)
-                runtime_obs.append(rt)
-                if rt.is_available():
-                    rt.launch_tab(url)
-                    return rt
-            
-            # Use browser runtime (i.e. webbrowser module)
-            # Default-browser always works (from the runtime perspective)
-            kwargs['type'] = runtime
-            rt = BrowserRuntime(**kwargs)
-            if rt.is_available():
-                rt.launch_tab(url)
-                return rt
-        else:
-            logger.warn('Runtime names should be "app", "browser" or '
-                        'end with "-app" or "-browser", not %r' % runtime)
+        rt, launched, err = _launch(url, runtime, **kwargs)
+        if rt and launched:
+            return rt  # Hooray!
+        if rt:
+            tried_runtimes.append(rt)
+        if err:
+            errors.append(str(err).strip())
     
     # We end up here only when no suitable runtime was found.
     # Note that default-browser will always work, so by default we wont
@@ -190,22 +151,27 @@ def launch(url, runtime=None, **kwargs):
     # way to create a dialog, and if there is a tty, and attempt to show a
     # webpage with an error message otherwise.
     messages = []
-    if len(runtime_obs) == 1:
+    if len(tried_runtimes) == 1:
         # This app needs exactly this runtime
-        rt = runtime_obs[0]
-        messages.append('Could not run app, because runtime %s is not available.' %
-                        rt.get_name())
-        messages.append(rt._get_install_instuctions())
+        rt = tried_runtimes[0]
+        msg = 'Could not run app, because runtime %s ' % rt.get_name()
+        msg += 'could not be used.' if errors else 'is not available.'
+        messages.append(msg)
+        if rt._get_install_instuctions():
+            messages.append(rt._get_install_instuctions())
     else:
         # User has options
         seen = set()
         messages.append('Could not find a suitable runtime to run app. '
                         'Available options:')
-        for c, rt in zip('ABCDEFGHIJK', runtime_obs):
+        for c, rt in zip('ABCDEFGHIJK', tried_runtimes):
             if rt.get_name() in seen or not rt._get_install_instuctions():
                 continue
             seen.add(rt.get_name())
             messages.append(c + ': ' + rt._get_install_instuctions())
+    if errors:
+        messages.append('Errors:')
+        messages.extend(errors)
     messages = '\n\n'.join(messages)
     
     from flexx import dialite  # noqa
@@ -213,6 +179,66 @@ def launch(url, runtime=None, **kwargs):
     
     raise ValueError('Could not detect a suitable backend among %r.' % runtimes)
 
+
+
+def _launch(url, runtime, **kwargs):
+    """ Attempt to launch runtime by its name.
+    Return (runtime_object, is_launched, error_object)
+    """
+    
+    rt = None
+    launched = False
+    
+    try:
+    
+        if runtime.endswith('-app'):
+            # Desktop-like app runtime
+            runtime = runtime.split('-')[0]
+            Runtime = _runtimes.get(runtime, None)
+            if Runtime is None:
+                logger.warn('Unknown app runtime %r.' % runtime)
+            else:
+                rt = Runtime(**kwargs)
+                if rt.is_available():
+                    rt.launch_app(url)
+                    launched = True
+        
+        elif runtime.startswith('selenium-'):
+            # Selenium runtime - always try or fail
+            if '-' in runtime:
+                kwargs['type'] = runtime.split('-', 1)[1]
+            rt = SeleniumRuntime(**kwargs)
+            rt.launch_tab(url)
+            launched = True
+        
+        elif runtime.endswith('-browser'):
+            # Browser runtime
+            runtime = runtime.split('-')[0]
+            
+            # Try using our own runtimes to open in tab, because
+            # the webbrowser module is not that good at opening specific browsers.
+            Runtime = _runtimes.get(runtime, None)
+            if Runtime is not None:
+                rt = Runtime(**kwargs)
+                if rt.is_available():
+                    rt.launch_tab(url)
+                    launched = True
+            
+            # Use browser runtime (i.e. webbrowser module)
+            # Default-browser always works (from the runtime perspective)
+            kwargs['type'] = runtime
+            rt = BrowserRuntime(**kwargs)
+            if rt.is_available():
+                rt.launch_tab(url)
+                launched = True
+        else:
+            logger.warn('Runtime names should be "app", "browser" or '
+                        'end with "-app" or "-browser", not %r' % runtime)
+    
+    except Exception as err:
+        return rt, False, err
+    
+    return rt, launched, None
 
 
 def _expand_runtime_name(runtime):

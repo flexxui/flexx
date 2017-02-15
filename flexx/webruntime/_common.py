@@ -104,7 +104,7 @@ class BaseRuntime:
         """ Get instructions on how a runtime can be installed. Used internally
         to show useful dialogs.
         """
-        return self._get_install_instuctions()
+        return self._get_install_instuctions().strip()
     
     def get_name(self):
         """ Get the name of the runtime.
@@ -295,19 +295,11 @@ class DesktopRuntime(BaseRuntime):
         elif versionstring(cur_version) < versionstring(min_version):
             install_action = 'update'
         
-        # Install if necessary
+        # Install if necessary and update version
         if install_action:
             logger.info('Performing %s of runtime %s' %
                         (install_action, self.get_name()))
-            try:
-                self._install_runtime()
-            except Exception as err:
-                from flexx import dialite  # noqa
-                dialite.fail('Flexx - Error with runtime %s' % self.get_name(),
-                             'Could not locally install runtime %s:\n\n%s' %
-                             (self.get_name(), str(err)))
-                raise err
-            # Update cur_version
+            self._install_runtime()
             cur_version = self.get_current_version()
             assert cur_version
         
