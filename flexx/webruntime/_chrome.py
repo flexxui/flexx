@@ -72,8 +72,8 @@ class ChromeRuntime(DesktopRuntime):
         exe = self.get_exe()
         version = self._get_version(exe)
         if not exe:
-            raise RuntimeError('You need to install Chrome / Chromium')
-            # todo: dialite
+            raise RuntimeError('Cannot use Chrome/Chromium runtime if corresponding '
+                               'browser is not installed on the system.')
         
         path = op.join(RUNTIME_DIR, self.get_name() + '_' + version)
         if sys.platform.startswith('win'):
@@ -98,10 +98,9 @@ class ChromeRuntime(DesktopRuntime):
         
         exe = self.get_exe()
         if exe is None:
-            raise RuntimeError('Chrome or Chromium browser was not detected.')
-            # todo: dialite
+            raise RuntimeError('Chrome/Chromium is not available on this system.')
         
-        # No way to set icon and title. On Wi,ndows, Chrome uses document
+        # No way to set icon and title. On Windows, Chrome uses document
         # title/icon. On OS X we create an app. On Linux ... tough luck
         # self._title ...
         # self._icon ...

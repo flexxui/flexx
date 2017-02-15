@@ -204,7 +204,8 @@ def launch(url, runtime=None, **kwargs):
             seen.add(rt.get_name())
             messages.append(c + ': ' + rt._get_install_instuctions())
     messages = '\n\n'.join(messages)
-    from flexx import dialite
+    
+    from flexx import dialite  # noqa
     dialite.fail('Flexx - No suitable runtime available', messages)
     
     raise ValueError('Could not detect a suitable backend among %r.' % runtimes)
