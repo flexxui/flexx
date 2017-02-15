@@ -27,6 +27,9 @@ class BrowserRuntime(BaseRuntime):
         self._type = type or ''
         super().__init__(**kwargs)
     
+    def _get_install_instuctions(self):
+        return ''  # we know nothing of the browsers
+    
     def _get_name(self):
         return 'browser'
     

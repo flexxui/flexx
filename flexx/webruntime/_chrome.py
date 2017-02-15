@@ -34,6 +34,12 @@ class ChromeRuntime(DesktopRuntime):
     def _get_name(self):
         return 'chrome'
     
+    def _get_install_instuctions(self):
+        m = 'Install Chrome from http://chrome.com or https://www.chromium.org'
+        if sys.platform.startswith('linux'):
+            m += ', or use your package manager.'
+        return m
+    
     def _get_version(self, exe=None):
         if exe is None:
             exe = self.get_exe()
@@ -218,6 +224,9 @@ class GoogleChromeRuntime(ChromeRuntime):
     
     def _get_exe(self):
         return self._get_google_chrome_exe()
+    
+    def _get_install_instuctions(self):
+        return 'Install Google Chrome from http://chrome.com'
 
 
 class ChromiumRuntime(ChromeRuntime):
@@ -229,3 +238,9 @@ class ChromiumRuntime(ChromeRuntime):
     
     def _get_exe(self):
         return self._get_chromium_exe()
+    
+    def _get_install_instuctions(self):
+        m = 'Install Chromium from https://www.chromium.org'
+        if sys.platform.startswith('linux'):
+            m += ', or use your package manager.'
+        return m

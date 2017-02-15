@@ -100,6 +100,12 @@ class BaseRuntime:
         t.setDaemon(True)
         t.start()  # tidy up
     
+    def get_install_instuctions(self):
+        """ Get instructions on how a runtime can be installed. Used internally
+        to show useful dialogs.
+        """
+        return self._get_install_instuctions()
+    
     def get_name(self):
         """ Get the name of the runtime.
         """
@@ -202,6 +208,13 @@ class BaseRuntime:
     
     ## Methods to implement in subclasses
     
+    def _get_install_instuctions(self):
+        """ Subclasses can let know how the user must install the runtime.
+        Can return None to indicate that it cannot be installed (like the
+        "default browser").
+        """
+        return "No info on how to install %s" % self.get_name()
+    
     def _get_name(self):
         """ Just make this return a string name.
         """
@@ -267,7 +280,7 @@ class DesktopRuntime(BaseRuntime):
     
     def get_runtime(self, min_version=None):
         """ Get the directory where (our local version of) the runtime is
-        located. If necessary, the runtime is installed or updated.
+        located. If necessary, the runtime is chached / installed in some way.
         """
         cur_version = self.get_current_version() or ''
         path = op.join(RUNTIME_DIR, self.get_name() + '_' + cur_version)
@@ -306,7 +319,6 @@ class DesktopRuntime(BaseRuntime):
             raise
         
         return op.join(RUNTIME_DIR, self.get_name() + '_' + self.get_current_version())
-        
     
     def get_current_version(self):
         """ Get the (highest) version of this runtime that we currently have.

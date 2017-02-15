@@ -25,6 +25,7 @@ import re
 import sys
 import json
 import struct
+import tempfile
 from urllib.request import urlopen
 
 from .. import config
@@ -107,6 +108,17 @@ class NWRuntime(DesktopRuntime):
     
     def _get_name(self):
         return 'nw'
+    
+    def _get_install_instuctions(self):
+        # Get possible dirs
+        dirs = op.normpath(op.expanduser('~/Downloads')), tempfile.gettempdir()
+        dirs = ['"%s"' % d for d in dirs if op.isdir(d)]
+        dirs = ' or '.join(dirs)
+        
+        m = ('Download the NW.js archive for your platform from '
+             '"http://mwjs.io". Flexx will find the file if it is placed in %s '
+             '(the default location for most browsers).' % dirs)
+        return m
     
     def _get_exe_name(self, dir):
         if sys.platform.startswith('win'):

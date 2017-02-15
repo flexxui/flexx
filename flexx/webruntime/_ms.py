@@ -11,6 +11,11 @@ from ._common import BaseRuntime
 class MicrosoftRuntime(BaseRuntime):
     """ Base class for IE and Edge runtimes.
     """
+    
+    def _get_install_instuctions(self):
+        # IE / Edge is installed, or not, but usually there is little choice
+        return ''
+    
     def _get_version(self):
         return None
 

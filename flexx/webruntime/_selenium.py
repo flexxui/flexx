@@ -18,6 +18,10 @@ class SeleniumRuntime(BaseRuntime):
         self._type = type or ''
         super().__init__(**kwargs)
     
+    def _get_install_instuctions(self):
+        return ('To enable the Selenium runtime, install selenium '
+                'in your Python environment.')
+    
     def _get_name(self):
         return 'selenium'
     

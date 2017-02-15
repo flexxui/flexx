@@ -128,7 +128,13 @@ class FirefoxRuntime(DesktopRuntime):
     
     def _get_name(self):
         return 'firefox'
-        
+    
+    def _get_install_instuctions(self):
+        m = 'Install Mozilla Firefox from http://firefox.com'
+        if sys.platform.startswith('linux'):
+            m += ', or use your package manager.'
+        return m
+    
     def _get_exe(self):
         
         # Return user-specified version?

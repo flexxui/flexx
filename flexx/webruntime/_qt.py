@@ -83,6 +83,10 @@ class PyQtRuntime(DesktopRuntime):
     def _get_name(self):
         return 'pyqt'
     
+    def _get_install_instuctions(self):
+        return ('To enable the Pyqt runtime, install Pyqt5, Pyqt4, '
+                'Pyside2 or Pyside in your Python environment.')
+    
     def _get_exe(self):
         return sys.executable
         # todo: perhaps we should test whether pyqt is available, but
