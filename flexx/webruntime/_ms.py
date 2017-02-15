@@ -8,6 +8,8 @@ import sys
 from ._common import BaseRuntime
 
 
+# todo: ensure good behavior on other OSes, e.g. should _get_exe() raise?
+
 class MicrosoftRuntime(BaseRuntime):
     """ Base class for IE and Edge runtimes.
     """

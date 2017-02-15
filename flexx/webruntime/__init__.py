@@ -14,6 +14,7 @@ Memory considerations
 
 """
 
+import sys
 import logging
 from collections import OrderedDict
 logger = logging.getLogger(__name__)
@@ -52,6 +53,8 @@ _aliases = {'app': 'firefox-app or nw-app',
             'chrome-app': 'googlechrome-app or chromium-app',
             }
 
+if sys.platform.startswith('win'):
+    _aliases['app'] = 'firefox-app or chrome-app or nw-app'
 
 # We require to specify -app or -browser suffixes, though old names still work
 _aliases_compat = {
