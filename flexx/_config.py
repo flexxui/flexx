@@ -24,7 +24,4 @@ config = Config('flexx', '~appdata/.flexx.cfg',
                     'Auto-detect by default.'),
         nw_exe=('', str, 'The location of the NW.js executable. '
                 'Auto-install by default.'),
-        nw_min_version=('0.19.5', str, 'The minimal required NW.js version. '
-                        'Ignored if nw_exe is given.'),
-        
         )
