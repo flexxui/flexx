@@ -117,7 +117,6 @@ def launch(url, runtime=None, **kwargs):
     """
     
     # Resolve backward compat names, and select default runtime if not given
-    given_runtime = runtime
     if runtime in _aliases_compat:
         logger.warn('Runtime name %s is deprecated, use %s instead.' %
                     (runtime, _aliases_compat[runtime]))
@@ -126,6 +125,7 @@ def launch(url, runtime=None, **kwargs):
         runtime = config.webruntime.strip('!')
     if not runtime:
         runtime = 'app or browser'
+    given_runtime = runtime
     
     # Normalize runtime, apply aliases
     runtimes = _expand_runtime_name(runtime)
@@ -159,7 +159,8 @@ def launch(url, runtime=None, **kwargs):
     elif len(tried_runtimes) == 1:
         # This app needs exactly this runtime
         rt = tried_runtimes[0]
-        msg = 'Could not run app, because runtime %s ' % rt.get_name()
+        name = given_runtime if given_runtime.endswith('-browser') else rt.get_name()
+        msg = 'Could not run app, because runtime %s ' % name
         msg += 'could not be used.' if errors else 'is not available.'
         messages.append(msg)
         if rt._get_install_instuctions():
