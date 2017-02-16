@@ -134,7 +134,8 @@ class App:
         """ Launch this app as a desktop app in the given runtime.
         
         Arguments:
-            runtime (str): the runtime to launch the application in. Default 'xul'.
+            runtime (str): the runtime to launch the application in.
+                Default 'app or browser'.
             runtime_kwargs: kwargs to pass to the ``webruntime.launch`` function.
                 A few names are passed to runtime kwargs if not already present
                 ('title' and 'icon').

@@ -11,9 +11,11 @@ import os.path as op
 import os
 import sys
 import time
+import stat
 import shutil
+import tarfile
+import zipfile
 import subprocess
-from urllib.request import urlopen, Request
 
 from . import logger
 
@@ -288,162 +290,17 @@ def create_temp_app_dir(prefix, cleanup=60):
     return path
 
 
-def download_runtime(runtime_name, version, url):
+def open_arch(filename):
+    """ Open archive, returning the zipfile or tarfile object.
     """
-    Function for downloading a runtime.
-    
-    * Download archive as xxx.zip~pid
-    * On download complete, rename to xxx.zip
-    * Extract to yyy~pid
-    * When extract is done, rename to yyy
-    
-    For downloading, we compare the pid to current list of pids to see
-    if perhaps another process is already downloading it (though its no
-    guarantee, as pids are reused). If there is an archive in progress,
-    which has "stalled", we rename the archive and continue downloading.
-    """
-
-    # Calculate file system locations
-    fname = url.split('?')[0].split('~')[0].split('/')[-1].lower()
-    archive_name = op.join(RUNTIME_DIR, fname)
-    dir_name = op.join(RUNTIME_DIR, runtime_name + '_' + version)
-    
-    # Get func to open archive
-    import tarfile
-    import zipfile
-    if fname.endswith(('.tar', '.tar.gz', '.tar.bz2')):
+    if filename.endswith(('.tar', '.tar.gz', '.tar.bz2')):
         arch_func = tarfile.open
-    elif fname.endswith('.zip'):
+    elif filename.endswith('.zip'):
         arch_func = zipfile.ZipFile
-    else:
-        raise ValueError('Dont know how to extract from %s' % fname)
-    
-    # Go!
-    if op.isdir(dir_name):
-        return
-    if _download(url, archive_name):
-        _extract(archive_name, dir_name, arch_func)
-    
-    # Remove archive
-    remove(archive_name)
-    
-    # Note, if for some reason the runtime is corrupt, the user can goto
-    # flexx.webruntime.RUNTIME_DIR and delete it. This solution works for
-    # devs but less so for end-users. So frozen apps should either ship the
-    # runtime along, or use the firefox-app runtime.
+    return arch_func(filename, mode='r')
 
 
-def _download(url, archive_name):
-    """ Download the archive.
-    """
-    temp_archive_name = '%s~%i' % (archive_name, os.getpid())
-    
-    # Clean, just to be sure
-    remove(temp_archive_name)
-    
-    # Maybe the archive is already there ...
-    if op.isfile(archive_name):
-        return True
-    
-    # Get whether the downloading is already in progress by another process
-    pids = get_pid_list()
-    # pids.remove(os.getpid())
-    archives = []  # that do not correspond to an existing pid other than us
-    for name in os.listdir(RUNTIME_DIR):
-        filename = op.join(RUNTIME_DIR, name)
-        if filename.startswith(archive_name):
-            try:
-                pid = int(name.split('~')[-1])
-            except ValueError:
-                continue  # what is this? not ours, probably
-            if pid and pid in pids:
-                # another process might be working on it
-                if False:  # noqa - maybe we want a silent update at some point?
-                    return
-            else:
-                archives.append(filename)
-    
-    # Touch file to clear it and tell other processes that we're loading it,
-    # or proceed with existing (partial) file.
-    if not archives:
-        with open(temp_archive_name, 'wb'):
-            pass
-    else:
-        try:
-            os.rename(archives[0], temp_archive_name)
-        except FileNotFoundError:
-            raise  # another process was just a wee bit earlier?
-    
-    # Open folder in native file explorer for user to see progress
-    _open_folder(op.dirname(archive_name))
-    
-    # Create a file that we keep renaming to indicate progress
-    progress_name_t = '%s~ progress %%0.0f %%%% ~%i' % (archive_name, os.getpid())
-    progress_name = progress_name_t % 0
-    with open(progress_name, 'wb'):
-        pass
-    
-    # Open local file ...
-    t0 = time.time()
-    with open(temp_archive_name, 'ab') as f_dst:
-        tries = 0
-        
-        while tries < 5:
-            tries += 1
-            
-            try:
-                nbytes = f_dst.tell()
-                # Open remote resource
-                r = Request(url)
-                r.headers['Range'] = 'bytes=%i-' % nbytes
-                f_src = urlopen(r, timeout=5)
-                file_size = nbytes + int(f_src.headers['Content-Length'].strip())
-                chunksize = 64 * 1024
-                # Download in chunks
-                while True:
-                    chunk = f_src.read(chunksize)
-                    if not chunk:
-                        break
-                    nbytes += len(chunk)
-                    f_dst.write(chunk)
-                    f_dst.flush()
-                    # Show percentage done in console
-                    percentage = 100 * nbytes / file_size
-                    print('downloading: %03.1f%%\r' % percentage, end='')
-                    # Show percentahe done in FS
-                    progress_name2 = progress_name_t % percentage
-                    if progress_name2 != progress_name:
-                        try:
-                            os.rename(progress_name, progress_name2)
-                            progress_name = progress_name2
-                        except Exception:
-                            pass
-            
-            except (OSError, IOError) as err:
-                if tries < 4:
-                    logger.warn('%s. Retrying ...' % str(err))
-                    time.sleep(0.2)
-                    continue
-                raise
-            break  # retry loop
-    
-    print('Downloaded %s in %1.f s' % (url, time.time() - t0))
-    
-    if op.isfile(progress_name):
-        try:
-            os.remove(progress_name)
-        except Exception:
-            pass
-    
-    # Mark archive as done
-    if op.isfile(archive_name):
-        pass  # another process beat us to it
-    else:
-        os.rename(temp_archive_name, archive_name)
-    return True
-    
-    
-def _extract(archive_name, dir_name, arch_func):
+def extract_arch(archive, dir_name):
     """ Extract an archive that contains a runtime.
     """
     temp_dir_name = dir_name + '~' + str(os.getpid())
@@ -453,13 +310,8 @@ def _extract(archive_name, dir_name, arch_func):
         return
     
     # Extract it
-    try:
-        print('Extracting ...', end='')
-        with arch_func(archive_name, mode='r') as archive:
-            archive.extractall(temp_dir_name)
-    except Exception:
-        remove(archive_name)  # it might be corrupt
-        raise
+    print('Extracting ...', end='')
+    archive.extractall(temp_dir_name)
     
     # Pop out empty dirs
     while True:
@@ -469,16 +321,15 @@ def _extract(archive_name, dir_name, arch_func):
         else:
             pop_dir = subdirs[0] + '~temp'
             os.rename(op.join(temp_dir_name, subdirs[0]),
-                      op.join(temp_dir_name, pop_dir))
+                    op.join(temp_dir_name, pop_dir))
             for name in os.listdir(op.join(temp_dir_name, pop_dir)):
                 os.rename(op.join(temp_dir_name, pop_dir, name),
-                          op.join(temp_dir_name, name))
+                        op.join(temp_dir_name, name))
             os.rmdir(op.join(temp_dir_name, pop_dir))
     
     print('done')
     
     # Enable executables for OS X
-    import stat
     for dirpath, dirnames, filenames in os.walk(temp_dir_name):
         if dirpath.endswith('/Contents/MacOS'):
             for fname in filenames:
@@ -492,14 +343,3 @@ def _extract(archive_name, dir_name, arch_func):
     else:
         os.rename(temp_dir_name, dir_name)
     return True
-
-
-def _open_folder(path):
-    """ Open folder in native file explorer, on Windows, OS X and Linux.
-    """
-    if sys.platform.startswith('win'):
-        os.startfile(path)
-    elif sys.platform.startswith('darwin'):
-        subprocess.Popen(["open", path])
-    else:
-        subprocess.Popen(["xdg-open", path])

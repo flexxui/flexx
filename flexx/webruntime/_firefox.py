@@ -26,9 +26,6 @@ from ._common import DesktopRuntime
 from ._manage import create_temp_app_dir, RUNTIME_DIR
 
 
-# todo: enable fullscreen - does not seem to work on XUL
-
-
 ## File templates
 
 # The Profile setting makes all apps use the same dummy profile (see issue #150)
@@ -128,7 +125,13 @@ class FirefoxRuntime(DesktopRuntime):
     
     def _get_name(self):
         return 'firefox'
-        
+    
+    def _get_install_instuctions(self):
+        m = 'Install Mozilla Firefox from http://firefox.com'
+        if sys.platform.startswith('linux'):
+            m += ', or use your package manager.'
+        return m
+    
     def _get_exe(self):
         
         # Return user-specified version?
@@ -223,8 +226,8 @@ class FirefoxRuntime(DesktopRuntime):
         exe = self.get_exe()
         version = self._get_version(exe)
         if not exe:
-            raise RuntimeError('You need to install Firefox')
-            # todo: dialite
+            raise RuntimeError('Cannot use Firefox runtime if Firefox is not '
+                               'installed on the system.')
         
         path = op.join(RUNTIME_DIR, self.get_name() + '_' + version)
         if sys.platform.startswith('win'):
@@ -257,7 +260,7 @@ class FirefoxRuntime(DesktopRuntime):
         # Get executable for xul runtime (may be None)
         ff_exe = self.get_exe()
         if not ff_exe:
-            raise RuntimeError('Firefox needs to be installed')  # todo: dialite
+            raise RuntimeError('Firefox is not available on this system.')
         elif not op.isfile(ff_exe):
             # We have no way to wrap things up in a custom app
             exe = ff_exe

@@ -100,6 +100,12 @@ class BaseRuntime:
         t.setDaemon(True)
         t.start()  # tidy up
     
+    def get_install_instuctions(self):
+        """ Get instructions on how a runtime can be installed. Used internally
+        to show useful dialogs.
+        """
+        return self._get_install_instuctions().strip()
+    
     def get_name(self):
         """ Get the name of the runtime.
         """
@@ -202,6 +208,13 @@ class BaseRuntime:
     
     ## Methods to implement in subclasses
     
+    def _get_install_instuctions(self):
+        """ Subclasses can let know how the user must install the runtime.
+        Can return None to indicate that it cannot be installed (like the
+        "default browser").
+        """
+        return "No info on how to install %s" % self.get_name()
+    
     def _get_name(self):
         """ Just make this return a string name.
         """
@@ -267,46 +280,33 @@ class DesktopRuntime(BaseRuntime):
     
     def get_runtime(self, min_version=None):
         """ Get the directory where (our local version of) the runtime is
-        located. If necessary, the runtime is installed or updated.
+        located. If necessary, the runtime is chached / installed in some way.
         """
+        install_action = None
         cur_version = self.get_current_version() or ''
-        path = op.join(RUNTIME_DIR, self.get_name() + '_' + cur_version)
         
+        # Do we need an install?
         if not cur_version:
-            # Need to install
-            path = self._meh_install_runtime(True)
+            install_action = 'install'
         elif not min_version:
             # No specific version required, e.g. because can assume that we
             # have an up-to-date version, like with Chrome.
             pass
         elif versionstring(cur_version) < versionstring(min_version):
-            # Need update
-            path = self._meh_install_runtime()
-        else:
-            # Our version is up to date
-            pass
+            install_action = 'update'
         
-        # Prevent the runtime dir from deletion while this process is running
-        lock_runtime_dir(path)
-        
-        return path
-    
-    def _meh_install_runtime(self, fresh=False):
-        
-        if fresh:
-            print('Installing %s runtime' % self.get_name())
-        else:
-            print('Updating %s runtime' % self.get_name())
-        # todo: this should be a confirmation dialog
-        
-        try:
+        # Install if necessary and update version
+        if install_action:
+            logger.info('Performing %s of runtime %s' %
+                        (install_action, self.get_name()))
             self._install_runtime()
-        except Exception:
-            # todo: show dialog
-            raise
+            cur_version = self.get_current_version()
+            assert cur_version
         
-        return op.join(RUNTIME_DIR, self.get_name() + '_' + self.get_current_version())
-        
+        # Get path, protect from deletion, return
+        path = op.join(RUNTIME_DIR, self.get_name() + '_' + cur_version)
+        lock_runtime_dir(path)
+        return path
     
     def get_current_version(self):
         """ Get the (highest) version of this runtime that we currently have.

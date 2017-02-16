@@ -21,15 +21,14 @@ The name of the executable is the main thing to change.
 
 import os.path as op
 import os
-import re
 import sys
 import json
-import struct
-from urllib.request import urlopen
+import tempfile
 
 from .. import config
 from ._common import DesktopRuntime
-from ._manage import RUNTIME_DIR, download_runtime, create_temp_app_dir
+from ._manage import RUNTIME_DIR, create_temp_app_dir
+from ._manage import open_arch, extract_arch, versionstring
 
 
 # http://docs.nwjs.io/en/latest/References/Manifest%20Format
@@ -108,6 +107,13 @@ class NWRuntime(DesktopRuntime):
     def _get_name(self):
         return 'nw'
     
+    def _get_install_instuctions(self):
+        m = ('Download the NW.js archive for your platform from '
+             '"http://nwjs.io". Flexx will find the file if it is placed in '
+             'your home dir, desktop, downloads dir (where most browser save '
+             'it) or the default temp dir.')
+        return m
+    
     def _get_exe_name(self, dir):
         if sys.platform.startswith('win'):
             return op.join(dir, 'nw.exe')
@@ -117,52 +123,75 @@ class NWRuntime(DesktopRuntime):
             return op.join(dir, 'nw')
     
     def _get_exe(self):
+        
+        # What do we have locally installed?
         cur_version = self.get_current_version() or ''
+        
+        # What can we get?
+        version, archive = self._get_archive_name(cur_version)
+        
+        # Maybe install newer version
+        if archive and versionstring(version) > versionstring(cur_version):
+            dir = op.join(RUNTIME_DIR, self.get_name() + '_' + version)
+            extract_arch(open_arch(archive), dir)
+            cur_version = self.get_current_version() or ''
+        
+        # Return exe
         if cur_version:
             dir = op.join(RUNTIME_DIR, self.get_name() + '_' + cur_version)
             exe = op.realpath(self._get_exe_name(dir))
             if op.isfile(exe):
                 return exe
     
-    # todo: if not installedm is_available is false, giving not chance to install
+    def _get_archive_name(self, version_th):
+        """ Get the name of any valid nwjs archive for this platform above the
+        given version.
+        """
+        # Where can we look for archives
+        dirs = [op.expanduser('~'),
+                op.expanduser('~/Desktop'),
+                op.expanduser('~/Downloads'),
+                tempfile.gettempdir(),
+                ]
+        
+        # What are we looking for?
+        exts = '.zip', '.tar', '.tar.gz', '.tar.bz2'
+        if sys.platform.startswith('win'):
+            plat = '-win'
+        elif sys.platform.startswith('linux'):
+            plat = '-linux'
+        elif sys.platform.startswith('darwin'):
+            plat = '-osx'
+        
+        # Collect archives
+        archives = {}  # version -> filename
+        for dir in dirs:
+            if os.path.isdir(dir):
+                for fname in os.listdir(dir):
+                    if fname.startswith('nwjs-v') and plat in fname:
+                        if fname.lower().endswith(exts):
+                            version = fname.split('-v')[1].split('-')[0]
+                            archives[version] = os.path.join(dir, fname)
+        
+        # Try - highest version first - whether the archive is ok
+        for version in reversed(sorted(archives, key=versionstring)):
+            if version_th and versionstring(version) <= versionstring(version_th):
+                break
+            try:
+                with open_arch(archives[version]):
+                    pass
+            except Exception:
+                continue
+            else:
+                return version, archives[version]
+        
+        return None, None
     
     def _get_version(self):
         return self.get_current_version()
     
-    def _get_latest_version(self):
-        """" Get latest version of the NW runtime.
-        """
-        text = urlopen('https://dl.nwjs.io/').read().decode('utf-8', 'ignore')
-        versions = re.findall('href\=\"v(.+?)\"', text)
-        versions_int = []
-        for v in versions:
-            v = v.strip('/')
-            try:
-                versions_int.append(tuple([int(i) for i in v.split('.')]))
-            except Exception:
-                pass
-        versions_int.sort()
-        return '.'.join([str(i) for i in versions_int[-1]])
-    
-    def _get_download_url(self, version, platform=None):
-        """ Given a version, get the url where it can be downloaded.
-        """
-        platform = platform or sys.platform
-        if platform.startswith('win'):
-            plat, ext = '-win', '.zip'
-        elif platform.startswith('linux'):
-            plat, ext = '-linux', '.tar.gz'
-        elif platform.startswith('darwin'):
-            plat, ext = '-osx', '.zip'
-        else:
-            raise RuntimeError('Unsupported platform')
-        plat += '-x64' if (struct.calcsize('P') == 8) else '-x64'
-        return 'https://dl.nwjs.io/v' + version + '/nwjs-v' + version + plat + ext
-    
     def _install_runtime(self):
-        latest_version = self._get_latest_version()
-        url = self._get_download_url(latest_version)
-        download_runtime(self.get_name(), latest_version, url)
+        pass  # We install in get_exe()
     
     def _test_platform(self):
         if not (sys.platform.startswith('win') or
@@ -170,7 +199,6 @@ class NWRuntime(DesktopRuntime):
                 sys.platform.startswith('darwin')):
             raise RuntimeError('NW.js runtime is not supported on platform ' +
                                sys.platform)
-            # todo: show GUI? that wont work either, but if dialite has a nice fallback, we might as well use that to notify the user
     
     def _launch_tab(self, url):
         raise RuntimeError('NW runtime cannot launch tabs.')
@@ -178,6 +206,7 @@ class NWRuntime(DesktopRuntime):
     def _launch_app(self, url):
         
         self._test_platform()
+        self._clean_nw_dirs()
         
         # Get dir to store app definition
         app_path = create_temp_app_dir('nw')
@@ -190,6 +219,7 @@ class NWRuntime(DesktopRuntime):
         else:
             # We install the runtime, based on a minimal required version
             exe = self._get_exe_name(self.get_runtime(config.nw_min_version))
+            # todo: remove config.nw_min_version
             
             # Change exe to avoid grouping + easier recognition in task manager
             if exe and op.isfile(op.realpath(exe)):
@@ -240,3 +270,17 @@ class NWRuntime(DesktopRuntime):
         # Launch
         cmd = [exe, '--user-data-dir=' + profile_dir, app_path]
         self._start_subprocess(cmd, LD_LIBRARY_PATH=llp)
+    
+    def _clean_nw_dirs(self):
+        """ NW makes empty dirs in temp dir, clean these up.
+        """
+        if sys.platform.startswith('win'):  # only an issue on Windows
+            dir = tempfile.gettempdir()
+            for dname in os.listdir(dir):
+                if dname.startswith('nw'):
+                    dirname = os.path.join(dir, dname)
+                    if not os.listdir(dirname):
+                        try:
+                            os.rmdir(dirname)
+                        except Exception:
+                            pass

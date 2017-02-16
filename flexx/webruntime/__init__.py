@@ -14,12 +14,14 @@ Memory considerations
 
 """
 
+import sys
 import logging
 from collections import OrderedDict
 logger = logging.getLogger(__name__)
 del logging
 
 from .. import config
+from .. import dialite
 
 from ._manage import RUNTIME_DIR, TEMP_APP_DIR  # noqa
 from ._common import BaseRuntime, DesktopRuntime  # noqa
@@ -52,6 +54,8 @@ _aliases = {'app': 'firefox-app or nw-app',
             'chrome-app': 'googlechrome-app or chromium-app',
             }
 
+if sys.platform.startswith('win'):
+    _aliases['app'] = 'firefox-app or chrome-app or nw-app'
 
 # We require to specify -app or -browser suffixes, though old names still work
 _aliases_compat = {
@@ -124,8 +128,68 @@ def launch(url, runtime=None, **kwargs):
     
     # Normalize runtime, apply aliases
     runtimes = _expand_runtime_name(runtime)
+    tried_runtimes = []
+    errors = []
     
+    # Attempt to launch runtimes, one by one
     for runtime in runtimes: 
+        rt, launched, err = _launch(url, runtime, **kwargs)
+        if rt and launched:
+            return rt  # Hooray!
+        if rt:
+            tried_runtimes.append(rt)
+        if err:
+            errors.append(str(err).strip())
+    
+    # We end up here only when no suitable runtime was found.
+    # Note that default-browser will always work, so by default we wont
+    # end up here. We can well get here when runtime is 'app' though.
+    
+    # Show dialog to the user with information on how to install a runtime.
+    # It is important that this is a dialog and not printed to stdout for
+    # cases where an app is frozen (e.g. with cx_Freeze), because there is
+    # no stdout in that case. Dialite will fallback to stdout if there is no
+    # way to create a dialog, and if there is a tty, and attempt to show a
+    # webpage with an error message otherwise.
+    messages = []
+    if len(tried_runtimes) == 1:
+        # This app needs exactly this runtime
+        rt = tried_runtimes[0]
+        msg = 'Could not run app, because runtime %s ' % rt.get_name()
+        msg += 'could not be used.' if errors else 'is not available.'
+        messages.append(msg)
+        if rt._get_install_instuctions():
+            messages.append(rt._get_install_instuctions())
+    else:
+        # User has options
+        seen = set()
+        messages.append('Could not find a suitable runtime to run app. '
+                        'Available options:')
+        for c, rt in zip('ABCDEFGHIJK', tried_runtimes):
+            if rt.get_name() in seen or not rt._get_install_instuctions():
+                continue
+            seen.add(rt.get_name())
+            messages.append(c + ': ' + rt._get_install_instuctions())
+    if errors:
+        messages.append('Errors:')
+        messages.extend(errors)
+    messages = '\n\n'.join(messages)
+    
+    dialite.fail('Flexx - No suitable runtime available', messages)
+    
+    raise ValueError('Could not detect a suitable backend among %r.' % runtimes)
+
+
+
+def _launch(url, runtime, **kwargs):
+    """ Attempt to launch runtime by its name.
+    Return (runtime_object, is_launched, error_object)
+    """
+    
+    rt = None
+    launched = False
+    
+    try:
     
         if runtime.endswith('-app'):
             # Desktop-like app runtime
@@ -133,21 +197,19 @@ def launch(url, runtime=None, **kwargs):
             Runtime = _runtimes.get(runtime, None)
             if Runtime is None:
                 logger.warn('Unknown app runtime %r.' % runtime)
-                continue
             else:
                 rt = Runtime(**kwargs)
-                if not rt.is_available():
-                    continue
-                rt.launch_app(url)
-                return rt
+                if rt.is_available():
+                    rt.launch_app(url)
+                    launched = True
         
         elif runtime.startswith('selenium-'):
-            # Selenium runtime
+            # Selenium runtime - always try or fail
             if '-' in runtime:
                 kwargs['type'] = runtime.split('-', 1)[1]
             rt = SeleniumRuntime(**kwargs)
             rt.launch_tab(url)
-            return rt
+            launched = True
         
         elif runtime.endswith('-browser'):
             # Browser runtime
@@ -160,28 +222,32 @@ def launch(url, runtime=None, **kwargs):
                 rt = Runtime(**kwargs)
                 if rt.is_available():
                     rt.launch_tab(url)
-                    return rt
+                    launched = True
             
             # Use browser runtime (i.e. webbrowser module)
+            # Default-browser always works (from the runtime perspective)
             kwargs['type'] = runtime
             rt = BrowserRuntime(**kwargs)
             if rt.is_available():
                 rt.launch_tab(url)
-                return rt
+                launched = True
         else:
             logger.warn('Runtime names should be "app", "browser" or '
                         'end with "-app" or "-browser", not %r' % runtime)
     
-    else:
-        raise ValueError('Could not detect a suitable backend among %r.' % runtimes)
-
+    except Exception as err:
+        return rt, False, err
+    
+    return rt, launched, None
 
 
 def _expand_runtime_name(runtime):
     """ Apply aliases and map "x or y" to ['x', 'y'].
     """
+    # Normalize
     for c in (' or ', ',', '|'):
         runtime = runtime.replace(c, ' ')
+    # Expand
     runtimes = []
     for runtime in runtime.split(' '):
         runtime = runtime.strip().lower()
@@ -189,7 +255,12 @@ def _expand_runtime_name(runtime):
             runtimes.extend(_expand_runtime_name(_aliases[runtime]))
         else:
             runtimes.append(runtime)
-    return runtimes
+    # Deduplicate
+    runtimes2 = []
+    for runtime in runtimes:
+        if runtime not in runtimes2:
+            runtimes2.append(runtime)
+    return runtimes2
 
 
 ##

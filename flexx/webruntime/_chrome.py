@@ -34,6 +34,12 @@ class ChromeRuntime(DesktopRuntime):
     def _get_name(self):
         return 'chrome'
     
+    def _get_install_instuctions(self):
+        m = 'Install Chrome from http://chrome.com or https://www.chromium.org'
+        if sys.platform.startswith('linux'):
+            m += ', or use your package manager.'
+        return m
+    
     def _get_version(self, exe=None):
         if exe is None:
             exe = self.get_exe()
@@ -66,8 +72,8 @@ class ChromeRuntime(DesktopRuntime):
         exe = self.get_exe()
         version = self._get_version(exe)
         if not exe:
-            raise RuntimeError('You need to install Chrome / Chromium')
-            # todo: dialite
+            raise RuntimeError('Cannot use Chrome/Chromium runtime if corresponding '
+                               'browser is not installed on the system.')
         
         path = op.join(RUNTIME_DIR, self.get_name() + '_' + version)
         if sys.platform.startswith('win'):
@@ -92,10 +98,9 @@ class ChromeRuntime(DesktopRuntime):
         
         exe = self.get_exe()
         if exe is None:
-            raise RuntimeError('Chrome or Chromium browser was not detected.')
-            # todo: dialite
+            raise RuntimeError('Chrome/Chromium is not available on this system.')
         
-        # No way to set icon and title. On Wi,ndows, Chrome uses document
+        # No way to set icon and title. On Windows, Chrome uses document
         # title/icon. On OS X we create an app. On Linux ... tough luck
         # self._title ...
         # self._icon ...
@@ -218,6 +223,9 @@ class GoogleChromeRuntime(ChromeRuntime):
     
     def _get_exe(self):
         return self._get_google_chrome_exe()
+    
+    def _get_install_instuctions(self):
+        return 'Install Google Chrome from http://chrome.com'
 
 
 class ChromiumRuntime(ChromeRuntime):
@@ -229,3 +237,9 @@ class ChromiumRuntime(ChromeRuntime):
     
     def _get_exe(self):
         return self._get_chromium_exe()
+    
+    def _get_install_instuctions(self):
+        m = 'Install Chromium from https://www.chromium.org'
+        if sys.platform.startswith('linux'):
+            m += ', or use your package manager.'
+        return m
