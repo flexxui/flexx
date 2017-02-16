@@ -358,7 +358,7 @@ def test_generated_javascript():
 
 def test_apps():
     
-    if not webruntime.has_firefox():
+    if not webruntime.FirefoxRuntime().is_available():
         skip('This live test needs firefox.')
     
     runner(ModelA)

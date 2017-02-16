@@ -34,6 +34,11 @@ def notrailtester(runtime, n=4):
     with open(html_filename, 'wb') as f:
         f.write('<html><body>test page</body></html>'.encode())
     
+    # Give a chance for common stuff to init
+    x = webruntime.launch(html_filename, runtime)
+    time.sleep(0.5)
+    x.close()
+
     before = index()
     
     for i in range(n):

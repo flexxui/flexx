@@ -333,8 +333,9 @@ def test_unsupported_platform2():
         
         dialite.warn()  # no problem
         
-        with raises(SystemExit):
-            dialite.fail()
+        dialite.fail()  # no problem
+        # with raises(SystemExit):
+        #     dialite.fail()
         
         with raises(SystemExit):
             dialite.ask_ok()
