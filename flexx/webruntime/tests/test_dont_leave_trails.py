@@ -19,6 +19,10 @@ def index():
     """
     filenames = set()
     for root, dirs, files in os.walk(userdir):
+        for fname in dirs:
+            if 'temp' not in fname.lower():
+                # hacky exception for firefox, which seems to clean things up itself
+                filenames.add(os.path.join(root, fname))
         for fname in files:
             filenames.add(os.path.join(root, fname))
     return filenames

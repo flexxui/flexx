@@ -206,6 +206,7 @@ class NWRuntime(DesktopRuntime):
     def _launch_app(self, url):
         
         self._test_platform()
+        self._clean_nw_dirs()
         
         # Get dir to store app definition
         app_path = create_temp_app_dir('nw')
@@ -269,3 +270,16 @@ class NWRuntime(DesktopRuntime):
         # Launch
         cmd = [exe, '--user-data-dir=' + profile_dir, app_path]
         self._start_subprocess(cmd, LD_LIBRARY_PATH=llp)
+    
+    def _clean_nw_dirs(self):
+        """ NW makes empty dirs in temp dir, clean these up.
+        """
+        dir = tempfile.gettempdir()
+        for dname in os.listdir(dir):
+            if dname.startswith('nw'):
+                dirname = os.path.join(dir, dname)
+                if not os.listdir(dirname):
+                    try:
+                        os.rmdir(dirname)
+                    except Exception:
+                        pass
