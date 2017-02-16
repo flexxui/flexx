@@ -8,15 +8,15 @@ import sys
 from ._common import BaseRuntime
 
 
-# todo: ensure good behavior on other OSes, e.g. should _get_exe() raise?
-
 class MicrosoftRuntime(BaseRuntime):
     """ Base class for IE and Edge runtimes.
     """
     
     def _get_install_instuctions(self):
-        # IE / Edge is installed, or not, but usually there is little choice
-        return ''
+        avail = 'available' if sys.platform.startswith('win') else 'only available'
+        name = self.get_name()
+        win = dict(ie='Windows', edge='modern versions of Windows')[name]
+        return 'Runtime %s is %s on %s.' % (name, avail, win)
     
     def _get_version(self):
         return None
@@ -31,14 +31,13 @@ class IERuntime(MicrosoftRuntime):
         return 'ie'
     
     def _get_exe(self):
-        paths = []
+        if not sys.platform.startswith('win'):
+            return None
         
         # Collect possible locations
-        if sys.platform.startswith('win'):
-            for basepath in ('C:\\Program Files\\', 'C:\\Program Files (x86)\\'):
-                paths.append(basepath + 'Internet Explorer\\iexplore.exe')
-        else:
-            raise RuntimeError('IE runtime is only available on Windows.')
+        paths = []
+        for basepath in ('C:\\Program Files\\', 'C:\\Program Files (x86)\\'):
+            paths.append(basepath + 'Internet Explorer\\iexplore.exe')
         
         # Try location until we find one that exists
         for path in paths:
@@ -63,6 +62,9 @@ class EdgeRuntime(MicrosoftRuntime):
         return 'edge'
     
     def _get_exe(self):
+        if not sys.platform.startswith('win'):
+            return None
+        
         path = op.join(os.environ['windir'], 'SystemApps',
                        'Microsoft.MicrosoftEdge_8wekyb3d8bbwe',
                        'MicrosoftEdge.exe')

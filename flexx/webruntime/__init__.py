@@ -117,6 +117,7 @@ def launch(url, runtime=None, **kwargs):
     """
     
     # Resolve backward compat names, and select default runtime if not given
+    given_runtime = runtime
     if runtime in _aliases_compat:
         logger.warn('Runtime name %s is deprecated, use %s instead.' %
                     (runtime, _aliases_compat[runtime]))
@@ -152,7 +153,10 @@ def launch(url, runtime=None, **kwargs):
     # way to create a dialog, and if there is a tty, and attempt to show a
     # webpage with an error message otherwise.
     messages = []
-    if len(tried_runtimes) == 1:
+    if not tried_runtimes:
+        messages.append('Given runtime name "%s" does '
+                        'not resolve to any known runtimes.' % given_runtime)
+    elif len(tried_runtimes) == 1:
         # This app needs exactly this runtime
         rt = tried_runtimes[0]
         msg = 'Could not run app, because runtime %s ' % rt.get_name()
