@@ -274,12 +274,13 @@ class NWRuntime(DesktopRuntime):
     def _clean_nw_dirs(self):
         """ NW makes empty dirs in temp dir, clean these up.
         """
-        dir = tempfile.gettempdir()
-        for dname in os.listdir(dir):
-            if dname.startswith('nw'):
-                dirname = os.path.join(dir, dname)
-                if not os.listdir(dirname):
-                    try:
-                        os.rmdir(dirname)
-                    except Exception:
-                        pass
+        if sys.patform.startswih('win'):  # only an issue on Windows
+            dir = tempfile.gettempdir()
+            for dname in os.listdir(dir):
+                if dname.startswith('nw'):
+                    dirname = os.path.join(dir, dname)
+                    if not os.listdir(dirname):
+                        try:
+                            os.rmdir(dirname)
+                        except Exception:
+                            pass
