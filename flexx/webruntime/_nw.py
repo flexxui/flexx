@@ -109,7 +109,7 @@ class NWRuntime(DesktopRuntime):
     
     def _get_install_instuctions(self):
         m = ('Download the NW.js archive for your platform from '
-             '"http://mwjs.io". Flexx will find the file if it is placed in '
+             '"http://nwjs.io". Flexx will find the file if it is placed in '
              'your home dir, desktop, downloads dir (where most browser save '
              'it) or the default temp dir.')
         return m
@@ -274,7 +274,7 @@ class NWRuntime(DesktopRuntime):
     def _clean_nw_dirs(self):
         """ NW makes empty dirs in temp dir, clean these up.
         """
-        if sys.patform.startswih('win'):  # only an issue on Windows
+        if sys.platform.startswith('win'):  # only an issue on Windows
             dir = tempfile.gettempdir()
             for dname in os.listdir(dir):
                 if dname.startswith('nw'):
