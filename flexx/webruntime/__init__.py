@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 del logging
 
 from .. import config
+from .. import dialite
 
 from ._manage import RUNTIME_DIR, TEMP_APP_DIR  # noqa
 from ._common import BaseRuntime, DesktopRuntime  # noqa
@@ -174,7 +175,6 @@ def launch(url, runtime=None, **kwargs):
         messages.extend(errors)
     messages = '\n\n'.join(messages)
     
-    from flexx import dialite  # noqa
     dialite.fail('Flexx - No suitable runtime available', messages)
     
     raise ValueError('Could not detect a suitable backend among %r.' % runtimes)

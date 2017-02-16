@@ -11,7 +11,10 @@ import os.path as op
 import os
 import sys
 import time
+import stat
 import shutil
+import tarfile
+import zipfile
 import subprocess
 
 from . import logger
@@ -290,14 +293,10 @@ def create_temp_app_dir(prefix, cleanup=60):
 def open_arch(filename):
     """ Open archive, returning the zipfile or tarfile object.
     """
-    
-    import tarfile
-    import zipfile
     if filename.endswith(('.tar', '.tar.gz', '.tar.bz2')):
         arch_func = tarfile.open
     elif filename.endswith('.zip'):
         arch_func = zipfile.ZipFile
-    
     return arch_func(filename, mode='r')
 
 
@@ -331,7 +330,6 @@ def extract_arch(archive, dir_name):
     print('done')
     
     # Enable executables for OS X
-    import stat
     for dirpath, dirnames, filenames in os.walk(temp_dir_name):
         if dirpath.endswith('/Contents/MacOS'):
             for fname in filenames:
