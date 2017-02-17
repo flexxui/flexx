@@ -1,4 +1,4 @@
-# doc-export: Leaflet
+# doc-export: LeafletExample
 """
 This example demonstrates the use of Leaflet to display a slippy map.
 """
@@ -242,59 +242,59 @@ class LeafletWidget(Widget):
                 self.layer_control.addOverlay(new_layer, layer_name)
 
 
-if __name__ == '__main__':
+class LeafletExample(flexx.ui.Widget):
 
-    class MapWidget(flexx.ui.Widget):
+    def init(self):
+        with flexx.ui.HBox():
+            self.leaflet = LeafletWidget(
+                flex=1,
+                layers=['http://a.tile.openstreetmap.org/'],
+                center=(52, 4.1),
+                zoom=12
+            )
+            with flexx.ui.VBox():
+                self.btna = flexx.ui.Button(text='Add SeaMap')
+                self.btnr = flexx.ui.Button(text='Remove SeaMap')
+                self.cbs = flexx.ui.CheckBox(text='Show scale')
+                self.cbl = flexx.ui.CheckBox(text='Show layers')
+                self.list = flexx.ui.VBox()
+                flexx.ui.Widget(flex=1)
 
-        def init(self):
-            with flexx.ui.HBox():
-                self.leaflet = LeafletWidget(
-                    flex=1,
-                    layers=['http://a.tile.openstreetmap.org/'],
-                    center=(52, 4.1),
-                    zoom=12
-                )
-                with flexx.ui.VBox():
-                    self.btna = flexx.ui.Button(text='Add SeaMap')
-                    self.btnr = flexx.ui.Button(text='Remove SeaMap')
-                    self.cbs = flexx.ui.CheckBox(text='Show scale')
-                    self.cbl = flexx.ui.CheckBox(text='Show layers')
-                    self.list = flexx.ui.VBox()
-                    flexx.ui.Widget(flex=1)
+    @event.connect('btna.mouse_click')
+    def handle_seamap_add(self, *events):
+        self.leaflet.layers = [
+            ('http://a.tile.openstreetmap.org/', 'OpenStreetMap'),
+            ('http://t1.openseamap.org/seamark/', 'OpenSeaMap'),
+        ]
 
-        @event.connect('btna.mouse_click')
-        def handle_seamap_add(self, *events):
-            self.leaflet.layers = [
-                ('http://a.tile.openstreetmap.org/', 'OpenStreetMap'),
-                ('http://t1.openseamap.org/seamark/', 'OpenSeaMap'),
-            ]
+    @event.connect('btnr.mouse_click')
+    def handle_seamap_remove(self, *events):
+        self.leaflet.layers = [
+            ('http://a.tile.openstreetmap.org/', 'OpenStreetMap'),
+        ]
 
-        @event.connect('btnr.mouse_click')
-        def handle_seamap_remove(self, *events):
-            self.leaflet.layers = [
-                ('http://a.tile.openstreetmap.org/', 'OpenStreetMap'),
-            ]
+    @event.connect('cbs.checked', 'cbl.checked')
+    def handle_checkboxes(self, *events):
+        self.leaflet.show_scale = self.cbs.checked
+        self.leaflet.show_layers = self.cbl.checked
 
-        @event.connect('cbs.checked', 'cbl.checked')
-        def handle_checkboxes(self, *events):
-            self.leaflet.show_scale = self.cbs.checked
-            self.leaflet.show_layers = self.cbl.checked
+    @event.connect('leaflet.mouse_event')
+    def handle_leaflet_mouse(self, *events):
+        ev = events[-1]
+        latlng = tuple(ev['latlng'])
+        flexx.ui.Label(text='%.5f, %.5f' % tuple(latlng), parent=self.list)
 
+    class JS:
         @event.connect('leaflet.mouse_event')
         def handle_leaflet_mouse(self, *events):
             ev = events[-1]
             latlng = tuple(ev['latlng'])
-            flexx.ui.Label(text='%.5f, %.5f' % tuple(latlng), parent=self.list)
+            if ev['event'] == 'click':
+                m = L.marker(ev['latlng'])
+                m.bindTooltip('%f, %f' % (latlng[0], latlng[1]))
+                m.addTo(self.leaflet.map)
 
-        class JS:
-            @event.connect('leaflet.mouse_event')
-            def handle_leaflet_mouse(self, *events):
-                ev = events[-1]
-                latlng = tuple(ev['latlng'])
-                if ev['event'] == 'click':
-                    m = L.marker(ev['latlng'])
-                    m.bindTooltip('%f, %f' % (latlng[0], latlng[1]))
-                    m.addTo(self.leaflet.map)
 
-    app.launch(MapWidget, 'app')
+if __name__ == '__main__':
+    app.launch(LeafletExample, 'app')
     app.run()
