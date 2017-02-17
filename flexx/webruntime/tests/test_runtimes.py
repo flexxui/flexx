@@ -133,12 +133,8 @@ def test_selenium():
 def test_unknown():
     # Suppress dialog temporarily
     from flexx import dialite
-    fail = dialite.fail
-    dialite.fail = lambda *args, **kwargs: None
-    try:
+    with dialite.NoDialogs():
         raises(ValueError, launch, URL, 'foo')
-    finally:
-        dialite.fail = fail
 
 
 def test_default():
