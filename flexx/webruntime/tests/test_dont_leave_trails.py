@@ -9,7 +9,7 @@ import time
 import tempfile
 
 from flexx import webruntime
-from flexx.util.testing import run_tests_if_main
+from flexx.util.testing import run_tests_if_main, skip
 
 userdir = os.path.expanduser('~')
 
@@ -59,10 +59,14 @@ def notrailtester(runtime, n=4):
 
 
 def test_notrail_firefox():
+    if not webruntime.FirefoxRuntime().is_available():
+        skip('no firefox')
     notrailtester('firefox-app')
 
 
 def test_notrail_nw():
+    if not webruntime.NWRuntime().is_available():
+        skip('no nw')
     notrailtester('nw-app')
 
 
