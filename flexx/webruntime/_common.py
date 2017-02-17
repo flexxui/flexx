@@ -113,8 +113,8 @@ class BaseRuntime:
     
     def get_exe(self):
         """ Get the executable corresponding to the runtime. This is usually
-        the path to an executable file, but it can also be a command. Is None
-        if the runeime is not available on this machine.
+        the path to an executable file, but it can also be a command, or even
+        a stub. Is None if the runtime is not available on this machine.
         """
         if not self._exe:
             self._exe = self._get_exe()
@@ -246,14 +246,15 @@ class DesktopRuntime(BaseRuntime):
     """ A base class for runtimes that launch a desktop-like app.
 
     Arguments:
-        title (str): Text shown in title bar.
+        title (str): Text shown in the title bar.
         icon (str | Icon): Icon instance or path to an icon file (png or ico).
-            The icon will be automatically converted to png/ico/icns,
+            The icon will automatically be converted to png/ico/icns,
             depending on what's needed by the runtime and platform.
-        size (tuple of ints): The size in pixels of the window.
-        pos (tuple of ints): The position of the window.
+        size (tuple of ints): The size (in pixels) of the window.
+        pos (tuple of ints): The position (in pixels) of the window.
         windowmode (str): the initial window mode, e.g. 'normal', 'maximized',
-            'fullscreen', 'kiosk'. Not all modes are supported by all runtimes.
+            'fullscreen', 'kiosk'. Note that not all modes are supported by all
+            runtimes.
     """
 
     def __init__(self, icon=None, title=None,

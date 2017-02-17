@@ -95,8 +95,10 @@ def fix_libudef(dest):
 
 class NWRuntime(DesktopRuntime):
     """ Desktop runtime based on NW.js (http://nwjs.io/, formerly
-    node-webkit), which uses the Chromium engine. Flexx takes
-    care of downloading (and updating) the runtime when needed.
+    node-webkit), which uses the Chromium engine. Flexx will install/update the
+    runtime if it finds a suitable archive in a few common locations like
+    the desktop, download dir and temp dir. That way, the end-user only
+    has to download the archive to make this runtime work.
     
     This runtime is visible in the task manager under a custom process name
     (``sys.executable + '-ui'``), making it easy to spot in the task manager,

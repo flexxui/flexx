@@ -114,8 +114,8 @@ def get_firefox_version_unused(exe):
 
 class FirefoxRuntime(DesktopRuntime):
     """ Runtime based on Mozilla Firefox. Can be used to open an app in
-    Firefox, as well as launch desktop-like apps via Mozilla's XUL framework
-    (available if Firefox is installed).
+    Firefox, as well as launch desktop-like apps via Mozilla's XUL framework.
+    Available if Firefox is installed.
     
     This runtime is visible in the task manager under a custom process name
     (``sys.executable + '-ui'``), making it easy to spot in the task manager,

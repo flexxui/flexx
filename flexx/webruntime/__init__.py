@@ -73,19 +73,21 @@ def launch(url, runtime=None, **kwargs):
     """ Launch a web runtime in a new process.
     
     Parameters:
-        url (str): The url to open. To open a local file prefix with ``file://``.
+        url (str): The url to open, e.g. ``'http://python.org'``. To open a
+            local file use ``'file://...'``.
         runtime (str) : The runtime(s) to use. E.g. 'app' will open in a
             desktop-app-like runtime, 'browser' in a browser runtime. One can
             target specific runtimes, e.g. 'nw-app' or 'edge-browser', or
-            a selection, e.g. 'chrome-browser or firefox-browser'. By default
-            uses the value of ``flexx.config.webruntime`` or 'app or browser'.
+            a selection, e.g. 'chrome-browser or firefox-browser'. If not given
+            uses the value of ``flexx.config.webruntime``, which defaults to
+            ``'app or browser'``.
             See below for more information on available runtimes.
         kwargs: addition arguments specific to the runtime. See the
             docs of the runtime classes.
     
     Returns:
-        runtime (BaseRuntime): An object that can sometimes be used to control
-        the runtime to some extend.
+        runtime (BaseRuntime): An object that represents the runtime. For
+        Desktop runtimes it can be used to close the runtime.
     
     Browser runtimes:
     
@@ -101,17 +103,19 @@ def launch(url, runtime=None, **kwargs):
     
     App runtimes:
     
-    * app: open as desktop app, using either firefox-app or nw-app.
-    * firerox-app: open as desktop app, using Firefox' app framework.
+    * app: open as desktop app, using firefox-app or nw-app
+      (and chrome-app on Windows).
+    * firerox-app: open as desktop app, using Firefox' app framework (Xul).
     * nw-app: open as desktop app using NW.js.
     * pyqt-app: open as desktop-like app using PyQt/PySide.
-    * chrome-app: open as desktop-like app via Chrome/Chromium.
+    * chrome-app: open as desktop-like app via Chrome/Chromium (only works well
+      on Windows).
     
     The most developed app runtimes are Firefox and NW. The former requires
-    the user to have Firefox installed. The latter requires Flexx to download
-    the runtime on first use. Firefox is lighter (memory-wise), while NW is
-    based on Chromium, making it heavier, but generally faster. The other app
-    runtimes are useful for testing or development, but should generally be
+    the user to have Firefox installed. The latter can be installed by the user
+    simply by downloading the archive. Firefox is lighter (memory-wise), while
+    NW is based on Chromium, making it heavier, but generally faster. The other
+    app runtimes are useful for testing or development, but should generally be
     avoided when distributing apps.
     
     """
