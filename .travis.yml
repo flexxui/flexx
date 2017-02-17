@@ -97,7 +97,7 @@ script:
       fi;
     - if [ "${TEST_DOCS}" == "1" ]; then
         python -c 'import flexx.ui'
-        invoke docs --build;
+        invoke docs --clean --build;
       fi;
     - if [ "${TEST_STYLE}" == "1" ]; then
         invoke test --style;
