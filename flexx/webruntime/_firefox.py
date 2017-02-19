@@ -23,7 +23,7 @@ import subprocess
 from .. import config
 from . import logger
 from ._common import DesktopRuntime
-from ._manage import create_temp_app_dir, RUNTIME_DIR
+from ._manage import create_temp_app_dir
 
 
 ## File templates
@@ -208,7 +208,10 @@ class FirefoxRuntime(DesktopRuntime):
             if part and part[0].isnumeric():
                 return part
     
-    def _install_runtime(self):
+    def _get_system_version(self):
+        return self.get_version(), self.get_exe()
+    
+    def _install_runtime(self, exe, path):
         """ Make a local "copy" of the firefox runtime. This should put
         a 'xulrunner' executable in the given path.
 
@@ -223,13 +226,6 @@ class FirefoxRuntime(DesktopRuntime):
         files in the firefox runtime. The symlink that we create here
         is only for reference, and does not actually work.
         """
-        exe = self.get_exe()
-        version = self._get_version(exe)
-        if not exe:
-            raise RuntimeError('Cannot use Firefox runtime if Firefox is not '
-                               'installed on the system.')
-        
-        path = op.join(RUNTIME_DIR, self.get_name() + '_' + version)
         if sys.platform.startswith('win'):
             # Windows: copy the whole tuntime
             self._copy_xul_runtime(op.dirname(exe), path)
@@ -266,8 +262,7 @@ class FirefoxRuntime(DesktopRuntime):
             exe = ff_exe
         else:
             # We make sure the runtime is "installed" and mangle the name
-            version = self._get_version(ff_exe)
-            xul_exe = op.join(self.get_runtime(version), 'xulrunner')
+            xul_exe = op.join(self.get_runtime_dir(), 'xulrunner')
             xul_exe += '.exe' * sys.platform.startswith('win')
             exe = self._get_app_exe(xul_exe, app_path)
         

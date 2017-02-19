@@ -27,7 +27,7 @@ import tempfile
 
 from .. import config
 from ._common import DesktopRuntime
-from ._manage import RUNTIME_DIR, create_temp_app_dir
+from ._manage import create_temp_app_dir
 from ._manage import open_arch, extract_arch, versionstring
 
 
@@ -106,6 +106,8 @@ class NWRuntime(DesktopRuntime):
     this runtime uses more processes and memory, but is generally faster.
     """
     
+    _pending_install = None
+    
     def _get_name(self):
         return 'nw'
     
@@ -125,30 +127,20 @@ class NWRuntime(DesktopRuntime):
             return op.join(dir, 'nw')
     
     def _get_exe(self):
-        
-        # What do we have locally installed?
-        cur_version = self.get_current_version() or ''
-        
-        # What can we get?
-        version, archive = self._get_archive_name(cur_version)
-        
-        # Maybe install newer version
-        if archive and versionstring(version) > versionstring(cur_version):
-            dir = op.join(RUNTIME_DIR, self.get_name() + '_' + version)
-            extract_arch(open_arch(archive), dir)
-            cur_version = self.get_current_version() or ''
-        
-        # Return exe
-        if cur_version:
-            dir = op.join(RUNTIME_DIR, self.get_name() + '_' + cur_version)
-            exe = op.realpath(self._get_exe_name(dir))
-            if op.isfile(exe):
-                return exe
+        # Get exe to up-to-date locally installed
+        # (this does an install/update if necessary)
+        exe = op.realpath(self._get_exe_name(self.get_runtime_dir()))
+        if op.isfile(exe):
+            return exe
     
-    def _get_archive_name(self, version_th):
-        """ Get the name of any valid nwjs archive for this platform above the
-        given version.
+    def _install_runtime(self, archive, path):
+        extract_arch(open_arch(archive), path)
+    
+    def _get_system_version(self):
+        """ Get the version and filename of any valid nwjs archive for this
+        platform.
         """
+        
         # Where can we look for archives
         dirs = [op.expanduser('~'),
                 op.expanduser('~/Desktop'),
@@ -175,6 +167,9 @@ class NWRuntime(DesktopRuntime):
                             version = fname.split('-v')[1].split('-')[0]
                             archives[version] = os.path.join(dir, fname)
         
+        # Avoid having to open archives which we know are not of higher version
+        version_th, _ = self.get_cached_version()
+        
         # Try - highest version first - whether the archive is ok
         for version in reversed(sorted(archives, key=versionstring)):
             if version_th and versionstring(version) <= versionstring(version_th):
@@ -190,10 +185,9 @@ class NWRuntime(DesktopRuntime):
         return None, None
     
     def _get_version(self):
-        return self.get_current_version()
-    
-    def _install_runtime(self):
-        pass  # We install in get_exe()
+        self.get_exe()
+        cur_version, _ = self.get_cached_version()
+        return cur_version
     
     def _test_platform(self):
         if not (sys.platform.startswith('win') or
@@ -220,7 +214,7 @@ class NWRuntime(DesktopRuntime):
             exe = config.nw_exe
         else:
             # We install the runtime, based on a minimal required version
-            exe = self._get_exe_name(self.get_runtime())
+            exe = self.get_exe()
             
             # Change exe to avoid grouping + easier recognition in task manager
             if exe and op.isfile(op.realpath(exe)):

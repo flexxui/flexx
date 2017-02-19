@@ -114,14 +114,14 @@ class BaseRuntime:
     def get_exe(self):
         """ Get the executable corresponding to the runtime. This is usually
         the path to an executable file, but it can also be a command, or even
-        a stub. Is None if the runtime is not available on this machine.
+        a stub. Can be None if the runtime is not (yet) installed.
         """
         if not self._exe:
             self._exe = self._get_exe()
         return self._exe
     
     def get_version(self):
-        """ Get the current version of the runtime (as a string). Can be None
+        """ Get the version of the available runtime (as a string). Can be None
         if the version cannot be retrieved (e.g. for Edge and IE), or if the
         runtime is not available on this system.
         """
@@ -132,7 +132,7 @@ class BaseRuntime:
     def is_available(self):
         """ Get whether this runtime appears to be available on this machine.
         """
-        return self.get_exe()
+        return self._is_available()
     
     def launch_tab(self, url):
         """ Launch the given url in a new browser tab. Only works for runtimes
@@ -226,8 +226,14 @@ class BaseRuntime:
         """
         raise NotImplementedError()
     
+    def _is_available(self):
+        """ Alias of get_exe(), unless overloaded.
+        """
+        return self.get_exe()
+    
     def _get_version(self):
-        """ String version, can return None if version cannot be retrieved.
+        """ String version of the available runtime, can return None
+        if the version cannot be retrieved.
         """
         raise NotImplementedError()
     
@@ -277,49 +283,88 @@ class DesktopRuntime(BaseRuntime):
         assert isinstance(self._windowmode, str)
         assert self._windowmode in ('normal', 'maximized', 'fullscreen', 'kiosk')
         
+        self._system_version = None
+        
         super().__init__(**kwargs)
     
-    def get_runtime(self, min_version=None):
-        """ Get the directory where (our local version of) the runtime is
-        located. If necessary, the runtime is chached / installed in some way.
+    def _is_available(self):
+        cached, _ = self.get_cached_version()
+        system, _ = self.get_system_version()
+        return bool(cached or system)
+    
+    def get_runtime_dir(self):
+        """ Get the directory of the (up-to-date) local version of the runtime.
+        If necessary, the runtime is chached / installed.
         """
-        install_action = None
-        cur_version = self.get_current_version() or ''
+        
+        # Get info on cached version
+        cur_version, path = self.get_cached_version()
+        sys_version, sys_path = self.get_system_version()
         
         # Do we need an install?
-        if not cur_version:
+        install_action = None
+        if not (cur_version or sys_version):
+            raise RuntimeError('Dont have cached version of runtime %s nor can '
+                               'install it.' % self.get_name())
+        elif not cur_version:
             install_action = 'install'
-        elif not min_version:
+        elif not sys_version:
             # No specific version required, e.g. because can assume that we
-            # have an up-to-date version, like with Chrome.
+            # have an up-to-date version.
             pass
-        elif versionstring(cur_version) < versionstring(min_version):
+        elif versionstring(cur_version) < versionstring(sys_version):
             install_action = 'update'
         
         # Install if necessary and update version
         if install_action:
             logger.info('Performing %s of runtime %s' %
                         (install_action, self.get_name()))
-            self._install_runtime()
-            cur_version = self.get_current_version()
-            assert cur_version
+            path = op.join(RUNTIME_DIR, self.get_name() + '_' +sys_version)
+            self._install_runtime(sys_path, path)
         
-        # Get path, protect from deletion, return
-        path = op.join(RUNTIME_DIR, self.get_name() + '_' + cur_version)
+        assert os.path.isdir(path)
         lock_runtime_dir(path)
         return path
     
-    def get_current_version(self):
-        """ Get the (highest) version of this runtime that we currently have.
+    def get_system_version(self):
+        """ Get (version, path) for the version of the runtime available
+        on the system. Can be an application, but also an archive or installer.
+        This information is used internally to install / update a runtime.
+        """
+        if not self._system_version:
+            self._system_version = self._get_system_version()
+            assert len(self._system_version) == 2
+        return self._system_version
+    
+    def get_cached_version(self):
+        """ Get (version, path) for the (highest) version of this runtime that
+        we currently have locally installed.
         """
         versions = []
         for dname in os.listdir(RUNTIME_DIR):
             dirname = op.join(RUNTIME_DIR, dname)
             if op.isdir(dirname) and dname.startswith(self.get_name() + '_'):
-                versions.append(dname.split('_')[-1])
-        versions.sort(key=versionstring)
+                versions.append((dname.split('_')[-1], dirname))
+        versions.sort(key=lambda x: versionstring(x[0]))
         if versions:
             return versions[-1]
+        return None, None
+    
+    def get_frozen_version(self):
+        """ Get (version, path) for the (highest) version of this runtime that
+        is shipped along with the executable.
+        """
+        # todo: put this to use
+        basedir = os.path.dirname(sys.executable)
+        versions = []
+        for dname in os.listdir(basedir):
+            dirname = op.join(basedir, dname)
+            if op.isdir(dirname) and dname.startswith(self.get_name() + '_'):
+                versions.append((dname.split('_')[-1], dirname))
+        versions.sort(key=lambda x: versionstring(x[0]))
+        if versions:
+            return versions[-1]
+        return None, None
     
     def _get_app_exe(self, runtime_exe, app_path):
         """ Get the executable to run our app. This should take care
@@ -361,9 +406,8 @@ class DesktopRuntime(BaseRuntime):
                 app_exe = op.join(app_path, exe_name)
                 if not op.isfile(app_exe):
                     os.symlink(op.realpath(runtime_exe), app_exe)
-
+        
         return app_exe
-
 
     def _osx_create_app(self, exe, dst_dir, title):
         """ Create osx app
@@ -417,7 +461,12 @@ class DesktopRuntime(BaseRuntime):
     
     ## To implenent in subclasses
     
-    def _install_runtime(self):
+    def _get_system_version(self):
+        """ Provide (tuple, path) info on a system-available version.
+        """
+        raise NotImplementedError()
+    
+    def _install_runtime(self, sys_path, dest_path):
         """ Install a local copy of the latest runtime. Called when needed.
         """
         raise NotImplementedError()

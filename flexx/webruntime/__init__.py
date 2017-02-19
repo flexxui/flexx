@@ -16,6 +16,7 @@ Memory considerations
 
 import sys
 import logging
+import traceback
 from collections import OrderedDict
 logger = logging.getLogger(__name__)
 del logging
@@ -107,9 +108,9 @@ def launch(url, runtime=None, **kwargs):
       (and chrome-app on Windows).
     * firerox-app: open as desktop app, using Firefox' app framework (Xul).
     * nw-app: open as desktop app using NW.js.
-    * pyqt-app: open as desktop-like app using PyQt/PySide.
     * chrome-app: open as desktop-like app via Chrome/Chromium (only works well
       on Windows).
+    * pyqt-app: open as desktop-like app using PyQt/PySide.
     
     The most developed app runtimes are Firefox and NW. The former requires
     the user to have Firefox installed. The latter can be installed by the user
@@ -245,7 +246,10 @@ def _launch(url, runtime, **kwargs):
                         'end with "-app" or "-browser", not %r' % runtime)
     
     except Exception as err:
-        return rt, False, err
+        type_, value, tb = sys.exc_info()
+        trace = traceback.format_list(traceback.extract_tb(tb))
+        del tb
+        return rt, False, str(err) + '\n' + ''.join(trace[-1:])
     
     return rt, launched, None
 

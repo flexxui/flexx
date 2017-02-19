@@ -16,7 +16,6 @@ import subprocess
 
 from .. import config
 from ._common import DesktopRuntime, find_osx_exe
-from ._manage import RUNTIME_DIR
 
 
 class ChromeRuntime(DesktopRuntime):
@@ -61,21 +60,17 @@ class ChromeRuntime(DesktopRuntime):
         for part in parts:
             if part and part[0].isnumeric():
                 return part
-   
-    def _install_runtime(self):
+    
+    def _get_system_version(self):
+        return self.get_version(), self.get_exe()
+    
+    def _install_runtime(self, exe, path):
         """ Symlink on Unix. Stub in Windows. In contrast to XUL, exe
         renaming is not needed to avoid grouping on Windows. Plus the
         firewall would asks permission for each new exe that we use
         this way. Ironically, there seems to be nothing we can do to avoid
         grouping on Linux and OS X.
         """
-        exe = self.get_exe()
-        version = self._get_version(exe)
-        if not exe:
-            raise RuntimeError('Cannot use Chrome/Chromium runtime if corresponding '
-                               'browser is not installed on the system.')
-        
-        path = op.join(RUNTIME_DIR, self.get_name() + '_' + version)
         if sys.platform.startswith('win'):
             os.mkdir(path)
             with open(op.join(path, 'stub.txt'), 'wb') as f:
@@ -93,8 +88,8 @@ class ChromeRuntime(DesktopRuntime):
         # Don't bother with create_temp_app_dir(); its only advantage would be
         # having an icon on OS X, but since it's grouped with Chrome, leave it.
         
-        # Get chrome executable
-        self.get_runtime(self.get_version())
+        # Get chrome executable, but don't really use it
+        self.get_runtime_dir()
         
         exe = self.get_exe()
         if exe is None:

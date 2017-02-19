@@ -96,12 +96,18 @@ class PyQtRuntime(DesktopRuntime):
     def _get_version(self):
         return None  # we could report the Qt version here (or pyqt version?)
     
+    def _get_system_version(self):
+        return None, None  # stub
+    
+    def _install_runtime(self, sys_path, dest_path):
+        pass  # is never called
+    
     def _launch_tab(self, url):
         raise RuntimeError('PyQt runtime cannot launch tabs.')
     
     def _launch_app(self, url):
         
-        # We don't call self.get_runtime() so we don't need to implement
+        # We don't call self.get_runtime_dir() so we don't need to implement
         # _install_runtime()
         
         # Write icon - assume that we have a 16x16 icon
