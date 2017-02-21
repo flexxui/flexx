@@ -52,7 +52,7 @@ class MyModel2(app.Model):
             return float(v)
         
 
-m = app.launch(MyModel1, 'xul')  # Change to MyModel2 to test reverse case
+m = app.launch(MyModel1, 'browser')  # Change to MyModel2 to test reverse case
 
 m.foo = 3
 m.foo = 7

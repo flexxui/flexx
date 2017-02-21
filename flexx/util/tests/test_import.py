@@ -91,16 +91,16 @@ def test_import_flexx_event():
 
 def test_import_flexx_webruntime():
     modnames = loaded_modules('flexx.webruntime', 2)
-    assert modnames == set(MIN_MODULES + ['flexx.util', 'flexx.webruntime'])
+    assert modnames == set(MIN_MODULES + ['flexx.util', 'flexx.dialite', 'flexx.webruntime'])
 
 def test_import_flexx_app():
     modnames = loaded_modules('flexx.app', 2)
-    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.webruntime',
+    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.dialite', 'flexx.webruntime',
                                           'flexx.event', 'flexx.pyscript'])
 
 def test_import_flexx_ui():
     modnames = loaded_modules('flexx.ui', 2)
-    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.webruntime',
+    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.dialite', 'flexx.webruntime',
                                           'flexx.event', 'flexx.pyscript', 'flexx.ui'])
 
 def test_import_deps():

@@ -8,7 +8,7 @@ from flexx.util import icon
 
 from flexx.util.testing import run_tests_if_main, raises, skipif
 
-from flexx.webruntime.common import BaseRuntime
+from flexx.webruntime import BaseRuntime
 from flexx.webruntime import launch
 from flexx import webruntime
 
@@ -48,17 +48,11 @@ def has_qt():
 
 
 def has_nw():
-    exe = webruntime.nodewebkit.get_nodewebkit_exe or 'nw'
-    try:
-        subprocess.check_call([exe, '--version'], shell=True)
-    except Exception:
-        return False
-    return True
+    return webruntime.NWRuntime().is_available()
 
 
 def has_chrome():
-    return (webruntime.chromeapp.get_chrome_exe() or
-            webruntime.chromeapp.get_chromium_exe())
+    return webruntime.ChromeRuntime().is_available()
 
 
 ## Misc
@@ -66,21 +60,21 @@ def has_chrome():
 def test_iconize():
 
     # Default icon
-    icn = webruntime.common.iconize(None)
+    icn = webruntime._common.iconize(None)
     assert isinstance(icn, icon.Icon)
 
     fname = os.path.join(tempfile.gettempdir(), 'flexx_testicon.ico')
     icn.write(fname)
 
     # Load from file
-    icn = webruntime.common.iconize(fname)
+    icn = webruntime._common.iconize(fname)
     assert isinstance(icn, icon.Icon)
 
     # Load from icon (noop)
-    assert webruntime.common.iconize(icn) is icn
+    assert webruntime._common.iconize(icn) is icn
 
     # Error
-    raises(ValueError, webruntime.common.iconize, [])
+    raises(ValueError, webruntime._common.iconize, [])
 
 
 ## Runtimes
@@ -88,13 +82,13 @@ def test_iconize():
 
 @skipif(not has_qt(), reason='need qt')
 def test_qtwebkit():
-    p = launch(URL, 'pyqt')
+    p = launch(URL, 'pyqt-app')
     assert p._proc
     p.close()
 
 
 def test_xul():
-    p = launch(URL, 'xul')
+    p = launch(URL, 'firefox-app')
     assert p._proc
 
     p.close()
@@ -103,34 +97,30 @@ def test_xul():
 
 @skipif(not has_nw(), reason='need nw')
 def test_nwjs():
-    p = launch(URL, 'nwjs')
+    p = launch(URL, 'nw-app')
     assert p._proc
     p.close()
 
 
 @skipif(not has_chrome(), reason='need chrome/chromium')
 def test_chomeapp():
-    p = launch(URL, 'chromeapp')
+    p = launch(URL, 'chrome-app')
     assert p._proc
     p.close()
 
 
 def test_browser():
-    p = launch(URL, 'browser')
+    p = launch(URL, 'default-browser')
     assert p._proc is None
 
 
 def test_browser_ff():
-    p = launch(URL, 'browser-firefox')
+    p = launch(URL, 'firefox-browser')
     assert p._proc is None
 
 
-def test_browser_fallback():
-    p = launch(URL, 'browser-foo')
-    assert p._proc is None
-
-
-@skipif(os.getenv('TRAVIS') == 'true', reason='skip selenium on Travis')
+#@skipif(os.getenv('TRAVIS') == 'true', reason='skip selenium on Travis')
+@skipif(True, reason='meh selenium')
 def test_selenium():
     p = launch(URL, 'selenium-firefox')
     assert p._proc is None
@@ -141,20 +131,16 @@ def test_selenium():
 
 
 def test_unknown():
-    raises(ValueError, launch, URL, 'foo')
+    # Suppress dialog temporarily
+    from flexx import dialite
+    with dialite.NoDialogs():
+        raises(ValueError, launch, URL, 'foo')
 
 
 def test_default():
     p = launch(URL)
-    assert p.__class__.__name__ == 'XulRuntime'
+    assert p.__class__.__name__ == 'FirefoxRuntime'
     p.close()
-
-
-def test_base_runtime_must_have_url_in_kwargs():
-    with raises(KeyError) as excinfo:
-        BaseRuntime()
-
-    assert 'url' in str(excinfo.value)
 
 
 run_tests_if_main()

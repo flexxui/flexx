@@ -60,6 +60,8 @@ class Session:
         self._store = store if (store is not None) else assetstore
         assert isinstance(self._store, AssetStore)
         
+        self._creation_time = time.time()  # used by app manager
+        
         # Id and name of the app
         self._id = get_random_string()
         self._app_name = app_name

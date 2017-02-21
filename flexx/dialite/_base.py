@@ -98,7 +98,7 @@ class StubApp(BaseApp):
         sys.exit(t % (kind, sys.platform, title, message))
     
     def fail(self, title, message):
-        self._error('fail', title, message)
+        logger.error('fail', title, message)
     
     def warn(self, title, message):
         logger.warning('%s: %s' % (title, message))

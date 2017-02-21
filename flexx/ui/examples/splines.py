@@ -360,5 +360,5 @@ class Splines(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Splines, 'xul')
+    m = app.launch(Splines)
     app.start()

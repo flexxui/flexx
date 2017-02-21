@@ -67,5 +67,5 @@ class SendData(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(SendData, 'firefox')
+    m = app.launch(SendData)
     app.run()

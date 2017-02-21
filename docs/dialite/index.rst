@@ -2,11 +2,14 @@
 Reference for flexx.dialite
 ---------------------------
 
+Dialite introduction
+--------------------
+
 .. automodule:: flexx.dialite
 
 
-----
-
+Dialite API
+-----------
 
 .. autofunction:: flexx.dialite.inform
 

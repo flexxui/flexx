@@ -107,6 +107,30 @@ def test_all_backends_are_complete():
             assert getattr(cls, name) is not getattr(BaseApp, name)
 
 
+def test_get_app():
+    
+    app1 = dialite._get_app()
+    app2 = dialite._get_app()
+    app3 = dialite._get_app(True)
+    app4 = dialite._get_app()
+    assert app1 is app2
+    assert app3 is app4
+    assert app1 is not app3
+    assert type(app1) is type(app3)
+
+
+def test_context_manager():
+    
+    app1 = dialite._get_app()
+    with dialite.NoDialogs():
+        app2 = dialite._get_app()
+    app3 = dialite._get_app()
+    
+    assert app1 is app3
+    assert app1 is not app2
+    assert isinstance(app2, StubApp)
+
+
 def test_main_funcs():
     o_app = dialite._the_app
     
@@ -274,10 +298,9 @@ def test_unsupported_platform1():
     
     try:
         
-        app = dialite._select_app()
+        app = dialite._get_app(True)
         assert app.works()
         assert isinstance(app, TerminalApp)
-        dialite._the_app = app
         
         assert dialite.is_supported()
         
@@ -322,10 +345,9 @@ def test_unsupported_platform2():
     
     try:
         
-        app = dialite._select_app()
+        app = dialite._get_app(True)
         assert app.works()
         assert isinstance(app, StubApp)
-        dialite._the_app = app
         
         assert not dialite.is_supported()
         
@@ -333,8 +355,9 @@ def test_unsupported_platform2():
         
         dialite.warn()  # no problem
         
-        with raises(SystemExit):
-            dialite.fail()
+        dialite.fail()  # no problem
+        # with raises(SystemExit):
+        #     dialite.fail()
         
         with raises(SystemExit):
             dialite.ask_ok()

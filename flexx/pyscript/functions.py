@@ -220,7 +220,10 @@ def evaljs(jscode, whitespace=True, print_result=True):
     try:
         res = subprocess.check_output(cmd)
     except Exception as err:
-        err = err.output.decode()
+        if hasattr(err, 'output'):
+            err = err.output.decode()
+        else:
+            err = str(err)
         err = err[:200] + '...' if len(err) > 200 else err
         raise Exception(err)
     finally:

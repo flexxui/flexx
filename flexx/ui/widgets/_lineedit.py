@@ -129,7 +129,7 @@ class LineEdit(Widget):
         def __placeholder_text_changed(self, *events):
             self.node.placeholder = self.placeholder_text
         
-        # todo: this works in Firefox but not in Xul
+        # todo: this works in the browser but not in e.g. firefox-app
         @event.connect('autocomp')
         def __autocomp_changed(self, *events):
             autocomp = self.autocomp

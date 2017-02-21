@@ -4,9 +4,9 @@ cross-platform, and has no dependencies. It provides a handful of
 functions, each a verb, that can be used to inform(), warn() or fail()
 the user, or to ask_ok(), ask_retry() or ask_yesno().
 
-Dialite works on Window, OS X and Linux, and falls back to a terminal
-interface otherwise (or if dialogs are unavailable, e.g. with an SSH
-connection).
+Dialite can show dialogs on Window, OS X and Linux, and falls back to
+a terminal interface if dialogs are unavailable (e.g. if not supported
+by the platform, or for SSH connections).
 
 On Windows, it uses Windows Script Host (cscript.exe). On OS X it uses
 osascript to show a dialog from the frontmost application. On Linux it
@@ -36,7 +36,19 @@ else:  # pragma: no cover
     string_types = basestring,  # noqa
 
 
-def _select_app():
+_the_app = None
+_disabled = 0
+
+def _get_app(force_new=False):
+    """ Internal function to get the app that should be used.
+    """
+    global _the_app
+    if _disabled:
+        return StubApp()
+    if _the_app is not None and not force_new:
+        assert isinstance(_the_app, BaseApp)
+        return _the_app
+    
     # Select preferred app
     if sys.platform.startswith('win'):
         app = WindowsApp()
@@ -52,10 +64,25 @@ def _select_app():
         app = TerminalApp()
     if not app.works():
         app = StubApp()
+    
+    _the_app = app
     return app
 
-_the_app = _select_app()
-assert isinstance(_the_app, BaseApp)
+
+class NoDialogs(object):
+    """ Context manager to temporarily disable dialogs, e.g. during tests.
+    Note that (currenty) the questions that require user input will raise
+    SystemExit. Also note thate on CI dialogs are generally already disabled.
+    """
+    
+    def __enter__(self):
+        global _disabled
+        _disabled += 1
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        global _disabled
+        _disabled -= 1
 
 
 def is_supported():
@@ -75,7 +102,7 @@ def fail(title='Error', message=''):
         raise TypeError('fail() title must be a string.')
     if not isinstance(message, string_types):
         raise TypeError('fail() message must be a string.')
-    _the_app.fail(title, message)
+    _get_app().fail(title, message)
 
 
 def warn(title='Warning', message=''):
@@ -89,7 +116,7 @@ def warn(title='Warning', message=''):
         raise TypeError('warn() title must be a string.')
     if not isinstance(message, string_types):
         raise TypeError('warn() message must be a string.')
-    _the_app.warn(title, message)
+    _get_app().warn(title, message)
 
 
 def inform(title='Info', message=''):
@@ -103,7 +130,7 @@ def inform(title='Info', message=''):
         raise TypeError('inform() title must be a string.')
     if not isinstance(message, string_types):
         raise TypeError('inform() message must be a string.')
-    _the_app.inform(title, message)
+    _get_app().inform(title, message)
 
 
 def ask_ok(title='Confirm', message=''):
@@ -120,7 +147,7 @@ def ask_ok(title='Confirm', message=''):
         raise TypeError('ask_ok() title must be a string.')
     if not isinstance(message, string_types):
         raise TypeError('ask_ok() message must be a string.')
-    return _the_app.ask_ok(title, message)
+    return _get_app().ask_ok(title, message)
 
 
 def ask_retry(title='Retry', message=''):
@@ -137,7 +164,7 @@ def ask_retry(title='Retry', message=''):
         raise TypeError('ask_retry() title must be a string.')
     if not isinstance(message, string_types):
         raise TypeError('ask_retry() message must be a string.')
-    return _the_app.ask_retry(title, message)
+    return _get_app().ask_retry(title, message)
 
 
 def ask_yesno(title='Question', message=''):
@@ -154,4 +181,4 @@ def ask_yesno(title='Question', message=''):
         raise TypeError('ask_yesno() title must be a string.')
     if not isinstance(message, string_types):
         raise TypeError('ask_yesno() message must be a string.')
-    return _the_app.ask_yesno(title, message)
+    return _get_app().ask_yesno(title, message)

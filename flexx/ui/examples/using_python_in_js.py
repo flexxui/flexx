@@ -65,5 +65,5 @@ class UsingPython(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(UsingPython, 'firefox')
+    m = app.launch(UsingPython, 'browser')
     app.run()
