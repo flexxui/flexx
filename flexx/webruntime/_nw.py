@@ -94,7 +94,7 @@ def fix_libudef(dest):
 
 
 class NWRuntime(DesktopRuntime):
-    """ Desktop runtime based on NW.js (http://nwjs.io/, formerly
+    """ Desktop runtime based on NW.js (http://nwjs.io, formerly
     node-webkit), which uses the Chromium engine. Flexx will install/update the
     runtime if it finds a suitable archive in a few common locations like
     the desktop, download dir and temp dir. That way, the end-user only
@@ -104,6 +104,9 @@ class NWRuntime(DesktopRuntime):
     (``sys.executable + '-ui'``), making it easy to spot in the task manager,
     and avoids task-bar grouping. Compared to the Firefox app runtime,
     this runtime uses more processes and memory, but is generally faster.
+    
+    The supported ``windowmode`` values are 'normal', 'fullscreen',
+    'kiosk' ('maximized' is ignored).
     """
     
     _pending_install = None

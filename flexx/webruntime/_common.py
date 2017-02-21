@@ -294,7 +294,7 @@ class DesktopRuntime(BaseRuntime):
     
     def get_runtime_dir(self):
         """ Get the directory of the (up-to-date) local version of the runtime.
-        If necessary, the runtime is chached / installed.
+        If necessary, the runtime is cached/installed.
         """
         
         # Get info on cached version
@@ -329,7 +329,7 @@ class DesktopRuntime(BaseRuntime):
     def get_system_version(self):
         """ Get (version, path) for the version of the runtime available
         on the system. Can be an application, but also an archive or installer.
-        This information is used internally to install / update a runtime.
+        This information is used internally to install or update a runtime.
         """
         if not self._system_version:
             self._system_version = self._get_system_version()
