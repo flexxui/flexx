@@ -94,7 +94,7 @@ def main():
             # Include notebooks?
             for fname in notebook_list:
                 if fname.endswith('.ipynb') and ('_%s.' % sub) in fname:
-                    url = 'http://github.com/zoofIO/flexx-notebooks/blob/master/' + fname
+                    url = 'https://github.com/zoofIO/flexx-notebooks/blob/master/' + fname
                     docs += '* `%s <%s>`_ (external notebook)\n' % (fname, url)
             # List examples
             for name in sorted(examples[sub]):
