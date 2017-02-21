@@ -261,6 +261,13 @@ def clean_dirs():
             dir = op.join(RUNTIME_DIR, name + '_' + version)
             if dir not in dirs_with_lockfiles:
                 remove(dir, True)
+        # Hack to clear old firefox runtime (it was renamed)
+        # remove / deprecate this in version 0.7 or so
+        if name == 'xul':
+            for version in versions:
+                dir = op.join(RUNTIME_DIR, name + '_' + version)
+                if dir not in dirs_with_lockfiles:
+                    remove(dir, True)
 
 
 def lock_runtime_dir(path):
@@ -310,7 +317,7 @@ def extract_arch(archive, dir_name):
         return
     
     # Extract it
-    print('Extracting ...', end='')
+    t0 = time.time()
     archive.extractall(temp_dir_name)
     
     # Pop out empty dirs
@@ -327,7 +334,8 @@ def extract_arch(archive, dir_name):
                         op.join(temp_dir_name, name))
             os.rmdir(op.join(temp_dir_name, pop_dir))
     
-    print('done')
+    logger.info('Extracted archive into %s in %1.1f s' %
+                (op.basename(dir_name), (time.time() - t0)))
     
     # Enable executables for OS X
     for dirpath, dirnames, filenames in os.walk(temp_dir_name):

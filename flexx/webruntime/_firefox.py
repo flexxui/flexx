@@ -380,7 +380,7 @@ class FirefoxRuntime(DesktopRuntime):
                 if op.isfile(exe):
                     break
             shutil.copy2(exe, op.join(dir2, 'xulrunner' + ext))
-            logger.info('Copied firefox (in %1.2f s)' % (time.time()-t0))
+            logger.info('Copied firefox in %1.1f s' % (time.time()-t0))
         except Exception:
             # Clean up
             shutil.rmtree(dir2)

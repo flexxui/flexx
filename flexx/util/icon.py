@@ -274,7 +274,7 @@ class Icon(object):
                 imdatas.append(struct.pack('>I', len(data) + 8))
                 imdatas.append(bytes(data))
             else:
-                print('Skipping export size %i to .icns' % size)
+                # print('Skipping export size %i to .icns' % size)
                 continue
         
         total_icon_size = sum([len(i) for i in imdatas]) + 8
