@@ -25,7 +25,7 @@ for dname in os.listdir(FLEXX_DIR):
 created_files = []
 
 def get_notebook_list():
-    url = 'https://api.github.com/repos/zoofio/flexx-notebooks/contents'
+    url = 'http://api.github.com/repos/zoofio/flexx-notebooks/contents'
     s = json.loads(urlopen(url, timeout=5.0).read().decode())
     filenames = []
     for file in s:
@@ -94,7 +94,7 @@ def main():
             # Include notebooks?
             for fname in notebook_list:
                 if fname.endswith('.ipynb') and ('_%s.' % sub) in fname:
-                    url = 'https://github.com/zoofIO/flexx-notebooks/blob/master/' + fname
+                    url = 'http://github.com/zoofIO/flexx-notebooks/blob/master/' + fname
                     docs += '* `%s <%s>`_ (external notebook)\n' % (fname, url)
             # List examples
             for name in sorted(examples[sub]):
