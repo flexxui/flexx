@@ -36,7 +36,7 @@ else:
     import ctypes
     data = (ctypes.c_double * N)()
     for i in range(N):
-        data[i] = random.random(0, 1)
+        data[i] = random.random()
 
 
 class SendData(ui.Widget):
@@ -49,7 +49,8 @@ class SendData(ui.Widget):
         
         # Send data to the JS side. In this case we don't need meta data
         meta = {}
-        self.send_data(bytes(data), meta)
+        bb = data.tobytes() if hasattr(data, 'tobytes') else bytes(data)
+        self.send_data(bb, meta)
     
     class JS:
         
