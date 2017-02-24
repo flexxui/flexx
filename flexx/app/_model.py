@@ -184,7 +184,9 @@ class ModelMeta(HasEventsMeta):
             Both = new_type('Both', (), {})
             setattr(cls, 'Both', Both)
         
-        # Copy properties from Both class to main class and JS class
+        # Copy properties from Both class to main class and JS class. Note that
+        # in Python 3.6 we iterate in the order in which the items are defined,
+        # though we currently do not preserve the order of Both/JS.
         for name, val in cls.Both.__dict__.items():
             if name.startswith('__') and name.endswith('__'):
                 continue
