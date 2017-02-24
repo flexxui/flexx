@@ -26,7 +26,9 @@ created_files = []
 
 def get_notebook_list():
     url = 'http://api.github.com/repos/zoofio/flexx-notebooks/contents'
+    print('downloading %s ... ' % url, end='')
     s = json.loads(urlopen(url, timeout=5.0).read().decode())
+    print('done')
     filenames = []
     for file in s:
         if file['name'].endswith('ipynb'):
@@ -94,7 +96,7 @@ def main():
             # Include notebooks?
             for fname in notebook_list:
                 if fname.endswith('.ipynb') and ('_%s.' % sub) in fname:
-                    url = 'http://github.com/zoofIO/flexx-notebooks/blob/master/' + fname
+                    url = 'https://github.com/zoofIO/flexx-notebooks/blob/master/' + fname
                     docs += '* `%s <%s>`_ (external notebook)\n' % (fname, url)
             # List examples
             for name in sorted(examples[sub]):
