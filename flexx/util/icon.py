@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2016, Almar Klein
+# Copyright (c) 2015-2017, Almar Klein
 # This module is distributed under the terms of the new BSD License.
 
 """

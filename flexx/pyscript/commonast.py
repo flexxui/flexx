@@ -7,6 +7,10 @@ the result. Supports CPython 2.7, CPython 3.2+, Pypy.
 https://github.com/almarklein/commonast
 """
 
+# Notes:
+# Python 3.6 introduced ast.Constant, which seems to be added so that 3d
+# party code can use it, but ast.parse does not produce it afaik.
+
 from __future__ import print_function, absolute_import
 
 import sys
@@ -786,7 +790,18 @@ class NativeAstConverter:
         return Num(n.n)
     
     def _convert_Str(self, n):
-        if pyversion < (3, ) and self._lines[n.lineno-1][n.col_offset] == 'b':
+        # Get string modifier char
+        line = self._lines[n.lineno-1]
+        pre = ''
+        if line[n.col_offset] not in '"\'':
+            pre += line[n.col_offset]
+            if line[n.col_offset + 1] not in '"\'':
+                pre += line[n.col_offset + 1]
+        # Formatted, bytes?
+        if 'f' in pre:
+            raise RuntimeError('Cannot do formatted string literals yet: ' +
+                               line)
+        if pyversion < (3, ) and 'b' in pre:
             return Bytes(n.s)
         return Str(n.s)
     

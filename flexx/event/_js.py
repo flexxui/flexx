@@ -2,6 +2,7 @@
 Implementation of flexx.event in JS via PyScript.
 """
 
+import sys
 import json
 
 from flexx.pyscript import JSString, py2js as py2js_
@@ -258,7 +259,12 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     OK_MAGICS = ('__properties__', '__emitters__', '__handlers__',
                  '__local_properties__')
     
-    for name, val in sorted(cls.__dict__.items()):
+    # Process class items in original order or sorted by name if we cant
+    class_items = cls.__dict__.items()
+    if sys.version_info < (3, 6):
+        class_items = sorted(class_items)
+    
+    for name, val in class_items:
         name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix mangling
         if isinstance(val, BaseEmitter):
             funcname = name
