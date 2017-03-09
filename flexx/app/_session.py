@@ -243,6 +243,10 @@ class Session:
         value in your server. Additional keyword arguments are set on
         the Cookie.Morsel directly.
         """
+        # This code is taken (in modified form) from the Tornado project
+        # Copyright 2009 Facebook
+        # Licensed under the Apache License, Version 2.0 
+        
         # Assume tornado is available ...
         from tornado.escape import native_str
         from tornado.httputil import format_timestamp
