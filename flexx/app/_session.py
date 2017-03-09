@@ -2,11 +2,14 @@
 Definition of the Session class.
 """
 
+import re
 import time
 import json
+import http
 import random
 import hashlib
 import weakref
+import datetime
 
 from ._model import Model, new_type
 from ._asset import Asset, Bundle, solve_dependencies
@@ -59,6 +62,7 @@ class Session:
     def __init__(self, app_name, store=None):  # Allow custom store for testing
         self._store = store if (store is not None) else assetstore
         assert isinstance(self._store, AssetStore)
+        self._cookies = {}
         
         self._creation_time = time.time()  # used by app manager
         
@@ -196,6 +200,14 @@ class Session:
             self._ws.command(command)
         self._ws.command('INIT-DONE')
    
+    def _set_cookies(self, cookies=None):
+        """ To set cookies, must be an http.cookie.SimpleCookie object.
+        When the app is loaded as a web app, the cookies are set *before* the
+        main model is instantiated. Otherwise they are set when the websocket
+        is connected.
+        """
+        self._cookies = cookies if cookies else http.cookies.SimpleCookie()
+    
     def _set_app(self, model):
         if self._model is not None:
             raise RuntimeError('Session already has an associated Model.')
@@ -205,6 +217,65 @@ class Session:
         if self._runtime is not None:
             raise RuntimeError('Session already has a runtime.')
         self._runtime = runtime
+    
+    ## Cookies, mmm
+    
+    def get_cookie(self, name, default=None):
+        """Gets the value of the cookie with the given name, else default."""
+        if name in self._cookies:
+            return self._cookies[name].value
+        else:
+            return default
+    
+    def set_cookie(self, name, value, domain=None, expires=None, path="/",
+                   expires_days=None, **kwargs):
+        """Sets the given cookie name/value with the given options. Set value
+        to None to clear.
+
+        Additional keyword arguments are set on the Cookie.Morsel
+        directly.
+        See http://docs.python.org/library/cookie.html#morsel-objects
+        for available attributes.
+        """
+        # Assume tornado is available ...
+        from tornado import escape
+        from tornado import httputil
+        
+        # Clear cookie?
+        if value is None:
+            value = ""
+            expires = datetime.datetime.utcnow() - datetime.timedelta(days=365)
+        
+        # The cookie library only accepts type str, in both python 2 and 3
+        name = escape.native_str(name)
+        value = escape.native_str(value)
+        if re.search(r"[\x00-\x20]", name + value):
+            # Don't let us accidentally inject bad stuff
+            raise ValueError("Invalid cookie %r: %r" % (name, value))
+        if name in self._cookies:
+            del self._cookies[name]
+        self._cookies[name] = value
+        morsel = self._cookies[name]
+        if domain:
+            morsel["domain"] = domain
+        if expires_days is not None and not expires:
+            expires = datetime.datetime.utcnow() + datetime.timedelta(
+                days=expires_days)
+        if expires:
+            morsel["expires"] = httputil.format_timestamp(expires)
+        if path:
+            morsel["path"] = path
+        for k, v in kwargs.items():
+            if k == 'max_age':
+                k = 'max-age'
+            # skip falsy values for httponly and secure flags because
+            # SimpleCookie sets them regardless
+            if k in ['httponly', 'secure'] and not v:
+                continue
+            morsel[k] = v
+        
+        self._exec('document.cookie = "%s";' %
+                   morsel.OutputString().replace('"', '\\"'))
     
     ## Data
     

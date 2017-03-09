@@ -337,7 +337,7 @@ class AppManager(event.HasEvents):
         except Exception as err:
             logger.error('Error when clearing old pending sessions: %s' % str(err))
     
-    def create_session(self, name, id=None):
+    def create_session(self, name, id=None, cookies=None):
         """ Create a session for the app with the given name.
         
         Instantiate an app and matching session object corresponding
@@ -360,6 +360,7 @@ class AppManager(event.HasEvents):
         
         # Create the session
         session = Session(name)
+        session._set_cookies(cookies)
         if id is not None:
             session._id = id  # used by app.export
         self._session_map[session.id] = session
@@ -377,7 +378,7 @@ class AppManager(event.HasEvents):
         logger.debug('Instantiate app client %s' % session.app_name)
         return session
     
-    def connect_client(self, ws, name, session_id):
+    def connect_client(self, ws, name, session_id, cookies=None):
         """ Connect a client to a session that was previously created.
         """
         _, pending, connected = self._appinfo[name]
@@ -394,6 +395,7 @@ class AppManager(event.HasEvents):
         # Add app to connected, set ws
         assert session.status == Session.STATUS.PENDING
         logger.info('New session %s %s' %(name, session_id))
+        session._set_cookies(cookies)
         session._set_ws(ws)
         connected.append(session)
         AppManager.total_sessions += 1
