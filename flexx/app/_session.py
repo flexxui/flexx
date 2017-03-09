@@ -17,6 +17,8 @@ from ._assetstore import AssetStore, export_assets_and_data, INDEX
 from ._assetstore import assets as assetstore
 from . import logger
 
+from .. import config
+
 reprs = json.dumps
 
 
@@ -220,35 +222,44 @@ class Session:
     
     ## Cookies, mmm
     
-    def get_cookie(self, name, default=None):
-        """Gets the value of the cookie with the given name, else default."""
+    def get_cookie(self, name, default=None, max_age_days=31, min_version=None):
+        """ Gets the value of the cookie with the given name, else default.
+        """
+        from tornado.web import decode_signed_value
         if name in self._cookies:
-            return self._cookies[name].value
+            value = self._cookies[name].value
+            value = decode_signed_value(config.cookie_secret,
+                                       name, value, max_age_days=max_age_days,
+                                       min_version=min_version)
+            return value.decode()
         else:
             return default
     
-    def set_cookie(self, name, value, domain=None, expires=None, path="/",
-                   expires_days=None, **kwargs):
-        """Sets the given cookie name/value with the given options. Set value
-        to None to clear.
-
-        Additional keyword arguments are set on the Cookie.Morsel
-        directly.
-        See http://docs.python.org/library/cookie.html#morsel-objects
-        for available attributes.
+    def set_cookie(self, name, value, expires_days=30, version=None,
+                   domain=None, expires=None, path="/", **kwargs):
+        """ Sets the given cookie name/value with the given options. Set value
+        to None to clear. The cookie value is secured using
+        `flexx.config.cookie_secret`; don't forget to set that config
+        value in your server. Additional keyword arguments are set on
+        the Cookie.Morsel directly.
         """
         # Assume tornado is available ...
-        from tornado import escape
-        from tornado import httputil
+        from tornado.escape import native_str
+        from tornado.httputil import format_timestamp
+        from tornado.web import create_signed_value
         
         # Clear cookie?
         if value is None:
             value = ""
             expires = datetime.datetime.utcnow() - datetime.timedelta(days=365)
+        else:
+            secret = config.cookie_secret
+            value = create_signed_value(secret, name, value, version=version,
+                                        key_version=None)
         
         # The cookie library only accepts type str, in both python 2 and 3
-        name = escape.native_str(name)
-        value = escape.native_str(value)
+        name = native_str(name)
+        value = native_str(value)
         if re.search(r"[\x00-\x20]", name + value):
             # Don't let us accidentally inject bad stuff
             raise ValueError("Invalid cookie %r: %r" % (name, value))
@@ -262,7 +273,7 @@ class Session:
             expires = datetime.datetime.utcnow() + datetime.timedelta(
                 days=expires_days)
         if expires:
-            morsel["expires"] = httputil.format_timestamp(expires)
+            morsel["expires"] = format_timestamp(expires)
         if path:
             morsel["path"] = path
         for k, v in kwargs.items():
