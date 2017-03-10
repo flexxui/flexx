@@ -307,7 +307,7 @@ class AppHandler(FlexxHandler):
                 self.redirect('/%s/' % app_name)  # redirect for normal serve
         else:
             # Create session - websocket will connect to it via session_id
-            session = manager.create_session(app_name)
+            session = manager.create_session(app_name, cookies=self.cookies)
             self.write(get_page(session).encode())
 
 
@@ -556,7 +556,8 @@ class WSHandler(WebSocketHandler):
                 session_id = message.split(' ', 1)[1].strip()
                 try:
                     self._session = manager.connect_client(self, self.app_name,
-                                                           session_id)
+                                                           session_id,
+                                                           cookies=self.cookies)
                 except Exception as err:
                     self.close(1003, "Could not launch app: %r" % err)
                     raise

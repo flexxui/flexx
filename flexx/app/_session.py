@@ -2,17 +2,22 @@
 Definition of the Session class.
 """
 
+import re
 import time
 import json
 import random
 import hashlib
 import weakref
+import datetime
+from http.cookies import SimpleCookie
 
 from ._model import Model, new_type
 from ._asset import Asset, Bundle, solve_dependencies
 from ._assetstore import AssetStore, export_assets_and_data, INDEX
 from ._assetstore import assets as assetstore
 from . import logger
+
+from .. import config
 
 reprs = json.dumps
 
@@ -59,6 +64,7 @@ class Session:
     def __init__(self, app_name, store=None):  # Allow custom store for testing
         self._store = store if (store is not None) else assetstore
         assert isinstance(self._store, AssetStore)
+        self._cookies = {}
         
         self._creation_time = time.time()  # used by app manager
         
@@ -196,6 +202,14 @@ class Session:
             self._ws.command(command)
         self._ws.command('INIT-DONE')
    
+    def _set_cookies(self, cookies=None):
+        """ To set cookies, must be an http.cookie.SimpleCookie object.
+        When the app is loaded as a web app, the cookies are set *before* the
+        main model is instantiated. Otherwise they are set when the websocket
+        is connected.
+        """
+        self._cookies = cookies if cookies else SimpleCookie()
+    
     def _set_app(self, model):
         if self._model is not None:
             raise RuntimeError('Session already has an associated Model.')
@@ -205,6 +219,79 @@ class Session:
         if self._runtime is not None:
             raise RuntimeError('Session already has a runtime.')
         self._runtime = runtime
+    
+    ## Cookies, mmm
+    
+    def get_cookie(self, name, default=None, max_age_days=31, min_version=None):
+        """ Gets the value of the cookie with the given name, else default.
+        Note that cookies only really work for web apps.
+        """
+        from tornado.web import decode_signed_value
+        if name in self._cookies:
+            value = self._cookies[name].value
+            value = decode_signed_value(config.cookie_secret,
+                                       name, value, max_age_days=max_age_days,
+                                       min_version=min_version)
+            return value.decode()
+        else:
+            return default
+    
+    def set_cookie(self, name, value, expires_days=30, version=None,
+                   domain=None, expires=None, path="/", **kwargs):
+        """ Sets the given cookie name/value with the given options. Set value
+        to None to clear. The cookie value is secured using
+        `flexx.config.cookie_secret`; don't forget to set that config
+        value in your server. Additional keyword arguments are set on
+        the Cookie.Morsel directly.
+        """
+        # This code is taken (in modified form) from the Tornado project
+        # Copyright 2009 Facebook
+        # Licensed under the Apache License, Version 2.0 
+        
+        # Assume tornado is available ...
+        from tornado.escape import native_str
+        from tornado.httputil import format_timestamp
+        from tornado.web import create_signed_value
+        
+        # Clear cookie?
+        if value is None:
+            value = ""
+            expires = datetime.datetime.utcnow() - datetime.timedelta(days=365)
+        else:
+            secret = config.cookie_secret
+            value = create_signed_value(secret, name, value, version=version,
+                                        key_version=None)
+        
+        # The cookie library only accepts type str, in both python 2 and 3
+        name = native_str(name)
+        value = native_str(value)
+        if re.search(r"[\x00-\x20]", name + value):
+            # Don't let us accidentally inject bad stuff
+            raise ValueError("Invalid cookie %r: %r" % (name, value))
+        if name in self._cookies:
+            del self._cookies[name]
+        self._cookies[name] = value
+        morsel = self._cookies[name]
+        if domain:
+            morsel["domain"] = domain
+        if expires_days is not None and not expires:
+            expires = datetime.datetime.utcnow() + datetime.timedelta(
+                days=expires_days)
+        if expires:
+            morsel["expires"] = format_timestamp(expires)
+        if path:
+            morsel["path"] = path
+        for k, v in kwargs.items():
+            if k == 'max_age':
+                k = 'max-age'
+            # skip falsy values for httponly and secure flags because
+            # SimpleCookie sets them regardless
+            if k in ['httponly', 'secure'] and not v:
+                continue
+            morsel[k] = v
+        
+        self._exec('document.cookie = "%s";' %
+                   morsel.OutputString().replace('"', '\\"'))
     
     ## Data
     

@@ -14,6 +14,7 @@ config = Config('flexx', '~appdata/.flexx.cfg',
                  'it is closed.'),
         ssl_certfile=('', str, 'The cert file for https server.'),
         ssl_keyfile=('', str, 'The key file for https server.'),
+        cookie_secret=('flexx_secret', str, 'The secret key to encode cookies.'),
         
         # flexx.webruntime
         webruntime=('', str, 'The default web runtime to use. '
