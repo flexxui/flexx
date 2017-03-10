@@ -5,11 +5,11 @@ Definition of the Session class.
 import re
 import time
 import json
-import http
 import random
 import hashlib
 import weakref
 import datetime
+from http.cookies import SimpleCookie
 
 from ._model import Model, new_type
 from ._asset import Asset, Bundle, solve_dependencies
@@ -208,7 +208,7 @@ class Session:
         main model is instantiated. Otherwise they are set when the websocket
         is connected.
         """
-        self._cookies = cookies if cookies else http.cookies.SimpleCookie()
+        self._cookies = cookies if cookies else SimpleCookie()
     
     def _set_app(self, model):
         if self._model is not None:
