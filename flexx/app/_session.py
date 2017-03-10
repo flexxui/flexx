@@ -224,6 +224,7 @@ class Session:
     
     def get_cookie(self, name, default=None, max_age_days=31, min_version=None):
         """ Gets the value of the cookie with the given name, else default.
+        Note that cookies only really work for web apps.
         """
         from tornado.web import decode_signed_value
         if name in self._cookies:
