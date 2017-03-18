@@ -2,7 +2,6 @@ Flexx
 =====
 
 [![Join the chat at https://gitter.im/zoofIO/flexx](https://badges.gitter.im/zoofIO/flexx.svg)](https://gitter.im/zoofIO/flexx?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 [![Build Status](https://travis-ci.org/zoofIO/flexx.svg)](https://travis-ci.org/zoofIO/flexx)
 [![Documentation Status](https://readthedocs.org/projects/flexx/badge/?version=latest)](https://flexx.readthedocs.org)
 
