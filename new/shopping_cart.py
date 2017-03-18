@@ -2,6 +2,10 @@
 An example for a shopping cart. More of a sketch really, of what it could look
 like. Some details (like names of mutator function) have not settled yet. But
 something like this should certainly be possible.
+
+In this example we have a clear separation of the application code and
+view/rendering code. It can also be argued to e.g. have a cart model
+class that handles the logic and also does the rendering.
 """
 
 from flexx import app, ui
@@ -99,16 +103,63 @@ class StoreWidget(ui.Widget):
         def init(self):
             
             # Views
-            self.catalog = ui.SomeWidgetThatDisplaysProducts()
-            self.cartwidget = ui.SomeWidgetThatDisplaysTheCart()
-        
-        @reaction('store.products')
-        def _update_quantities(self, *events):
-            for ev in events:
-                prod_id = ev.key
-                quantity = ev.data.quantity
-                self.catalog.set_quantity(prod_id, quantity)
+            self.catalog = WidgetThatDisplaysProducts()
+            self.cartwidget = WidgetThatDisplaysTheCart()        
 
+        
+class WidgetThatDisplaysProducts(ui.Widget):
+    
+    class JS:
+        
+        def init(self):
+        
+            self.vbox = ui.VBoxPanel()
+            self._product_labels = {}
+        
+        @app.reaction('root.store.products')
+        def _update_products(self, *events):
+            """ Rerender the inventory when the products change somehow.
+            """
+            for ev in events:
+                if ev.method == 'update':
+                    self._update_product(product)  # fast
+                else:
+                    self._rerender_inventory()  # slower
+                
+        def _rerender_inventory(self):
+            # Clear
+            for w in self.vbox.children:
+                w.dispose()
+            self.vbox.children = []
+            self._product_labels = {}
+            # Add products
+            for product in self.root.store.products:
+                with ui.HBox():
+                    self._product_labels[product.id] = ui.Label()
+                    ui.Button(text='Buy', on_mouse_click=lambda:self.root.add_product(product))
+                    self.update_product(product)
+        
+        def _update_product(self, product):
+            label =  self._product_labels[product.id]
+            label.set_text(text="%s (%i in store)" % (product.name, product.quantity))
+
+
+class WidgetThatDisplaysTheCart(ui.Widget):
+    
+    class JS:
+        
+        def init(self):
+            
+            self.label = ui.Label()
+            ui.Button(text='Checkout', on_mouse_click=self.root.cart.checkout)
+        
+        @app.react
+        def _update_cart(self):
+            html = '<b>Products in cart</b>:<br>'
+            for product in self.root.cart.added:
+                html += '%s (%ix)' % (product.name, product.quantity)
+            self.label.set_text(html)
+        
 
 if __name__ == '__main__':
     app.serve(StoreWidget)
