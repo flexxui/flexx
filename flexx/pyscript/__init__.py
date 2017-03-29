@@ -12,7 +12,7 @@ PyScript is a tool to write JavaScript using (a subset) of the Python
 language. All relevant buildins, and the methods of list, dict and str
 are supported. Not supported are set, slicing with steps,
 ``**kwargs``, ``with``, ``yield``. Imports are not supported. Other than that,
-most Python code should work as expected, though if you pry hard enough the
+most Python code should work as expected, though if you try hard enough the
 JavaScript may shine through. As a rule of thumb, the code should behave
 as expected when correct, but error reporting may not be very Pythonic.
 
