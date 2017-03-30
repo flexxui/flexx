@@ -1,6 +1,9 @@
-This document is intended to give a complete understanding of how the model
-class is used. You might also need the API docs to learn how to write things
-down exactly, though all relevant concepts should be covered here.
+# Docs for new Model class - now called Component
+
+This document is intended to give a complete understanding of how the Flexx
+``Component`` classes are used. You might also need the API docs to
+learn how to write things down exactly, though all relevant concepts
+should be covered here.
 
 This is not a particularly short text, but it does (should) cover
 everything. We try to be gentle by starting with an introduction and
@@ -9,12 +12,13 @@ an example that cover the most important bits.
 
 ## Introduction
 
-To understand how models work, there are four main concepts to understand:
-1) a model can contain code for both Python and JavaScript; 2) a model
-has state in the form of (read-only) properties, which are synchronised
-between JS and Python; 3) a model can have "actions" to mutate the state;
-4) a model can have "reactions" to keep the application up-to-date with
-the current state and react to (user) events.
+To understand how components work, there are four main concepts to understand:
+1) a component is either a ``PyComponent`` or a ``JSComponent``, i.e. defining
+behavior for server or client; 2) a component has state in the form of
+(read-only) properties, which are synchronised to JS/Python;
+3) a component can have "actions" to mutate the state; 4) a component can have
+"reactions" to keep the application up-to-date with the current state
+and react to (user) events.
 
 ```
                                                     Events
@@ -23,7 +27,7 @@ Actions                     -->  State         -->  Reactions
 (do work and mutate state)       (properties)       (make app reflect the state)
 ```
 
-The Model class promotes a certain information flow: it starts with an
+The ``Component`` classes promote a certain information flow: it starts with an
 action, which generally modifies properties. The combination of state
 mutations caused by one action should be seen as a single transition
 to a new state. These mutations lead to reactions that e.g. change the
@@ -35,46 +39,42 @@ level application state.
 
 If this seems complicated or confusing at first, don't worry, in most cases it
 Just Works, and you don't have to think too much about it. Actions and
-reactions are nothing more than methods of a model class.
+reactions are nothing more than methods of a component class.
 
 
 ## A simple example
 
 
 ```py
-class DrawingApp(ui.Widget):
+class DrawingWidget(flexx.JSComponent):
     
-    class State:
-        
-        points = prop([], doc='The drawn points')
-        color = prop('red', doc='Color of new points')
+    points = prop([], doc='The drawn points')
+    color = prop('red', doc='Color of new points')
     
-    class JS:
-        
-        def init(self):
-            self.label = ui.Label()
-            self.canvas = ui.Canvas()
-            ...
-        
-        @action
-        def add_point(self, x, y, color):
-            """An action to mutate the points property by appending a point."""
-            point = x, y, color
-            self._set_prop('points', points + [point])  # this is a mutation
-        
-        @reaction
-        def _update_label(self):
-            """A reaction to keep the label up-to-date."""
-            self.label.set_text('Drawing in ' + self.color)
-        
-        @reaction
-        def _draw_points(self):
-            """An action to react to changes in state by (re)drawing the points,
-            using fictive _clear() and _draw_point() methods."""
-            self._clear()
-            clr = self.color
-            for p in self.points:
-                self._draw_point(*p)
+    def init(self):
+        self.label = ui.Label()
+        self.canvas = ui.Canvas()
+        ...
+    
+    @action
+    def add_point(self, x, y, color):
+        """An action to mutate the points property by appending a point."""
+        point = x, y, color
+        self._set_prop('points', points + [point])  # this is a mutation
+    
+    @reaction
+    def _update_label(self):
+        """A reaction to keep the label up-to-date."""
+        self.label.set_text('Drawing in ' + self.color)
+    
+    @reaction
+    def _draw_points(self):
+        """An action to react to changes in state by (re)drawing the points,
+        using fictive _clear() and _draw_point() methods."""
+        self._clear()
+        clr = self.color
+        for p in self.points:
+            self._draw_point(*p)
 ```
 
 In the above example, the three aspects of action, state and reaction
@@ -83,90 +83,41 @@ cause the action to be invoked asynchronously. Its mostly that you cannot call
 ``_set_prop()`` and other mutator methods inside a reaction. More on that later.
 
 
-## Python and JavaScript
+## Python or JavaScript
 
-A model is written as a class that inherits (directly or indirectly) from `app.Model`,
-any code written at the usual indentation represents the Python-logic. 
-Code to run in JavaScript is written in a nested `JS` class. This keeps the code
-separated from the Python logic, and makes it easy to recognise by its extra indentation.
+The component classes that you use and write inherit (directly or
+indirectly) either from ``PyComponent`` or ``JSComponent``, which define where
+the app "operates".
 
+A py-component is always instantiated in Python, and can be
+associated with a session (more than one, actually, as we'll see later),
+where it will have a representation; from JS its properties can be observed,
+and its actions invoked (which will then run in Python).
 
-```py
-class MyModel(app.Model):
-    
-    def a_python_function(self):
-        pass
-    
-    class JS:
-        
-        def a_js_func(self):
-            pass
-```
+A js-component can be instantiated in JS, in which case the object only
+lives in JS, and can thus only be used from JS. When it is instantiated
+in Python, the object has a representation in both JS and Python; from
+both sided its state can be observed and actions invoked (which will then
+run in JS).
 
-### Initialisation
-
-An `init()` method can be written as an alternative to `__init__`, since
-the former is called at a better moment in the Model's initialisation
-procedure. Both the Python and JS side can implement an `init()`, and use it to
-initialize local (private) variables, instantiate new models, etc.
-
-### Instantiation in Python
-
-A model class can be instantiated in Python, making it available in both Python and
-JavaScript. The model must be associated with a session, usually by instantiating
-it in the `init()` of another model.
-
-The state of a model is available at both the Python and JS side. Actions can
-(usually) be invoked from either side as well, e.g. ``button.set_text()``.
-Assigning a sub-model to an attribute in the `init()` method will make
-that sub-model available at the JS side by the same attribute name:
-
-```py
-class MyModel(app.Model):
-    
-    def init(self):
-        self.submodel = AnotherModel()
-    
-    class JS:
-        
-        def a_js_func(self):
-            self.submodel.xxx
-```
-
-### Instantiation in JavaSript
-
-Models can also be instantiated in JavaScript, making them JS-only:
-they have no representation in Python, no syncing, etc. and are
-therefore lighter. Such models can still be used as property values (e.g.
-in ``some_widget.children``), in which case a stub object is used to
-represent the model in Python.
-
-For most applications, it is recommended to instantiate models that
-are not related to (high level) application state, such as most widgets, in JS.
-Some models may be unsuited because they need their presense in Python to work
-correctly.
+While we're on the subject of instantiation, any component class can have
+an ``init()`` method, which should generally be used as an alternative to
+`__init__`, since the former is called at a better moment in the component's
+initialisation procedure.
 
 
 ## State / properties
 
-State is represented as properties. These are readonly and can only be changed using
-private mutation functions (see below). Properties can only be mutated from JS (unless you
-use the `PyModel`, see below) and are then synced to Python. This might seem restrictive,
-but this keeps the flow of information unidirectional, which leads to more
-predictability and less bugs.
-
-State is usually written inside a nested `State` class. It is also possible to define
-properties at the Python or JS side, in which case they are not available at the
-other side (though you should probably use a private variable instead).
-
+State is represented as properties. These are readonly and can only be
+changed using private mutation functions (see below). This might seem
+restrictive, but this keeps the flow of information unidirectional,
+which leads to more predictability and less bugs.
 
 ```py
-class MyModel(app.Model):
+class MyModel(flexx.PyComponent):
     
-    class State:
-        
-        foo = prop('', doc='An example prop')
-        bar = prop(42, doc='Another example prop')
+    foo = prop('', doc='An example prop')
+    bar = prop(42, doc='Another example prop')
 ```
 
 
@@ -204,6 +155,10 @@ to JavaScript, where the mutation takes place. If the registered
 mutation is valid (not outdated), JS sends back a small acknowledge
 message instead of syncing the whole data.
 
+TODO: the above assumes that we can define methods on the Python side of a
+`JSComponent` class. Not sure yet how to do this, but it might make sense for special
+cases.
+
 
 ## Actions
 
@@ -213,28 +168,22 @@ iteration of the event loop, i.e. asynchronous, and therefore
 thread-safe. Actions that are called from other actions *are* invoked
 directly unless the implementation is on the other side (Python/JS).
 
-Actions can be implemented on both the Python and JS side, though only actions
-on the JS side can apply mutations (except for the ``PyModel`` class). 
-As long as the arguments are serializable, any action can be invoked from
-both the Python and JS side.
+Actions are implemented on either the Python and JS side (depending on whether
+ist a py-component or js-component), though can be invoked from both
+the Python and JS side, as long as the arguments are serializable.
 
 Actions are defined by decorating a method with `@action`:
 
 ```py
 class DrawinApp(ui.Widget):
     
-    class State:
-        
-        points = prop([], doc='The drawn points')
-        color = prop('red', doc='Color of new points')
+    points = prop([], doc='The drawn points')
+    color = prop('red', doc='Color of new points')
     
-    class JS:
-        ...
-        
-        @action
-        def add_point(self, x, y, color):
-            point = x, y, color
-            self._set_prop('points', points + [point])
+    @action
+    def add_point(self, x, y, color):
+        point = x, y, color
+        self._set_prop('points', points + [point])
 ```
 
 ### Setter actions
@@ -260,6 +209,8 @@ to mutate a property (e.g. ``set_priority()`` and ``increase_priority()``):
         if value not in ('red', 'green', 'blue'):
             raise ValueError('Only primary color allowed.')
         self._set_prop('color', value)
+        # ... or maybe simply like this?
+        self.color = value
 ```
 
 Note that since actions are asynchronous, calling `set_foo()` from a
@@ -275,33 +226,24 @@ that state changes, certain parts of your apps should react to reflect
 the new state. Ideally, it should be possible to apply a certain state to an app,
 and always have the same predictable outcome.
 
-Reactions can only be implemented on the JS side, because it makes no
-sense on the server side; actions should suffice there. (That's my feeling right
-now, at least.)
-
 Reactions are defined by decorating a method with `@reaction`:
 
 ``` py
 class DrawinApp(ui.Widget):
+
+    points = prop([], doc='The drawn points')
+    color = prop('red', doc='Color of new points')
+
+    @reaction
+    def _update_label(self):
+        self.label.set_text('Drawing in ' + self.color)
     
-    class State:
-        
-        points = prop([], doc='The drawn points')
-        color = prop('red', doc='Color of new points')
-    
-    class JS:
-        ...
-       
-        @reaction
-        def _update_label(self):
-            self.label.set_text('Drawing in ' + self.color)
-        
-        @reaction
-        def _draw_points(self):
-            """Draw the points, using fictive _clear() and _draw_point() methods."""
-            self._clear()
-            for p in self.points:
-                self._draw_point(*p)
+    @reaction
+    def _draw_points(self):
+        """Draw the points, using fictive _clear() and _draw_point() methods."""
+        self._clear()
+        for p in self.points:
+            self._draw_point(*p)
 ```
 
 Reaction functions are automatically called when any of the properties that are
@@ -333,9 +275,9 @@ def _update_stuff(self, ev):
 
 The explicit form can also be used to react to mutations, in which case
 they can be handled individually. This can be convenient to target
-certain mutations very precisely, e.g. keeping track of changing
-properties of models in a large list without having to iterate over the
-list. Or for effectively keeping track of `array_prop` and `dict_prop` by
+certain mutations precisely, e.g. keeping track of changing
+properties of multiple components without having to iterate over them.
+Or for effectively keeping track of `array_prop` and `dict_prop` by
 "replicating" the mutations instead of resetting the data as a whole:
 
 ```py
@@ -358,7 +300,7 @@ corresponding mutation function.
 ### In-line reactions
 
 Reactions can be written in just one line of code while initializing a
-model. This helps keeping your code compact and declarative. The color
+component. This helps keeping your code compact and declarative. The color
 label example above could thus also be written as:
 
 ```py
@@ -414,29 +356,21 @@ in the docstring. In this case the emitter converts the native JS mouse event to
 a (simpler) Flexx event.
 
 
-## PyModel
+## Sharing a PyComponent
 
-Most text in this document relates to "common" models. There is, however, also
-a `PyModel` class that offers some interesting mechanics.
-
-The `PyModel` class can be instantiated at any time and is initially not associated
-with any session. When it is set as an attribute on another model, it is 
-associated with the session corresponding to that model, allowing the JS side
-of that model to use its state. Since mutations are done at the Python side,
-changes originating from Python can be communicated more efficiently. (In the ``Model``
-class an action would first be communicated to JS, where the mutation takes place,
-followed by syncing back the mutation to Py.)
-
-Furthermore, a `PyModel` instance can be used by multiple sessions at the
-same time, allowing multiple connected users to have a shared state,
-e.g. for a chat application.
+The ``PyComponent`` class can be instantiated at any time; and is associated
+with a session when it is set as an attribute on another py-component.
+In this way it is possible to associate it with *multiple*
+sessions, which offers some interesting mechanics, such as providing
+a shared state between clients, e.g. for a chat application.
 
 
 ## Tips
 
-When writing a higher level widget with subwidgets, consider what the "application state"
-of your model is, and represent that with properties; avoid using properties of submodels
-to manage such state. 
+When writing a higher level widget with subwidgets, consider what the
+"application state" of your component is, and represent that with
+properties; avoid using properties of subcomponents to manage such
+state.
 
 In deciding whether a function should be an action or a reaction, consider whether
 what you're writing represents a certain "action" that ought to cause a mutation in
@@ -447,7 +381,9 @@ state, or whether it is something to make your app reflect (i.e. react to) the c
 
 The example below is an extended version of the example at the start of this document:
 
-* It adds actions to save and restore the points at the server side.
+* It adds a ``DrawingApp`` class, which inherits from ``PyComponent``, which
+  represents the app and operates in Python.
+* This new class has actions to save and restore the points.
 * It makes use of ``array_prop`` to represent the points, so that when a point
   is added, the mutation to sync to the server is just a small message.
 * Also, the above allows more efficient drawing when points are only added.
@@ -457,17 +393,15 @@ The example below is an extended version of the example at the start of this doc
 
 ```py
 
-class DrawingApp(ui.Widget):
+class DrawingApp(flexx.PyComponent):
     
-    class State:
-        
-        points = array_prop(settable=True, doc='The drawn points')
-        color = prop('red', doc='Color of new points')
+    def init(self):
+        self.view = DrawingWidget()
     
     @action
     def save(self):
         """Save the currently drawn points at the server."""
-        s = json.dumps(self.points)
+        s = json.dumps(self.view.points)
         with open('~/points.json', 'wt') as f:
             f.write(s)
     
@@ -475,38 +409,42 @@ class DrawingApp(ui.Widget):
     def load(self):
         """Load the currently drawn points from the latest save point."""
         s = open('~/points.json', 'rt').read()
-        self.set_points(json.loads(s))  # invoke action set_points
+        self.view.set_points(json.loads(s))  # invoke action set_points
+
+
+class DrawingWidget(ui.Widget):
     
-    class JS:
-        
-        def init(self):
-            ui.Label(text=lambda:'Drawing in ' + self.color)
-            self.canvas = ui.Canvas(on_mouse_click=lambda ev: self.add_point(ev.x, ev.y, self.color))
-            ...
-        
-        @action
-        def add_point(self, x, y, color):
-            point = x, y, color
-            self._push_prop('points', None, [point])
-        
-        # Instead of the inline acion above, this would also work:
-        #@reaction('canvas.mouse_click')
-        #def _add_point_from_click(self, ev):
-        #    self.add_point(ev.x, ev.y, self.color)
-        
-        @reaction('points')
-        def _draw_points(self, *events):
-            """Draw the points, using fictive _clear() and _draw_point() methods."""
-            for ev in events:
-                if ev.method == 'push':
-                    assert ev.start is None  # only appends, not insert
-                    for point in ev.data:
-                        self._draw_point(*point)
-                elif ev.method == 'set':
-                    self._clear()
-                    for point in self.points:
-                        self._draw_point(*point)
-                else:
+    points = array_prop(settable=True, doc='The drawn points')
+    color = prop('red', doc='Color of new points')
+
+    def init(self):
+        ui.Label(text=lambda:'Drawing in ' + self.color)
+        self.canvas = ui.Canvas(on_mouse_click=lambda ev: self.add_point(ev.x, ev.y, self.color))
+        ...
+    
+    @action
+    def add_point(self, x, y, color):
+        point = x, y, color
+        self._push_prop('points', None, [point])
+    
+    # Instead of the inline acion above, this would also work:
+    #@reaction('canvas.mouse_click')
+    #def _add_point_from_click(self, ev):
+    #    self.add_point(ev.x, ev.y, self.color)
+    
+    @reaction('points')
+    def _draw_points(self, *events):
+        """Draw the points, using fictive _clear() and _draw_point() methods."""
+        for ev in events:
+            if ev.method == 'push':
+                assert ev.start is None  # only appends, not insert
+                for point in ev.data:
+                    self._draw_point(*point)
+            elif ev.method == 'set':
+                self._clear()
+                for point in self.points:
+                    self._draw_point(*point)
+            else:
                     raise RuntimeError('was only expecting set and push mutations.')
 ```
 
@@ -514,33 +452,35 @@ class DrawingApp(ui.Widget):
 
 ## Programming patterns
 
-This section describes how you can keep your app easy to maintain as it grows
-by providing three examples.
+This section describes how you can keep your app easy to maintain as
+it grows by providing three examples. The exact way depends on the
+use-case, but the main point is to separate "drawing code" from
+application logic, and to implement high-level application logic in a
+central place. Web apps tend to have more js-components, whereas desktop
+apps might have more py-components.
 
 ### A silly app component
 
-In the first example, we write a component of an app that displays the username.
-It also implements an action to perform a login (the details of the login process
-are not interesting for this example). On sucess, a label text is updated to display
-the username.
+In the first example, we write a component of an app that displays the
+username. It also implements an action to perform a login (the details
+of the login process are not interesting for this example). On sucess,
+a label text is updated to display the username.
 
 ```py
 class SomeWidget(ui.Widget):
     
-    class JS:
-        
-        def init(self):
-            self.username_label = ui.Label()
-        
-        @action
-        def login(self, username):
-            success = self.try_login(username)
-            if success:
-                self.username_label.set_text(username)
+    def init(self):
+        self.username_label = ui.Label()
+    
+    @action
+    def login(self, username):
+        success = self.try_login(username)
+        if success:
+            self.username_label.set_text(username)
 ...
 
 This could work, but becomes annoying when the username is used in other places,
-or when the login action is implemented on another model; other parts of your
+or when the login action is implemented on another component; other parts of your
 app must then be aware of the `username_label`, and that makes things hard to maintain.
 Actually, its good practice to use private attribute names for sub components.
 
@@ -555,20 +495,16 @@ to the view.
 ```py
 class SomeWidget(ui.Widget):
     
-    class State:
+    username = prop('', settable=str)
         
-        username = prop('', settable=str)
+    def init(self):
+        ui.Label(text=lambda: self.username)
     
-    class JS:
-        
-        def init(self):
-            ui.Label(text=lambda: self.username)
-        
-        @action
-        def login(self, username):
-            success = self.try_login(username)
-            if success:
-                self.set_username(username)
+    @action
+    def login(self, username):
+        success = self.try_login(username)
+        if success:
+            self.set_username(username)
 ...
 
 A nice side effect is that all code related to the label is constrained to a
@@ -576,22 +512,20 @@ single line and we don't even have to give the label a name. The login action
 is also easier to read because ``set_username()`` has semantic meaning. As your
 app grows, however, the login procedure might be implemented in a different place,
 or there might be more ways to set the username, and in all places you'd need
-a reference to this model in order to store the username.
+a reference to this component in order to store the username.
 
 
 ### The Elm architecture
 
 In the Elm architecture, you keep track of (most) state in a central place.
-Flexx provides a means to implement this pattern via the ``root`` model, which
-for each model points to the main application.
-
+Flexx provides a means to implement this pattern via the ``root`` component,
+which represents the main/central component of the application.
 
 ```py
 
 class MyApp(ui.Widget):
     
-    class State:
-        username = prop('', settable=str)
+    username = prop('', settable=str)
     
     def init(self):
         
@@ -615,20 +549,18 @@ class SomeOtherWidget(ui.Widget):
 ...
 
 Now, this does not mean that all state should be put at the root
-application object, but things that apply to the whole app are certainly
+application component, but things that apply to the whole app are certainly
 easier to manage when they are stored in a central place.
 
-A hybrid form is also possible, where models keep a reference to a shared
-model to store state:
+A hybrid form is also possible, where a component keep a reference to another
+component which acts as a model to store state:
 
 ```py
 class SomeWidget(ui.Widget):
     
-    def init(self, sharedmodel):
-        self.sharedmodel = sharedmodel
+    def init(self, given_model):
+        self.given_model = given_model
     
-    class JS:
-        
-        def init(self):
-            ui.Label(text=lambda: self.sharedmodel.username) 
+    def init(self):
+        ui.Label(text=lambda: self.given_model.username) 
 ```

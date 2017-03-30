@@ -11,7 +11,7 @@ class that handles the logic and also does the rendering.
 from flexx import app, ui
 
 
-class Store(app.PyModel):
+class Store(app.PyComponent):
     """ A server-side model that tracks the inventory at the server. Shared by all
     clients.
     """
@@ -45,7 +45,7 @@ class Store(app.PyModel):
 store = Store()
 
 
-class Cart(app.Model):
+class Cart(app.JSComponent):
     """ Representation of (the bisiness logic of) a shopping cart.
     """
     
@@ -88,77 +88,70 @@ class Cart(app.Model):
             self._set_prop('checkout_status', -1)
 
 
-class StoreWidget(ui.Widget):
+class StoreWidget(app.PyComponent):
     """ The main widget.
     """
     
     def init(self):
         
-        # Models that represent business logic
+        # Models that represent application logic
         self.store = store
         self.cart = Cart()
-    
-    class JS:
         
-        def init(self):
-            
-            # Views
+        # Views
+        with ui.HBox() as self.view:
             self.catalog = WidgetThatDisplaysProducts()
-            self.cartwidget = WidgetThatDisplaysTheCart()        
+            self.cartwidget = WidgetThatDisplaysTheCart()
 
-        
-class WidgetThatDisplaysProducts(ui.Widget):
+
+class WidgetThatDisplaysProducts(ui.Widget):  # a JSComponent
+
+    def init(self):
     
-    class JS:
-        
-        def init(self):
-        
-            self.vbox = ui.VBoxPanel()
-            self._product_labels = {}
-        
-        @app.reaction('root.store.products')
-        def _update_products(self, *events):
-            """ Rerender the inventory when the products change somehow.
-            """
-            for ev in events:
-                if ev.method == 'update':
-                    self._update_product(product)  # fast
-                else:
-                    self._rerender_inventory()  # slower
-                
-        def _rerender_inventory(self):
-            # Clear
-            for w in self.vbox.children:
-                w.dispose()
-            self.vbox.children = []
-            self._product_labels = {}
-            # Add products
-            for product in self.root.store.products:
-                with ui.HBox():
-                    self._product_labels[product.id] = ui.Label()
-                    ui.Button(text='Buy', on_mouse_click=lambda:self.root.add_product(product))
-                    self.update_product(product)
-        
-        def _update_product(self, product):
-            label =  self._product_labels[product.id]
-            label.set_text(text="%s (%i in store)" % (product.name, product.quantity))
-
-
-class WidgetThatDisplaysTheCart(ui.Widget):
+        self.vbox = ui.VBoxPanel()
+        self._product_labels = {}
     
-    class JS:
-        
-        def init(self):
+    @app.reaction('root.store.products')
+    def _update_products(self, *events):
+        """ Rerender the inventory when the products change somehow.
+        """
+        for ev in events:
+            if ev.method == 'update':
+                self._update_product(product)  # fast
+            else:
+                self._rerender_inventory()  # slower
             
-            self.label = ui.Label()
-            ui.Button(text='Checkout', on_mouse_click=self.root.cart.checkout)
+    def _rerender_inventory(self):
+        # Clear
+        for w in self.vbox.children:
+            w.dispose()
+        self.vbox.children = []
+        self._product_labels = {}
+        # Add products
+        for product in self.root.store.products:
+            with ui.HBox():
+                self._product_labels[product.id] = ui.Label()
+                ui.Button(text='Buy', on_mouse_click=lambda:self.root.add_product(product))
+                self.update_product(product)
+    
+    def _update_product(self, product):
+        label =  self._product_labels[product.id]
+        label.set_text(text="%s (%i in store)" % (product.name, product.quantity))
+
+
+class WidgetThatDisplaysTheCart(ui.Widget):  # a JSComponent
+
+    def init(self):
         
-        @app.react
-        def _update_cart(self):
-            html = '<b>Products in cart</b>:<br>'
-            for product in self.root.cart.added:
-                html += '%s (%ix)' % (product.name, product.quantity)
-            self.label.set_text(html)
+        self.label = ui.Label()
+        ui.Button(text='Checkout', on_mouse_click=self.root.cart.checkout)
+    
+    @app.react
+    def _update_cart(self):
+        html = '<b>Products in cart</b>:<br>'
+        for product in self.root.cart.added:
+            html += '%s (%ix)' % (product.name, product.quantity)
+        self.label.set_text(html)
         
 
 if __name__ == '__main__':
