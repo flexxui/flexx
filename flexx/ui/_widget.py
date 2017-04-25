@@ -792,5 +792,9 @@ class Widget(Model):
                             self.outernode.classList.add('flx-hbox')
                         else:
                             self.outernode.classList.add('flx-vbox')
-                    elif 'flx-BoxPanel' in subClassName:
+                    elif ('flx-BoxPanel' in subClassName or 
+                          'flx-SplitPanel' in subClassName or
+                          'flx-DockPanel' in subClassName or
+                          'flx-StackPanel' in subClassName or
+                          'flx-TabPanel' in subClassName):
                         self.outernode.classList.add('flx-abs-children')
