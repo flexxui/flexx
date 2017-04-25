@@ -20,7 +20,7 @@ Example:
 """
 
 from ... import event
-from ...pyscript import RawJS
+from ...pyscript import RawJS, window
 from . import Layout
 
 
@@ -66,7 +66,8 @@ class SplitPanel(Layout):
         def _init_phosphor_and_node(self):
             self.phosphor = _phosphor_splitpanel.SplitPanel()
             self.node = self.phosphor.node
-            window.setTimeout(0.01, self._set_flexes)  # Phosphor seems to need one iter to "settle"
+            # Phosphor seems to need one iter to "settle"
+            window.setTimeout(0.01, self._set_flexes)
         
         @event.connect('spacing')
         def __spacing_changed(self, *events):
