@@ -20,7 +20,7 @@ Example:
 """
 
 from ... import event
-from ...pyscript import RawJS
+from ...pyscript import RawJS, window
 from . import Layout
 
 
@@ -40,6 +40,11 @@ class SplitPanel(Layout):
     
     class Both:
     
+        @event.prop
+        def spacing(self, v=5):
+            """ The space between two child elements (in pixels)"""
+            return float(v)
+        
         @event.prop
         def orientation(self, v=None):
             """ The orientation of the child widgets. 'h' or 'v'. Default
@@ -61,13 +66,27 @@ class SplitPanel(Layout):
         def _init_phosphor_and_node(self):
             self.phosphor = _phosphor_splitpanel.SplitPanel()
             self.node = self.phosphor.node
+            # Phosphor seems to need one iter to "settle"
+            window.setTimeout(0.01, self._set_flexes)
         
-        @event.connect('orientation')
-        def __orientation_changed(self, *events):
+        @event.connect('spacing')
+        def __spacing_changed(self, *events):
+            self.phosphor.spacing = self.spacing
+        
+        @event.connect('orientation', 'children', 'children*.flex')
+        def _set_flexes(self, *events):
             ori = self.orientation
+            i = 0 if ori in (0, 'h', 'hr') else 1
+            # Set orientation
             if ori == 0 or ori == 'h':
                 self.phosphor.orientation = 'horizontal'
             elif ori == 1 or ori == 'v':
                 self.phosphor.orientation = 'vertical'
             else:
                 raise ValueError('Invalid splitter orientation: ' + ori)
+            # Set sizes
+            flexes = []
+            for widget in self.children:
+                flex = widget.flex[i]
+                flexes.append(flex + 0.1)
+            self.phosphor.setRelativeSizes(flexes)
