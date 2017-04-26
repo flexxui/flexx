@@ -20,3 +20,4 @@ from ._canvas import CanvasWidget
 from ._color import ColorSelectWidget
 from ._media import ImageWidget, VideoWidget, YoutubeWidget
 from ._html import Div, html
+from ._leaflet import MapWidget

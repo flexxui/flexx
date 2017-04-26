@@ -15,19 +15,22 @@ except Exception:
     warning = info = print
 
 try:
-    from urllib.request import urlopen
+    from urllib.request import urlopen, Request
 except ImportError:
     try:
-        from urllib2 import urlopen  # Legacy Python
+        from urllib2 import urlopen, Request  # Legacy Python
     except ImportError:
         raise RuntimeError('Could not import urlopen.')
 
 
 # Definition of remote resources, optionally versioned ('{}' in url becomes tag)
 phosphor_url = 'https://raw.githubusercontent.com/zoofIO/phosphor-all/{}/dist/'
+leaflet_url = 'https://unpkg.com/leaflet@{}/dist/'
 RESOURCES = {
     'phosphor-all.js': (phosphor_url + 'phosphor-all.js', '94d59b003849f'),
     'phosphor-all.css': (phosphor_url + 'phosphor-all.css', '94d59b003849f'),
+    'leaflet.js': (leaflet_url + 'leaflet.js', '1.0.3'),
+    'leaflet.css': (leaflet_url + 'leaflet.css', '1.0.3'),
 }
 
 
@@ -80,7 +83,8 @@ def _fetch_file(url):
     info('Downloading %s' % url)
     for tries in range(4):
         try:
-            return urlopen(url, timeout=5.0).read()
+            req = Request(url, headers={'User-Agent': 'flexx'})
+            return urlopen(req, timeout=5.0).read()
         except Exception as e:
             warning('Error while fetching file: %s' % str(e))
     raise IOError('Unable to download %r. Perhaps there is a no internet '
