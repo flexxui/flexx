@@ -711,6 +711,11 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             # print('retrieving data for', self.id, 'from', url)
             def process_response():
                 if xhr.status == 200:
+                    if meta.byteLength and meta.byteLength != xhr.response.byteLength:
+                        # Seen on FF with large data
+                        b1, b2 = meta.byteLength, xhr.response.byteLength
+                        raise RuntimeError('Failed to retrieve the whole data! '
+                                           '%i vs %i bytes' % (b1, b2))
                     self.receive_data(xhr.response, meta)
                 else:
                     raise RuntimeError("Retrieving data for %s failed with "

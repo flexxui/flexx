@@ -323,6 +323,7 @@ class Session:
         elif isinstance(data, bytes):
             # Blob: store it, and tell client to retieve it with AJAX
             # todo: have a second ws connection for pushing data
+            meta['byteLength'] = len(data)
             data_name = 'blob-' + get_random_string()
             url = '/flexx/data/%s/%s' % (self.id, data_name)
             self._data_volatile[data_name] = data
