@@ -223,11 +223,19 @@ class Parser1(Parser0):
     
     ## Variables
     
+    def set_name_prefix(self, prefix):
+        # To avoid name clashes e.g. in comprehensions, which have their own
+        # scope in Python, but we want to apply these as a for loop in JS
+        # where possible.
+        self._name_prefix = prefix
+    
     def parse_Name(self, node):
         # node.ctx can be Load, Store, Del -> can be of use somewhere?
         name = node.name
         if self.vars.get(name, None):
             name = self.with_prefix(name)
+        elif self._name_prefix and (self._name_prefix + name) in self.vars:
+            name = self._name_prefix + name  # apply the current prefix
         elif name in self.NAME_MAP:
             name = self.NAME_MAP[name]
         else:
@@ -497,8 +505,14 @@ class Parser1(Parser0):
             code.append(' = ')
         
         # Parse right side
-        code += self.parse(node.value_node)
-        code.append(';')
+        if isinstance(node.value_node, ast.ListComp) and len(node.target_nodes) == 1:
+            result_name = self.dummy()
+            code.append(result_name + ';')
+            lc_code = self.parse_ListComp_funtionless(node.value_node, result_name)
+            code = [self.lf(), result_name + ' = [];'] + lc_code + code
+        else:
+            code += self.parse(node.value_node)
+            code.append(';')
         
         # Handle tuple unpacking
         if tuple:

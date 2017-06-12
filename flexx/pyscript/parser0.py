@@ -164,6 +164,7 @@ class Parser0:
         self._stack = []
         self._indent = indent
         self._dummy_counter = 0
+        self._name_prefix = ''
         
         # To keep track of std lib usage
         self._std_functions = set()
