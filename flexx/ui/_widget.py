@@ -141,15 +141,18 @@ class Widget(Model):
         """ Overloaded version of dispose() that will also
         dispose any child widgets.
         """
+        # Dispose children? Yes, each widget can have exactly one parent and
+        # when that parent is disposed, it makes sense to assume that the
+        # child ought to be disposed as well. It avoids memory leaks. If a
+        # child is not supposed to be disposed, the developer should orphan the
+        # child widget.
         children = self.children
-        self.children = []
-        # Dispose children? Yes, it makes sense because each widget can
-        # have exactly one parent and when that parent is disposed, it
-        # makes sense to assume that the child ought to be disposed as
-        # well. It avoids memory leaks. If a child is not supposed to
-        # be disposed, the developer should orphan the child widget.
+        # First dispose children (so they wont send messages back), then clear
+        # the children and dispose ourselves.
         for child in children:
             child.dispose()
+        self.parent = None
+        self.children = ()  # tuple, to avoid triggering a reset when called twice
         super().dispose()
     
     @event.connect('parent:aaa')
@@ -373,7 +376,7 @@ class Widget(Model):
                 except Exception as err:
                     print(err)
             super().dispose()
-            
+        
         @event.connect('style')
         def __style_changed(self, *events):
             """ Emits when the style signal changes, and provides a dict with

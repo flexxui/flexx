@@ -237,7 +237,7 @@ class TreeWidget(Widget):
     def dispose(self):
         # Note that we do not call dispose on the items like Widget does for its
         # children, because items can be in multiple items/trees at the same time.
-        self.items = []
+        self.items = ()
         super().dispose()
     
     class Both:
@@ -271,10 +271,6 @@ class TreeWidget(Widget):
             return items
     
     class JS:
-        
-        # def dispose(self):
-        #     self._items_value = []
-        #     super().dispose()
         
         def _init_phosphor_and_node(self):
             self.phosphor = self._create_phosphor_widget('div')
@@ -373,7 +369,7 @@ class TreeItem(Model):
                                'of a TreeWidget or TreeItem.')
     
     def dispose(self):
-        self.items = []
+        self.items = ()
         super().dispose()
     
     class Both:

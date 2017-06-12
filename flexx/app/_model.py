@@ -353,6 +353,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         session = kwargs.pop('session', None)
         kwargs.pop('is_app', None)
         
+        self._disposed = False
+        
         # Init session
         if session is None:
             active_model = get_active_model()
@@ -466,6 +468,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             except Exception:
                 pass  # ws can be closed/gone if this gets invoked from __del__
         super().dispose()
+        self._disposed = True
     
     @property
     def id(self):
@@ -495,7 +498,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         # This is mostly intended for attributes set during init() but works
         # at any time.
         event.HasEvents.__setattr__(self, name, value)
-        if isinstance(value, Model):
+        if isinstance(value, Model) and not self._disposed:
             if not (name in self.__properties__ or
                     (name.endswith('_value') and name[1:-6] in self.__properties__)):
                 txt = serializer.saves(value)
@@ -509,7 +512,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         if not self.__pending_props_from_js:
             call_later(0.01, self.__set_prop_from_js_pending)
         self.__pending_props_from_js.append((name, value))
-    
+
     def __set_prop_from_js_pending(self):
         # Collect near-simultaneous prop settings in one handler call,
         # see __emit_from_js_pending
@@ -527,7 +530,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         logger.debug('Setting prop %r on %s, fromjs=%s' % (name, self.id, fromjs))
         ischanged = super()._set_prop(name, value, _initial)
         
-        if ischanged and issyncable and not fromjs:
+        if ischanged and issyncable and not fromjs and not self._disposed:
             value = getattr(self, name)  # use normalized value
             txt = serializer.saves(value)
             cmd = 'flexx.instances.%s._set_prop_from_py(%s, %s);' % (
@@ -570,11 +573,14 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         ev = super().emit(type, info)
         isprop = type in self.__properties__ and type not in self.__local_properties__
         if not fromjs and not isprop and type in self.__event_types_js:
-            cmd = 'flexx.instances.%s._emit_from_py(%s, %r);' % (
-                self._id, serializer.saves(type), serializer.saves(ev))
-            self._session._exec(cmd)
+            if not self._disposed:
+                cmd = 'flexx.instances.%s._emit_from_py(%s, %r);' % (
+                    self._id, serializer.saves(type), serializer.saves(ev))
+                self._session._exec(cmd)
     
     def call_js(self, call):
+        if self._disposed:
+            return
         # Not documented; not sure if we keep it. Handy for debugging though
         cmd = 'flexx.instances.%s.%s;' % (self._id, call)
         self._session._exec(cmd)
@@ -626,6 +632,9 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             
             self._sync_props = True
             
+            # Store the websocket instance, so that we can clear it when disposed
+            self._ws = window.flexx.ws
+            
             self._event_listeners = []  # JS event listeners
             
             # Init HasEvents, but delay initialization of handlers
@@ -661,6 +670,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 except Exception as err:
                     print(err)
             del window.flexx.instances[self._id]
+            self._ws = None  # don't send messaged back to server
         
         def _register_handler(self, *args):
             event_type = args[0].split(':')[0]
@@ -684,7 +694,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             islocal = self.__local_properties__.indexOf(name) >= 0
             issyncable = not _initial and not islocal and self._sync_props
             
-            if window.flexx.ws is None:  # Exported app
+            if self._ws is None:  # Exported app
                 super()._set_prop(name, value, _initial)
                 return
             
@@ -693,14 +703,14 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             if ischanged and issyncable:
                 value = self[name]
                 txt = serializer.saves(value)
-                window.flexx.ws.send('SET_PROP ' + [self.id, name, txt].join(' '))
+                self._ws.send('SET_PROP ' + [self.id, name, txt].join(' '))
         
         def _handlers_changed_hook(self):
             handlers = self.__handlers
             types = [name for name in handlers.keys() if len(handlers[name])]
             text = serializer.saves(types)
-            if window.flexx.ws:
-                window.flexx.ws.send('SET_EVENT_TYPES ' + [self.id, text].join(' '))
+            if self._ws:
+                self._ws.send('SET_EVENT_TYPES ' + [self.id, text].join(' '))
         
         def _set_event_types_py(self, event_types):
             self.__event_types_py = event_types
@@ -717,8 +727,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             
             if not frompy and not isprop and type in self.__event_types_py:
                 txt = serializer.saves(ev)
-                if window.flexx.ws:
-                    window.flexx.ws.send('EVENT ' + [self.id, type, txt].join(' '))
+                if self._ws:
+                    self._ws.send('EVENT ' + [self.id, type, txt].join(' '))
         
         def retrieve_data(self, url, meta):
             """ Make an AJAX call to retrieve a blob of data. When the
