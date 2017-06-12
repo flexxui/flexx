@@ -642,11 +642,58 @@ class Parser2(Parser1):
     
     ## Comprehensions
     
+    def parse_ListComp_funtionless(self, node, result_name):
+        
+        prefix = result_name
+        self.set_name_prefix(prefix)
+        code = []
+        
+        for iter, comprehension in enumerate(node.comp_nodes):
+            cc = []
+            # Get target (can be multiple vars)
+            if isinstance(comprehension.target_node, ast.Tuple):
+                target = [''.join(self.parse(t)) for t in 
+                          comprehension.target_node.element_nodes]
+            else:
+                target = [''.join(self.parse(comprehension.target_node))]
+            target = [prefix + t for t in target]
+            for t in target:
+                self.vars.add(t)
+            self.vars.add(prefix + 'i%i' % iter)
+            self.vars.add(prefix + 'iter%i' % iter)
+            
+            # comprehension(target_node, iter_node, if_nodes)
+            cc.append('iter# = %s;' % ''.join(self.parse(comprehension.iter_node)))
+            cc.append('if ((typeof iter# === "object") && '
+                    '(!Array.isArray(iter#))) {iter# = Object.keys(iter#);}')
+            cc.append('for (i#=0; i#<iter#.length; i#++) {')
+            cc.append(self._iterator_assign('iter#[i#]', *target))
+            # Ifs
+            if comprehension.if_nodes:
+                cc.append('if (!(')
+                for iff in comprehension.if_nodes:
+                    cc += unify(self.parse(iff))
+                    cc.append('&&')
+                cc.pop(-1)  # pop '&&'
+                cc.append(')) {continue;}')
+            # Insert code for this comprehension loop
+            code.append(''.join(cc).replace('i#', prefix + 'i%i' % iter).replace(
+                                            'iter#', prefix + 'iter%i' % iter))
+        
+        # Push result
+        elt = ''.join(self.parse(node.element_node))
+        code.append('{%s.push(%s);}' % (result_name, elt))
+        for comprehension in node.comp_nodes:
+            code.append('}')  # end for
+        
+        self.set_name_prefix('')
+        return code
+    
     def parse_ListComp(self, node):
         
         self.push_stack('function', 'listcomp')
         elt = ''.join(self.parse(node.element_node))
-        code = ['(function list_comprehension () {', 'var res = [];']
+        code = ['(function list_comprehension (iter0) {', 'var res = [];']
         vars = []
         
         for iter, comprehension in enumerate(node.comp_nodes):
@@ -659,10 +706,14 @@ class Parser2(Parser1):
                 target = [''.join(self.parse(comprehension.target_node))]
             for t in target:
                 vars.append(t)
+            vars.append('i%i' % iter)
+            
             # comprehension(target_node, iter_node, if_nodes)
-            cc.append('iter# = %s;' % ''.join(self.parse(comprehension.iter_node)))
+            if iter > 0:  # first one is passed to function as an arg
+                cc.append('iter# = %s;' % ''.join(self.parse(comprehension.iter_node)))
+                vars.append('iter%i' % iter)
             cc.append('if ((typeof iter# === "object") && '
-                      '(!Array.isArray(iter#))) {iter# = Object.keys(iter#);}')
+                    '(!Array.isArray(iter#))) {iter# = Object.keys(iter#);}')
             cc.append('for (i#=0; i#<iter#.length; i#++) {')
             cc.append(self._iterator_assign('iter#[i#]', *target))
             # Ifs
@@ -676,14 +727,14 @@ class Parser2(Parser1):
             # Insert code for this comprehension loop
             code.append(''.join(cc).replace('i#', 'i%i' % iter).replace(
                                             'iter#', 'iter%i' % iter))
-            vars.extend(['iter%i' % iter, 'i%i' % iter])
         # Push result
         code.append('{res.push(%s);}' % elt)
         for comprehension in node.comp_nodes:
             code.append('}')  # end for
         # Finalize
         code.append('return res;})')  # end function
-        code.append('.apply(this)')  # call function
+        iter0 = ''.join(self.parse(node.comp_nodes[0].iter_node))
+        code.append('.call(this, ' + iter0 + ')')  # call funct with iter as 1st arg
         code.insert(2, 'var %s;' % ', '.join(vars))
         # Clean vars
         for var in vars:
@@ -692,6 +743,7 @@ class Parser2(Parser1):
         return code
         
         # todo: apply the apply(this) trick everywhere where we use a function
+    
     # SetComp
     # GeneratorExp
     # DictComp

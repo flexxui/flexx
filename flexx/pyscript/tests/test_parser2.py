@@ -16,7 +16,7 @@ class TestConrolFlow:
     
     def test_ignore_if_name_is_main(self):
         assert py2js('if __name__ == "__main__":4') == ''
-        
+    
     def test_if(self):
         # Normal if
         assert evalpy('if True: 4\nelse: 5') == '4'
@@ -159,30 +159,74 @@ class TestConrolFlow:
     def test_list_comprehensions(self):
         
         # Simple
-        code = '[i for i in [-1, -2, 1, 2, 3]]'
-        assert str(eval(code)) == normallist(evalpy(code))
+        code1 = '[i for i in [-1, -2, 1, 2, 3]]'
+        assert str(eval(code1)) == normallist(evalpy(code1))
+        #
+        code2 = 'a = ' + code1 + '; a == ' + code1
+        assert evalpy(code2) == 'true'
+        
+        # With assignment
+        code1 = 'a = 3\na = [i for i in range(a)]\na'
+        assert evalpy(code1) == '[ 0, 1, 2 ]'
         
         # With ifs
-        code = '[i for i in [-1, -2, 1, 2, 3] if i > 0 and i < 3]'
-        assert str(eval(code)) == normallist(evalpy(code))
-        code = '[i for i in [-1, -2, 1, 2, 3] if i > 0 if i < 3]'
-        assert str(eval(code)) == normallist(evalpy(code))
+        code1 = '[i for i in [-1, -2, 1, 2, 3] if i > 0 and i < 3]'
+        assert str(eval(code1)) == normallist(evalpy(code1))
+        #
+        code2 = 'a = ' + code1 + '; a == ' + code1
+        assert evalpy(code2) == 'true'
+        
+        code1 = '[i for i in [-1, -2, 1, 2, 3] if i > 0 if i < 3]'
+        assert str(eval(code1)) == normallist(evalpy(code1))
+        #
+        code2 = 'a = ' + code1 + '; a == ' + code1
+        assert evalpy(code2) == 'true'
         
         # Double
-        code = '[i*j for i in [-1, -2, 1, 2, 3] if i > 0 for j in [1, 10, 100] if j<100]'
-        assert str(eval(code)) == normallist(evalpy(code))
+        code1 = '[i*j for i in [-1, -2, 1, 2, 3] if i > 0 for j in [1, 10, 100] if j<100]'
+        assert str(eval(code1)) == normallist(evalpy(code1))
+        #
+        code2 = 'a = ' + code1 + '; a == ' + code1
+        assert evalpy(code2) == 'true'
         
         # Triple
-        code = '[i*j*k for i in [1, 2, 3] for j in [1, 10] for k in [5, 7]]'
-        assert str(eval(code)) == normallist(evalpy(code))
+        code1 = '[i*j*k for i in [1, 2, 3] for j in [1, 10] for k in [5, 7]]'
+        assert str(eval(code1)) == normallist(evalpy(code1))
+        #
+        code2 = 'a = ' + code1 + '; a == ' + code1
+        assert evalpy(code2) == 'true'
         
         # Double args
-        code = '[(i, j) for i in [1, 2, 3] for j in [1, 10]]'
-        assert str(eval(code)).replace('(', '[').replace(')', ']') == normallist(evalpy(code))
+        code1 = '[(i, j) for i in [1, 2, 3] for j in [1, 10]]'
+        assert str(eval(code1)).replace('(', '[').replace(')', ']') == normallist(evalpy(code1))
+        #
+        code2 = 'a = ' + code1 + '; a == ' + code1
+        assert evalpy(code2) == 'true'
         
         # Double iters
-        code = '[(i, j) for i, j in [[1, 2], [3, 4], [5, 6]]]'
-        assert str(eval(code)).replace('(', '[').replace(')', ']') == normallist(evalpy(code))
+        code1 = '[(i, j) for i, j in [[1, 2], [3, 4], [5, 6]]]'
+        assert str(eval(code1)).replace('(', '[').replace(')', ']') == normallist(evalpy(code1))
+        #
+        code2 = 'a = ' + code1 + '; a == ' + code1
+        assert evalpy(code2) == 'true'
+        
+        # Double, dependent iter
+        code1 = '[i for j in [1,2,3] for i in range(j)]'
+        assert str(eval(code1)).replace('(', '[').replace(')', ']') == normallist(evalpy(code1))
+        #
+        code2 = 'a = ' + code1 + '; a == ' + code1
+        assert evalpy(code2) == 'true'
+    
+    
+    def xx_test_list_comprehension_speed(self):
+        # https://developers.google.com/speed/articles/optimizing-javascript
+        # ~ 0.029 when comprehension transpile to closures
+        # ~ 0.023 when comprehensions transpile to inner function s, plus smaller chance on closures
+        # ~ 0.017 when comprehensions transpile to inner function s, plus no chance on closures
+        code = 't0 = perf_counter()\nfor i in range(100000): a = [j for j in range(10)]\n\nperf_counter()-t0'
+        t1 = evalpy(code)
+        print(t1)
+
 
 class TestExceptions:
     
