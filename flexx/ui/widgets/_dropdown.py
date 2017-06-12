@@ -153,11 +153,11 @@ class BaseDropdown(Widget):
             self._strud = self.node.childNodes[4]
             
             f2 = lambda e: self._submit_text() if e.which == 13 else None
-            self._edit.addEventListener('keydown', f2, False)
-            self._edit.addEventListener('blur', self._submit_text, False)
+            self._addEventListener(self._edit, 'keydown', f2, False)
+            self._addEventListener(self._edit, 'blur', self._submit_text, False)
             
-            self._label.addEventListener('click', self._but_click, 0)
-            self._button.addEventListener('click', self._but_click, 0)
+            self._addEventListener(self._label, 'click', self._but_click, 0)
+            self._addEventListener(self._button, 'click', self._but_click, 0)
         
         @event.connect('text')
         def __on_text(self, *events):
@@ -181,7 +181,7 @@ class BaseDropdown(Widget):
             self._rect_to_check = rect
             window.setTimeout(self._check_expanded_pos, 100)
             # Collapse when the mouse is used outside the combobox (or its children)
-            window.document.addEventListener('mouseup', self._collapse_maybe, 0)
+            self._addEventListener(window.document, 'mouseup', self._collapse_maybe, 0)
             # Return rect so subclasses can use it
             return rect
         
@@ -324,7 +324,7 @@ class ComboBox(BaseDropdown):
             self._ul = window.document.createElement('ul')
             self.node.appendChild(self._ul)
             
-            self._ul.addEventListener('click', self._ul_click, 0)
+            self._addEventListener(self._ul, 'click', self._ul_click, 0)
             
         def _ul_click(self, e):
             index = e.target.index

@@ -120,7 +120,7 @@ class Button(BaseButton):
         def _init_phosphor_and_node(self):
             self.phosphor = self._create_phosphor_widget('button')
             self.node = self.phosphor.node
-            self.node.addEventListener('click', self.mouse_click, 0)
+            self._addEventListener(self.node, 'click', self.mouse_click, 0)
 
         @event.connect('text')
         def __text_changed(self, *events):
@@ -149,7 +149,7 @@ class ToggleButton(BaseButton):
         def _init_phosphor_and_node(self):
             self.phosphor = self._create_phosphor_widget('button')
             self.node = self.phosphor.node
-            self.node.addEventListener('click', self.mouse_click, 0)
+            self._addEventListener(self.node, 'click', self.mouse_click, 0)
 
         @event.connect('text')
         def __text_changed(self, *events):
@@ -180,7 +180,7 @@ class RadioButton(BaseButton):
             self.node = p.node.childNodes[0]
             self.text_node = p.node.childNodes[1]
 
-            self.node.addEventListener('click', self._check_radio_click, 0)
+            self._addEventListener(self.node, 'click', self._check_radio_click, 0)
 
         @event.connect('parent')
         def __update_group(self, *events):
@@ -225,8 +225,8 @@ class CheckBox(BaseButton):
             self.node = p.node.childNodes[0]
             self.text_node = p.node.childNodes[1]
 
-            self.node.addEventListener('click', self.mouse_click, 0)
-            self.node.addEventListener('change', self._check_changed_from_dom, 0)
+            self._addEventListener(self.node, 'click', self.mouse_click, 0)
+            self._addEventListener(self.node, 'change', self._check_changed_from_dom, 0)
 
         @event.connect('text')
         def __text_changed(self, *events):

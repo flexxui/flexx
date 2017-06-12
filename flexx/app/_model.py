@@ -461,7 +461,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         """
         if self.session.status:
             try:
-                self.call_js('dispose()')
+                cmd = 'flexx.dispose_object("%s")' % self.id
+                self._session._exec(cmd)
             except Exception:
                 pass  # ws can be closed/gone if this gets invoked from __del__
         super().dispose()
@@ -625,6 +626,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             
             self._sync_props = True
             
+            self._event_listeners = []  # JS event listeners
+            
             # Init HasEvents, but delay initialization of handlers
             super().__init__(False)
             
@@ -640,10 +643,24 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             """
             pass
         
+        def _addEventListener(self, node, type, callback, capture=False):
+            """ Register events with DOM nodes, to be automatically cleaned up
+            when this object is disposed.
+            """
+            node.addEventListener(type, callback, capture)
+            self._event_listeners.append((node, type, callback, capture))
+        
         def dispose(self):
             """ Can be overloaded by subclasses to dispose resources.
             """
-            window.flexx.instances[self._id] = 'disposed'
+            super().dispose()
+            while len(self._event_listeners) > 0:
+                try:
+                    node, type, callback, capture = self._event_listeners.pop()
+                    node.removeEventListener(type, callback, capture)
+                except Exception as err:
+                    print(err)
+            del window.flexx.instances[self._id]
         
         def _register_handler(self, *args):
             event_type = args[0].split(':')[0]

@@ -92,6 +92,13 @@ class Flexx:
         else:
             return self.instances[id]
     
+    def dispose_object(self, id):
+        """ Dispose the object with the given id.
+        """
+        ob = self.instances[id]
+        if ob is not undefined:
+            ob.dispose()  # Model.dispose() removes itself from flexx.instances
+    
     def spin(self, text='*'):
         RawJS("""
         if (!window.document.body) {return;}

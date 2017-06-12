@@ -73,6 +73,7 @@ class TabPanel(Layout):
             self.phosphor = _phosphor_tabpanel.TabPanel()
             self.node = self.phosphor.node
             
+            # Keep track of Phosphor. Phosphor clears this ref when it is disposed.
             def _phosphor_changes_current(v, info):
                 if info.currentWidget:
                     self.current = window.flexx.instances[info.currentWidget.id]

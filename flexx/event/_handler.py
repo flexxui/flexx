@@ -352,6 +352,7 @@ class Handler:
             while len(connection.objects):
                 ob, type = connection.objects.pop(0)
                 ob.disconnect(type, self)
+        self._connections = []
         while len(self._pending):
             self._pending.pop()  # no list.clear on legacy py
 

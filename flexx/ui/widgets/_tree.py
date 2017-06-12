@@ -234,6 +234,12 @@ class TreeWidget(Widget):
     
     """
     
+    def dispose(self):
+        # Note that we do not call dispose on the items like Widget does for its
+        # children, because items can be in multiple items/trees at the same time.
+        self.items = []
+        super().dispose()
+    
     class Both:
         
         @event.prop
@@ -265,6 +271,10 @@ class TreeWidget(Widget):
             return items
     
     class JS:
+        
+        # def dispose(self):
+        #     self._items_value = []
+        #     super().dispose()
         
         def _init_phosphor_and_node(self):
             self.phosphor = self._create_phosphor_widget('div')
@@ -362,6 +372,10 @@ class TreeItem(Model):
             raise RuntimeError('TreeItems can only be created in the context '
                                'of a TreeWidget or TreeItem.')
     
+    def dispose(self):
+        self.items = []
+        super().dispose()
+    
     class Both:
         
         @event.prop
@@ -447,8 +461,8 @@ class TreeItem(Model):
             self._title = self._row.childNodes[3]
             self._text = self._row.childNodes[4]
             
-            self._row.addEventListener('click', self._on_click)
-            self._row.addEventListener('dblclick', self.mouse_double_click)
+            self._addEventListener(self._row, 'click', self._on_click)
+            self._addEventListener(self._row, 'dblclick', self.mouse_double_click)
         
         @event.emitter
         def mouse_click(self):
