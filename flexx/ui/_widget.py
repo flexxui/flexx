@@ -138,8 +138,7 @@ class Widget(Model):
         pass
 
     def dispose(self):
-        """ Overloaded version of dispose() that will also
-        dispose any child widgets.
+        """ Overloaded version of dispose() that disposes any child widgets.
         """
         # Dispose children? Yes, each widget can have exactly one parent and
         # when that parent is disposed, it makes sense to assume that the
@@ -151,9 +150,9 @@ class Widget(Model):
         # the children and dispose ourselves.
         for child in children:
             child.dispose()
-        self.parent = None
-        self.children = ()  # tuple, to avoid triggering a reset when called twice
         super().dispose()
+        self.parent = None
+        self._children_value = ()  # tuple, to avoid triggering a reset when called twice
     
     @event.connect('parent:aaa')
     def __keep_alive(self, *events):
@@ -366,7 +365,8 @@ class Widget(Model):
             return _phosphor_widget.Widget({'node': node})
         
         def dispose(self):
-            """ Overloaded version of dispose() that will also dispose phosphor widget.
+            """ Overloaded version of dispose() that disposes phosphor widget
+            as well as any child widgets.
             """
             if self.phosphor:
                 try:
@@ -376,6 +376,8 @@ class Widget(Model):
                 except Exception as err:
                     print(err)
             super().dispose()
+            self.parent = None
+            self._children_value = ()
         
         @event.connect('style')
         def __style_changed(self, *events):
