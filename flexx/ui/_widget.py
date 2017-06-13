@@ -152,7 +152,7 @@ class Widget(Model):
             child.dispose()
         super().dispose()
         self.parent = None
-        self._children_value = ()  # tuple, to avoid triggering a reset when called twice
+        self._children_value = ()
     
     @event.connect('parent:aaa')
     def __keep_alive(self, *events):

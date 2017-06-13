@@ -74,7 +74,7 @@ from ..event._hasevents import (with_metaclass, new_type, HasEventsMeta,
                                 finalize_hasevents_class)
 from ..event._emitters import Emitter
 from ..event._js import create_js_hasevents_class, HasEventsJS
-from ..pyscript import js_rename, window, JSString
+from ..pyscript import js_rename, window, JSString, undefined
 
 from ._asset import get_mod_name
 from ._server import call_later
@@ -544,6 +544,8 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         return super()._register_handler(*args)
     
     def _handlers_changed_hook(self):
+        if self._disposed:
+            return
         handlers = self._HasEvents__handlers
         types = [name for name in handlers.keys() if handlers[name]]
         txt = serializer.saves(types)
@@ -685,6 +687,10 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         
         def _set_prop_from_py(self, name, text):
             value = serializer.loads(text)
+            # Trick for when value is e.g. x.children with disposed children,
+            # causing "sparse" arrays.
+            if isinstance(value, list):
+                value = [v for v in value if v is not undefined]
             self._set_prop(name, value, False, True)
         
         def _set_prop(self, name, value, _initial=False, frompy=False):
