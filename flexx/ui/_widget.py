@@ -138,15 +138,21 @@ class Widget(Model):
         pass
 
     def dispose(self):
-        """ Overloaded version of dispose() that will also
-        dispose any child widgets.
+        """ Overloaded version of dispose() that disposes any child widgets.
         """
+        # Dispose children? Yes, each widget can have exactly one parent and
+        # when that parent is disposed, it makes sense to assume that the
+        # child ought to be disposed as well. It avoids memory leaks. If a
+        # child is not supposed to be disposed, the developer should orphan the
+        # child widget.
         children = self.children
+        # First dispose children (so they wont send messages back), then clear
+        # the children and dispose ourselves.
         for child in children:
             child.dispose()
-        if self.session.status:
-            self._session._exec('flexx.instances.%s.phosphor.dispose();' % self._id)
         super().dispose()
+        self.parent = None
+        self._children_value = ()
     
     @event.connect('parent:aaa')
     def __keep_alive(self, *events):
@@ -308,26 +314,10 @@ class Widget(Model):
             # children are changed from the outside, but this is non-trivial
             # and easily leads to strange recursions. E.g. we temporarily remove
             # widgets ourselves to get the order straight.
-            that = self
-            def msg_hook(handler, msg):
-                if msg.type == 'resize':
-                    that._check_real_size()
-                elif msg.type == 'close-request':
-                    pass  # not sure what close means in Phosphor
-                elif msg.type == 'child-added':
-                    if msg.child.id not in window.flexx.instances:
-                        if not msg.child.node.classList.contains('p-TabBar'):
-                            print('Phosphor child %r added to %r that is not '
-                                'managed by Flexx.' % (msg.child.id, self.id))
-                    elif window.flexx.instances[msg.child.id] not in self.children:
-                        print('Phosphor child %s added without Flexx knowing' %
-                              msg.child.id)
-                elif msg.type == 'child-removed':
-                    pass
-                return True  # resume processing the message as normal
-            _phosphor_messaging.installMessageHook(self.phosphor, msg_hook)
+            _phosphor_messaging.installMessageHook(self.phosphor,
+                                                   self._phosphor_msg_hook)
             
-            # Keep track of Phosphor changing the title
+            # Keep track of Phosphor. Phosphor clears this ref when it is disposed.
             def _title_changed_in_phosphor(title):
                 self.title = title.label
             self.phosphor.title.changed.connect(_title_changed_in_phosphor)
@@ -345,6 +335,23 @@ class Widget(Model):
             else:
                 raise RuntimeError('Error determining class names for %s' % self.id)
         
+        def _phosphor_msg_hook(self, handler, msg):
+            if msg.type == 'resize':
+                self._check_real_size()
+            elif msg.type == 'close-request':
+                pass  # not sure what close means in Phosphor
+            elif msg.type == 'child-added':
+                if msg.child.id not in window.flexx.instances:
+                    if not msg.child.node.classList.contains('p-TabBar'):
+                        print('Phosphor child %r added to %r that is not '
+                            'managed by Flexx.' % (msg.child.id, self.id))
+                elif window.flexx.instances[msg.child.id] not in self.children:
+                    print('Phosphor child %s added without Flexx knowing' %
+                            msg.child.id)
+            elif msg.type == 'child-removed':
+                pass
+            return True  # resume processing the message as normal
+    
         def _init_phosphor_and_node(self):
             """ Overload this in sub widgets.
             """
@@ -356,6 +363,21 @@ class Widget(Model):
             """
             node = window.document.createElement(element_name)
             return _phosphor_widget.Widget({'node': node})
+        
+        def dispose(self):
+            """ Overloaded version of dispose() that disposes phosphor widget
+            as well as any child widgets.
+            """
+            if self.phosphor:
+                try:
+                    self.phosphor.dispose()
+                    _phosphor_messaging.removeMessageHook(self.phosphor,
+                                                          self._phosphor_msg_hook)
+                except Exception as err:
+                    print(err)
+            super().dispose()
+            self.parent = None
+            self._children_value = ()
         
         @event.connect('style')
         def __style_changed(self, *events):
@@ -508,8 +530,8 @@ class Widget(Model):
                 except Exception as err:
                     err.message += ' (%s)' % self.id
                     raise err
-                window.addEventListener('resize', lambda: (self.phosphor.update(),
-                                                           self._check_real_size()))
+                self._addEventListener(window, 'resize',
+                    lambda: (self.phosphor.update(), self._check_real_size()))
             if id == 'body':
                 self.outernode.classList.add('flx-main-widget')
                 window.document.title = self.title or 'Flexx app'
@@ -572,11 +594,11 @@ class Widget(Model):
         
         def _init_events(self):
             # Connect some standard events
-            self.node.addEventListener('mousedown', self.mouse_down, 0)
-            self.node.addEventListener('wheel', self.mouse_wheel, 0)
-            self.node.addEventListener('keydown', self.key_down, 0)
-            self.node.addEventListener('keyup', self.key_up, 0)
-            self.node.addEventListener('keypress', self.key_press, 0)
+            self._addEventListener(self.node, 'mousedown', self.mouse_down, 0)
+            self._addEventListener(self.node, 'wheel', self.mouse_wheel, 0)
+            self._addEventListener(self.node, 'keydown', self.key_down, 0)
+            self._addEventListener(self.node, 'keyup', self.key_up, 0)
+            self._addEventListener(self.node, 'keypress', self.key_press, 0)
             
             # Implement mouse capturing. When a mouse is pressed down on
             # a widget, it "captures" the mouse, and will continue to receive
@@ -616,11 +638,11 @@ class Widget(Model):
                         self.mouse_up(e)
 
             # Setup capturing and releasing
-            self.node.addEventListener('mousedown', capture, True)
-            self.node.addEventListener("losecapture", release)
+            self._addEventListener(self.node, 'mousedown', capture, True)
+            self._addEventListener(self.node, "losecapture", release)
             # Subscribe to normal mouse events
-            self.node.addEventListener("mousemove", mouse_inside, False)
-            self.node.addEventListener("mouseup", mouse_inside, False)
+            self._addEventListener(self.node, "mousemove", mouse_inside, False)
+            self._addEventListener(self.node, "mouseup", mouse_inside, False)
 
         @event.emitter
         def mouse_down(self, e):

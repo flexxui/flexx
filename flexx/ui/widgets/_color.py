@@ -53,7 +53,7 @@ class ColorSelectWidget(Widget):
             self.phosphor = self._create_phosphor_widget('input')
             self.node = self.phosphor.node
             self.node.type = 'color'
-            self.node.addEventListener('input', self._color_changed_from_dom, 0)
+            self._addEventListener(self.node, 'input', self._color_changed_from_dom, 0)
         
         @event.connect('color')
         def _color_changed(self, *events):

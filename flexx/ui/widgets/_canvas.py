@@ -39,8 +39,8 @@ class CanvasWidget(Widget):
             # Disable context menu so we can handle RMB clicks
             # Firefox is particularly stuborn with Shift+RMB, and RMB dbl click
             for ev_name in ('contextmenu', 'click', 'dblclick'):
-                window.document.addEventListener(ev_name,
-                                                 self._prevent_default_event, 0)
+                self._addEventListener(window.document, ev_name,
+                                       self._prevent_default_event, 0)
             
             # If the canvas uses the wheel event for something, you'd want to
             # disable browser-scroll when the mouse is over the canvas. But
@@ -57,7 +57,7 @@ class CanvasWidget(Widget):
                     window.flexx._wheel_timestamp = e.target.id, t1  # new scroll
             if not window.flexx._wheel_timestamp:
                 window.flexx._wheel_timestamp = 0, ''
-                window.document.addEventListener('wheel', wheel_behavior, 0)
+                self._addEventListener(window.document, 'wheel', wheel_behavior, 0)
         
         def _prevent_default_event(self, e):
             """ Prevent the default action of an event unless all modifier
@@ -66,7 +66,6 @@ class CanvasWidget(Widget):
             if e.target is self.node:
                 if not (e.altKey is True and e.ctrlKey is True and e.shiftKey is True):
                     e.preventDefault()
-                    
         
         @event.emitter
         def mouse_wheel(self, e):

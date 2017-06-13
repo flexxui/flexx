@@ -98,10 +98,10 @@ class LineEdit(Widget):
             
             f1 = lambda ev: self._set_prop('user_text', self.node.value)
             f2 = lambda ev: self.submit() if ev.which == 13 else None
-            self.node.addEventListener('input', f1, False)
-            self.node.addEventListener('keydown', f2, False)
+            self._addEventListener(self.node, 'input', f1, False)
+            self._addEventListener(self.node, 'keydown', f2, False)
             #if IE10:
-            #    this.node.addEventListener('change', f1, False)
+            #    self._addEventListener(self.node, 'change', f1, False)
         
         @event.readonly
         def user_text(self, v=None):

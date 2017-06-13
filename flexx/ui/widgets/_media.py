@@ -156,7 +156,7 @@ class YoutubeWidget(Widget):
             self.overlay_node.style.left = '0px'
             
             self.node = self.overlay_node
-            self.phosphor.node.addEventListener('mouseenter', self._show_overlay, False)
+            self._addEventListener(self.phosphor.node, 'mouseenter', self._show_overlay)
         
         @event.connect('size')
         def _update_canvas_size(self, *events):
