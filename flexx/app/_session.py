@@ -94,7 +94,7 @@ class Session:
         self._model_counter = 0
         self._model_instances = weakref.WeakValueDictionary()
         self._instances_guarded = {}  # id: (ping_count, instance)
-        self._roundtrip_based_calllaters =  []  # (ping_count, callback, args, kwargs)
+        self._roundtrip_based_calllaters = []  # (ping_count, callback, args, kwargs)
         
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
