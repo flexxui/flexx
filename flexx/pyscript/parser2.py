@@ -645,7 +645,7 @@ class Parser2(Parser1):
     def parse_ListComp_funtionless(self, node, result_name):
         
         prefix = result_name
-        self.set_name_prefix(prefix)
+        self.push_scope_prefix(prefix)
         code = []
         
         for iter, comprehension in enumerate(node.comp_nodes):
@@ -686,7 +686,7 @@ class Parser2(Parser1):
         for comprehension in node.comp_nodes:
             code.append('}')  # end for
         
-        self.set_name_prefix('')
+        self.pop_scope_prefix()
         return code
     
     def parse_ListComp(self, node):

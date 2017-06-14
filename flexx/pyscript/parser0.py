@@ -164,7 +164,7 @@ class Parser0:
         self._stack = []
         self._indent = indent
         self._dummy_counter = 0
-        self._name_prefix = ''
+        self._scope_prefix = []  # stack of name prefixes to simulate local scope
         
         # To keep track of std lib usage
         self._std_functions = set()
