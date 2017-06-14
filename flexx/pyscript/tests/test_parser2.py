@@ -218,6 +218,18 @@ class TestConrolFlow:
         assert evalpy(code2) == 'true'
     
     
+    def test_listcomp_regressions(self):
+        
+        code1 = 'a = [i for i in range(the_iter)]'
+        js = py2js(code1)
+        assert 'the_iter' in js.meta['vars_unknown']
+        assert 'i' not in js.meta['vars_unknown']
+        
+        code1 = 'corners = [[(p[i] + 0.5) for i in range(3)] for p in corners_local]'
+        js = py2js(code1)
+        assert 'p' not in js.meta['vars_unknown']
+    
+    
     def xx_test_list_comprehension_speed(self):
         # https://developers.google.com/speed/articles/optimizing-javascript
         # ~ 0.029 when comprehension transpile to closures

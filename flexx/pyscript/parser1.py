@@ -223,24 +223,33 @@ class Parser1(Parser0):
     
     ## Variables
     
-    def set_name_prefix(self, prefix):
+    def push_scope_prefix(self, prefix):
         # To avoid name clashes e.g. in comprehensions, which have their own
         # scope in Python, but we want to apply these as a for loop in JS
         # where possible.
-        self._name_prefix = prefix
+        assert prefix
+        self._scope_prefix.append(prefix)
     
+    def pop_scope_prefix(self):
+        self._scope_prefix.pop(-1)
+
     def parse_Name(self, node):
         # node.ctx can be Load, Store, Del -> can be of use somewhere?
         name = node.name
         if self.vars.get(name, None):
-            name = self.with_prefix(name)
-        elif self._name_prefix and (self._name_prefix + name) in self.vars:
-            name = self._name_prefix + name  # apply the current prefix
-        elif name in self.NAME_MAP:
-            name = self.NAME_MAP[name]
-        else:
-            if not (name in self._functions or name in ('undefined', 'window')):
-                self.vars.use(name)  # mark as used (not defined)
+            return self.with_prefix(name)
+        if self._scope_prefix:
+            for stackitem in reversed(self._stack):
+                scope = stackitem[2]
+                for prefix in reversed(self._scope_prefix):
+                    prefixed_name = prefix + name
+                    if prefixed_name in scope:
+                        return prefixed_name
+        if name in self.NAME_MAP:
+            return self.NAME_MAP[name]
+        # Else ...
+        if not (name in self._functions or name in ('undefined', 'window')):
+            self.vars.use(name)  # mark as used (not defined)
         return name
     
     def parse_Starred(self, node):

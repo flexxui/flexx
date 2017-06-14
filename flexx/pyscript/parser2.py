@@ -645,17 +645,17 @@ class Parser2(Parser1):
     def parse_ListComp_funtionless(self, node, result_name):
         
         prefix = result_name
-        self.set_name_prefix(prefix)
+        self.push_scope_prefix(prefix)
         code = []
         
         for iter, comprehension in enumerate(node.comp_nodes):
             cc = []
             # Get target (can be multiple vars)
             if isinstance(comprehension.target_node, ast.Tuple):
-                target = [''.join(self.parse(t)) for t in 
+                target = [namenode.name for namenode in
                           comprehension.target_node.element_nodes]
             else:
-                target = [''.join(self.parse(comprehension.target_node))]
+                target = [comprehension.target_node.name]
             target = [prefix + t for t in target]
             for t in target:
                 self.vars.add(t)
@@ -686,7 +686,7 @@ class Parser2(Parser1):
         for comprehension in node.comp_nodes:
             code.append('}')  # end for
         
-        self.set_name_prefix('')
+        self.pop_scope_prefix()
         return code
     
     def parse_ListComp(self, node):
