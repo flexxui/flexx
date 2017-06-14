@@ -652,10 +652,10 @@ class Parser2(Parser1):
             cc = []
             # Get target (can be multiple vars)
             if isinstance(comprehension.target_node, ast.Tuple):
-                target = [''.join(self.parse(t)) for t in 
+                target = [namenode.name for namenode in
                           comprehension.target_node.element_nodes]
             else:
-                target = [''.join(self.parse(comprehension.target_node))]
+                target = [comprehension.target_node.name]
             target = [prefix + t for t in target]
             for t in target:
                 self.vars.add(t)
