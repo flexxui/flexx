@@ -103,6 +103,13 @@ class LineEdit(Widget):
             #if IE10:
             #    self._addEventListener(self.node, 'change', f1, False)
         
+        @event.emitter
+        def key_down(self, e):
+            # Prevent propating the key
+            ev = super().key_down(e)
+            e.stopPropagation()
+            return ev
+        
         @event.readonly
         def user_text(self, v=None):
             """ The text set by the user (updates on each keystroke). """
