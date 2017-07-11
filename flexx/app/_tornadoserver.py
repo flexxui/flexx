@@ -228,7 +228,7 @@ class AppHandler(FlexxHandler):
     @gen.coroutine
     def get(self, full_path):
         
-        logger.debug('Incoming request at %s' % full_path)
+        logger.debug('Incoming request at %r' % full_path)
         
         ok_app_names = '__main__', '__default__', '__index__'
         parts = [p for p in full_path.split('/') if p]
@@ -244,8 +244,17 @@ class AppHandler(FlexxHandler):
                 app_name = parts[0]
                 path = '/'.join(parts[1:])
         
-        # Maybe its the main app?
-        app_name = app_name or '__main__'
+        # If it does not look like an app, it might be that the request is for
+        # the main app. The main app can have sub-paths, but lets try to filter
+        # out cases that might make Flexx unnecessarily instantiate an app.
+        # In particular "favicon.ico" that browsers request by default (#385).
+        if app_name is None:
+            if len(parts) == 1 and '.' in full_path:
+                return self.redirect('/flexx/data/' + full_path)
+            # If we did not return ... assume this is the default app
+            app_name = '__main__'
+        
+        # Try harder to produce an app
         if app_name == '__main__':
             app_name = manager.has_app_name('__main__')
         elif '/' not in full_path:
@@ -261,7 +270,7 @@ class AppHandler(FlexxHandler):
     
         # We now have:
         # * app_name: name of the app, must be a valid identifier, names
-        #   with underscrores are reserved for special things like assets,
+        #   with underscores are reserved for special things like assets,
         #   commands, etc.
         # * path: part (possibly with slashes) after app_name
         if app_name == '__index__':

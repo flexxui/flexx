@@ -394,7 +394,7 @@ class AppManager(event.HasEvents):
     
         # Add app to connected, set ws
         assert session.status == Session.STATUS.PENDING
-        logger.info('New session %s %s' %(name, session_id))
+        logger.info('New session %s %s' % (name, session_id))
         session._set_cookies(cookies)
         session._set_ws(ws)
         connected.append(session)
