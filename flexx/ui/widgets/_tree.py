@@ -351,6 +351,9 @@ class TreeWidget(Widget):
                     if count < self.max_selected:
                         item.selected = True
         
+        # NOTE: this highlight API is currently not documented, as it lives
+        # in JS only. The big refactoring will change all that.
+        
         def highlight_hide(self):
             """ Stop highlighting the "current" item.
             """
