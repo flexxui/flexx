@@ -242,6 +242,9 @@ class ComboBox(BaseDropdown):
         .flx-ComboBox.expanded > ul > li:hover {
             background: rgba(128, 128, 128, 0.3);
         }
+        .flx-ComboBox.expanded > ul > li.highlighted-true {
+            box-shadow: inset 0 0 3px 1px rgba(0, 0, 255, 0.4);
+        }
     """
     
     class Both:
@@ -325,15 +328,52 @@ class ComboBox(BaseDropdown):
             self.node.appendChild(self._ul)
             
             self._addEventListener(self._ul, 'click', self._ul_click, 0)
+            self._addEventListener(self.node, 'keydown', self._key_down, 0)
             
+            self._highlighted = -1
+        
         def _ul_click(self, e):
-            index = e.target.index
+            self._select_from_ul(e.target.index)
+        
+        def _select_from_ul(self, index):
             if index >= 0:
                 key, text = self.options[index]
                 self.selected_index = index
                 self.selected_key = key
                 self.text = text
             self._collapse()
+        
+        def _key_down(self, e):
+            e.preventDefault()
+            e.stopPropagation()
+            key = e.key
+            if not key and e.code:
+                key = e,code
+            childNodes = [self._ul.childNodes[i] for i in range(len(self._ul.childNodes))]
+            
+            if key == 'ArrowUp' or key == 'ArrowDown':
+                # Clear current highlight
+                for node in childNodes:
+                    node.classList.remove('highlighted-true')
+                # Update currently highlighted index
+                if key == 'ArrowDown':
+                    self._highlighted += 1
+                else:
+                    self._highlighted -= 1
+                self._highlighted = min(max(self._highlighted, 0), len(childNodes)-1)
+                # Apply highlighting
+                childNodes[self._highlighted].classList.add('highlighted-true')
+            
+            elif key in ('Escape', ' '):
+                # Clear highlighting and current highlighted index
+                for node in childNodes:
+                    node.classList.remove('highlighted-true')
+                self._highlighted = -1
+            
+            elif key in ('Enter', ' '):
+                # Select the currently highlighted - keep highlighted as-is, for quick re-apply
+                if self._highlighted >= 0 and self._highlighted < len(childNodes):
+                    self._select_from_ul(self._highlighted)
         
         def _expand(self):
             rect = super()._expand()
