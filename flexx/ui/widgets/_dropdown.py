@@ -230,6 +230,10 @@ class ComboBox(BaseDropdown):
     Optionally, the text of the combobox can be edited.
     Connect to the ``text`` and/or ``selected_index`` properties to keep
     track of interactions.
+    
+    When the combobox is expanded, the arrow keys can be used to select
+    an item, and it can be made current by pressing Enter or spacebar.
+    Escape can be used to collapse the combobox.
     """
         
     CSS = """

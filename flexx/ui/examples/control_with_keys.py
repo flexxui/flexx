@@ -1,13 +1,15 @@
-# doc-export: TreeWithControlsTester
+# doc-export: KeyboardControlsTester
 """
+The ComboBox can be controlled with the keyboard when it is expanded.
+
 The TreeWidget offers a simple JS-side API to control highlighting of
 a "current item". This example demonstrates how this can be used to control
 a tree widget with keyboard controls.
 
-This functionality is not added to the TreeWidget itself at the moment, because
+The keyboard functionality is not added to the TreeWidget by default, because
 its usually not the desired behavior, and its not trivial how to deal with 
-consuming keys etc. Until we figure these things out, one can simply use the
-code below.
+consuming keys. Further, an application may want to control the tree widget
+even when it does not have focus.
 """
 
 from flexx import event, ui, app
@@ -49,7 +51,7 @@ class TreeWithControls(ui.TreeWidget):
                     self.highlight_show(-1)
 
 
-class TreeWithControlsTester(ui.Widget):
+class KeyboardControlsTester(ui.Widget):
     
     def init(self):
         
@@ -72,4 +74,4 @@ class TreeWithControlsTester(ui.Widget):
             print('combo text is now', ev.new_value)
 
 
-m = app.launch(TreeWithControlsTester)
+m = app.launch(KeyboardControlsTester)
