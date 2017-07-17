@@ -387,6 +387,7 @@ class ComboBox(BaseDropdown):
                 for node in childNodes:
                     node.classList.remove('highlighted-true')
                 self._highlighted = -1
+                self._collapse()
             
             elif key == 'ArrowUp' or key == 'ArrowDown':
                 # Clear current highlight
