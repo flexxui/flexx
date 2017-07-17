@@ -197,6 +197,9 @@ class TreeWidget(Widget):
     .flx-TreeItem.selected-true {
         background: rgba(128, 128, 128, 0.35);
     }
+    .flx-TreeItem.highlighted-true {
+        box-shadow: inset 0 0 3px 1px rgba(0, 0, 255, 0.4);
+    }
     
     .flx-TreeWidget .flx-TreeItem.collapsed-true > .collapsebut::after {
         content: '\\25B8';  /* small right triangle */
@@ -229,7 +232,6 @@ class TreeWidget(Widget):
     .flx-TreeWidget .flx-TreeItem > .text {
         width: 50%;
     }
-    
     /* ----- End Tree Widget ----- */
     
     """
@@ -278,6 +280,9 @@ class TreeWidget(Widget):
             self._ul = window.document.createElement('ul')
             self.node.appendChild(self._ul)
         
+        def init(self):
+            self._last_highlighted_hint = ''
+            
         @event.connect('items')
         def __update(self, *events):
             while self._ul.firstChild:
@@ -314,7 +319,9 @@ class TreeWidget(Widget):
                         i.selected = False
         
         @event.connect('!items**.mouse_click')
-        def __item_clicked(self, *events):
+        def _handle_item_clicked(self, *events):
+            self._last_highlighted_hint = events[-1].source.id
+            
             if self.max_selected == 0:
                 # No selection allowed
                 pass
@@ -343,8 +350,106 @@ class TreeWidget(Widget):
                         count += int(i.selected)
                     if count < self.max_selected:
                         item.selected = True
+        
+        # NOTE: this highlight API is currently not documented, as it lives
+        # in JS only. The big refactoring will change all that.
+        
+        def highlight_hide(self):
+            """ Stop highlighting the "current" item.
+            """
+            all_items = self._get_all_items_annotated()
+            self._de_highlight_and_get_highlighted_index(all_items)
+        
+        def highlight_show(self, step=0):
+            """ Highlight the "current" item, optionally moving step items.
+            """
+            classname = 'highlighted-true'
+            all_items = self._get_all_items_annotated()
+            
+            index1 = self._de_highlight_and_get_highlighted_index(all_items)
+            index2 = 0 if index1 is None else index1 + step
+            while 0 <= index2 < len(all_items):
+                visible, _ = all_items[index2]
+                if visible:
+                    break
+                index2 += step
+            else:
+                index2 = index1
+            if index2 is not None:
+                _, item = all_items[index2]
+                item._row.classList.add(classname)
+                self._last_highlighted_hint = item.id
+        
+        def highlight_get(self):
+            """ Get the "current" item. This is the currently highlighted
+            item if there is one. Otherwise it can be the last highlighted item
+            or the last clicked item.
+            """
+            classname = 'highlighted-true'
+            all_items = self._get_all_items_annotated()
+            
+            index = self._de_highlight_and_get_highlighted_index(all_items)
+            if index is not None:
+                _, item = all_items[index]
+                item._row.classList.add(classname)
+                return item
+        
+        def highlight_toggle_selected(self):
+            """ Convenience method to toggle the "selected" property of the
+            current item.
+            """
+            item = self.highlight_get()
+            if item is not None:
+                self._handle_item_clicked(dict(source=item))  # simulate click
+        
+        def highlight_toggle_checked(self):
+            """ Convenience method to toggle the "checked" property of the
+            current item.
+            """
+            item = self.highlight_get()
+            if item is not None:
+                if item.checked is not None:  # is it checkable?
+                    item.checked = not item.checked
+        
+        def _de_highlight_and_get_highlighted_index(self, all_items):
+            """ Unhighlight all items and get the index of the item that was
+            highlighted, or which otherwise represents the "current" item, e.g.
+            because it was just clicked.
+            """
+            classname = 'highlighted-true'
+            index = None
+            hint = None
+            for i in range(len(all_items)):
+                visible, item = all_items[i]
+                if item._row.classList.contains(classname):
+                    item._row.classList.remove(classname)
+                    if index is None:
+                        index = i
+                if hint is None and item.id == self._last_highlighted_hint:
+                    hint = i
+            if index is not None:
+                return index
+            else:
+                return hint
+        
+        def _get_all_items_annotated(self):
+            """ Get a flat list of all TreeItem instances in this Tree,
+            including visibility information due to collapsed parents.
+            """
+            items = []
+            def collect(x, parent_collapsed):
+                visible = x.visible and not parent_collapsed
+                items.append((visible, x))
+                for i in x.items:
+                    if i:
+                        collect(i, parent_collapsed or x.collapsed)
+            
+            for x in self.items:
+                collect(x, False)
+            return items
 
-    
+
+
 class TreeItem(Model):
     """ An item to put in a TreeWidget. TreeItem objects are Model
     objects, but do not inherit from `ui.Widget`.

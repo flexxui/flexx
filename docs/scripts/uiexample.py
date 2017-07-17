@@ -9,7 +9,7 @@ import warnings
 import subprocess
 import importlib.util
 
-from sphinx.util.compat import Directive
+from docutils.parsers.rst import Directive
 from docutils import nodes
 
 from flexx import app

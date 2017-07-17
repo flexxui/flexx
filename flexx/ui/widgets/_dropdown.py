@@ -132,6 +132,12 @@ class BaseDropdown(Widget):
     def init(self):
         self.tabindex = -1
     
+    def expand(self):
+        """ Expand the dropdown and give it focus, so that it can be used
+        with the up/down keys.
+        """
+        self.call_js('expand()')
+    
     class JS:
         
         _HTML = """
@@ -158,6 +164,13 @@ class BaseDropdown(Widget):
             
             self._addEventListener(self._label, 'click', self._but_click, 0)
             self._addEventListener(self._button, 'click', self._but_click, 0)
+        
+        def expand(self):
+            """ Expand the dropdown and give it focus, so that it can be used
+            with the up/down keys.
+            """
+            self._expand()
+            self.node.focus()
         
         @event.connect('text')
         def __on_text(self, *events):
@@ -217,6 +230,10 @@ class ComboBox(BaseDropdown):
     Optionally, the text of the combobox can be edited.
     Connect to the ``text`` and/or ``selected_index`` properties to keep
     track of interactions.
+    
+    When the combobox is expanded, the arrow keys can be used to select
+    an item, and it can be made current by pressing Enter or spacebar.
+    Escape can be used to collapse the combobox.
     """
         
     CSS = """
@@ -241,6 +258,9 @@ class ComboBox(BaseDropdown):
         
         .flx-ComboBox.expanded > ul > li:hover {
             background: rgba(128, 128, 128, 0.3);
+        }
+        .flx-ComboBox.expanded > ul > li.highlighted-true {
+            box-shadow: inset 0 0 3px 1px rgba(0, 0, 255, 0.4);
         }
     """
     
@@ -325,15 +345,71 @@ class ComboBox(BaseDropdown):
             self.node.appendChild(self._ul)
             
             self._addEventListener(self._ul, 'click', self._ul_click, 0)
+            self._addEventListener(self.node, 'keydown', self._key_down, 0)
             
+            self._highlighted = -1
+        
         def _ul_click(self, e):
-            index = e.target.index
+            self._select_from_ul(e.target.index)
+        
+        def _select_from_ul(self, index):
             if index >= 0:
                 key, text = self.options[index]
                 self.selected_index = index
                 self.selected_key = key
                 self.text = text
             self._collapse()
+        
+        def _key_down(self, e):
+            # Get key
+            key = e.key
+            if not key and e.code:
+                key = e.code
+            
+            # If collapsed, we may want to expand. Otherwise, do nothing.
+            # In this case, only consume events that dont sit in the way with
+            # the line edit of an editable combobox.
+            if not self.node.classList.contains('expanded'):
+                if key in ['ArrowUp', 'ArrowDown']:
+                    e.stopPropagation()
+                    self.expand()
+                return
+            
+            # Early exit, be specific about the keys that we want to accept
+            if key not in ['Escape', 'ArrowUp', 'ArrowDown', ' ', 'Enter']:
+                return
+            
+            # Consume the keys
+            e.preventDefault()
+            e.stopPropagation()
+            
+            childNodes = [self._ul.childNodes[i]
+                          for i in range(len(self._ul.childNodes))]
+            
+            if key == 'Escape':
+                # Clear highlighting and current highlighted index
+                for node in childNodes:
+                    node.classList.remove('highlighted-true')
+                self._highlighted = -1
+                self._collapse()
+            
+            elif key == 'ArrowUp' or key == 'ArrowDown':
+                # Clear current highlight
+                for node in childNodes:
+                    node.classList.remove('highlighted-true')
+                # Update currently highlighted index
+                if key == 'ArrowDown':
+                    self._highlighted += 1
+                else:
+                    self._highlighted -= 1
+                self._highlighted = min(max(self._highlighted, 0), len(childNodes)-1)
+                # Apply highlighting
+                childNodes[self._highlighted].classList.add('highlighted-true')
+            
+            elif key == 'Enter' or key == ' ':
+                # Select the currently highlighted - keep it, for quick re-apply
+                if self._highlighted >= 0 and self._highlighted < len(childNodes):
+                    self._select_from_ul(self._highlighted)
         
         def _expand(self):
             rect = super()._expand()

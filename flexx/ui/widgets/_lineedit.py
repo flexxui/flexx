@@ -107,7 +107,11 @@ class LineEdit(Widget):
         def key_down(self, e):
             # Prevent propating the key
             ev = super().key_down(e)
-            e.stopPropagation()
+            pkeys = 'Escape',  # keys to propagate
+            if (ev.modifiers and ev.modifiers != ('Shift', )) or ev.key in pkeys:
+                pass
+            else:
+                e.stopPropagation()
             return ev
         
         @event.readonly
