@@ -9,7 +9,7 @@ from pygments import highlight
 from pygments.lexers import get_lexer_by_name
 from pygments.formatters import HtmlFormatter
 
-from sphinx.util.compat import Directive
+from docutils.parsers.rst import Directive
 from docutils import nodes
 
 from flexx.pyscript import py2js
