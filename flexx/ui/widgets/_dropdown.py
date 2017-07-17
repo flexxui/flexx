@@ -132,6 +132,12 @@ class BaseDropdown(Widget):
     def init(self):
         self.tabindex = -1
     
+    def expand(self):
+        """ Expand the dropdown and give it focus, so that it can be used
+        with the up/down keys.
+        """
+        self.call_js('expand()')
+    
     class JS:
         
         _HTML = """
@@ -158,6 +164,13 @@ class BaseDropdown(Widget):
             
             self._addEventListener(self._label, 'click', self._but_click, 0)
             self._addEventListener(self._button, 'click', self._but_click, 0)
+        
+        def expand(self):
+            """ Expand the dropdown and give it focus, so that it can be used
+            with the up/down keys.
+            """
+            self._expand()
+            self.node.focus()
         
         @event.connect('text')
         def __on_text(self, *events):
@@ -344,14 +357,38 @@ class ComboBox(BaseDropdown):
             self._collapse()
         
         def _key_down(self, e):
-            e.preventDefault()
-            e.stopPropagation()
+            # Get key
             key = e.key
             if not key and e.code:
-                key = e,code
-            childNodes = [self._ul.childNodes[i] for i in range(len(self._ul.childNodes))]
+                key = e.code
             
-            if key == 'ArrowUp' or key == 'ArrowDown':
+            # If collapsed, we may want to expand. Otherwise, do nothing.
+            # In this case, only consume events that dont sit in the way with
+            # the line edit of an editable combobox.
+            if not self.node.classList.contains('expanded'):
+                if key in ['ArrowUp', 'ArrowDown']:
+                    e.stopPropagation()
+                    self.expand()
+                return
+            
+            # Early exit, be specific about the keys that we want to accept
+            if key not in ['Escape', 'ArrowUp', 'ArrowDown', ' ', 'Enter']:
+                return
+            
+            # Consume the keys
+            e.preventDefault()
+            e.stopPropagation()
+            
+            childNodes = [self._ul.childNodes[i]
+                          for i in range(len(self._ul.childNodes))]
+            
+            if key == 'Escape':
+                # Clear highlighting and current highlighted index
+                for node in childNodes:
+                    node.classList.remove('highlighted-true')
+                self._highlighted = -1
+            
+            elif key == 'ArrowUp' or key == 'ArrowDown':
                 # Clear current highlight
                 for node in childNodes:
                     node.classList.remove('highlighted-true')
@@ -364,14 +401,8 @@ class ComboBox(BaseDropdown):
                 # Apply highlighting
                 childNodes[self._highlighted].classList.add('highlighted-true')
             
-            elif key in ('Escape', ' '):
-                # Clear highlighting and current highlighted index
-                for node in childNodes:
-                    node.classList.remove('highlighted-true')
-                self._highlighted = -1
-            
-            elif key in ('Enter', ' '):
-                # Select the currently highlighted - keep highlighted as-is, for quick re-apply
+            elif key == 'Enter' or key == ' ':
+                # Select the currently highlighted - keep it, for quick re-apply
                 if self._highlighted >= 0 and self._highlighted < len(childNodes):
                     self._select_from_ul(self._highlighted)
         
