@@ -33,6 +33,25 @@ also be used by themselves:
 * [flexx.util](http://flexx.readthedocs.io/en/stable/util/) - utilities
 
 
+Status
+------
+
+Early 2017 we were close to a new release and moving to beta-status.
+However, we found that in some real (bigger) applications written in Flexx,
+we were hitting certain boundaries. We believe that these boundaries prevent
+Flexx from being usable at a large scale.
+
+We've since looked at what does boundaries are and how Flexx would need to
+change to be able to remove or move beyond these boundaries. This has culminated
+in a [plan](https://github.com/zoofIO/flexx/pull/367) to refactor Flexx.
+
+These changes are quite substantial. E.g. a central idea of the current
+Flexx is having objects that exist in both Python and JS and have
+properties that are settable from both ends. This will be no more.
+Instead, objects live/operate *either* in Python or JS, but objects in JS
+can still be referenced and influenced from Py.
+
+
 Example
 -------
 
