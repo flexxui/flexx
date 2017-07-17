@@ -53,14 +53,23 @@ class TreeWithControlsTester(ui.Widget):
     
     def init(self):
         
-        self.x = TreeWithControls(max_selected=1)
+        combo_options = ['Paris', 'New York', 'Enschede', 'Tokio']
         
-        with self.x:
+        with ui.HBox():
+            self.tree = TreeWithControls(flex=1, max_selected=1)
+            self.combo = ui.ComboBox(flex=1, options=combo_options, editable=True)
+        
+        with self.tree:
             for cat in ('foo', 'bar', 'spam'):
                 with ui.TreeItem(text=cat):
                     for name in ('Martin', 'Kees', 'Hans'):
                         item = ui.TreeItem(title=name)
                         item.checked = cat=='foo' or None
+    
+    @event.connect('combo.text')
+    def _combo_text_changed(self, *events):
+        for ev in events:
+            print('combo text is now', ev.new_value)
 
 
 m = app.launch(TreeWithControlsTester)
