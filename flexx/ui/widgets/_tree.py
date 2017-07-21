@@ -253,25 +253,31 @@ class TreeWidget(Widget):
         
         @event.prop
         def max_selected(self, v=0):
-            """ The maximum number of selected items. Default 0. Can be -1 to
-            allow any number of selected items. This determines the selection
-            policy.
+            """ The maximum number of selected items:
+            
+            * If 0 (default) there is no selection.
+            * If 1, there can be one selected item.
+            * If > 1, up to this number of items can be selected by clicking them.
+            * If -1, any number of items can be selected by holding Ctrl or Shift.
             """
             return int(v)
         
         def get_all_items(self):
             """ Get a flat list of all TreeItem instances in this Tree
-            (including sub items and sub-sub items, etc.).
+            (including sub items and sub-sub items, etc.), in the order that
+            they are shown in the tree.
             """
             items = []
             def collect(x):
-                items.extend(x.items)
+                items.append(x)
                 for i in x.items:
                     if i:
                         collect(i)
-            collect(self)
+            
+            for x in self.items:
+                collect(x)
             return items
-    
+            
     class JS:
         
         def _init_phosphor_and_node(self):
@@ -282,6 +288,7 @@ class TreeWidget(Widget):
         
         def init(self):
             self._last_highlighted_hint = ''
+            self._last_selected = None
             
         @event.connect('items')
         def __update(self, *events):
@@ -325,11 +332,40 @@ class TreeWidget(Widget):
             if self.max_selected == 0:
                 # No selection allowed
                 pass
+            
             elif self.max_selected < 0:
-                # Select/deselect any
+                # Select/deselect any, but only with CTRL and SHIFT
                 for ev in events:
                     item = ev.source
-                    item.selected = not item.selected
+                    if 'Shift' in ev.modifiers:  # Ctrl can also be in modifiers
+                        # Select everything between last selected and current
+                        if self._last_selected and self._last_selected.selected:
+                            if self._last_selected is not item:
+                                mark_selected = False
+                                for i in self.get_all_items():
+                                    if mark_selected == True:
+                                        if i is item or i is self._last_selected:
+                                            break
+                                        i.selected = True
+                                    else:
+                                        if i is item or i is self._last_selected:
+                                            mark_selected = True
+                        item.selected = True
+                        self._last_selected = item
+                    elif 'Ctrl' in ev.modifiers:
+                        # Toggle
+                        item.selected = not item.selected
+                        if item.selected:
+                            self._last_selected = item
+                    else:
+                        # Similar as when max_selected is 1
+                        for i in self.get_all_items():
+                            if i.selected and i is not item:
+                                i.selected = False
+                        item.selected = not item.selected
+                        if item.selected:
+                            self._last_selected = item
+            
             elif self.max_selected == 1:
                 # Selecting one, deselects others
                 item = events[-1].source
@@ -339,6 +375,7 @@ class TreeWidget(Widget):
                         if i.selected and i is not item:
                             i.selected = False
                 item.selected = gets_selected  # set the item last
+            
             else:
                 # Select to a certain max
                 item = events[-1].source
