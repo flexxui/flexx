@@ -565,19 +565,33 @@ class TreeItem(Model):
             self._addEventListener(self._row, 'click', self._on_click)
             self._addEventListener(self._row, 'dblclick', self._on_double_click)
         
+        def _create_mouse_event(self, e):
+            # Variant of Widget._create_mouse_event(), but without position
+            modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
+                         if e[n.lower()+'Key']]
+            # Fix buttons
+            if e.buttons:
+                buttons_mask = reversed([c for c in e.buttons.toString(2)]).join('')
+            else:
+                buttons_mask = [e.button.toString(2)]
+            buttons = [i+1 for i in range(5) if buttons_mask[i] == '1']
+            button = {0: 1, 1: 3, 2: 2, 3: 4, 4: 5}[e.button]
+            # Create event dict
+            return dict(button=button, buttons=buttons, modifiers=modifiers)
+        
         @event.emitter
-        def mouse_click(self):
+        def mouse_click(self, e=None):
             """ Event emitted when the item is clicked on. Depending
             on the tree's max_selected, this can result in the item
             being selected/deselected.
             """
-            return {}
+            return {} if e is None else self._create_mouse_event(e)
         
         @event.emitter
         def mouse_double_click(self, e=None):
             """ Event emitted when the item is double-clicked.
             """
-            return {}
+            return {} if e is None else self._create_mouse_event(e)
         
         def _on_click(self, e):
             # Handle JS mouse click event
@@ -586,11 +600,11 @@ class TreeItem(Model):
             elif e.target is self._checkbut:
                 self.checked = not self.checked
             else:
-                self.mouse_click()
+                self.mouse_click(e)
         
         def _on_double_click(self, e):
             if not (e.target is self._collapsebut or e.target is self._checkbut):
-                self.mouse_double_click()
+                self.mouse_double_click(e)
         
         @event.connect('items')
         def __update(self, *events):
