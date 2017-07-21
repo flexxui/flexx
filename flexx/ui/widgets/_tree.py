@@ -318,7 +318,7 @@ class TreeWidget(Widget):
                     for i in self.items:
                         i.selected = False
         
-        @event.connect('!items**.mouse_click')
+        @event.connect('!items**.mouse_click', '!items**.mouse_double_click')
         def _handle_item_clicked(self, *events):
             self._last_highlighted_hint = events[-1].source.id
             
@@ -563,7 +563,7 @@ class TreeItem(Model):
             self._text = self._row.childNodes[4]
             
             self._addEventListener(self._row, 'click', self._on_click)
-            self._addEventListener(self._row, 'dblclick', self.mouse_double_click)
+            self._addEventListener(self._row, 'dblclick', self._on_double_click)
         
         @event.emitter
         def mouse_click(self):
@@ -587,6 +587,10 @@ class TreeItem(Model):
                 self.checked = not self.checked
             else:
                 self.mouse_click()
+        
+        def _on_double_click(self, e):
+            if not (e.target is self._collapsebut or e.target is self._checkbut):
+                self.mouse_double_click()
         
         @event.connect('items')
         def __update(self, *events):
