@@ -343,7 +343,7 @@ class TreeWidget(Widget):
                             if self._last_selected is not item:
                                 mark_selected = False
                                 for i in self.get_all_items():
-                                    if mark_selected == True:
+                                    if mark_selected == True:  # noqa - PyScript perf
                                         if i is item or i is self._last_selected:
                                             break
                                         i.selected = True
