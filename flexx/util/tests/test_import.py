@@ -13,7 +13,7 @@ from flexx.util.testing import run_tests_if_main, raises, skipif
 import flexx
 
 # https://docs.pytest.org/en/latest/skipping.html
-pytestmark = pytest.mark.skipif(
+pytestmark = skipif(
     '__pypy__' in sys.builtin_module_names and os.getenv('TRAVIS', '') == 'true',
     reason='These import tests are slow on pypy')
 
