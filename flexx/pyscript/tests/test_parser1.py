@@ -8,7 +8,7 @@ def nowhitespace(s):
     return s.replace('\n', '').replace('\t', '').replace(' ', '')
 
 
-class TestParser(Parser):
+class StubParser(Parser):
     
     def function_foo_foo(self, node):
         return 'xxx'
@@ -20,11 +20,11 @@ class TestParser(Parser):
 class TestTheParser:
     
     def test_special_functions(self):
-        assert TestParser("foo_foo()").dump() == 'xxx;'
-        assert TestParser("bar_bar()").dump() == 'bar_bar();'
+        assert StubParser("foo_foo()").dump() == 'xxx;'
+        assert StubParser("bar_bar()").dump() == 'bar_bar();'
         
-        assert TestParser("xxx.bar_bar()").dump() == 'xxx;'
-        assert TestParser("xxx.foo_foo()").dump() == 'xxx.foo_foo();'
+        assert StubParser("xxx.bar_bar()").dump() == 'xxx;'
+        assert StubParser("xxx.foo_foo()").dump() == 'xxx.foo_foo();'
     
     def test_exceptions(self):
         raises(JSError, py2js, "foo(**kwargs)")
