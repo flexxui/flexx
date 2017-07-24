@@ -307,7 +307,8 @@ class ComboBox(BaseDropdown):
         
         @event.prop
         def options(self, options=[]):
-            """ A list of tuples (key, text) representing the options.
+            """ A list of tuples (key, text) representing the options. Both
+            keys and texts are converted to strings if they are not already.
             For items that are given as a string, the key and text are the same.
             If a dict is given, it is transformed to key-text pairs.
             """

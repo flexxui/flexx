@@ -8,12 +8,14 @@ import os
 import sys
 import subprocess
 
-from flexx.util.testing import run_tests_if_main, raises, skip
+from flexx.util.testing import run_tests_if_main, raises, skipif
 
 import flexx
 
-if '__pypy__' in sys.builtin_module_names and os.getenv('TRAVIS', '') == 'true':
-    skip('These import tests are slow on pypy')
+# https://docs.pytest.org/en/latest/skipping.html
+pytestmark = skipif(
+    '__pypy__' in sys.builtin_module_names and os.getenv('TRAVIS', '') == 'true',
+    reason='These import tests are slow on pypy')
 
 # minimum that will be imported when importing flexx
 PROJECT_MODULE = flexx
