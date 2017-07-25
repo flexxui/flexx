@@ -337,7 +337,8 @@ class TreeWidget(Widget):
                 # Select/deselect any, but only with CTRL and SHIFT
                 for ev in events:
                     item = ev.source
-                    if 'Shift' in ev.modifiers:  # Ctrl can also be in modifiers
+                    modifiers = ev.modifiers if ev.modifiers else []
+                    if 'Shift' in modifiers:  # Ctrl can also be in modifiers
                         # Select everything between last selected and current
                         if self._last_selected and self._last_selected.selected:
                             if self._last_selected is not item:
@@ -352,7 +353,7 @@ class TreeWidget(Widget):
                                             mark_selected = True
                         item.selected = True
                         self._last_selected = item
-                    elif 'Ctrl' in ev.modifiers:
+                    elif 'Ctrl' in modifiers:
                         # Toggle
                         item.selected = not item.selected
                         if item.selected:
@@ -622,13 +623,19 @@ class TreeItem(Model):
             on the tree's max_selected, this can result in the item
             being selected/deselected.
             """
-            return {} if e is None else self._create_mouse_event(e)
+            if e is None:
+                return {button:1, buttons:[1], modifiers:[]}
+            else:
+                return self._create_mouse_event(e)
         
         @event.emitter
         def mouse_double_click(self, e=None):
             """ Event emitted when the item is double-clicked.
             """
-            return {} if e is None else self._create_mouse_event(e)
+            if e is None:
+                return {button:1, buttons:[1], modifiers:[]}
+            else:
+                self._create_mouse_event(e)
         
         def _on_click(self, e):
             # Handle JS mouse click event
