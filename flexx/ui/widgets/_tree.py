@@ -624,7 +624,7 @@ class TreeItem(Model):
             being selected/deselected.
             """
             if e is None:
-                return {button:1, buttons:[1], modifiers:[]}
+                return dict(button=1, buttons=[1], modifiers=[])
             else:
                 return self._create_mouse_event(e)
         
@@ -633,7 +633,7 @@ class TreeItem(Model):
             """ Event emitted when the item is double-clicked.
             """
             if e is None:
-                return {button:1, buttons:[1], modifiers:[]}
+                return dict(button=1, buttons=[1], modifiers=[])
             else:
                 self._create_mouse_event(e)
         
