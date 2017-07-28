@@ -22,12 +22,19 @@ class TreeWithControls(ui.TreeWidget):
     
     class JS:
         
-        @event.connect('key_press')
+        @event.emitter
+        def key_down(self, e):
+            """Overload key_down emitter to prevent browser scroll."""
+            ev = self._create_key_event(e)
+            if ev.key.startswith('Arrow'):
+                e.preventDefault()
+            return ev
+        
+        @event.connect('key_down')
         def _handle_highlighting(self, *events):
             for ev in events:
                 if ev.modifiers:
                     continue
-                
                 if ev.key == 'Escape':
                     self.highlight_hide()
                 elif ev.key == ' ':

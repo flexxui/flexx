@@ -287,6 +287,7 @@ class TreeWidget(Widget):
             self.node.appendChild(self._ul)
         
         def init(self):
+            self._highlight_on = False
             self._last_highlighted_hint = ''
             self._last_selected = None
             
@@ -328,6 +329,8 @@ class TreeWidget(Widget):
         @event.connect('!items**.mouse_click', '!items**.mouse_double_click')
         def _handle_item_clicked(self, *events):
             self._last_highlighted_hint = events[-1].source.id
+            if self._highlight_on:  # highhlight tracks clicks
+                self.highlight_show_item(events[-1].source)
             
             if self.max_selected == 0:
                 # No selection allowed
@@ -397,12 +400,24 @@ class TreeWidget(Widget):
             """
             all_items = self._get_all_items_annotated()
             self._de_highlight_and_get_highlighted_index(all_items)
+            self._highlight_on = False
+        
+        def highlight_show_item(self, item):
+            """ Highlight the given item.
+            """
+            classname = 'highlighted-true'
+            all_items = self._get_all_items_annotated()
+            self._highlight_on = True
+            self._de_highlight_and_get_highlighted_index(all_items)
+            item._row.classList.add(classname)
+            self._last_highlighted_hint = item.id
         
         def highlight_show(self, step=0):
             """ Highlight the "current" item, optionally moving step items.
             """
             classname = 'highlighted-true'
             all_items = self._get_all_items_annotated()
+            self._highlight_on = True
             
             index1 = self._de_highlight_and_get_highlighted_index(all_items)
             index2 = 0 if index1 is None else index1 + step
