@@ -417,6 +417,13 @@ class TreeWidget(Widget):
                 _, item = all_items[index2]
                 item._row.classList.add(classname)
                 self._last_highlighted_hint = item.id
+                # Scroll into view when needed
+                y1 = item._row.offsetTop - 20
+                y2 = item._row.offsetTop + item._row.offsetHeight + 20 
+                if self.node.scrollTop > y1:
+                    self.node.scrollTop = y1
+                if self.node.scrollTop + self.node.offsetHeight < y2:
+                    self.node.scrollTop = y2 - self.node.offsetHeight
         
         def highlight_get(self):
             """ Get the "current" item. This is the currently highlighted
