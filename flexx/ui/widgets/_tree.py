@@ -657,7 +657,7 @@ class TreeItem(Model):
             if e is None:
                 return dict(button=1, buttons=[1], modifiers=[])
             else:
-                self._create_mouse_event(e)
+                return self._create_mouse_event(e)
         
         def _on_click(self, e):
             # Handle JS mouse click event
