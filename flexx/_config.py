@@ -25,4 +25,7 @@ config = Config('flexx', '~appdata/.flexx.cfg',
                     'Auto-detect by default.'),
         nw_exe=('', str, 'The location of the NW.js executable. '
                 'Auto-install by default.'),
+        # tornado
+        tornado_debug=('false', bool, 'Setting the tornado application debug flag '
+                       'allows autoreload and other debugging features.'),
         )

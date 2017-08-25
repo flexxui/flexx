@@ -79,11 +79,15 @@ class TornadoServer(AbstractServer):
                 kwargs['ssl_options'] = {}
             if 'keyfile' not in kwargs['ssl_options']:
                 kwargs['ssl_options']['keyfile'] = config.ssl_keyfile
-                
+
+        if config.tornado_debug:
+            app_kwargs = dict(debug=True)
+        else:
+            app_kwargs = dict()
         # Create tornado application
         self._app = Application([(r"/flexx/ws/(.*)", WSHandler),
                                  (r"/flexx/(.*)", MainHandler),
-                                 (r"/(.*)", AppHandler), ])
+                                 (r"/(.*)", AppHandler), ], **app_kwargs)
         # Create tornado server, bound to our own ioloop
         self._server = HTTPServer(self._app, io_loop=self._loop, **kwargs)
 
