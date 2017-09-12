@@ -4,6 +4,7 @@ config = Config('flexx', '~appdata/.flexx.cfg',
 
         # General
         log_level=('info', str, 'The log level to use (DEBUG, INFO, WARNING, ERROR)'),
+        browser_stacktrace=(True, bool, 'Show stack traces in browser window'),
         
         # flexx.app
         hostname=('localhost', str, 'The default hostname to serve apps.'),
