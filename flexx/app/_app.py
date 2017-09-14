@@ -104,7 +104,7 @@ class App:
         else:
             proto = server.protocol
             host, port = server.serving
-            path =  self._path + '/' if self._path else ''
+            path = self._path + '/' if self._path else ''
             return '%s://%s:%i/%s' % (proto, host, port, path)
     
     @property
