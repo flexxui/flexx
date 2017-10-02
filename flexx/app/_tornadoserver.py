@@ -211,14 +211,15 @@ class FlexxHandler(RequestHandler):
         if status_code == 404:  # does not work?
             self.write('flexx.ui wants you to connect to root (404)')
         else:
-            msg = 'Flexx.ui encountered an error: <br /><br />'
-            try:  # try providing a useful message; tough luck if this fails
-                type, value, tb = kwargs['exc_info']
-                tb_str = ''.join(traceback.format_tb(tb))
-                msg += '<pre>%s\n%s</pre>' % (tb_str, str(value))
-            except Exception:
-                pass
-            self.write(msg)
+            if config.browser_stacktrace:
+                msg = 'Flexx.ui encountered an error: <br /><br />'
+                try:  # try providing a useful message; tough luck if this fails
+                    type, value, tb = kwargs['exc_info']
+                    tb_str = ''.join(traceback.format_tb(tb))
+                    msg += '<pre>%s\n%s</pre>' % (tb_str, str(value))
+                except Exception:
+                    pass
+                self.write(msg)
             super().write_error(status_code, **kwargs)
 
     def on_finish(self):

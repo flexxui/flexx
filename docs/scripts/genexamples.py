@@ -25,7 +25,7 @@ for dname in os.listdir(FLEXX_DIR):
 created_files = []
 
 def get_notebook_list():
-    url = 'http://api.github.com/repos/zoofio/flexx-notebooks/contents'
+    url = 'https://api.github.com/repos/zoofio/flexx-notebooks/contents'
     print('downloading %s ... ' % url, end='')
     s = json.loads(urlopen(url, timeout=5.0).read().decode())
     print('done')
