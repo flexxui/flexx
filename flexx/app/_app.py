@@ -360,9 +360,7 @@ class AppManager(event.HasEvents):
         app, pending, connected = self._appinfo[name]
 
         # Create the session
-        session = Session(name)
-        session._request = request
-        session._set_cookies(request and request.cookies)
+        session = Session(name, request=request)
         if id is not None:
             session._id = id  # used by app.export
         self._session_map[session.id] = session

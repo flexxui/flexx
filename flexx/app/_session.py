@@ -62,10 +62,10 @@ class Session:
 
     STATUS = new_type('Enum', (), {'PENDING': 1, 'CONNECTED': 2, 'CLOSED': 0})
 
-    def __init__(self, app_name, store=None):  # Allow custom store for testing
+    def __init__(self, app_name, store=None,
+                 request=None):  # Allow custom store for testing
         self._store = store if (store is not None) else assetstore
         assert isinstance(self._store, AssetStore)
-        self._cookies = {}
 
         self._creation_time = time.time()  # used by app manager
 
@@ -100,8 +100,13 @@ class Session:
         # commands, which are send to the client as soon as it connects
         self._pending_commands = []
 
-        # record the request that originated the session
-        self._request = None
+        # request related information
+        self._request = request
+        if request and request.cookies:
+            cookies = request.cookies
+        else:
+            cookies = {}
+        self._set_cookies(cookies)
 
     def __repr__(self):
         t = '<%s for %r (%i) at 0x%x>'
