@@ -361,7 +361,7 @@ class AppManager(event.HasEvents):
 
         # Create the session
         session = Session(name)
-        session.request = request
+        session._request = request
         session._set_cookies(request and request.cookies)
         if id is not None:
             session._id = id  # used by app.export
