@@ -353,8 +353,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
         session = kwargs.pop('session', None)
         kwargs.pop('is_app', None)
         
-        self._disposed = False
-        
         # Init session
         if session is None:
             active_model = get_active_model()
@@ -468,7 +466,6 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             except Exception:
                 pass  # ws can be closed/gone if this gets invoked from __del__
         super().dispose()
-        self._disposed = True
     
     @property
     def id(self):
