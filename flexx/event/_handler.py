@@ -386,14 +386,14 @@ class Handler:
         new_objects = connection.objects
         
         # Verify
-        if not connection.objects:
+        if not new_objects:
             raise RuntimeError('Could not connect to %r' % connection.fullname)
         
         # Connect and disconnect
         
         # Skip common objects from the start
         i1 = 0
-        while (i1 < len(connection.objects) and i1 < len(old_objects) and
+        while (i1 < len(new_objects) and i1 < len(old_objects) and
                new_objects[i1][0] is old_objects[i1][0] and
                new_objects[i1][1] == old_objects[i1][1]):
             i1 += 1
