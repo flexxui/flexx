@@ -399,7 +399,7 @@ class Handler:
             i1 += 1
         # Skip common objects from the end
         i2, i3 = len(new_objects) - 1, len(old_objects) - 1
-        while (i2 > i1 and i3 > i1 and
+        while (i2 >= i1 and i3 >= i1 and
                new_objects[i2][0] is old_objects[i3][0] and
                new_objects[i2][1] == old_objects[i3][1]):
             i2 -= 1
