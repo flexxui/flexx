@@ -330,14 +330,14 @@ class Handler:
         """ Get list of events and reconnect-events from list of pending events.
         """
         events = []
-        reconnect = []
+        reconnect = {}  # poor man's set
         for label, ev in self._pending:
             if label.startswith('reconnect_'):
                 index = int(label.split('_')[-1])
-                reconnect.append(index)
+                reconnect[index] = index
             else:
                 events.append(ev)
-        return events, reconnect
+        return events, tuple(reconnect)
 
     ## Connecting
 
