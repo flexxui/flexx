@@ -370,6 +370,7 @@ def test_disposing_emitter():
     
     del foo
     gc.collect()
+    event.loop.iter()
     assert foo_ref() is None
 
 

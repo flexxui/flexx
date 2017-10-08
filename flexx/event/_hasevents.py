@@ -138,6 +138,8 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         
         init_handlers = property_values.pop('_init_handlers', True)
         
+        self._disposed = False
+        
         # Instantiate emitters
         for name in self.__emitters__:
             self.__handlers.setdefault(name, [])
@@ -185,7 +187,8 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
     if sys.version_info > (3, 4):
         # http://eli.thegreenplace.net/2009/06/12/safely-using-destructors-in-python
         def __del__(self):
-            self.dispose()
+            if not self._disposed:
+                loop.call_later(self.dispose)
     
     def dispose(self):
         """ Use this to dispose of the object to prevent memory leaks.
@@ -194,6 +197,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         all references to subscribed handlers, disconnect all handlers
         defined on this object.
         """
+        self._disposed = True
         if not this_is_js():
             logger.debug('Disposing HasEvents instance %r' % self)
         for name, handlers in self.__handlers.items():

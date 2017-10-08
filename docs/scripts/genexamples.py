@@ -6,7 +6,7 @@ import json
 from types import ModuleType
 import flexx
 from flexx import ui, app
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 
 from uiexample import create_ui_example
 
@@ -27,7 +27,9 @@ created_files = []
 def get_notebook_list():
     url = 'https://api.github.com/repos/zoofio/flexx-notebooks/contents'
     print('downloading %s ... ' % url, end='')
-    s = json.loads(urlopen(url, timeout=5.0).read().decode())
+    # https://github.com/travis-ci/travis-ci/issues/5649
+    req = Request(url, headers={'User-Agent': 'flexx/%s' % flexx.__version__})
+    s = json.loads(urlopen(req, timeout=5.0).read().decode())
     print('done')
     filenames = []
     for file in s:
@@ -35,7 +37,13 @@ def get_notebook_list():
             filenames.append(file['name'])
     return filenames
     
-notebook_list = get_notebook_list()
+# Skip notebook building on CI; doing the API request fails half the time,
+# because Github limits the number of requests that you (in this case Travis)
+# can do. We can create an API token and use that, but we can also just skip ...
+if os.getenv('TRAVIS', '').lower() == 'true':
+    notebook_list = []
+else:
+    notebook_list = get_notebook_list()
 
 
 def main():
