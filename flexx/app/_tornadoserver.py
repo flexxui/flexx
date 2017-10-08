@@ -46,14 +46,14 @@ def is_main_thread():
 class TornadoServer(AbstractServer):
     """ Flexx Server implemented in Tornado.
     """
-    
+
     def __init__(self, host, port, new_loop, **kwargs):
         self._new_loop = new_loop
         self._app = None
         self._server = None
         self._get_io_loop()
         super().__init__(host, port, **kwargs)
-    
+
     def _get_io_loop(self):
         # Get a new ioloop or the current ioloop for this thread
         if self._new_loop:
@@ -62,9 +62,9 @@ class TornadoServer(AbstractServer):
             self._loop = IOLoop.current(instance=is_main_thread())
             if self._loop is None:
                 self._loop = IOLoop(make_current=True)
-    
+
     def _open(self, host, port, **kwargs):
-        # Note: does not get called if host is False. That way we can 
+        # Note: does not get called if host is False. That way we can
         # run Flexx in e.g. JLab's application.
 
         # handle ssl, wether from configuration or given args
@@ -114,14 +114,14 @@ class TornadoServer(AbstractServer):
                 [sock] = netutil.bind_sockets(None, host, family=socket.AF_INET)
                 self._server.add_sockets([sock])
                 port = sock.getsockname()[1]
-        
+
         # Notify address, so its easy to e.g. copy and paste in the browser
         self._serving = self._app._flexx_serving = host, port
         proto = 'http'
         if 'ssl_options' in kwargs:
             proto = 'https'
         logger.info('Serving apps at %s://%s:%i/' % (proto, host, port))
-    
+
     def _start(self):
         # Ensure that our loop is the current loop for this thread
         if self._new_loop:
@@ -134,15 +134,15 @@ class TornadoServer(AbstractServer):
         # AbstractServer class keeps track of this.
         if not getattr(self._loop, '_in_event_loop', False):
             self._loop.start()
-    
+
     def _stop(self):
         # todo: explicitly close all websocket connections
         logger.debug('Stopping Tornado server')
         self._loop.stop()
-    
+
     def _close(self):
         self._server.stop()
-    
+
     def call_later(self, delay, callback, *args, **kwargs):
         # We use a wrapper func so that exceptions are processed via our
         # logging system. Also fixes that Tornado seems to close websockets
@@ -155,22 +155,22 @@ class TornadoServer(AbstractServer):
             except Exception as err:
                 err.skip_tb = 1
                 logger.exception(err)
-        
+
         if delay <= 0:
             self._loop.add_callback(wrapper)
         else:
             self._loop.call_later(delay, wrapper)
-    
+
     @property
     def app(self):
         """ The Tornado Application object being used."""
         return self._app
-    
+
     @property
     def loop(self):
         """ The Tornado IOLoop object being used."""
         return self._loop
-    
+
     @property
     def server(self):
         """ The Tornado HttpServer object being used."""
@@ -186,7 +186,7 @@ class TornadoServer(AbstractServer):
 
 def port_hash(name):
     """ Given a string, returns a port number between 49152 and 65535
-    
+
     This range (of 2**14 posibilities) is the range for dynamic and/or
     private ports (ephemeral ports) specified by iana.org. The algorithm
     is deterministic.
@@ -202,11 +202,11 @@ def port_hash(name):
 class FlexxHandler(RequestHandler):
     """ Base class for Flexx' Tornado request handlers.
     """
-    
+
     def initialize(self, **kwargs):
         # kwargs == dict set as third arg in url spec
         pass
-    
+
     def write_error(self, status_code, **kwargs):
         if status_code == 404:  # does not work?
             self.write('flexx.ui wants you to connect to root (404)')
@@ -221,7 +221,7 @@ class FlexxHandler(RequestHandler):
                     pass
                 self.write(msg)
             super().write_error(status_code, **kwargs)
-    
+
     def on_finish(self):
         pass
 
@@ -229,15 +229,15 @@ class FlexxHandler(RequestHandler):
 class AppHandler(FlexxHandler):
     """ Handler for http requests to get apps.
     """
-    
+
     @gen.coroutine
     def get(self, full_path):
-        
+
         logger.debug('Incoming request at %r' % full_path)
-        
+
         ok_app_names = '__main__', '__default__', '__index__'
         parts = [p for p in full_path.split('/') if p]
-        
+
         # Try getting regular app name
         # Note: invalid part[0] can mean its a path relative to the main app
         app_name = None
@@ -248,7 +248,7 @@ class AppHandler(FlexxHandler):
             if parts[0] in ok_app_names or manager.has_app_name(parts[0]):
                 app_name = parts[0]
                 path = '/'.join(parts[1:])
-        
+
         # If it does not look like an app, it might be that the request is for
         # the main app. The main app can have sub-paths, but lets try to filter
         # out cases that might make Flexx unnecessarily instantiate an app.
@@ -258,13 +258,13 @@ class AppHandler(FlexxHandler):
                 return self.redirect('/flexx/data/' + full_path)
             # If we did not return ... assume this is the default app
             app_name = '__main__'
-        
+
         # Try harder to produce an app
         if app_name == '__main__':
             app_name = manager.has_app_name('__main__')
         elif '/' not in full_path:
             return self.redirect('/%s/' % app_name)  # ensure slash behind name
-        
+
         # Maybe the user wants an index? Otherwise error.
         if not app_name:
             if not parts:
@@ -272,7 +272,7 @@ class AppHandler(FlexxHandler):
             else:
                 name = parts[0] if parts else '__main__'
                 return self.write('No app "%s" is currently hosted.' % name)
-    
+
         # We now have:
         # * app_name: name of the app, must be a valid identifier, names
         #   with underscores are reserved for special things like assets,
@@ -282,36 +282,33 @@ class AppHandler(FlexxHandler):
             self._get_index(app_name, path)  # Index page
         else:
             self._get_app(app_name, path)  # An actual app!
-    
+
     def _get_index(self, app_name, path):
         if path:
             return self.redirect('/flexx/__index__')
-        all_apps = ['<li><a href="%s/">%s</a></li>' % (name, name) for name in 
+        all_apps = ['<li><a href="%s/">%s</a></li>' % (name, name) for name in
                     manager.get_app_names()]
         the_list = '<ul>%s</ul>' % ''.join(all_apps) if all_apps else 'no apps'
         self.write('Index of available apps: ' + the_list)
-    
+
     def _get_app(self, app_name, path):
-    
-        # todo: send path to app somehow
-        
         # Allow serving data/assets relative to app so that data can use
         # relative paths just like exported apps.
         if path.startswith(('_data/', '_assets/')):
             return self.redirect('/flexx/' + path[1:])
-        
+
         # Get case-corrected app name if the app is known
         correct_app_name = manager.has_app_name(app_name)
-        
+
         # Error or redirect if app name is not right
         if not correct_app_name:
             return self.write('No app "%s" is currently hosted.' % app_name)
         if correct_app_name != app_name:
             return self.redirect('/%s/%s' % (correct_app_name, path))
-        
+
         # Should we bind this app instance to a pre-created session?
         session_id = self.get_argument('session_id', '')
-        
+
         if session_id:
             # If session_id matches a pending app, use that session
             session = manager.get_session_by_id(session_id)
@@ -321,7 +318,7 @@ class AppHandler(FlexxHandler):
                 self.redirect('/%s/' % app_name)  # redirect for normal serve
         else:
             # Create session - websocket will connect to it via session_id
-            session = manager.create_session(app_name, cookies=self.cookies)
+            session = manager.create_session(app_name, request=self.request)
             self.write(get_page(session).encode())
 
 
@@ -336,12 +333,12 @@ class MainHandler(RequestHandler):
         guess = mimetypes.guess_type(fname)[0]
         if guess:
             self.set_header("Content-Type", guess)
-    
+
     @gen.coroutine
     def get(self, full_path):
-        
+
         logger.debug('Incoming request at %s' % full_path)
-        
+
         # Analyze path to derive components
         # Note: invalid app name can mean its a path relative to the main app
         parts = [p for p in full_path.split('/') if p]
@@ -349,7 +346,7 @@ class MainHandler(RequestHandler):
             return self.write('Root url for flexx: assets, assetview, data, cmd')
         selector = parts[0]
         path = '/'.join(parts[1:])
-        
+
         if selector in ('assets', 'assetview', 'data'):
             self._get_asset(selector, path)  # JS, CSS, or data
         elif selector == 'info':
@@ -358,34 +355,34 @@ class MainHandler(RequestHandler):
             self._get_cmd(selector, path)  # Execute (or ignore) command
         else:
             return self.write('Invalid url path "%s".' % full_path)
-    
+
     def _get_asset(self, selector, path):
-        
+
         # Get session id and filename
         session_id, _, filename = path.partition('/')
         session_id = '' if session_id == 'shared' else session_id
-        
+
         # Get asset provider: store or session
         asset_provider = assets
         if session_id and selector != 'data':
             return self.write('Only supports shared assets, not ' % filename)
         elif session_id:
             asset_provider = manager.get_session_by_id(session_id)
-        
+
         # Checks
         if asset_provider is None:
             return self.write('Invalid session %r' % session_id)
         if not filename:
             return self.write('Root dir for %s/%s' % (selector, path))
-        
+
         if selector == 'assets':
-            
+
             # If colon: request for a view of an asset at a certain line
             if '.js:' in filename or '.css:' in filename or filename[0] == ':':
                 fname, where = filename.split(':')[:2]
                 return self.redirect('/flexx/assetview/%s/%s#L%s' %
                     (session_id or 'shared', fname.replace('/:', ':'), where))
-            
+
             # Retrieve asset
             try:
                 res = asset_provider.get_asset(filename)
@@ -394,9 +391,9 @@ class MainHandler(RequestHandler):
             else:
                 self._guess_mime_type(filename)
                 self.write(res.to_string())
-        
+
         elif selector == 'assetview':
-            
+
             # Retrieve asset
             try:
                 res = asset_provider.get_asset(filename)
@@ -404,7 +401,7 @@ class MainHandler(RequestHandler):
                 return self.write('Could not load asset %r' % filename)
             else:
                 res = res.to_string()
-            
+
             # Build HTML page
             style = ('pre {display:block; width: 100%; padding:0; margin:0;} '
                     'a {text-decoration: none; color: #000; background: #ddd;} '
@@ -417,10 +414,10 @@ class MainHandler(RequestHandler):
                              (i+1, i+1, str(i+1).rjust(4).replace(' ', '&nbsp'), line))
             lines.append('</body></html>')
             return self.write('\n'.join(lines))
-        
+
         elif selector == 'data':
             # todo: can/do we async write in case the data is large?
-            
+
             # Retrieve data
             res = asset_provider.get_data(filename)
             if res is None:
@@ -428,10 +425,10 @@ class MainHandler(RequestHandler):
             else:
                 self._guess_mime_type(filename)  # so that images show up
                 return self.write(res)
-        
+
         else:
             raise RuntimeError('Invalid asset type %r' % selector)
-    
+
     def _get_info(self, selector, info):
         """ Provide some rudimentary information about the server.
         Note that this is publicly accesible.
@@ -440,22 +437,22 @@ class MainHandler(RequestHandler):
         napps = len(manager.get_app_names())
         nsessions = sum([len(manager.get_connections(x))
                          for x in manager.get_app_names()])
-        
+
         info = []
         info.append('Runtime: %1.1f s' % runtime)
         info.append('Number of apps: %i' % napps)
         info.append('Number of sessions: %i' % nsessions)
-        
+
         info = '\n'.join(['<li>%s</li>' % i for i in info])
         self.write('<ul>' + info + '</ul>')
-    
+
     def _get_cmd(self, selector, path):
         """ Allow control of the server using http, but only from localhost!
         """
         if not self.request.host.startswith('localhost:'):
             self.write('403')
             return
-        
+
         if not path:
             self.write('No command given')
         elif path == 'info':
@@ -477,19 +474,19 @@ class MessageCounter:
     """ Simple class to count incoming messages and periodically log
     the number of messages per second.
     """
-    
+
     def __init__(self):
         self._collect_interval = 0.2  # period over which to collect messages
         self._notify_interval = 3.0  # period on which to log the mps
         self._window_interval = 4.0  # size of sliding window
-        
+
         self._mps = [(time.time(), 0)]  # tuples of (time, count)
         self._collect_count = 0
         self._collect_stoptime = 0
-        
+
         self._stop = False
         self._notify()
-    
+
     def trigger(self):
         t = time.time()
         if t < self._collect_stoptime:
@@ -498,7 +495,7 @@ class MessageCounter:
             self._mps.append((self._collect_stoptime, self._collect_count))
             self._collect_count = 1
             self._collect_stoptime = t + self._collect_interval
-    
+
     def _notify(self):
         mintime = time.time() - self._window_interval
         self._mps = [x for x in self._mps if x[0] > mintime]
@@ -508,11 +505,11 @@ class MessageCounter:
         else:
             n, T = 0, self._collect_interval
         logger.debug('Websocket messages per second: %1.1f' % (n / T))
-        
+
         if not self._stop:
             loop = IOLoop.current()
             loop.call_later(self._notify_interval, self._notify)
-    
+
     def stop(self):
         self._stop = True
 
@@ -520,50 +517,50 @@ class MessageCounter:
 class WSHandler(WebSocketHandler):
     """ Handler for websocket.
     """
-    
+
     # https://tools.ietf.org/html/rfc6455#section-7.4.1
-    known_reasons = {1000: 'client done', 
-                     1001: 'client closed', 
-                     1002: 'protocol error', 
+    known_reasons = {1000: 'client done',
+                     1001: 'client closed',
+                     1002: 'protocol error',
                      1003: 'could not accept data',
                      }
-    
+
     # --- callbacks
-    
+
     def open(self, path=None):
         """ Called when a new connection is made.
         """
         if not hasattr(self, 'close_code'):  # old version of Tornado?
             self.close_code, self.close_reason = None, None
-        
+
         self._session = None
         self._mps_counter = MessageCounter()
-        
+
         # Don't collect messages to send them more efficiently, just send asap
         # self.set_nodelay(True)
-        
+
         if isinstance(path, bytes):
             path = path.decode()
         self.app_name = path.strip('/')
-        
+
         logger.debug('New websocket connection %s' % path)
         if manager.has_app_name(self.app_name):
             IOLoop.current().spawn_callback(self.pinger1)
             IOLoop.current().spawn_callback(self.pinger2)
         else:
             self.close(1003, "Could not associate socket with an app.")
-    
+
     # todo: @gen.coroutine?
     def on_message(self, message):
         """ Called when a new message is received from JS.
-        
+
         This handles one message per event loop iteration.
-        
+
         We now have a very basic protocol for receiving messages,
         we should at some point define a real formalized protocol.
         """
         self._mps_counter.trigger()
-        
+
         self._pongtime = time.time()
         if self._session is None:
             if message.startswith('hiflexx '):
@@ -584,7 +581,7 @@ class WSHandler(WebSocketHandler):
             except Exception as err:
                 err.skip_tb = 1
                 logger.exception(err)
-    
+
     def on_close(self):
         """ Called when the connection is closed.
         """
@@ -595,30 +592,30 @@ class WSHandler(WebSocketHandler):
         if self._session is not None:
             manager.disconnect_client(self._session)
             self._session = None  # Allow cleaning up
-    
+
     @gen.coroutine
     def pinger1(self):
         """ Check for timeouts. This helps remove lingering false connections.
-        
+
         This uses the websocket's native ping-ping mechanism. On the
         browser side, pongs work even if JS is busy. On the Python side
-        we perform a check whether we were really waiting or whether Python 
+        we perform a check whether we were really waiting or whether Python
         was too busy to detect the pong.
         """
         self._pongtime = time.time()
         self._pingtime = pingtime = 0
-        
+
         while self.close_code is None:
             dt = config.ws_timeout
-            
+
             # Ping, but don't spam
             if pingtime <= self._pongtime:
                 self.ping(b'x')
                 pingtime = self._pingtime = time.time()
                 iters_since_ping = 0
-            
+
             yield gen.sleep(dt / 5)
-            
+
             # Check pong status
             iters_since_ping += 1
             if iters_since_ping < 5:
@@ -629,28 +626,28 @@ class WSHandler(WebSocketHandler):
                 logger.warn('Closing connection due to lack of pong')
                 self.close(1000, 'Conection timed out (no pong).')
                 return
-    
+
     def on_pong(self, data):
         """ Implement the ws's on_pong() method. Called when our ping
         is returned by the browser.
         """
         self._pongtime = time.time()
-    
+
     @property
     def ping_counter(self):
         """ Counter indicating the number of pings so far. This measure is
         used by ``Session.keep_alive()``.
         """
         return self._ping_counter
-    
+
     @gen.coroutine
     def pinger2(self):
         """ Ticker so we have a signal of sorts to indicate round-trips.
-        
+
         This is used to implement session.call_on_next_pong(), which
         is sort of like call_later(), but waits for both Py and JS to "flush"
         their current events.
-        
+
         This uses a ping-pong mechanism implemented *atop* the websocket.
         When JS is working, it is not able to send a pong (which is what we
         want in this case).
@@ -662,44 +659,44 @@ class WSHandler(WebSocketHandler):
                 self._ping_counter += 1
                 self.command('PING %i' % self._ping_counter)
             yield gen.sleep(1.0)
-    
+
     def on_pong2(self, data):
         """ Called when our ping is returned by Flexx.
         """
         self._pong_counter = int(data)
         if self._session:
             self._session._receive_pong(self._pong_counter)
-    
+
     # --- methods
-    
+
     def command(self, cmd):
         self.write_message(cmd, binary=BINARY)
-    
+
     def close(self, *args):
         try:
             WebSocketHandler.close(self, *args)
         except TypeError:
             WebSocketHandler.close(self)  # older Tornado
-    
+
     def close_this(self):
         """ Call this to close the websocket
         """
         self.close(1000, 'closed by server')
-    
+
     def check_origin(self, origin):
         """ Handle cross-domain access; override default same origin policy.
         """
         # http://www.tornadoweb.org/en/stable/_modules/tornado/websocket.html
         #WebSocketHandler.check_origin
-        
+
         serving_host = self.request.headers.get("Host")
         serving_hostname, _, serving_port = serving_host.partition(':')
         connecting_host = urlparse(origin).netloc
         connecting_hostname, _, connecting_port = connecting_host.partition(':')
-        
+
         serving_port = serving_port or '80'
         connecting_port = connecting_port or '80'
-        
+
         if serving_hostname == 'localhost':
             return True  # Safe
         elif serving_host == connecting_host:
