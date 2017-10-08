@@ -27,7 +27,12 @@ created_files = []
 def get_notebook_list():
     url = 'https://api.github.com/repos/zoofio/flexx-notebooks/contents'
     print('downloading %s ... ' % url, end='')
-    req = Request(url, headers={'User-Agent': 'flexx/%s' % flexx.__version__})
+    # https://github.com/travis-ci/travis-ci/issues/5649
+    uagent_prefix = 'Travis/' if os.getenv('TRAVIS', '') else ''
+    req = Request(url, headers={'User-Agent': uagent_prefix + 'flexx/%s' % flexx.__version__,
+                                'Accept': 'application/vnd.travis-ci.2+json',
+                                'Host': 'api.travis-ci.org',
+                                'Content-Type': 'application/json'})
     s = json.loads(urlopen(req, timeout=5.0).read().decode())
     print('done')
     filenames = []
