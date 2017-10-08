@@ -330,14 +330,14 @@ class Handler:
         """ Get list of events and reconnect-events from list of pending events.
         """
         events = []
-        reconnect = []
+        reconnect = {}  # poor man's set
         for label, ev in self._pending:
             if label.startswith('reconnect_'):
                 index = int(label.split('_')[-1])
-                reconnect.append(index)
+                reconnect[index] = index
             else:
                 events.append(ev)
-        return events, reconnect
+        return events, tuple(reconnect)
 
     ## Connecting
 
@@ -375,22 +375,40 @@ class Handler:
         """
         connection = self._connections[index]
 
-        # Disconnect
-        while len(connection.objects):
-            ob, type = connection.objects.pop(0)
-            ob.disconnect(type, self)
-
+        # Prepare disconnecting
+        old_objects = connection.objects  # (ob, type) tuples
+        connection.objects = []
+        
         # Obtain root object and setup connections
         ob = self._ob1()
         if ob is not None:
             self._seek_event_object(index, connection.parts, ob)
-
+        new_objects = connection.objects
+        
         # Verify
-        if not connection.objects:
+        if not new_objects:
             raise RuntimeError('Could not connect to %r' % connection.fullname)
-
-        # Connect
-        for ob, type in connection.objects:
+        
+        # Connect and disconnect
+        
+        # Skip common objects from the start
+        i1 = 0
+        while (i1 < len(new_objects) and i1 < len(old_objects) and
+               new_objects[i1][0] is old_objects[i1][0] and
+               new_objects[i1][1] == old_objects[i1][1]):
+            i1 += 1
+        # Skip common objects from the end
+        i2, i3 = len(new_objects) - 1, len(old_objects) - 1
+        while (i2 >= i1 and i3 >= i1 and
+               new_objects[i2][0] is old_objects[i3][0] and
+               new_objects[i2][1] == old_objects[i3][1]):
+            i2 -= 1
+            i3 -= 1
+        # Disconnect remaining old
+        for ob, type in old_objects[i1:i3+1]:
+            ob.disconnect(type, self)
+        # Connect remaining new
+        for ob, type in new_objects[i1:i2+1]:
             ob._register_handler(type, self, connection.force)
 
     def _seek_event_object(self, index, path, ob):

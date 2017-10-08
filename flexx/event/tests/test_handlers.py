@@ -581,4 +581,106 @@ def test_dispose3():
     assert handler_ref() is None
 
 
+def test_dynamism_and_handler_reconnecting():
+    # Flexx' event system tries to be smart about reusing connections when
+    # reconnections are made. This tests checks that this works, and when
+    # it does not.
+
+    class Foo(event.HasEvents):
+        def __init__(self):
+            super().__init__()
+        
+        @event.prop
+        def bars(self, v=[]):
+            return list(v)
+        
+        def disconnect(self, *args):  # Detect disconnections
+            super().disconnect(*args)
+            disconnects.append(self)
+    
+    class Bar(event.HasEvents):
+        def __init__(self):
+            super().__init__()
+        
+        @event.prop
+        def spam(self, v=0):
+            return v
+        
+        def disconnect(self, *args):  # Detect disconnections
+            super().disconnect(*args)
+            disconnects.append(self)
+    
+    f = Foo()
+    
+    triggers = []
+    disconnects = []
+    
+    @f.connect('!bars*.spam')
+    def handle_foo(*events):
+        triggers.append(len(events))
+    
+    assert len(triggers) == 0
+    assert len(disconnects) == 0
+    
+    # Assign new bar objects
+    with event.loop:
+        f.bars = [Bar(), Bar()]
+    #
+    assert len(triggers) == 0
+    assert len(disconnects) == 0
+    
+    # Change values of bar.spam
+    with event.loop:
+        f.bars[0].spam = 7
+        f.bars[1].spam = 42
+    #
+    assert sum(triggers) == 2
+    assert len(disconnects) == 0
+    
+    # Assign 3 new bar objects - old ones are disconnected
+    with event.loop:
+        f.bars =  [Bar(), Bar(), Bar()]
+    #
+    assert sum(triggers) == 2
+    assert len(disconnects) == 2
+    
+    #
+    
+    # Append to bars property
+    disconnects = []
+    with event.loop:
+        f.bars = f.bars + [Bar(), Bar()]
+    assert len(disconnects) == 0
+   
+    # Append to bars property, drop one
+    disconnects = []
+    with event.loop:
+        f.bars = f.bars[:-1] + [Bar(), Bar()]
+    assert len(disconnects) == 1
+    
+    # Append to bars property, drop one at the wrong end: Flexx can't optimize
+    disconnects = []
+    with event.loop:
+        f.bars = f.bars[1:] + [Bar(), Bar()]
+    assert len(disconnects) == len(f.bars) - 1
+    
+    # Prepend to bars property
+    disconnects = []
+    with event.loop:
+        f.bars = [Bar(), Bar()] + f.bars
+    assert len(disconnects) == 0
+    
+    # Prepend to bars property, drop one
+    disconnects = []
+    with event.loop:
+        f.bars = [Bar(), Bar()] + f.bars[1:]
+    assert len(disconnects) == 1
+    
+    # Prepend to bars property, drop one at the wrong end: Flexx can't optimize
+    disconnects = []
+    with event.loop:
+        f.bars = [Bar(), Bar()] + f.bars[:-1]
+    assert len(disconnects) == len(f.bars) - 1
+
+
 run_tests_if_main()
