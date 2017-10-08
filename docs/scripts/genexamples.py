@@ -6,7 +6,7 @@ import json
 from types import ModuleType
 import flexx
 from flexx import ui, app
-from urllib.request import urlopen, HTTPError
+from urllib.request import urlopen, Request
 
 from uiexample import create_ui_example
 
@@ -27,16 +27,8 @@ created_files = []
 def get_notebook_list():
     url = 'https://api.github.com/repos/zoofio/flexx-notebooks/contents'
     print('downloading %s ... ' % url, end='')
-    max_tries = 4
-    for i in range(1, max_tries+1):
-        try:
-            s = json.loads(urlopen(url, timeout=5.0).read().decode())
-            break
-        except HTTPError:
-            if i == max_tries:
-                raise
-            print('retry ... ', end='')
-            continue
+    req = Request(url, headers={'User-Agent': 'flexx/%s' % flexx.__version__})
+    s = json.loads(urlopen(req, timeout=5.0).read().decode())
     print('done')
     filenames = []
     for file in s:
