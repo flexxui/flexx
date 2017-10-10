@@ -48,7 +48,7 @@ class Flexx:
         self.instances = {}
         # Note: flexx.init() is not auto-called when Flexx is embedded
         window.addEventListener('load', self.init, False)
-        window.addEventListener('beforeunload', self.exit, False)
+        window.addEventListener('unload', self.exit, False)  # not beforeunload
     
     def init(self):
         """ Called after document is loaded. """
