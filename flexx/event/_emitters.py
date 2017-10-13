@@ -6,7 +6,7 @@ prop, readonly and emitter.
 import inspect
 
 
-# Decorators to apply at a HasEvents class
+# Decorators to apply at a Component class
 
 def prop(func):
     """ Decorator to define a settable propery. An event is emitted
@@ -15,7 +15,7 @@ def prop(func):
     
     .. code-block:: python
     
-        class MyObject(event.HasEvents):
+        class MyObject(event.Component):
            
            @prop
            def foo(self, v=1):
@@ -40,11 +40,11 @@ def readonly(func):
     """ Decorator to define a readonly property. An event is emitted
     when the property is set, which has values for "old_value" and
     "new_value". To set a readonly property internally, use the
-    :func:`HasEvents._set_prop() <flexx.event.HasEvents._set_prop>` method.
+    :func:`Component._set_prop() <flexx.event.Component._set_prop>` method.
     
     .. code-block:: python
     
-        class MyObject(event.HasEvents):
+        class MyObject(event.Component):
            
            @readonly
            def bar(self, v=1):
@@ -66,7 +66,7 @@ def emitter(func):
     
     .. code-block:: python
     
-        class MyObject(event.HasEvents):
+        class MyObject(event.Component):
            
            @emitter
            def spam(self, v):
@@ -91,7 +91,7 @@ class BaseEmitter:
     def __init__(self, func, name=None, doc=None):
         assert callable(func)
         self._func = func
-        self._name = name or func.__name__  # updated by HasEvents meta class
+        self._name = name or func.__name__  # updated by Component meta class
         self.__doc__ = '*%s*: %s' % (self.__class__.__name__.lower(),
                                      doc or func.__doc__ or self._name)
     

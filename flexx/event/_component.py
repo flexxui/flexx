@@ -1,5 +1,5 @@
 """
-Implements the HasEvents class; the core class via which events are
+Implements the Component class; the core class via which events are
 generated and handled. It is the object that keeps track of handlers.
 """
 
@@ -38,17 +38,17 @@ def new_type(name, *args, **kwargs):
     return type(name, *args, **kwargs)
 
 
-class HasEventsMeta(type):
-    """ Meta class for HasEvents
+class ComponentMeta(type):
+    """ Meta class for Component
     * Set the name of each handler and emitter.
     * Sets __handlers__, __emitters, __properties__ attribute on the class.
     """
     
     def __init__(cls, name, bases, dct):
-        finalize_hasevents_class(cls)
+        finalize_component_class(cls)
         type.__init__(cls, name, bases, dct)
 
-def finalize_hasevents_class(cls):
+def finalize_component_class(cls):
     """ Given a class, analyse its Properties, Readonlies, Emitters,
     and Handlers, to set a list of __emitters__, __properties__, and
     __handlers__. Also create private methods corresponding to the
@@ -79,7 +79,7 @@ def finalize_hasevents_class(cls):
     return cls
 
 
-class HasEvents(with_metaclass(HasEventsMeta, object)):
+class Component(with_metaclass(ComponentMeta, object)):
     """ Base class for objects that have properties and can emit events.
     Initial values of settable properties can be provided by passing them
     as keyword arguments.
@@ -93,7 +93,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
     
     .. code-block:: python
     
-        class MyObject(event.HasEvents):
+        class MyObject(event.Component):
             
             # Emitters
             
@@ -124,7 +124,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
     
     """
     
-    _IS_HASEVENTS = True
+    _IS_COMPONENT = True
     
     def __init__(self, **property_values):
         
@@ -199,10 +199,10 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         """
         self._disposed = True
         if not this_is_js():
-            logger.debug('Disposing HasEvents instance %r' % self)
+            logger.debug('Disposing Component instance %r' % self)
         for name, handlers in self.__handlers.items():
             for label, handler in handlers:
-                handler._clear_hasevents_refs(self)
+                handler._clear_component_refs(self)
             while len(handlers):
                 handlers.pop()  # no list.clear on legacy py
         for name in self.__handlers__:
@@ -393,7 +393,7 @@ class HasEvents(with_metaclass(HasEventsMeta, object)):
         
         .. code-block:: py
             
-            h = HasEvents()
+            h = Component()
             
             # Usage as a decorator
             @h.connect('first_name', 'last_name')

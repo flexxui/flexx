@@ -5,7 +5,7 @@ to user input.
 
 In short:
 
-* The :class:`HasEvents <flexx.event.HasEvents>` class provides objects
+* The :class:`Component <flexx.event.Component>` class provides objects
   that have properties and can emit events.
 * There are three decorators to create :func:`properties <flexx.event.prop>`,
   :func:`readonlies <flexx.event.readonly>` and 
@@ -26,20 +26,20 @@ class is used that inherits from ``dict`` but allows attribute access,
 e.g. ``ev.button`` as an alternative to ``ev['button']``.
 
 
-The HasEvents class
+The Component class
 -------------------
 
-The :class:`HasEvents <flexx.event.HasEvents>` class provides a base
+The :class:`Component <flexx.event.Component>` class provides a base
 class for objects that have properties and/or emit events. E.g. a
 ``flexx.ui.Widget`` inherits from ``flexx.app.Model``, which inherits
-from ``flexx.event.HasEvents``.
+from ``flexx.event.Component``.
 
-Events are emitted using the :func:`emit() <flexx.event.HasEvents.emit>`
+Events are emitted using the :func:`emit() <flexx.event.Component.emit>`
 method, which accepts a name for the type of the event, and optionally a dict,
 e.g. ``emitter.emit('mouse_down', dict(button=1, x=103, y=211))``.
 
-The HasEvents object will add two attributes to the event: ``source``,
-a reference to the HasEvents object itself, and ``type``, a string
+The Component object will add two attributes to the event: ``source``,
+a reference to the Component object itself, and ``type``, a string
 indicating the type of the event.
 
 As a user, you generally do not need to emit events explicitly; events are
@@ -56,7 +56,7 @@ using the :func:`connect <flexx.event.connect>` decorator:
     
     from flexx import event
     
-    class MyObject(event.HasEvents):
+    class MyObject(event.Component):
        
         @event.connect('foo')
         def handle_foo(self, *events):
@@ -94,18 +94,18 @@ multiple events at once:
 
 .. code-block:: python
 
-    class MyObject(event.HasEvents):
+    class MyObject(event.Component):
        
         @event.connect('foo', 'bar')
         def handle_foo_and_bar(self, *events):
             print(events)
 
 To create a handler from a normal function, use the
-:func:`HasEvents.connect() <flexx.event.HasEvents.connect>` method:
+:func:`Component.connect() <flexx.event.Component.connect>` method:
 
 .. code-block:: python
 
-    h = event.HasEvents()
+    h = event.Component()
     
     # Using a decorator
     @h.connect('foo', 'bar')
@@ -121,8 +121,8 @@ To create a handler from a normal function, use the
 Event emitters
 --------------
 
-Apart from using :func:`emit() <flexx.event.HasEvents.emit>` there are
-certain attributes of ``HasEvents`` instances that generate events.
+Apart from using :func:`emit() <flexx.event.Component.emit>` there are
+certain attributes of ``Component`` instances that generate events.
 
 Properties
 ==========
@@ -132,7 +132,7 @@ Settable properties can be created easiliy using the
 
 .. code-block:: python
 
-    class MyObject(event.HasEvents):
+    class MyObject(event.Component):
        
         @event.prop
         def foo(self, v=0):
@@ -159,11 +159,11 @@ Readonly
 Readonly properties are created with the 
 :func:`readonly <flexx.event.readonly>` decorator. The value of a
 readonly property can be set internally using the
-:func:`_set_prop() <flexx.event.HasEvents._set_prop>` method:.
+:func:`_set_prop() <flexx.event.Component._set_prop>` method:.
 
 .. code-block:: python
 
-    class MyObject(event.HasEvents):
+    class MyObject(event.Component):
        
         @event.readonly
         def foo(self, v=0):
@@ -183,7 +183,7 @@ placeholder to document events on a class. They are created with the
 
 .. code-block:: python
 
-    class MyObject(event.HasEvents):
+    class MyObject(event.Component):
     
         @event.emitter
         def mouse_down(self, js_event):
@@ -230,7 +230,7 @@ string: 'foo.bar:label'.
 
 .. code-block:: python
     
-    class MyObject(event.HasEvents):
+    class MyObject(event.Component):
     
         @event.connect('foo')
         def given_foo_handler(*events):
@@ -249,7 +249,7 @@ scheduled to handle its events due to another event, and a handler
 always handles all its pending events at once.
 
 The label can also be used in the
-:func:`disconnect() <flexx.event.HasEvents.disconnect>` method:
+:func:`disconnect() <flexx.event.Component.disconnect>` method:
 
 .. code-block:: python
 
@@ -267,7 +267,7 @@ Dynamism
 
 Dynamism is a concept that allows one to connect to events for which
 the source can change. For the following example, assume that ``Node``
-is a ``HasEvents`` subclass that has properties ``parent`` and
+is a ``Component`` subclass that has properties ``parent`` and
 ``children``.
 
 .. code-block:: python
@@ -317,13 +317,13 @@ window-title inside the function that starts a song, there would be a
 concept of a "current song", and the window would listen for changes to
 the current song to update the title when it changes.
 
-In ``flexx.event``, a ``HasEvents`` object keeps track of its observers
+In ``flexx.event``, a ``Component`` object keeps track of its observers
 (handlers) and notifies them when there are changes. In our music player
 example, there would be a property "current_song", and a handler to
 take action when it changes.
 
 As is common in the observer pattern, the handlers keep track of the
-handlers that they observe. Therefore both handlers and ``HasEvents``
+handlers that they observe. Therefore both handlers and ``Component``
 objects have a ``dispose()`` method for cleaning up.
 
 Signals and slots
@@ -349,7 +349,7 @@ In pub-sub, publishers generate messages identified by a 'topic', and
 subscribers can subscribe to such topics. There can be zero or more publishers
 and zero or more subscribers to any topic. 
 
-In ``flexx.event`` a `HasEvents` object can play the role of a broker.
+In ``flexx.event`` a `Component` object can play the role of a broker.
 Publishers can simply emit events. The event type represents the message
 topic. Subscribers are represented by handlers.
 
@@ -364,6 +364,6 @@ from ._dict import Dict
 from ._loop import loop
 from ._handler import Handler, connect
 from ._emitters import prop, readonly, emitter
-from ._hasevents import HasEvents
+from ._component import Component
 
-# from ._hasevents import new_type, with_metaclass
+# from ._component import new_type, with_metaclass

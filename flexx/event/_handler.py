@@ -29,7 +29,7 @@ def looks_like_method(func):
 
 # Decorator to wrap a function in a Handler object
 def connect(*connection_strings):
-    """ Decorator to turn a method of HasEvents into an event
+    """ Decorator to turn a method of Component into an event
     :class:`Handler <flexx.event.Handler>`.
 
     A method can be connected to multiple event types. Each connection
@@ -37,13 +37,13 @@ def connect(*connection_strings):
     dynamism and labels for further information on the possibilities
     of connection strings.
 
-    To connect functions or methods to an event from another HasEvents
+    To connect functions or methods to an event from another Component
     object, use that object's
-    :func:`HasEvents.connect()<flexx.event.HasEvents.connect>` method.
+    :func:`Component.connect()<flexx.event.Component.connect>` method.
 
     .. code-block:: py
 
-        class MyObject(event.HasEvents):
+        class MyObject(event.Component):
             @event.connect('first_name', 'last_name')
             def greet(self, *events):
                 print('hello %s %s' % (self.first_name, self.last_name))
@@ -81,14 +81,14 @@ class HandlerDescriptor:
     Arguments:
         func (callable): function that handles the events.
         connection_strings (list): the strings that represent the connections.
-        ob (HasEvents, optional): the HasEvents object to use a a basis for the
+        ob (Component, optional): the Component object to use a a basis for the
             connection. A weak reference to this object is stored.
     """
 
     def __init__(self, func, connection_strings, ob=None):
         assert callable(func)  # HandlerDescriptor is not instantiated directly
         self._func = func
-        self._name = func.__name__  # updated by HasEvents meta class
+        self._name = func.__name__  # updated by Component meta class
         self._ob = None if ob is None else weakref.ref(ob)
         self._connection_strings = connection_strings
         self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
@@ -132,12 +132,12 @@ class HandlerDescriptor:
 class Handler:
     """ Wrapper around a function object to connect it to one or more events.
     This class should not be instantiated directly; use ``event.connect`` or
-    ``HasEvents.connect`` instead.
+    ``Component.connect`` instead.
 
     Arguments:
         func (callable): function that handles the events.
         connection_strings (list): the strings that represent the connections.
-        ob (HasEvents): the HasEvents object to use a a basis for the
+        ob (Component): the Component object to use a a basis for the
             connection. A weak reference to this object is stored.
     """
 
@@ -148,7 +148,7 @@ class Handler:
         self._id = 'h%i' % Handler._count  # to ensure a consistent event order
 
         # Store objects using a weakref.
-        # - ob1 is the HasEvents object of which the connect() method was called
+        # - ob1 is the Component object of which the connect() method was called
         #   to create the handler. Connection strings are relative to this object.
         # - ob2 is the object to be passed to func (if it is a method). Is often
         #   the same as ob1, but not per see. Can be None.
@@ -278,7 +278,7 @@ class Handler:
 
     def _add_pending_event(self, label, ev):
         """ Add an event object to be handled at the next event loop
-        iteration. Called from HasEvents.emit().
+        iteration. Called from Component.emit().
         """
         if not self._scheduled_update:
             # register only once
@@ -356,9 +356,9 @@ class Handler:
         while len(self._pending):
             self._pending.pop()  # no list.clear on legacy py
 
-    def _clear_hasevents_refs(self, ob):
-        """ Clear all references to the given HasEvents instance. This is
-        called from a HasEvents' dispose() method. This handler remains
+    def _clear_component_refs(self, ob):
+        """ Clear all references to the given Component instance. This is
+        called from a Component' dispose() method. This handler remains
         working, but wont receive events from that object anymore.
         """
         for connection in self._connections:
@@ -424,7 +424,7 @@ class Handler:
         if len(path) == 1:
             # Path only consists of event type now: make connection
             # connection.type consists of event type name (no stars) plus a label
-            if hasattr(ob, '_IS_HASEVENTS'):
+            if hasattr(ob, '_IS_COMPONENT'):
                 connection.objects.append((ob, connection.type))
             # Reached end or continue?
             if not path[0].endswith('**'):
@@ -439,7 +439,7 @@ class Handler:
         if selector == '***':
             self._seek_event_object(index, path, ob)
         # Select object
-        if hasattr(ob, '_IS_HASEVENTS') and obname in ob.__properties__:
+        if hasattr(ob, '_IS_COMPONENT') and obname in ob.__properties__:
             name_label = obname + ':reconnect_' + str(index)
             connection.objects.append((ob, name_label))
             new_ob = getattr(ob, obname, None)

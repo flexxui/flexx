@@ -10,7 +10,7 @@ from flexx.pyscript.parser2 import get_class_definition
 
 from flexx.event._emitters import BaseEmitter, Property
 from flexx.event._handler import HandlerDescriptor, Handler
-from flexx.event._hasevents import HasEvents
+from flexx.event._component import Component
 
 
 Object = Date = console = setTimeout = undefined = None  # fool pyflake
@@ -24,8 +24,8 @@ def py2js(*args, **kwargs):
     return py2js_(*args, **kwargs)
 
 
-class HasEventsJS:
-    """ An implementation of the HasEvents class in PyScript. It has
+class ComponentJS:
+    """ An implementation of the Component class in PyScript. It has
     some boilerplate code to create handlers and emitters, but otherwise
     shares most of the code with the Python classes by transpiling their
     methods via PyScript. This ensures that the Python and JS
@@ -36,7 +36,7 @@ class HasEventsJS:
     """
     
     _HANDLER_COUNT = 0
-    _IS_HASEVENTS = True
+    _IS_COMPONENT = True
     
     def __init__(self, init_handlers=True):
         
@@ -152,9 +152,9 @@ class HasEventsJS:
         
         # Init handler
         that = self
-        HasEvents.prototype._HANDLER_COUNT += 1
+        Component.prototype._HANDLER_COUNT += 1
         handler._name = name
-        handler._id = 'h' + str(HasEvents.prototype._HANDLER_COUNT)
+        handler._id = 'h' + str(Component.prototype._HANDLER_COUNT)
         handler._ob1 = lambda : that  # no weakref in JS
         handler._init(connection_strings, self)
         
@@ -187,13 +187,13 @@ class Loop:
                 console.log(err)
 
 
-def get_HasEvents_js():
-    """ Get the final code for the JavaScript version of the HasEvents class.
+def get_Component_js():
+    """ Get the final code for the JavaScript version of the Component class.
     """
     # Add the loop
     jscode = py2js(Loop, 'Loop') + '\nvar loop = new Loop();\n'
     # Start with our special JS version
-    jscode += py2js(HasEventsJS, 'HasEvents')
+    jscode += py2js(ComponentJS, 'Component')
     # Add the Handler methods
     code = '\n'
     for name, val in sorted(Handler.__dict__.items()):
@@ -201,12 +201,12 @@ def get_HasEvents_js():
             code += py2js(val, 'handler.' + name, indent=1)[4:]
             code += '\n'
     jscode = jscode.replace('HANDLER_METHODS_HOOK', code)
-    # Add the methods from the Python HasEvents class
+    # Add the methods from the Python Component class
     code = '\n'
-    for name, val in sorted(HasEvents.__dict__.items()):
-        if name.startswith(('__', '_HasEvents__')) or not callable(val):
+    for name, val in sorted(Component.__dict__.items()):
+        if name.startswith(('__', '_Component__')) or not callable(val):
             continue
-        code += py2js(val, 'HasEvents.prototype.' + name)
+        code += py2js(val, 'Component.prototype.' + name)
         code += '\n'
     jscode += code
     # Almost done
@@ -214,21 +214,21 @@ def get_HasEvents_js():
     return jscode
 
 
-HasEventsJS.JSCODE = get_HasEvents_js()
+ComponentJS.JSCODE = get_Component_js()
 
 
-def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
-    """ Create the JS equivalent of a subclass of the HasEvents class.
+def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
+    """ Create the JS equivalent of a subclass of the Component class.
     
     Given a Python class with handlers, properties and emitters, this
     creates the code for the JS version of this class. It also supports
     class constants that are int/float/str, or a tuple/list thereof.
-    The given class does not have to be a subclass of HasEvents.
+    The given class does not have to be a subclass of Component.
     
-    This more or less does what HasEventsMeta does, but for JS.
+    This more or less does what ComponentMeta does, but for JS.
     """
     
-    assert cls_name != 'HasEvents'  # we need this special class above instead
+    assert cls_name != 'Component'  # we need this special class above instead
     
     # Collect meta information of all code pieces that we collect
     meta = {'vars_unknown': set(), 'vars_global': set(), 'std_functions': set(),
@@ -248,7 +248,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
     total_code = []
     funcs_code = []  # functions and emitters go below class constants
     const_code = []
-    err = ('Objects on JS HasEvents classes can only be int, float, str, '
+    err = ('Objects on JS Component classes can only be int, float, str, '
            'or a list/tuple thereof. Not %s -> %r.')
     
     total_code.append('\n'.join(get_class_definition(cls_name, base_class)).rstrip())
@@ -317,7 +317,7 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
             try:
                 serialized = json.dumps(val)
             except Exception as err:  # pragma: no cover
-                raise ValueError('Attributes on JS HasEvents class must be '
+                raise ValueError('Attributes on JS Component class must be '
                                  'JSON compatible.\n%s' % str(err))
             #const_code.append('%s.prototype.%s = JSON.parse(%s)' %
             #                  (cls_name, name, reprs(serialized)))
@@ -340,11 +340,11 @@ def create_js_hasevents_class(cls, cls_name, base_class='HasEvents.prototype'):
 if __name__ == '__main__':
     # Testing ...
     from flexx import event
-    class Foo(HasEvents):
+    class Foo(Component):
         @event.prop
         def foo(self, v=0):
             return v
         
-    print(HasEventsJS.JSCODE)
-    print(len(HasEventsJS.JSCODE))
-    #print(create_js_hasevents_class(Foo, 'Foo'))
+    print(ComponentJS.JSCODE)
+    print(len(ComponentJS.JSCODE))
+    #print(create_js_Component_class(Foo, 'Foo'))
