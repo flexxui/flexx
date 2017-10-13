@@ -37,7 +37,7 @@ For more information, see http://flexx.readthedocs.io.
 # part after the "----" is stripped. The long-description for Pypi is
 # obtained by converting README.md to RST.
 
-__version__ = '0.4.1-dev'
+__version__ = '0.4.2-dev'
 
 
 # Assert compatibility and redirect to legacy version on Python 2.7
