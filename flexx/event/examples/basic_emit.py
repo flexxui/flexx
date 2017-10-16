@@ -8,15 +8,15 @@ property or emitter).
 
 from flexx import event
 
-class Basic(event.HasEvents):
+class Basic(event.Component):
     
-    @event.connect('!foo')
+    @event.reaction('!foo')
     def on_foo(self, *events):
-        print('foo handler called with %i events' % len(events))
+        print('foo reaction called with %i events' % len(events))
     
-    @event.connect('!bar')
+    @event.reaction('!bar')
     def on_bar(self, *events):
-        print('bar handler called with %i events' % len(events))
+        print('bar reaction called with %i events' % len(events))
 
 b = Basic()
 

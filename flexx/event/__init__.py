@@ -362,8 +362,10 @@ del logging
 # flake8: noqa
 from ._dict import Dict
 from ._loop import loop
-from ._handler import Handler, connect
-from ._emitters import prop, readonly, emitter
+from ._action import Action, action
+from ._reaction import Reaction, reaction
+from ._emitter import emitter
+from ._property import prop, readonly
 from ._component import Component
 
 # from ._component import new_type, with_metaclass

@@ -1,40 +1,46 @@
 """
-This example demonstrates how props can set each-other without
-getting into an infinite loop.
+This example demonstrates how two mutually dependent props can be set
+without getting into an infinite loop. Since flexx uses actions, this
+is rather trivial. Technically, one could also react to one property
+and invoke the set action of the other, but that would result in the
+props being set infinitely.
 """
 
 from flexx import event
 
 
-class Temperature(event.HasEvents):
+class Temperature(event.Component):
     """ Temperature object with a settable prop for both Celcius and
     Fahrenheit.
     """
     
-    @event.prop
-    def C(self, t=0):
-        t = float(t)
-        self.F = t * 1.8 + 32
-        return t
+    c = event.prop(0)
+    f = event.prop(0)
     
-    @event.prop
-    def F(self, t=0):
+    @event.action
+    def set_c(self, t):
         t = float(t)
-        self.C = (t - 32) / 1.8
-        return t
+        self._set_c(t)
+        self._set_f(t * 1.8 + 32)
     
-    @event.connect('C', 'F')
-    def on_temp_change(self, *events):
+    @event.action
+    def set_f(self, t):
+        t = float(t)
+        self._set_f(t)
+        self._set_c((t - 32) / 1.8)
+    
+    @event.reaction
+    def on_temp_change(self):
         # This gets called once with two events when either C or F is changed.
-        print('  temp in Celcius: %1.1f C' % self.C)
-        print('  temp in Fahrenheit: %1.1f F' % self.F)
+        print('  temp in Celcius: %1.1f C' % self.c)
+        print('  temp in Fahrenheit: %1.1f F' % self.f)
 
 t = Temperature()
 
-print('Water if freezing:')
-t.C = 0
+print('Water is freezing:')
+t.set_c(0)
+event.loop.iter()
 
 print('Average annual temp in California')
-t.F = 59.4
-
+t.set_f(59.4)
 event.loop.iter()

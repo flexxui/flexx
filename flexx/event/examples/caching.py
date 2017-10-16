@@ -13,26 +13,19 @@ import time
 from flexx import event
 
 
-class CachingExample(event.HasEvents):
+class CachingExample(event.Component):
     
-    @event.prop
-    def source(self, v=''):
-        """ The input for the calcualations. """
-        return str(v)
+    source = event.prop('', setter=str, doc='The input for the calculations.')
+    data = event.prop(None, setter=lambda x:x, doc='Cache of the calculation result.')
     
-    @event.connect('source')
+    @event.reaction('source')
     def download_data(self, *events):
         """ Simulate a download of data from the web. takes a while. """
         if self.source:
             time.sleep(2)
-            self._set_prop('data', hash(self.source))
+            self.set_data(hash(self.source))
     
-    @event.readonly
-    def data(self, v=None):
-        """ readonly prop to cache the result. """
-        return v
-    
-    @event.connect('data')
+    @event.reaction
     def show_data(self, *events):
         """ handler to show the data. Can be called at any time. """
         if self.data is not None:
@@ -41,6 +34,6 @@ class CachingExample(event.HasEvents):
 
 c = CachingExample()
 
-c.source = 'foo'
+c.set_source('foo')
 
 event.loop.iter()

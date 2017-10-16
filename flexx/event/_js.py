@@ -9,7 +9,7 @@ from flexx.pyscript import JSString, py2js as py2js_
 from flexx.pyscript.parser2 import get_class_definition
 
 from flexx.event._emitters import BaseEmitter, Property
-from flexx.event._handler import HandlerDescriptor, Handler
+from flexx.event._handler import ReactionDescriptor, Handler
 from flexx.event._component import Component
 
 
@@ -289,7 +289,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             emitter_type = val.__class__.__name__
             funcs_code.append(t % (cls_name, funcname, reprs(emitter_type)))
             funcs_code.append('')
-        elif isinstance(val, HandlerDescriptor):
+        elif isinstance(val, ReactionDescriptor):
             funcname = name  # funcname is simply name, so that super() works
             handlers.append(name)
             # Add function def

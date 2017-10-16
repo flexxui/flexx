@@ -1,10 +1,11 @@
 """
-Implementation of handler class and corresponding descriptor.
+Implements the reaction decorator, class and desciptor.
 """
 
 import weakref
 import inspect
 
+from ._action import BaseDescriptor
 from ._dict import Dict
 from ._loop import loop
 from . import logger
@@ -27,10 +28,9 @@ def looks_like_method(func):
         return False
 
 
-# Decorator to wrap a function in a Handler object
-def connect(*connection_strings):
-    """ Decorator to turn a method of Component into an event
-    :class:`Handler <flexx.event.Handler>`.
+def reaction(*connection_strings):
+    """ Decorator to turn a method of Component into a
+    :class:`Reaction <flexx.event.Reaction>`.
 
     A method can be connected to multiple event types. Each connection
     string represents an event type to connect to. Read more about
@@ -44,30 +44,34 @@ def connect(*connection_strings):
     .. code-block:: py
 
         class MyObject(event.Component):
-            @event.connect('first_name', 'last_name')
+        
+            @event.reaction('first_name', 'last_name')
             def greet(self, *events):
                 print('hello %s %s' % (self.first_name, self.last_name))
     """
-    if (not connection_strings) or (len(connection_strings) == 1 and
-                                    callable(connection_strings[0])):
-        raise RuntimeError('Connect decorator needs one or more event strings.')
-
+    if (not connection_strings):
+        raise RuntimeError('reaction() needs one or more arguments.')
+    
+    # Extract function if we can
     func = None
     if callable(connection_strings[0]):
         func = connection_strings[0]
         connection_strings = connection_strings[1:]
-
+    elif callable(connection_strings[-1]):
+        func = connection_strings[-1]
+        connection_strings = connection_strings[:-1]
+    
     for s in connection_strings:
         if not (isinstance(s, str) and len(s) > 0):
             raise ValueError('Connection string must be nonempty strings.')
 
     def _connect(func):
         if not callable(func):
-            raise TypeError('connect() decorator requires a callable.')
+            raise TypeError('reaction() decorator requires a callable.')
         if not looks_like_method(func):
-            raise TypeError('connect() decorator requires a method '
+            raise TypeError('reaction() decorator requires a method '
                             '(first arg must be self).')
-        return HandlerDescriptor(func, connection_strings)
+        return ReactionDescriptor(func, connection_strings)
 
     if func is not None:
         return _connect(func)
@@ -75,52 +79,36 @@ def connect(*connection_strings):
         return _connect
 
 
-class HandlerDescriptor:
-    """ Class descriptor for handlers.
-
-    Arguments:
-        func (callable): function that handles the events.
-        connection_strings (list): the strings that represent the connections.
-        ob (Component, optional): the Component object to use a a basis for the
-            connection. A weak reference to this object is stored.
+class ReactionDescriptor(BaseDescriptor):
+    """ Class descriptor for reactions.
     """
-
+    
     def __init__(self, func, connection_strings, ob=None):
-        assert callable(func)  # HandlerDescriptor is not instantiated directly
         self._func = func
-        self._name = func.__name__  # updated by Component meta class
+        self._name = func.__name__
         self._ob = None if ob is None else weakref.ref(ob)
         self._connection_strings = connection_strings
-        self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
-
-    def __repr__(self):
-        t = '<%s %r(this should be a class attribute) at 0x%x>'
-        return t % (self.__class__.__name__, self._name, id(self))
-
-    def __set__(self, obj, value):
-        raise AttributeError('Cannot overwrite handler %r.' % self._name)
-
-    def __delete__(self, obj):
-        raise AttributeError('Cannot delete handler %r.' % self._name)
+        self.__doc__ = '*%s*: %s' % ('event reaction', func.__doc__ or self._name)
 
     def __get__(self, instance, owner):
         if instance is None:
             return self
 
-        private_name = '_' + self._name + '_handler'
+        private_name = '_' + self._name + '_reaction'
         try:
-            handler = getattr(instance, private_name)
+            reaction = getattr(instance, private_name)
         except AttributeError:
-            handler = Handler((self._func, instance), self._connection_strings,
-                              instance if self._ob is None else self._ob())
-            setattr(instance, private_name, handler)
+            reaction = Reaction(instance if self._ob is None else self._ob(),
+                                (self._func, instance),
+                                self._connection_strings)
+            setattr(instance, private_name, reaction)
 
-        # Make the handler use *our* func one time. In most situations
-        # this is the same function that the handler has, but not when
-        # using super(); i.e. this allows a handler to call the same
-        # handler of its super class.
-        handler._use_once(self._func)
-        return handler
+        # Make the reaction use *our* func one time. In most situations
+        # this is the same function that the reaction has, but not when
+        # using super(); i.e. this allows a reaction to call the same
+        # reaction of its super class.
+        reaction._use_once(self._func)
+        return reaction
 
     @property
     def local_connection_strings(self):
@@ -129,27 +117,21 @@ class HandlerDescriptor:
         return [s for s in self._connection_strings if '.' not in s]
 
 
-class Handler:
-    """ Wrapper around a function object to connect it to one or more events.
-    This class should not be instantiated directly; use ``event.connect`` or
-    ``Component.connect`` instead.
-
-    Arguments:
-        func (callable): function that handles the events.
-        connection_strings (list): the strings that represent the connections.
-        ob (Component): the Component object to use a a basis for the
-            connection. A weak reference to this object is stored.
+class Reaction:
+    """ Reaction objects are wrappers around Component methods. They connected
+    to one or more events. This class should not be instantiated directly;
+    use ``event.reaction()`` or ``Component.connect()`` instead.
     """
 
     _count = 0
 
-    def __init__(self, func, connection_strings, ob):
-        Handler._count += 1
-        self._id = 'h%i' % Handler._count  # to ensure a consistent event order
+    def __init__(self, ob, func, connection_strings):
+        Reaction._count += 1
+        self._id = 'r%i' % Reaction._count  # to ensure a consistent event order
 
         # Store objects using a weakref.
         # - ob1 is the Component object of which the connect() method was called
-        #   to create the handler. Connection strings are relative to this object.
+        #   to create the reaction. Connection strings are relative to this object.
         # - ob2 is the object to be passed to func (if it is a method). Is often
         #   the same as ob1, but not per see. Can be None.
         self._ob1 = weakref.ref(ob)
@@ -169,12 +151,12 @@ class Handler:
         self._func = func
         self._func_once = func
         self._name = func.__name__
-        self.__doc__ = '*%s*: %s' % ('event handler', func.__doc__ or self._name)
+        self.__doc__ = '*%s*: %s' % ('event reaction', func.__doc__ or self._name)
 
         self._init(connection_strings)
     
     def _init(self, connection_strings):
-        """ Init of this handler that is compatible with PyScript.
+        """ Init of this reaction that is compatible with PyScript.
         """
         
         ichars = '0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -228,10 +210,13 @@ class Handler:
             d.force = force
             d.objects = []
 
-        # Pending events for this handler
+        # Pending events for this reaction
         self._scheduled_update = False
         self._pending = []  # pending events
-
+        
+        # Implicit connections
+        self._implicit_connections = []  # list of (component, type) tuples
+        
         # Connect
         for index in range(len(self._connections)):
             self._connect_to_event(index)
@@ -240,10 +225,16 @@ class Handler:
         c = '+'.join([str(len(c.objects)) for c in self._connections])
         cname = self.__class__.__name__
         return '<%s %r with %s connections at 0x%x>' % (cname, self._name, c, id(self))
-
+    
+    def is_explicit(self):
+        """ Whether this reaction is explicit (has connection strings),
+        or implicit (auto-connects to used properties).
+        """
+        return len(self._connections) > 0
+    
     def get_name(self):
-        """ Get the name of this handler, usually corresponding to the name
-        of the function that this handler wraps.
+        """ Get the name of this reaction, usually corresponding to the name
+        of the function that this reaction wraps.
         """
         return self._name
 
@@ -261,9 +252,10 @@ class Handler:
         self._func_once = func
 
     def __call__(self, *events):
-        """ Call the handler function.
+        """ Call the reaction function.
         """
         func = self._func_once
+        self._func_once = self._func
         if self._ob2 is not None:
             if self._ob2() is not None:
                 res = func(self._ob2(), *events)
@@ -273,71 +265,7 @@ class Handler:
                 return
         else:
             res = func(*events)
-        self._func_once = self._func
         return res
-
-    def _add_pending_event(self, label, ev):
-        """ Add an event object to be handled at the next event loop
-        iteration. Called from Component.emit().
-        """
-        if not self._scheduled_update:
-            # register only once
-            self._scheduled_update = True
-            if this_is_js():
-                #setTimeout(self._handle_now_callback.bind(self), 0)
-                loop.call_later(self._handle_now_callback.bind(self))
-            else:
-                loop.call_later(self._handle_now_callback)
-        self._pending.append((label, ev))
-
-    def _handle_now_callback(self):
-        self._scheduled_update = False
-        self.handle_now()
-
-    def handle_now(self):
-        """ Invoke a call to the handler function with all pending
-        events. This is normally called in a next event loop iteration
-        when an event is scheduled for this handler, but it can also
-        be called manually to force the handler to process pending
-        events *now*.
-        """
-        # Collect pending events and clear current list
-        events, reconnect = self._collect()
-        self._pending = []
-        # Reconnect (dynamism)
-        for index in reconnect:
-            self._connect_to_event(index)
-        # Collect newly created events (corresponding to props)
-        events2, reconnect2 = self._collect()
-        if not len(reconnect2):
-            events = events + events2
-            self._pending = []
-        # Handle events
-        if len(events):
-            if not this_is_js():
-                logger.debug('Handler %s is processing %i events' %
-                            (self._name, len(events)))
-            try:
-                self(*events)
-            except Exception as err:
-                if this_is_js():
-                    console.error(err)
-                else:
-                    err.skip_tb = 2
-                    logger.exception(err)
-
-    def _collect(self):
-        """ Get list of events and reconnect-events from list of pending events.
-        """
-        events = []
-        reconnect = {}  # poor man's set
-        for label, ev in self._pending:
-            if label.startswith('reconnect_'):
-                index = int(label.split('_')[-1])
-                reconnect[index] = index
-            else:
-                events.append(ev)
-        return events, tuple(reconnect)
 
     ## Connecting
 
@@ -347,7 +275,7 @@ class Handler:
         Disconnects all connections, and cancel all pending events.
         """
         if not this_is_js():
-            logger.debug('Disposing Handler %r ' % self)
+            logger.debug('Disposing reaction %r ' % self)
         for connection in self._connections:
             while len(connection.objects):
                 ob, type = connection.objects.pop(0)
@@ -355,10 +283,40 @@ class Handler:
         self._connections = []
         while len(self._pending):
             self._pending.pop()  # no list.clear on legacy py
-
+    
+    def _filter_events(self, events):
+        """ Filter events, taking out the events for reconnections.
+        Used by the loop.
+        """
+        # Filter
+        filtered_events = []
+        reconnect = {}  # poor man's set
+        for ev in events:
+            if ev.label.startswith('reconnect_'):
+                index = int(ev.label.split('_')[-1])
+                reconnect[index] = index
+            else:
+                filtered_events.append(ev)
+        # Reconnect
+        for index in reconnect:
+            self._connect_to_event(index)
+        # Return shorter list
+        return events
+    
+    def _update_implicit_connections(self, connections):
+        """ Update the list of implicit connections. Used by the loop.
+        """
+        # Init - each connection is a (component, type) tuple
+        old_conns = self._implicit_connections
+        new_conns = connections
+        self._implicit_connections = new_conns
+        
+        # Reconnect in a smart way
+        self._connect_and_disconnect(old_conns, new_conns)
+    
     def _clear_component_refs(self, ob):
         """ Clear all references to the given Component instance. This is
-        called from a Component' dispose() method. This handler remains
+        called from a Component' dispose() method. This reaction remains
         working, but wont receive events from that object anymore.
         """
         for connection in self._connections:
@@ -366,7 +324,7 @@ class Handler:
                 if connection.objects[i][0] is ob:
                     connection.objects.pop(i)
 
-        # Do not clear pending events. This handler is assumed to continue
+        # Do not clear pending events. This reaction is assumed to continue
         # working, and should thus handle its pending events at some point,
         # at which point it cannot hold any references to ob anymore.
 
@@ -389,8 +347,14 @@ class Handler:
         if not new_objects:
             raise RuntimeError('Could not connect to %r' % connection.fullname)
         
-        # Connect and disconnect
-        
+        # Reconnect in a smart way
+        self._connect_and_disconnect(old_objects, new_objects, connection.force)
+    
+    def _connect_and_disconnect(self, old_objects, new_objects, force=False):    
+        """ Update connections by disconnecting old and connecting new,
+        but try to keep connections that do not change.
+        """
+    
         # Skip common objects from the start
         i1 = 0
         while (i1 < len(new_objects) and i1 < len(old_objects) and
@@ -409,7 +373,7 @@ class Handler:
             ob.disconnect(type, self)
         # Connect remaining new
         for ob, type in new_objects[i1:i2+1]:
-            ob._register_handler(type, self, connection.force)
+            ob._register_reaction(type, self, force)
 
     def _seek_event_object(self, index, path, ob):
         """ Seek an event object based on the name (PyScript compatible).

@@ -1,13 +1,16 @@
 """
-Implements the Component class; the core class via which events are
-generated and handled. It is the object that keeps track of handlers.
+Implements the Component class; the core class that has properties,
+actions that mutate the properties, and reactions that react to the
+events and changes in properties.
 """
 
 import sys
 
 from ._dict import Dict
-from ._handler import HandlerDescriptor, Handler, looks_like_method
-from ._emitters import BaseEmitter, Property
+from ._action import ActionDescriptor, Action
+from ._reaction import ReactionDescriptor, Reaction, looks_like_method
+from ._property import PropertyDescriptor
+from ._emitter import Emitter
 from ._loop import loop
 from . import logger
 
@@ -40,42 +43,66 @@ def new_type(name, *args, **kwargs):
 
 class ComponentMeta(type):
     """ Meta class for Component
-    * Set the name of each handler and emitter.
-    * Sets __handlers__, __emitters, __properties__ attribute on the class.
+    * Set the name of property desciptors.
+    * Sets __actions__, __reactions__ and __properties__ attribute on the class.
+    * Create some private functions (e.g. mutator functions).
     """
     
     def __init__(cls, name, bases, dct):
         finalize_component_class(cls)
         type.__init__(cls, name, bases, dct)
 
+
+def make_mutator(name, *args):
+    def mutator(self, *args):
+        self._mutate(name, *args)
+    return mutator
+
+def make_set_action(name, func):
+    def setter(self, *args):
+        getattr(self, '_mutate')(name, func(*args))
+    return setter
+
+
 def finalize_component_class(cls):
-    """ Given a class, analyse its Properties, Readonlies, Emitters,
-    and Handlers, to set a list of __emitters__, __properties__, and
-    __handlers__. Also create private methods corresponding to the
-    properties, emitters and handlers.
+    """ Given a class, analyse its Properties, Actions and Reactions,
+    to set a list of __actions__, __properties__, and __reactions__.
+    Also create private methods corresponding to the properties,
+    actions and reactions.
     """
-    # Collect handlers defined on this class
-    handlers = {}
+    actions = {}
     emitters = {}
     properties = {}
+    reactions = {}
+    
     for name in dir(cls):
         if name.startswith('__'):
             continue
         val = getattr(cls, name)
-        if isinstance(val, Property):
+        if isinstance(val, ActionDescriptor):
+            actions[name] = val
+        elif isinstance(val, PropertyDescriptor):
             properties[name] = val
-        elif isinstance(val, BaseEmitter):
+            val._set_name(name)  # noqa
+            # Mutator function
+            setattr(cls, '_set_' + name, make_mutator(name))
+            # auto-setter?
+            if val._setter:
+                setattr(cls, 'set_' + name, ActionDescriptor(make_set_action(name, val._setter), 'set_' + name, 'Setter for %s.' % name))
+        elif isinstance(val, ReactionDescriptor):
+            reactions[name] = val
+        elif isinstance(val, Emitter):
             emitters[name] = val
-        elif isinstance(val, HandlerDescriptor):
-            handlers[name] = val
-        elif isinstance(val, Handler):
-            raise RuntimeError('Class methods can only be made handlers using '
-                               '@event.connect() (handler %r)' % name)
+        elif isinstance(val, (Action, Reaction)):
+            raise RuntimeError('Class methods can only be made actions or '
+                               'reactions using the corresponding decorators '
+                               '(%r)' % name)
     
     # Cache prop names
-    cls.__handlers__ = [name for name in sorted(handlers.keys())]
+    cls.__actions__ = [name for name in sorted(actions.keys())]
     cls.__emitters__ = [name for name in sorted(emitters.keys())]
     cls.__properties__ = [name for name in sorted(properties.keys())]
+    cls.__reactions__ = [name for name in sorted(reactions.keys())]
     return cls
 
 
@@ -88,7 +115,7 @@ class Component(with_metaclass(ComponentMeta, object)):
     method. Subclasses can use the
     :func:`prop <flexx.event.prop>` and :func:`readonly <flexx.event.readonly>`
     decorator to create properties, and the
-    :func:`connect <flexx.event.connect>` decorator to create handlers.
+    :func:`connect <flexx.event.connect>` decorator to create reactions.
     Methods named ``on_foo`` are connected to the event "foo".
     
     .. code-block:: python
@@ -105,7 +132,7 @@ class Component(with_metaclass(ComponentMeta, object)):
             def bar(self, v):
                 return dict(value=v)  # the event to emit
             
-            # Handlers
+            # Reactions
             
             @event.connect('foo')
             def handle_foo(self, *events):
@@ -125,12 +152,17 @@ class Component(with_metaclass(ComponentMeta, object)):
     """
     
     _IS_COMPONENT = True
-    
+    _count = 0
+     
     def __init__(self, **property_values):
         
-        # Init some internal variables. Note that __handlers__ is a list of handler
-        # names for this class, and __handlers a dict of handlers registered to
-        # events of this object.
+        # todo: perhaps use the mechanis that Model uses to make an id?
+        Component._count += 1
+        self._id = 'c%i' % Component._count  # to ensure a consistent event order
+        
+        # Init some internal variables. Note that __reactions__ is a list of
+        # reaction names for this class, and __handlers a dict of reactions
+        # registered to events of this object.
         self.__handlers = {}
         self.__props_being_set = {}
         self.__props_ever_set = {}
@@ -147,17 +179,19 @@ class Component(with_metaclass(ComponentMeta, object)):
         # Initialize properties with default and given values (does not emit yet)
         for name in self.__properties__:
             self.__handlers.setdefault(name, [])
-            setattr(self, '_' + name + '_value', None)  # need *something* for value
-            func = getattr(self.__class__, name).get_func()
-            setattr(self, '_' + name + '_func', func)  # needed in set_prop()
-        for name in self.__properties__:
-            dd = getattr(self.__class__, name)._defaults
-            if dd:
-                self._set_prop(name, dd[0], True)
+            default = getattr(self.__class__, name)._default
+            setattr(self, '_' + name + '_value', default)
+            # func = getattr(self.__class__, name).get_func()
+            # setattr(self, '_' + name + '_func', func)  # needed in set_prop()
+        # for name in self.__properties__:
+        #     dd = getattr(self.__class__, name)._defaults
+        #     if dd:
+        #         self._set_prop(name, dd[0], True)
         for name in sorted(property_values):  # sort for deterministic order
             if name in self.__properties__:
                 value = property_values[name]
-                setattr(self, name, value)  # should raise error whith readonly
+                func = getattr(self, 'set_' + name)
+                func(value)
             else:
                 cname = self.__class__.__name__
                 raise AttributeError('%s does not have a property %r' % (cname, name))
@@ -181,8 +215,11 @@ class Component(with_metaclass(ComponentMeta, object)):
     
     def __init_handlers(self):
         # Instantiate handlers (i.e. resolve connections) its enough to reference them
-        for name in self.__handlers__:
-            getattr(self, name)
+        # the new_value attribute in the event is to trigger a reconnect
+        for name in self.__reactions__:
+            reaction = getattr(self, name)
+            if not reaction.is_explicit():
+                loop.add_reaction_event(reaction, 'init', Dict(source=self, type='', new_value=()))
     
     if sys.version_info > (3, 4):
         # http://eli.thegreenplace.net/2009/06/12/safely-using-destructors-in-python
@@ -205,14 +242,14 @@ class Component(with_metaclass(ComponentMeta, object)):
                 handler._clear_component_refs(self)
             while len(handlers):
                 handlers.pop()  # no list.clear on legacy py
-        for name in self.__handlers__:
+        for name in self.__reactions__:
             getattr(self, name).dispose()
     
     def _handlers_changed_hook(self):
         # Called when the handlers changed, can be implemented in subclasses
         pass
     
-    def _register_handler(self, event_type, handler, force=False):
+    def _register_reaction(self, event_type, handler, force=False):
         # Register a handler for the given event type. The type
         # can include a label, e.g. 'mouse_down:foo'.
         # This is called from Handler objects at initialization and when
@@ -243,7 +280,8 @@ class Component(with_metaclass(ComponentMeta, object)):
         if self.__pending_events is not None:
             if not label.startswith('reconnect_'):
                 for ev in self.__pending_events.get(type, []):
-                    handler._add_pending_event(label, ev)
+                    #handler._add_pending_event(label, ev)
+                    loop.add_reaction_event(handler, label, ev)
         # Send an event to communicate the value of a property
         # if type in self.__properties__:
         #     if self.__props_ever_set.get(type, False):
@@ -304,9 +342,61 @@ class Component(with_metaclass(ComponentMeta, object)):
     
     def _emit(self, ev):
         for label, handler in self.__handlers.get(ev.type, ()):
-            handler._add_pending_event(label, ev)  # friend class
+            # handler._add_pending_event(label, ev)  # friend class
+            ev2 = ev.copy()  # todo: there's also a copy above, limit to 1
+            ev2.label = label
+            loop.add_reaction_event(handler, label, ev2)
     
-    def _set_prop(self, prop_name, value, _initial=False):
+    
+    def _mutate(self, prop_name, value, kind='set', index=-1):
+        """ Main mutator function. Each Component class will also have an
+        auto-generated mutator function for each property.
+        """
+        if not isinstance(prop_name, str):
+            raise TypeError("_set_prop's first arg must be str, not %s" %
+                             prop_name.__class__)
+        if prop_name not in self.__properties__:
+            cname = self.__class__.__name__
+            raise AttributeError('%s object has no property %r' % (cname, prop_name))
+        
+        if not loop.is_processing_actions():
+            raise RuntimeError('Trying to mutate a property outside of an action.')
+        
+        # todo: still needed?
+        # prop_being_set = self.__props_being_set.get(prop_name, None)
+        # if prop_being_set:
+        #     return
+        
+        # Prepare
+        private_name = '_' + prop_name + '_value'
+        self.__props_being_set[prop_name] = True
+        self.__props_ever_set[prop_name] = True
+        
+        # Set / Emit
+        value2 = value
+        # If not initialized yet, set
+        # if prop_being_set is None:
+        #     setattr(self, private_name, value2)
+        #     self.emit(prop_name, dict(new_value=value2, old_value=value2))
+        #     return True
+        # Otherwise only set if value has changed
+        old = getattr(self, private_name)
+        if this_is_js():
+            is_equal = old == value2
+        elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):
+            import numpy as np
+            is_equal = np.array_equal(old, value2)
+        else:
+            is_equal = type(old) == type(value2) and old == value2
+        if not is_equal:
+            if kind == 'set':
+                setattr(self, private_name, value)
+            else:
+                raise NotImplementedError()
+            self.emit(prop_name, dict(new_value=value2, old_value=old))
+            return True
+    
+    def _sett_prop(self, prop_name, value, _initial=False):
         """ Set the value of a (readonly) property.
         
         Parameters:
@@ -333,8 +423,10 @@ class Component(with_metaclass(ComponentMeta, object)):
         try:
             if this_is_js():
                 value2 = func.apply(self, [value])
-            else:
+            elif getattr(self.__class__, prop_name)._has_self:
                 value2 = func(self, value)
+            else:
+                value2 = func(value)
         finally:
             self.__props_being_set[prop_name] = False
         # If not initialized yet, set
@@ -386,7 +478,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         return [h[1] for h in handlers]
 
     # This method does *not* get transpiled
-    def connect(self, *connection_strings):
+    def reaction(self, *connection_strings):
         """ Connect a function to one or more events of this instance. Can
         also be used as a decorator. See the
         :func:`connect <flexx.event.connect>` decorator for more information.
@@ -396,23 +488,23 @@ class Component(with_metaclass(ComponentMeta, object)):
             h = Component()
             
             # Usage as a decorator
-            @h.connect('first_name', 'last_name')
+            @h.reaction('first_name', 'last_name')
             def greet(*events):
                 print('hello %s %s' % (h.first_name, h.last_name))
             
             # Direct usage
-            h.connect(greet, 'first_name', 'last_name')
+            h.reaction(greet, 'first_name', 'last_name')
             
             # Order does not matter
-            h.connect('first_name', greet)
+            h.reaction('first_name', greet)
         
         """
-        return self.__connect(*connection_strings)  # calls Py or JS version
+        return self.__react(*connection_strings)  # calls Py or JS version
     
-    def __connect(self, *connection_strings):
+    def __react(self, *connection_strings):
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
-            raise RuntimeError('connect() needs one or more connection strings.')
+            raise RuntimeError('react() needs one or more connection strings.')
         
         func = None
         if callable(connection_strings[0]):
@@ -426,15 +518,15 @@ class Component(with_metaclass(ComponentMeta, object)):
             if not (isinstance(s, str) and len(s) > 0):
                 raise ValueError('Connection string must be nonempty string.')
         
-        def _connect(func):
+        def _react(func):
             if not callable(func):
-                raise TypeError('connect() decorator requires a callable.')
+                raise TypeError('react() decorator requires a callable.')
             if looks_like_method(func):
-                return HandlerDescriptor(func, connection_strings, self)
+                return ReactionDescriptor(func, connection_strings, self)
             else:
-                return Handler(func, connection_strings, self)
+                return Reaction(self, func, connection_strings)
         
         if func is not None:
-            return _connect(func)
+            return _react(func)
         else:
-            return _connect
+            return _react
