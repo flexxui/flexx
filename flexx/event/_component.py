@@ -179,8 +179,15 @@ class Component(with_metaclass(ComponentMeta, object)):
             if name in self.__properties__:
                 value = property_values[name]
                 prop_setter_name = 'set_' + name
-                func = getattr(self, prop_setter_name)
-                func(value)
+                setter_func = getattr(self, prop_setter_name)
+                if callable(value):  # make a reaction
+                    setter_reaction = lambda: setter_func(value())
+                    ev = Dict(source=self, type='', label='')
+                    loop.add_reaction_event(Reaction(self, setter_reaction, []), ev)
+                                            
+                    
+                else:
+                    setter_func(value)
             else:
                 cname = self.__class__.__name__
                 raise AttributeError('%s does not have a property %r' % (cname, name))
@@ -209,7 +216,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         for name in self.__reactions__:
             reaction = getattr(self, name)
             if not reaction.is_explicit():
-                ev = Dict(source=self, type='', label='', new_value=())
+                ev = Dict(source=self, type='', label='')
                 loop.add_reaction_event(reaction, ev)
     
     if sys.version_info > (3, 4):
@@ -416,6 +423,7 @@ class Component(with_metaclass(ComponentMeta, object)):
             self.emit(prop_name, ev)
             return True
     
+    # todo: clean up
     def _sett_prop(self, prop_name, value, _initial=False):
         """ Set the value of a (readonly) property.
         
