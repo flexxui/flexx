@@ -301,7 +301,7 @@ class Reaction:
         for index in reconnect:
             self._connect_to_event(index)
         # Return shorter list
-        return events
+        return filtered_events
     
     def _update_implicit_connections(self, connections):
         """ Update the list of implicit connections. Used by the loop.

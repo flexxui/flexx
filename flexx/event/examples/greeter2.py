@@ -13,7 +13,7 @@ class Person(event.Component):
     
     @event.action
     def add_child(self, child):
-        self._set_children(self.children + [child])
+        self._mutate_children(self.children + [child])
     
 
 p1 = Person()

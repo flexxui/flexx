@@ -36,7 +36,7 @@ def action(func):
             
             @action
             def increase_counter(self):
-                self._set_count(self.count + 1)  # call mutator function
+                self._mutate_count(self.count + 1)  # call mutator function
     
     """
     if not callable(func):

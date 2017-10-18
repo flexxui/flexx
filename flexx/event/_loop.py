@@ -120,11 +120,11 @@ class Loop:
                 # For implicit reactions, we try to consolidate by not adding
                 # to the queue if the correspinding reaction is already
                 # present. We use _pending_reaction_ids for this. We use the
-                # same dict to keep track of whether a prop changed that is a
-                # container, because only then a reconnect might be necessary.
+                # same dict to keep track of whether a prop changed might need
+                # the reaction to perform a reconnect.
                 if reaction._id in self._pending_reaction_ids:
-                    is_container = isinstance(ev.get('new_value', None), (tuple, list))
-                    self._pending_reaction_ids[reaction._id] |= is_container
+                    if not self._pending_reaction_ids[reaction._id]:
+                        self._pending_reaction_ids[reaction._id] = self._might_need_reconnect(ev)
                     return
             
             # Add new item to queue
@@ -132,10 +132,20 @@ class Loop:
                 self._pending_reactions.append((reaction, ev, [ev]))
             else:
                 self._pending_reactions.append((reaction, None, []))
-                is_container = isinstance(ev.get('new_value', None), (tuple, list))
-                self._pending_reaction_ids[reaction._id] = is_container
+                self._pending_reaction_ids[reaction._id] = self._might_need_reconnect(ev)
             
             self._schedule_iter()
+    
+    def _might_need_reconnect(self, ev):
+        check = []
+        for v in (ev.get('new_value', None), ev.get('old_value', None)):
+            if v is None:
+                pass
+            elif isinstance(v, Component):
+                return True
+            elif isinstance(v, (tuple, list)):
+                if len(v) > 0 and isinstance(v[0], Component):
+                    return True
     
     def register_prop_access(self, component, prop_name):
         """ Register access of a property, to keep track of implicit reactions.
@@ -335,3 +345,6 @@ class Loop:
 
 loop = Loop()
 loop.integrate(None, False)
+
+
+from ._component import Component  # deal with circular import

@@ -33,37 +33,15 @@ def prop(default, doc='', setter=None):
         raise TypeError('event.prop() is not a decorator (anymore).')
     if not isinstance(doc, str):
         raise TypeError('event.prop() doc must be a string.')
-    if not (setter is None or callable(setter)):
-        raise TypeError('event.prop() setter must be None or callable.')
+    if not (setter is None or setter is True or callable(setter)):
+        raise TypeError('event.prop() setter must be None, True, or callable.')
     return PropertyDescriptor(default, setter, doc)
 
 
-def arrayprop(default, setter=None, doc=None):
-    raise NotImplementedError()
-
-
 def readonly(func):
-    """ Decorator to define a readonly property. An event is emitted
-    when the property is set, which has values for "old_value" and
-    "new_value". To set a readonly property internally, use the
-    :func:`Component._set_prop() <flexx.event.Component._set_prop>` method.
-    
-    .. code-block:: python
-    
-        class MyObject(event.Component):
-           
-           @readonly
-           def bar(self, v=1):
-                return float(v)
-        
-        m = MyObject()
-        m._set_prop('bar', 2)  # only for internal use
-    
+    """ Deprecated.
     """
     raise NotImplementedError('Deprecated: use event.prop() instead.')
-    # if not callable(func):
-    #     raise TypeError('readonly decorator needs a callable')
-    # return Readonly(func)
 
 
 class PropertyDescriptor(BaseDescriptor):

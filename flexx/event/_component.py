@@ -59,6 +59,8 @@ def make_mutator(name, *args):
     return mutator
 
 def make_set_action(name, func):
+    if func is True:
+        func = lambda x: x
     def setter(self, *args):
         getattr(self, '_mutate')(name, func(*args))
     return setter
@@ -85,7 +87,7 @@ def finalize_component_class(cls):
             properties[name] = val
             val._set_name(name)  # noqa
             # Mutator function
-            setattr(cls, '_set_' + name, make_mutator(name))
+            setattr(cls, '_mutate_' + name, make_mutator(name))
             # auto-setter?
             if val._setter:
                 setattr(cls, 'set_' + name, ActionDescriptor(make_set_action(name, val._setter), 'set_' + name, 'Setter for %s.' % name))
@@ -347,10 +349,26 @@ class Component(with_metaclass(ComponentMeta, object)):
             ev2.label = label
             loop.add_reaction_event(handler, label, ev2)
     
-    
-    def _mutate(self, prop_name, value, kind='set', index=-1):
+    # todo: make this public? It can only be called from actions anyway
+    # mmm, but we want to constrain its use to the class itself -> private
+    # this needs to be documented though!
+    def _mutate(self, prop_name, value, mutation='set', index=-1):
         """ Main mutator function. Each Component class will also have an
         auto-generated mutator function for each property.
+        
+        Arguments:
+            prop_name (str): the name of the property being mutated.
+            value: the new value, or the partial value for partial mutations.
+            mutation (str): the kind of mutation to apply. Default is 'set'.
+               Partial mutations can be applied by using 'insert', 'remove', or
+               'replace'. If other than 'set', index must be specified,
+               and >= 0. If 'remove', then value must be an int
+               specifying the number of items to remove.
+            index (int): the index at which to insert, remove or replace items.
+            
+        The 'replace' mutation also supports multidensional (numpy) arrays.
+        In this case value can be an ndarray to patch the data with, and
+        index a tuple of elements.
         """
         if not isinstance(prop_name, str):
             raise TypeError("_set_prop's first arg must be str, not %s" %
@@ -381,19 +399,30 @@ class Component(with_metaclass(ComponentMeta, object)):
         #     return True
         # Otherwise only set if value has changed
         old = getattr(self, private_name)
-        if this_is_js():
-            is_equal = old == value2
-        elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):
-            import numpy as np
-            is_equal = np.array_equal(old, value2)
-        else:
-            is_equal = type(old) == type(value2) and old == value2
-        if not is_equal:
-            if kind == 'set':
-                setattr(self, private_name, value)
+        
+        if mutation == 'set':
+            # Normal setting of a property
+            if this_is_js():
+                is_equal = old == value2
+            elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):
+                import numpy as np
+                is_equal = np.array_equal(old, value2)
             else:
-                raise NotImplementedError()
-            self.emit(prop_name, dict(new_value=value2, old_value=old))
+                is_equal = type(old) == type(value2) and old == value2
+            if not is_equal:
+                setattr(self, private_name, value)
+                self.emit(prop_name, dict(new_value=value2, old_value=old, mutation=mutation))
+                return True
+        else:
+            # Array mutations - value is assumed to be a sequence, or int for 'remove'
+            if index < 0:
+                raise IndexError('For insert, remove, and replace mutations, the index must be >= 0.')
+            ev = Dict()
+            ev.objects = value
+            ev.mutation = mutation
+            ev.index=index
+            _mutate_array_py(old, ev)
+            self.emit(prop_name, ev)
             return True
     
     def _sett_prop(self, prop_name, value, _initial=False):
@@ -530,3 +559,44 @@ class Component(with_metaclass(ComponentMeta, object)):
             return _react(func)
         else:
             return _react
+
+
+def mutate_array(array, ev):
+    """ Mutate an array based on the given mutation event.
+    """
+    _mutate_array_py(array, ev)
+
+
+def _mutate_array_py(array, ev):
+    """ Logic to mutate an list-like or array-like property in-place.
+    """
+    is_numpy = hasattr(array, 'shape') and hasattr(array, 'dtype')
+    mutation = ev.mutation
+    index = ev.index
+    objects = ev.objects
+    
+    if is_numpy:
+        if mutation == 'set':
+            raise NotImplementedError('set numpy array in-place')
+        elif mutation in ('extend', 'insert', 'remove'):
+            raise NotImplementedError('Cannot resize numpy arrays')
+        elif mutation == 'replace':
+            if isinstance(index, tuple): # nd-replacement
+                # todo: untested
+                slices = tuple(slice(index[i], index[i] + objects.shape[i]) for i in range(len(index)))
+                array[slices] = objects
+            else:
+                array[index:index+len(objects)] = objects
+            raise NotImplementedError()
+    else:
+        if mutation == 'set':
+            array[:] = objects
+        elif mutation == 'insert':
+            array[index:index] = objects
+        elif mutation == 'remove':
+            assert isinstance(objects, int)  # objects must be a count in this case
+            array[index:index+objects] = []
+        elif mutation == 'replace':
+            array[index:index+len(objects)] = objects
+        else:
+            raise NotImplementedError(mutation)

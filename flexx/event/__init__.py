@@ -366,6 +366,6 @@ from ._action import Action, action
 from ._reaction import Reaction, reaction
 from ._emitter import emitter
 from ._property import prop, readonly
-from ._component import Component
+from ._component import Component, mutate_array
 
 # from ._component import new_type, with_metaclass

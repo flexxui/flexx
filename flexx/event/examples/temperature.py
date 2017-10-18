@@ -20,14 +20,14 @@ class Temperature(event.Component):
     @event.action
     def set_c(self, t):
         t = float(t)
-        self._set_c(t)
-        self._set_f(t * 1.8 + 32)
+        self._mutate_c(t)
+        self._mutate_f(t * 1.8 + 32)
     
     @event.action
     def set_f(self, t):
         t = float(t)
-        self._set_f(t)
-        self._set_c((t - 32) / 1.8)
+        self._mutate_f(t)
+        self._mutate_c((t - 32) / 1.8)
     
     @event.reaction
     def on_temp_change(self):
