@@ -11,7 +11,7 @@ from flexx import event
 
 class Test(event.Component):
     
-    foo = event.prop(0, setter=int)
+    foo = event.IntProp(0, settable=True)
     
     @event.reaction
     def react_to_foo_a(self):

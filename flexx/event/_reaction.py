@@ -284,24 +284,14 @@ class Reaction:
         while len(self._pending):
             self._pending.pop()  # no list.clear on legacy py
     
-    def _filter_events(self, events):
+    def _filter_event(self, ev):
         """ Filter events, taking out the events for reconnections.
         Used by the loop.
         """
-        # Filter
-        filtered_events = []
-        reconnect = {}  # poor man's set
-        for ev in events:
-            if ev.label.startswith('reconnect_'):
-                index = int(ev.label.split('_')[-1])
-                reconnect[index] = index
-            else:
-                filtered_events.append(ev)
-        # Reconnect
-        for index in reconnect:
+        if ev.label.startswith('reconnect_'):
+            index = int(ev.label.split('_')[-1])
             self._connect_to_event(index)
-        # Return shorter list
-        return filtered_events
+            return True
     
     def _update_implicit_connections(self, connections):
         """ Update the list of implicit connections. Used by the loop.

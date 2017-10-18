@@ -7,9 +7,9 @@ from flexx import event
 
 class Person(event.Component):
     
-    first_name = event.prop('Jane', setter=str)
-    last_name = event.prop('Doe', setter=str)
-    children = event.prop([], 'The children of this person')
+    first_name = event.StringProp('Jane', settable=True)
+    last_name = event.StringProp('Doe', settable=True)
+    children = event.ListProp([], 'The children of this person')
     
     @event.action
     def add_child(self, child):

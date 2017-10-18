@@ -39,8 +39,8 @@ class Loop:
         self._last_thread_id = 0
         self._scheduled_call_to_iter = False
         
-        self._processing_actions = False
-        self._processing_reactions = False
+        self._processing_action = None
+        self._processing_reaction = None
         
         self._prop_access = {}
         self._pending_calls = []
@@ -58,7 +58,7 @@ class Loop:
         """ Whether the loop is processing actions right now, i.e.
         whether mutations are allowed to be done now.
         """
-        return self._processing_actions
+        return self._processing_action is not None
     
     ## Adding to queues
     
@@ -82,16 +82,20 @@ class Loop:
             self._pending_actions.append((action, args))
             self._schedule_iter()
     
-    def add_reaction_event(self, reaction, label, ev):
+    def add_reaction_event(self, reaction, ev):
         """ Schulde the handling of a reaction.
         """
         
         # In principal, the mechanics of adding items to the queue is not complex,
         # but this code is performance critical, so we have apply several tricks
         # to make this code run fast.
-        #
         # _pending_reactions is a list of tuples (reaction, representing event, events)
-        # _pending_reaction_ids maps reaction._id -> whether a container prop changed
+        
+        # Allow reaction to discard the event (or rather, consume it by reconnecting)
+        # It is important to do the reconnecting before a new event occurs that
+        # the reaction might be subscribed to after the reconnect.
+        if reaction._filter_event(ev):
+            return
         
         with self._lock:
             self._ensure_thread_match()
@@ -119,12 +123,8 @@ class Loop:
             else:
                 # For implicit reactions, we try to consolidate by not adding
                 # to the queue if the correspinding reaction is already
-                # present. We use _pending_reaction_ids for this. We use the
-                # same dict to keep track of whether a prop changed might need
-                # the reaction to perform a reconnect.
+                # present. We use _pending_reaction_ids for this.
                 if reaction._id in self._pending_reaction_ids:
-                    if not self._pending_reaction_ids[reaction._id]:
-                        self._pending_reaction_ids[reaction._id] = self._might_need_reconnect(ev)
                     return
             
             # Add new item to queue
@@ -132,34 +132,33 @@ class Loop:
                 self._pending_reactions.append((reaction, ev, [ev]))
             else:
                 self._pending_reactions.append((reaction, None, []))
-                self._pending_reaction_ids[reaction._id] = self._might_need_reconnect(ev)
+                self._pending_reaction_ids[reaction._id] = True
             
             self._schedule_iter()
-    
-    def _might_need_reconnect(self, ev):
-        check = []
-        for v in (ev.get('new_value', None), ev.get('old_value', None)):
-            if v is None:
-                pass
-            elif isinstance(v, Component):
-                return True
-            elif isinstance(v, (tuple, list)):
-                if len(v) > 0 and isinstance(v[0], Component):
-                    return True
     
     def register_prop_access(self, component, prop_name):
         """ Register access of a property, to keep track of implicit reactions.
         """
+        # Notes on implicit reactions. Like explicit reactions, these are
+        # connected to events, such that add_reaction_event() will get called
+        # for the reaction when a property that the reaction uses changes.
+        # This wil always result in the invokation of the reaction.
+        # 
+        # During the invokation of a reaction, the register_prop_access()
+        # method is used to track property access by the reaction. That way,
+        # connections can be updated as needed.
+        
         # Note that we use a dict here, but for the event reconnecting to
         # be efficient, the order of connections is imporant, so implicit
         # reactions have really poor performance on Python 2.7 :)
         # Make sure not to count access from other threads
-        if self._processing_reactions:
-            if threading.get_ident() == self._last_thread_id:
-                if component._id not in self._prop_access:
-                    self._prop_access[component._id] = component, {prop_name: True}
-                else:
-                    self._prop_access[component._id][1][prop_name] = True
+        if self._processing_reaction is not None:
+            if not self._processing_reaction.is_explicit():
+                if threading.get_ident() == self._last_thread_id:
+                    if component._id not in self._prop_access:
+                        self._prop_access[component._id] = component, {prop_name: True}
+                    else:
+                        self._prop_access[component._id][1][prop_name] = True
 
     ## Queue processing
     
@@ -217,13 +216,13 @@ class Loop:
         # Process
         for i in range(len(pending_actions)):
             action, args = pending_actions[i]
-            self._processing_actions = True
+            self._processing_action = action
             try:
                 action(*args)
             except Exception as err:
                 logger.exception(err)
             finally:
-                self._processing_actions = False
+                self._processing_action = None
     
     def process_reactions(self):
         """ Process all pending reactions.
@@ -239,27 +238,27 @@ class Loop:
         # Process
         for i in range(len(pending_reactions)):
             reaction, _, events = pending_reactions[i]
-            # Reconnect explicit reaction
-            if reaction.is_explicit():
-                events = reaction._filter_events(events)
             # Call reaction
             if len(events) > 0 or not reaction.is_explicit():
                 self._prop_access = {}
-                self._processing_reactions = True
+                self._processing_reaction = reaction
                 try:
                     reaction(*events)
                 except Exception as err:
                     logger.exception(err)
                 finally:
-                    self._processing_reactions = False
-            # Reconnect implicit reaction
+                    self._processing_reaction = None
+            # Reconnect implicit reaction. The _update_implicit_connections()
+            # method is pretty efficient if connections has not changed.
             try:
-                if not reaction.is_explicit() and pending_reaction_ids[reaction._id]:
+                if not reaction.is_explicit():
                     connections = []
                     for component, names in self._prop_access.values():
                         for name in names:
                             connections.append((component, name))
                     reaction._update_implicit_connections(connections)
+            except Exception as err:
+                logger.exception(err)
             finally:
                 self._prop_access = {}
     

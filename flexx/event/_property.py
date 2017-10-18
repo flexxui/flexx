@@ -8,49 +8,20 @@ from ._loop import loop
 from ._action import BaseDescriptor
 
 
-def prop(default, doc='', setter=None):
-    """ Function to define a propery on a Component.
-    
-    An event is emitted when the property is changed, which has values
-    for "old_value" and "new_value".
-    
-    Usage:
-    
-    .. code-block:: python
-    
-        class MyObject(event.Component):
-           
-            foo = prop(1, setter=int, doc='docstring goes here.')
-        
-        m = MyObject(foo=2)
-        m.set_foo(3)
-    
-    The first argument is the default value. If ``setter`` is specified,
-    the ``set_xxx()`` will be created automatically.
-    
-    """
-    if callable(default):
-        raise TypeError('event.prop() is not a decorator (anymore).')
-    if not isinstance(doc, str):
-        raise TypeError('event.prop() doc must be a string.')
-    if not (setter is None or setter is True or callable(setter)):
-        raise TypeError('event.prop() setter must be None, True, or callable.')
-    return PropertyDescriptor(default, setter, doc)
-
-
-def readonly(func):
-    """ Deprecated.
-    """
-    raise NotImplementedError('Deprecated: use event.prop() instead.')
-
-
-class PropertyDescriptor(BaseDescriptor):
+class Property(BaseDescriptor):
     """ Class descriptor for properties.
     """
     
-    def __init__(self, default, setter, doc):
+    def __init__(self, default=None, doc='', settable=None):
+        if callable(default):
+            raise TypeError('event.prop() is not a decorator (anymore).')
+        if not isinstance(doc, str):
+            raise TypeError('event.prop() doc must be a string.')
+        if not (settable is None or settable is True or callable(settable)):
+            raise TypeError('event.prop() settable must be None, True, or callable.')
+            
         self._default = default
-        self._setter = setter
+        self._settable = settable
         self._doc = doc
         self._set_name('anonymous_property')
     
@@ -68,3 +39,128 @@ class PropertyDescriptor(BaseDescriptor):
         private_name = '_' + self._name + '_value'
         loop.register_prop_access(instance, self._name)
         return getattr(instance, private_name)
+    
+    def make_mutator(self):
+        name = self._name
+        def mutator(self, *args):
+            return self._mutate(name, *args)
+        return mutator
+    
+    def make_set_action(self):
+        name = self._name
+        func = self._settable
+        if func is True:
+            func = lambda x: x
+        def setter(self, *args):
+            self._mutate(name, func(*args))
+        return setter
+    
+    def _validate(self, value):
+        raise NotImplementedError('Cannot use Property; use one of the subclasses instead.')
+
+
+# todo: these need docs!
+
+class AnyProp(Property):
+    
+    def _validate(self, value):
+        return value
+
+
+# todo: this is useless unless combined with AnyProp
+class NullProp(Property):
+    
+    def _validate(self, value):
+        if not isinstance(value, None):
+            raise TypeError('Null property can only be None.')
+
+
+class BoolProp(Property):
+    
+    def _validate(self, value):
+        return bool(value)
+
+
+class IntProp(Property):
+    
+    def _validate(self, value):
+        return int(value)
+
+
+class FloatProp(Property):
+    
+    def _validate(self, value):
+        return float(value)
+
+
+class StringProp(Property):
+    
+    def _validate(self, value):
+        if not isinstance(value, str):
+            raise TypeError('%s property cannot accept %s.' %
+                            (self.__class__.__name__, value.__class__.__name__))
+        return value
+
+
+class TupleProp(Property):
+    
+    def _validate(self, value):
+        if not isinstance(value, (tuple, list)):
+            raise TypeError('%s property cannot accept %s.' %
+                            (self.__class__.__name__, value.__class__.__name__))
+        return tuple(value)
+
+
+# todo: test in both that initializing a prop gives a new list instance
+class ListProp(Property):
+    
+    def _validate(self, value):
+        if not isinstance(value, (tuple, list)):
+            raise TypeError('%s property cannot accept %s.' %
+                            (self.__class__.__name__, value.__class__.__name__))
+        return list(value)
+
+
+# todo: can I make this work on JS?
+class EitherProp(Property):
+    
+    def __init__(self, *prop_classes, **kwargs):
+        self._sub_classes = prop_classes
+    
+    def _validate(self, value):
+        for cls in self._sub_classes:
+            try:
+                return cls._validate(self, value)
+            except TypeError:
+                pass
+            raise TypeError('This %s property cannot accept %s.' %
+                            (self.__class__.__name__, value.__class__.__name__))
+
+class ComponentProp(Property):
+    
+    def _validate(self, value):
+        from ._component import Component
+        if not (value is None or isinstance(value, Component)):
+            raise TypeError('%s property cannot accept %s.' %
+                            (self.__class__.__name__, value.__class__.__name__))
+        return value
+
+
+## More special
+
+# class Auto -> Bokeh has special prop to indicate "automatic" value
+# class Color
+# class Date, DateTime
+# class Enum
+# class Either
+# class Instance
+# class Component
+# class Array
+# class MinMax
+
+__all__ = []
+for name, cls in list(globals().items()):
+    if isinstance(cls, type) and issubclass(cls, Property):
+        __all__.append(name)
+
+del name, cls

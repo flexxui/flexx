@@ -365,7 +365,7 @@ from ._loop import loop
 from ._action import Action, action
 from ._reaction import Reaction, reaction
 from ._emitter import emitter
-from ._property import prop, readonly
+from ._property import *
 from ._component import Component, mutate_array
 
 # from ._component import new_type, with_metaclass

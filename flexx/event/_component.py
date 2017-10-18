@@ -9,7 +9,7 @@ import sys
 from ._dict import Dict
 from ._action import ActionDescriptor, Action
 from ._reaction import ReactionDescriptor, Reaction, looks_like_method
-from ._property import PropertyDescriptor
+from ._property import Property
 from ._emitter import Emitter
 from ._loop import loop
 from . import logger
@@ -53,18 +53,6 @@ class ComponentMeta(type):
         type.__init__(cls, name, bases, dct)
 
 
-def make_mutator(name, *args):
-    def mutator(self, *args):
-        self._mutate(name, *args)
-    return mutator
-
-def make_set_action(name, func):
-    if func is True:
-        func = lambda x: x
-    def setter(self, *args):
-        getattr(self, '_mutate')(name, func(*args))
-    return setter
-
 
 def finalize_component_class(cls):
     """ Given a class, analyse its Properties, Actions and Reactions,
@@ -83,14 +71,16 @@ def finalize_component_class(cls):
         val = getattr(cls, name)
         if isinstance(val, ActionDescriptor):
             actions[name] = val
-        elif isinstance(val, PropertyDescriptor):
+        elif isinstance(val, Property):
             properties[name] = val
             val._set_name(name)  # noqa
             # Mutator function
-            setattr(cls, '_mutate_' + name, make_mutator(name))
+            setattr(cls, '_mutate_' + name, val.make_mutator())
             # auto-setter?
-            if val._setter:
-                setattr(cls, 'set_' + name, ActionDescriptor(make_set_action(name, val._setter), 'set_' + name, 'Setter for %s.' % name))
+            if val._settable:
+                setattr(cls, 'set_' + name, ActionDescriptor(val.make_set_action(), 'set_' + name, 'Setter for %s.' % name))
+            # validator
+            setattr(cls, '_' + name + '_validate', val._validate)
         elif isinstance(val, ReactionDescriptor):
             reactions[name] = val
         elif isinstance(val, Emitter):
@@ -180,19 +170,16 @@ class Component(with_metaclass(ComponentMeta, object)):
         
         # Initialize properties with default and given values (does not emit yet)
         for name in self.__properties__:
+            prop = getattr(self.__class__, name)
             self.__handlers.setdefault(name, [])
-            default = getattr(self.__class__, name)._default
+            default = prop._validate(prop._default)
             setattr(self, '_' + name + '_value', default)
-            # func = getattr(self.__class__, name).get_func()
-            # setattr(self, '_' + name + '_func', func)  # needed in set_prop()
-        # for name in self.__properties__:
-        #     dd = getattr(self.__class__, name)._defaults
-        #     if dd:
-        #         self._set_prop(name, dd[0], True)
+            # todo: must this be a mutation?
         for name in sorted(property_values):  # sort for deterministic order
             if name in self.__properties__:
                 value = property_values[name]
-                func = getattr(self, 'set_' + name)
+                prop_setter_name = 'set_' + name
+                func = getattr(self, prop_setter_name)
                 func(value)
             else:
                 cname = self.__class__.__name__
@@ -217,11 +204,13 @@ class Component(with_metaclass(ComponentMeta, object)):
     
     def __init_handlers(self):
         # Instantiate handlers (i.e. resolve connections) its enough to reference them
-        # the new_value attribute in the event is to trigger a reconnect
+        # the new_value attribute in the event is to trigger a reconnect.
+        # Force implicit reactions to connect.
         for name in self.__reactions__:
             reaction = getattr(self, name)
             if not reaction.is_explicit():
-                loop.add_reaction_event(reaction, 'init', Dict(source=self, type='', new_value=()))
+                ev = Dict(source=self, type='', label='', new_value=())
+                loop.add_reaction_event(reaction, ev)
     
     if sys.version_info > (3, 4):
         # http://eli.thegreenplace.net/2009/06/12/safely-using-destructors-in-python
@@ -283,7 +272,7 @@ class Component(with_metaclass(ComponentMeta, object)):
             if not label.startswith('reconnect_'):
                 for ev in self.__pending_events.get(type, []):
                     #handler._add_pending_event(label, ev)
-                    loop.add_reaction_event(handler, label, ev)
+                    loop.add_reaction_event(handler, ev)
         # Send an event to communicate the value of a property
         # if type in self.__properties__:
         #     if self.__props_ever_set.get(type, False):
@@ -347,7 +336,7 @@ class Component(with_metaclass(ComponentMeta, object)):
             # handler._add_pending_event(label, ev)  # friend class
             ev2 = ev.copy()  # todo: there's also a copy above, limit to 1
             ev2.label = label
-            loop.add_reaction_event(handler, label, ev2)
+            loop.add_reaction_event(handler, ev2)
     
     # todo: make this public? It can only be called from actions anyway
     # mmm, but we want to constrain its use to the class itself -> private
@@ -387,6 +376,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         
         # Prepare
         private_name = '_' + prop_name + '_value'
+        validator_name = '_' + prop_name + '_validate'
         self.__props_being_set[prop_name] = True
         self.__props_ever_set[prop_name] = True
         
@@ -410,7 +400,8 @@ class Component(with_metaclass(ComponentMeta, object)):
             else:
                 is_equal = type(old) == type(value2) and old == value2
             if not is_equal:
-                setattr(self, private_name, value)
+                value2 = getattr(self, validator_name)(value)
+                setattr(self, private_name, value2)
                 self.emit(prop_name, dict(new_value=value2, old_value=old, mutation=mutation))
                 return True
         else:

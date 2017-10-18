@@ -15,8 +15,8 @@ from flexx import event
 
 class CachingExample(event.Component):
     
-    source = event.prop('', setter=str, doc='The input for the calculations.')
-    data = event.prop(None, setter=lambda x:x, doc='Cache of the calculation result.')
+    source = event.StringProp('', settable=True, doc='The input for the calculations.')
+    data = event.AnyProp(None, settable=True, doc='Cache of the calculation result.')
     
     @event.reaction('source')
     def download_data(self, *events):
@@ -26,7 +26,7 @@ class CachingExample(event.Component):
             self.set_data(hash(self.source))
     
     @event.reaction
-    def show_data(self, *events):
+    def show_data(self):
         """ handler to show the data. Can be called at any time. """
         if self.data is not None:
             print('The data is', self.data)
