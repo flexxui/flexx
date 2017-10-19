@@ -1,5 +1,16 @@
 """
 Implementation of flexx.event in JS via PyScript.
+
+In this module we compile Loop, Reaction and Component to JavaScript,
+by transpiling most methods from the Python classes. This module
+implements a JS variant of these classes to overload certain behavior
+in JS. E.g. the JS implementation of the Component class has some
+boilerplate code to create actions, reactions, emitters and properties,
+
+By reusing as much code as possible, we reduce maintencance costs, and
+make it easier to realize that the Python and JS implementation of this
+event system have the same API and behavior.
+
 """
 
 import sys
@@ -8,8 +19,11 @@ import json
 from flexx.pyscript import JSString, py2js as py2js_
 from flexx.pyscript.parser2 import get_class_definition
 
-from flexx.event._emitters import BaseEmitter, Property
-from flexx.event._handler import ReactionDescriptor, Handler
+from flexx.event._loop import Loop
+from flexx.event._action import ActionDescriptor, Action
+from flexx.event._reaction import ReactionDescriptor, Reaction
+from flexx.event._property import Property
+from flexx.event._emitter import Emitter
 from flexx.event._component import Component
 
 
@@ -24,144 +38,11 @@ def py2js(*args, **kwargs):
     return py2js_(*args, **kwargs)
 
 
-class ComponentJS:
-    """ An implementation of the Component class in PyScript. It has
-    some boilerplate code to create handlers and emitters, but otherwise
-    shares most of the code with the Python classes by transpiling their
-    methods via PyScript. This ensures that the Python and JS
-    implementation of this event system have the same API and behavior.
-    
-    The Python version of this class has a ``JSCODE`` attribute that
-    contains the auto-generated JavaScript for this class.
+## The JS class variants
+
+class LoopJS:
+    """ JS variant of the Loop class.
     """
-    
-    _HANDLER_COUNT = 0
-    _IS_COMPONENT = True
-    
-    def __init__(self, init_handlers=True):
-        
-        # Init some internal variables
-        self.__handlers = {}
-        self.__props_being_set = {}
-        self.__props_ever_set = {}
-        self.__pending_events = {}
-        
-        # Create properties
-        for name in self.__properties__:
-            self.__handlers.setdefault(name, [])
-            self['_' + name + '_value'] = None  # need *something*
-            self['_' + name + '_func'] = self[name]  # need below and in set_prop()
-        for name in self.__properties__:
-            func = self['_' + name + '_func']
-            creator = self['__create_' + func.emitter_type]
-            creator(name)
-            if func.default is not undefined:
-                self._set_prop(name, func.default, True)
-        
-        # Create emitters
-        for name in self.__emitters__:
-            self.__handlers.setdefault(name, [])
-            func = self[name]
-            self.__create_Emitter(func, name)
-        
-        # Init handlers and properties now, or later?
-        if init_handlers:
-            self._init_handlers()
-    
-    def __init_handlers(self):
-        # Create (and connect) handlers
-        for name in self.__handlers__:
-            func = self[name]
-            self[name] = self.__create_Handler(func, name, func._connection_strings)
-    
-    def __connect(self, *connection_strings):
-        # The JS version (no decorator functionality)
-        
-        if len(connection_strings) < 2:
-            raise RuntimeError('connect() (js) needs a function and one or ' +
-                               'more connection strings.')
-        
-        # Get callable
-        if callable(connection_strings[0]):
-            func = connection_strings[0]
-            connection_strings = connection_strings[1:]
-        elif callable(connection_strings[-1]):
-            func = connection_strings[-1]
-            connection_strings = connection_strings[:-1]
-        else:
-            raise TypeError('connect() decorator requires a callable.')
-        
-        # Verify connection strings
-        for s in connection_strings:
-            if not (isinstance(s, str) and len(s)):
-                raise ValueError('Connection string must be nonempty strings.')
-        
-        # Get function name (Flexx sets __name__ on methods)
-        name = func.__name__ or func.name or 'anonymous'
-        name = name.split(' ')[-1].split('flx_')[-1]
-        return self.__create_Handler(func, name, connection_strings)
-    
-    def __create_PyProperty(self, name):
-        self.__create_Property(name)
-    
-    def __create_Property(self, name):
-        private_name = '_' + name + '_value'
-        def getter():
-            return self[private_name]
-        def setter(x):
-            self._set_prop(name, x)
-        opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
-                'get': getter, 'set': setter}
-        Object.defineProperty(self, name, opts)
-    
-    def __create_Readonly(self, name):
-        private_name = '_' + name + '_value'
-        def getter():
-            return self[private_name]
-        def setter(x):
-            raise AttributeError('Readonly %s is not settable' % name)
-        opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
-                'get': getter, 'set': setter}
-        Object.defineProperty(self, name, opts)
-    
-    def __create_Emitter(self, emitter_func, name):
-        # Keep a ref to the emitter func, which is a class attribute. The object
-        # attribute with the same name will be overwritten with the property below.
-        # Because the class attribute is the underlying function, super() works.
-        def func(*args):  # this func should return None, so super() works correct
-            ev = emitter_func.apply(self, args)
-            if ev is not None:
-                self.emit(name, ev)
-        def getter():
-            return func
-        def setter(x):
-            raise AttributeError('Emitter %s is not settable' % name)
-        opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
-                'get': getter, 'set': setter}
-        Object.defineProperty(self, name, opts)
-    
-    def __create_Handler(self, handler_func, name, connection_strings):
-        # Keep ref to the handler function, see comment in create_Emitter().
-        
-        # Create function that becomes our "handler object"
-        def handler(*events):
-            return handler_func.apply(self, events)
-        
-        # Attach methods to the function object (this gets replaced)
-        HANDLER_METHODS_HOOK  # noqa
-        
-        # Init handler
-        that = self
-        Component.prototype._HANDLER_COUNT += 1
-        handler._name = name
-        handler._id = 'h' + str(Component.prototype._HANDLER_COUNT)
-        handler._ob1 = lambda : that  # no weakref in JS
-        handler._init(connection_strings, self)
-        
-        return handler
-
-
-class Loop:
     
     def __init__(self):
         self._pending_calls = []
@@ -187,41 +68,201 @@ class Loop:
                 console.log(err)
 
 
-def get_Component_js():
-    """ Get the final code for the JavaScript version of the Component class.
+class ReactionJS:
+    """ JS variant of the Reaction class.
     """
-    # Add the loop
-    jscode = py2js(Loop, 'Loop') + '\nvar loop = new Loop();\n'
+    
+    _COUNT = 0
+    
+    def __init__(self, func, ob, name, connection_strings):
+        Reaction.prototype._COUNT += 1
+        self._id = 'r' + str(self._COUNT)
+        self._func = func
+        self._ob1 = lambda : that  # no weakref in JS
+        self._name = name
+        self._init(connection_strings, ob)
+
+
+class ComponentJS:
+    """ JS variant of the Component class.
+    """
+    
+    _IS_COMPONENT = True
+    
+    def __init__(self, init_handlers=True):
+        
+        # Init some internal variables
+        self.__handlers = {}  # reactions connecting to this component
+        self.__props_being_set = {}
+        self.__props_ever_set = {}
+        self.__pending_events = {}
+        
+        # Init actions
+        for name in self.__actions__:
+            self.__create_action(self[name], name)
+        
+        # Init properties
+        for name in self.__properties__:
+            self.__handlers.setdefault(name, [])
+            value_name = '_' + name + '_value'
+            validator = self['_' + name + '_validate']
+            self[value_name] = validator(self[value_name])  # todo: or via mutate?
+            self.__create_property(name)
+        
+        # Init emitters
+        for name in self.__emitters__:
+            self.__handlers.setdefault(name, [])
+            self.__create_emitter(self[name], name)
+        
+        # Init handlers and properties now, or later?
+        if init_handlers:
+            self._init_handlers()
+    
+    # todo: rename handler -> reaction
+    def _init_handlers2(self):
+        # Create (and connect) handlers
+        for name in self.__reactions__:
+            func = self[name]
+            # todo: func.is_explicit = ...
+            self[name] = self.__create_reaction(func, name, func._connection_strings)
+            # todo: add_reaction_event for implicit handlers
+    
+    def _reaction(self, *connection_strings):
+        # The JS version (no decorator functionality)
+        
+        if len(connection_strings) < 2:
+            raise RuntimeError('connect() (js) needs a function and one or ' +
+                               'more connection strings.')
+        
+        # Get callable
+        if callable(connection_strings[0]):
+            func = connection_strings[0]
+            connection_strings = connection_strings[1:]
+        elif callable(connection_strings[-1]):
+            func = connection_strings[-1]
+            connection_strings = connection_strings[:-1]
+        else:
+            raise TypeError('connect() decorator requires a callable.')
+        
+        # Verify connection strings
+        for s in connection_strings:
+            if not (isinstance(s, str) and len(s)):
+                raise ValueError('Connection string must be nonempty strings.')
+        
+        # Get function name (Flexx sets __name__ on methods)
+        name = func.__name__ or func.name or 'anonymous'
+        name = name.split(' ')[-1].split('flx_')[-1]
+        return self.__create_reaction(func, name, connection_strings)
+    
+    def __create_action(self, action_func, name):
+        # Keep a ref to the action func, which is a class attribute. The object
+        # attribute with the same name will be overwritten with the property below.
+        # Because the class attribute is the underlying function, super() works.
+        def action(*args):  # this func should return None, so super() works correct
+            if loop.is_processing_actions():
+                action_func.apply(self, args)
+            else:
+                loop.add_action_invokation(action, args)
+        def getter():
+            return action
+        def setter(x):
+            raise AttributeError('Action %s is not settable' % name)
+        opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
+                'get': getter, 'set': setter}
+        Object.defineProperty(self, name, opts)
+    
+    def __create_property(self, name):
+        private_name = '_' + name + '_value'
+        def getter():
+            return self[private_name]
+        def setter(x):
+            raise AttributeError('Cannot set property %r; properties can only '
+                                 'be mutated by actions.' % name)
+        opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
+                'get': getter, 'set': setter}
+        Object.defineProperty(self, name, opts)
+    
+    def __create_emitter(self, emitter_func, name):
+        # Keep a ref to the emitter func, see comment in __create_action()
+        def func(*args):  # this func should return None, so super() works correct
+            ev = emitter_func.apply(self, args)
+            if ev is not None:
+                self.emit(name, ev)
+        def getter():
+            return func
+        def setter(x):
+            raise AttributeError('Emitter %s is not settable' % name)
+        opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
+                'get': getter, 'set': setter}
+        Object.defineProperty(self, name, opts)
+    
+    def __create_reaction(self, reaction_func, name, connection_strings):
+        # Keep ref to the reaction function, see comment in create_action().
+        
+        reaction = Reaction(reaction_func, self, name, connection_strings)
+        return reaction
+        
+        # todo: remove the below
+        
+        # Create function that becomes our "reaction object"
+        def reaction(*events):
+            return reaction_func.apply(self, events)
+        
+        # Attach methods to the function object (this gets replaced)
+        REACTION_METHODS_HOOK  # noqa
+        
+        # Init reaction
+        that = self
+        Component.prototype._REACTION_COUNT += 1
+        reaction._name = name
+        reaction._id = 'h' + str(Component.prototype._REACTION_COUNT)
+        reaction._ob1 = lambda : that  # no weakref in JS
+        reaction._init(connection_strings, self)
+        
+        return reaction
+
+
+## Compile functions
+
+def _create_js_class(PyClass, JSClass, ignore=()):
+    """ Create the JS code for Loop, Reaction and Component based on their
+    Python and JS variants.
+    """
+    cname = PyClass.__name__
     # Start with our special JS version
-    jscode += py2js(ComponentJS, 'Component')
-    # Add the Handler methods
-    code = '\n'
-    for name, val in sorted(Handler.__dict__.items()):
-        if not name.startswith('__') and callable(val):
-            code += py2js(val, 'handler.' + name, indent=1)[4:]
-            code += '\n'
-    jscode = jscode.replace('HANDLER_METHODS_HOOK', code)
-    # Add the methods from the Python Component class
-    code = '\n'
-    for name, val in sorted(Component.__dict__.items()):
-        if name.startswith(('__', '_Component__')) or not callable(val):
-            continue
-        code += py2js(val, 'Component.prototype.' + name)
-        code += '\n'
-    jscode += code
+    jscode = [py2js(JSClass, cname)]
+    jscode[0] = jscode[0].replace('}\n',
+                                  '}\nvar $%s = %s.prototype;\n' % (cname, cname),
+                                  1
+                        ).replace('%s.prototype.' % cname,
+                                  '$%s.' % cname)
+    # Add the Reaction methods
+    for name, val in sorted(PyClass.__dict__.items()):
+        #if not name.startswith(('__', '_%s__' % cname)):
+        if not name.startswith('__') and not name in ignore:
+            if not hasattr(JSClass, name) and callable(val):
+                jscode.append(py2js(val, '$' + cname + '.' + name))
     # Almost done
+    jscode = '\n'.join(jscode)
     jscode = jscode.replace('new Dict()', '{}').replace('new Dict(', '_pyfunc_dict(')
     return jscode
 
 
-ComponentJS.JSCODE = get_Component_js()
+IGNORE = ('_integrate_qt', 'integrate_tornado', 'integrate_pyqt4', 'integrate_pyside'
+          )
+
+# Generate the code
+JS_Loop = ''#_create_js_class(Loop, LoopJS, IGNORE) + '\nvar loop = new Loop();\n'
+JS_Reaction = _create_js_class(Reaction, ReactionJS, IGNORE)
+JS_Component = _create_js_class(Component, ComponentJS, IGNORE)
+JS = JS_Loop + JS_Reaction + JS_Component
 
 
 def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     """ Create the JS equivalent of a subclass of the Component class.
     
-    Given a Python class with handlers, properties and emitters, this
-    creates the code for the JS version of this class. It also supports
+    Given a Python class with actions, properties, emitters and reactions,
+    this creates the code for the JS version of the class. It also supports
     class constants that are int/float/str, or a tuple/list thereof.
     The given class does not have to be a subclass of Component.
     
@@ -242,9 +283,6 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
                 meta[key].update(code.meta[key])
         return code
     
-    handlers = []
-    emitters = []
-    properties = []
     total_code = []
     funcs_code = []  # functions and emitters go below class constants
     const_code = []
@@ -254,10 +292,11 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     total_code.append('\n'.join(get_class_definition(cls_name, base_class)).rstrip())
     prefix = '' if cls_name.count('.') else 'var '
     total_code[0] = prefix + total_code[0]
-    
+    prototype_prefix = '$' + cls_name.split('.')[-1] + '.'
+    total_code.append('var %s = %s.prototype;' % (prototype_prefix[:-1], cls_name))
     # Functions to ignore
-    OK_MAGICS = ('__properties__', '__emitters__', '__handlers__',
-                 '__local_properties__')
+    OK_MAGICS = ('__actions__', '__properties__', '__emitters__',
+                 '__reactions__', '__local_properties__')
     
     # Process class items in original order or sorted by name if we cant
     class_items = cls.__dict__.items()
@@ -265,52 +304,55 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
         class_items = sorted(class_items)
     
     for name, val in class_items:
-        name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix mangling
-        if isinstance(val, BaseEmitter):
+        name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix __ mangling
+        if isinstance(val, ActionDescriptor):
+            # Set underlying function as class attribute. This is overwritten
+            # by the instance, but this way super() works.
             funcname = name
-            if isinstance(val, Property):
-                properties.append(name)
-            else:
-                emitters.append(name)
             # Add function def
-            code = py2js_local(val._func, cls_name + '.prototype.' + funcname)
+            code = py2js_local(val._func, prototype_prefix + funcname)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             # Mark to not bind the func
-            t = '%s.prototype.%s.nobind = true;'
-            funcs_code.append(t % (cls_name, funcname))
-            # Has default val?
-            if isinstance(val, Property) and val._defaults:
-                default_val = json.dumps(val._defaults[0])
-                t = '%s.prototype.%s.default = %s;'
-                funcs_code.append(t % (cls_name, funcname, default_val))
-            # Add type of emitter
-            t = '%s.prototype.%s.emitter_type = %s;'
-            emitter_type = val.__class__.__name__
-            funcs_code.append(t % (cls_name, funcname, reprs(emitter_type)))
+            funcs_code.append(prototype_prefix + funcname + '.nobind = true;')
             funcs_code.append('')
         elif isinstance(val, ReactionDescriptor):
             funcname = name  # funcname is simply name, so that super() works
-            handlers.append(name)
             # Add function def
-            code = py2js_local(val._func, cls_name + '.prototype.' + funcname)
+            code = py2js_local(val._func, prototype_prefix + funcname)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             # Mark to not bind the func
-            t = '%s.prototype.%s.nobind = true;'
-            funcs_code.append(t % (cls_name, funcname))
-            # Add connection strings to the function object
-            t = '%s.prototype.%s._connection_strings = %s;'
-            funcs_code.append(t % (cls_name, funcname, reprs(val._connection_strings)))
+            funcs_code.append(prototype_prefix + funcname + '.nobind = true;')
+            # Add connection strings, but not for implicit reactions
+            if val._connection_strings:
+                funcs_code.append(prototype_prefix + funcname +
+                                  '._connection_strings = ' +
+                                  reprs(val._connection_strings))
             funcs_code.append('')
+        elif isinstance(val, Emitter):
+            funcname = name
+            # Add function def
+            code = py2js_local(val._func, prototype_prefix + funcname)
+            code = code.replace('super()', base_class)  # fix super
+            funcs_code.append(code.rstrip())
+            # Mark to not bind the func
+            funcs_code.append(prototype_prefix + funcname + '.nobind = true;')
+            funcs_code.append('')
+        elif isinstance(val, Property):
+            # Mutator and validator functions are picked up as normal functions.
+            # Set default value on class.
+            default_val = json.dumps(val._default)
+            t = '%s_%s_value = %s;'
+            const_code.append(t % (prototype_prefix, name, default_val))
         elif callable(val):
-            code = py2js_local(val, cls_name + '.prototype.' + name)
+            # Functions, including methods attached by the meta class
+            code = py2js_local(val, prototype_prefix + name)
             code = code.replace('super()', base_class)  # fix super
             funcs_code.append(code.rstrip())
             funcs_code.append('')
         elif name in OK_MAGICS:
-            t = '%s.prototype.%s = %s;'
-            const_code.append(t % (cls_name, name, reprs(val)))
+            const_code.append(prototype_prefix + name + ' = ' + reprs(val))
         elif name.startswith('__'):
             pass  # we create our own __emitters__, etc.
         else:
@@ -319,9 +361,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             except Exception as err:  # pragma: no cover
                 raise ValueError('Attributes on JS Component class must be '
                                  'JSON compatible.\n%s' % str(err))
-            #const_code.append('%s.prototype.%s = JSON.parse(%s)' %
-            #                  (cls_name, name, reprs(serialized)))
-            const_code.append('%s.prototype.%s = %s;' % (cls_name, name, serialized))
+            const_code.append(prototype_prefix + name + ' = ' + serialized)
     
     if const_code:
         total_code.append('')
@@ -338,13 +378,29 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
 
 
 if __name__ == '__main__':
+    
     # Testing ...
     from flexx import event
+    
     class Foo(Component):
-        @event.prop
-        def foo(self, v=0):
-            return v
         
-    print(ComponentJS.JSCODE)
-    print(len(ComponentJS.JSCODE))
-    #print(create_js_Component_class(Foo, 'Foo'))
+        foo = event.StringProp('asd', settable=True)
+        
+        @event.action
+        def do_bar(self, v=0):
+            print(v)
+        
+        @event.reaction
+        def react2foo(self):
+            print(self.foo)
+    
+    print('-' * 80)
+    # print(JS_Loop)
+    print('-' * 80)
+    # print(JS_Reaction)
+    print('-' * 80)
+    print(JS_Component)
+    print('-' * 80)
+    print(len(JS), 'bytes in total')
+    print('-' * 80)
+    # print(create_js_component_class(Foo, 'Foo'))

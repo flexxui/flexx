@@ -5,7 +5,7 @@ This helps ensure that both implementation work in the same way.
 Focus on use-cases rather than coverage.
 
 These tests work a bit awkward, but its very useful to be able to test
-that the two systems work exactly the same way. You define a HasEvents
+that the two systems work exactly the same way. You define a Component
 class, and then provide that class to a test function using a
 decorator. The test function will then be run both in Python and in JS.
 The test function should return an object, that when evaluated to a
@@ -18,7 +18,7 @@ from flexx.util.testing import run_tests_if_main, raises
 
 from flexx import event
 from flexx.event import loop
-from flexx.event._js import create_js_hasevents_class, HasEventsJS, reprs
+from flexx.event._js import create_js_component_class, ComponentJS, reprs
 from flexx.pyscript.functions import py2js, evaljs, evalpy, js_rename
 from flexx.pyscript.stdlib import get_std_info, get_partial_std_lib
 
@@ -40,16 +40,16 @@ def run_in_both(cls, reference, extra_classes=()):
     def wrapper(func):
         def runner():
             # Run in JS
-            code = HasEventsJS.JSCODE
+            code = ComponentJS.JSCODE
             for c in extra_classes:
-                code += create_js_hasevents_class(c, c.__name__)
+                code += create_js_component_class(c, c.__name__)
             this_classes = []
             for c in cls.mro():
-                if c is event.HasEvents:
+                if c is event.Component:
                     break
                 this_classes.append(c)
             for c in reversed(this_classes):
-                code += create_js_hasevents_class(c, c.__name__, c.__bases__[0].__name__+'.prototype')
+                code += create_js_component_class(c, c.__name__, c.__bases__[0].__name__+'.prototype')
             code += py2js(func, 'test', inline_stdlib=False, docstrings=False)
             code += 'console.log(test(%s));' % cls.__name__
             nargs, function_deps, method_deps = get_std_info(code)
@@ -69,7 +69,7 @@ def run_in_both(cls, reference, extra_classes=()):
     return wrapper
 
 
-class Person(event.HasEvents):
+class Person(event.Component):
     
     _foo = 3
     _bar = 'bar'
@@ -133,7 +133,7 @@ class Person(event.HasEvents):
         self._set_prop('full_name', self.first_name + ' ' + self.last_name)
 
 
-class PersonNoDefault(event.HasEvents):
+class PersonNoDefault(event.Component):
     def __init__(self):
         self.r1 = []
         super().__init__()
@@ -151,8 +151,14 @@ class PersonNoDefault(event.HasEvents):
     def some_event(self, v):
         return dict(val=v)
 
+##
 
-@run_in_both(Person, "['', 'john doe', '', 'almar klein', '', 'jorik klein']")
+@run_in_both(Person, "['', 'john doe', '', 'almar klein', '', 'jorik klein']",
+py="""
+Python
+---
+asdasd
+""")
 def test_name(Person):
     name = Person()
     name._set_full_name.handle_now()
@@ -165,6 +171,10 @@ def test_name(Person):
     name._set_full_name.handle_now()
     name.r4.append(name.full_name)
     return name.r4
+
+
+
+##
 
 @run_in_both(Person, "[3, 'bar', [1, 2, 3]]")
 def test_class_attributes(Person):
@@ -366,7 +376,7 @@ def test_try_illegal_stuff(Person):
     return res
 
 
-class PropRecursion(event.HasEvents):
+class PropRecursion(event.Component):
     count = 0
     
     @event.prop
@@ -409,26 +419,26 @@ def test_prop_recursion(PropRecursion):
     return []
 
 
-## Test HasEvents class
+## Test Component class
 
 @run_in_both(Person, "[3, 'bar', [1, 2, 3]]")
-def test_hasevents_class_attributes(Person):
+def test_component_class_attributes(Person):
     name = Person()
     return name._foo, name._bar, name.spam
 
 
 @run_in_both(Person, "['yell']")
-def test_hasevents___emitters__(Person):
+def test_component___emitters__(Person):
     name = Person()
     return name.__emitters__
 
 @run_in_both(Person, "['age', 'first_name', 'full_name', 'last_name', 'nchildren']")
-def test_hasevents___properties__(Person):
+def test_component___properties__(Person):
     name = Person()
     return name.__properties__
 
 @run_in_both(Person, "['_first_name_logger', '_full_name_logger', '_set_full_name', '_yell_logger']")
-def test_hasevents___handlers__(Person):
+def test_component___handlers__(Person):
     name = Person()
     return name.__handlers__
 
@@ -907,7 +917,7 @@ def test_handler_get_connection_info(Person):
     return info
 
 
-class Simple1(event.HasEvents):
+class Simple1(event.Component):
     
     def __init__(self):
         super().__init__()
@@ -933,7 +943,7 @@ def test_handler_on_method(Simple1):
     return s._r1
 
 
-class Order1(event.HasEvents):
+class Order1(event.Component):
     
     def __init__(self):
         super().__init__()
@@ -1050,7 +1060,7 @@ if not os.getenv('TRAVIS'):
         return m.r
 
 
-class ConnectFail(event.HasEvents):
+class ConnectFail(event.Component):
     
     @event.connect('foo.bar')
     def failing_handler(self, *events):
@@ -1080,7 +1090,7 @@ def test_handler_connection_fail2(Person):
     return ['fail']
 
 
-class HandlerFail(event.HasEvents):
+class HandlerFail(event.Component):
     
     @event.prop
     def foo(self, v=0):
@@ -1121,7 +1131,7 @@ def test_handler_exception1(HandlerFail):
 
 ## Dynamism
 
-class Node(event.HasEvents):
+class Node(event.Component):
     
     def __init__(self):
         super().__init__()

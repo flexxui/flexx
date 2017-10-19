@@ -30,7 +30,7 @@ class Property(BaseDescriptor):
         self.__doc__ = '*property*: %s' % (self._doc or self._name)
                                      
     def __set__(self, instance, value):
-        t ='Cannot set property %r; properties can only be mutated by actions.'
+        t = 'Cannot set property %r; properties can only be mutated by actions.'
         raise AttributeError(t % self._name)
     
     def __get__(self, instance, owner):

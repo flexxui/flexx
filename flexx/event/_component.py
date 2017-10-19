@@ -44,8 +44,8 @@ def new_type(name, *args, **kwargs):
 class ComponentMeta(type):
     """ Meta class for Component
     * Set the name of property desciptors.
-    * Sets __actions__, __reactions__ and __properties__ attribute on the class.
-    * Create some private functions (e.g. mutator functions).
+    * Set __actions__, __reactions__, __emitters__ and __properties__ class attributes.
+    * Create private methods (e.g. mutator functions and prop validators).
     """
     
     def __init__(cls, name, bases, dct):
@@ -57,9 +57,20 @@ class ComponentMeta(type):
 def finalize_component_class(cls):
     """ Given a class, analyse its Properties, Actions and Reactions,
     to set a list of __actions__, __properties__, and __reactions__.
-    Also create private methods corresponding to the properties,
-    actions and reactions.
+    
+    For actions, reactions and emitters, there's nothing more to do. For
+    properties there is though:
+    
+    * Create a mutator function for convenience.
+    * If needed, create a corresponding set_xx action.
+    * Create validator function.
+    
+    The instances also set up a few things:
+    
+    * Initialize property values (at `self._xx_value`).
+    * Initialize (connect) reactions.
     """
+    
     actions = {}
     emitters = {}
     properties = {}
@@ -74,13 +85,17 @@ def finalize_component_class(cls):
         elif isinstance(val, Property):
             properties[name] = val
             val._set_name(name)  # noqa
-            # Mutator function
-            setattr(cls, '_mutate_' + name, val.make_mutator())
-            # auto-setter?
-            if val._settable:
-                setattr(cls, 'set_' + name, ActionDescriptor(val.make_set_action(), 'set_' + name, 'Setter for %s.' % name))
-            # validator
+            # Create validator method
             setattr(cls, '_' + name + '_validate', val._validate)
+            # Create mutator method
+            setattr(cls, '_mutate_' + name, val.make_mutator())
+            # Create setter action?
+            if val._settable:
+                action_name = 'set_' + name
+                action_des = ActionDescriptor(val.make_set_action(), action_name,
+                                              'Setter for %s.' % name)
+                setattr(cls, action_name, action_des)
+                actions[action_name] = action_des
         elif isinstance(val, ReactionDescriptor):
             reactions[name] = val
         elif isinstance(val, Emitter):
@@ -184,8 +199,6 @@ class Component(with_metaclass(ComponentMeta, object)):
                     setter_reaction = lambda: setter_func(value())
                     ev = Dict(source=self, type='', label='')
                     loop.add_reaction_event(Reaction(self, setter_reaction, []), ev)
-                                            
-                    
                 else:
                     setter_func(value)
             else:
@@ -207,9 +220,9 @@ class Component(with_metaclass(ComponentMeta, object)):
             self.__pending_events = None
         loop.call_later(stop_capturing)
         # Call Python or JS version to initialize and connect the handlers
-        self.__init_handlers()
+        self._init_handlers2()
     
-    def __init_handlers(self):
+    def _init_handlers2(self):
         # Instantiate handlers (i.e. resolve connections) its enough to reference them
         # the new_value attribute in the event is to trigger a reconnect.
         # Force implicit reactions to connect.
@@ -424,57 +437,57 @@ class Component(with_metaclass(ComponentMeta, object)):
             return True
     
     # todo: clean up
-    def _sett_prop(self, prop_name, value, _initial=False):
-        """ Set the value of a (readonly) property.
-        
-        Parameters:
-            prop_name (str): the name of the property to set.
-            value: the value to set.
-        """
-        # Checks
-        if not isinstance(prop_name, str):
-            raise TypeError("_set_prop's first arg must be str, not %s" %
-                             prop_name.__class__)
-        if prop_name not in self.__properties__:
-            cname = self.__class__.__name__
-            raise AttributeError('%s object has no property %r' % (cname, prop_name))
-        prop_being_set = self.__props_being_set.get(prop_name, None)
-        if prop_being_set:
-            return
-        # Prepare
-        private_name = '_' + prop_name + '_value'
-        func_name = '_' + prop_name + '_func'  # set in init in both Py and JS
-        # Validate value
-        self.__props_being_set[prop_name] = True
-        self.__props_ever_set[prop_name] = True
-        func = getattr(self, func_name)
-        try:
-            if this_is_js():
-                value2 = func.apply(self, [value])
-            elif getattr(self.__class__, prop_name)._has_self:
-                value2 = func(self, value)
-            else:
-                value2 = func(value)
-        finally:
-            self.__props_being_set[prop_name] = False
-        # If not initialized yet, set
-        if prop_being_set is None:
-            setattr(self, private_name, value2)
-            self.emit(prop_name, dict(new_value=value2, old_value=value2))
-            return True
-        # Otherwise only set if value has changed
-        old = getattr(self, private_name)
-        if this_is_js():
-            is_equal = old == value2
-        elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):
-            import numpy as np
-            is_equal = np.array_equal(old, value2)
-        else:
-            is_equal = type(old) == type(value2) and old == value2
-        if not is_equal:
-            setattr(self, private_name, value2)
-            self.emit(prop_name, dict(new_value=value2, old_value=old))
-            return True
+    # def _sett_prop(self, prop_name, value, _initial=False):
+    #     """ Set the value of a (readonly) property.
+    #     
+    #     Parameters:
+    #         prop_name (str): the name of the property to set.
+    #         value: the value to set.
+    #     """
+    #     # Checks
+    #     if not isinstance(prop_name, str):
+    #         raise TypeError("_set_prop's first arg must be str, not %s" %
+    #                          prop_name.__class__)
+    #     if prop_name not in self.__properties__:
+    #         cname = self.__class__.__name__
+    #         raise AttributeError('%s object has no property %r' % (cname, prop_name))
+    #     prop_being_set = self.__props_being_set.get(prop_name, None)
+    #     if prop_being_set:
+    #         return
+    #     # Prepare
+    #     private_name = '_' + prop_name + '_value'
+    #     func_name = '_' + prop_name + '_func'  # set in init in both Py and JS
+    #     # Validate value
+    #     self.__props_being_set[prop_name] = True
+    #     self.__props_ever_set[prop_name] = True
+    #     func = getattr(self, func_name)
+    #     try:
+    #         if this_is_js():
+    #             value2 = func.apply(self, [value])
+    #         elif getattr(self.__class__, prop_name)._has_self:
+    #             value2 = func(self, value)
+    #         else:
+    #             value2 = func(value)
+    #     finally:
+    #         self.__props_being_set[prop_name] = False
+    #     # If not initialized yet, set
+    #     if prop_being_set is None:
+    #         setattr(self, private_name, value2)
+    #         self.emit(prop_name, dict(new_value=value2, old_value=value2))
+    #         return True
+    #     # Otherwise only set if value has changed
+    #     old = getattr(self, private_name)
+    #     if this_is_js():
+    #         is_equal = old == value2
+    #     elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):
+    #         import numpy as np
+    #         is_equal = np.array_equal(old, value2)
+    #     else:
+    #         is_equal = type(old) == type(value2) and old == value2
+    #     if not is_equal:
+    #         setattr(self, private_name, value2)
+    #         self.emit(prop_name, dict(new_value=value2, old_value=old))
+    #         return True
     
     def get_event_types(self):
         """ Get the known event types for this HasEvent object. Returns
@@ -527,9 +540,9 @@ class Component(with_metaclass(ComponentMeta, object)):
             h.reaction('first_name', greet)
         
         """
-        return self.__react(*connection_strings)  # calls Py or JS version
+        return self._reaction(*connection_strings)  # calls Py or JS version
     
-    def __react(self, *connection_strings):
+    def _reaction(self, *connection_strings):
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
             raise RuntimeError('react() needs one or more connection strings.')
