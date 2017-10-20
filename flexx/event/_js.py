@@ -20,16 +20,15 @@ import json
 from flexx.pyscript import JSString, py2js as py2js_
 from flexx.pyscript.parser2 import get_class_definition
 
-from flexx.event import logger
 from flexx.event._loop import Loop
-from flexx.event._action import ActionDescriptor, Action
+from flexx.event._action import ActionDescriptor
 from flexx.event._reaction import ReactionDescriptor, Reaction
 from flexx.event._property import Property
 from flexx.event._emitter import Emitter
 from flexx.event._component import Component
 
 
-Object = Date = console = setTimeout = undefined = None  # fool pyflake
+Object = Date = console = setTimeout = undefined = loop = None  # fool pyflake
 
 reprs = json.dumps
 
@@ -81,6 +80,8 @@ class LoopJS:
         pass  # JS has threads, but worker threads are unlikely to touch this
 
 
+# todo: validate that these get cleaned up ... e.f. the on1 lambda is suspicious
+
 class ReactionJS:
     """ JS variant of the Reaction class.
     """
@@ -91,7 +92,7 @@ class ReactionJS:
         Reaction.prototype._COUNT += 1
         self._id = 'r' + str(self._COUNT)
         self._func = func
-        self._ob1 = lambda : that  # no weakref in JS
+        self._ob1 = lambda: ob  # no weakref in JS
         self._name = name
         self._init(connection_strings, ob)
 
@@ -252,7 +253,7 @@ def _create_js_class(PyClass, JSClass, ignore=()):
     # Add the Reaction methods
     for name, val in sorted(PyClass.__dict__.items()):
         #if not name.startswith(('__', '_%s__' % cname)):
-        if not name.startswith('__') and not name in ignore:
+        if not name.startswith('__') and name not in ignore:
             if not hasattr(JSClass, name) and callable(val):
                 jscode.append(py2js(val, '$' + cname + '.' + name))
     # Almost done
@@ -262,7 +263,7 @@ def _create_js_class(PyClass, JSClass, ignore=()):
     if PyClass is Loop:
         p = r"this\._lock\.__enter.+?try {(.+?)} catch.+?else.+?exit__.+?}"
         jscode= re.sub(p, r'{/* with lock */\1}', jscode, 0, re.MULTILINE | re.DOTALL)
-        jscode = jscode.replace('this._ensure_thread_match();', '//this._ensure_thread_match();')
+        jscode = jscode.replace('this._ensure_thread_', '//this._ensure_thread_')
     return jscode
 
 
@@ -323,7 +324,9 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
         class_items = sorted(class_items)
     
     for name, val in class_items:
-        name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])  # fix __ mangling
+        # fix double underscore mangling
+        name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])
+        
         if isinstance(val, ActionDescriptor):
             # Set underlying function as class attribute. This is overwritten
             # by the instance, but this way super() works.

@@ -422,12 +422,14 @@ class Component(with_metaclass(ComponentMeta, object)):
             if not is_equal:
                 value2 = getattr(self, validator_name)(value)
                 setattr(self, private_name, value2)
-                self.emit(prop_name, dict(new_value=value2, old_value=old, mutation=mutation))
+                self.emit(prop_name,
+                          dict(new_value=value2, old_value=old, mutation=mutation))
                 return True
         else:
             # Array mutations - value is assumed to be a sequence, or int for 'remove'
             if index < 0:
-                raise IndexError('For insert, remove, and replace mutations, the index must be >= 0.')
+                raise IndexError('For insert, remove, and replace mutations, '
+                                 'the index must be >= 0.')
             ev = Dict()
             ev.objects = value
             ev.mutation = mutation
@@ -593,9 +595,10 @@ def _mutate_array_py(array, ev):
         elif mutation in ('extend', 'insert', 'remove'):
             raise NotImplementedError('Cannot resize numpy arrays')
         elif mutation == 'replace':
-            if isinstance(index, tuple): # nd-replacement
+            if isinstance(index, tuple):  # nd-replacement
                 # todo: untested
-                slices = tuple(slice(index[i], index[i] + objects.shape[i]) for i in range(len(index)))
+                slices = tuple(slice(index[i], index[i] + objects.shape[i])
+                               for i in range(len(index)))
                 array[slices] = objects
             else:
                 array[index:index+len(objects)] = objects

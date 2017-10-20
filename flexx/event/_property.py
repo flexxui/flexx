@@ -2,8 +2,6 @@
 Implements the property decorator, class and desciptor.
 """
 
-import inspect
-
 from ._loop import loop
 from ._action import BaseDescriptor
 
@@ -51,7 +49,8 @@ class Property(BaseDescriptor):
         return setter
     
     def _validate(self, value):
-        raise NotImplementedError('Cannot use Property; use one of the subclasses instead.')
+        raise NotImplementedError('Cannot use Property; '
+                                  'use one of the subclasses instead.')
 
 
 # todo: these need docs!

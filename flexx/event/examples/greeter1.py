@@ -36,11 +36,13 @@ class Person(event.Component):
     
     @event.reaction('children*.first_name')
     def greetall_explicit(self, *events):
-        print('Explicit hey kids ' + ', '.join(n.first_name for n in self.children) + '!')
+        print('Explicit hey kids ' +
+              ', '.join(n.first_name for n in self.children) + '!')
     
     @event.reaction
     def greetall_implicit(self):
-        print('Implicit hey kids ' + ', '.join(n.first_name for n in self.children) + '!')
+        print('Implicit hey kids ' +
+              ', '.join(n.first_name for n in self.children) + '!')
     
     @event.reaction('!eat')
     def track_eating(self, *events):

@@ -33,8 +33,8 @@ class Test2(event.Component):
             elif ev.mutation == 'insert':
                 self.data[ev.index:ev.index] = ev.objects
             elif ev.mutation == 'remove':
-                self.data[ev.index:index+ev.objects] = []
-            elif ev.mutation  == 'replace':
+                self.data[ev.index:ev.index+ev.objects] = []  # objects is int here
+            elif ev.mutation == 'replace':
                 self.data[ev.index:ev.index+len(ev.objects)] = ev.objects
             else:
                 raise NotImplementedError(ev.mutation)

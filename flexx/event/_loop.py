@@ -6,7 +6,6 @@ event loop such as tornado or Qt.
 import sys
 import threading
 
-from ._dict import Dict
 from . import logger
 
 # todo: maybe this can be the base class for the tornado loop that we use in flexx.app
@@ -111,13 +110,16 @@ class Loop:
                     i -= 1
                     ev2 = self._pending_reactions[i][1]  # representing event
                     if self._pending_reactions[i][0] is reaction:
-                        # We can simply append the event. Is the repr. event still valid?
+                        # We can simply append the event
                         self._pending_reactions[i][2].append(ev)
-                        if not (ev2['source'] is ev['source'] and ev2['type'] == ev['type']):
-                            self._pending_reactions[i][1] = {'source': None}  # events are heterogeneous
+                        if not (ev2['source'] is ev['source'] and
+                                ev2['type'] == ev['type']):
+                            # Mark that the events are heterogeneous
+                            self._pending_reactions[i][1] = {'source': None}
                         return
-                    # Only continue if all events of the next item matches the current event
-                    if not (ev2 is None or (ev2.source is ev.source and ev2.type == ev.type)):
+                    # Only continue if all events of the next item match the current
+                    if not (ev2 is None or
+                            (ev2.source is ev.source and ev2.type == ev.type)):
                         break
             
             else:
@@ -231,7 +233,6 @@ class Loop:
         with self._lock:
             self._ensure_thread_match()
             pending_reactions = self._pending_reactions
-            pending_reaction_ids = self._pending_reaction_ids
             self._pending_reactions = []
             self._pending_reaction_ids = {}
         
@@ -345,6 +346,3 @@ class Loop:
 
 loop = Loop()
 loop.integrate(None, False)
-
-
-from ._component import Component  # deal with circular import

@@ -7,7 +7,6 @@ import inspect
 
 from ._action import BaseDescriptor
 from ._dict import Dict
-from ._loop import loop
 from . import logger
 
 

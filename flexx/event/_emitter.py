@@ -2,8 +2,6 @@
 Implements the emitter decorator, class and desciptor.
 """
 
-import inspect
-
 from ._action import BaseDescriptor
 
 
