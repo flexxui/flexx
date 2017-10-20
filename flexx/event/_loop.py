@@ -113,8 +113,8 @@ class Loop:
                     if self._pending_reactions[i][0] is reaction:
                         # We can simply append the event. Is the repr. event still valid?
                         self._pending_reactions[i][2].append(ev)
-                        if not (ev2.source is ev.source and ev2.type == ev.type):
-                            self._pending_reactions[i][1] = Dict(source=None)  # events are heterogeneous
+                        if not (ev2['source'] is ev['source'] and ev2['type'] == ev['type']):
+                            self._pending_reactions[i][1] = {'source': None}  # events are heterogeneous
                         return
                     # Only continue if all events of the next item matches the current event
                     if not (ev2 is None or (ev2.source is ev.source and ev2.type == ev.type)):
@@ -253,8 +253,9 @@ class Loop:
             try:
                 if not reaction.is_explicit():
                     connections = []
-                    for component, names in self._prop_access.values():
-                        for name in names:
+                    for component_names in self._prop_access.values():
+                        component = component_names[0]
+                        for name in component_names[1]:
                             connections.append((component, name))
                     reaction._update_implicit_connections(connections)
             except Exception as err:

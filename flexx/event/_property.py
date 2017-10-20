@@ -12,16 +12,14 @@ class Property(BaseDescriptor):
     """ Class descriptor for properties.
     """
     
-    def __init__(self, default=None, doc='', settable=None):
+    def __init__(self, default=None, doc='', settable=False):
         if callable(default):
             raise TypeError('event.prop() is not a decorator (anymore).')
         if not isinstance(doc, str):
             raise TypeError('event.prop() doc must be a string.')
-        if not (settable is None or settable is True or callable(settable)):
-            raise TypeError('event.prop() settable must be None, True, or callable.')
-            
+        
         self._default = default
-        self._settable = settable
+        self._settable = bool(settable)
         self._doc = doc
         self._set_name('anonymous_property')
     
@@ -48,11 +46,8 @@ class Property(BaseDescriptor):
     
     def make_set_action(self):
         name = self._name
-        func = self._settable
-        if func is True:
-            func = lambda x: x
-        def setter(self, *args):
-            self._mutate(name, func(*args))
+        def setter(self, val):
+            self._mutate(name, val)
         return setter
     
     def _validate(self, value):
