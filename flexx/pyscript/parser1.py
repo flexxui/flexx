@@ -540,13 +540,15 @@ class Parser1(Parser0):
         
         nl = self.lf()
         if node.op == node.OPS.Add:
-            return [nl, target, '=', self.use_std_function('op_add', [target, value])]
+            return [nl, target, ' = ',
+                    self.use_std_function('op_add', [target, value]), ';']
         elif node.op == node.OPS.Mult:
-            return [nl, target, '=', self.use_std_function('op_mult', [target, value])]
+            return [nl, target, ' = ',
+                    self.use_std_function('op_mult', [target, value]), ';']
         elif node.op == node.OPS.Pow:
-            return [nl, target, " = Math.pow(", target, ", ", value, ")"]
+            return [nl, target, " = Math.pow(", target, ", ", value, ");"]
         elif node.op == node.OPS.FloorDiv:
-            return [nl, target, " = Math.floor(", target, "/", value, ")"]
+            return [nl, target, " = Math.floor(", target, "/", value, ");"]
         else:
             op = ' %s= ' % self.BINARY_OP[node.op]
             return [nl, target, op, value, ';']
