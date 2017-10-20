@@ -315,6 +315,55 @@ class TestExceptions:
         assert evaljs(py2js(catchtest, 'f') + 'f(1)').endswith('xx\nyy')
 
 
+class TestContextManagers:
+    
+    def test_with_simple(self):
+        
+        def contexttest():
+            c = dict(__enter__=lambda: print('enter'),
+                     __exit__=lambda: print('exit'))
+            with c:
+                print(42)
+            print('.')
+            return undefined
+        
+        assert evaljs(py2js(contexttest, 'f') + 'f()') == 'enter\n42\nexit\n.'
+    
+    def test_with_as(self):
+        
+        def contexttest():
+            c = dict(__enter__=lambda: 7,
+                     __exit__=lambda: print('exit'))
+            with c as item:
+                print(42)
+                print(item)
+                print(43)
+            print('.')
+            return undefined
+        
+        assert evaljs(py2js(contexttest, 'f') + 'f()') == '42\n7\n43\nexit\n.'
+
+    def test_with_exception(self):
+        
+        def contexttest(x):
+            c = dict(__enter__=lambda: print('enter'),
+                     __exit__=lambda et, ev, tb: print(et))
+            try:
+                with c:
+                    print(42)
+                    if x != 1:
+                        raise AttributeError('fooerror')
+                    print(43)
+            except Exception as e:
+                print(e.message)
+            print('.')
+            return undefined
+        
+        assert evaljs(py2js(contexttest, 'f') + 'f(1)') == 'enter\n42\n43\nnull\n.'
+        s = 'enter\n42\nAttributeError\nAttributeError:fooerror\n.'
+        assert evaljs(py2js(contexttest, 'f') + 'f(0)') == s
+
+
 def func1():
     return 2 + 3
 

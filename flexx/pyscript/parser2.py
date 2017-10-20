@@ -371,6 +371,47 @@ class Parser2(Parser1):
         code.append(self.lf('}'))
         return code
     
+    def parse_With(self, node):
+        code = []
+        
+        if len(node.item_nodes) != 1:
+            raise JSError('With statement only supported with singleton contexts.')
+        with_item = node.item_nodes[0]
+        context_name = unify(self.parse(with_item.expr_node))
+        
+        err_name1 = 'err_%i' % self._indent
+        err_name2 = self.dummy('err')
+        
+        # Enter
+        # for with_item in node.item_nodes: ...
+        if with_item.as_node is None:
+            code.append(self.lf(''))
+        else:
+            assert isinstance(with_item.as_node, ast.Name)
+            self.vars.add(with_item.as_node.name)
+            code.append(self.lf(with_item.as_node.name + ' = '))
+        code += [context_name, '.__enter__();']
+        
+        # Try
+        code.append(self.lf('try {'))
+        self._indent += 1
+        for n in node.body_nodes:
+            code += self.parse(n)
+        self._indent -= 1
+        code.append(self.lf('}'))
+        
+        # Exit
+        code.append(' catch(%s)  { %s=%s; }' % (err_name1, err_name2, err_name1))
+        code.append(self.lf() + 'if (%s) { '
+                    'if (!%s.__exit__(%s.name || "error", %s, null)) '
+                    '{ throw %s; }' %
+                    (err_name2, context_name, err_name2, err_name2, err_name2))
+        code.append(self.lf() + '} else { %s.__exit__(null, null, null); }' % 
+                    context_name)
+        return code
+    
+    # def parse_Withitem(self, node) -> handled in parse_With
+    
     ## Control flow
     
     def parse_IfExp(self, node):
@@ -956,10 +997,6 @@ class Parser2(Parser1):
         
         base_class = nsname2
         return '%s.prototype._base_class' % base_class
-    
-    
-    #def parse_With
-    #def parse_Withitem
     
     #def parse_Yield
     #def parse_YieldFrom
