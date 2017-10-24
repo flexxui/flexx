@@ -165,6 +165,14 @@ logger = logging.getLogger(MODULE_NAME)
 logger.propagate = False
 logger.setLevel(logging.INFO)
 
+# Remove previous handlers, these can be leftovers when flexx is re-imorted,
+# as can happen during tests
+h = None
+for h in list(logger.handlers):
+    if h.__class__.__module__ == __name__:
+        logger.removeHandler(h)
+del h
+
 _handler = _Handler()
 _filter = _MatchFilter()
 _formatter = _Formatter()
