@@ -218,14 +218,14 @@ def evaljs(jscode, whitespace=True, print_result=True):
     
     # Call node
     try:
-        res = subprocess.check_output(cmd)
+        res = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
     except Exception as err:
         if hasattr(err, 'output'):
             err = err.output.decode()
         else:
             err = str(err)
         err = err[:200] + '...' if len(err) > 200 else err
-        raise Exception(err)
+        raise RuntimeError(err)
     finally:
         if filename is not None:
             try:
