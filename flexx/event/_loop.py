@@ -169,7 +169,7 @@ class Loop:
         tid = threading.get_ident()
         if self._last_thread_id == 0:
             self._last_thread_id = tid
-        elif self._last_thread_id != tid:
+        elif self._last_thread_id != tid:  # pragma: no cover
             raise RuntimeError('Flexx is supposed to run a single event loop at once.')
     
     def iter(self):

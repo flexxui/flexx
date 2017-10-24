@@ -1,65 +1,123 @@
+"""
+Test the main use of the event loop.
+"""
 
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
+from flexx.event._both_tester import run_in_both
 
 from flexx import event
 from flexx.event._dict import isidentifier
 
+loop = event.loop
 
-class Foo(event.HasEvents):
+
+class Foo(event.Component):
     
     def __init__(self):
         super().__init__()
         self.r = []
+        print('init')
     
-    @event.connect('foo')
+    @event.reaction('!foo')
     def on_foo(self, *events):
         self.r.append(len(events))
+        print(len(events))
 
 
+## Tests for both
+
+
+@run_in_both(Foo)
 def test_iter():
+    """
+    init
+    -
+    1
+    init
+    -
+    2
+    """
+    foo = Foo()
+    foo.emit('foo', {})
+    print('-')
+    loop.iter()
     
     foo = Foo()
     foo.emit('foo', {})
-    assert len(foo.r) == 0
-    event.loop.iter()
-    assert len(foo.r) == 1
-    assert foo.r[0] == 1
-    
-    foo = Foo()
     foo.emit('foo', {})
-    foo.emit('foo', {})
-    event.loop.iter()
-    assert len(foo.r) == 1
-    assert foo.r[0] == 2
-    
+    print('-')
+    loop.iter()
+
+
+@run_in_both()
+def test_iter_fail():
+    """
+    1
+    ok
+    1
+    ? AttributeError
+    """
     # Failing func call
     res = []
     def fail():
-        res.append(1)
-        1/0
-    raises(ZeroDivisionError, fail)
-    assert len(res) == 1
+        print('1')
+        raise AttributeError('xx')
+    
+    try:
+        fail()
+        print('bad')
+    except AttributeError:
+        print('ok')
     
     # When handled by the loop, error is printed, but no fail
-    event.loop.call_later(fail)
-    event.loop.iter()
-    assert len(res) == 2
+    loop.call_later(fail)
+    loop.iter()
 
+
+@run_in_both(Foo)
 def test_context():
+    """
+    init
+    1
+    init
+    2
+    """
+    foo = Foo()
+    with loop:
+        foo.emit('foo', {})
     
     foo = Foo()
-    with event.loop:
+    with loop:
         foo.emit('foo', {})
-    assert len(foo.r) == 1
-    assert foo.r[0] == 1
+        foo.emit('foo', {})
     
-    foo = Foo()
-    with event.loop:
-        foo.emit('foo', {})
-        foo.emit('foo', {})
-    assert len(foo.r) == 1
-    assert foo.r[0] == 2
+    assert not loop.is_processing_actions()
 
+
+@run_in_both(Foo)
+def test_loop_reset():
+    """
+    init
+    -
+    1
+    """
+    foo = Foo()
+    foo.emit('foo', {})
+    foo.emit('foo', {})
+    foo.emit('foo', {})
+    
+    loop.reset()
+    loop.iter()
+    print('-')
+    
+    foo.emit('foo', {})
+    foo.emit('foo', {})
+    loop.reset()
+    foo.emit('foo', {})
+    loop.iter()
+
+    
+## Tests for only Python
 
 def test_integrate():
     
