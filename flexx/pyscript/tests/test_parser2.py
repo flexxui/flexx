@@ -298,6 +298,22 @@ class TestExceptions:
         
         assert evaljs(py2js(catchtest, 'f') + 'f(1)').endswith('foo')
     
+    def test_catching3(self):
+        
+        def catchtest(x):
+            try:
+                try:
+                    raise ValueError('foo')
+                except AttributeError:
+                    print('not here')
+                except IndexError:
+                    print('not here either')
+            except Exception:
+                print('ok')
+            return undefined
+        
+        assert evaljs(py2js(catchtest, 'f') + 'f(1)') == 'ok'
+    
     def test_finally(self):
         
         def catchtest(x):

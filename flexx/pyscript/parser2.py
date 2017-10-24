@@ -325,12 +325,18 @@ class Parser2(Parser1):
             self._indent += 1
             err_name = 'err_%i' % self._indent
             code.append(' catch(%s) {' % err_name)
+            subcode = []
             for i, handler in enumerate(node.handler_nodes):
                 if i == 0:
                     code.append(self.lf(''))
                 else:
                     code.append(' else ')
-                code += self.parse(handler)
+                subcode = self.parse(handler)
+                code += subcode
+            
+            # Rethrow?
+            if subcode and subcode[0].startswith('if'):
+                code.append(' else { throw %s; }' % err_name)
             
             self._indent -= 1
             code.append(self.lf('}'))  # end catch
