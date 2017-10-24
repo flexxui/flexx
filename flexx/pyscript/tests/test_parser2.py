@@ -740,8 +740,8 @@ class TestClasses:
         err = 'Class constructor is called as a function.'
         assert evaljs(code + 'try { var m = new MyClass13(); "ok"} catch (err) { err; }') == 'ok'
         assert evaljs(code + 'try { var m = MyClass13();} catch (err) { err; }') == err
-        assert evaljs(code + 'try { MyClass13.apply(root);} catch (err) { err; }') == err
-        assert evaljs(code + 'var window = root;try { MyClass13.apply(window);} catch (err) { err; }') == err
+        assert evaljs(code + 'try { MyClass13.apply(global);} catch (err) { err; }') == err
+        assert evaljs(code + 'var window = global;try { MyClass13.apply(window);} catch (err) { err; }') == err
         
     
     def test_bound_methods(self):
