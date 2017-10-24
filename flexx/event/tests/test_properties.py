@@ -1,201 +1,502 @@
+"""
+Test component properties.
+"""
+
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
+from flexx.event._both_tester import run_in_both
 
 from flexx import event
 
+loop = event.loop
 
-def test_property():
+def this_is_js():
+    return False
+
+
+class MyCustomProp(event.Property):
     
-    class MyObject(event.HasEvents):
-        
-        @event.prop
-        def foo(self, v=1.2):
-            return float(v)
-        
-        @event.prop
-        def bar(self, v=1.3):
-            return float(v)
+    _default = 'a'
+    
+    def _validate(self, value):
+        if value not in 'abc':
+            raise TypeError('MyCustomProp must have a value of "a", "b", or "c".')
+        return value
+
+
+class MyObject(event.Component):
+    
+    # Props to test basic stuff
+    foo = event.AnyProp(6, settable=True)
+    bar = event.StringProp('xx')  # not settable
+    
+    # Props to test array mutations
+    eggs = event.ListProp([], settable=True)
+    # todo: good defaults!  eggs2 = event.ListProp()
+    eggs3 = event.ListProp([3, 4])
+
+    # All kinds of props, defaults
+    anyprop = event.AnyProp(doc='can be anything', settable=True)
+    boolprop = event.BoolProp(settable=True)
+    intprop = event.IntProp(settable=True)
+    floatprop = event.FloatProp(settable=True)
+    stringprop = event.StringProp(settable=True)
+    tupleprop = event.TupleProp(settable=True)
+    listprop = event.ListProp(settable=True)
+    componentprop = event.ComponentProp(settable=True)  # can be None
+    myprop = MyCustomProp(settable=True)
+    # nullprop = event.NullProp(None, settable=True)
+    # eitherprop = event.EitherProp(event.IntProp, event.NoneProp)
+
+
+@run_in_both(MyObject)
+def test_property_setting():
+    """
+    6
+    xx
+    6
+    3.2
+    fail ok
+    xx
+    """
     
     m = MyObject()
-    assert m.foo == 1.2
-    assert m.bar == 1.3
+    print(m.foo)
+    print(m.bar)
     
-    m = MyObject(foo=3)
-    assert m.foo == 3.0
+    m.set_foo(3.2)
+    print(m.foo)
+    loop.iter()
+    print(m.foo)
     
-    m.foo = 5.1
-    m.bar = 5.1
-    assert m.foo == 5.1
-    assert m.bar == 5.1
-    
-    m.foo = '9.3'
-    assert m.foo == 9.3
-    
-    m = MyObject(foo=3)
-    assert m.foo == 3.0
-    
-    # Hacky, but works
-    def foo():
-        pass
-    x = event.prop(foo)
-    assert 'foo' in repr(x)
-    
-    spam = lambda x:None
-    x = event.prop(spam)
-    assert '<lambda>' in repr(x)
-    
-    # fails
-    
-    with raises(ValueError):
-        m.foo = 'bla'
-    
-    with raises(ValueError):
-        MyObject(foo='bla')
-    
-    with raises(TypeError):
-        m._set_prop(3, 3)  # Property name must be a string
-        
-    with raises(AttributeError):
-        m._set_prop('spam', 3)  # MyObject has not spam property
-    
-    with raises(AttributeError):
-        MyObject(spam='bla')  # MyObject has not spam property
-    
-    with raises(TypeError):
-        event.prop(3)  # prop decorator needs callable
-    
-    with raises(AttributeError):
-        del m.foo  # cannot delete a property
-    
-    class MyObject2(event.HasEvents):
-        
-        @event.prop
-        def foo(self, v):
-            return float(v)
-    
-    #with raises(RuntimeError):
-    #    MyObject2()  # no default value for foo
-    ob = MyObject2()
-    assert ob.foo is None
+    try:
+        m.set_bar('yy')
+    except AttributeError:
+        print('fail ok')  # py
+    except TypeError:
+        print('fail ok')  # js
+    print(m.bar)
 
 
-def test_prop_recursion():
-    class MyObject(event.HasEvents):
-        count = 0
-        
-        @event.prop
-        def foo(self, v=1):
-            v = float(v)
-            self.bar = v + 1
-            return v
-        
-        @event.prop
-        def bar(self, v=2):
-            v = float(v)
-            self.foo = v - 1
-            return v
-        
-        @event.connect('foo', 'bar')
-        def handle(self, *events):
-            self.count += 1
-    
+
+@run_in_both(MyObject)
+def test_property_mutating():
+    """
+    cannot mutate
+    6
+    9
+    """
     m = MyObject()
-    event.loop.iter()
-    assert m.count == 1
-    assert m.foo == 1
-    assert m.bar== 2
     
-    m = MyObject(foo=3)
-    event.loop.iter()
-    assert m.count == 1
-    assert m.foo == 3
-    assert m.bar== 4
+    try:
+        m._mutate_foo(9)
+    except AttributeError:
+        print('cannot mutate')
     
-    m.foo = 50
-    event.loop.iter()
-    assert m.count == 2
-    assert m.foo == 50
-    assert m.bar== 51
+    print(m.foo)
     
-    m.bar = 50
-    event.loop.iter()
-    assert m.count == 3
-    assert m.foo == 49
-    assert m.bar== 50
+    # Hack
+    loop._processing_action = True
+    m._mutate_foo(9)
+    print(m.foo)
 
 
-def test_prop_init():
-    class MyObject(event.HasEvents):
-        
-        @event.prop
-        def foo(self, v=1):
-            return float(v)
-        
-        @event.connect('foo')
-        def foo_handler(self, *events):
-            pass
+# todo: enable for JS once we can do keyword args in pyscript!
+@run_in_both(MyObject, js=False)
+def test_property_defaults():
+    """
+    6
+    xx
+    9
+    xx
+    fail ok
+    end
+    """
     
-    m = MyObject()
-    assert len(m.foo_handler._pending) == 1
-    m.foo = 2
-    m.foo = 3
-    assert len(m.foo_handler._pending) == 3
-    m.foo = 3
-    assert len(m.foo_handler._pending) == 3
-    
-    # Specifying the value in the init will result in just one event
     m = MyObject(foo=9)
-    assert len(m.foo_handler._pending) == 2
-    m.foo = 2
-    m.foo = 3
-    assert len(m.foo_handler._pending) == 4
-    m.foo = 3
-    assert len(m.foo_handler._pending) == 4
+    print(m.foo)
+    print(m.bar)
     
+    loop.iter()
+    print(m.foo)
+    print(m.bar)
+    
+    try:
+        MyObject(bar='yy')
+    except AttributeError:
+        print('fail ok')  # py and js
+    print('end')
 
-def test_readonly():
-    class MyObject(event.HasEvents):
-        
-        @event.readonly
-        def foo(self, v=1.2):
-            return float(v)
+
+@run_in_both(MyObject) 
+def test_property_list_init():
+    """
+    []
+    [3, 4]
+    """
+    m = MyObject()
+    print(m.eggs)
+    print(m.eggs3)
+    
+    # todo: property defaults
+    # print(m.eggs2)
+    
+    # todo: pyscript kwargs!
+    # m = MyObject(eggs=[7,8,9])
+    # loop.iter()
+    # print(m.eggs)
+
+
+@run_in_both(MyObject) 
+def test_property_list_mutate():
+    """
+    []
+    [1, 2, 3, 4, 5, 6, 7, 8]
+    [1, 2, 3, 44, 55, 66, 7, 8]
+    [1, 2, 3, 7, 8]
+    """
+    m = MyObject()
+    print(m.eggs)
+    
+    loop._processing_action = True
+    
+    m._mutate_eggs([5, 6], 'insert', 0)
+    m._mutate_eggs([1, 2], 'insert', 0)
+    m._mutate_eggs([3, 4], 'insert', 2)
+    m._mutate_eggs([7, 8], 'insert', 6)
+    print(m.eggs)
+    
+    m._mutate_eggs([44, 55, 66], 'replace', 3)
+    print(m.eggs)
+    
+    m._mutate_eggs(3, 'remove', 3)
+    print(m.eggs)
+
+
+## All prop types
+
+
+class MyDefaults(event.Component):
+    # Custom defaults
+    anyprop2 = event.AnyProp(7, doc='can be anything')
+    boolprop2 = event.BoolProp(True)
+    intprop2 = event.IntProp(-9)
+    floatprop2 = event.FloatProp(800.45)
+    stringprop2 = event.StringProp('heya')
+    tupleprop2 = event.TupleProp((2, 'xx'))
+    listprop2 = event.ListProp([3, 'yy'])
+    componentprop2 = event.ComponentProp(None)
+    myprop2 = MyCustomProp('b', settable=True)
+
+
+@run_in_both(MyDefaults)
+def test_property_defaults():
+    """
+    7
+    True
+    -9
+    800.45
+    heya
+    [True, 2, 'xx']
+    [3, 'yy']
+    True
+    b
+    """
+    m = MyDefaults()
+    print(m.anyprop2)
+    print(m.boolprop2)
+    print(m.intprop2)
+    print(m.floatprop2)
+    print(m.stringprop2)
+    print([isinstance(m.tupleprop2, tuple)] + list(m.tupleprop2))  # grrr
+    print(m.listprop2)
+    print(m.componentprop2 is None)
+    print(m.myprop2)
+
+
+@run_in_both(MyObject)
+def test_property_any():  # Can be anything
+    """
+    True
+    42
+    ? Loop
+    """
+    m = MyObject()
+    print(m.anyprop is None)  # Because None becomes null in JS
+    
+    m.set_anyprop(42)
+    loop.iter()
+    print(m.anyprop)
+    
+    m.set_anyprop(loop)
+    loop.iter()
+    print(m.anyprop)
+
+
+@run_in_both(MyObject)
+def test_property_bool():  # Converts to bool, no type checking
+    """
+    False
+    True
+    False
+    True
+    """
+    m = MyObject()
+    print(m.boolprop)
+    
+    m.set_boolprop(42)
+    loop.iter()
+    print(m.boolprop)
+    
+    m.set_boolprop('')
+    loop.iter()
+    print(m.boolprop)
+    
+    m.set_boolprop(loop)
+    loop.iter()
+    print(m.boolprop)
+
+
+@run_in_both(MyObject)
+def test_property_int():  # typechecking, but converts from float/str
+    """
+    0
+    42
+    9
+    ? TypeError
+    9
+    """
+    m = MyObject()
+    print(m.intprop)
+    
+    m.set_intprop(42.9)
+    loop.iter()
+    print(m.intprop)
+    
+    m.set_intprop('9')  # actually, '9.1' would fail on Python
+    loop.iter()
+    print(m.intprop)
+
+    m.set_intprop(loop)  # fail
+    loop.iter()
+    print(m.intprop)
+
+
+@run_in_both(MyObject)
+def test_property_float():  # typechecking, but converts from int/str
+    """
+    ? 0
+    42.9
+    9.1
+    ? TypeError
+    9.1
+    """
+    m = MyObject()
+    print(m.floatprop)
+    
+    m.set_floatprop(42.9)
+    loop.iter()
+    print(m.floatprop)
+    
+    m.set_floatprop('9.1')  # actually, '9.1' would fail on Python
+    loop.iter()
+    print(m.floatprop)
+
+    m.set_floatprop(loop)  # fail
+    loop.iter()
+    print(m.floatprop)
+
+
+@run_in_both(MyObject)
+def test_property_string():
+    """
+    .
+    
+    hello
+    ? TypeError
+    hello
+    """
+    print('.')
     
     m = MyObject()
-    assert m.foo == 1.2
+    print(m.stringprop)
     
+    m.set_stringprop('hello')
+    loop.iter()
+    print(m.stringprop)
     
-    m._set_prop('foo', 5.1)
-    assert m.foo == 5.1
+    m.set_stringprop(3)
+    loop.iter()
+    print(m.stringprop)
+
+
+@run_in_both(MyObject)
+def test_property_tuple():
+    """
+    []
+    [3, 4]
+    [5, 6]
+    ? TypeError
+    ? TypeError
+    ? TypeError
+    [5, 6]
+    append failed
+    reverse failed
+    """
+    # We convert to list when printing, because in JS we cripple the object
+    # and on Node the repr then includes the crippled methods. This way, the
+    # output for Py and JS is also the same. At the bottom we validate that 
+    # the value is indeed ummutable.
+    m = MyObject()
+    print(list(m.tupleprop))
     
-    m._set_prop('foo', '9.3')
-    assert m.foo == 9.3
+    m.set_tupleprop((3, 4))
+    loop.iter()
+    print(list(m.tupleprop))
     
-    # fails
+    m.set_tupleprop((5, 6))
+    loop.iter()
+    print(list(m.tupleprop))
     
-    with raises(AttributeError):
-        m.foo = 3.1
+    for value in [3, None, 'asd']:
+        m.set_tupleprop(value)
+        loop.iter()
+    print(list(m.tupleprop))
     
-    with raises(AttributeError):
-        m.foo = 'bla'
+    # Cannot append to a tuple
+    try:
+        m.tupleprop.append(9)
+    except Exception:
+        print('append failed')
     
-    with raises(AttributeError):
-        MyObject(foo=3.2)
+    # Cannot reverse a tuple
+    try:
+        m.tupleprop.reverse()
+    except Exception:
+        print('reverse failed')
+
+
+@run_in_both(MyObject)
+def test_property_list():
+    """
+    []
+    [3, 4]
+    [5, 6]
+    ? TypeError
+    ? TypeError
+    ? TypeError
+    [5, 6]
+    .
+    [1, 2, 3]
+    [1, 2, 3, 5]
+    """
+    m = MyObject()
+    print(m.listprop)
+    
+    m.set_listprop((3, 4))
+    loop.iter()
+    print(m.listprop)
+    
+    m.set_listprop((5, 6))
+    loop.iter()
+    print(m.listprop)
+    
+    for value in [3, None, 'asd']:
+        m.set_listprop(value)
+        loop.iter()
+    print(m.listprop)
+    
+    print('.')
+    # copies are made on set
+    x = [1, 2]
+    m.set_listprop(x)
+    x.append(3)  # this gets in, because copie happens at validation (i.e. mutation)
+    loop.iter()
+    x.append(4)  # this does not
+    loop.iter()
+    print(m.listprop)
+    m.listprop.append(5)  # this is inplace; use tuples where we can
+    print(m.listprop)
+
+
+@run_in_both(MyObject)
+def test_property_component():  # Can be a Component or None
+    """
+    True
+    [False, True, False]
+    [False, False, True]
+    [True, False, False]
+    ? TypeError
+    ? TypeError
+    ? TypeError
+    [True, False, False]
+    """
+    m = MyObject()
+    m1 = MyObject()
+    m2 = MyObject()
+    print(m.componentprop is None)
+    
+    m.set_componentprop(m1)
+    loop.iter()
+    print([m.componentprop is None, m.componentprop is m1, m.componentprop is m2])
+    
+    m.set_componentprop(m2)
+    loop.iter()
+    print([m.componentprop is None, m.componentprop is m1, m.componentprop is m2])
+    
+    m.set_componentprop(None)
+    loop.iter()
+    print([m.componentprop is None, m.componentprop is m1, m.componentprop is m2])
+    
+    for value in [3, loop, 'asd']:
+        m.set_componentprop(value)
+        loop.iter()
+    print([m.componentprop is None, m.componentprop is m1, m.componentprop is m2])
+
+
+@run_in_both(MyObject)
+def test_property_custom():
+    """
+    a
+    c
+    ? TypeError
+    ? TypeError
+    ? TypeError
+    c
+    """
+    m = MyObject()
+    print(m.myprop)
+    
+    m.set_myprop('c')
+    loop.iter()
+    print(m.myprop)
+    
+    for value in [3, loop, 'd']:
+        m.set_myprop(value)
+        loop.iter()
+    print(m.myprop)
+
+
+## Python only
+
+def test_more():
     
     with raises(TypeError):
-        event.readonly(3)  # readonly decorator needs callable
+        class MyObject2(event.Component):
+            @event.Property
+            def foo(self, v):
+                pass
+    
+    with raises(TypeError):
+        event.AnyProp(doc=3)
+    
+    m1 = MyObject()
+    m2 = MyDefaults()
     
     with raises(AttributeError):
-        del m.foo  # cannot delete a readonly
-        
-    class MyObject2(event.HasEvents):
-        
-        @event.readonly
-        def foo(self, v):
-            return float(v)
+        m1.foo = 3
     
-    #with raises(RuntimeError):
-    #    MyObject2()  # no default value for foo
-    ob = MyObject2()
-    assert ob.foo is None
+    assert 'anything' in m1.__class__.anyprop.__doc__
+    assert 'anything' in m2.__class__.anyprop2.__doc__
 
 
 run_tests_if_main()

@@ -8,6 +8,9 @@ import threading
 
 from . import logger
 
+def this_is_js():
+    return False
+
 # todo: maybe this can be the base class for the tornado loop that we use in flexx.app
 
 

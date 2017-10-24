@@ -25,7 +25,7 @@ from flexx.event._action import ActionDescriptor
 from flexx.event._reaction import ReactionDescriptor, Reaction
 from flexx.event._property import Property
 from flexx.event._emitter import Emitter
-from flexx.event._component import Component
+from flexx.event._component import Component, _mutate_array_js
 
 
 Object = Date = console = setTimeout = undefined = loop = None  # fool pyflake
@@ -291,10 +291,11 @@ IGNORE = ('_integrate_qt', 'integrate_tornado', 'integrate_pyqt4', 'integrate_py
 
 # todo: see if we can optimize this somewhat
 # Generate the code
+JS_FUNCS = py2js(_mutate_array_js) + '\nvar mutate_array = _mutate_array_js;\n'
 JS_LOOP = _create_js_class(Loop, LoopJS, IGNORE) + '\nvar loop = new Loop();\n'
 # JS_REACTION = _create_js_class(Reaction, ReactionJS)
 JS_COMPONENT = _create_js_class(Component, ComponentJS)
-JS_EVENT = JS_LOGGER + JS_LOOP + JS_COMPONENT
+JS_EVENT = JS_FUNCS + JS_LOGGER + JS_LOOP + JS_COMPONENT
 
 
 def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
@@ -394,8 +395,9 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             # Functions, including methods attached by the meta class
             code = py2js_local(val, prototype_prefix + name)
             code = code.replace('super()', base_class)  # fix super
-            # if name.startswith('_mutate_') and name[8:] in cls.__properties__:
-            #     code = code.replace("name", "'%s'" % name[8:])
+            # todo: or define mutators in __create_property?
+            if name.startswith('_mutate_') and name[8:] in cls.__properties__:
+                code = code.replace("name", "'%s'" % name[8:])
             funcs_code.append(code.rstrip())
             funcs_code.append('')
         elif name in OK_MAGICS:
@@ -441,7 +443,7 @@ if __name__ == '__main__':
         def react2foo(self):
             print(self.foo)
     
-    toprint = JS_COMPONENT  # or JS_LOOP JS_REACTION JS_COMPONENT JS_EVENT
+    toprint = JS_FUNCS  # or JS_LOOP JS_REACTION JS_COMPONENT JS_EVENT
     print('-' * 80)
     print(toprint)  
     print('-' * 80)

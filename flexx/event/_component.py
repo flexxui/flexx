@@ -11,11 +11,9 @@ from ._action import ActionDescriptor, Action
 from ._reaction import ReactionDescriptor, Reaction, looks_like_method
 from ._property import Property
 from ._emitter import Emitter
-from ._loop import loop
+from ._loop import loop, this_is_js
 from . import logger
 
-def this_is_js():
-    return False
 
 setTimeout = console = None
 
@@ -387,7 +385,7 @@ class Component(with_metaclass(ComponentMeta, object)):
             raise AttributeError('%s object has no property %r' % (cname, prop_name))
         
         if not loop.is_processing_actions():
-            raise RuntimeError('Trying to mutate a property outside of an action.')
+            raise AttributeError('Trying to mutate a property outside of an action.')
         
         # todo: still needed?
         # prop_being_set = self.__props_being_set.get(prop_name, None)
@@ -433,8 +431,8 @@ class Component(with_metaclass(ComponentMeta, object)):
             ev = Dict()
             ev.objects = value
             ev.mutation = mutation
-            ev.index=index
-            _mutate_array_py(old, ev)
+            ev.index = index
+            mutate_array(old, ev)
             self.emit(prop_name, ev)
             return True
     
@@ -575,23 +573,17 @@ class Component(with_metaclass(ComponentMeta, object)):
             return _react
 
 
-def mutate_array(array, ev):
-    """ Mutate an array based on the given mutation event.
-    """
-    _mutate_array_py(array, ev)
-
-
 def _mutate_array_py(array, ev):
-    """ Logic to mutate an list-like or array-like property in-place.
+    """ Logic to mutate an list-like or array-like property in-place, in Python.
     """
-    is_numpy = hasattr(array, 'shape') and hasattr(array, 'dtype')
+    is_nd = hasattr(array, 'shape') and hasattr(array, 'dtype')
     mutation = ev.mutation
     index = ev.index
     objects = ev.objects
     
-    if is_numpy:
+    if is_nd:
         if mutation == 'set':
-            raise NotImplementedError('set numpy array in-place')
+            raise NotImplementedError('Cannot set numpy array in-place')
         elif mutation in ('extend', 'insert', 'remove'):
             raise NotImplementedError('Cannot resize numpy arrays')
         elif mutation == 'replace':
@@ -602,7 +594,6 @@ def _mutate_array_py(array, ev):
                 array[slices] = objects
             else:
                 array[index:index+len(objects)] = objects
-            raise NotImplementedError()
     else:
         if mutation == 'set':
             array[:] = objects
@@ -615,3 +606,35 @@ def _mutate_array_py(array, ev):
             array[index:index+len(objects)] = objects
         else:
             raise NotImplementedError(mutation)
+
+
+def _mutate_array_js(array, ev):
+    """ Logic to mutate an list-like or array-like property in-place, in JS.
+    """
+    is_nd = hasattr(array, 'shape') and hasattr(array, 'dtype')
+    mutation = ev.mutation
+    index = ev.index
+    objects = ev.objects
+    
+    if is_nd == True:
+        if mutation == 'set':
+            raise NotImplementedError('Cannot set nd array in-place')
+        elif mutation in ('extend', 'insert', 'remove'):
+            raise NotImplementedError('Cannot resize nd arrays')
+        elif mutation == 'replace':
+            raise NotImplementedError('Cannot replace items in nd array')
+    else:
+        if mutation == 'set':
+            array.splice(0, len(array), *objects)
+        elif mutation == 'insert':
+            array.splice(index, 0, *objects)
+        elif mutation == 'remove':
+            assert isinstance(objects, float)  # objects must be a count in this case
+            array.splice(index, objects)
+        elif mutation == 'replace':
+            array.splice(index, len(objects), *objects)
+        else:
+            raise NotImplementedError(mutation)
+
+
+mutate_array = _mutate_array_py

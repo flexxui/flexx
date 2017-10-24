@@ -5,6 +5,7 @@ Implements the reaction decorator, class and desciptor.
 import weakref
 import inspect
 
+from ._loop import this_is_js
 from ._action import BaseDescriptor
 from ._dict import Dict
 from . import logger
@@ -12,10 +13,6 @@ from . import logger
 
 window = None
 console = logger
-
-
-def this_is_js():
-    return False
 
 
 def looks_like_method(func):
