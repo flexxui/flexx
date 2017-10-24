@@ -76,6 +76,7 @@ def show_coverage_html():
     from coverage import coverage
     
     print('Generating HTML...')
+    os.chdir(ROOT_DIR)
     cov = coverage(auto_data=False, branch=True, data_suffix=None,
                    source=[NAME])  # should match testing/_coverage.py
     cov.load()
