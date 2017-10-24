@@ -272,22 +272,11 @@ class Parser2(Parser1):
         self.vars.add(err_name)
         
         # Build code to throw
-        code = []
         if err_cls:
-            code.append(self.lf("%s = " % err_name))
-            code.append('new Error(')
-            code.append("'%s:' + " % err_cls)
+            code = self.use_std_function('op_error', ["'%s'" % err_cls, err_msg or '""'])
         else:
-            code.append(self.lf("throw "))
-        code.append(err_msg or '""')
-        if err_cls:
-            code.append(');')
-            code.append(' %s.name = "%s";' % (err_name, err_cls))
-            code.append(' throw %s;' % err_name)
-        else:
-            code.append(';')
-        
-        return code
+            code = err_msg
+        return [self.lf('throw ' + code + ';')]
     
     def parse_Assert(self, node):
         
@@ -299,9 +288,8 @@ class Parser2(Parser1):
         code = []
         code.append(self.lf('if (!('))
         code += test
-        code.append(')) {')
-        code.append('throw "AssertionError: " + ')  # don't bother with new Error
-        code.append(reprs(msg))
+        code.append(')) { throw ')
+        code.append(self.use_std_function('op_error', ["'AssertionError'", reprs(msg)]))
         code.append(";}")
         return code
     

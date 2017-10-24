@@ -265,6 +265,17 @@ class TestExceptions:
         assert evaljs(catcher % py2js('assert false')).count('AssertionError')
         assert evaljs(catcher % py2js('assert false, "foo"')).count('foo')
     
+    def test_assert_catch(self):
+        
+        def catchtest(x):
+            try:
+                assert False
+            except AssertionError:
+                print('assertion-error')
+            return undefined
+        
+        assert evaljs(py2js(catchtest, 'f') + 'f(1)') == 'assertion-error'
+    
     def test_catching(self):
         
         def catchtest(x):
@@ -376,7 +387,7 @@ class TestContextManagers:
             return undefined
         
         assert evaljs(py2js(contexttest, 'f') + 'f(1)') == 'enter\n42\n43\nnull\n.'
-        s = 'enter\n42\nAttributeError\nAttributeError:fooerror\n.'
+        s = 'enter\n42\nAttributeError\nAttributeError: fooerror\n.'
         assert evaljs(py2js(contexttest, 'f') + 'f(0)') == s
 
 

@@ -141,6 +141,12 @@ FUNCTIONS['op_instantiate'] = """function (ob, args) { // nargs: 2
     }
 }"""
 
+FUNCTIONS['op_error'] = """function (etype, msg) { // nargs: 2
+    var e = new Error(etype + ': ' + msg);
+    e.name = etype
+    return e;
+}"""
+
 FUNCTIONS['hasattr'] = """function (ob, name) { // nargs: 2
     return (ob !== undefined) && (ob !== null) && (ob[name] !== undefined);
 }"""
