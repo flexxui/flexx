@@ -159,13 +159,13 @@ class Component(with_metaclass(ComponentMeta, object)):
     """
     
     _IS_COMPONENT = True
-    _count = 0
+    _COUNT = 0
      
     def __init__(self, **property_values):
         
         # todo: perhaps use the mechanis that Model uses to make an id?
-        Component._count += 1
-        self._id = 'c%i' % Component._count  # to ensure a consistent event order
+        Component._COUNT += 1
+        self._id = 'c%i' % Component._COUNT  # to ensure a consistent event order
         
         # Init some internal variables. Note that __reactions__ is a list of
         # reaction names for this class, and __handlers a dict of reactions

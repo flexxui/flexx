@@ -73,6 +73,12 @@ class LoopJS:
     def __init__(self):
         self.reset()
     
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        self.iter()
+    
     def _calllaterfunc(self, func):
         setTimeout(func, 0)
     
@@ -102,8 +108,13 @@ class ComponentJS:
     """
     
     _IS_COMPONENT = True
+    _REACTION_COUNT = 0
+    _COUNT = 0
     
     def __init__(self, init_handlers=True):
+        
+        Component.prototype._COUNT += 1
+        self._id = 'c' + str(Component.prototype._COUNT)
         
         # Init some internal variables
         self.__handlers = {}  # reactions connecting to this component
@@ -213,8 +224,8 @@ class ComponentJS:
     def __create_reaction(self, reaction_func, name, connection_strings):
         # Keep ref to the reaction function, see comment in create_action().
         
-        reaction = Reaction(reaction_func, self, name, connection_strings)
-        return reaction
+        # reaction = Reaction(reaction_func, self, name, connection_strings)
+        # return reaction
         
         # todo: remove the below
         
@@ -228,8 +239,8 @@ class ComponentJS:
         # Init reaction
         that = self
         Component.prototype._REACTION_COUNT += 1
+        reaction._id = 'r' + str(Component.prototype._REACTION_COUNT)
         reaction._name = name
-        reaction._id = 'h' + str(Component.prototype._REACTION_COUNT)
         reaction._ob1 = lambda : that  # no weakref in JS
         reaction._init(connection_strings, self)
         
@@ -250,20 +261,28 @@ def _create_js_class(PyClass, JSClass, ignore=()):
                                   1
                         ).replace('%s.prototype.' % cname,
                                   '$%s.' % cname)
-    # Add the Reaction methods
+    # Add the Python class methods
     for name, val in sorted(PyClass.__dict__.items()):
         #if not name.startswith(('__', '_%s__' % cname)):
         if not name.startswith('__') and name not in ignore:
             if not hasattr(JSClass, name) and callable(val):
                 jscode.append(py2js(val, '$' + cname + '.' + name))
-    # Almost done
+    # Compose
     jscode = '\n'.join(jscode)
-    jscode = jscode.replace('new Dict()', '{}').replace('new Dict(', '_pyfunc_dict(')
+    # Add the reaction methods to component
+    if PyClass is Component:
+        code = '\n'
+        for name, val in sorted(Reaction.__dict__.items()):
+            if not name.startswith('__') and callable(val):
+                code += py2js(val, 'reaction.' + name, indent=1)[4:] + '\n'
+        jscode = jscode.replace('REACTION_METHODS_HOOK', code)
     # Optimizations, e.g. remove threading lock context in Loop
     if PyClass is Loop:
         p = r"this\._lock\.__enter.+?try {(.+?)} catch.+?else.+?exit__.+?}"
         jscode= re.sub(p, r'{/* with lock */\1}', jscode, 0, re.MULTILINE | re.DOTALL)
         jscode = jscode.replace('this._ensure_thread_', '//this._ensure_thread_')
+    # Almost done
+    jscode = jscode.replace('new Dict()', '{}').replace('new Dict(', '_pyfunc_dict(')
     return jscode
 
 
@@ -273,9 +292,9 @@ IGNORE = ('_integrate_qt', 'integrate_tornado', 'integrate_pyqt4', 'integrate_py
 # todo: see if we can optimize this somewhat
 # Generate the code
 JS_LOOP = _create_js_class(Loop, LoopJS, IGNORE) + '\nvar loop = new Loop();\n'
-JS_REACTION = _create_js_class(Reaction, ReactionJS)
+# JS_REACTION = _create_js_class(Reaction, ReactionJS)
 JS_COMPONENT = _create_js_class(Component, ComponentJS)
-JS_EVENT = JS_LOGGER + JS_LOOP + JS_REACTION + JS_COMPONENT
+JS_EVENT = JS_LOGGER + JS_LOOP + JS_COMPONENT
 
 
 def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
@@ -422,11 +441,11 @@ if __name__ == '__main__':
         def react2foo(self):
             print(self.foo)
     
-    toprint = JS_LOGGER  # or JS_LOOP JS_REACTION JS_COMPONENT JS_EVENT
+    toprint = JS_COMPONENT  # or JS_LOOP JS_REACTION JS_COMPONENT JS_EVENT
     print('-' * 80)
     print(toprint)  
     print('-' * 80)
-    print(len(toprint), 'of', len(JS_EVENT), 'bytes in total')
+    print(len(toprint), 'of', len(JS_EVENT), 'bytes in total')  # 29546 before refactor
     print('-' * 80)
     
-    print(create_js_component_class(Foo, 'Foo'))
+    # print(create_js_component_class(Foo, 'Foo'))
