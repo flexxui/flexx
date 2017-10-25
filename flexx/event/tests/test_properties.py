@@ -23,7 +23,7 @@ class MyCustomProp(event.Property):
 class MyObject(event.Component):
     
     # Props to test basic stuff
-    foo = event.AnyProp(6, settable=True)
+    foo = event.AnyProp(6, settable=True, doc='can be anything')
     bar = event.StringProp('xx')  # not settable
     
     # Props to test array mutations
@@ -167,25 +167,6 @@ def test_property_list_mutate():
     
     m._mutate_eggs(3, 'remove', 3)
     print(m.eggs)
-
-
-@run_in_both(MyObject) 
-def test_property_not_settable():
-    """
-    fail AtributeError
-    """
-    m = MyObject()
-    try:
-        m.foo = 3
-    except AttributeError:
-        print('fail AtributeError')
-    
-    # We cannot prevent deletion in JS, otherwise we cannot overload
-    # m = MyObject()
-    # try:
-    #     del m.foo
-    # except AttributeError:
-    #     print('fail AtributeError')
 
 
 ## Defaults and overloading
@@ -511,10 +492,26 @@ def test_property_custom():
     print(m.myprop)
 
 
-## Python only
+## Meta-ish tests that are similar for property/emitter/action/reaction
+
+
+@run_in_both(MyObject) 
+def test_property_not_settable():
+    """
+    fail AtributeError
+    """
+    m = MyObject()
+    try:
+        m.foo = 3
+    except AttributeError:
+        print('fail AtributeError')
+    
+    # We cannot prevent deletion in JS, otherwise we cannot overload
+
 
 def test_property_python_only():
     
+    # Fail on old syntax
     with raises(TypeError):
         class MyObject2(event.Component):
             @event.Property
@@ -524,17 +521,27 @@ def test_property_python_only():
     with raises(TypeError):
         event.AnyProp(doc=3)
     
-    m1 = MyObject()
-    m2 = MyDefaults()
     
+    m = MyObject()
+    
+    # Check type of the instance attribute
+    # -> Ha! the attrubute it the prop value!
+    # assert isinstance(m.foo, event._action.Action) 
+    
+    # Cannot set or delete a property
     with raises(AttributeError):
-        m1.foo = 3  # Cannot set a property
-    
+        m.foo = 3
     with raises(AttributeError):
-        del m1.foo  # cannot delete an property
+        del m.foo
     
-    assert 'anything' in m1.__class__.anyprop.__doc__
-    assert 'anything' in m2.__class__.anyprop2.__doc__
+    # Repr and docs
+    assert 'anything' in m.__class__.foo.__doc__
+    assert 'anyprop' in repr(m.__class__.foo).lower()
+    assert 'foo' in repr(m.__class__.foo).lower()
+    # Also for one with defaults
+    m = MyDefaults()
+    assert 'anything' in m.__class__.anyprop2.__doc__
+    assert 'anyprop' in repr(m.__class__.anyprop2).lower()
 
 
 run_tests_if_main()

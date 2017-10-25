@@ -16,23 +16,24 @@ def action(func):
     
     Actions are asynchronous and thread-safe. Invoking an action will not
     apply the changes directly; the action is queued and handled at a later
-    time. Except when invoking from anoher action, in which case the action
-    is handled directly.
+    time. The one exception is that when an action is invoked from anoher
+    action, it is handled directly.
     
-    Why not properties? Settable properties might seem nice, but it would mean
+    Although settable properties might seem nice, their use would mean
     that the state of the application can change while the app is *reacting*
     to changes in the state. This might be managable for small applications,
-    but easily results in inconsistencies and bugs as an app grows. Separating
-    actions (that set state) and reactions (that react to it) makes apps
-    easier to understand and debug.
+    but as an app grows this easily results in inconsistencies and bugs.
+    Separating actions (which modify state) and reactions (that react to it)
+    makes apps easier to understand and debug. This is the core idea behind
+    frameworks such as Elm, React and Veux. And Flexx adopts it as well.
     
     Usage:
     
     .. code-block:: py
         
-        class MyComponent(Component):
+        class MyComponent(event.Component):
             
-            count = prop(0)
+            count = event.IntProp(0)
             
             @action
             def increase_counter(self):
