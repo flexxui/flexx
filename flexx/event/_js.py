@@ -24,7 +24,7 @@ from flexx.event._loop import Loop
 from flexx.event._action import ActionDescriptor
 from flexx.event._reaction import ReactionDescriptor, Reaction
 from flexx.event._property import Property
-from flexx.event._emitter import Emitter
+from flexx.event._emitter import EmitterDescriptor
 from flexx.event._component import Component, _mutate_array_js
 
 
@@ -376,7 +376,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
                                   '._connection_strings = ' +
                                   reprs(val._connection_strings))
             funcs_code.append('')
-        elif isinstance(val, Emitter):
+        elif isinstance(val, EmitterDescriptor):
             funcname = name
             # Add function def
             code = py2js_local(val._func, prototype_prefix + funcname)

@@ -35,6 +35,13 @@ class MyObject(event.Component):
         print('bar', ', '.join([str(ev.value) for ev in events]))
 
 
+class MyObject2(MyObject):
+    
+    @event.emitter
+    def bar(self, v):
+        return super().bar(v + 10)
+
+
 @run_in_both(MyObject)
 def test_emitter_ok():
     """
@@ -59,6 +66,17 @@ def test_emitter_ok():
     
     with loop:
         m.bar(3.9)
+
+
+@run_in_both(MyObject2)
+def test_emitter_overloading():  # and super()
+    """
+    bar 14.2, 15.5
+    """
+    m = MyObject2()
+    with loop:
+        m.bar(3.2)
+        m.bar(4.5)
 
 
 @run_in_both(MyObject)

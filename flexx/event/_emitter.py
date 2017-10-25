@@ -2,6 +2,8 @@
 Implements the emitter decorator, class and desciptor.
 """
 
+import weakref
+
 from ._action import BaseDescriptor
 
 
@@ -30,10 +32,10 @@ def emitter(func):
         raise TypeError('The event.emitter() decorator needs a function.')
     if getattr(func, '__self__', None) is not None:  # builtin funcs have __self__
         raise RuntimeError('Invalid use of emitter decorator.')
-    return Emitter(func, func.__name__, func.__doc__ or func.__name__)
+    return EmitterDescriptor(func, func.__name__, func.__doc__ or func.__name__)
 
 
-class Emitter(BaseDescriptor):
+class EmitterDescriptor(BaseDescriptor):
     """ Placeholder for documentation and easy emitting of the event.
     """
     
@@ -49,14 +51,45 @@ class Emitter(BaseDescriptor):
         
         private_name = '_' + self._name + '_emitter'
         try:
-            func = getattr(instance, private_name)
+            emitter = getattr(instance, private_name)
         except AttributeError:
-            
-            def func(*args):  # this func should return None, so super() works correct
-                ev = self._func(instance, *args)
-                if ev is not None:
-                    instance.emit(self._name, ev)
-            func.__doc__ = self.__doc__
-            setattr(instance, private_name, func)
+            emitter = Emitter(instance, self._func, self._name, self._doc)
+            setattr(instance, private_name, emitter)
 
-        return func
+        emitter._use_once(self._func)  # make super() work, see _action.py
+        return emitter
+
+
+class Emitter:
+    """ Placeholder for emitter function.
+    """
+    
+    def __init__(self, ob, func, name, doc):
+        assert callable(func)
+        
+        # Store func, name, and docstring (e.g. for sphinx docs)
+        self._ob1 = weakref.ref(ob)
+        self._func = func
+        self._func_once = func
+        self._name = name
+        self.__doc__ = '*emitter*: {}'.format(doc)
+    
+    def __repr__(self):
+        cname = self.__class__.__name__
+        return '<%s %r at 0x%x>' % (cname, self._name, id(self))
+
+    def _use_once(self, func):
+        """ To support super().
+        """
+        self._func_once = func
+
+    def __call__(self, *args):
+        """ Emit the event.
+        """
+        func = self._func_once
+        self._func_once = self._func
+        ob = self._ob1()
+        if ob is not None:
+            ev = func(ob, *args)
+            if ev is not None:
+                ob.emit(self._name, ev)

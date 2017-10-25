@@ -10,7 +10,7 @@ from ._dict import Dict
 from ._action import ActionDescriptor, Action
 from ._reaction import ReactionDescriptor, Reaction, looks_like_method
 from ._property import Property
-from ._emitter import Emitter
+from ._emitter import EmitterDescriptor
 from ._loop import loop, this_is_js
 from . import logger
 
@@ -96,7 +96,7 @@ def finalize_component_class(cls):
                 actions[action_name] = action_des
         elif isinstance(val, ReactionDescriptor):
             reactions[name] = val
-        elif isinstance(val, Emitter):
+        elif isinstance(val, EmitterDescriptor):
             emitters[name] = val
         elif isinstance(val, (Action, Reaction)):
             raise RuntimeError('Class methods can only be made actions or '
