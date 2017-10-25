@@ -8,7 +8,7 @@ from ._action import BaseDescriptor
 def emitter(func):
     """ Decorator to turn a Component's method into an emitter.
     
-    An emitter makes it easy to emit specific events and functions as a
+    An emitter makes it easy to emit specific events, and is also a
     placeholder for documenting an event.
     
     .. code-block:: python
@@ -20,11 +20,11 @@ def emitter(func):
                 return dict(value=v)
         
         m = MyObject()
-        m.spam(42)
+        m.spam(42)  # emit the spam event
     
-    The method can have any number of arguments, and should return a
-    dictionary that represents the event to generate. The method's
-    docstring is used as the emitter's docstring.
+    The method being decorated can have any number of arguments, and
+    should return a dictionary that represents the event to generate.
+    The method's docstring is used as the emitter's docstring.
     """
     if not callable(func):
         raise TypeError('The event.emitter() decorator needs a function.')

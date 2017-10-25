@@ -3,14 +3,11 @@ Test component properties.
 """
 
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
-from flexx.event._both_tester import run_in_both
+from flexx.event._both_tester import run_in_both, this_is_js
 
 from flexx import event
 
 loop = event.loop
-
-def this_is_js():
-    return False
 
 
 class MyCustomProp(event.Property):
@@ -170,6 +167,25 @@ def test_property_list_mutate():
     
     m._mutate_eggs(3, 'remove', 3)
     print(m.eggs)
+
+
+@run_in_both(MyObject) 
+def test_property_not_settable():
+    """
+    fail AtributeError
+    """
+    m = MyObject()
+    try:
+        m.foo = 3
+    except AttributeError:
+        print('fail AtributeError')
+    
+    # We cannot prevent deletion in JS, otherwise we cannot overload
+    # m = MyObject()
+    # try:
+    #     del m.foo
+    # except AttributeError:
+    #     print('fail AtributeError')
 
 
 ## All prop types
@@ -478,7 +494,7 @@ def test_property_custom():
 
 ## Python only
 
-def test_more():
+def test_property_python_only():
     
     with raises(TypeError):
         class MyObject2(event.Component):
@@ -493,7 +509,10 @@ def test_more():
     m2 = MyDefaults()
     
     with raises(AttributeError):
-        m1.foo = 3
+        m1.foo = 3  # Cannot set a property
+    
+    with raises(AttributeError):
+        del m1.foo  # cannot delete an property
     
     assert 'anything' in m1.__class__.anyprop.__doc__
     assert 'anything' in m2.__class__.anyprop2.__doc__

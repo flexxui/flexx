@@ -1,73 +1,149 @@
-""" Basic tests for emitters. Does not contain an awefull extensive
-test suite, as we test emitters quite well in test_both.py.
+"""
+Test event emitters.
 """
 
+from flexx.util.testing import run_tests_if_main, skipif, skip, raises
+from flexx.event._both_tester import run_in_both, this_is_js
 
-def test_emitter():
+from flexx import event
+
+loop = event.loop
+
+
+class MyObject(event.Component):
     
-    class MyObject(event.HasEvents):
-        
-        @event.emitter
-        def foo(self, v):
-            return dict(value=float(v))
-        
-        @event.emitter
-        def bar(self, v):
-            return dict(value=float(v)+1)  # note plus 1
-        
-        @event.connect('foo')
-        def on_foo(self, *events):
-            self.the_val = events[0].value  # so we can test it
-        
-        @event.connect('bar')
-        def on_bar(self, *events):
-            self.the_val = events[0].value  # so we can test it
+    @event.emitter
+    def foo(self, v):
+        if not isinstance(v, (int, float)):
+            raise TypeError('Foo emitter expects a number.')
+        return dict(value=float(v))
+    
+    @event.emitter
+    def bar(self, v):
+        return dict(value=float(v)+1)  # note plus 1
+    
+    @event.emitter
+    def wrong(self, v):
+        return float(v)  # does not return a dict
+    
+    @event.reaction('foo')
+    def on_foo(self, *events):
+        print('foo', ', '.join([str(ev.value) for ev in events]))
+    
+    @event.reaction('bar')
+    def on_bar(self, *events):
+        print('bar', ', '.join([str(ev.value) for ev in events]))
+
+
+@run_in_both(MyObject)
+def test_emitter_ok():
+    """
+    foo 3.2
+    foo 3.2, 3.3
+    bar 4.8, 4.9
+    bar 4.9
+    """
     
     m = MyObject()
     
-    the_vals = []
-    @m.connect('foo', 'bar')
-    def handle_foo(*events):
-        the_vals.append(events[0].value)
-    
-    with event.loop:
+    with loop:
         m.foo(3.2)
-    assert m.the_val == 3.2
-    assert the_vals[-1] == 3.2
     
-    with event.loop:
-        m.foo('9.1')
-    assert m.the_val == 9.1
-    assert the_vals[-1] == 9.1
+    with loop:
+        m.foo(3.2)
+        m.foo(3.3)
     
-    with event.loop:
-        m.bar(3.2)
-    assert m.the_val == 4.2
-    assert the_vals[-1] == 4.2
+    with loop:
+        m.bar(3.8)
+        m.bar(3.9)
     
-    # Fail
+    with loop:
+        m.bar(3.9)
+
+
+@run_in_both(MyObject)
+def test_emitter_order():
+    """
+    foo 3.1, 3.2
+    bar 6.3, 6.4
+    foo 3.5, 3.6
+    bar 6.7, 6.8
+    bar 6.9, 6.9
+    """
+    m = MyObject()
     
-    with raises(ValueError):
+    # Even though we emit foo 4 times between two event loop iterations,
+    # they are only grouped as much as to preserve order. This was not
+    # the case before the 2017 Flexx refactoring.
+    with loop:
+        m.foo(3.1)
+        m.foo(3.2)
+        m.bar(5.3)
+        m.bar(5.4)
+        m.foo(3.5)
+        m.foo(3.6)
+        m.bar(5.7)
+        m.bar(5.8)
+    
+    # The last two occur after an event loop iter, so these cannot be grouped
+    # with the previous.
+    with loop:
+        m.bar(5.9)
+        m.bar(5.9)
+
+
+@run_in_both(MyObject)
+def test_emitter_fail():
+    """
+    fail TypeError
+    fail TypeError
+    """
+    
+    m = MyObject()
+    
+    try:
+        m.wrong(1.1)
+    except TypeError:
+        print('fail TypeError')
+    
+    try:
         m.foo('bla')
+    except TypeError:
+        print('fail TypeError')
+
+
+@run_in_both(MyObject)
+def test_emitter_not_settable():
+    """
+    fail AttributeError
+    """
+    
+    m = MyObject()
+    
+    try:
+        m.foo = 3
+    except AttributeError:
+        print('fail AttributeError')
+    
+    # We cannot prevent deletion in JS, otherwise we cannot overload
+    # try:
+    #     del m.foo
+    # except AttributeError:
+    #     print('fail AttributeError')
+        
+
+def test_emitter_python_only():
+    
+    m = MyObject()
     
     with raises(TypeError):
         event.emitter(3)  # emitter decorator needs callable
+     
+    with raises(RuntimeError):
+        event.emitter(isinstance)  # emitter decorator needs callable
     
     with raises(AttributeError):
         del m.foo  # cannot delete an emitter
-    
-    with raises(AttributeError):
-        m.foo = None  # cannot set an emitter
-    
-    class MyObject2(event.HasEvents):
-        
-        @event.emitter
-        def foo(self, v):
-            return float(v)
-    
-    with raises(TypeError):
-        m = MyObject2()
-        m.foo(3.2)  # return value of emitter must be a dict
 
 
 run_tests_if_main()

@@ -8,15 +8,12 @@ during tests.
 
 import sys
 
-from flexx import event
-from flexx.event import loop
-from flexx.event._js import create_js_component_class, JS_EVENT
-from flexx.pyscript.functions import py2js, evaljs 
-from flexx.pyscript.stdlib import get_std_info, get_partial_std_lib
+from ._loop import loop, this_is_js
+from ._component import Component
+from ._js import create_js_component_class, JS_EVENT
 
-
-def this_is_js():
-    return False
+from ..pyscript.functions import py2js, evaljs 
+from ..pyscript.stdlib import get_std_info, get_partial_std_lib
 
 
 class StdoutMismatchError(Exception):
@@ -70,7 +67,7 @@ def call_func_in_js(func, classes):
     all_classes = []
     for cls in classes:
         for c in cls.mro():
-            if c is event.Component or c in all_classes:
+            if c is Component or c in all_classes:
                 break
             all_classes.append(c)
     # Generate JS code
