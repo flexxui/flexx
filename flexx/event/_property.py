@@ -7,7 +7,6 @@ from ._action import BaseDescriptor
 
 undefined = None 
 
-# todo: allow using this directly
 
 class Property(BaseDescriptor):
     """ Base property class. Properties are readonly attributes associated

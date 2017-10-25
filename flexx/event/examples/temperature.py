@@ -14,8 +14,8 @@ class Temperature(event.Component):
     Fahrenheit.
     """
     
-    c = event.prop(0)
-    f = event.prop(0)
+    c = event.FloatProp(doc='Temperature in degrees Celcius')
+    f = event.FloatProp(doc='Temperature in degrees Fahrenheit')
     
     @event.action
     def set_c(self, t):
