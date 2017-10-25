@@ -43,7 +43,7 @@ def action(func):
     if not callable(func):
         raise TypeError('The event.action() decorator needs a function.')
     if getattr(func, '__self__', None) is not None:  # builtin funcs have __self__
-        raise RuntimeError('Invalid use of action decorator.')
+        raise TypeError('Invalid use of action decorator.')
     return ActionDescriptor(func, func.__name__, func.__doc__ or func.__name__)
 
 

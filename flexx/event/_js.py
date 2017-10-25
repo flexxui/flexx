@@ -149,7 +149,7 @@ class ComponentJS:
         for name in self.__reactions__:
             func = self[name]
             # todo: func.is_explicit = ...
-            self[name] = self.__create_reaction(func, name, func._connection_strings)
+            self.__create_reaction(func, name, func._connection_strings)
             # todo: add_reaction_event for implicit handlers
     
     def _reaction(self, *connection_strings):
@@ -177,7 +177,7 @@ class ComponentJS:
         # Get function name (Flexx sets __name__ on methods)
         name = func.__name__ or func.name or 'anonymous'
         name = name.split(' ')[-1].split('flx_')[-1]
-        return self.__create_reaction(func, name, connection_strings)
+        return self.__create_reaction_object(func, name, connection_strings)
     
     def __create_action(self, action_func, name):
         # Keep a ref to the action func, which is a class attribute. The object
@@ -224,6 +224,16 @@ class ComponentJS:
         Object.defineProperty(self, name, opts)
     
     def __create_reaction(self, reaction_func, name, connection_strings):
+        reaction = self.__create_reaction_object(reaction_func, name, connection_strings)
+        def getter():
+            return reaction
+        def setter(x):
+            raise AttributeError('Reaction %s is not settable' % name)
+        opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
+                'get': getter, 'set': setter}
+        Object.defineProperty(self, name, opts)
+        
+    def __create_reaction_object(self, reaction_func, name, connection_strings):
         # Keep ref to the reaction function, see comment in create_action().
         
         # reaction = Reaction(reaction_func, self, name, connection_strings)

@@ -31,7 +31,7 @@ def emitter(func):
     if not callable(func):
         raise TypeError('The event.emitter() decorator needs a function.')
     if getattr(func, '__self__', None) is not None:  # builtin funcs have __self__
-        raise RuntimeError('Invalid use of emitter decorator.')
+        raise TypeError('Invalid use of emitter decorator.')
     return EmitterDescriptor(func, func.__name__, func.__doc__ or func.__name__)
 
 

@@ -134,9 +134,9 @@ class Loop:
             
             # Add new item to queue
             if reaction.is_explicit():
-                self._pending_reactions.append((reaction, ev, [ev]))
+                self._pending_reactions.append([reaction, ev, [ev]])
             else:
-                self._pending_reactions.append((reaction, None, []))
+                self._pending_reactions.append([reaction, None, []])
                 self._pending_reaction_ids[reaction._id] = True
             
             self._schedule_iter()

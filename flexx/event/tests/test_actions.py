@@ -202,7 +202,7 @@ def test_action_python_only():
     # Action decorator needs proper callable
     with raises(TypeError):
         event.action(3)
-    with raises(RuntimeError):
+    with raises(TypeError):
         event.action(isinstance)
     
     # Check type of the instance attribute

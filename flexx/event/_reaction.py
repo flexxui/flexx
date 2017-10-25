@@ -59,7 +59,7 @@ def reaction(*connection_strings):
     
     for s in connection_strings:
         if not (isinstance(s, str) and len(s) > 0):
-            raise ValueError('Connection string must be nonempty strings.')
+            raise TypeError('Connection string must be nonempty strings.')
 
     def _connect(func):
         if not callable(func):
