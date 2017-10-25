@@ -188,7 +188,7 @@ def test_property_not_settable():
     #     print('fail AtributeError')
 
 
-## All prop types
+## Defaults and overloading
 
 
 class MyDefaults(event.Component):
@@ -202,6 +202,11 @@ class MyDefaults(event.Component):
     listprop2 = event.ListProp([3, 'yy'])
     componentprop2 = event.ComponentProp(None)
     myprop2 = MyCustomProp('b', settable=True)
+
+
+class MyDefaults2(MyDefaults):
+    floatprop2 = event.FloatProp(3.14)
+    stringprop2 = event.StringProp('hi')
 
 
 @run_in_both(MyDefaults)
@@ -227,6 +232,20 @@ def test_property_defaults():
     print(m.listprop2)
     print(m.componentprop2 is None)
     print(m.myprop2)
+
+
+@run_in_both(MyDefaults2)
+def test_property_defaults2():
+    """
+    3.14
+    hi
+    """
+    m = MyDefaults2()
+    print(m.floatprop2)
+    print(m.stringprop2)
+
+
+## All prop types
 
 
 @run_in_both(MyObject)
