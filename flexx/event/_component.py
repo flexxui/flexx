@@ -88,8 +88,8 @@ def finalize_component_class(cls):
             # Create mutator method
             setattr(cls, '_mutate_' + name, val.make_mutator())
             # Create setter action?
-            if val._settable:
-                action_name = 'set_' + name
+            action_name = 'set_' + name
+            if val._settable and not hasattr(cls, action_name):
                 action_des = ActionDescriptor(val.make_set_action(), action_name,
                                               'Setter for %s.' % name)
                 setattr(cls, action_name, action_des)

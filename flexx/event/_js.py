@@ -185,7 +185,9 @@ class ComponentJS:
         # Because the class attribute is the underlying function, super() works.
         def action(*args):  # this func should return None, so super() works correct
             if loop.is_processing_actions():
-                action_func.apply(self, args)
+                res = action_func.apply(self, args)
+                if res is not None:
+                    logger.warn('Action (%s) is not supposed to return a value' % name)
             else:
                 loop.add_action_invokation(action, args)
         def getter():

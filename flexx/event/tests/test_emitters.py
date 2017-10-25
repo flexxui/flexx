@@ -144,21 +144,24 @@ def test_emitter_not_settable():
         print('fail AttributeError')
     
     # We cannot prevent deletion in JS, otherwise we cannot overload
-    # try:
-    #     del m.foo
-    # except AttributeError:
-    #     print('fail AttributeError')
-        
+
 
 def test_emitter_python_only():
     
     m = MyObject()
     
+    assert 'emitter' in repr(m.__class__.foo).lower()
+    assert 'emitter' in repr(m.foo).lower()
+    assert 'foo' in repr(m.foo)
+    
     with raises(TypeError):
         event.emitter(3)  # emitter decorator needs callable
      
     with raises(RuntimeError):
-        event.emitter(isinstance)  # emitter decorator needs callable
+        event.emitter(isinstance)  # emitter decorator needs proper callable
+    
+    with raises(AttributeError):
+        m.foo = 3  # Cannot set an emitter
     
     with raises(AttributeError):
         del m.foo  # cannot delete an emitter
