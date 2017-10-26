@@ -129,10 +129,12 @@ class ComponentJS:
         # Init properties
         for name in self.__properties__:
             self.__handlers.setdefault(name, [])
-            value_name = '_' + name + '_value'
-            validator = self['_' + name + '_validate']
-            self[value_name] = validator(self[value_name])  # todo: or via mutate?
             self.__create_property(name)
+            # self._mutate(name, prop._default) but with shortcuts
+            value_name = '_' + name + '_value'
+            value2 = self['_' + name + '_validate'](self[value_name])
+            self[value_name] = value2
+            self.emit(name, dict(new_value=value2, old_value=value2, mutation='set'))
         
         # Init emitters
         for name in self.__emitters__:

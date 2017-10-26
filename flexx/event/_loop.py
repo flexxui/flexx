@@ -93,12 +93,6 @@ class Loop:
         # to make this code run fast.
         # _pending_reactions is a list of tuples (reaction, representing event, events)
         
-        # Allow reaction to discard the event (or rather, consume it by reconnecting)
-        # It is important to do the reconnecting before a new event occurs that
-        # the reaction might be subscribed to after the reconnect.
-        if reaction._filter_event(ev):
-            return
-        
         with self._lock:
             self._ensure_thread_match()
             
@@ -122,7 +116,7 @@ class Loop:
                         return
                     # Only continue if all events of the next item match the current
                     if not (ev2 is None or
-                            (ev2.source is ev.source and ev2.type == ev.type)):
+                            (ev2['source'] is ev['source'] and ev2.type == ev.type)):
                         break
             
             else:

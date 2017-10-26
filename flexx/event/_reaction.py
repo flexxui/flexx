@@ -215,7 +215,7 @@ class Reaction:
         
         # Connect
         for index in range(len(self._connections)):
-            self._connect_to_event(index)
+            self.reconnect(index)
 
     def __repr__(self):
         c = '+'.join([str(len(c.objects)) for c in self._connections])
@@ -280,15 +280,6 @@ class Reaction:
         while len(self._pending):
             self._pending.pop()  # no list.clear on legacy py
     
-    def _filter_event(self, ev):
-        """ Filter events, taking out the events for reconnections.
-        Used by the loop.
-        """
-        if ev.label.startswith('reconnect_'):
-            index = int(ev.label.split('_')[-1])
-            self._connect_to_event(index)
-            return True
-    
     def _update_implicit_connections(self, connections):
         """ Update the list of implicit connections. Used by the loop.
         """
@@ -314,8 +305,8 @@ class Reaction:
         # working, and should thus handle its pending events at some point,
         # at which point it cannot hold any references to ob anymore.
 
-    def _connect_to_event(self, index):
-        """ Connect one connection.
+    def reconnect(self, index):
+        """ (re)connect the index'th connection.
         """
         connection = self._connections[index]
 

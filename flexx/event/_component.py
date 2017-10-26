@@ -182,12 +182,13 @@ class Component(with_metaclass(ComponentMeta, object)):
             self.__handlers.setdefault(name, [])
         
         # Initialize properties with default and given values (does not emit yet)
-        for name in self.__properties__:
+        for name in sorted(self.__properties__):
             prop = getattr(self.__class__, name)
             self.__handlers.setdefault(name, [])
-            default = prop._validate(prop._default)
-            setattr(self, '_' + name + '_value', default)
-            # todo: must this be a mutation?
+            # self._mutate(name, prop._default) but with shortcuts
+            value2 = getattr(self, '_' + name + '_validate')(prop._default)
+            setattr(self, '_' + name + '_value', value2)
+            self.emit(name, dict(new_value=value2, old_value=value2, mutation='set'))
         for name in sorted(property_values):  # sort for deterministic order
             if name in self.__properties__:
                 value = property_values[name]
@@ -275,32 +276,27 @@ class Component(with_metaclass(ComponentMeta, object)):
                 msg = msg.replace('{}', type)
                 if hasattr(self, 'id'):
                     msg = msg.replace('exist.', 'exist on %s.' % self.id)  # Model
-                if this_is_js():
-                    console.warn(msg)
-                else:
-                    logger.warn(msg)
+                logger.warn(msg)
         
-        entry = label, handler
-        if entry not in handlers:
-            handlers.append(entry)
-        handlers.sort(key=lambda x: x[0]+'-'+x[1]._id)
+        # Insert handler in good place (if not already in there) - sort as we add
+        comp1 = label + '-' + handler._id
+        for i in range(len(handlers)):
+            comp2 = handlers[i][0] + '-' + handlers[i][1]._id
+            if comp1 < comp2:
+                handlers.insert(i, (label, handler))
+                break
+            elif comp1 == comp2:
+                break  # already in there
+        else:
+            handlers.append((label, handler))
+        
         self._handlers_changed_hook()
+        
         # Emit any pending events
         if self.__pending_events is not None:
             if not label.startswith('reconnect_'):
                 for ev in self.__pending_events.get(type, []):
-                    #handler._add_pending_event(label, ev)
                     loop.add_reaction_event(handler, ev)
-        # Send an event to communicate the value of a property
-        # if type in self.__properties__:
-        #     if self.__props_ever_set.get(type, False):
-        #         if not label.startswith('reconnect_'):  # Avoid recursion
-        #             val = getattr(self, type)
-        #             ev = Dict()  # PyScript compatible
-        #             ev.type = type
-        #             ev.source = self
-        #             ev.new_value = ev.old_value = val
-        #             handler._add_pending_event(label, ev)  # friend class
     
     def disconnect(self, type, handler=None):
         """ Disconnect handlers. 
@@ -346,15 +342,16 @@ class Component(with_metaclass(ComponentMeta, object)):
         # Push the event to the handlers (handlers use labels for dynamism)
         if self.__pending_events is not None:
             self.__pending_events.setdefault(ev.type, []).append(ev)
-        self._emit(ev)
-        return ev
-    
-    def _emit(self, ev):
+        # Register pending reactions
+        # Reaction reconnections are applied directly; before a new event
+        # occurs that the reaction might be subscribed to after the reconnect.
         for label, handler in self.__handlers.get(ev.type, ()):
-            # handler._add_pending_event(label, ev)  # friend class
-            ev2 = ev.copy()  # todo: there's also a copy above, limit to 1
-            ev2.label = label
-            loop.add_reaction_event(handler, ev2)
+            if label.startswith('reconnect_'):
+                index = int(label.split('_')[-1])
+                handler.reconnect(index)
+            else:
+                loop.add_reaction_event(handler, ev)
+        return ev
     
     # todo: make this public? It can only be called from actions anyway
     # mmm, but we want to constrain its use to the class itself -> private
