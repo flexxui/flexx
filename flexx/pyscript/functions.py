@@ -224,7 +224,7 @@ def evaljs(jscode, whitespace=True, print_result=True):
             err = err.output.decode()
         else:
             err = str(err)
-        err = err[:200] + '...' if len(err) > 200 else err
+        err = err[:400] + '...' if len(err) > 400 else err
         raise RuntimeError(err)
     finally:
         if filename is not None:

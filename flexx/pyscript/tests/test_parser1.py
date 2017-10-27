@@ -26,8 +26,8 @@ class TestTheParser:
         assert StubParser("xxx.bar_bar()").dump() == 'xxx;'
         assert StubParser("xxx.foo_foo()").dump() == 'xxx.foo_foo();'
     
-    def test_exceptions(self):
-        raises(JSError, py2js, "foo(**kwargs)")
+    # def test_exceptions(self):
+    #     raises(JSError, py2js, "foo(**kwargs)")
         
 
 class TestExpressions:

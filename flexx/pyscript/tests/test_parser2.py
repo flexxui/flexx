@@ -409,8 +409,8 @@ class TestFunctions:
         assert py2js('a.foo(3, *args)')  # JS is complex, just test it compiles
         
         # Does not work
-        raises(JSError, py2js, 'foo(x=1, y=2)')
-        raises(JSError, py2js, 'foo(**kwargs)')
+        # raises(JSError, py2js, 'foo(x=1, y=2)')
+        # raises(JSError, py2js, 'foo(**kwargs)')
         
         code = "def foo(x): return x + 1\nd = {'foo':foo}\n"
         assert evalpy(code + 'foo(3)') == '4'

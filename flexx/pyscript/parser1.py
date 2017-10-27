@@ -424,19 +424,55 @@ class Parser1(Parser0):
         handles starargs. The first element in the returned list is either
         "(" or ".apply(".
         """
-        # Check for keywords (not supported) after handling special functions
-        if node.kwarg_nodes:
-            raise JSError('function calls do not support keyword arguments or kwargs')
+        
+        # Can produce:
+        # normal:               foo(.., ..)
+        # use_call_or_apply:    foo.call(base_name, .., ..)
+        # use_starargs:         foo.apply(base_name, vararg_name)
+        #           or:         foo.apply(base_name, [].concat([.., ..], vararg_name)
+        # has_kwargs:           foo({__args: [], __kwargs: {} })
+        #         or:           foo.apply(base_name, ({__args: [], __kwargs: {} })
         
         base_name = base_name or 'null'
         
-        # flatten args and add commas
-        use_starargs = False
+        # Get arguments
+        args_simple, args_array = self._get_positional_args(node)
+        kwargs = self._get_keyword_args(node)
+        
+        if kwargs is not None:
+            # Keyword arguments need a whole special treatment
+            if use_call_or_apply:
+                start = ['.call(', base_name, ', '] 
+            else:
+                start = ['(']
+            return start + ['{', 'args: ', args_array, ', kwargs: ', kwargs, '})']
+        elif args_simple is None:
+            # Need to use apply
+            return [".apply(", base_name, ', ', args_array, ")"]
+        elif use_call_or_apply:
+            # Need to use call (arg_simple can be empty string)
+            if args_simple:
+                return [".call(", base_name, ', ', args_simple, ")"]
+            else:
+                return [".call(", base_name, ")"]
+        else: 
+            # Normal function call
+            return ["(", args_simple, ")"]
+    
+    def _get_positional_args(self, node):
+        """ Returns:
+        * a string args_simple, which represents the positional args in comma
+          separated form. Can be None if the args cannot be represented that
+          way. Note that it can be empty string.
+        * a string args_array representing the array with positional arguments.
+        """
+        
+        # Generate list of arg lists (has normal positional args and starargs)
+        # Note that there can be multiple starargs and these can alternate.
         argswithcommas = []
         arglists = [argswithcommas]
         for arg in node.arg_nodes:
             if isinstance(arg, ast.Starred):
-                use_starargs = True
                 starname = ''.join(self.parse(arg.value_node))
                 arglists.append(starname)
                 argswithcommas = []
@@ -453,33 +489,58 @@ class Parser1(Parser0):
             elif arglist[-1] == ', ':
                 arglist.pop(-1)
         
-        if use_starargs:
-            # Note that this goes wrong if the original code uses apply()
-            code = ['.apply(', base_name, ', ']
-            if len(arglists) == 1:
-                # the concat thing does not seem to work well with "arguments"
-                code += starname, ')'
-            else:
-                code += ['[].concat(']
-                for arglist in arglists:
-                    if isinstance(arglist, list):
-                        code += ['[']
-                        code += arglist
-                        code += [']']
-                    else:
-                        code += [arglist]
-                    code += [', ']
-                code.pop(-1)
-                code += '))'
-            return code
-        elif use_call_or_apply:
-            if argswithcommas:
-                return [".call(", base_name, ', '] + argswithcommas + [")"]
-            else:
-                return [".call(", base_name, ")"]
+        # Generate code for positional arguments
+        if len(arglists) == 0:
+            return '', '[]'
+        elif len(arglists) == 1 and isinstance(arglists[0], list):
+            args_simple = ''.join(argswithcommas)
+            return args_simple, '[' + args_simple + ']'
+        elif len(arglists) == 1:
+            assert isinstance(arglists[0], str)
+            return None, arglists[0]
         else:
-            # Normal func
-            return ["("] + argswithcommas + [")"]
+            code = ['[].concat(']
+            for arglist in arglists:
+                if isinstance(arglist, list):
+                    code += ['[']
+                    code += arglist
+                    code += [']']
+                else:
+                    code += [arglist]
+                code += [', ']
+            code.pop(-1)
+            code += ')'
+            return None, ''.join(code)
+    
+    def _get_keyword_args(self, node):
+        """ Get a string that represents the dictionary of keyword arguments,
+        or None if there are no keyword arguments (normal nor double-star).
+        """
+        
+        # Collect elements that will make up the total kwarg dict
+        kwargs = []
+        for kwnode in node.kwarg_nodes:
+            if not kwnode.name:  # **xx
+                kwargs.append(unify(self.parse(kwnode.value_node)))
+            else:  # foo=xx
+                if not (kwargs and isinstance(kwargs[-1], list)):
+                    kwargs.append([])
+                kwargs[-1].append('%s: %s' % (kwnode.name, unify(self.parse(kwnode.value_node))))
+        
+        # Resolve sequneces of loose kwargs
+        for i in range(len(kwargs)):
+            if isinstance(kwargs[i], list):
+                kwargs[i] = '{' + ', '.join(kwargs[i]) + '}'
+        
+        # Compose, easy if singleton, otherwise we need to merge
+        if len(kwargs) == 0:
+            return None
+        elif len(kwargs) == 1:
+            return kwargs[0]
+        else:
+            # register use of merge_dicts(), but we build the string ourselves
+            self.use_std_function('merge_dicts', [])
+            return stdlib.FUNCTION_PREFIX + 'merge_dicts(' + ', '.join(kwargs) + ')'
     
     def parse_Attribute(self, node):
         base_name = unify(self.parse(node.value_node))

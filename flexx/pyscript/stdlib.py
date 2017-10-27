@@ -141,6 +141,33 @@ FUNCTIONS['op_instantiate'] = """function (ob, args) { // nargs: 2
     }
 }"""
 
+FUNCTIONS['merge_dicts'] = """function () {
+    var res = {};
+    for (var i=0; i<arguments.length; i++) {
+        var d = arguments[i];
+        var key, keys = Object.keys(d);
+        for (var j=0; j<keys.length; j++) { key = keys[j]; res[key] = d[key]; }
+    }
+    return res;
+}"""
+
+# args is a list of (name, default) tuples, and is overwritten with names from kwargs
+FUNCTIONS['op_parse_kwargs'] = """
+function (arg_names, arg_values, kwargs, strict) { // nargs: 3
+    for (var i=0; i<arg_values.length; i++) {
+        var name = arg_names[i];
+        if (kwargs[name] !== undefined) {
+            arg_values[i] = kwargs[name];
+            delete kwargs[name];
+        }
+    }
+    if (strict && Object.keys(kwargs).length > 0) {
+        throw FUNCTION_PREFIXop_error('TypeError',
+            'Function ' + strict + ' does not accept **kwargs.');
+    }
+}""".lstrip()
+
+
 FUNCTIONS['op_error'] = """function (etype, msg) { // nargs: 2
     var e = new Error(etype + ': ' + msg);
     e.name = etype
@@ -517,6 +544,7 @@ METHODS['update'] = """function (other) { // nargs: 1
     if (this.constructor !== Object) return this.KEY.apply(this, arguments);
     var key, keys = Object.keys(other);
     for (var i=0; i<keys.length; i++) {key = keys[i]; this[key] = other[key];}
+    return null;
 }"""
 
 METHODS['values'] = """function () { // nargs: 0
