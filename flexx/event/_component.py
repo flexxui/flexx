@@ -98,7 +98,7 @@ def finalize_component_class(cls):
             reactions[name] = val
         elif isinstance(val, EmitterDescriptor):
             emitters[name] = val
-        elif isinstance(val, (Action, Reaction)):
+        elif isinstance(val, (Action, Reaction)):  # pragma: no cover
             raise RuntimeError('Class methods can only be made actions or '
                                'reactions using the corresponding decorators '
                                '(%r)' % name)
@@ -610,7 +610,7 @@ def _mutate_array_py(array, ev):
             raise NotImplementedError(mutation)
 
 
-def _mutate_array_js(array, ev):
+def _mutate_array_js(array, ev):  # pragma: no cover
     """ Logic to mutate an list-like or array-like property in-place, in JS.
     """
     is_nd = hasattr(array, 'shape') and hasattr(array, 'dtype')
