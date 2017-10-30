@@ -207,18 +207,23 @@ class Parser1(Parser0):
         return self.parse_List(node)  # tuple = ~ list in JS
     
     def parse_Dict(self, node):
-        code = ['{']
+        # Oh JS; without the outer braces, it would only be an Object if used
+        # in an assignment ...
+        code = ['({']
         for key, val in zip(node.key_nodes, node.value_nodes):
-            if isinstance(key, (ast.Str, ast.Num, ast.NameConstant)):
+            if isinstance(key, (ast.Num, ast.NameConstant)):
                 code += self.parse(key)
+            elif isinstance(key, ast.Str):
+                code += key.value
             else:
-                code += ['['] + self.parse(key) + [']']  # this actually breaks on IE
+                # code += ['['] + self.parse(key) + [']']  # this actually breaks on IE
+                raise JSError('Computed dict attributes are not supported on IE :/')
             code.append(': ')
             code += self.parse(val)
             code.append(', ')
         if node.key_nodes:
             code.pop(-1)  # skip last comma
-        code.append('}')
+        code.append('})')
         return code
         
     def parse_Set(self, node):
