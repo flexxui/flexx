@@ -308,7 +308,9 @@ class TestExpressions:
         
         assert py2js('[1,2,3]') == '[1, 2, 3];'
         assert py2js('(1,2,3)') == '[1, 2, 3];'
+        
         assert py2js('{foo: 3, bar: 4}') == '{foo: 3, bar: 4};'
+        assert py2js('var bla="foo";{bla: 3, bar: 4}') == '{foo: 3, bar: 4};'
     
     def test_ignore_import_of_compiler(self):
         modname = pyscript.__name__

@@ -209,7 +209,10 @@ class Parser1(Parser0):
     def parse_Dict(self, node):
         code = ['{']
         for key, val in zip(node.key_nodes, node.value_nodes):
-            code += self.parse(key)
+            if isinstance(key, (ast.Str, ast.Num, ast.NameConstant)):
+                code += self.parse(key)
+            else:
+                code += ['['] + self.parse(key) + [']']
             code.append(': ')
             code += self.parse(val)
             code.append(', ')
