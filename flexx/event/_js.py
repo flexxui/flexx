@@ -128,7 +128,7 @@ class ComponentJS:
         for name in self.__actions__:
             self.__create_action(self[name], name)
         
-        # Init properties
+        # Init properties and their default value
         for name in self.__properties__:
             self.__handlers.setdefault(name, [])
             self.__create_property(name)
@@ -137,11 +137,20 @@ class ComponentJS:
             value2 = self['_' + name + '_validate'](self[value_name])
             self[value_name] = value2
             self.emit(name, dict(new_value=value2, old_value=value2, mutation='set'))
+        
+        # Invoke initial set actions for properties
         for name in sorted(property_values):  # sort for deterministic order
             if name in self.__properties__:
                 prop_setter_name = 'set_' + name
-                setter_func = getattr(self, prop_setter_name)
-                setter_func(property_values[name])
+                setter_func = getattr(self, prop_setter_name, None)
+                if setter_func is None:
+                    raise TypeError('%s does not have a set_%s() action.' %
+                                    (self._class_name, name))
+                else:
+                    setter_func(property_values[name])
+            else:
+                raise AttributeError('%s does not have a property %r' %
+                                     (self._class_name, name))
         
         # Init emitters
         for name in self.__emitters__:
@@ -471,4 +480,4 @@ if __name__ == '__main__':
     print(len(toprint), 'of', len(JS_EVENT), 'bytes in total')  # 29546 before refactor
     print('-' * 80)
     
-    # print(create_js_component_class(Foo, 'Foo'))
+    print(create_js_component_class(Foo, 'Foo'))

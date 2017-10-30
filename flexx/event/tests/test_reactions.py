@@ -13,7 +13,10 @@ from flexx.util.logging import capture_log
 from flexx import event
 
 loop = event.loop
+logger = event.logger
 
+
+## Order
 
 class MyObject1(event.Component):
     
@@ -29,8 +32,6 @@ class MyObject1(event.Component):
     def r3(self, *events):
         pass
 
-
-## Order
 
 @run_in_both(MyObject1)
 def test_reaction_order1():
@@ -146,7 +147,8 @@ class MyObject_init(event.Component):
     
     foo = event.IntProp(settable=True)
     bar = event.IntProp(7, settable=True)
-    
+    spam = event.IntProp(settable=False)
+
     @event.reaction('foo', 'bar')
     def _report(self, *events):
         print('r ' + ', '.join(['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
@@ -170,7 +172,7 @@ def test_reacion_init1():
     print('end')
 
 
-@run_in_both(MyObject_init, js=False)  # todo: kwargs
+@run_in_both(MyObject_init)
 def test_reacion_init2():
     """
     0 7
@@ -209,7 +211,7 @@ def test_reacion_init3():
     print('end')
 
 
-@run_in_both(MyObject_init, js=False)  # todo: kwargs
+@run_in_both(MyObject_init)
 def test_reacion_init4():
     """
     0 7
@@ -228,6 +230,174 @@ def test_reacion_init4():
     loop.iter()
     print(m.foo, m.bar)
     print('end')
+
+
+@run_in_both(MyObject_init)
+def test_reacion_init_fail1():
+    """
+    ? AttributeError
+    ? TypeError
+    """
+    try:
+        m = MyObject_init(blabla=1)
+    except AttributeError as err:
+        logger.exception(err)
+    
+    try:
+        m = MyObject_init(spam=1)
+    except TypeError as err:
+        logger.exception(err)
+
+
+## Reactions used not as decorators
+
+
+class MyObject2(event.Component):
+    
+    foo = event.IntProp(settable=True)
+    bar = event.IntProp(7, settable=True)
+
+
+@run_in_both(MyObject2)
+def test_reacion_using_react_func1():
+    """
+    r foo:0->0, bar:7->7, foo:0->2, bar:7->2
+    r foo:0->0, bar:7->7, foo:0->3, bar:7->3
+    """
+    
+    def foo(*events):
+        print('r ' + ', '.join(['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
+    
+    m = MyObject2()
+    m.reaction(foo, 'foo', 'bar')
+    m.set_foo(2)
+    m.set_bar(2)
+    loop.iter()
+    
+    # Again, but watch order of args
+    m = MyObject2()
+    m.reaction('foo', 'bar', foo)
+    m.set_foo(3)
+    m.set_bar(3)
+    loop.iter()
+
+
+@run_in_both(MyObject2)
+def test_reacion_using_react_func2():
+    """
+    r foo:0->2, bar:7->2
+    r foo:0->3, bar:7->3
+    """
+    def foo(*events):
+        print('r ' + ', '.join(['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
+    
+    m = MyObject2()
+    loop.iter()  # this is extra
+    m.reaction(foo, 'foo', 'bar')
+    m.set_foo(2)
+    m.set_bar(2)
+    loop.iter()
+    
+    # Again, but watch order of args
+    m = MyObject2()
+    loop.iter()  # this is extra
+    m.reaction('foo', 'bar', foo)
+    m.set_foo(3)
+    m.set_bar(3)
+    loop.iter()
+
+
+@run_in_both(MyObject2, js=False)  # not an issue in JS - no decorators there
+def test_reacion_using_react_func3():
+    """
+    r foo:0->0, bar:7->7, foo:0->2, bar:7->2
+    """
+    
+    m = MyObject2()
+    
+    @m.reaction('foo', 'bar')
+    def foo(*events):
+        print('r ' + ', '.join(['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
+    
+    m.set_foo(2)
+    m.set_bar(2)
+    loop.iter()
+
+
+# not in both
+def test_reaction_builtin_function():
+    
+    class Foo(event.Component):
+        pass
+    
+    foo = Foo()
+    foo.reaction('!bar', print)  # this should not error
+
+
+## Misc
+
+
+@run_in_both(MyObject1)
+def test_reaction_invoking():
+    """
+    r1 
+    r2 
+    end 
+    """
+    m = MyObject1()
+    m.r1()
+    m.r2()
+    loop.iter()
+    print('end')
+
+
+def test_reaction_exceptions1():
+    m = event.Component()
+    
+    @m.reaction('!foo')
+    def handle_foo(*events):
+        1/0
+    
+    m.emit('foo', {})
+    
+    sys.last_traceback = None
+    assert sys.last_traceback is None
+    
+    # No exception should be thrown here
+    loop.iter()
+    loop.iter()
+    
+    # But we should have prepared for PM debugging
+    if sys.version_info[0] >= 3:  # not sure why
+        assert sys.last_traceback
+    
+    # Its different for a direct call
+    with raises(ZeroDivisionError):
+        handle_foo()
+
+
+def test_reaction_exceptions2():
+    
+    class Foo(event.Component):
+        def __init__(self):
+            super().__init__()
+            self.bar = event.Component()
+            self.bars = [self.bar]
+    
+    f = Foo()
+    
+    # ok
+    @f.reaction('bars*.spam')
+    def handle_foo(*events):
+        pass
+    
+    # not ok
+    with raises(RuntimeError) as err:
+        @f.reaction('bar*.spam')
+        def handle_foo(*events):
+            pass
+    assert 'not a tuple' in str(err)
+
 
 
 ## Meta-ish tests that are similar for property/emitter/action/reaction

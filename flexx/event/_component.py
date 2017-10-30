@@ -181,7 +181,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         for name in self.__emitters__:
             self.__handlers.setdefault(name, [])
         
-        # Initialize properties with default and given values (does not emit yet)
+        # Initialize properties with default values (does not emit yet)
         for name in sorted(self.__properties__):
             prop = getattr(self.__class__, name)
             self.__handlers.setdefault(name, [])
@@ -189,20 +189,24 @@ class Component(with_metaclass(ComponentMeta, object)):
             value2 = getattr(self, '_' + name + '_validate')(prop._default)
             setattr(self, '_' + name + '_value', value2)
             self.emit(name, dict(new_value=value2, old_value=value2, mutation='set'))
-        # todo: should this mutate instead of call the action? The code that instanties might know what its doing ...
+        
+        # Invoke initial set actions for properties
+        cname = self.__class__.__name__
         for name in sorted(property_values):  # sort for deterministic order
             if name in self.__properties__:
                 value = property_values[name]
                 prop_setter_name = 'set_' + name
-                setter_func = getattr(self, prop_setter_name)
-                if callable(value):  # make a reaction
+                setter_func = getattr(self, prop_setter_name, None)
+                if setter_func is None:
+                    t = '%s does not have a set_%s() action for property %s.'
+                    raise TypeError(t % (cname, name, name))
+                elif callable(value):  # make a reaction
                     setter_reaction = lambda: setter_func(value())
                     ev = Dict(source=self, type='', label='')
                     loop.add_reaction_event(Reaction(self, setter_reaction, []), ev)
                 else:
                     setter_func(value)
             else:
-                cname = self.__class__.__name__
                 raise AttributeError('%s does not have a property %r' % (cname, name))
         
         # Init handlers and properties now, or later? --> feature for subclasses

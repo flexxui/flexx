@@ -840,6 +840,7 @@ class Parser2(Parser1):
         # Check
         if (not lambda_) and node.decorator_nodes:
             if not (len(node.decorator_nodes) == 1 and
+                    isinstance(node.decorator_nodes[0], ast.Name) and
                     node.decorator_nodes[0].name == 'staticmethod'):
                 raise JSError('No support for function decorators')
         
