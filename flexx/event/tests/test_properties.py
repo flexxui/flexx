@@ -28,7 +28,7 @@ class MyObject(event.Component):
     
     # Props to test array mutations
     eggs = event.ListProp([], settable=True)
-    # todo: good defaults!  eggs2 = event.ListProp()
+    eggs2 = event.ListProp(settable=True)
     eggs3 = event.ListProp([3, 4])
 
     # All kinds of props, defaults
@@ -97,8 +97,7 @@ def test_property_mutating():
     print(m.foo)
 
 
-# todo: enable for JS once we can do keyword args in pyscript!
-@run_in_both(MyObject, js=False)
+@run_in_both(MyObject)
 def test_property_defaults():
     """
     6
@@ -129,18 +128,19 @@ def test_property_list_init():
     """
     []
     [3, 4]
+    []
+    [7, 8, 9]
     """
     m = MyObject()
     print(m.eggs)
     print(m.eggs3)
     
-    # todo: property defaults
-    # print(m.eggs2)
+    # Good auto-defaults
+    print(m.eggs2)
     
-    # todo: pyscript kwargs!
-    # m = MyObject(eggs=[7,8,9])
-    # loop.iter()
-    # print(m.eggs)
+    m = MyObject(eggs=[7,8,9])
+    loop.iter()
+    print(m.eggs)
 
 
 @run_in_both(MyObject) 

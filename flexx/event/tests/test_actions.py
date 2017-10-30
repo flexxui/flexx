@@ -68,8 +68,7 @@ def test_action_simple():
     loop.iter()
 
 
-# todo: need kwargs in js!
-@run_in_both(MyObject, js=False)
+@run_in_both(MyObject)
 def test_action_init():
     """
     True

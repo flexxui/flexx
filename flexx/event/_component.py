@@ -189,6 +189,7 @@ class Component(with_metaclass(ComponentMeta, object)):
             value2 = getattr(self, '_' + name + '_validate')(prop._default)
             setattr(self, '_' + name + '_value', value2)
             self.emit(name, dict(new_value=value2, old_value=value2, mutation='set'))
+        # todo: should this mutate instead of call the action? The code that instanties might know what its doing ...
         for name in sorted(property_values):  # sort for deterministic order
             if name in self.__properties__:
                 value = property_values[name]

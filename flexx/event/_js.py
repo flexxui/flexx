@@ -111,7 +111,7 @@ class ComponentJS:
     _REACTION_COUNT = 0
     _COUNT = 0
     
-    def __init__(self, init_handlers=True):
+    def __init__(self, **property_values):
         
         Component.prototype._COUNT += 1
         self._id = 'c' + str(Component.prototype._COUNT)
@@ -121,6 +121,8 @@ class ComponentJS:
         self.__props_being_set = {}
         self.__props_ever_set = {}
         self.__pending_events = {}
+        
+        init_handlers = property_values.pop('_init_handlers', True)
         
         # Init actions
         for name in self.__actions__:
@@ -135,6 +137,11 @@ class ComponentJS:
             value2 = self['_' + name + '_validate'](self[value_name])
             self[value_name] = value2
             self.emit(name, dict(new_value=value2, old_value=value2, mutation='set'))
+        for name in sorted(property_values):  # sort for deterministic order
+            if name in self.__properties__:
+                prop_setter_name = 'set_' + name
+                setter_func = getattr(self, prop_setter_name)
+                setter_func(property_values[name])
         
         # Init emitters
         for name in self.__emitters__:
