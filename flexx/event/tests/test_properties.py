@@ -98,7 +98,7 @@ def test_property_mutating():
 
 
 @run_in_both(MyObject)
-def test_property_defaults():
+def test_property_defaults1():
     """
     6
     xx
@@ -118,7 +118,7 @@ def test_property_defaults():
     
     try:
         MyObject(bar='yy')
-    except AttributeError:
+    except TypeError:
         print('fail ok')  # py and js
     print('end')
 
@@ -191,7 +191,7 @@ class MyDefaults2(MyDefaults):
 
 
 @run_in_both(MyDefaults)
-def test_property_defaults():
+def test_property_defaults2():
     """
     7
     True
@@ -216,7 +216,7 @@ def test_property_defaults():
 
 
 @run_in_both(MyDefaults2)
-def test_property_defaults2():
+def test_property_defaults3():
     """
     3.14
     hi
@@ -510,6 +510,11 @@ def test_property_not_settable():
 
 
 def test_property_python_only():
+    
+    # Fail multiple positional args
+    with raises(TypeError):
+        class MyObject2(event.Component):
+            foo = event.AnyProp(3, 4)
     
     # Fail on old syntax
     with raises(TypeError):

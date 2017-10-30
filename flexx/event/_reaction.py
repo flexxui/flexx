@@ -46,16 +46,13 @@ def reaction(*connection_strings):
                 print('hello %s %s' % (self.first_name, self.last_name))
     """
     if (not connection_strings):
-        raise RuntimeError('reaction() needs one or more arguments.')
+        raise TypeError('reaction() needs one or more arguments.')
     
     # Extract function if we can
     func = None
-    if callable(connection_strings[0]):
+    if len(connection_strings) == 1 and callable(connection_strings[0]):
         func = connection_strings[0]
-        connection_strings = connection_strings[1:]
-    elif callable(connection_strings[-1]):
-        func = connection_strings[-1]
-        connection_strings = connection_strings[:-1]
+        connection_strings = []
     
     for s in connection_strings:
         if not (isinstance(s, str) and len(s) > 0):
@@ -110,13 +107,14 @@ class ReactionDescriptor(BaseDescriptor):
     def local_connection_strings(self):
         """ List of connection strings that are local to the object.
         """
+        # This is used in e.g. flexx.app
         return [s for s in self._connection_strings if '.' not in s]
 
 
 class Reaction:
-    """ Reaction objects are wrappers around Component methods. They connected
+    """ Reaction objects are wrappers around Component methods. They connect
     to one or more events. This class should not be instantiated directly;
-    use ``event.reaction()`` or ``Component.connect()`` instead.
+    use ``event.reaction()`` or ``Component.reaction()`` instead.
     """
 
     _count = 0
@@ -255,7 +253,7 @@ class Reaction:
         if self._ob2 is not None:
             if self._ob2() is not None:
                 res = func(self._ob2(), *events)
-            else:
+            else:  # pragma: no cover
                 # We detected that the object that wants the events no longer exist
                 self.dispose()
                 return

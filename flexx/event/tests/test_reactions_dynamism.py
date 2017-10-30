@@ -117,9 +117,18 @@ def test_connectors2():
     with raises(RuntimeError):
         h = x.reaction(foo, 'sub.b')
     
+    # y.a is not a list, fail!
+    with raises(RuntimeError):
+        h = y.reaction(foo, 'a*.b')
+    
     # Mix it
     with capture_log('warning') as log:
+        h = x.reaction(foo, '!aa**')
+    with capture_log('warning') as log:
         h = x.reaction(foo, '!aa*')
+    assert not log
+    with capture_log('warning') as log:
+        h = y.reaction(foo, '!aa*')
     assert not log
     with capture_log('warning') as log:
         h = x.reaction(foo, '!aa**')
@@ -127,7 +136,6 @@ def test_connectors2():
     with capture_log('warning') as log:
         h = x.reaction(foo, '!aa**:meh')  # why not
     assert not log
-
 
 
 def test_dynamism_and_handler_reconnecting():

@@ -166,7 +166,7 @@ class TupleProp(Property):
             raise TypeError('%s property cannot accept %s.' %
                             (self.__class__.__name__, value.__class__.__name__))
         value = tuple(value)
-        if this_is_js():
+        if this_is_js():  # pragma: no cover
             # Cripple the object so in-place changes are harder. Note that we
             # cannot prevent setting or deletion of items.
             value.push = undefined

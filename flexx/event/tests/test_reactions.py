@@ -307,8 +307,27 @@ def test_reacion_using_react_func2():
     loop.iter()
 
 
-@run_in_both(MyObject2, js=False)  # not an issue in JS - no decorators there
+@run_in_both(MyObject2)
 def test_reacion_using_react_func3():
+    """
+    r foo:0->2, bar:7->2
+    """
+    class Foo:
+        def foo(self, *events):
+            print('r ' + ', '.join(['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
+    
+    f = Foo()
+    
+    m = MyObject2()
+    loop.iter()  # this is extra
+    m.reaction(f.foo, 'foo', 'bar')
+    m.set_foo(2)
+    m.set_bar(2)
+    loop.iter()
+
+
+@run_in_both(MyObject2, js=False)  # not an issue in JS - no decorators there
+def test_reacion_using_react_func4():
     """
     r foo:0->0, bar:7->7, foo:0->2, bar:7->2
     """
@@ -398,6 +417,41 @@ def test_reaction_exceptions2():
             pass
     assert 'not a tuple' in str(err)
 
+
+def test_reaction_decorator_fails():
+    
+    class Foo:
+        def foo(self, *events):
+            pass
+    
+    f = Foo()
+    
+    def foo(*events):
+        pass
+    
+    # Needs at least one argument
+    with raises(TypeError):
+        event.reaction()
+    
+    # Need a function
+    with raises(TypeError):
+        event.reaction('!foo')(3)
+        
+    # Need self argument
+    with raises(TypeError):
+        event.reaction('!foo')(foo)
+    
+    # Cannot be bound method
+    with raises(TypeError):
+        event.reaction('!foo')(f.foo)
+    
+
+def test_reaction_descriptor_has_local_connection_strings():
+    
+    m = MyObject1()
+    assert m.__class__.r1.local_connection_strings == ['!a']
+    
+    
 
 
 ## Meta-ish tests that are similar for property/emitter/action/reaction

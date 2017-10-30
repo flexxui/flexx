@@ -44,6 +44,9 @@ def test_dict_ok():
     
     d.x0123 = 7
     assert d.x0123 == 7
+    
+    with raises(AttributeError):
+        d.bladibla
 
 
 def test_dict_keys_that_are_methods():
@@ -56,7 +59,7 @@ def test_dict_keys_that_are_methods():
     assert d.copy != 3
     assert d['copy'] == 3
 
-
+    
 def test_dir_and_repr():
     
     d = event.Dict(foo=3, bar=4)
