@@ -212,7 +212,7 @@ class Parser1(Parser0):
             if isinstance(key, (ast.Str, ast.Num, ast.NameConstant)):
                 code += self.parse(key)
             else:
-                code += ['['] + self.parse(key) + [']']
+                code += ['['] + self.parse(key) + [']']  # this actually breaks on IE
             code.append(': ')
             code += self.parse(val)
             code.append(', ')
