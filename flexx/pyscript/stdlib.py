@@ -165,6 +165,7 @@ function (arg_names, arg_values, kwargs, strict) { // nargs: 3
         throw FUNCTION_PREFIXop_error('TypeError',
             'Function ' + strict + ' does not accept **kwargs.');
     }
+    return kwargs;
 }""".lstrip()
 
 

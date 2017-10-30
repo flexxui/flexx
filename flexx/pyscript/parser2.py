@@ -842,10 +842,6 @@ class Parser2(Parser1):
             if not (len(node.decorator_nodes) == 1 and
                     node.decorator_nodes[0].name == 'staticmethod'):
                 raise JSError('No support for function decorators')
-        if node.kwarg_nodes:
-            raise JSError('No support for keyword only arguments')
-        if node.kwargs_node:
-            raise JSError('No support for kwargs')
         
         # Prepare for content
         code.append(') {')
@@ -857,7 +853,64 @@ class Parser2(Parser1):
         for name in argnames:
             self.vars.add(name)
         
-        # Apply defaults
+        # Handle keyword arguments and kwargs
+        parse_kwargs = False
+        kw_argnames = set()  # variables that come from keyword args, or helper vars
+        if node.kwarg_nodes or node.kwargs_node:
+            parse_kwargs = True
+            # Collect names and default values
+            names, values = [], []
+            for arg in node.kwarg_nodes:
+                self.vars.add(arg.name)
+                kw_argnames.add(arg.name)
+                names.append("'%s'" % arg.name)
+                values.append(''.join(self.parse(arg.value_node)))
+            # Turn into string representation
+            names = '[' + ', '.join(names) + ']'
+            values = '[' + ', '.join(values) + ']'
+            # Write code to prepare for kwargs
+            if node.kwargs_node:
+                code.append(self.lf('%s = {};' % node.kwargs_node.name))
+            if node.kwarg_nodes:
+                values_var = self.dummy('kw_values')
+                kw_argnames.add(values_var)
+                code += [self.lf(values_var), ' = ', values, ';']
+            else:
+                values_var = values;
+            # Enter if to actually parse kwargs
+            code.append(self.lf(
+                "if (arguments.length == 1 && typeof arguments[0] == 'object' && "
+                "Object.keys(arguments[0]).toString() == 'flx_args,flx_kwargs') {"))
+            self._indent += 1
+            # Call function to parse args
+            code += [self.lf()]
+            if node.kwargs_node:
+                kw_argnames.add(node.kwargs_node.name)
+                self.vars.add(node.kwargs_node.name)
+                code += [node.kwargs_node.name, ' = ']
+            self.use_std_function('op_parse_kwargs', [])
+            code += [stdlib.FUNCTION_PREFIX + 'op_parse_kwargs(',
+                     names, ', ', values_var, ', arguments[0].flx_kwargs']
+            if not node.kwargs_node:
+                code.append(", '%s'" % func_name or 'anonymous')
+            code.append(');')
+            # Apply values of positional args
+            # inside if, because standard arguments are invalid
+            args_var = 'arguments[0].flx_args'
+            if len(node.arg_nodes) > 1:
+                args_var = self.dummy('args')
+                code.append(self.lf('%s = arguments[0].flx_args;' % args_var))
+            for i, arg in enumerate(node.arg_nodes):
+                code.append(self.lf('%s = %s[%i];' % (arg.name, args_var, i)))
+            # End if
+            self._indent -= 1
+            code.append(self.lf('}'))
+            # Apply values of keyword-only args
+            # outside if, because these need to be assigned always
+            for i, arg in enumerate(node.kwarg_nodes):
+                code.append(self.lf('%s = %s[%i];' % (arg.name, values_var, i)))
+        
+        # Apply defaults of positional arguments
         for arg in node.arg_nodes:
             if arg.value_node is not None:
                 name = arg.name
@@ -867,7 +920,10 @@ class Parser2(Parser1):
         
         # Handle varargs
         if node.args_node:
-            asarray = 'Array.prototype.slice.call(arguments)'
+            if parse_kwargs:
+                asarray = 'arguments[0].flx_args'
+            else:
+                asarray = 'Array.prototype.slice.call(arguments)'
             name = node.args_node.name  # always an ast.Arg
             self.vars.add(name)
             if not argnames:
@@ -878,6 +934,7 @@ class Parser2(Parser1):
                 # Slice it
                 code.append(self.lf('%s = %s.slice(%i);' %
                             (name, asarray, len(argnames))))
+        
         # Apply content
         if lambda_:
             code.append('return ')
@@ -901,9 +958,12 @@ class Parser2(Parser1):
         # Wrap up
         if lambda_:
             code.append('}%s' % binder)
-            # ns should only consist of arg names
+            # ns should only consist only of arg names (or helpers)
+            for name in argnames:
+                self.vars.discard(name)
             ns = self.pop_stack()
-            assert not set(ns).difference(argnames)
+            assert set(ns) == kw_argnames
+            pre_code.append(self.get_declarations(ns))
         else:
             if not (code and code[-1].strip().startswith('return ')):
                 code.append(self.lf('return null;'))

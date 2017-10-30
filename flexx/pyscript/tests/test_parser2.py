@@ -401,28 +401,53 @@ class TestFunctions:
         assert evalpy('def foo():pass\nprint(foo(), 1)') == 'null 1'
         assert evalpy('def foo():return\nprint(foo(), 1)') == 'null 1'
     
-    def test_func_calls(self):
+    def test_func_call_compilation(self):
         assert py2js('foo()') == 'foo();'
         assert py2js('foo(3, 4)') == 'foo(3, 4);'
         assert py2js('foo(3, 4+1)') == 'foo(3, 4 + 1);'
         assert py2js('foo(3, *args)')  # JS is complex, just test it compiles
         assert py2js('a.foo(3, *args)')  # JS is complex, just test it compiles
+
+    def test_simple_funcs_dont_parse_kwargs(self):
         
-        # Does not work
-        # raises(JSError, py2js, 'foo(x=1, y=2)')
-        # raises(JSError, py2js, 'foo(**kwargs)')
+        # Simplest function does not parse kwargs
+        code = py2js('def foo(): pass')
+        assert 'parse_kwargs' not in code
+        assert 'kw_values' not in code
         
-        code = "def foo(x): return x + 1\nd = {'foo':foo}\n"
-        assert evalpy(code + 'foo(3)') == '4'
-        assert evalpy(code + 'd.foo(3)') == '4'
+        # Also not with positional args
+        code = py2js('def foo(a, b, c): pass')
+        assert 'parse_kwargs' not in code
+        assert 'kw_values' not in code
         
-        code = "def foo(x, *xx): return x + sum(xx)\nd = {'foo':foo}\nfive=[2, 3]\n"
-        assert evalpy(code + 'foo(1, 2, 3)') == '6'
-        assert evalpy(code + 'd.foo(1, 2, 3)') == '6'
-        #
-        assert evalpy(code + 'foo(1, *five)') == '6'
-        assert evalpy(code + 'd.foo(1, *five)') == '6'
-    
+        # Also not with varargs
+        code = py2js('def foo(a, *c): pass')
+        assert 'parse_kwargs' not in code
+        assert 'kw_values' not in code
+        
+        # Also not with positional args that have defaults
+        code = py2js('def foo(a, b=1, c="foo"): pass')
+        assert 'parse_kwargs' not in code
+        assert 'kw_values' not in code
+        
+    def test_when_funcs_do_parse_kwargs(self):
+        
+        # We do for **kwargs
+        code = py2js('def foo(a, **c): pass')
+        assert 'parse_kwargs' in code
+        assert 'kw_values' not in code
+        
+        # We do for keyword only args
+        if sys.version_info > (3, ):
+            code = py2js('def foo(a, *, b=1, c="foo"): pass')
+            assert 'parse_kwargs' in code
+            assert 'kw_values' in code
+        
+        # We do for keyword only args and **kwargs
+        if sys.version_info > (3, ):
+            code = py2js('def foo(a, *, b=1, c="foo", **d): pass')
+            assert 'parse_kwargs' in code
+            assert 'kw_values' in code
     
     def test_func1(self):
         code = py2js(func1)
@@ -433,6 +458,90 @@ class TestFunctions:
         assert lines[2].startswith('  ')  # indented
         assert lines[3] == '};'  # dedented
     
+    
+    def test_function_call_simple(self):
+        code = "def foo(x): return x + 1\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(3)') == '4'
+        assert evalpy(code + 'd.foo(3)') == '4'
+    
+    def test_function_call_varargs(self):
+        code = "def foo(x, *xx): return x + sum(xx)\nd = {'foo':foo}\nfive=[2, 3]\n"
+        assert evalpy(code + 'foo(1, 2, 3)') == '6'
+        assert evalpy(code + 'd.foo(1, 2, 3)') == '6'
+        #
+        assert evalpy(code + 'foo(1, *five)') == '6'
+        assert evalpy(code + 'd.foo(1, *five)') == '6'
+    
+    def test_function_call_default_args(self):
+        code = "def foo(a=2, b=3, c=4): return a+b+c;\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(1, 2, 3)') == '6'
+        assert evalpy(code + 'd.foo(1, 2, 3)') == '6'
+        #
+        assert evalpy(code + 'foo(1, 2)') == '7'
+        assert evalpy(code + 'd.foo(1, 2)') == '7'
+        #
+        assert evalpy(code + 'foo(1)') == '8'
+        assert evalpy(code + 'd.foo(1)') == '8'
+        #
+        assert evalpy(code + 'foo()') == '9'
+        assert evalpy(code + 'd.foo()') == '9'
+    
+    @skipif(sys.version_info < (3,), reason='no keyword only args in legacy py')
+    def test_function_call_keyword_only_args(self):
+        code = "def foo(*, a=2, b=3, c=4): return a+b+c;\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(a=1, b=2, c=3)') == '6'
+        assert evalpy(code + 'd.foo(a=1, b=2, c=3)') == '6'
+        #
+        assert evalpy(code + 'foo(b=10)') == '16'
+        assert evalpy(code + 'd.foo(b=10)') == '16'
+        
+        # Also with varargs
+        code = "def foo(*x, a=2, b=3, c=4): return (sum(x) if x else 0) + a+b+c;\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(a=1, b=2, c=3)') == '6'
+        assert evalpy(code + 'd.foo(a=1, b=2, c=3)') == '6'
+        #
+        assert evalpy(code + 'foo(b=10)') == '16'
+        assert evalpy(code + 'd.foo(b=10)') == '16'
+        #
+        assert evalpy(code + 'foo(100, 200, b=10)') == '316'
+        assert evalpy(code + 'd.foo(100, 200, b=10)') == '316'
+        
+        # Cannot pass invalid kwargs
+        assert evalpy(code + 'try:\n  foo(d=4)\nexcept TypeError:\n  print("ha")') == 'ha'
+        assert evalpy(code + 'try:\n  d.foo(d=4)\nexcept TypeError:\n  print("ha")') == 'ha'
+        
+        # NOTE: if we use kwargs on a simple func, we just get weird args.
+        # Checking for this case adds overhead, and quite a bit of boilerplate code
+        code = "def foo(a=2): return a\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(a=3)') == '{ flx_args: [], flx_kwargs: { a: 3 } }'
+        assert evalpy(code + 'd.foo(a=3)') == '{ flx_args: [], flx_kwargs: { a: 3 } }'
+    
+    def test_function_call_kwargs(self):
+        code = "def foo(a, b=9, **x): return repr([a, b]) + repr(x);\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(1, 2)') == '[1,2]{}'
+        assert evalpy(code + 'foo(1, 2, 3)') == '[1,2]{}'  # 3d arg is ignored
+        assert evalpy(code + 'foo(1, b=3)') == '[1,9]{"b":3}'
+        assert evalpy(code + 'foo(1, b=3, c=4)') == '[1,9]{"b":3,"c":4}'
+        #
+        assert evalpy(code + 'd.foo(1, 2)') == '[1,2]{}'
+        assert evalpy(code + 'd.foo(1, b=3, c=4)') == '[1,9]{"b":3,"c":4}'
+    
+    @skipif(sys.version_info < (3,), reason='no keyword only args in legacy py')
+    def test_function_call_keyword_only_args_and_kwargs(self):
+        code = "def foo(*, a=3, b=4, **x): return repr([a, b]) + repr(x);\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(1)') == '[3,4]{}'
+        assert evalpy(code + 'foo(a=1, b=2)') == '[1,2]{}'
+        assert evalpy(code + 'foo(a=1, b=2, c=5)') == '[1,2]{"c":5}'
+        #
+        assert evalpy(code + 'd.foo(1)') == '[3,4]{}'
+        assert evalpy(code + 'd.foo(a=1, b=2, c=5)') == '[1,2]{"c":5}'
+        
+        # All the args
+        code = "def foo(a, b=2, *, c=3, **x): return repr([a, b, c]) + repr(x);\n"
+        assert evalpy(code + 'foo(1)') == '[1,2,3]{}'
+        assert evalpy(code + 'foo(1, b=8)') == '[1,2,3]{"b":8}'  # this one might be surprising
+        assert evalpy(code + 'foo(1, c=8)') == '[1,2,8]{}'
+        assert evalpy(code + 'foo(1, d=8)') == '[1,2,3]{"d":8}'
     
     def method1(self):
         return

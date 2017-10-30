@@ -445,7 +445,7 @@ class Parser1(Parser0):
                 start = ['.call(', base_name, ', '] 
             else:
                 start = ['(']
-            return start + ['{', 'args: ', args_array, ', kwargs: ', kwargs, '})']
+            return start + ['{', 'flx_args: ', args_array, ', flx_kwargs: ', kwargs, '})']
         elif args_simple is None:
             # Need to use apply
             return [".apply(", base_name, ', ', args_array, ")"]
