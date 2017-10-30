@@ -897,16 +897,18 @@ class Parser2(Parser1):
             # Apply values of positional args
             # inside if, because standard arguments are invalid
             args_var = 'arguments[0].flx_args'
-            if len(node.arg_nodes) > 1:
+            if len(argnames) > 1:
                 args_var = self.dummy('args')
                 code.append(self.lf('%s = arguments[0].flx_args;' % args_var))
-            for i, arg in enumerate(node.arg_nodes):
-                code.append(self.lf('%s = %s[%i];' % (arg.name, args_var, i)))
+            for i, name in enumerate(argnames):
+                code.append(self.lf('%s = %s[%i];' % (name, args_var, i)))
             # End if
             self._indent -= 1
             code.append(self.lf('}'))
             # Apply values of keyword-only args
             # outside if, because these need to be assigned always
+            # Note that we cannot use destructuring assignment because not all
+            # browsers support it (meh IE and Safari!)
             for i, arg in enumerate(node.kwarg_nodes):
                 code.append(self.lf('%s = %s[%i];' % (arg.name, values_var, i)))
         
