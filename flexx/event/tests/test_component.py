@@ -15,7 +15,14 @@ class Comp(event.Component):
 
 class Foo(event.Component):
     
+    spam = 3
+    eggs = [1, 2, 3]
+    
     a_prop = event.AnyProp(settable=True)
+
+
+class FooSubclass(Foo):
+    pass
 
 
 class Bar(event.Component):
@@ -40,7 +47,7 @@ class Bar(event.Component):
     
 
 @run_in_both(Foo, Bar, Comp)
-def test_component_class_attributes():
+def test_component_class_attributes1():
     """
     Component
     []
@@ -81,6 +88,28 @@ def test_component_class_attributes():
     print(c.__properties__)
 
 
+@run_in_both(Foo)
+def test_component_class_attributes2():
+    """
+    3
+    [1, 2, 3]
+    """
+    f = Foo()
+    print(f.spam)
+    print(f.eggs)
+
+
+@run_in_both(FooSubclass)
+def test_component_class_attributes3():
+    """
+    3
+    [1, 2, 3]
+    """
+    f = FooSubclass()
+    print(f.spam)
+    print(f.eggs)
+
+
 @run_in_both(Foo, Bar, Comp)
 def test_component_event_types():
     """
@@ -98,47 +127,57 @@ def test_component_event_types():
 
 
 
-
-
-def test_get_event_handlers():
+class Foo2(event.Component):
     
-    class Foo(event.Component):
-        
-        @event.reaction('x')
-        def spam(self, *events):
-            pass
-        
-        @event.reaction('x')
-        def eggs(self, *events):
-            pass
-            
-    foo = Foo()
-    @foo.reaction('x')
+    @event.reaction('!x')
+    def spam(self, *events):
+        pass
+    
+    @event.reaction('!x')
+    def eggs(self, *events):
+        pass
+
+
+@run_in_both(Foo2)
+def test_get_event_handlers():
+    """
+    ['bar', 'eggs', 'spam']
+    ['zz2', 'bar', 'eggs', 'spam', 'zz1']
+    []
+    fail ValueError
+    """
+    
+    foo = Foo2()
+    
     def bar(*events):
         pass
+    bar = foo.reaction('!x', bar)
     
     # sorted by label name
-    assert foo.get_event_handlers('x') == [bar, foo.eggs, foo.spam]
+    print([r.get_name() for r in foo.get_event_handlers('x')])
     
-    @foo.reaction('x')
     def zz1(*events):
         pass
-    @foo.reaction('x:a')
     def zz2(*events):
         pass
+    zz1 = foo.reaction('!x', zz1)
+    zz2 = foo.reaction('!x:a', zz2)
     
     # sorted by label name
-    assert foo.get_event_handlers('x') == [zz2, bar, foo.eggs, foo.spam, zz1]
+    print([r.get_name() for r in foo.get_event_handlers('x')])
     
     # Nonexisting event type is ok
-    assert foo.get_event_handlers('y') == []
+    print([r.get_name() for r in foo.get_event_handlers('y')])
     
     # No labels allowed
-    with raises(ValueError):
+    try:
         foo.get_event_handlers('x:a')
+    except ValueError:
+        print('fail ValueError')
 
 
 def test_that_methods_starting_with_on_are_not_autoconverted():
+    # Because we did that at some point
     
     # There is also a warning, but seems a bit of a fuzz to test
     class Foo(event.Component):

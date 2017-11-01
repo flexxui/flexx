@@ -7,6 +7,7 @@ import sys
 import weakref
 
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
+from flexx.event._both_tester import run_in_both, this_is_js
 from flexx.util.logging import capture_log
 
 from flexx import event
@@ -14,6 +15,473 @@ from flexx import event
 loop = event.loop
 logger = event.logger
 
+
+class Node(event.Component):
+    
+    val = event.IntProp(settable=True)
+    parent = event.ComponentProp(settable=True)
+    children = event.TupleProp(settable=True)
+    
+    @event.reaction('parent.val')
+    def handle_parent_val(self, *events):
+        xx = []
+        for ev in events:
+            if self.parent:
+                xx.append(self.parent.val)
+            else:
+                xx.append(None)
+        print('parent.val ' +  ', '.join([str(x) for x in xx]))
+    
+    @event.reaction('children*.val')
+    def handle_children_val(self, *events):
+        xx = []
+        for ev in events:
+            if isinstance(ev.new_value, (int, float)):
+                xx.append(ev.new_value)
+            else:
+                xx.append(None)
+        print('children.val ' + ', '.join([str(x) for x in xx]))
+
+
+@run_in_both(Node)
+def test_dynamism1():
+    """
+    parent.val 17
+    parent.val 18
+    parent.val 29
+    done
+    """
+    
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    loop.iter()
+    
+    with loop:  # does not get trigger, because n1.val was not set
+        n.set_parent(n1)
+        n.set_val(42)
+    with loop:
+        n1.set_val(17)
+        n2.set_val(27)
+    with loop:
+        n1.set_val(18)
+        n2.set_val(28)
+    with loop:  # does not trigger
+        n.set_parent(n2)
+    with loop:
+        n1.set_val(19)
+        n2.set_val(29)
+    with loop:
+        n.set_parent(None)
+    with loop:
+        n1.set_val(11)
+        n2.set_val(21)
+
+    print('done')
+
+
+@run_in_both(Node)
+def test_dynamism2a():
+    """
+    parent.val 17
+    parent.val 18
+    parent.val 29
+    [17, 18, 29]
+    """
+    
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    res = []
+    
+    def func(*events):
+        for ev in events:
+            if n.parent:
+                res.append(n.parent.val)
+            else:
+                res.append(None)
+    n.reaction(func, 'parent.val')
+    
+    loop.iter()
+    
+    with loop:  # does not get trigger, because n1.val was not set
+        n.set_parent(n1)
+        n.set_val(42)
+    with loop:
+        n1.set_val(17)
+        n2.set_val(27)
+    with loop:
+        n1.set_val(18)
+        n2.set_val(28)
+    with loop:  # does not trigger
+        n.set_parent(n2)
+    with loop:
+        n1.set_val(19)
+        n2.set_val(29)
+    with loop:
+        n.set_parent(None)
+    with loop:
+        n1.set_val(11)
+        n2.set_val(21)
+
+    print(res)
+
+
+@run_in_both(Node)
+def test_dynamism2b():
+    """
+    parent.val 17
+    parent.val 18
+    parent.val 29
+    [None, None, 17, 18, None, 29, None]
+    """
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    res = []
+    
+    def func(*events):
+        for ev in events:
+            if ev.type == 'val':
+                res.append(n.parent.val)
+            else:
+                res.append(None)
+    handler = n.reaction(func, 'parent', 'parent.val')  # also connect to parent
+    
+    loop.iter()
+    
+    with loop:  # does not get trigger, because n1.val was not set
+        n.set_parent(n1)
+        n.set_val(42)
+    with loop:
+        n1.set_val(17)
+        n2.set_val(27)
+    with loop:
+        n1.set_val(18)
+        n2.set_val(28)
+    with loop:  # does not trigger
+        n.set_parent(n2)
+    with loop:
+        n1.set_val(19)
+        n2.set_val(29)
+    with loop:
+        n.set_parent(None)
+    with loop:
+        n1.set_val(11)
+        n2.set_val(21)
+
+    print(res)
+
+
+@run_in_both(Node)
+def test_dynamism3():
+    """
+    children.val 17, 27
+    children.val 18, 28
+    children.val 29
+    done
+    """
+    
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    loop.iter()
+    
+    with loop:  # no trigger
+        n.set_children((n1, n2))
+        n.set_val(42)
+    with loop:
+        n1.set_val(17)
+        n2.set_val(27)
+    with loop:
+        n1.set_val(18)
+        n2.set_val(28)
+    with loop:  # no trigger
+        n.set_children((n2, ))
+    with loop:
+        n1.set_val(19)
+        n2.set_val(29)
+    with loop:
+        n.set_children(())
+    with loop:
+        n1.set_val(11)
+        n2.set_val(21)
+    print('done')
+
+
+@run_in_both(Node)
+def test_dynamism4a():
+    """
+    children.val 17, 27
+    children.val 18, 28
+    children.val 29
+    [17, 27, 18, 28, 29]
+    """
+    
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    res = []
+    
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                res.append(ev.new_value)
+            else:
+                res.append(None)
+    handler = n.reaction(func, 'children*.val')
+    
+    loop.iter()
+    
+    with loop:  # no trigger
+        n.set_children((n1, n2))
+        n.set_val(42)
+    with loop:
+        n1.set_val(17)
+        n2.set_val(27)
+    with loop:
+        n1.set_val(18)
+        n2.set_val(28)
+    with loop:  # no trigger
+        n.set_children((n2, ))
+    with loop:
+        n1.set_val(19)
+        n2.set_val(29)
+    with loop:
+        n.set_children(())
+    with loop:
+        n1.set_val(11)
+        n2.set_val(21)
+    print(res)
+
+
+@run_in_both(Node)
+def test_dynamism4b():
+    """
+    children.val 17, 27
+    children.val 18, 28
+    children.val 29
+    [None, None, 17, 27, 18, 28, None, 29, None]
+    """
+    
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    
+    res = []
+    
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                res.append(ev.new_value)
+            else:
+                res.append(None)
+    handler = n.reaction(func, 'children', 'children*.val')  # also connect children
+    
+    loop.iter()
+    
+    with loop:  # no trigger
+        n.set_children((n1, n2))
+        n.set_val(42)
+    with loop:
+        n1.set_val(17)
+        n2.set_val(27)
+    with loop:
+        n1.set_val(18)
+        n2.set_val(28)
+    with loop:  # no trigger
+        n.set_children((n2, ))
+    with loop:
+        n1.set_val(19)
+        n2.set_val(29)
+    with loop:
+        n.set_children(())
+    with loop:
+        n1.set_val(11)
+        n2.set_val(21)
+    print(res)
+
+
+@run_in_both(Node)
+def test_dynamism5a():
+    """
+    [0, 17, 18, 19]
+    """
+    
+    # connection strings with static attributes - no reconnect
+    n = Node()
+    n1 = Node()
+    n.foo = n1
+    
+    res = []
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                res.append(ev.new_value)
+            else:
+                res.append(None)
+    
+    # because the connection is fully resolved upon connecting, and at that time
+    # the object is still in its init stage, the handler does get the init event
+    # with value 0.
+    handler = n.reaction(func, 'foo.val')
+    loop.iter()
+    
+    with loop:
+        n.set_val(42)
+    with loop:
+        n1.set_val(17)
+        n1.set_val(18)
+    with loop:
+        n.foo = None  # no reconnect in this case
+    with loop:
+        n1.set_val(19)
+    print(res)
+
+
+@run_in_both(Node)
+def test_dynamism5b():
+    """
+    [17, 18, 19]
+    """
+    
+    # connection strings with static attributes - no reconnect
+    n = Node()
+    n1 = Node()
+    n.foo = n1
+    
+    res = []
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                res.append(ev.new_value)
+            else:
+                res.append(None)
+    
+    # But not now
+    loop.iter()  # <-- only change
+    handler = n.reaction(func, 'foo.val')
+    loop.iter()
+    
+    with loop:
+        n.set_val(42)
+    with loop:
+        n1.set_val(17)
+        n1.set_val(18)
+    with loop:
+        n.foo = None  # no reconnect in this case
+    with loop:
+        n1.set_val(19)
+    print(res)
+
+
+
+
+@run_in_both(Node)
+def test_deep1():
+    """
+    children.val 7
+    children.val 8
+    children.val 17
+    [7, 8, 17]
+    """
+    # deep connectors
+    
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    n.set_children((Node(), n1))
+    loop.iter()
+    n.children[0].set_children((Node(), n2))
+    loop.iter()
+    
+    res = []
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                if ev.new_value:
+                    res.append(ev.new_value)
+            else:
+                res.append(None)
+    handler = n.reaction(func, 'children**.val')
+    
+    loop.iter()
+    
+    # We want these
+    with loop:
+        n1.set_val(7)
+    with loop:
+        n2.set_val(8)
+    # But not these
+    with loop:
+        n.set_val(42)
+    with loop:
+        n1.set_children((Node(), Node()))
+        n.children[0].set_children([])
+    # again ...
+    with loop:
+        n1.set_val(17)
+    with loop:
+        n2.set_val(18)  # n2 is no longer in the tree
+    print(res)
+
+
+@run_in_both(Node)
+def test_deep2():
+    """
+    children.val 11
+    children.val 12
+    ['id12', 'id11', 'id10', 'id11']
+    """
+    # deep connectors - string ends in deep connector
+    
+    n = Node()
+    n1 = Node()
+    n2 = Node()
+    n.set_children((Node(), n1))
+    loop.iter()
+    n.children[0].set_children((Node(), n2))
+    loop.iter()
+    
+    res = []
+    def func(*events):
+        for ev in events:
+            if isinstance(ev.new_value, (float, int)):
+                res.append(ev.new_value)
+            elif ev.type == 'children':
+                if ev.source.val:
+                    res.append('id%i' % ev.source.val)
+            else:
+                res.append(None)
+    handler = n.reaction(func, 'children**')
+    
+    loop.iter()
+    
+    # Give val to id by - these should have no effect on res though
+    with loop:
+        n.set_val(10)
+    with loop:
+        n1.set_val(11)
+    with loop:
+        n2.set_val(12)
+    # Change children
+    with loop:
+        n2.set_children((Node(), Node(), Node()))
+        n1.set_children((Node(), Node()))
+        n.set_children((Node(), n1, Node()))
+    with loop:
+        n2.set_children([])  # no longer in the tree
+        n1.set_children([])
+    print(res)
+
+
+
+## Python only
 
 class MyComponent(event.Component):
     

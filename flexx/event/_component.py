@@ -78,6 +78,9 @@ def finalize_component_class(cls):
         if name.startswith('__'):
             continue
         val = getattr(cls, name)
+        if isinstance(val, type) and issubclass(val, Property):
+            raise TypeError('Properties should be instantiated, '
+                            'use ``foo = IntProp()`` instead of ``foo = IntProp``.')
         if isinstance(val, ActionDescriptor):
             actions[name] = val
         elif isinstance(val, Property):
@@ -251,7 +254,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         """
         self._disposed = True
         if not this_is_js():
-            logger.debug('Disposing Component instance %r' % self)
+            logger.debug('Disposing Component %r' % self)
         for name, handlers in self.__handlers.items():
             for label, handler in handlers:
                 handler._clear_component_refs(self)

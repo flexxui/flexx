@@ -169,7 +169,51 @@ def test_property_list_mutate():
     print(m.eggs)
 
 
-## Defaults and overloading
+@run_in_both(MyObject) 
+def test_property_persistance1():  # anyprop just sets, listProm makes a copy
+    """
+    []
+    []
+    [3, 4]
+    []
+    """
+    m = MyObject()
+    x = []
+    m.set_foo(x)
+    m.set_eggs(x)
+    loop.iter()
+    
+    print(m.foo)
+    print(m.eggs)
+    
+    x.extend([3, 4])
+    print(m.foo)
+    print(m.eggs)
+    
+
+@run_in_both(MyObject) 
+def test_property_persistance2():  # now we use the egg prop value itself
+    """
+    []
+    []
+    [3, 4]
+    [3, 4]
+    """
+    m = MyObject()
+    x = m.eggs  # <-- only difference
+    m.set_foo(x)
+    m.set_eggs(x)
+    loop.iter()
+    
+    print(m.foo)
+    print(m.eggs)
+    
+    x.extend([3, 4])
+    print(m.foo)
+    print(m.eggs)
+
+
+## Defaults and overloading/inheritance
 
 
 class MyDefaults(event.Component):
@@ -220,10 +264,16 @@ def test_property_defaults3():
     """
     3.14
     hi
+    7
+    b
     """
     m = MyDefaults2()
+    # From overloaded class
     print(m.floatprop2)
     print(m.stringprop2)
+    # From base class
+    print(m.anyprop2)
+    print(m.myprop2)
 
 
 ## All prop types
@@ -510,6 +560,11 @@ def test_property_not_settable():
 
 
 def test_property_python_only():
+    
+    # Fail component needs property instance, not class
+    with raises(TypeError):
+        class MyObject2(event.Component):
+            foo = event.AnyProp
     
     # Fail multiple positional args
     with raises(TypeError):

@@ -249,6 +249,36 @@ def test_reacion_init_fail1():
         logger.exception(err)
 
 
+## Inheritance, overloading, and super()
+
+class MyObjectSub(MyObject1):
+    
+    @event.reaction('!a', '!b')
+    def r2(self, *events):
+        super().r2(*events)
+        print('-- r2 sub')
+
+
+@run_in_both(MyObjectSub)
+def test_reaction_overloading1():
+    """
+    r1 a a
+    r2 a a
+    -- r2 sub
+    r2 b b
+    -- r2 sub
+    """
+    
+    m = MyObjectSub()
+    
+    with loop:
+        m.emit('a', {})
+        m.emit('a', {})
+    with loop:
+        m.emit('b', {})
+        m.emit('b', {})
+
+
 ## Reactions used not as decorators
 
 
@@ -357,7 +387,7 @@ def test_reaction_builtin_function():
 
 
 @run_in_both(MyObject1)
-def test_reaction_invoking():
+def test_reaction_calling():
     """
     r1 
     r2 

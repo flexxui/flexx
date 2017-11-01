@@ -180,7 +180,7 @@ def get_node_exe():
 
 _eval_count = 0
 
-def evaljs(jscode, whitespace=True, print_result=True):
+def evaljs(jscode, whitespace=True, print_result=True, extra_nodejs_args=None):
     """ Evaluate JavaScript code in Node.js.
     
     parameters:
@@ -190,11 +190,17 @@ def evaljs(jscode, whitespace=True, print_result=True):
         print_result (bool): whether to print the result of the evaluation.
             Default True. If False, larger pieces of code can be evaluated
             because we can use file-mode.
+        extra_nodejs_args (list): Extra command line args to pass to nodejs.
     
     returns:
         result (str): the last result as a string.
     """
     global _eval_count
+    
+    # Init command
+    cmd = [get_node_exe()]
+    if extra_nodejs_args:
+        cmd.extend(extra_nodejs_args)
     
     # Prepare command
     if len(jscode) > 2**14:
@@ -208,11 +214,11 @@ def evaljs(jscode, whitespace=True, print_result=True):
         filename = os.path.join(tempfile.gettempdir(), fname)
         with open(filename, 'wb') as f:
             f.write(jscode.encode())
-        cmd = [get_node_exe(), '--use_strict', filename]
+        cmd += ['--use_strict', filename]
     else:
         filename = None
         p_or_e = ['-p', '-e'] if print_result else ['-e']
-        cmd = [get_node_exe(), '--use_strict'] + p_or_e + [jscode]
+        cmd += ['--use_strict'] + p_or_e + [jscode]
         if sys.version_info[0] < 3:
             cmd = [c.encode('raw_unicode_escape') for c in cmd]
     

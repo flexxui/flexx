@@ -62,7 +62,7 @@ def call_func_in_py(func):
     return fake_stdout.getvalue().rstrip()
 
 
-def call_func_in_js(func, classes):
+def call_func_in_js(func, classes, extra_nodejs_args=None):
     # Collect base classes
     all_classes = []
     for cls in classes:
@@ -79,8 +79,8 @@ def call_func_in_js(func, classes):
     code += 'test();'
     nargs, function_deps, method_deps = get_std_info(code)
     code = get_partial_std_lib(function_deps, method_deps, []) + code
-    # Call
-    return evaljs(code, print_result=False)  # allow using file
+    # Call (allow using file)
+    return evaljs(code, print_result=False, extra_nodejs_args=extra_nodejs_args)
 
 
 def smart_compare(kinds, text1, text2, what=''):
@@ -121,7 +121,7 @@ def smart_compare(kinds, text1, text2, what=''):
 
 # todo: do I use the split option? If not, compare ref py and js in one go
 
-def run_in_both(*classes, js=True, py=True):
+def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
     """ Decorator to run a test in both Python and JS.
     
     The decorator should be provided with any Component classes that
@@ -162,10 +162,11 @@ def run_in_both(*classes, js=True, py=True):
                 #print('Py:\n' + pyresult)
             # Run in JS
             if js:
-                jsresult = call_func_in_js(func, classes)
+                jsresult = call_func_in_js(func, classes, extra_nodejs_args)
                 jsresult = jsresult.replace('[ ', '[').replace(' ]', ']')
                 jsresult = jsresult.replace('\n  ', ' ')
                 jsresult = jsresult.replace('"', "'").split('!!!!')[-1]
+                jsresult = jsresult.replace('null', 'None')
                 #print('JS:\n' + jsresult)
             if py:
                 smart_compare('rp', pyref, pyresult, func.__name__ + '() in Python')

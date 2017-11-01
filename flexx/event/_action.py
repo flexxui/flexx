@@ -52,7 +52,7 @@ class BaseDescriptor:
     """
     
     def __repr__(self):
-        t = '<%s %r(this should be a class attribute) at 0x%x>'
+        t = '<%s %r (this should be a class attribute) at 0x%x>'
         return t % (self.__class__.__name__, self._name, id(self))
 
     def __set__(self, obj, value):

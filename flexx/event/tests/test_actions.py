@@ -200,6 +200,32 @@ def test_action_subaction():
     print(m.foo)
 
 
+class MyObject4(event.Component):
+    
+    @event.action
+    def emitit(self):
+        self.emit('boe', dict(value=42))
+    
+    @event.reaction('!boe')
+    def on_boe(self, *events):
+        print([ev.value for ev in events])
+
+
+@run_in_both(MyObject4)
+def test_action_can_emit():
+    """
+    [42]
+    [42, 42]
+    """
+    m = MyObject4()
+    
+    with loop:
+        m.emitit()
+    with loop:
+        m.emitit()
+        m.emitit()
+
+
 ## Meta-ish tests that are similar for property/emitter/action/reaction
 
 

@@ -86,23 +86,6 @@ class LoopJS:  # pragma: no cover
         pass  # JS has threads, but worker threads are unlikely to touch this
 
 
-# todo: validate that these get cleaned up ... e.f. the on1 lambda is suspicious
-
-class ReactionJS:  # pragma: no cover
-    """ JS variant of the Reaction class.
-    """
-    
-    _COUNT = 0
-    
-    def __init__(self, func, ob, name, connection_strings):
-        Reaction.prototype._COUNT += 1
-        self._id = 'r' + str(self._COUNT)
-        self._func = func
-        self._ob1 = lambda: ob  # no weakref in JS
-        self._name = name
-        self._init(connection_strings, ob)
-
-
 class ComponentJS:  # pragma: no cover
     """ JS variant of the Component class.
     """
@@ -327,7 +310,6 @@ IGNORE = ('_integrate_qt', 'integrate_tornado', 'integrate_pyqt4', 'integrate_py
 # Generate the code
 JS_FUNCS = py2js(_mutate_array_js) + '\nvar mutate_array = _mutate_array_js;\n'
 JS_LOOP = _create_js_class(Loop, LoopJS, IGNORE) + '\nvar loop = new Loop();\n'
-# JS_REACTION = _create_js_class(Reaction, ReactionJS)
 JS_COMPONENT = _create_js_class(Component, ComponentJS)
 JS_EVENT = JS_FUNCS + JS_LOGGER + JS_LOOP + JS_COMPONENT
 

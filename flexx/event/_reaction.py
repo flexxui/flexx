@@ -154,7 +154,11 @@ class Reaction:
         """
         
         ichars = '0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        
+        # Init explicit connections: (connection-object, type) tuples
         self._connections = []
+        # Init implicit connections: (component, type) tuples
+        self._implicit_connections = []
         
         # Notes on connection strings:
         # * The string can have a "!" at the start to suppress warnings for
@@ -203,13 +207,6 @@ class Reaction:
             d.type = parts[-1].rstrip('*') + ':' + (label or self._name)
             d.force = force
             d.objects = []
-
-        # Pending events for this reaction
-        self._scheduled_update = False
-        self._pending = []  # pending events
-        
-        # Implicit connections
-        self._implicit_connections = []  # list of (component, type) tuples
         
         # Connect
         for index in range(len(self._connections)):
@@ -264,19 +261,22 @@ class Reaction:
     ## Connecting
 
     def dispose(self):
-        """ Cleanup any references.
-
-        Disconnects all connections, and cancel all pending events.
+        """ Disconnect all connections so that there are no more references
+        to components.
         """
+        if len(self._connections) + len(self._implicit_connections) == 0:
+            return
         if not this_is_js():
+            self._ob1 = lambda: None
             logger.debug('Disposing reaction %r ' % self)
+        while len(self._implicit_connections):
+            ob, type = self._implicit_connections.pop(0)
+            ob.disconnect(type, self)
         for connection in self._connections:
             while len(connection.objects):
                 ob, type = connection.objects.pop(0)
                 ob.disconnect(type, self)
         self._connections = []
-        while len(self._pending):
-            self._pending.pop()  # no list.clear on legacy py
     
     def _update_implicit_connections(self, connections):
         """ Update the list of implicit connections. Used by the loop.
@@ -298,10 +298,6 @@ class Reaction:
             for i in range(len(connection.objects)-1, -1, -1):
                 if connection.objects[i][0] is ob:
                     connection.objects.pop(i)
-
-        # Do not clear pending events. This reaction is assumed to continue
-        # working, and should thus handle its pending events at some point,
-        # at which point it cannot hold any references to ob anymore.
 
     def reconnect(self, index):
         """ (re)connect the index'th connection.
