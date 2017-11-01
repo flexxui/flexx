@@ -115,46 +115,49 @@ def finalize_component_class(cls):
 
 
 class Component(with_metaclass(ComponentMeta, object)):
-    """ Base class for objects that have properties and can emit events.
-    Initial values of settable properties can be provided by passing them
-    as keyword arguments.
+    """ Base component class.
+    
+    Components have properties, actions that can mutate properties, and
+    reactions that react to changes in properties and to other events.
+    
+    Initial values of properties can be provided by passing them
+    as keyword arguments. This only works if a corresponding ``set_xx()``
+    action is available.
     
     Objects of this class can emit events through their ``emit()``
-    method. Subclasses can use the
-    :func:`prop <flexx.event.prop>` and :func:`readonly <flexx.event.readonly>`
-    decorator to create properties, and the
-    :func:`connect <flexx.event.connect>` decorator to create reactions.
-    Methods named ``on_foo`` are connected to the event "foo".
+    method. Subclasses can use :func:`Property <flexx.event.Property>` to
+    define properties, and the  :func:`action <flexx.event.action>`, 
+    :func:`reaction <flexx.event.reaction>`, and 
+    :func:`emitter <flexx.event.emitter>` decorators to create actions,
+    reactions. and emitters, respectively. 
     
     .. code-block:: python
     
-        class MyObject(event.Component):
+        class MyComponent(event.Component):
             
-            # Emitters
-            
-            @event.prop
-            def foo(self, v=0):
-                return float(v)
+            foo = evene.FloatProp(7, settable=True)
             
             @event.emitter
             def bar(self, v):
                 return dict(value=v)  # the event to emit
             
-            # Reactions
+            @event.action
+            def inrease_foo(self):
+                self._mutate_foo(self.foo + 1)
             
-            @event.connect('foo')
-            def handle_foo(self, *events):
+            @event.reaction('foo')
+            def on_foo(self, *events):
                 print('foo was set to', events[-1].new_value)
             
-            @event.connect('bar')
+            @event.reaction('bar')
             def on_bar(self, *events):
                 for ev in events:
-                    print('bar event was generated')
+                    print('bar event was emitted')
         
-        ob = MyObject(foo=42)
+        ob = MyComponent(foo=42)
         
-        @ob.connect('foo')
-        def another_foo handler(*events):
+        @ob.reaction('foo')
+        def another_foo_reaction(*events):
             print('foo was set %i times' % len(events))
     
     """
@@ -176,7 +179,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         self.__props_ever_set = {}
         self.__pending_events = {}
         
-        init_handlers = property_values.pop('_init_handlers', True)
+        init_reactions = property_values.pop('_init_reactions', True)
         
         self._disposed = False
         
@@ -212,13 +215,13 @@ class Component(with_metaclass(ComponentMeta, object)):
             else:
                 raise AttributeError('%s does not have a property %r' % (cname, name))
         
-        # Init handlers and properties now, or later? --> feature for subclasses
-        if init_handlers:
-            self._init_handlers()
+        # Init reactions and properties now, or later? --> feature for subclasses
+        if init_reactions:
+            self._init_reactions()
     
-    def _init_handlers(self):
+    def _init_reactions(self):
         """ Initialize handlers and properties. You should only do this once,
-        and only when using the object is initialized with init_handlers=False.
+        and only when using the object is initialized with _init_reactions=False.
         """
         if self.__pending_events is None:
             return
@@ -226,11 +229,11 @@ class Component(with_metaclass(ComponentMeta, object)):
         def stop_capturing():
             self.__pending_events = None
         loop.call_later(stop_capturing)
-        # Call Python or JS version to initialize and connect the handlers
-        self._init_handlers2()
+        # Call Python or JS version to initialize and connect the reactions
+        self._init_reactions2()
     
-    def _init_handlers2(self):
-        # Instantiate handlers (i.e. resolve connections) its enough to reference them
+    def _init_reactions2(self):
+        # Instantiate reactions (i.e. resolve connections) its enough to reference them
         # the new_value attribute in the event is to trigger a reconnect.
         # Force implicit reactions to connect.
         for name in self.__reactions__:
@@ -248,36 +251,36 @@ class Component(with_metaclass(ComponentMeta, object)):
     def dispose(self):
         """ Use this to dispose of the object to prevent memory leaks.
         
-        Make all subscribed handlers to forget about this object, clear
-        all references to subscribed handlers, disconnect all handlers
+        Make all subscribed reactions forget about this object, clear
+        all references to subscribed reactions, disconnect all reactions
         defined on this object.
         """
         self._disposed = True
         if not this_is_js():
             logger.debug('Disposing Component %r' % self)
-        for name, handlers in self.__handlers.items():
-            for label, handler in handlers:
-                handler._clear_component_refs(self)
-            while len(handlers):
-                handlers.pop()  # no list.clear on legacy py
+        for name, reactions in self.__handlers.items():
+            for label, reaction in reactions:
+                reaction._clear_component_refs(self)
+            while len(reactions):
+                reactions.pop()  # no list.clear on legacy py
         for name in self.__reactions__:
             getattr(self, name).dispose()
     
-    def _handlers_changed_hook(self):
-        # Called when the handlers changed, can be implemented in subclasses
+    def _reactions_changed_hook(self):
+        # Called when the reactions changed, can be implemented in subclasses
         pass
     
-    def _register_reaction(self, event_type, handler, force=False):
-        # Register a handler for the given event type. The type
+    def _register_reaction(self, event_type, reaction, force=False):
+        # Register a reaction for the given event type. The type
         # can include a label, e.g. 'mouse_down:foo'.
-        # This is called from Handler objects at initialization and when
+        # This is called from Reaction objects at initialization and when
         # they reconnect (dynamism).
         type, _, label = event_type.partition(':')
-        label = label or handler._name
-        handlers = self.__handlers.get(type, None)
-        if handlers is None:  # i.e. type not in self.__handlers
-            handlers = []
-            self.__handlers[type] = handlers
+        label = label or reaction._name
+        reactions = self.__handlers.get(type, None)
+        if reactions is None:  # i.e. type not in self.__handlers
+            reactions = []
+            self.__handlers[type] = reactions
             if not force:  # ! means force
                 msg = ('Event type "{}" does not exist. ' +
                        'Use "!{}" or "!foo.bar.{}" to suppress this warning.')
@@ -286,49 +289,49 @@ class Component(with_metaclass(ComponentMeta, object)):
                     msg = msg.replace('exist.', 'exist on %s.' % self.id)  # Model
                 logger.warn(msg)
         
-        # Insert handler in good place (if not already in there) - sort as we add
-        comp1 = label + '-' + handler._id
-        for i in range(len(handlers)):
-            comp2 = handlers[i][0] + '-' + handlers[i][1]._id
+        # Insert reaction in good place (if not already in there) - sort as we add
+        comp1 = label + '-' + reaction._id
+        for i in range(len(reactions)):
+            comp2 = reactions[i][0] + '-' + reactions[i][1]._id
             if comp1 < comp2:
-                handlers.insert(i, (label, handler))
+                reactions.insert(i, (label, reaction))
                 break
             elif comp1 == comp2:
                 break  # already in there
         else:
-            handlers.append((label, handler))
+            reactions.append((label, reaction))
         
-        self._handlers_changed_hook()
+        self._reactions_changed_hook()
         
         # Emit any pending events
         if self.__pending_events is not None:
             if not label.startswith('reconnect_'):
                 for ev in self.__pending_events.get(type, []):
-                    loop.add_reaction_event(handler, ev)
+                    loop.add_reaction_event(reaction, ev)
     
-    def disconnect(self, type, handler=None):
-        """ Disconnect handlers. 
+    def disconnect(self, type, reaction=None):
+        """ Disconnect reactions. 
         
         Parameters:
-            type (str): the type for which to disconnect any handlers.
-                Can include the label to only disconnect handlers that
+            type (str): the type for which to disconnect any reactions.
+                Can include the label to only disconnect reactions that
                 were registered with that label.
-            handler (optional): the handler object to disconnect. If given,
-               only this handler is removed.
+            reaction (optional): the reaction object to disconnect. If given,
+               only this reaction is removed.
         """
-        # This is called from Handler objects when they dispose and when
+        # This is called from Reaction objects when they dispose and when
         # they reconnect (dynamism).
         type, _, label = type.partition(':')
-        handlers = self.__handlers.get(type, ())
-        for i in range(len(handlers)-1, -1, -1):
-            entry = handlers[i]
+        reactions = self.__handlers.get(type, ())
+        for i in range(len(reactions)-1, -1, -1):
+            entry = reactions[i]
             if not ((label and label != entry[0]) or
-                    (handler and handler is not entry[1])):
-                handlers.pop(i)
-        self._handlers_changed_hook()
+                    (reaction and reaction is not entry[1])):
+                reactions.pop(i)
+        self._reactions_changed_hook()
     
     def emit(self, type, info=None):
-        """ Generate a new event and dispatch to all event handlers.
+        """ Generate a new event and dispatch to all event reactions.
         
         Arguments:
             type (str): the type of the event. Should not include a label.
@@ -347,23 +350,20 @@ class Component(with_metaclass(ComponentMeta, object)):
         ev = Dict(info)  # make copy and turn into nicer Dict on py
         ev.type = type
         ev.source = self
-        # Push the event to the handlers (handlers use labels for dynamism)
+        # Push the event to the reactions (reactions use labels for dynamism)
         if self.__pending_events is not None:
             self.__pending_events.setdefault(ev.type, []).append(ev)
         # Register pending reactions
         # Reaction reconnections are applied directly; before a new event
         # occurs that the reaction might be subscribed to after the reconnect.
-        for label, handler in self.__handlers.get(ev.type, ()):
+        for label, reaction in self.__handlers.get(ev.type, ()):
             if label.startswith('reconnect_'):
                 index = int(label.split('_')[-1])
-                handler.reconnect(index)
+                reaction.reconnect(index)
             else:
-                loop.add_reaction_event(handler, ev)
+                loop.add_reaction_event(reaction, ev)
         return ev
     
-    # todo: make this public? It can only be called from actions anyway
-    # mmm, but we want to constrain its use to the class itself -> private
-    # this needs to be documented though!
     def _mutate(self, prop_name, value, mutation='set', index=-1):
         """ Main mutator function. Each Component class will also have an
         auto-generated mutator function for each property.
@@ -441,63 +441,10 @@ class Component(with_metaclass(ComponentMeta, object)):
             self.emit(prop_name, ev)
             return True
     
-    # todo: clean up
-    # def _sett_prop(self, prop_name, value, _initial=False):
-    #     """ Set the value of a (readonly) property.
-    #     
-    #     Parameters:
-    #         prop_name (str): the name of the property to set.
-    #         value: the value to set.
-    #     """
-    #     # Checks
-    #     if not isinstance(prop_name, str):
-    #         raise TypeError("_set_prop's first arg must be str, not %s" %
-    #                          prop_name.__class__)
-    #     if prop_name not in self.__properties__:
-    #         cname = self.__class__.__name__
-    #         raise AttributeError('%s object has no property %r' % (cname, prop_name))
-    #     prop_being_set = self.__props_being_set.get(prop_name, None)
-    #     if prop_being_set:
-    #         return
-    #     # Prepare
-    #     private_name = '_' + prop_name + '_value'
-    #     func_name = '_' + prop_name + '_func'  # set in init in both Py and JS
-    #     # Validate value
-    #     self.__props_being_set[prop_name] = True
-    #     self.__props_ever_set[prop_name] = True
-    #     func = getattr(self, func_name)
-    #     try:
-    #         if this_is_js():
-    #             value2 = func.apply(self, [value])
-    #         elif getattr(self.__class__, prop_name)._has_self:
-    #             value2 = func(self, value)
-    #         else:
-    #             value2 = func(value)
-    #     finally:
-    #         self.__props_being_set[prop_name] = False
-    #     # If not initialized yet, set
-    #     if prop_being_set is None:
-    #         setattr(self, private_name, value2)
-    #         self.emit(prop_name, dict(new_value=value2, old_value=value2))
-    #         return True
-    #     # Otherwise only set if value has changed
-    #     old = getattr(self, private_name)
-    #     if this_is_js():
-    #         is_equal = old == value2
-    #     elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):
-    #         import numpy as np
-    #         is_equal = np.array_equal(old, value2)
-    #     else:
-    #         is_equal = type(old) == type(value2) and old == value2
-    #     if not is_equal:
-    #         setattr(self, private_name, value2)
-    #         self.emit(prop_name, dict(new_value=value2, old_value=old))
-    #         return True
-    
     def get_event_types(self):
         """ Get the known event types for this HasEvent object. Returns
         a list of event type names, for which there is a
-        property/emitter or for which any handlers are registered.
+        property/emitter or for which any reactions are registered.
         Sorted alphabetically.
         """
         types = list(self.__handlers)  # avoid using sorted (one less stdlib func)
@@ -505,12 +452,12 @@ class Component(with_metaclass(ComponentMeta, object)):
         return types
     
     def get_event_handlers(self, type):
-        """ Get a list of handlers for the given event type. The order
+        """ Get a list of reactions for the given event type. The order
         is the order in which events are handled: alphabetically by
         label.
         
         Parameters:
-            type (str): the type of event to get handlers for. Should not
+            type (str): the type of event to get reactions for. Should not
                 include a label.
         
         """
@@ -520,14 +467,13 @@ class Component(with_metaclass(ComponentMeta, object)):
         if len(label):
             raise ValueError('The type given to get_event_handlers() '
                              'should not include a label.')
-        handlers = self.__handlers.get(type, ())
-        return [h[1] for h in handlers]
+        reactions = self.__handlers.get(type, ())
+        return [h[1] for h in reactions]
 
-    # This method does *not* get transpiled
     def reaction(self, *connection_strings):
-        """ Connect a function to one or more events of this instance. Can
-        also be used as a decorator. See the
-        :func:`connect <flexx.event.connect>` decorator for more information.
+        """ Create a reaction by connecting a function to one or more events of
+        this instance. Can also be used as a decorator. See the
+        :func:`reaction <flexx.event.reaction>` decorator for more information.
         
         .. code-block:: py
             
@@ -547,6 +493,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         """
         return self._reaction(*connection_strings)  # calls Py or JS version
     
+    # todo: remove this indirection?
     def _reaction(self, *connection_strings):
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
@@ -621,7 +568,7 @@ def _mutate_array_js(array, ev):  # pragma: no cover
     index = ev.index
     objects = ev.objects
     
-    if is_nd == True:
+    if is_nd is True:
         if mutation == 'set':
             raise NotImplementedError('Cannot set nd array in-place')
         elif mutation in ('extend', 'insert', 'remove'):

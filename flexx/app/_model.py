@@ -540,7 +540,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
             self.call_js('_new_event_type_hook("%s")' % event_type)
         return super()._register_handler(*args)
     
-    def _handlers_changed_hook(self):
+    def _reactions_changed_hook(self):
         if self._disposed:
             return
         handlers = self._HasEvents__handlers
@@ -708,7 +708,7 @@ class Model(with_metaclass(ModelMeta, event.HasEvents)):
                 txt = serializer.saves(value)
                 self._ws.send('SET_PROP ' + [self.id, name, txt].join(' '))
         
-        def _handlers_changed_hook(self):
+        def _reactions_changed_hook(self):
             handlers = self.__handlers
             types = [name for name in handlers.keys() if len(handlers[name])]
             text = serializer.saves(types)

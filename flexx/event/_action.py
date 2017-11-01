@@ -9,7 +9,8 @@ from . import logger
 
 
 def action(func):
-    """ Decorator to turn a Component's method into an action.
+    """ Decorator to turn a method of a Component into an
+    :class:`Action <flexx.event.Action>`.
     
     Actions change the state of the application by mutating properties.
     In fact, properties can only be changed via actions.
@@ -19,7 +20,7 @@ def action(func):
     time. The one exception is that when an action is invoked from anoher
     action, it is handled directly.
     
-    Although settable properties might seem nice, their use would mean
+    Although setting properties directly might seem nice, their use would mean
     that the state of the application can change while the app is *reacting*
     to changes in the state. This might be managable for small applications,
     but as an app grows this easily results in inconsistencies and bugs.
@@ -97,8 +98,11 @@ class ActionDescriptor(BaseDescriptor):
     
 
 class Action:
-    """ Action objects are wrappers around Component methods. They take care of
-    queueing action invokations rather than calling the function directly.
+    """ Action objects are wrappers around Component methods. They take
+    care of queueing action invokations rather than calling the function
+    directly, unless the action is called from another action (in this
+    case it would a direct call). This class should not be instantiated
+    directly; use ``event.action()`` instead.
     """
     
     def __init__(self, ob, func, name, doc):

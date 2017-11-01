@@ -9,7 +9,7 @@ undefined = None
 
 
 class Property(BaseDescriptor):
-    """ Base property class. Properties are readonly attributes associated
+    """ Base property class. Properties are (readonly) attributes associated
     with Component classes. Properties can be mutated by actions.
     The ``Property`` class can have any value, the other property classes
     validate/convert the value when it is mutated.
@@ -24,8 +24,8 @@ class Property(BaseDescriptor):
             bar = event.StringProp(doc='A property that can only be string')
             spam = event.IntProp(8, settable=True)
     
-    In the above example, one can see how the initial value can be specified.
-    If a omitted, a sensible default value is used. The docstring for the
+    In the example above, one can see how the initial value can be specified.
+    If omitted, a sensible default value is used. The docstring for the
     property can be provided using the ``doc`` keyword argument. The ``spam``
     property is marked as ``settable``; a ``set_spam()`` action is
     automatically generated.
@@ -238,6 +238,7 @@ class ComponentProp(Property):
 # class Array
 # class MinMax
 
+# NOTE: don't forget to add new property classes to the sphinx docs.
 
 __all__ = []
 for name, cls in list(globals().items()):

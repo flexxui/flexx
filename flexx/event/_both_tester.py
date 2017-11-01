@@ -8,7 +8,7 @@ during tests.
 
 import sys
 
-from ._loop import loop, this_is_js
+from ._loop import loop, this_is_js  # noqa - import from here by tests
 from ._component import Component
 from ._js import create_js_component_class, JS_EVENT
 
@@ -113,10 +113,12 @@ def smart_compare(kinds, text1, text2, what=''):
             for j in range(i1, i2):
                 linenr = str(j + 1).rjust(2, '0')
                 prefix = ' >> ' if j == i else '    '
-                msg += '{}{} {} {}'.format(refpfx, kinds[0], linenr,
-                                           lines1[j].replace(' ', '\xb7') + '\n')
-                msg += '{}{} {} {}'.format(prefix, kinds[1], linenr,
-                                           lines2[j].replace(' ', '\xb7') + '\n')
+                line1 = lines1[j].replace(' ', '\xb7')
+                line2 = lines2[j].replace(' ', '\xb7')
+                line1 = line1 if len(line1) < 65 else line1[:65] + '...'
+                line2 = line2 if len(line2) < 65 else line2[:65] + '...'
+                msg += '{}{} {} {}'.format(refpfx, kinds[0], linenr, line1 + '\n')
+                msg += '{}{} {} {}'.format(prefix, kinds[1], linenr, line2 + '\n')
             raise StdoutMismatchError('Text mismatch in %s:\n%s ' % (what, msg))
 
 # todo: do I use the split option? If not, compare ref py and js in one go

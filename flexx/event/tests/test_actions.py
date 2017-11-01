@@ -226,6 +226,51 @@ def test_action_can_emit():
         m.emitit()
 
 
+class RecursiveActions(event.Component):
+    
+    p1 = event.IntProp()
+    p2 = event.IntProp()
+    
+    @event.action
+    def set_p1(self, v):
+        self.set_p2(v + 1)
+        self._mutate_p1(v)
+    
+    @event.action
+    def set_p2(self, v):
+        self.set_p1(v - 1)
+        self._mutate_p2(v)
+
+
+@run_in_both(RecursiveActions)
+def test_property_recursive():
+    """
+    0 0
+    ? maximum
+    0 0
+    ? maximum
+    0 0
+    """
+    # What we really test is that we don't do anything to prevent action recursion :)
+    m = RecursiveActions()
+    loop.iter()
+    print(m.p1, m.p2)
+    
+    try:
+        m.set_p1(7)
+        loop.iter()
+    except Exception as err:
+        print(err)
+    print(m.p1, m.p2)
+    
+    try:
+        m.set_p2(18)
+        loop.iter()
+    except Exception as err:
+        print(err)
+    print(m.p1, m.p2)
+
+
 ## Meta-ish tests that are similar for property/emitter/action/reaction
 
 

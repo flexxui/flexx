@@ -25,7 +25,7 @@ def looks_like_method(func):
 
 
 def reaction(*connection_strings):
-    """ Decorator to turn a method of Component into a
+    """ Decorator to turn a method of a Component into a
     :class:`Reaction <flexx.event.Reaction>`.
 
     A method can be connected to multiple event types. Each connection
@@ -35,7 +35,7 @@ def reaction(*connection_strings):
 
     To connect functions or methods to an event from another Component
     object, use that object's
-    :func:`Component.connect()<flexx.event.Component.connect>` method.
+    :func:`Component.reaction() <flexx.event.Component.reaction>` method.
 
     .. code-block:: py
 
@@ -44,6 +44,13 @@ def reaction(*connection_strings):
             @event.reaction('first_name', 'last_name')
             def greet(self, *events):
                 print('hello %s %s' % (self.first_name, self.last_name))
+    
+    By not specifying any connection strings, you create an implicit
+    reaction: it is invoked automatically when any of the properties
+    used in the function changes. This is a convenient feature, but is
+    best avoided when a potentially large number of properties are
+    accessed, because the reconnection mechanism of implicit properties
+    is less efficient than that of explicit reactions.
     """
     if (not connection_strings):
         raise TypeError('reaction() needs one or more arguments.')

@@ -8,7 +8,8 @@ from ._action import BaseDescriptor
 
 
 def emitter(func):
-    """ Decorator to turn a Component's method into an emitter.
+    """ Decorator to turn a method of a Component into an
+    :class:`Emitter <flexx.event.Emitter>`.
     
     An emitter makes it easy to emit specific events, and is also a
     placeholder for documenting an event.
@@ -61,7 +62,10 @@ class EmitterDescriptor(BaseDescriptor):
 
 
 class Emitter:
-    """ Placeholder for emitter function.
+    """ Emitter objects are wrappers around Component methods. They take
+    care of emitting an event when called and function as a placeholder
+    for documenting an event. This class should not be instantiated
+    directly; use ``event.emitter()`` instead.
     """
     
     def __init__(self, ob, func, name, doc):

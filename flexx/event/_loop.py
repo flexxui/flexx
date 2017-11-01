@@ -182,7 +182,7 @@ class Loop:
         
         self.process_calls()
         self.process_actions()
-        # todo: while len(self._pending_reactions) > 0:
+        # todo: while len(self._pending_reactions) > 0? -- Seems not needed so far
         self.process_reactions()
     
     def process_calls(self):
