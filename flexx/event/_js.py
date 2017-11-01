@@ -131,11 +131,17 @@ class ComponentJS:  # pragma: no cover
         # Invoke initial set actions for properties
         for name in sorted(property_values):  # sort for deterministic order
             if name in self.__properties__:
+                value = property_values[name]
                 prop_setter_name = 'set_' + name
                 setter_func = getattr(self, prop_setter_name, None)
                 if setter_func is None:
                     raise TypeError('%s does not have a set_%s() action.' %
                                     (self._class_name, name))
+                elif callable(value):  # make a reaction
+                    setter_reaction = lambda: setter_func(value())
+                    ev = dict(source=self, type='', label='')
+                    r = self.__create_reaction(setter_reaction, 'auto-' + name, [])
+                    loop.add_reaction_event(r, ev)
                 else:
                     setter_func(property_values[name])
             else:

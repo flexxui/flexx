@@ -22,7 +22,11 @@ loop = event.loop
 logger = event.logger
 
 
-class MyObject(event.Component):
+
+## Implici reactions
+
+
+class MyObject1(event.Component):
     
     foo = event.IntProp(settable=True)
     bar = event.IntProp(7, settable=True)
@@ -32,7 +36,7 @@ class MyObject(event.Component):
         print(self.foo, self.bar)
 
 
-@run_in_both(MyObject)
+@run_in_both(MyObject1)
 def test_reacion_implicit():
     """
     init
@@ -44,7 +48,7 @@ def test_reacion_implicit():
     """
     
     print('init')
-    m = MyObject()
+    m = MyObject1()
     print(m.report.is_explicit())
     loop.iter()
     
@@ -64,6 +68,36 @@ def test_reacion_implicit():
     m.set_foo(4)
     loop.iter()
     print('end')
+
+
+class MyObject2(event.Component):
+    
+    bar = event.IntProp(7, settable=True)
+
+
+@run_in_both(MyObject2)
+def test_reaction_oneliner():
+    """
+    7
+    2
+    xx
+    2
+    3
+    """
+    
+    m1 = MyObject2(bar=2)
+    m2 = MyObject2(bar=lambda: m1.bar)
+    loop.iter()
+    print(m2.bar)
+    loop.iter()
+    print(m2.bar)
+    
+    print('xx')
+    m1.set_bar(3)
+    loop.iter()
+    print(m2.bar)
+    loop.iter()
+    print(m2.bar)
 
 
 run_tests_if_main()
