@@ -621,8 +621,8 @@ class Parser2(Parser1):
             code.append(lf('%s = %s;' % (name2, name1)))
         code.append(lf('if ((typeof %s === "object") && '
                        '(!Array.isArray(%s))) {' % (name2, name2)))
-        code.append(lf('    %s = Object.keys(%s);' % (name2, name2)))
-        code.append(lf('}'))
+        code.append(' %s = Object.keys(%s);' % (name2, name2))
+        code.append('}')
         return ''.join(code)
     
     def parse_While(self, node):

@@ -343,8 +343,9 @@ class Parser1(Parser0):
         test = ''.join(self.parse(node))
         if (False or test.endswith('.length') or test.startswith('!') or
                      test.isnumeric() or test == 'true' or test == 'false' or
-                     test.count('==') or test.count('>') or test.count(eq_name) or
-                     test == '"this_is_js()"' or
+                     test.count('==') or test.count('>') or test.count('<') or
+                     test.count(eq_name) or
+                     test == '"this_is_js()"' or test.startswith('Array.isArray(') or
                      (test.startswith(returning_bool) and '||' not in test)):
             return unify(test)
         else:
@@ -364,7 +365,7 @@ class Parser1(Parser0):
         left = unify(self.parse(node.left_node))
         right = unify(self.parse(node.right_node))
         
-        if node.op in (node.COMP.Eq, node.COMP.NotEq):
+        if node.op in (node.COMP.Eq, node.COMP.NotEq) and not left.endswith('.length'):
             code = self.use_std_function('op_equals', [left, right])
             if node.op == node.COMP.NotEq:
                 code = '!' + code
