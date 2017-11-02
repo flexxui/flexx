@@ -18,7 +18,7 @@ import re
 import sys
 import json
 
-from flexx.pyscript import JSString, py2js as py2js_
+from flexx.pyscript import JSString, RawJS, py2js as py2js_
 from flexx.pyscript.parser2 import get_class_definition
 
 from flexx.event._loop import Loop
@@ -103,8 +103,8 @@ class ComponentJS:  # pragma: no cover
     
     def __init__(self, **property_values):
         
-        Component.prototype._COUNT += 1
-        self._id = 'c' + str(Component.prototype._COUNT)
+        RawJS('Component.prototype._COUNT += 1')
+        self._id = RawJS("'c' + Component.prototype._COUNT")
         
         # Init some internal variables
         self.__handlers = {}  # reactions connecting to this component
@@ -115,17 +115,20 @@ class ComponentJS:  # pragma: no cover
         init_reactions = property_values.pop('_init_reactions', True)
         
         # Init actions
-        for name in self.__actions__:
+        for i in range(len(self.__actions__)):
+            name = self.__actions__[i]
             self.__create_action(self[name], name)
         
         # Init emitters
-        for name in self.__emitters__:
-            self.__handlers.setdefault(name, [])
+        for i in range(len(self.__emitters__)):
+            name = self.__emitters__[i]
+            self.__handlers[name] = []
             self.__create_emitter(self[name], name)
         
         # Init properties and their default value
-        for name in self.__properties__:
-            self.__handlers.setdefault(name, [])
+        for i in range(len(self.__properties__)):
+            name = self.__properties__[i]
+            self.__handlers[name] = []
             self.__create_property(name)
             # self._mutate(name, prop._default) but with shortcuts
             value_name = '_' + name + '_value'
@@ -159,18 +162,19 @@ class ComponentJS:  # pragma: no cover
     
     def _init_reactions2(self):
         # Create (and connect) reactions
-        for name in self.__reactions__:
+        for i in range(len(self.__reactions__)):
+            name = self.__reactions__[i]
             func = self[name]
             r = self.__create_reaction(func, name, func._connection_strings or ())
-            if not r.is_explicit():
+            if r.is_explicit() is False:
                 ev = dict(source=self, type='', label='')
                 loop.add_reaction_event(r, ev)
     
-    def _reaction(self, *connection_strings):
+    def reaction(self, *connection_strings):
         # The JS version (no decorator functionality)
         
         if len(connection_strings) < 2:
-            raise RuntimeError('connect() (js) needs a function and one or ' +
+            raise RuntimeError('Component.reaction() (js) needs a function and one or ' +
                                'more connection strings.')
         
         # Get callable
@@ -181,29 +185,33 @@ class ComponentJS:  # pragma: no cover
             func = connection_strings[-1]
             connection_strings = connection_strings[:-1]
         else:
-            raise TypeError('connect() decorator requires a callable.')
+            raise TypeError('Component.reaction() requires a callable.')
         
         # Verify connection strings
-        for s in connection_strings:
+        for i in range(len(connection_strings)):
+            s = connection_strings[i]
             if not (isinstance(s, str) and len(s)):
                 raise ValueError('Connection string must be nonempty strings.')
         
         # Get function name (Flexx sets __name__ on methods)
-        name = func.__name__ or func.name or 'anonymous'
-        name = name.split(' ')[-1].split('flx_')[-1]
+        name = RawJS("func.__name__ || func.name || 'anonymous'")
+        # name = name.split(' ')[-1].split('flx_')[-1]
+        nameparts = RawJS("name.split(' ')")
+        nameparts = RawJS("nameparts[nameparts.length-1].split('flx_')")
+        name = nameparts[-1]
         return self.__create_reaction_ob(func, name, connection_strings)
     
     def __create_action(self, action_func, name):
         # Keep a ref to the action func, which is a class attribute. The object
         # attribute with the same name will be overwritten with the property below.
         # Because the class attribute is the underlying function, super() works.
-        def action(*args):  # this func should return None, so super() works correct
-            if loop.is_processing_actions():
-                res = action_func.apply(self, args)
+        def action():  # this func should return None, so super() works correct
+            if loop.is_processing_actions() is True:
+                res = action_func.apply(self, arguments)
                 if res is not None:
                     logger.warn('Action (%s) is not supposed to return a value' % name)
             else:
-                loop.add_action_invokation(action, args)
+                loop.add_action_invokation(action, arguments)
         def getter():
             return action
         def setter(x):
@@ -226,8 +234,8 @@ class ComponentJS:  # pragma: no cover
     
     def __create_emitter(self, emitter_func, name):
         # Keep a ref to the emitter func, see comment in __create_action()
-        def func(*args):  # this func should return None, so super() works correct
-            ev = emitter_func.apply(self, args)
+        def func():  # this func should return None, so super() works correct
+            ev = emitter_func.apply(self, arguments)
             if ev is not None:
                 self.emit(name, ev)
         def getter():
@@ -253,16 +261,16 @@ class ComponentJS:  # pragma: no cover
         # Keep ref to the reaction function, see comment in create_action().
         
         # Create function that becomes our "reaction object"
-        def reaction(*events):
-            return reaction_func.apply(self, events)
+        def reaction():
+            return reaction_func.apply(self, arguments)  # arguments == events
         
         # Attach methods to the function object (this gets replaced)
         REACTION_METHODS_HOOK  # noqa
         
         # Init reaction
         that = self
-        Component.prototype._REACTION_COUNT += 1
-        reaction._id = 'r' + str(Component.prototype._REACTION_COUNT)
+        RawJS("Component.prototype._REACTION_COUNT += 1")
+        reaction._id = RawJS("'r' + Component.prototype._REACTION_COUNT")
         reaction._name = name
         reaction._ob1 = lambda : that  # no weakref in JS
         reaction._init(connection_strings, self)
@@ -465,7 +473,7 @@ if __name__ == '__main__':
         def react2foo(self):
             print(self.foo)
     
-    toprint = JS_COMPONENT  # or JS_LOOP JS_COMPONENT JS_EVENT
+    toprint = JS_EVENT  # or JS_LOOP JS_COMPONENT JS_EVENT
     print('-' * 80)
     print(toprint)  
     print('-' * 80)

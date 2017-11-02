@@ -2,6 +2,10 @@
 Implements the reaction decorator, class and desciptor.
 """
 
+# Note: there are some unusual constructs here, such as ``if xx is True``.
+# These are there to avoid inefficient JS code as this code is transpiled
+# using PyScript. This code is quite performance crirical.
+
 import weakref
 import inspect
 
@@ -179,8 +183,8 @@ class Reaction:
         #   list (a.k.a. a deep connector).
         # * Stripped of '*', each part must be a valid identifier.
         # * An extreme example: "!foo.bar*.spam.eggs**:meh"
-        
-        for fullname in connection_strings:
+        for ic in range(len(connection_strings)):
+            fullname = connection_strings[ic]
             # Separate label and exclamation mark from the string path
             force = fullname.startswith('!')
             s, _, label = fullname.lstrip('!').partition(':')
@@ -198,12 +202,12 @@ class Reaction:
                              'the very start, use "!%s" instead of "%s".' % (s, s0))
             # Check that all parts are identifiers
             parts = s.split('.')
-            for part in parts:
-                part = part.rstrip('*')
-                is_identifier = bool(part)
-                for c in part:
-                    is_identifier = is_identifier and (c in ichars)
-                if not is_identifier:
+            for ipart in range(len(parts)):
+                part = parts[ipart].rstrip('*')
+                is_identifier = len(part) > 0
+                for i in range(len(part)):
+                    is_identifier = is_identifier and (part[i] in ichars)
+                if is_identifier is False:
                     raise ValueError('Connection string %r contains '
                                      'non-identifier part %r' % (s, part))
             # Init connection
@@ -216,8 +220,8 @@ class Reaction:
             d.objects = []
         
         # Connect
-        for index in range(len(self._connections)):
-            self.reconnect(index)
+        for ic in range(len(self._connections)):
+            self.reconnect(ic)
 
     def __repr__(self):
         c = '+'.join([str(len(c.objects)) for c in self._connections])
@@ -271,7 +275,7 @@ class Reaction:
         """ Disconnect all connections so that there are no more references
         to components.
         """
-        if len(self._connections) + len(self._implicit_connections) == 0:
+        if len(self._connections) == 0 and len(self._implicit_connections) == 0:
             return
         if not this_is_js():
             self._ob1 = lambda: None
@@ -279,8 +283,9 @@ class Reaction:
         while len(self._implicit_connections):
             ob, type = self._implicit_connections.pop(0)
             ob.disconnect(type, self)
-        for connection in self._connections:
-            while len(connection.objects):
+        for ic in range(len(self._connections)):
+            connection = self._connections[ic]
+            while len(connection.objects) > 0:
                 ob, type = connection.objects.pop(0)
                 ob.disconnect(type, self)
         self._connections = []
@@ -301,7 +306,8 @@ class Reaction:
         called from a Component' dispose() method. This reaction remains
         working, but wont receive events from that object anymore.
         """
-        for connection in self._connections:
+        for ic in range(len(self._connections)):
+            connection = self._connections[ic]
             for i in range(len(connection.objects)-1, -1, -1):
                 if connection.objects[i][0] is ob:
                     connection.objects.pop(i)
@@ -322,7 +328,7 @@ class Reaction:
         new_objects = connection.objects
         
         # Verify
-        if not new_objects:
+        if len(new_objects) == 0:
             raise RuntimeError('Could not connect to %r' % connection.fullname)
         
         # Reconnect in a smart way
@@ -347,10 +353,12 @@ class Reaction:
             i2 -= 1
             i3 -= 1
         # Disconnect remaining old
-        for ob, type in old_objects[i1:i3+1]:
+        for i in range(i1, i3+1):
+            ob, type = old_objects[i]
             ob.disconnect(type, self)
         # Connect remaining new
-        for ob, type in new_objects[i1:i2+1]:
+        for i in range(i1, i2+1):
+            ob, type = new_objects[i]
             ob._register_reaction(type, self, force)
 
     def _seek_event_object(self, index, path, ob):
@@ -391,8 +399,8 @@ class Reaction:
         if len(selector) and selector in '***' and isinstance(new_ob, (tuple, list)):
             if len(selector) > 1:
                 path = [obname + '***'] + path  # recurse (avoid insert for space)
-            for sub_ob in new_ob:
-                self._seek_event_object(index, path, sub_ob)
+            for isub in range(len(new_ob)):
+                self._seek_event_object(index, path, new_ob[isub])
             return
         elif selector == '*':  # "**" is recursive, so allow more
             t = "Invalid connection {name_full} because {name} is not a tuple/list."

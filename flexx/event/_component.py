@@ -167,7 +167,6 @@ class Component(with_metaclass(ComponentMeta, object)):
      
     def __init__(self, **property_values):
         
-        # todo: perhaps use the mechanis that Model uses to make an id?
         Component._COUNT += 1
         self._id = 'c%i' % Component._COUNT  # to ensure a consistent event order
         
@@ -175,7 +174,6 @@ class Component(with_metaclass(ComponentMeta, object)):
         # reaction names for this class, and __handlers a dict of reactions
         # registered to events of this object.
         self.__handlers = {}
-        self.__props_being_set = {}
         self.__props_ever_set = {}
         self.__pending_events = {}
         
@@ -259,12 +257,12 @@ class Component(with_metaclass(ComponentMeta, object)):
         if not this_is_js():
             logger.debug('Disposing Component %r' % self)
         for name, reactions in self.__handlers.items():
-            for label, reaction in reactions:
-                reaction._clear_component_refs(self)
+            for i in range(len(reactions)):
+                reactions[i][1]._clear_component_refs(self)
             while len(reactions):
                 reactions.pop()  # no list.clear on legacy py
-        for name in self.__reactions__:
-            getattr(self, name).dispose()
+        for i in range(len(self.__reactions__)):
+            getattr(self, self.__reactions__[i]).dispose()
     
     def _reactions_changed_hook(self):
         # Called when the reactions changed, can be implemented in subclasses
@@ -306,8 +304,9 @@ class Component(with_metaclass(ComponentMeta, object)):
         # Emit any pending events
         if self.__pending_events is not None:
             if not label.startswith('reconnect_'):
-                for ev in self.__pending_events.get(type, []):
-                    loop.add_reaction_event(reaction, ev)
+                events = self.__pending_events.get(type, [])
+                for i in range(len(events)):
+                    loop.add_reaction_event(reaction, events[i])
     
     def disconnect(self, type, reaction=None):
         """ Disconnect reactions. 
@@ -356,7 +355,9 @@ class Component(with_metaclass(ComponentMeta, object)):
         # Register pending reactions
         # Reaction reconnections are applied directly; before a new event
         # occurs that the reaction might be subscribed to after the reconnect.
-        for label, reaction in self.__handlers.get(ev.type, ()):
+        reactions = self.__handlers.get(ev.type, ())
+        for i in range(len(reactions)):
+            label, reaction = reactions[i]
             if label.startswith('reconnect_'):
                 index = int(label.split('_')[-1])
                 reaction.reconnect(index)
@@ -389,28 +390,16 @@ class Component(with_metaclass(ComponentMeta, object)):
             cname = self.__class__.__name__
             raise AttributeError('%s object has no property %r' % (cname, prop_name))
         
-        if not loop.is_processing_actions():
+        if loop.is_processing_actions() is False:
             raise AttributeError('Trying to mutate a property outside of an action.')
-        
-        # todo: still needed?
-        # prop_being_set = self.__props_being_set.get(prop_name, None)
-        # if prop_being_set:
-        #     return
         
         # Prepare
         private_name = '_' + prop_name + '_value'
         validator_name = '_' + prop_name + '_validate'
-        self.__props_being_set[prop_name] = True
-        self.__props_ever_set[prop_name] = True
+        self.__props_ever_set[prop_name] = True  # todo: what was this for again?
         
         # Set / Emit
         value2 = value
-        # If not initialized yet, set
-        # if prop_being_set is None:
-        #     setattr(self, private_name, value2)
-        #     self.emit(prop_name, dict(new_value=value2, old_value=value2))
-        #     return True
-        # Otherwise only set if value has changed
         old = getattr(self, private_name)
         
         if mutation == 'set':
@@ -491,13 +480,10 @@ class Component(with_metaclass(ComponentMeta, object)):
             h.reaction('first_name', greet)
         
         """
-        return self._reaction(*connection_strings)  # calls Py or JS version
-    
-    # todo: remove this indirection?
-    def _reaction(self, *connection_strings):
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
-            raise RuntimeError('react() needs one or more connection strings.')
+            raise RuntimeError('Component.reaction() '
+                                'needs one or more connection strings.')
         
         func = None
         if callable(connection_strings[0]):
@@ -513,7 +499,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         
         def _react(func):
             if not callable(func):
-                raise TypeError('react() decorator requires a callable.')
+                raise TypeError('Component.reaction() decorator requires a callable.')
             if looks_like_method(func):
                 return ReactionDescriptor(func, connection_strings, self)
             else:

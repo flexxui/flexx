@@ -115,8 +115,8 @@ def smart_compare(kinds, text1, text2, what=''):
                 prefix = ' >> ' if j == i else '    '
                 line1 = lines1[j].replace(' ', '\xb7')
                 line2 = lines2[j].replace(' ', '\xb7')
-                line1 = line1 if len(line1) < 65 else line1[:65] + '...'
-                line2 = line2 if len(line2) < 65 else line2[:65] + '...'
+                line1 = line1 if len(line1) < 128 else line1[:127] + '…'
+                line2 = line2 if len(line2) < 128 else line2[:127] + '…'
                 msg += '{}{} {} {}'.format(refpfx, kinds[0], linenr, line1 + '\n')
                 msg += '{}{} {} {}'.format(prefix, kinds[1], linenr, line2 + '\n')
             raise StdoutMismatchError('Text mismatch in %s:\n%s ' % (what, msg))

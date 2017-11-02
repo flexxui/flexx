@@ -243,8 +243,8 @@ class Loop:
             self._pending_reaction_ids = {}
         
         # Process
-        for i in range(len(pending_reactions)):
-            reaction, _, events = pending_reactions[i]
+        for ir in range(len(pending_reactions)):
+            reaction, _, events = pending_reactions[ir]
             # Call reaction
             if len(events) > 0 or reaction.is_explicit() is False:
                 self._prop_access = {}
@@ -262,7 +262,7 @@ class Loop:
                     connections = []
                     for component_names in self._prop_access.values():
                         component = component_names[0]
-                        for name in component_names[1]:
+                        for name in component_names[1].keys():
                             connections.append((component, name))
                     reaction._update_implicit_connections(connections)
             except Exception as err:  # pragma: no cover
