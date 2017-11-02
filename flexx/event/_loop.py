@@ -3,6 +3,10 @@ Implementation of basic event loop object. Can be integrated a real
 event loop such as tornado or Qt.
 """
 
+# Note: there are some unusual constructs here, such as ``if xx is True``.
+# These are there to avoid inefficient JS code as this code is transpiled
+# using PyScript. This code is quite performance crirical.
+
 import sys
 import threading
 
@@ -66,7 +70,7 @@ class Loop:
     
     def _schedule_iter(self):
         # Make sure to call this with the lock
-        if not self._scheduled_call_to_iter:
+        if self._scheduled_call_to_iter is False:
             self._scheduled_call_to_iter = True
             self._calllaterfunc(self.iter)
     
@@ -94,9 +98,9 @@ class Loop:
         # _pending_reactions is a list of tuples (reaction, representing event, events)
         
         with self._lock:
-            self._ensure_thread_match()
+            self._does_thread_match(True)
             
-            if reaction.is_explicit():
+            if reaction.is_explicit() is True:
                 # For explicit reactions, we try to consolidate the events by
                 # appending the event to the existing item in the queue, but
                 # we don't want to break the order, i.e. we can only skip over
@@ -127,7 +131,7 @@ class Loop:
                     return
             
             # Add new item to queue
-            if reaction.is_explicit():
+            if reaction.is_explicit() is True:
                 self._pending_reactions.append([reaction, ev, [ev]])
             else:
                 self._pending_reactions.append([reaction, None, []])
@@ -152,8 +156,8 @@ class Loop:
         # reactions have really poor performance on Python 2.7 :)
         # Make sure not to count access from other threads
         if self._processing_reaction is not None:
-            if not self._processing_reaction.is_explicit():
-                if threading.get_ident() == self._last_thread_id:
+            if self._processing_reaction.is_explicit() is False:
+                if self._does_thread_match(False):
                     if component._id not in self._prop_access:
                         d = {}
                         self._prop_access[component._id] = component, d
@@ -163,13 +167,16 @@ class Loop:
 
     ## Queue processing
     
-    def _ensure_thread_match(self):
+    def _does_thread_match(self, fail):
         # Check that event loop is not run from multiple threads at once
         tid = threading.get_ident()
         if self._last_thread_id == 0:
             self._last_thread_id = tid
         elif self._last_thread_id != tid:  # pragma: no cover
-            raise RuntimeError('Flexx is supposed to run a single event loop at once.')
+            if not fail:
+                return False
+            raise RuntimeError('Flexx is supposed to run a single event loop a once.')
+        return True
     
     def iter(self):
         """ Do one event loop iteration; process pending calls,
@@ -178,7 +185,7 @@ class Loop:
         """
         with self._lock:
             self._scheduled_call_to_iter = False
-            self._ensure_thread_match()
+            self._does_thread_match(True)
         
         self.process_calls()
         self.process_actions()
@@ -190,7 +197,7 @@ class Loop:
         """
         # Select pending
         with self._lock:
-            self._ensure_thread_match()
+            self._does_thread_match(True)
             pending_calls = self._pending_calls
             self._pending_calls = []
         
@@ -207,7 +214,7 @@ class Loop:
         """
         # Select pending
         with self._lock:
-            self._ensure_thread_match()
+            self._does_thread_match(True)
             if process_one:
                 pending_actions = [self._pending_actions.pop(0)]
             else:
@@ -230,7 +237,7 @@ class Loop:
         """
         # Select pending
         with self._lock:
-            self._ensure_thread_match()
+            self._does_thread_match(True)
             pending_reactions = self._pending_reactions
             self._pending_reactions = []
             self._pending_reaction_ids = {}
@@ -239,7 +246,7 @@ class Loop:
         for i in range(len(pending_reactions)):
             reaction, _, events = pending_reactions[i]
             # Call reaction
-            if len(events) > 0 or not reaction.is_explicit():
+            if len(events) > 0 or reaction.is_explicit() is False:
                 self._prop_access = {}
                 self._processing_reaction = reaction
                 try:
@@ -251,7 +258,7 @@ class Loop:
             # Reconnect implicit reaction. The _update_implicit_connections()
             # method is pretty efficient if connections has not changed.
             try:
-                if not reaction.is_explicit():
+                if reaction.is_explicit() is False:
                     connections = []
                     for component_names in self._prop_access.values():
                         component = component_names[0]
