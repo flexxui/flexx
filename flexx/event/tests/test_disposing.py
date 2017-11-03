@@ -25,6 +25,10 @@ class MyComponent1(event.Component):
 
     def react2foo(self):
         self.foo + 1
+    
+    @event.reaction
+    def on_foo_implicit(self):
+        self.foo
 
 
 class MyComponent2(event.Component):
@@ -43,6 +47,21 @@ class MyComponent3(event.Component):
     @event.reaction
     def react2foo(self):
         print('foo is', self.foo)
+
+
+class MyComponent4(event.Component):
+    
+    foo = event.IntProp(settable=True)
+    other = event.ComponentProp(settable=True)
+    
+    @event.reaction('other.foo')
+    def on_foo_explicit(self, *events):
+        print('other foo is', events[-1].new_value)
+    
+    @event.reaction
+    def on_foo_implicit(self):
+        if self.other is not None:
+            print('other foo is implicit', self.other.foo)
 
 
 @run_in_both(MyComponent2)
@@ -137,6 +156,54 @@ def test_disposing_disconnects3():
     
     m.dispose()
     m.set_foo(2)
+    loop.iter()
+    
+    print('xx')
+
+
+@run_in_both(MyComponent4)
+def test_disposing_disconnects4():
+    """
+    other foo is implicit 0
+    other foo is 1
+    other foo is implicit 1
+    other foo is 2
+    xx
+    other foo is implicit 0
+    other foo is 1
+    other foo is implicit 1
+    xx
+    """
+    # This one tests where reaction and prop are on different objects
+    
+    m1 = MyComponent4()
+    m2 = MyComponent4()
+    m1.set_other(m2)
+    loop.iter()
+    
+    m2.set_foo(1)
+    loop.iter()
+    
+    m1.on_foo_implicit.dispose()
+    m2.set_foo(2)
+    loop.iter()
+    
+    m1.on_foo_explicit.dispose()
+    m2.set_foo(3)
+    loop.iter()
+    
+    print('xx')
+    
+    m1 = MyComponent4()
+    m2 = MyComponent4()
+    m1.set_other(m2)
+    loop.iter()
+    
+    m2.set_foo(1)
+    loop.iter()
+    
+    m2.dispose()
+    m2.set_foo(2)
     loop.iter()
     
     print('xx')
@@ -458,6 +525,73 @@ def test_disposing_handler4():
     loop.iter()
     gc.collect()
     assert foo_ref() is None
+
+
+
+def test_disposing_handler5():
+    """ explicit reactions need cleaning. """ 
+    
+    m1 = MyComponent4()
+    m2 = MyComponent4()
+    m1.set_other(m2)
+    
+    loop.iter()
+    
+    # Simply deleteing does not work, obviously
+    m2_ref = weakref.ref(m2)
+    del m2
+    gc.collect()
+    assert m2_ref() is not None
+    
+    # But disposing and removing ref works
+    m2_ref().dispose()
+    m1.set_other(None)
+    loop.iter()
+    gc.collect()
+    assert m2_ref() is None
+
+
+def test_disposing_handler6():
+    """ explicit reactions need cleaning, done proper """ 
+    
+    class TestComponent1(event.Component):
+        
+        foo = event.IntProp()
+    
+    class TestComponent2(event.Component):
+        
+        def __init__(self, other):
+            self.other = other
+            super().__init__()
+        
+        @event.reaction('!other.foo')
+        def handler1(self, *events):  # explicit
+            print('explicit', events[-1].new_value)
+        
+        @event.reaction
+        def handler2(self):  # implicit
+            if self.other:
+                print('implicit', self.other.foo)
+    
+    m1 = TestComponent1()  # the object we want to get rid of
+    m2 = TestComponent2(m1)  # the object holding on to it
+    loop.iter()
+    
+    loop.iter()
+    
+    # Simply deleting does not work, obviously
+    m1_ref = weakref.ref(m1)
+    del m1
+    gc.collect()
+    loop.iter()
+    assert m1_ref() is not None
+    
+    # But disposing works
+    m1_ref().dispose()
+    m2.other = None
+    loop.iter()
+    gc.collect()
+    assert m1_ref() is None
 
 
 def test_disposing_emitter():

@@ -98,7 +98,7 @@ class Loop:
         # _pending_reactions is a list of tuples (reaction, representing event, events)
         
         with self._lock:
-            self._does_thread_match(True)
+            self._thread_match(True)
             
             if reaction.is_explicit() is True:
                 # For explicit reactions, we try to consolidate the events by
@@ -157,7 +157,7 @@ class Loop:
         # Make sure not to count access from other threads
         if self._processing_reaction is not None:
             if self._processing_reaction.is_explicit() is False:
-                if self._does_thread_match(False):
+                if self._thread_match(False):
                     if component._id not in self._prop_access:
                         d = {}
                         self._prop_access[component._id] = component, d
@@ -167,7 +167,7 @@ class Loop:
 
     ## Queue processing
     
-    def _does_thread_match(self, fail):
+    def _thread_match(self, fail):
         # Check that event loop is not run from multiple threads at once
         tid = threading.get_ident()
         if self._last_thread_id == 0:
@@ -185,7 +185,7 @@ class Loop:
         """
         with self._lock:
             self._scheduled_call_to_iter = False
-            self._does_thread_match(True)
+            self._thread_match(True)
         
         self.process_calls()
         self.process_actions()
@@ -197,7 +197,7 @@ class Loop:
         """
         # Select pending
         with self._lock:
-            self._does_thread_match(True)
+            self._thread_match(True)
             pending_calls = self._pending_calls
             self._pending_calls = []
         
@@ -209,17 +209,18 @@ class Loop:
             except Exception as err:
                 logger.exception(err)
     
-    def process_actions(self, process_one=False):
+    def process_actions(self, n=None):
         """ Process all (or just one) pending actions.
         """
         # Select pending
         with self._lock:
-            self._does_thread_match(True)
-            if process_one:
-                pending_actions = [self._pending_actions.pop(0)]
-            else:
+            self._thread_match(True)
+            if n is None:
                 pending_actions = self._pending_actions
                 self._pending_actions = []
+            else:
+                pending_actions = self._pending_actions[:n]
+                self._pending_actions = self._pending_actions[n:]
         
         # Process
         for i in range(len(pending_actions)):
@@ -237,7 +238,7 @@ class Loop:
         """
         # Select pending
         with self._lock:
-            self._does_thread_match(True)
+            self._thread_match(True)
             pending_reactions = self._pending_reactions
             self._pending_reactions = []
             self._pending_reaction_ids = {}
@@ -289,7 +290,7 @@ class Loop:
                 self._calllaterfunc(self.iter)
             else:
                 raise ValueError('call_later_func must be a function')
-        elif 'tornado' in sys.modules:
+        elif 'tornado' in sys.modules:  # pragma: no cover
             self.integrate_tornado()
         elif 'PyQt4.QtGui' in sys.modules:  # pragma: no cover
             self.integrate_pyqt4()

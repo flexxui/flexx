@@ -383,6 +383,31 @@ def test_reaction_builtin_function():
     foo.reaction('!bar', print)  # this should not error
 
 
+## Reactions as decorators on other components
+
+# not in both
+def test_reaction_as_decorator_of_other_cls():
+    
+    class C1(event.Component):
+        foo = event.AnyProp(settable=True)
+    
+    c1 = C1()
+    
+    class C2(event.Component):
+        
+        @c1.reaction('foo')
+        def on_foo(self, *events):
+            print('x')
+            self.xx = events[-1].new_value
+    
+    c2 = C2()
+    loop.iter()
+    c1.set_foo(3)
+    loop.iter()
+    
+    assert c2.xx == 3
+
+
 ## Misc
 
 

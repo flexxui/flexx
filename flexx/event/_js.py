@@ -29,7 +29,7 @@ from flexx.event._emitter import EmitterDescriptor
 from flexx.event._component import Component, _mutate_array_js
 
 
-Object = Date = console = setTimeout = loop = logger = None  # fool pyflake
+Object = console = setTimeout = loop = logger = arguments = None  # fool pyflake
 undefined = 'UNDEFINED'
 reprs = json.dumps
 
@@ -78,7 +78,7 @@ class LoopJS:  # pragma: no cover
     integrate_pyqt4 = undefined
     integrate_pyside = undefined
     _integrate_qt = undefined
-    _does_thread_match = undefined
+    _thread_match = undefined
     
     def __init__(self):
         self.reset()
@@ -174,8 +174,8 @@ class ComponentJS:  # pragma: no cover
         # The JS version (no decorator functionality)
         
         if len(connection_strings) < 2:
-            raise RuntimeError('Component.reaction() (js) needs a function and one or ' +
-                               'more connection strings.')
+            raise RuntimeError('Component.reaction() (js) needs a function and '
+                               'one or more connection strings.')
         
         # Get callable
         if callable(connection_strings[0]):
@@ -309,12 +309,14 @@ def _create_js_class(PyClass, JSClass):
     # Optimizations, e.g. remove threading lock context in Loop
     if PyClass is Loop:
         p = r"this\._lock\.__enter.+?try {(.+?)} catch.+?else.+?exit__.+?}"
-        jscode= re.sub(p, r'{/* with lock */\1}', jscode, 0, re.MULTILINE | re.DOTALL)
-        jscode= re.sub(r'\$Loop\..+? = undefined;\n', r'', jscode, 0, re.MULTILINE | re.DOTALL)
+        jscode= re.sub(p, r'{/* with lock */\1}', jscode, 0,
+                       re.MULTILINE | re.DOTALL)
+        jscode= re.sub(r'\$Loop\..+? = undefined;\n', r'', jscode, 0,
+                       re.MULTILINE | re.DOTALL)
         jscode = jscode.replace('this._ensure_thread_', '//this._ensure_thread_')
         jscode = jscode.replace('threading.get_ident()', '0')
-        jscode = jscode.replace('this._does_thread_match(true);\n', '')
-        jscode = jscode.replace('if (_pyfunc_truthy(this._does_thread_match(false)))', '')
+        jscode = jscode.replace('this._thread_match(true);\n', '')
+        jscode = jscode.replace('if (_pyfunc_truthy(this._thread_match(false)))', '')
     
     # Almost done
     jscode = jscode.replace('new Dict()', '{}').replace('new Dict(', '_pyfunc_dict(')

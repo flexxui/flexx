@@ -32,7 +32,7 @@ def with_metaclass(meta, *bases):
     return type.__new__(metaclass, tmp_name, (), {})
 
 
-def new_type(name, *args, **kwargs):
+def new_type(name, *args, **kwargs):  # pragma: no cover
     """ Alternative for type(...) to be legacy-py compatible.
     """
     name = name.encode() if sys.version_info[0] == 2 else name
@@ -221,7 +221,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         """ Initialize handlers and properties. You should only do this once,
         and only when using the object is initialized with _init_reactions=False.
         """
-        if self.__pending_events is None:
+        if self.__pending_events is None:  # pragma: no cover
             return
         # Schedule a call to disable event capturing
         def stop_capturing():
@@ -280,11 +280,9 @@ class Component(with_metaclass(ComponentMeta, object)):
             reactions = []
             self.__handlers[type] = reactions
             if not force:  # ! means force
-                msg = ('Event type "{}" does not exist. ' +
-                       'Use "!{}" or "!foo.bar.{}" to suppress this warning.')
-                msg = msg.replace('{}', type)
-                if hasattr(self, 'id'):
-                    msg = msg.replace('exist.', 'exist on %s.' % self.id)  # Model
+                msg = ('Event type "{type}" does not exist on component {id}. ' +
+                       'Use "!{type}" or "!xx.yy.{type}" to suppress this warning.')
+                msg = msg.replace('{type}', type).replace('{id}', self._id)
                 logger.warn(msg)
         
         # Insert reaction in good place (if not already in there) - sort as we add
@@ -404,9 +402,9 @@ class Component(with_metaclass(ComponentMeta, object)):
         
         if mutation == 'set':
             # Normal setting of a property
-            if this_is_js():
+            if this_is_js():  # pragma: no cover
                 is_equal = old == value2
-            elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):
+            elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):  # pragma: no cover
                 import numpy as np
                 is_equal = np.array_equal(old, value2)
             else:
@@ -450,7 +448,7 @@ class Component(with_metaclass(ComponentMeta, object)):
                 include a label.
         
         """
-        if not type:
+        if not type:  # pragma: no cover - this is mostly since js allows missing args
             raise TypeError('get_event_handlers() missing "type" argument.')
         type, _, label = type.partition(':')
         if len(label):
@@ -498,7 +496,7 @@ class Component(with_metaclass(ComponentMeta, object)):
                 raise ValueError('Connection string must be nonempty string.')
         
         def _react(func):
-            if not callable(func):
+            if not callable(func):  # pragma: no cover
                 raise TypeError('Component.reaction() decorator requires a callable.')
             if looks_like_method(func):
                 return ReactionDescriptor(func, connection_strings, self)
@@ -513,21 +511,24 @@ class Component(with_metaclass(ComponentMeta, object)):
 
 def _mutate_array_py(array, ev):
     """ Logic to mutate an list-like or array-like property in-place, in Python.
+    ev must be a dict with elements:
+    * mutation: 'set', 'insert', 'remove' or 'replace'.
+    * objects: the values to set/insert/replace, or the number of iterms to remove.
+    * index: the (non-negative) index to insert/replace/remove at.
     """
     is_nd = hasattr(array, 'shape') and hasattr(array, 'dtype')
-    mutation = ev.mutation
-    index = ev.index
-    objects = ev.objects
+    mutation = ev['mutation']
+    index = ev['index']
+    objects = ev['objects']
     
     if is_nd:
-        if mutation == 'set':
+        if mutation == 'set':  # pragma: no cover
             raise NotImplementedError('Cannot set numpy array in-place')
-        elif mutation in ('extend', 'insert', 'remove'):
+        elif mutation in ('extend', 'insert', 'remove'):  # pragma: no cover
             raise NotImplementedError('Cannot resize numpy arrays')
         elif mutation == 'replace':
             if isinstance(index, tuple):  # nd-replacement
-                # todo: untested
-                slices = tuple(slice(index[i], index[i] + objects.shape[i])
+                slices = tuple(slice(index[i], index[i] + objects.shape[i], 1)
                                for i in range(len(index)))
                 array[slices] = objects
             else:

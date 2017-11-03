@@ -69,6 +69,47 @@ def test_action_simple():
 
 
 @run_in_both(MyObject)
+def test_action_one_by_one():
+    """
+    None
+    hi
+    there
+    42
+    42
+    xx
+    bar
+    0
+    """
+    
+    m = MyObject()
+    print(m.foo)
+    
+    m.set_foo("hi")
+    m.set_foo("there")
+    m.set_foo(42)
+    
+    loop.process_actions(1)  # process one
+    print(m.foo)
+    loop.process_actions(1)  # process one
+    print(m.foo)
+    loop.process_actions(1)  # process one
+    print(m.foo)
+    loop.process_actions(1)  # process one
+    print(m.foo)
+    
+    print('xx')
+    
+    m.set_foo("foo")
+    m.set_foo("bar")
+    m.set_foo(0)
+    
+    loop.process_actions(2)  # process two
+    print(m.foo)
+    loop.process_actions(2)  # process two
+    print(m.foo)
+
+
+@run_in_both(MyObject)
 def test_action_init():
     """
     True

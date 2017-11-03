@@ -115,6 +115,7 @@ def test_emitter_fail():
     """
     fail TypeError
     fail TypeError
+    fail ValueError
     """
     
     m = MyObject()
@@ -128,6 +129,11 @@ def test_emitter_fail():
         m.foo('bla')
     except TypeError:
         print('fail TypeError')
+    
+    try:
+        m.emit('bla:x')
+    except ValueError:
+        print('fail ValueError')
 
 
 ## Meta-ish tests that are similar for property/emitter/action/reaction

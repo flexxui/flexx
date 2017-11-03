@@ -150,6 +150,7 @@ def test_property_list_mutate():
     [1, 2, 3, 4, 5, 6, 7, 8]
     [1, 2, 3, 44, 55, 66, 7, 8]
     [1, 2, 3, 7, 8]
+    fail IndexError
     """
     m = MyObject()
     print(m.eggs)
@@ -167,6 +168,11 @@ def test_property_list_mutate():
     
     m._mutate_eggs(3, 'remove', 3)
     print(m.eggs)
+    
+    try:
+        m._mutate_eggs([7, 8], 'insert', -1)
+    except IndexError:
+        print('fail IndexError')
 
 
 @run_in_both(MyObject) 

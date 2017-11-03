@@ -26,6 +26,20 @@ class Foo(event.Component):
 
 ## Tests for both
 
+@run_in_both()
+def test_calllater():
+    """
+    xx
+    called later
+    called later
+    """
+    def x():
+        print('called later')
+    loop.call_later(x)
+    loop.call_later(x)
+    print('xx')
+    loop.iter()
+
 
 @run_in_both(Foo)
 def test_iter():

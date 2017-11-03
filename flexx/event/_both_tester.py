@@ -93,7 +93,7 @@ def smart_compare(kinds, text1, text2, what=''):
     
     while len(lines1) < n:
         lines1.append('<empty>')
-    while len(lines2) < n:
+    while len(lines2) < n:  # pragma: no cover
         lines2.append('<empty>')
     
     refpfx = '\xaf   '

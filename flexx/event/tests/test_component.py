@@ -4,6 +4,7 @@
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
 from flexx.event._both_tester import run_in_both, this_is_js
 
+from flexx.event import mutate_array, Dict
 from flexx import event
 
 loop = event.loop
@@ -194,6 +195,41 @@ def test_that_methods_starting_with_on_are_not_autoconverted():
     assert not isinstance(foo.on_foo, event.Reaction)
 
 
+@run_in_both(Foo)
+def test_component_fails():
+    """
+    fail TypeError
+    fail AttributeError
+    fail RuntimeError
+    fail ValueError
+    """
+    
+    f = Foo()
+    loop._processing_action = True
+    
+    try:
+        f._mutate(3, 3)  # prop name must be str
+    except TypeError:
+        print('fail TypeError')
+    
+    try:
+        f._mutate('invalidpropname', 3)  # prop name invalid
+    except AttributeError:
+        print('fail AttributeError')
+    
+    f.reaction('!foo', lambda: None)  # Ok
+        
+    try:
+        f.reaction(lambda: None)  # Component.reaction cannot be implicit
+    except RuntimeError:
+        print('fail RuntimeError')
+    
+    try:
+        f.reaction(42, lambda: None)  # 42 is not a string
+    except ValueError:
+        print('fail ValueError')
+
+
 @run_in_both(Comp)
 def test_registering_handlers():
     """
@@ -229,6 +265,10 @@ def test_registering_handlers():
     c._register_reaction('foo:z', handler3)
     assert c.get_event_handlers('foo') == [handler2, handler1, handler3]
     
+    # Wont add twice
+    c._register_reaction('foo', handler1)
+    assert c.get_event_handlers('foo') == [handler2, handler1, handler3]
+    
     # Unregestering one handler
     c.disconnect('foo', handler2)
     assert c.get_event_handlers('foo') == [handler1, handler3]
@@ -257,6 +297,59 @@ def test_registering_handlers():
     assert c.get_event_handlers('foo') == []
     
     print('ok')
+
+
+@run_in_both()
+def test_mutate_array1():
+    """
+    [1, 2, 5, 6]
+    [1, 2, 3, 3, 4, 4, 5, 6]
+    [1, 2, 3, 4, 5, 6]
+    [1, 2, 3, 4, 50, 60]
+    []
+    """
+    a = []
+    
+    mutate_array(a, dict(mutation='set', index=0, objects=[1,2,5,6]))
+    print(a)
+    
+    mutate_array(a, dict(mutation='insert', index=2, objects=[3, 3, 4, 4]))
+    print(a)
+    
+    mutate_array(a, dict(mutation='remove', index=3, objects=2))
+    print(a)
+    
+    mutate_array(a, dict(mutation='replace', index=4, objects=[50, 60]))
+    print(a)
+    
+    mutate_array(a, dict(mutation='set', index=0, objects=[]))
+    print(a)
+
+
+@run_in_both(js=False)
+def test_mutate_array2():
+    """
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    [0, 1, 2, 0, 0, 0, 0, 7, 8, 9, 10, 11]
+    [0, 1, 2, 3, 4, 5, 0, 0, 8, 9, 0, 0]
+    """
+    
+    try:
+        import numpy as np
+    except ImportError:
+        skip('No numpy')
+    
+    a = np.arange(12)
+    print(list(a.flat))
+    
+    mutate_array(a, dict(mutation='replace', index=3, objects=np.zeros((4,))))
+    print(list(a.flat))
+    
+    a = np.arange(12)
+    a.shape = 3, 4
+    
+    mutate_array(a, dict(mutation='replace', index=(1, 2), objects=np.zeros((2,2))))
+    print(list(a.flat))
 
 
 run_tests_if_main()

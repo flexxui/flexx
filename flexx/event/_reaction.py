@@ -306,6 +306,9 @@ class Reaction:
         called from a Component' dispose() method. This reaction remains
         working, but wont receive events from that object anymore.
         """
+        for i in range(len(self._implicit_connections)-1, -1, -1):
+            if self._implicit_connections[i][0] is ob:
+                self._implicit_connections.pop(i)
         for ic in range(len(self._connections)):
             connection = self._connections[ic]
             for i in range(len(connection.objects)-1, -1, -1):
