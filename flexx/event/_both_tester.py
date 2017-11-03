@@ -121,7 +121,6 @@ def smart_compare(kinds, text1, text2, what=''):
                 msg += '{}{} {} {}'.format(prefix, kinds[1], linenr, line2 + '\n')
             raise StdoutMismatchError('Text mismatch in %s:\n%s ' % (what, msg))
 
-# todo: do I use the split option? If not, compare ref py and js in one go
 
 def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
     """ Decorator to run a test in both Python and JS.
