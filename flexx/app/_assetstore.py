@@ -7,9 +7,11 @@ etc.) needed by the applications.
 import os
 import shutil
 
+from ..event._js import JS_EVENT
 from ..pyscript import create_js_module, get_all_std_names, get_full_std_lib
+from ..pyscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
 
-from ._model import Model
+from ._component2 import AppComponentMeta
 from ._asset import Asset, Bundle, HEADER
 from ._modules import JSModule
 from . import logger
@@ -202,25 +204,38 @@ class AssetStore:
     Each session object also keeps track of data. 
     
     Assets with additional JS or CSS to load can be used simply by
-    creating/importing them in a module that defines the Model class
+    creating/importing them in a module that defines the JsComponent class
     that needs the asset.
     """
     
     def __init__(self):
-        self._known_model_classes = set()
+        self._known_component_classes = set()
         self._modules = {}
         self._assets = {}
         self._associated_assets = {}
         self._data = {}
         self._used_assets = set()  # between all sessions (for export)
         
-        # Create standard assets
+        # Create asset to reset CSS
         asset_reset = Asset('reset.css', RESET)
+        # Create asset to bootstrap Flexx
         asset_loader = Asset('flexx-loader.js', LOADER)
+        # Create asset for Pyscript std
         func_names, method_names = get_all_std_names()
         mod = create_js_module('pyscript-std.js', get_full_std_lib(),
                                [], func_names + method_names, 'amd-flexx')
         asset_pyscript = Asset('pyscript-std.js', HEADER + mod)
+        # Create asset for the even system
+        pre1 = ', '.join(['%s%s = _py.%s%s' % (FUNCTION_PREFIX, n, FUNCTION_PREFIX, n)
+                          for n in JS_EVENT.meta['std_functions']])
+        pre2 = ', '.join(['%s%s = _py.%s%s' % (METHOD_PREFIX, n, METHOD_PREFIX, n)
+                          for n in JS_EVENT.meta['std_methods']])
+        mod = create_js_module('flexx.event.js',
+                               'var %s;\nvar %s;\n%s' % (pre1, pre2, JS_EVENT),
+                               ['pyscript-std.js as _py'],
+                               ['Component', 'loop', 'logger'],
+                               'amd-flexx')
+        asset_event = Asset('flexx.event.js', HEADER + mod)
         
         # Add them
         for a in [asset_reset, asset_loader, asset_pyscript]:
@@ -229,13 +244,16 @@ class AssetStore:
         if getattr(self, '_test_mode', False):
             return
         
-        #  Create flexx-core bootstrap bundle
-        self.update_modules()  # to collect _model and _clientcore
+        # todo: need for big bundle seems less, since we push via ws anyway?
+        # Create flexx-core bootstrap bundle
+        self.update_modules()  # to collect _component2 and _clientcore
         asset_core = Bundle('flexx-core.js')
         asset_core.add_asset(asset_loader)
         asset_core.add_asset(asset_pyscript)
+        asset_core.add_asset(asset_event)
+        # todo: add flexx.event here to access loop? What about logger?
         asset_core.add_module(self.modules['flexx.app._clientcore'])
-        asset_core.add_module(self.modules['flexx.app._model'])
+        asset_core.add_module(self.modules['flexx.app._component2'])
         self.add_shared_asset(asset_core)
     
     def __repr__(self):
@@ -256,7 +274,7 @@ class AssetStore:
     
     def update_modules(self):
         """ Collect and update the JSModule instances that correspond
-        to Python modules that define Model classes. Any newly created
+        to Python modules that define Component classes. Any newly created
         modules get added to all corresponding assets bundles (creating
         them if needed).
         
@@ -269,12 +287,12 @@ class AssetStore:
         # what modules we know of beforehand.
         current_module_names = set(self._modules)
         
-        # Track all known (i.e. imported classes) Model classes. We keep track
+        # Track all known (i.e. imported) Component classes. We keep track
         # of what classes we've registered, so this is pretty efficient. This
-        # works also if a module got a new or renewed Model class.
-        for cls in Model.CLASSES:
-            if cls not in self._known_model_classes:
-                self._known_model_classes.add(cls)
+        # works also if a module got a new or renewed Component class.
+        for cls in AppComponentMeta.CLASSES:
+            if cls not in self._known_component_classes:
+                self._known_component_classes.add(cls)
                 if cls.__jsmodule__ not in self._modules:
                     JSModule(cls.__jsmodule__, self._modules)  # auto-registers
                 self._modules[cls.__jsmodule__].add_variable(cls.__name__)
@@ -416,7 +434,7 @@ class AssetStore:
         """ Add data to serve to the client (e.g. images), which is shared
         between sessions. It is an error to add data with a name that is
         already registered. See ``Session.add_data()`` to set data per-session
-        and `Model.send_data()`` to send data to Model objects directly.
+        and `JsComponent.send_data()`` to send data to JsComponent objects directly.
         
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. 

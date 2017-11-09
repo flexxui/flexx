@@ -12,7 +12,7 @@ import datetime
 from http.cookies import SimpleCookie
 
 from ._server import call_later
-from ._model import Model, new_type
+from ._component2 import PyComponent, JsComponent, new_type
 from ._asset import Asset, Bundle, solve_dependencies
 from ._assetstore import AssetStore, export_assets_and_data, INDEX
 from ._assetstore import assets as assetstore
@@ -54,7 +54,8 @@ class Session:
     Responsibilities:
 
     * Send messages to the client and parse messages received by the client.
-    * Keep track of Model instances associated with the session.
+    * Keep track of PyComponent instances used by the session.
+    * Keep track of JsComponent instances associated with the session.
     * Ensure that the client has all the module definitions it needs.
     * Allow the user to send data to the client.
 
@@ -74,7 +75,7 @@ class Session:
         self._app_name = app_name
 
         # To keep track of what modules are defined at the client
-        self._present_classes = set()  # Model classes known by the client
+        self._present_classes = set()  # Component classes known by the client
         self._present_modules = set()  # module names that, plus deps
         self._present_assets = set()  # names of used associated assets
         self._assets_to_ignore = set()  # user settable
@@ -86,13 +87,17 @@ class Session:
         # More vars
         self._runtime = None  # init web runtime, will be set when used
         self._ws = None  # init websocket, will be set when a connection is made
-        self._model = None  # Model instance, can be None if app_name is __default__
         self._closing = False  # Flag to help with shutdown
-
-        # The session assigns model id's, keeps track of model objects and
+        
+        # PyComponent or JsComponent instance, can be None if app_name is __default__
+        self._component = None
+        
+        # todo: id assigning maybe no more?
+        # todo: keep alive likely not necessary no more?
+        # The session assigns component id's, keeps track of component objects and
         # sometimes keeps them alive for a short while.
-        self._model_counter = 0
-        self._model_instances = weakref.WeakValueDictionary()
+        self._component_counter = 0
+        self._component_instances = weakref.WeakValueDictionary()
         self._instances_guarded = {}  # id: (ping_count, instance)
         self._roundtrip_based_calllaters = []  # (ping_count, callback, args, kwargs)
 
@@ -132,9 +137,9 @@ class Session:
 
     @property
     def app(self):
-        """ The Model instance that represents the app.
+        """ The PyComponent or JsComponent instance that represents the app.
         """
-        return self._model
+        return self._component
 
     @property
     def runtime(self):
@@ -188,10 +193,10 @@ class Session:
             # Close the runtime
             if self._runtime:
                 self._runtime.close()
-            # Dispose the model and break the circular reference
-            if self._model:
-                self._model.dispose()
-                self._model = None
+            # Dispose the component and break the circular reference
+            if self._component is not None:
+                self._component.dispose()
+                self._component = None
             # Discard data
             self._data = {}
             self._data_volatile = {}
@@ -222,15 +227,15 @@ class Session:
     def _set_cookies(self, cookies=None):
         """ To set cookies, must be an http.cookie.SimpleCookie object.
         When the app is loaded as a web app, the cookies are set *before* the
-        main model is instantiated. Otherwise they are set when the websocket
+        main component is instantiated. Otherwise they are set when the websocket
         is connected.
         """
         self._cookies = cookies if cookies else SimpleCookie()
 
-    def _set_app(self, model):
-        if self._model is not None:
-            raise RuntimeError('Session already has an associated Model.')
-        self._model = model
+    def _set_app(self, component):
+        if self._component is not None:
+            raise RuntimeError('Session already has an associated Component.')
+        self._component = component
 
     def _set_runtime(self, runtime):
         if self._runtime is not None:
@@ -311,48 +316,49 @@ class Session:
                    morsel.OutputString().replace('"', '\\"'))
 
     ## Data
+    
+    # todo: clean up
+    # def _send_data(self, id, data, meta):
+    #     """ Send data to a component on the JS side. The corresponding object's
+    #     receive_data() method is called when the data is available in JS.
+    #     This is called by ``JsComponent.send_data()`` and works in the same way.
+    #     """
+    #     # Check id
+    #     if not isinstance(id, str):
+    #         raise TypeError('session.send_data() first arg must be a str id.')
+    #     if not self._component_instances.get(id, None):
+    #         raise ValueError('session.send_data() first arg must be an id '
+    #                          'corresponding to an existing component: %r' % id)
+    #     # Check meta
+    #     if not isinstance(meta, dict):
+    #         raise TypeError('session.send_data() meta must be a dict.')
+    #     # Check data - url or blob
+    #     data_name = None
+    #     if isinstance(data, str):
+    #         # Perhaps a URL: tell client to retrieve it with AJAX
+    #         if data.startswith(('https://', 'http://', '/flexx/data/')):
+    #             url = data
+    #         elif data.startswith('_data/'):
+    #             url = '/flexx/' + data[1:]  # prevent one redirect
+    #         else:
+    #             raise TypeError('session.send_data() got a string, but does '
+    #                             'not look like a URL: %r' % data)
+    #     elif isinstance(data, bytes):
+    #         # Blob: store it, and tell client to retieve it with AJAX
+    #         # todo: have a second ws connection for pushing data
+    #         meta['byteLength'] = len(data)
+    #         data_name = 'blob-' + get_random_string()
+    #         url = '/flexx/data/%s/%s' % (self.id, data_name)
+    #         self._data_volatile[data_name] = data
+    #         if self.id == self.app_name:  # Maintain data if we're being exported
+    #             self._data[data_name] = data
+    #     else:
+    #         raise TypeError('session.send_data() data must be a bytes or a URL, '
+    #                         'not %s.' % data.__class__.__name__)
 
-    def _send_data(self, id, data, meta):
-        """ Send data to a model on the JS side. The corresponding object's
-        receive_data() method is called when the data is available in JS.
-        This is called by ``Model.send_data()`` and works in the same way.
-        """
-        # Check id
-        if not isinstance(id, str):
-            raise TypeError('session.send_data() first arg must be a str id.')
-        if not self._model_instances.get(id, None):
-            raise ValueError('session.send_data() first arg must be an id '
-                             'corresponding to an existing model: %r' % id)
-        # Check meta
-        if not isinstance(meta, dict):
-            raise TypeError('session.send_data() meta must be a dict.')
-        # Check data - url or blob
-        data_name = None
-        if isinstance(data, str):
-            # Perhaps a URL: tell client to retrieve it with AJAX
-            if data.startswith(('https://', 'http://', '/flexx/data/')):
-                url = data
-            elif data.startswith('_data/'):
-                url = '/flexx/' + data[1:]  # prevent one redirect
-            else:
-                raise TypeError('session.send_data() got a string, but does '
-                                'not look like a URL: %r' % data)
-        elif isinstance(data, bytes):
-            # Blob: store it, and tell client to retieve it with AJAX
-            # todo: have a second ws connection for pushing data
-            meta['byteLength'] = len(data)
-            data_name = 'blob-' + get_random_string()
-            url = '/flexx/data/%s/%s' % (self.id, data_name)
-            self._data_volatile[data_name] = data
-            if self.id == self.app_name:  # Maintain data if we're being exported
-                self._data[data_name] = data
-        else:
-            raise TypeError('session.send_data() data must be a bytes or a URL, '
-                            'not %s.' % data.__class__.__name__)
-
-        # Tell JS to retrieve data
-        t = 'window.flexx.instances.%s.retrieve_data("%s", %s);'
-        self._exec(t % (id, url, reprs(meta)))
+   ##       # Tell JS to retrieve data
+    #     t = 'window.flexx.instances.%s.retrieve_data("%s", %s);'
+    #     self._exec(t % (id, url, reprs(meta)))
 
     def add_data(self, name, data):
         """ Add data to serve to the client (e.g. images), specific to this
@@ -412,45 +418,48 @@ class Session:
         export_assets_and_data(assets, data, dirname, self.id, clear)
         logger.info('Exported data for %r to %r.' % (self.id, dirname))
 
-    ## Keeping track of model objects
+    ## Keeping track of component objects
 
-    def _register_model(self, model):
-        """ Called by Model to give them an id and register with the session.
+    # todo: still need this? only for JsComponent? 
+    def _register_component(self, component):
+        """ Called by PyComponent and JsComponent to give them an id and register with the session.
         """
-        assert isinstance(model, Model)
-        assert model.session is self
-        cls = model.__class__
+        assert isinstance(component, (PyComponent, JsComponent))
+        # todo: what to do instead of assert component.session is self
+        cls = component.__class__
         # Set id
-        self._model_counter += 1
-        model._id = cls.__name__ + str(self._model_counter)
+        # self._component_counter += 1
+        # component._id = cls.__name__ + str(self._component_counter)
         # Register the instance using a weakref
-        self._model_instances[model.id] = model
+        self._component_instances[component.id] = component
         # Register the class to that the client has the needed definitions
-        self._register_model_class(cls)
+        self._register_component_class(cls)
 
-    def get_model_instance_by_id(self, id):
-        """ Get instance of Model class corresponding to the given id,
-        or None if it does not exist.
+    def get_component_instance_by_id(self, id):
+        """ Get instance of PyComponent or JsComponent class
+        corresponding to the given id, or None if it does not exist.
         """
+        # todo: bla provided its used in this session or something
         try:
-            return self._model_instances[id]
+            return self._component_instances[id]
         except KeyError:
-            t = 'Model instance %r does not exist in this session (anymore).'
+            t = 'Component instance %r does not exist in this session (anymore).'
             logger.warn(t % id)
             return None  # Could we revive it? ... probably not a good idea
 
-    def keep_alive(self, ob, iters=4):
-        """ Keep an object alive for a certain amount of time, expressed
-        in Python-JS ping roundtrips. This is intended for making Model
-        objects survive jitter due to synchronisation, though any type
-        of object can be given.
-        """
-        obid = id(ob)
-        counter = 0 if self._ws is None else self._ws.ping_counter
-        lifetime = counter + int(iters)
-        if lifetime > self._instances_guarded.get(obid, (0, ))[0]:
-            self._instances_guarded[obid] = lifetime, ob
-
+    # def keep_alive(self, ob, iters=4):
+    #     """ Keep an object alive for a certain amount of time, expressed
+    #     in Python-JS ping roundtrips. This is intended for making Component
+    #     objects survive jitter due to synchronisation, though any type
+    #     of object can be given.
+    #     """
+    #     obid = id(ob)
+    #     counter = 0 if self._ws is None else self._ws.ping_counter
+    #     lifetime = counter + int(iters)
+    #     if lifetime > self._instances_guarded.get(obid, (0, ))[0]:
+    #         self._instances_guarded[obid] = lifetime, ob
+    
+    # todo: no longer necesary, I suspect, but maybe leave; does no harm?
     def call_after_roundtrip(self, callback, *args, **kwargs):
         """ A variant of ``app.call_later()`` that calls a callback after
         a py-js roundrip. This can be convenient to delay an action until
@@ -463,25 +472,22 @@ class Session:
 
     ## JIT asset definitions
 
-    # todo: deprecated - remove this
-    def register_model_class(self, cls):
-        logger.warn('register_model_class() is no more.')
-
-    def _register_model_class(self, cls):
-        """ Mark the given Model class as used; ensure that the client
-        knows about the module that it is defined in, dependencies
-        of this module, and associated assets of any of these modules.
+    def _register_component_class(self, cls):
+        """ Mark the given PyComponent or JsComponent class as used; ensure
+        that the client knows about the module that it is defined in,
+        dependencies of this module, and associated assets of any of these
+        modules.
         """
-        if not (isinstance(cls, type) and issubclass(cls, Model)):
-            raise TypeError('_register_model_class() needs a Model class')
+        if not (isinstance(cls, type) and issubclass(cls, (PyComponent, JsComponent))):
+            raise TypeError('_register_component_class() needs a PyComponent or JsComponent class')
         # Early exit if we know the class already
         if cls in self._present_classes:
             return
 
-        # Make sure that no two models have the same name, or we get problems
+        # Make sure that no two Component classes have the same name, or we get problems
         # that are difficult to debug. Unless classes are defined interactively.
         # The modules of classes that are re-registered are re-defined. The base
-        # class of such a model is assumed to be either unchanged or defined
+        # class of such a component is assumed to be either unchanged or defined
         # in the same module. It can also happen that a class is registered for
         # which the module was defined earlier (e.g. ui.html). Such modules
         # are redefined as well.
@@ -491,12 +497,12 @@ class Session:
             same_name.append(cls)
             is_dynamic_cls = all([c.__module__ == '__main__' for c in same_name])
             if not (is_interactive and is_dynamic_cls):
-                raise RuntimeError('Cannot have multiple Model classes with the same '
+                raise RuntimeError('Cannot have multiple Component classes with the same '
                                    'name unless using interactive session and the '
                                    'classes are dynamically defined: %r' % same_name)
 
         # Mark the class and the module as used
-        logger.debug('Registering Model class %r' % cls.__name__)
+        logger.debug('Registering Component class %r' % cls.__name__)
         self._register_module(cls.__jsmodule__, True)
 
     def _register_module(self, mod_name, force=False):
@@ -545,7 +551,7 @@ class Session:
 
         # Mark classes as used
         for mod in modules:
-            for cls in mod.model_classes:
+            for cls in mod.component_classes:
                 self._present_classes.add(cls)
 
         # Push assets over the websocket. Note how this works fine with the
@@ -596,17 +602,17 @@ class Session:
             logger.info('JS - ' + command[5:].strip())
         elif command.startswith('SET_PROP '):
             _, id, name, txt = command.split(' ', 3)
-            ob = self._model_instances.get(id, None)
+            ob = self._component_instances.get(id, None)
             if ob is not None:
                 ob._set_prop_from_js(name, txt)
         elif command.startswith('SET_EVENT_TYPES '):
             _, id, txt = command.split(' ', 3)
-            ob = self._model_instances.get(id, None)
+            ob = self._component_instances.get(id, None)
             if ob is not None:
                 ob._set_event_types_js(txt)
         elif command.startswith('EVENT '):
             _, id, name, txt = command.split(' ', 3)
-            ob = self._model_instances.get(id, None)
+            ob = self._component_instances.get(id, None)
             if ob is not None:
                 ob._emit_from_js(name, txt)
         else:
@@ -614,14 +620,15 @@ class Session:
 
     def _receive_pong(self, count):
         """ Called by ws when it gets a pong. Thus gets called about
-        every sec. Clear the guarded Model instances for which the
+        every sec. Clear the guarded Component instances for which the
         "timeout counter" has expired.
         """
         objects_to_clear = [ob for c, ob in
                            self._instances_guarded.values() if c <= count]
         for ob in objects_to_clear:
             self._instances_guarded.pop(id(ob))
-
+        # todo: remoe use of _instances_guarded
+        
         for i in reversed(range(len(self._roundtrip_based_calllaters))):
             if self._roundtrip_based_calllaters[i][0] <= count:
                 entry = self._roundtrip_based_calllaters.pop(i)
@@ -703,10 +710,7 @@ def _get_page(session, js_assets, css_assets, link, export):
     pre_path = '_assets' if export else '/flexx/assets'
 
     codes = []
-
-    t = 'var flexx = {app_name: "%s", session_id: "%s"};'
-    codes.append('<script>%s</script>\n' % t % (session.app_name, session.id))
-
+    
     for assets in [css_assets, js_assets]:
         for asset in assets:
             if not link:
@@ -720,6 +724,9 @@ def _get_page(session, js_assets, css_assets, link, export):
             if export and assets is js_assets:
                 codes.append('<script>window.flexx.spin();</script>')
         codes.append('')  # whitespace between css and js assets
+    
+    codes.append('<script>flexx.create_session("%s", "%s");</script>\n' %
+                 (session.app_name, session.id))
 
     src = INDEX
     if not link:

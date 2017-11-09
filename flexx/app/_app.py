@@ -9,7 +9,7 @@ from base64 import encodestring as encodebytes
 
 from .. import event, webruntime
 
-from ._model import Model
+from ._component2 import PyComponent, JsComponent
 from ._server import current_server
 from ._session import Session, get_page_for_export
 from ._assetstore import assets
@@ -38,19 +38,21 @@ class ExporterWebSocketDummy:
 class App:
     """ Specification of a Flexx app.
 
-    In the strict sense, this is a container for a Model class plus the
-    args and kwargs that it is to be instantiated with.
+    In the strict sense, this is a container for a PyComponent/JsComponent
+    class plus the args and kwargs that it is to be instantiated with.
 
     Arguments:
-        cls (Model): the Model class (or Widget) that represents this app.
+        cls (Component): the PyComponent or JsComponent class (e.g. Widget) that
+            represents this app.
         args: positional arguments used to instantiate the class (and received
             in its ``init()`` method).
-        kwargs: keyword arguments used to initialize the model's properties.
+        kwargs: keyword arguments used to initialize the component's properties.
     """
 
     def __init__(self, cls, *args, **kwargs):
-        if not isinstance(cls, type) and issubclass(type, Model):
-            raise ValueError('App needs a Model class as its first argument.')
+        if not isinstance(cls, type) and issubclass(type, (PyComponent, JsComponent)):
+            raise ValueError('App needs a PyComponent or JsComponent class '
+                             'as its first argument.')
         self._cls = cls
         self.args = args
         self.kwargs = kwargs
@@ -80,7 +82,7 @@ class App:
 
     @property
     def cls(self):
-        """ The Model class that is the basis of this app.
+        """ The Component class that is the basis of this app.
         """
         return self._cls
 
@@ -142,7 +144,7 @@ class App:
                 ('title' and 'icon').
 
         Returns:
-            app (Model): an instance of the given class.
+            app (Component): an instance of the given class.
         """
         # Create session
         if not self._is_served:
@@ -162,7 +164,7 @@ class App:
         return session.app
 
     def export(self, filename=None, link=None, write_shared=True):
-        """ Export the given Model class to an HTML document.
+        """ Export the app to an HTML document.
 
         Arguments:
             filename (str, optional): Path to write the HTML document to.
@@ -241,10 +243,10 @@ def valid_app_name(name):
     return name and name[0] in T[:-10] and all([c in T for c in name])
 
 
-class AppManager(event.HasEvents):
+class AppManager(event.Component):
     """ Manage apps, or more specifically, the session objects.
 
-    There is one AppManager class (in ``flexx.model.manager``). It's
+    There is one AppManager class (in ``flexx.app.manager``). It's
     purpose is to manage the application classes and instances. Intended
     for internal use.
     """
@@ -259,7 +261,7 @@ class AppManager(event.HasEvents):
         self._last_check_time = time.time()
 
     def register_app(self, app):
-        """ Register an app (an object that wraps a model class plus init args).
+        """ Register an app (an object that wraps a Component class plus init args).
         After registering an app (and starting the server) it is
         possible to connect to "http://address:port/app_name".
         """
@@ -282,9 +284,9 @@ class AppManager(event.HasEvents):
             raise RuntimeError('The default session can only be created once.')
 
         if cls is None:
-            cls = Model
-        if not isinstance(cls, type) and issubclass(cls, Model):
-            raise TypeError('create_default_session() needs a Model subclass.')
+            cls = JsComponent  # todo: allow PyComponent?
+        if not isinstance(cls, type) and issubclass(cls, JsComponent):
+            raise TypeError('create_default_session() needs a JsComponent subclass.')
 
         # Create app and register it by __default__ name
         app = App(cls)
@@ -296,9 +298,9 @@ class AppManager(event.HasEvents):
         _, pending, connected = self._appinfo['__default__']
         pending.append(session)
 
-        # Instantiate the model
-        model_instance = app(session=session, is_app=True)
-        session._set_app(model_instance)
+        # Instantiate the component
+        component_instance = app(session=session, is_app=True)
+        session._set_app(component_instance)
 
         return session
 
@@ -306,7 +308,7 @@ class AppManager(event.HasEvents):
         """ Get the default session that is used for interactive use.
         Returns None unless create_default_session() was called earlier.
 
-        When a Model class is created without a session, this method
+        When a JsComponent class is created without a session, this method
         is called to get one (and will then fail if it's None).
         """
         x = self._appinfo.get('__default__', None)
@@ -364,11 +366,11 @@ class AppManager(event.HasEvents):
         if id is not None:
             session._id = id  # used by app.export
         self._session_map[session.id] = session
-        # Instantiate the model
-        # This represents the "instance" of the App object (Model class + args)
-        model_instance = app(session=session, is_app=True)
-        # Session and app model need each-other, thus the _set_app()
-        session._set_app(model_instance)
+        # Instantiate the component
+        # This represents the "instance" of the App object (Component class + args)
+        component_instance = app(session=session, is_app=True)
+        # Session and app component need each-other, thus the _set_app()
+        session._set_app(component_instance)
 
         # Now wait for the client to connect. The client will be served
         # a page that contains the session_id. Upon connecting, the id

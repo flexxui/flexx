@@ -10,8 +10,9 @@ import time
 import types
 
 from ..pyscript import py2js, RawJS, JSConstant, create_js_module, get_all_std_names
+from ..event import Component
 
-from ._model import Model
+from ._component2 import PyComponent, JsComponent
 from ._asset import Asset, get_mod_name, module_is_package
 from . import logger
 
@@ -27,7 +28,7 @@ else:  # pragma: no cover
 # 
 # * In PyScript we detect unresolved dependencies in JS code, and move these up
 #   the namespace stack.
-# * The create_js_hasevents_class() function and ModelMeta class collect the
+# * The create_js_hasevents_class() function and AppComponentMeta class collect the
 #   dependencies from the different code pieces.
 # * In JSModule we resolve some dependencies and let other propagate into
 #   module dependencies.
@@ -38,9 +39,9 @@ else:  # pragma: no cover
 class JSModule:
     """
     A JSModule object represents the JavaScript (and CSS) corresponding
-    to a Python module, which either defines one or more Model classes,
-    or PyScript transpilable functions or classes. Intended for internal
-    use only.
+    to a Python module, which either defines one or more
+    PyComponent/JsCompontent classes, or PyScript transpilable functions or
+    classes. Intended for internal use only.
     
     Modules are collected in a "store" which is simply a dictionary. The
     flexx asset system has this dict in ``app.assets.modules``.
@@ -51,7 +52,7 @@ class JSModule:
     
     The JS code includes: 
     
-    * The JS code corresponding to all used Model classes defined in the module.
+    * The JS code corresponding to all used Component classes defined in the module.
     * The transpiled JS from (PySript compatible) functions and classes that
       are defined in this module and marked as used.
     * Variables with json-compatible values that are used by JS in this module.
@@ -68,9 +69,9 @@ class JSModule:
     
     Notes on how the Flexx asset system uses modules:
     
-    The asset system will generate JSModule objects for all Python
-    modules that define Model subclasses. The session is aware of the
-    Model classes that it uses (and their base classes), and can
+    The asset system will generate JSModule objects for all Python modules
+    that define PyComponent or JsComponent subclasses. The session is aware of
+    the Component classes that it uses (and their base classes), and can
     therefore determine what modules (and assets) need to be loaded.
     """
     
@@ -110,7 +111,7 @@ class JSModule:
         self._imported_names = set()
         # Stuff defined in this module (in JS)
         # We use dicts so that we can "overwrite" them in interactive mode
-        self._model_classes = {}
+        self._component_classes = {}
         self._pyscript_code = {}
         self._js_values = {}
         # Dependencies
@@ -153,10 +154,11 @@ class JSModule:
         return set(self._deps.keys())
     
     @property
-    def model_classes(self):
-        """ The Model classes defined in this module.
+    def component_classes(self):
+        """ The PyComponent and JsComponent classes defined in this module.
         """
-        return set(self._model_classes.values())
+        # todo: could/should this also include event.Component classes?
+        return set(self._component_classes.values())
     
     def _import(self, mod_name, name, as_name):
         """ Import a name from another module. This also ensures that the
@@ -189,7 +191,7 @@ class JSModule:
     
     def add_variable(self, name, is_global=False):
         """ Mark the variable with the given name as used by JavaScript.
-        The corresponding object must be a module, Model, class or function,
+        The corresponding object must be a module, Component, class or function,
         or a json serializable value.
         
         If the object is defined here (or a json value) it will add JS to
@@ -205,6 +207,8 @@ class JSModule:
         if getattr(self._pymodule, '__pyscript__', False):
             return  # everything is transpiled and exported already
         
+        # todo: do a check to disallow using Components that are not PyComponent or JsComponent
+        
         # Try getting value. We warn if there is no variable to match, but
         # if we do find a value we're either including it or raising an error
         try:
@@ -216,9 +220,12 @@ class JSModule:
             logger.warn(msg)
             return
         
-        # Stubs
+        # Early exit
         if isinstance(val, (JSConstant, Asset)) or name in ('Infinity', 'NaN'):
-            return
+            return  # stubs
+        elif name in ('loop', 'logger'):
+            # .... maybe should be if val is loop, but what to do about logger?
+            return  # provided by event system
         elif val is None and not is_global:  # pragma: no cover
             logger.warn('JS in "%s" uses variable %r that is None; '
                         'I will assume its a stub and ignore it. Declare %s '
@@ -241,18 +248,21 @@ class JSModule:
                 t = 'JS in "%s" cannot use module %s directly unless it defines %s.'
                 raise ValueError(t % (self.filename, val.__name__, '"__pyscript__"'))
         
-        elif isinstance(val, type) and issubclass(val, Model):
-            # Model class; we know that we can get the JS for this
+        elif isinstance(val, type) and issubclass(val, Component):
+            if not issubclass(val, (PyComponent, JsComponent)):
+                raise TypeError('Flexx.app can only use components that inherit from PyComponenr or JsComponent')
+            # App Component class; we know that we can get the JS for this
             if val.__jsmodule__ == self.name:
                 # Define here
                 self._provided_names.add(name)
-                self._model_classes[name] = val
+                self._component_classes[name] = val
                 # Recurse
                 self._collect_dependencies_from_bases(val)
                 self._collect_dependencies(**val.JS.CODE.meta)
             else:
                 # Import from another module
                 # not needed per see; bound via window.flexx.classes
+                # todo: \--> not anymore!
                 self._import(val.__jsmodule__, val.__name__, name)
         
         elif isinstance(val, pyscript_types) and hasattr(val, '__module__'):
@@ -320,15 +330,20 @@ class JSModule:
         """
         Collect dependencies based on the base classes of a class.
         """
-        if cls is Model:
-            return
         if len(cls.__bases__) != 1:  # pragma: no cover
             raise TypeError('PyScript classes do not (yet) support '
                             'multiple inheritance.')
+        if cls is PyComponent or cls is JsComponent:
+            imports = self._deps.setdefault('flexx.event.js', ['flexx.event.js'])
+            self._imported_names.add('Component')
+            for line in ('Component as Component', ):
+                if line not in imports:
+                    imports.append(line)
+            return
         for base_cls in cls.__bases__:
             if base_cls is object:
-                continue
-            m = self._import(get_mod_name(base_cls), None, None)
+                break
+            m = self._import(get_mod_name(base_cls), base_cls.__name__, base_cls.__name__)
             m.add_variable(base_cls.__name__)  # note: m can be self, which is ok
     
     def get_js(self):
@@ -336,7 +351,7 @@ class JSModule:
         """
         if self._js_cache is None:
             # Collect JS and sort by linenr
-            js = [cls.JS.CODE for cls in self._model_classes.values()]
+            js = [cls.JS.CODE for cls in self._component_classes.values()]
             js += list(self._pyscript_code.values())
             js.sort(key=lambda x: x.meta['linenr'])
             # todo: collect stdlib funcs here
@@ -362,6 +377,7 @@ class JSModule:
                     js.insert(0, 'var ' + (', '.join(pieces)) + ';')
             # Import stdlib
             # todo: either include only std of what we use, or use _py.xxx
+            # todo: !!! this is so ugly!
             func_names, method_names = get_all_std_names()
             pre1 = ', '.join(['%s = _py.%s' % (n, n) for n in func_names])
             pre2 = ', '.join(['%s = _py.%s' % (n, n) for n in method_names])
@@ -378,7 +394,7 @@ class JSModule:
         if self._css_cache is None:
             css = []
             sorter = lambda x: x.JS.CODE.meta['linenr']
-            for cls in sorted(self._model_classes.values(), key=sorter):
+            for cls in sorted(self._component_classes.values(), key=sorter):
                 css.append(cls.CSS)
             self._css_cache = '\n\n'.join(css)
         return self._css_cache

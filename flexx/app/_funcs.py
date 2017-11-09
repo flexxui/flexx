@@ -8,7 +8,7 @@ import json
 from .. import webruntime, config, set_log_level
 
 from ._app import App, manager
-from ._model import Model
+from ._component2 import PyComponent, JsComponent
 from ._server import current_server
 from ._assetstore import assets
 from . import logger
@@ -51,7 +51,7 @@ def stop():
     server.stop()
 
 
-@manager.connect('connections_changed')
+@manager.reaction('connections_changed')
 def _auto_closer(*events):
     server = current_server()
     if not getattr(server, '_auto_stop', False):
@@ -73,14 +73,14 @@ def init_interactive(cls=None, runtime=None):
     and launches a runtime to connect to it. 
     
     Parameters:
-        cls (None, Model): a subclass of ``app.Model`` (or ``ui.Widget``) to use
-            as the *default active model*. Only has effect the first time that
-            this function is called.
+        cls (None, Component): a subclass of ``app.PyComponent``, ``app.JsComponent``
+            (or ``ui.Widget``) to use as the *default active component*. Only has effect
+            the first time that this function is called.
         runtime (str): the runtime to launch the application in.
             Default 'app or browser'.
     """
     
-    # Determine default model class (which is a Widget if ui is imported)
+    # Determine default component class (which is a Widget if ui is imported)
     if cls is None and 'flexx.ui' in sys.modules:
         from .. import ui
         cls = ui.Widget
@@ -231,7 +231,7 @@ def serve(cls, name=None, properties=None):
         raise RuntimeError('serve(... properties) is deprecated, '
                            'use app.App().serve() instead.')
     # Note: this talks to the manager; it has nothing to do with the server
-    assert (isinstance(cls, type) and issubclass(cls, Model))
+    assert (isinstance(cls, type) and issubclass(cls, (PyComponent, JsComponent)))
     a = App(cls)
     a.serve(name)
     return cls
@@ -245,7 +245,7 @@ def launch(cls, runtime=None, properties=None, **runtime_kwargs):
                            'use app.App().launch() instead.')
     if isinstance(cls, str):
         return webruntime.launch(cls, runtime, **runtime_kwargs)
-    assert (isinstance(cls, type) and issubclass(cls, Model))
+    assert (isinstance(cls, type) and issubclass(cls, (PyComponent, JsComponent)))
     a = App(cls)
     return a.launch(runtime, **runtime_kwargs)
 
@@ -253,9 +253,10 @@ def launch(cls, runtime=None, properties=None, **runtime_kwargs):
 def export(cls, filename, properties=None, **kwargs):
     """ Shorthand for ``app.App(cls).export(filename, ...)``.
     """
+    # todo: perhaps this should only work for JsComponent classes?
     if properties is not None:
         raise RuntimeError('export(... properties) is deprecated, '
                            'use app.App(...).export() instead.')
-    assert (isinstance(cls, type) and issubclass(cls, Model))
+    assert (isinstance(cls, type) and issubclass(cls, (PyComponent, JsComponent)))
     a = App(cls)
     return a.export(filename, **kwargs)

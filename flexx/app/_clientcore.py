@@ -20,32 +20,17 @@ class Flexx:
         # setting them on this object before the init() is called.
         self.is_notebook = False
         self.is_exported = False
-        self.app_name = ''
-        self.session_id = ''
-        self.ws_url = ''
+        
         # Copy attributes from temporary flexx object
         if window.flexx.init:
-            raise RuntimeError('Should not create Flexx object more than once.')
+            raise RuntimeError('Should not create global Flexx object more than once.')
         for key in window.flexx.keys():
             self[key] = window.flexx[key]  # session_id, app_name, and maybe more
-        # Maybe this is JLab
-        if not self.session_id:
-            jconfig = window.document.getElementById('jupyter-config-data')
-            if jconfig:
-                try:
-                    config = JSON.parse(jconfig.innerText)
-                    self.session_id = config.flexx_session_id
-                    self.app_name = config.flexx_app_name
-                except Exception as err:
-                    print(err)
-        # Init internal variables
-        self._init_time = time()
-        self._pending_commands = []
-        self._asset_count = 0
-        self.ws = None
-        self.last_msg = None
-        self.classes = {}
-        self.instances = {}
+        
+        # Keep track of sessions
+        self._session_count = 0
+        self.sessions = {}
+        
         # Note: flexx.init() is not auto-called when Flexx is embedded
         window.addEventListener('load', self.init, False)
         window.addEventListener('unload', self.exit, False)  # not beforeunload
@@ -67,7 +52,6 @@ class Flexx:
             print('Flexx: Initializing')
             if not self.is_notebook:
                 self._remove_querystring()
-            self.initSocket()
             self.initLogging()
     
     def _remove_querystring(self):
@@ -80,10 +64,121 @@ class Flexx:
     
     def exit(self):
         """ Called when runtime is about to quit. """
+        for session in self.sessions.values():
+            session.exit()
+    
+    def spin(self, text='*'):
+        RawJS("""
+        if (!window.document.body) {return;}
+        var el = window.document.body.children[0];
+        if (el && el.classList.contains("flx-spinner")) {
+            if (text === null) {
+                el.style.display = 'none';  // Stop the spinner
+            } else {
+                el.children[0].innerHTML += text.replace(/\*/g, '&#9632');
+            }
+        }
+        """)
+    
+    def initLogging(self):
+        """ Setup logging so that messages are proxied to Python.
+        """
+        if window.console.ori_log:
+            return  # already initialized the loggers
+        # Keep originals
+        window.console.ori_log = window.console.log
+        window.console.ori_info = window.console.info or window.console.log
+        window.console.ori_warn = window.console.warn or window.console.log
+        window.console.ori_error = window.console.error or window.console.log
+        
+        def log(msg):
+            window.console.ori_log(msg)
+            for session in self.sessions.values():
+                if session.ws is not None:
+                    self.ws.send("PRINT " + msg)
+        def info(msg):
+            window.console.ori_info(msg)
+            for session in self.sessions.values():
+                if session.ws is not None:
+                    session.ws.send("INFO " + msg)
+        def warn(msg):
+            window.console.ori_warn(msg)
+            for session in self.sessions.values():
+                if session.ws is not None:
+                    session.ws.send("WARN " + msg)
+        def error(msg):
+            evt = dict(message=str(msg), error=msg, preventDefault=lambda: None)
+            on_error(evt)
+        def on_error(evt):
+            msg = evt.message
+            if evt.error and evt.error.stack:  # evt.error can be None for syntax err
+                stack = evt.error.stack.splitlines()
+                if evt.message in stack[0]:
+                    stack.pop(0)
+                msg += '\n' + '\n'.join(stack)
+                session_needle = '?session_id=' + self.session_id
+                msg = msg.replace('@', ' @ ').replace(session_needle, '')  # Firefox
+            elif evt.message and evt.lineno:  # message, url, linenumber
+                msg += "\nIn %s:%i" % (evt.filename, evt.lineno)
+            # Handle error
+            evt.preventDefault()  # Don't do the standard error 
+            window.console.ori_error(msg)
+            for session in self.sessions.values():
+                if session.ws is not None:
+                    session.ws.send("ERROR " + evt.message)
+        on_error = on_error.bind(self)
+        # Set new versions
+        window.console.log = log
+        window.console.info = info
+        window.console.warn = warn
+        window.console.error = error
+        # Create error handler, so that JS errors get into Python
+        window.addEventListener('error', on_error, False)
+    
+    def create_session(self, app_name, session_id, ws_url):
+        # todo: should this be delayed if we did not call init yet?
+        s = JsSession(app_name, session_id, ws_url)
+        self._session_count += 1
+        self['s' + self._session_count] = s
+        self.sessions[session_id] = s
+
+
+class JsSession:
+    
+    def __init__(self, app_name, session_id, ws_url=None):
+        self.app_name = app_name
+        self.session_id = session_id
+        self.ws_url = ws_url
+        
+        # Maybe this is JLab
+        if not self.session_id:
+            jconfig = window.document.getElementById('jupyter-config-data')
+            if jconfig:
+                try:
+                    config = JSON.parse(jconfig.innerText)
+                    self.session_id = config.flexx_session_id
+                    self.app_name = config.flexx_app_name
+                except Exception as err:
+                    print(err)
+        
+        # Init internal variables
+        self._init_time = time()
+        self._pending_commands = []
+        self._asset_count = 0
+        self.ws = None
+        self.last_msg = None
+        # self.classes = {}
+        self.instances = {}
+        
+        self.initSocket()
+        
+    def exit(self):
         if self.ws:  # is not null or undefined
             self.ws.close()
             self.ws = None
-    
+            # flexx.instances.sessions.pop(self)  might be good, but perhaps not that much neede?
+
+    # todo: do we need a global version?
     def get(self, id):  # todo: rename this to get_instance()?
         """ Get instance of a Model class.
         """
@@ -98,19 +193,6 @@ class Flexx:
         ob = self.instances[id]
         if ob is not undefined:
             ob.dispose()  # Model.dispose() removes itself from flexx.instances
-    
-    def spin(self, text='*'):
-        RawJS("""
-        if (!window.document.body) {return;}
-        var el = window.document.body.children[0];
-        if (el && el.classList.contains("flx-spinner")) {
-            if (text === null) {
-                el.style.display = 'none';  // Stop the spinner
-            } else {
-                el.children[0].innerHTML += text.replace(/\*/g, '&#9632');
-            }
-        }
-        """)
     
     def initSocket(self):
         """ Make the connection to Python.
@@ -155,6 +237,7 @@ class Flexx:
             if evt and evt.reason:
                 msg += ': %s (%i)' % (evt.reason, evt.code)
             if not self.is_notebook:
+                # todo: show modal or cooky-like dialog instead of killing whole page
                 window.document.body.innerHTML = msg
             else:
                 window.console.info(msg)
@@ -167,57 +250,6 @@ class Flexx:
         ws.onmessage = on_ws_message
         ws.onclose = on_ws_close
         ws.onerror = on_ws_error
-    
-    def initLogging(self):
-        """ Setup logging so that messages are proxied to Python.
-        """
-        if window.console.ori_log:
-            return  # already initialized the loggers
-        # Keep originals
-        window.console.ori_log = window.console.log
-        window.console.ori_info = window.console.info or window.console.log
-        window.console.ori_warn = window.console.warn or window.console.log
-        window.console.ori_error = window.console.error or window.console.log
-        
-        def log(msg):
-            window.console.ori_log(msg)
-            if self.ws is not None:
-                self.ws.send("PRINT " + msg)
-        def info(msg):
-            window.console.ori_info(msg)
-            if self.ws is not None:
-                self.ws.send("INFO " + msg)
-        def warn(msg):
-            window.console.ori_warn(msg)
-            if self.ws is not None:
-                self.ws.send("WARN " + msg)
-        def error(msg):
-            evt = dict(message=str(msg), error=msg, preventDefault=lambda: None)
-            on_error(evt)
-        def on_error(evt):
-            msg = evt.message
-            if evt.error and evt.error.stack:  # evt.error can be None for syntax err
-                stack = evt.error.stack.splitlines()
-                if evt.message in stack[0]:
-                    stack.pop(0)
-                msg += '\n' + '\n'.join(stack)
-                session_needle = '?session_id=' + self.session_id
-                msg = msg.replace('@', ' @ ').replace(session_needle, '')  # Firefox
-            elif evt.message and evt.lineno:  # message, url, linenumber
-                msg += "\nIn %s:%i" % (evt.filename, evt.lineno)
-            # Handle error
-            evt.preventDefault()  # Don't do the standard error 
-            window.console.ori_error(msg)
-            if self.ws is not None:
-                self.ws.send("ERROR " + evt.message)
-        on_error = on_error.bind(self)
-        # Set new versions
-        window.console.log = log
-        window.console.info = info
-        window.console.warn = warn
-        window.console.error = error
-        # Create error handler, so that JS errors get into Python
-        window.addEventListener('error', on_error, False)
     
     def _process_commands(self):
         """ A less direct way to process commands, which gives the
@@ -242,7 +274,7 @@ class Flexx:
         if msg.startswith('PING '):
             self.ws.send('PONG ' + msg[5:])
         elif msg == 'INIT-DONE':
-            self.spin(None)
+            window.flexx.spin(None)
             while len(self._pending_commands):
                 self.command(self._pending_commands.pop(0))
             self._pending_commands = None
@@ -255,7 +287,7 @@ class Flexx:
         elif msg.startswith('EXEC '):
             eval(msg[5:])  # like eval, but do not return result
         elif msg.startswith('DEFINE-JS ') or msg.startswith('DEFINE-JS-EVAL '):
-            self.spin()
+            window.flexx.spin()
             cmd, name, code = msg.split(' ', 2)
             address = window.location.protocol + '//' + self.ws_url.split('/')[2]
             code += '\n//# sourceURL=%s/flexx/assets/shared/%s\n' % (address, name)
@@ -271,7 +303,7 @@ class Flexx:
                 el.innerHTML = code
                 self._asset_node.appendChild(el)
         elif msg.startswith('DEFINE-CSS '):
-            self.spin()
+            window.flexx.spin()
             cmd, name, code = msg.split(' ', 2)
             address = window.location.protocol + '//' + self.ws_url.split('/')[2]
             code += '\n/*# sourceURL=%s/flexx/assets/shared/%s*/\n' % (address, name)
@@ -294,6 +326,7 @@ class Flexx:
             window.console.warn('Invalid command: "' + msg + '"')
 
 
+# todo: in bsdf there is utf8 encode/decode code, check which is better, put that in bsdf, and use it here
 def decodeUtf8(arrayBuffer):
     RawJS("""
     var result = "",
@@ -336,7 +369,6 @@ def decodeUtf8(arrayBuffer):
     }
     return result;
     """)
-
 
 
 # In Python, we need some extras for the serializer to work
