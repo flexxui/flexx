@@ -47,6 +47,10 @@ ASSET-HOOK
 # create a private namespace. The modules must follow this pattern:
 # define(name, dep_strings, function (name1, name2) {...});
 
+
+# todo: have loaders per session, or allow prefixing with session id, so that
+# each session can bring their own assets and not clash.
+
 LOADER = """
 /*Flexx module loader. Licensed by BSD-2-clause.*/
 

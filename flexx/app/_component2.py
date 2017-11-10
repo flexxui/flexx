@@ -37,11 +37,14 @@ manager = None  # Set by __init__ to prevent circular dependencies
 reprs = json.dumps  # todo: used?
 
 
-def make_proxy_action(name):
+
+def make_proxy_action(flx_name):
+    # Note: the flx_prefixes are picked up by the code in flexx.event that
+    # compiles component classes, so it can fix /insert the name for JS.
     
-    def proxy_action():
-        self._proxy_action(name, arguments)
-    return ActionDescriptor(proxy_action, name, '')
+    def flx_proxy_action(*args, **kwargs):
+        self._proxy_action(flx_name, *args, **kwargs)
+    return ActionDescriptor(flx_proxy_action, flx_name, '')
 
 
 def get_component_classes():
@@ -319,6 +322,18 @@ class LocalComponent(Component):
         for session in self._sessions:
             session._register_component(self)
         
+        
+        # Instantiate JavaScript version of this class
+        for session in self._sessions:
+            clsname = self.__class__.__name__
+            cmd = 'flexx.sessions["%s"].instantiate_component("%s", "%s", "%s");' % (
+                     session.id, self.__module__, clsname, self._id,
+                    # serializer.saves(event_types_py),
+                    # serializer.saves(known_event_types_py)
+                    )
+            session._exec(cmd)
+        
+        
         # Get event types that we need to register that may come from other end
         known_event_types = self.__emitters__ + self.__properties__
         
@@ -392,7 +407,7 @@ class LocalComponent(Component):
             raise RuntimeError('It seems that the event loop is processing '
                                'events while a Component is active. This has a '
                                'high risk on race conditions.')
-    
+
 
 class ProxyComponent(Component):
     """
@@ -405,8 +420,12 @@ class ProxyComponent(Component):
     
     __jsmodule__ = __name__
     
-    def __init__(self):
-        pass
+    def __init__(self, session, id):
+        
+        super().__init__()
+        
+        self._sessions = [session]
+        self._id = id
         
         # # Instantiate JavaScript version of this class
         # clsname = 'flexx.classes.' + self.__class__.__name__
@@ -416,10 +435,12 @@ class ProxyComponent(Component):
         #         serializer.saves(known_event_types_py))
         # self._session._exec(cmd)
     
-    def _proxy_action(name, *args, **kwargs):
-        print('proxy action', args, kwargs)
-        # todo: send to other side over the ws
-
+    def _proxy_action(self, name, *args, **kwargs):
+        # print(name, args)
+        assert not kwargs
+        for session in self._sessions:
+            session._send_command('INVOKE %s %s %s' % (self._id, name, repr(args)))
+    
     def _mutate(self, *args, **kwargs):
         raise RuntimeError('Cannot mutate properties from a proxy class.')
     

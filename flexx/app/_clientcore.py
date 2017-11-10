@@ -95,7 +95,7 @@ class Flexx:
             window.console.ori_log(msg)
             for session in self.sessions.values():
                 if session.ws is not None:
-                    self.ws.send("PRINT " + msg)
+                    session.ws.send("PRINT " + msg)
         def info(msg):
             window.console.ori_info(msg)
             for session in self.sessions.values():
@@ -177,7 +177,14 @@ class JsSession:
             self.ws.close()
             self.ws = None
             # flexx.instances.sessions.pop(self)  might be good, but perhaps not that much neede?
-
+    
+    def instantiate_component(self, module, cname, id):
+        m = flexx.require(module)
+        Cls = m[cname]  # noqa
+        c = Cls(self, id)
+        self.instances[id] = c
+        return c
+    
     # todo: do we need a global version?
     def get(self, id):  # todo: rename this to get_instance()?
         """ Get instance of a Model class.
@@ -225,7 +232,7 @@ class JsSession:
             self.last_msg = msg = evt.data or evt
             if self._pending_commands is None:
                 # Direct mode
-                self.command(msg)
+                self._receive_command(msg)
             else:
                 # Indirect mode, to give browser draw-time during loading
                 if len(self._pending_commands) == 0:
@@ -259,7 +266,7 @@ class JsSession:
         while self._pending_commands is not None and len(self._pending_commands) > 0:
             msg = self._pending_commands.pop(0)
             try:
-                self.command(msg)
+                self._receive_command(msg)
             except Exception as err:
                 window.setTimeout(self._process_commands, 0)
                 raise err
@@ -270,13 +277,20 @@ class JsSession:
                         window.setTimeout(self._process_commands, 0)
                     break
     
-    def command(self, msg):
+    def _send_command(self, command):
+        """ Send a command over the web socket to the server.
+        """
+        self.ws.send(command)
+    
+    def _receive_command(self, msg):
+        """ Process a command send from the server.
+        """
         if msg.startswith('PING '):
             self.ws.send('PONG ' + msg[5:])
         elif msg == 'INIT-DONE':
             window.flexx.spin(None)
             while len(self._pending_commands):
-                self.command(self._pending_commands.pop(0))
+                self._receive_command(self._pending_commands.pop(0))
             self._pending_commands = None
             # print('init took', time() - self._init_time)
         elif msg.startswith('PRINT '):

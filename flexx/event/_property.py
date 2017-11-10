@@ -81,16 +81,16 @@ class Property(BaseDescriptor):
         return getattr(instance, private_name)
     
     def make_mutator(self):
-        name = self._name
-        def mutator(self, *args):
-            return self._mutate(name, *args)
-        return mutator
+        flx_name = self._name
+        def flx_mutator(self, *args):
+            return self._mutate(flx_name, *args)
+        return flx_mutator
     
     def make_set_action(self):
-        name = self._name
-        def setter(self, val):
-            self._mutate(name, val)
-        return setter
+        flx_name = self._name
+        def flx_setter(self, val):
+            self._mutate(flx_name, val)
+        return flx_setter
     
     def _validate(self, value):
         return value

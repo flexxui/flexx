@@ -11,6 +11,8 @@ import weakref
 import datetime
 from http.cookies import SimpleCookie
 
+from ..event import Action
+
 from ._server import call_later
 from ._component2 import PyComponent, JsComponent, new_type
 from ._asset import Asset, Bundle, solve_dependencies
@@ -615,6 +617,13 @@ class Session:
             ob = self._component_instances.get(id, None)
             if ob is not None:
                 ob._emit_from_js(name, txt)
+        elif command.startswith('INVOKE '):
+            _, id, name, txt = command.split(' ', 3)
+            ob = self._component_instances.get(id, None)
+            if ob is not None:
+                action = getattr(ob, name, None)
+                if isinstance(action, Action):
+                    action(*json.loads(txt))
         else:
             logger.warn('Unknown command received from JS:\n%s' % command)
 
