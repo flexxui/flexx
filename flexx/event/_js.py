@@ -341,6 +341,7 @@ def _create_js_class(PyClass, JSClass):
         jscode = jscode.replace('if (_pyfunc_truthy(this._thread_match(false)))', '')
     # Almost done
     jscode = jscode.replace('new Dict()', '{}').replace('new Dict(', '_pyfunc_dict(')
+    mc.meta['std_functions'].add('dict')
     return mc.attach_meta(jscode)
 
 

@@ -47,71 +47,74 @@ class ComponentMeta(type):
     """
     
     def __init__(cls, name, bases, dct):
-        finalize_component_class(cls)
+        cls._finish_properties()
+        cls._init_hook(name, bases, dct)
+        cls._set_summaries()
         type.__init__(cls, name, bases, dct)
-
-
-
-def finalize_component_class(cls):
-    """ Given a class, analyse its Properties, Actions and Reactions,
-    to set a list of __actions__, __properties__, and __reactions__.
     
-    For actions, reactions and emitters, there's nothing more to do. For
-    properties there is though:
+    def _init_hook(cls, name, bases, dct):
+        """ Overloaded in flexx.app.AppComponentMeta.
+        """
+        pass
     
-    * Create a mutator function for convenience.
-    * If needed, create a corresponding set_xx action.
-    * Create validator function.
+    def _finish_properties(cls):
+        """ Finish properties:
+        
+        * Create a mutator function for convenience.
+        * Create validator function.
+        * If needed, create a corresponding set_xx action.
+        """
+        for name in dir(cls):
+            if name.startswith('__'):
+                continue
+            val = getattr(cls, name)
+            if isinstance(val, type) and issubclass(val, Property):
+                raise TypeError('Properties should be instantiated, '
+                                'use ``foo = IntProp()`` instead of ``foo = IntProp``.')
+            elif isinstance(val, Property):
+                val._set_name(name)  # noqa
+                # Create validator method
+                setattr(cls, '_' + name + '_validate', val._validate)
+                # Create mutator method
+                setattr(cls, '_mutate_' + name, val.make_mutator())
+                # Create setter action?
+                action_name = 'set_' + name
+                if val._settable and not hasattr(cls, action_name):
+                    action_des = ActionDescriptor(val.make_set_action(), action_name,
+                                                'Setter for %s.' % name)
+                    setattr(cls, action_name, action_des)
     
-    The instances also set up a few things:
-    
-    * Initialize property values (at `self._xx_value`).
-    * Initialize (connect) reactions.
-    """
-    
-    actions = {}
-    emitters = {}
-    properties = {}
-    reactions = {}
-    
-    for name in dir(cls):
-        if name.startswith('__'):
-            continue
-        val = getattr(cls, name)
-        if isinstance(val, type) and issubclass(val, Property):
-            raise TypeError('Properties should be instantiated, '
-                            'use ``foo = IntProp()`` instead of ``foo = IntProp``.')
-        if isinstance(val, ActionDescriptor):
-            actions[name] = val
-        elif isinstance(val, Property):
-            properties[name] = val
-            val._set_name(name)  # noqa
-            # Create validator method
-            setattr(cls, '_' + name + '_validate', val._validate)
-            # Create mutator method
-            setattr(cls, '_mutate_' + name, val.make_mutator())
-            # Create setter action?
-            action_name = 'set_' + name
-            if val._settable and not hasattr(cls, action_name):
-                action_des = ActionDescriptor(val.make_set_action(), action_name,
-                                              'Setter for %s.' % name)
-                setattr(cls, action_name, action_des)
-                actions[action_name] = action_des
-        elif isinstance(val, ReactionDescriptor):
-            reactions[name] = val
-        elif isinstance(val, EmitterDescriptor):
-            emitters[name] = val
-        elif isinstance(val, (Action, Reaction)):  # pragma: no cover
-            raise RuntimeError('Class methods can only be made actions or '
-                               'reactions using the corresponding decorators '
-                               '(%r)' % name)
-    
-    # Cache prop names
-    cls.__actions__ = [name for name in sorted(actions.keys())]
-    cls.__emitters__ = [name for name in sorted(emitters.keys())]
-    cls.__properties__ = [name for name in sorted(properties.keys())]
-    cls.__reactions__ = [name for name in sorted(reactions.keys())]
-    return cls
+    def _set_summaries(cls):
+        """ Analyse the class and set lists __actions__, __emitters__,
+        __properties__, and __reactions__.
+        """
+        
+        actions = {}
+        emitters = {}
+        properties = {}
+        reactions = {}
+        
+        for name in dir(cls):
+            if name.startswith('__'):
+                continue
+            val = getattr(cls, name)
+            if isinstance(val, ActionDescriptor):
+                actions[name] = val
+            elif isinstance(val, Property):
+                properties[name] = val
+            elif isinstance(val, ReactionDescriptor):
+                reactions[name] = val
+            elif isinstance(val, EmitterDescriptor):
+                emitters[name] = val
+            elif isinstance(val, (Action, Reaction)):  # pragma: no cover
+                raise RuntimeError('Class methods can only be made actions or '
+                                   'reactions using the corresponding decorators '
+                                   '(%r)' % name)
+        # Cache prop names
+        cls.__actions__ = [name for name in sorted(actions.keys())]
+        cls.__emitters__ = [name for name in sorted(emitters.keys())]
+        cls.__properties__ = [name for name in sorted(properties.keys())]
+        cls.__reactions__ = [name for name in sorted(reactions.keys())]
 
 
 class Component(with_metaclass(ComponentMeta, object)):
