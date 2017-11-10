@@ -526,6 +526,21 @@ class TestFunctions:
         assert evalpy(code + 'd.foo(1, 2)') == '[1,2]{}'
         assert evalpy(code + 'd.foo(1, b=3, c=4)') == '[1,9]{"b":3,"c":4}'
     
+    def test_function_call_args_and_kwargs(self):
+        # Func returns args
+        code = "def foo(*args, **kwargs): return args;\n"
+        assert evalpy(code + 'foo(1, 2, 3)') == '[ 1, 2, 3 ]'
+        assert evalpy(code + 'foo(1, 2, 3, a=3)') == '[ 1, 2, 3 ]'
+        assert evalpy(code + 'foo(1, 2, 3, **{"b":4})') == '[ 1, 2, 3 ]'
+        assert evalpy(code + 'foo(a=3, **{"b":4})') == '[]'
+        
+        # Func return kwargs
+        code = "def foo(*args, **kwargs): return kwargs;\n"
+        assert evalpy(code + 'foo(1, 2, 3)') == '{}'
+        assert evalpy(code + 'foo(1, 2, 3, a=3)') == '{ a: 3 }'
+        assert evalpy(code + 'foo(1, 2, 3, **{"b":4})') == '{ b: 4 }'
+        assert evalpy(code + 'foo(a=3, **{"b":4})') == '{ a: 3, b: 4 }'
+    
     @skipif(sys.version_info < (3,), reason='no keyword only args in legacy py')
     def test_function_call_keyword_only_args_and_kwargs(self):
         code = "def foo(*, a=3, b=4, **x): return repr([a, b]) + repr(x);\nd = {'foo':foo}\n"

@@ -854,6 +854,22 @@ class Parser2(Parser1):
         for name in argnames:
             self.vars.add(name)
         
+        # Prepare code for varargs
+        vararg_code1 = vararg_code2 = ''
+        if node.args_node:
+            name = node.args_node.name  # always an ast.Arg
+            self.vars.add(name)
+            if not argnames:
+                # Make available under *arg name
+                #code.append(self.lf('%s = arguments;' % name))
+                vararg_code1 = '%s = Array.prototype.slice.call(arguments);' % name
+                vararg_code2 = '%s = arguments[0].flx_args;' % name
+            else:
+                # Slice it
+                x = name, len(argnames)
+                vararg_code1 = '%s = Array.prototype.slice.call(arguments, %i);' % x
+                vararg_code2 = '%s = arguments[0].flx_args.slice(%i);' % x
+        
         # Handle keyword arguments and kwargs
         parse_kwargs = False
         kw_argnames = set()  # variables that come from keyword args, or helper vars
@@ -904,14 +920,21 @@ class Parser2(Parser1):
             for i, name in enumerate(argnames):
                 code.append(self.lf('%s = %s[%i];' % (name, args_var, i)))
             # End if
+            if vararg_code2:
+                code.append(self.lf(vararg_code2))
             self._indent -= 1
             code.append(self.lf('}'))
+            if vararg_code1:
+                code += [' else {', vararg_code1, '}']
             # Apply values of keyword-only args
             # outside if, because these need to be assigned always
             # Note that we cannot use destructuring assignment because not all
             # browsers support it (meh IE and Safari!)
             for i, arg in enumerate(node.kwarg_nodes):
                 code.append(self.lf('%s = %s[%i];' % (arg.name, values_var, i)))
+        else:
+            if vararg_code1:
+                code.append(self.lf(vararg_code1))
         
         # Apply defaults of positional arguments
         for arg in node.arg_nodes:
@@ -920,23 +943,6 @@ class Parser2(Parser1):
                 d = ''.join(self.parse(arg.value_node))
                 x = '%s = (%s === undefined) ? %s: %s;' % (name, name, d, name)
                 code.append(self.lf(x))
-        
-        # Handle varargs
-        if node.args_node:
-            if parse_kwargs:
-                asarray = 'arguments[0].flx_args'
-            else:
-                asarray = 'Array.prototype.slice.call(arguments)'
-            name = node.args_node.name  # always an ast.Arg
-            self.vars.add(name)
-            if not argnames:
-                # Make available under *arg name
-                #code.append(self.lf('%s = arguments;' % name))
-                code.append(self.lf('%s = %s;' % (name, asarray)))
-            else:
-                # Slice it
-                code.append(self.lf('%s = %s.slice(%i);' %
-                            (name, asarray, len(argnames))))
         
         # Apply content
         if lambda_:
