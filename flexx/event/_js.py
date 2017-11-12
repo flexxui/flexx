@@ -125,7 +125,7 @@ class ComponentJS:  # pragma: no cover
     def __init__(self, *init_args, **property_values):
         
         RawJS('Component.prototype._COUNT += 1')
-        self._id = RawJS("'c' + Component.prototype._COUNT")
+        self._id = RawJS("this._class_name + Component.prototype._COUNT")
         self._disposed = False
         
         # Init some internal variables

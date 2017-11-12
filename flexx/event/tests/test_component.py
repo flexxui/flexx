@@ -47,6 +47,30 @@ class Bar(event.Component):
         return {'x':1}
     
 
+@run_in_both(FooSubclass)
+def test_component_id1():
+    """
+    ? Foo
+    ? FooSubclass
+    """
+    f = Foo()
+    print(f._id)
+    f = FooSubclass()
+    print(f._id)
+
+
+@run_in_both(FooSubclass, js=False)
+def test_component_id2():
+    """
+    true
+    true
+    """
+    f = Foo()
+    print(f._id in str(f))
+    f = FooSubclass()
+    print(f._id in str(f))
+
+
 @run_in_both(Foo, Bar, Comp)
 def test_component_class_attributes1():
     """

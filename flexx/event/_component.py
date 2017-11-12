@@ -170,9 +170,8 @@ class Component(with_metaclass(ComponentMeta, object)):
     
     def __init__(self, *init_args, **property_values):
         
-        # todo: more sensible, show in repr
         Component._COUNT += 1
-        self._id = 'c%i' % Component._COUNT  # to ensure a consistent event order
+        self._id = self.__class__.__name__ + str(Component._COUNT)
         self._disposed = False
         
         # Init some internal variables. Note that __reactions__ is a list of
@@ -198,6 +197,9 @@ class Component(with_metaclass(ComponentMeta, object)):
         # Connect reactions and fire initial events
         self._comp_init_reactions()
         self._comp_init_events(prop_events)
+    
+    def __repr__(self):
+        return "<Component '%s' at 0x%x>" % (self._id, id(self))
     
     def _comp_init_property_values(self, property_values):
         events = []
