@@ -177,8 +177,10 @@ class Component(with_metaclass(ComponentMeta, object)):
         # Init some internal variables. Note that __reactions__ is a list of
         # reaction names for this class, and __handlers a dict of reactions
         # registered to events of this object.
+        # The __pending_events makes that reactions that connect to this
+        # component right after it initialization get the initial events.
         self.__handlers = {}
-        self.__pending_events = {}  # todo: what was this for exactly again?
+        self.__pending_events = {}
         self.__anonymous_reactions = []
         
         # Prepare handlers with event types that we know
