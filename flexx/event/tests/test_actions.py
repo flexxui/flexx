@@ -112,19 +112,19 @@ def test_action_one_by_one():
 @run_in_both(MyObject)
 def test_action_init():
     """
-    True
     9
-    True
+    9
+    12
     42
     """
     
     m = MyObject(foo=9)
-    print(m.foo is None)
+    print(m.foo)
     loop.iter()
     print(m.foo)
     
-    m = MyObject(foo=9)
-    print(m.foo is None)
+    m = MyObject(foo=12)
+    print(m.foo)
     m.set_foo(42)
     loop.iter()
     print(m.foo)

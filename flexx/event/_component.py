@@ -167,81 +167,109 @@ class Component(with_metaclass(ComponentMeta, object)):
     
     _IS_COMPONENT = True
     _COUNT = 0
-     
-    def __init__(self, **property_values):
+    
+    def __init__(self, *init_args, **property_values):
         
+        # todo: more sensible, show in repr
         Component._COUNT += 1
         self._id = 'c%i' % Component._COUNT  # to ensure a consistent event order
+        self._disposed = False
         
         # Init some internal variables. Note that __reactions__ is a list of
         # reaction names for this class, and __handlers a dict of reactions
         # registered to events of this object.
         self.__handlers = {}
-        self.__props_ever_set = {}
-        self.__pending_events = {}
+        self.__pending_events = {}  # todo: what was this for exactly again?
+        self.__anonymous_reactions = []
         
-        init_reactions = property_values.pop('_init_reactions', True)
-        
-        self._disposed = False
-        
-        # Instantiate emitters
+        # Prepare handlers with event types that we know
         for name in self.__emitters__:
             self.__handlers.setdefault(name, [])
-        
-        # Initialize properties with default values (does not emit yet)
-        for name in sorted(self.__properties__):
-            prop = getattr(self.__class__, name)
+        for name in self.__properties__:
             self.__handlers.setdefault(name, [])
-            # self._mutate(name, prop._default) but with shortcuts
-            value2 = getattr(self, '_' + name + '_validate')(prop._default)
-            setattr(self, '_' + name + '_value', value2)
-            self.emit(name, dict(new_value=value2, old_value=value2, mutation='set'))
         
-        # Invoke initial set actions for properties
-        cname = self.__class__.__name__
-        for name in sorted(property_values):  # sort for deterministic order
-            if name in self.__properties__:
-                value = property_values[name]
-                prop_setter_name = 'set_' + name
-                setter_func = getattr(self, prop_setter_name, None)
-                if setter_func is None:
-                    t = '%s does not have a set_%s() action for property %s.'
-                    raise TypeError(t % (cname, name, name))
-                elif callable(value):  # make a reaction
-                    setter_reaction = lambda: setter_func(value())
-                    ev = Dict(source=self, type='', label='')
-                    loop.add_reaction_event(Reaction(self, setter_reaction, []), ev)
-                else:
-                    setter_func(value)
-            else:
-                raise AttributeError('%s does not have a property %r' % (cname, name))
+        # Init the values of all properties.
+        prop_events = self._comp_init_property_values(property_values)
         
-        # Init reactions and properties now, or later? --> feature for subclasses
-        if init_reactions:
-            self._init_reactions()
+        # Apply user-defined initialization
+        with self:
+            self.init(*init_args)
+        
+        # Connect reactions and fire initial events
+        self._comp_init_reactions()
+        self._comp_init_events(prop_events)
     
-    def _init_reactions(self):
+    def _comp_init_property_values(self, property_values):
+        events = []
+        # First process default property values
+        for name in self.__properties__:  # is sorted by name
+            prop = getattr(self.__class__, name)
+            value = getattr(self, '_' + name + '_validate')(prop._default)
+            setattr(self, '_' + name + '_value', value)
+            if name not in property_values:
+                ev = dict(type=name, new_value=value, old_value=value, mutation='set')
+                events.append(ev)
+        # Then process property values given at init time
+        for name, value in property_values.items():  # is sorted by occurance in py36
+            if name not in self.__properties__:
+                raise AttributeError('%s does not have property %s.' % (self._id, name))
+            if callable(value):
+                self._comp_make_implicit_setter(name, value)
+                continue
+            value = getattr(self, '_' + name + '_validate')(value)
+            setattr(self, '_' + name + '_value', value)
+            ev = dict(type=name, new_value=value, old_value=value, mutation='set')
+            events.append(ev)
+        return events
+    
+    def _comp_make_implicit_setter(self, prop_name, func):
+        setter_func = getattr(self, 'set_' + prop_name, None)
+        if setter_func is None:
+            t = '%s does not have a set_%s() action for property %s.'
+            raise TypeError(t % (self._id, prop_name, prop_name)) 
+        setter_reaction = lambda: setter_func(func())
+        reaction = Reaction(self, setter_reaction, [])
+        self.__anonymous_reactions.append(reaction)
+    
+    def _comp_init_reactions(self):
+        # Instantiate reactions by referencing them, Connections are resolved now.
+        # Implicit reactions need to be invoked to initialize connections.
+        for name in self.__reactions__:
+            reaction = getattr(self, name)
+            if not reaction.is_explicit():
+                ev = Dict(source=self, type='', label='')
+                loop.add_reaction_event(reaction, ev)
+        # Also invoke the anonymouse implicit reactions
+        for reaction in self.__anonymous_reactions:
+            if not reaction.is_explicit():
+                ev = Dict(source=self, type='', label='')
+                loop.add_reaction_event(reaction, ev)
+    
+    def _comp_init_events(self, prop_events):
         """ Initialize handlers and properties. You should only do this once,
         and only when using the object is initialized with _init_reactions=False.
         """
+        
         if self.__pending_events is None:  # pragma: no cover
             return
         # Schedule a call to disable event capturing
         def stop_capturing():
             self.__pending_events = None
         loop.call_later(stop_capturing)
-        # Call Python or JS version to initialize and connect the reactions
-        self._init_reactions2()
+        
+        # Emit initial events for props
+        for i in range(len(prop_events)):
+            ev = prop_events[i]
+            self.emit(ev['type'], ev)
     
-    def _init_reactions2(self):
-        # Instantiate reactions (i.e. resolve connections) its enough to reference them
-        # the new_value attribute in the event is to trigger a reconnect.
-        # Force implicit reactions to connect.
-        for name in self.__reactions__:
-            reaction = getattr(self, name)
-            if not reaction.is_explicit():
-                ev = Dict(source=self, type='', label='')
-                loop.add_reaction_event(reaction, ev)
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        pass
+    
+    def init(self):
+        pass
     
     if sys.version_info > (3, 4):
         # http://eli.thegreenplace.net/2009/06/12/safely-using-destructors-in-python
@@ -397,7 +425,6 @@ class Component(with_metaclass(ComponentMeta, object)):
         # Prepare
         private_name = '_' + prop_name + '_value'
         validator_name = '_' + prop_name + '_validate'
-        self.__props_ever_set[prop_name] = True  # todo: what was this for again?
         
         # Set / Emit
         value2 = value

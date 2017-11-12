@@ -111,6 +111,21 @@ def test_component_class_attributes3():
     print(f.eggs)
 
 
+class CompWithInit1(event.Component):
+    
+    def init(self, a, b=3):
+        print('i', a, b)
+
+@run_in_both(CompWithInit1)
+def test_component_init():
+    """
+    i 1 2
+    i 1 3
+    """
+    CompWithInit1(1, 2)
+    CompWithInit1(1)
+
+
 @run_in_both(Foo, Bar, Comp)
 def test_component_event_types():
     """

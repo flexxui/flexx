@@ -100,10 +100,11 @@ def test_property_mutating():
 @run_in_both(MyObject)
 def test_property_defaults1():
     """
-    6
+    9
     xx
     9
     xx
+    yy
     fail ok
     end
     """
@@ -116,10 +117,20 @@ def test_property_defaults1():
     print(m.foo)
     print(m.bar)
     
+    # Even non-settable props can be initialized at instantiation
+    # try:
+    #     MyObject(bar='yy')
+    # except TypeError:
+    #     print('fail ok')  # py and js
+    m = MyObject(bar='yy')
+    print(m.bar)
+    
+    # But need settable prop if setting to implicit reaction
     try:
-        MyObject(bar='yy')
+        MyObject(bar=lambda:'yy')
     except TypeError:
         print('fail ok')  # py and js
+    
     print('end')
 
 

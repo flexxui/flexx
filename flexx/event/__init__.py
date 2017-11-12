@@ -68,13 +68,27 @@ Properties accept one positional arguments to set the default value. If not
 given, a sensible default value is used that depends on the type of property.
 The ``foo`` property above is marked as settable, so that the class will have
 a ``set_foo()`` action. Docs for a property can be added too. Properties
-are readonly, can can only be mutated by actions.
+are readonly: they can can only be mutated by actions.
 
-Properties that have a setter action can be provided at initialization:
+Property values can be initialized when a component is created (also
+for non-settable properties):
 
 .. code-block:: python
 
     c = MyComponent(foo=42)
+
+A similar pattern is to set the initial value to a function, as a way to create
+an "implicit reaction" that sets the property. In the example below, the label
+text will be automatically updated when the username property changes:
+
+.. code-block:: python
+
+    c = UiLabel(text=lambda: self.username)
+
+An event is emitted every time that a property changes. This event has attributes
+``old_value`` and ``new_value`` (except for in-place array mutations, as
+explained below). The first event for a property will have the same value
+for ``old_value`` and ``new_value``.
 
 
 Actions
@@ -102,8 +116,8 @@ Mutations are done via the ``_mutate()`` method, or by the auto-generated
 to do so otherwise will result in an error.
 
 
-Fine graned mutations
----------------------
+Fine grained mutations
+----------------------
 
 The above shows the simple and most common use of mutations. However,
 mutations can also be done in-place:
@@ -124,8 +138,8 @@ provided value is the number of elements to remove. For the others it must
 be a list of elements to set/insert/replace at the specified index.
 
 
-Emitter
--------
+Emitters
+--------
 
 :func:`Emitters <flexx.event.emitter>` make it easy to generate events.
 Similar to actions, they are created with a decorator.

@@ -122,71 +122,96 @@ class ComponentJS:  # pragma: no cover
     _COUNT = 0
     _REACTION_COUNT = 0
     
-    def __init__(self, **property_values):
+    def __init__(self, *init_args, **property_values):
         
         RawJS('Component.prototype._COUNT += 1')
         self._id = RawJS("'c' + Component.prototype._COUNT")
+        self._disposed = False
         
         # Init some internal variables
         self.__handlers = {}  # reactions connecting to this component
-        self.__props_being_set = {}
-        self.__props_ever_set = {}
         self.__pending_events = {}
+        self.__anonymous_reactions = []
         
-        init_reactions = property_values.pop('_init_reactions', True)
-        
-        # Init actions
+        # Create actions
         for i in range(len(self.__actions__)):
             name = self.__actions__[i]
             self.__create_action(self[name], name)
-        
-        # Init emitters
+        # Create emitters
         for i in range(len(self.__emitters__)):
             name = self.__emitters__[i]
             self.__handlers[name] = []
             self.__create_emitter(self[name], name)
-        
-        # Init properties and their default value
+        # Create properties
         for i in range(len(self.__properties__)):
             name = self.__properties__[i]
             self.__handlers[name] = []
             self.__create_property(name)
-            # self._mutate(name, prop._default) but with shortcuts
-            value_name = '_' + name + '_value'
-            value2 = self['_' + name + '_validate'](self[value_name])
-            self[value_name] = value2
-            self.emit(name, dict(new_value=value2, old_value=value2, mutation='set'))
         
-        # Invoke initial set actions for properties
-        for name in sorted(property_values):  # sort for deterministic order
-            if name in self.__properties__:
-                value = property_values[name]
-                prop_setter_name = 'set_' + name
-                setter_func = getattr(self, prop_setter_name, None)
-                if setter_func is None:
-                    raise TypeError('%s does not have a set_%s() action.' %
-                                    (self._class_name, name))
-                elif callable(value):  # make a reaction
-                    setter_reaction = lambda: setter_func(value())
-                    ev = dict(source=self, type='', label='')
-                    r = self.__create_reaction(setter_reaction, 'auto-' + name, [])
-                    loop.add_reaction_event(r, ev)
-                else:
-                    setter_func(property_values[name])
-            else:
-                raise AttributeError('%s does not have a property %r' %
-                                     (self._class_name, name))
+        # Init the values of all properties.
+        prop_events = self._comp_init_property_values(property_values)
         
-        # Init reactions and properties now, or later?
-        if init_reactions:
-            self._init_reactions()
+        # Apply user-defined initialization
+        with self:
+            self.init(*init_args)
+        
+        # Connect reactions and fire initial events
+        self._comp_init_reactions()
+        self._comp_init_events(prop_events)
     
-    def _init_reactions2(self):
-        # Create (and connect) reactions
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        pass
+    
+    def _comp_init_property_values(self, property_values):
+        events = []
+        # First process default property values
+        for i in range(len(self.__properties__)):
+            name = self.__properties__[i]
+            value_name = '_' + name + '_value'
+            value = self[value_name]
+            value = self['_' + name + '_validate'](value)
+            self[value_name] = value
+            if name not in property_values:
+                ev = dict(type=name, new_value=value, old_value=value, mutation='set')
+                events.append(ev)
+        # Then process property values given at init time
+        for name, value in property_values.items():  # is sorted by occurance in py36
+            if name not in self.__properties__:
+                raise AttributeError('%s does not have property %s.' % (self._id, name))
+            if callable(value):
+                self._comp_make_implicit_setter(name, value)
+                continue
+            value = self['_' + name + '_validate'](value)
+            self['_' + name + '_value'] = value
+            ev = dict(type=name, new_value=value, old_value=value, mutation='set')
+            events.append(ev)
+        return events
+    
+    def _comp_make_implicit_setter(self, prop_name, func):
+        setter_func = getattr(self, 'set_' + prop_name, None)
+        if setter_func is None:
+            t = '%s does not have a set_%s() action for property %s.'
+            raise TypeError(t % (self._id, prop_name, prop_name)) 
+        setter_reaction = lambda: setter_func(func())
+        reaction = self.__create_reaction(setter_reaction, 'auto-' + prop_name, [])
+        self.__anonymous_reactions.append(reaction)
+    
+    def _comp_init_reactions(self):
+        # Create (and connect) reactions.
+        # Implicit reactions need to be invoked to initialize connections.
         for i in range(len(self.__reactions__)):
             name = self.__reactions__[i]
             func = self[name]
             r = self.__create_reaction(func, name, func._connection_strings or ())
+            if r.is_explicit() is False:
+                ev = dict(source=self, type='', label='')
+                loop.add_reaction_event(r, ev)
+        # Also invoke the anonymouse implicit reactions
+        for i in range(len(self.__anonymous_reactions)):
+            r = self.__anonymous_reactions[i]
             if r.is_explicit() is False:
                 ev = dict(source=self, type='', label='')
                 loop.add_reaction_event(r, ev)
@@ -461,6 +486,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     total_code.append('')
     
     # Return string with meta info (similar to what py2js returns)
+    mc.meta['vars_unknown'].discard('flx_name')
     return mc.attach_meta('\n'.join(total_code))
 
 

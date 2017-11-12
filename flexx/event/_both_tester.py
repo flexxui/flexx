@@ -59,6 +59,7 @@ def call_func_in_py(func):
     finally:
         sys.stdout = orig_stdout
         sys.stderr = orig_stderr
+    loop.reset()
     return fake_stdout.getvalue().rstrip()
 
 
@@ -76,7 +77,7 @@ def call_func_in_js(func, classes, extra_nodejs_args=None):
         code += create_js_component_class(c, c.__name__,
                                           c.__bases__[0].__name__+'.prototype')
     code += py2js(func, 'test', inline_stdlib=False, docstrings=False)
-    code += 'test();'
+    code += 'test();loop.reset();'
     nargs, function_deps, method_deps = get_std_info(code)
     code = get_partial_std_lib(function_deps, method_deps, []) + code
     # Call (allow using file)

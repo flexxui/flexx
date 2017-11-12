@@ -155,15 +155,15 @@ class MyObject_init(event.Component):
 
 
 @run_in_both(MyObject_init)
-def test_reacion_init1():
+def test_reaction_init1():
     """
     0 7
     iter
-    r foo:0->0, bar:7->7
+    r bar:7->7, foo:0->0
     0 7
     end
     """
-    # order foo bar is because of order of connection strings
+    # order bar foo is because of sorted prop names
     m = MyObject_init()
     print(m.foo, m.bar)
     print('iter')
@@ -172,17 +172,17 @@ def test_reacion_init1():
     print('end')
 
 
+@skipif(sys.version_info < (3,6), reason='need ordered kwargs')
 @run_in_both(MyObject_init)
-def test_reacion_init2():
+def test_reaction_init2():
     """
-    0 7
+    4 4
     iter
-    r foo:0->0, bar:7->7, bar:7->4, foo:0->4
+    r foo:4->4, bar:4->4
     4 4
     end
     """
-    # Order of first two is determined by order of connection strings
-    # the next two by the property name
+    # Order is determined by order of kwargs.
     m = MyObject_init(foo=4, bar=4)
     print(m.foo, m.bar)
     print('iter')
@@ -192,15 +192,15 @@ def test_reacion_init2():
 
 
 @run_in_both(MyObject_init)
-def test_reacion_init3():
+def test_reaction_init3():
     """
     0 7
     iter
-    r foo:0->0, bar:7->7, foo:0->2, bar:7->2
+    r bar:7->7, foo:0->0, foo:0->2, bar:7->2
     2 2
     end
     """
-    # order foo bar is because of order of connection strings
+    # first order due to prop name sorting, second two due to order of calling setters
     m = MyObject_init()
     m.set_foo(2)
     m.set_bar(2)
@@ -212,11 +212,11 @@ def test_reacion_init3():
 
 
 @run_in_both(MyObject_init)
-def test_reacion_init4():
+def test_reaction_init4():
     """
-    0 7
+    4 4
     iter
-    r foo:0->0, bar:7->7, bar:7->4, foo:0->4, foo:4->2, bar:4->2
+    r foo:4->4, bar:4->4, foo:4->2, bar:4->2
     2 2
     end
     """
@@ -233,10 +233,10 @@ def test_reacion_init4():
 
 
 @run_in_both(MyObject_init)
-def test_reacion_init_fail1():
+def test_reaction_init_fail1():
     """
     ? AttributeError
-    ? TypeError
+    end
     """
     try:
         m = MyObject_init(blabla=1)
@@ -247,7 +247,7 @@ def test_reacion_init_fail1():
         m = MyObject_init(spam=1)
     except TypeError as err:
         logger.exception(err)
-
+    print('end')
 
 ## Inheritance, overloading, and super()
 
@@ -289,7 +289,7 @@ class MyObject2(event.Component):
 
 
 @run_in_both(MyObject2)
-def test_reacion_using_react_func1():
+def test_reaction_using_react_func1():
     """
     r foo:0->0, bar:7->7, foo:0->2, bar:7->2
     r foo:0->0, bar:7->7, foo:0->3, bar:7->3
@@ -311,9 +311,8 @@ def test_reacion_using_react_func1():
     m.set_bar(3)
     loop.iter()
 
-
 @run_in_both(MyObject2)
-def test_reacion_using_react_func2():
+def test_reaction_using_react_func2():
     """
     r foo:0->2, bar:7->2
     r foo:0->3, bar:7->3
@@ -338,7 +337,7 @@ def test_reacion_using_react_func2():
 
 
 @run_in_both(MyObject2)
-def test_reacion_using_react_func3():
+def test_reaction_using_react_func3():
     """
     r foo:0->2, bar:7->2
     """
@@ -357,7 +356,7 @@ def test_reacion_using_react_func3():
 
 
 @run_in_both(MyObject2, js=False)  # not an issue in JS - no decorators there
-def test_reacion_using_react_func4():
+def test_reaction_using_react_func4():
     """
     r foo:0->0, bar:7->7, foo:0->2, bar:7->2
     """
