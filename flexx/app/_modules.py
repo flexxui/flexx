@@ -225,7 +225,7 @@ class JSModule:
             return  # stubs
         elif name in ('loop', 'logger'):
             # .... maybe should be if val is loop, but what to do about logger?
-            self._deps.setdefault('flexx.event.js', ['flexx.event.js']).append('loop')
+            self._deps.setdefault('flexx.event.js', ['event']).append('loop')
             return  # provided by event system'
         elif val is None and not is_global:  # pragma: no cover
             logger.warn('JS in "%s" uses variable %r that is None; '
@@ -325,7 +325,10 @@ class JSModule:
         """
         assert not (vars_unknown is None or vars_global is None)
         for name in reversed(sorted(vars_unknown)):
-            self.add_variable(name, name in vars_global)
+            if name == 'event':
+                self._deps.setdefault('flexx.event.js', ['event'])
+            else:
+                self.add_variable(name, name in vars_global)
     
     def _collect_dependencies_from_bases(self, cls):
         """

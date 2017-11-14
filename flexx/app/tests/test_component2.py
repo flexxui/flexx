@@ -1,7 +1,7 @@
 from flexx.app._component2 import PyComponent, JsComponent, LocalComponent, ProxyComponent
 from flexx.event import Component
 
-from flexx import event
+from flexx import event, app
 
 from flexx.util.testing import run_tests_if_main, raises, skip
 
@@ -89,6 +89,10 @@ def test_pycomponent_heritage():
 
 def test_jscomponent_heritage():
     
+    session = app.manager.get_default_session()
+    if session is None:
+        session = app.manager.create_default_session()
+    
     C = MyJComponent2
    
     # Names and repr
@@ -108,7 +112,7 @@ def test_jscomponent_heritage():
         if cls not in mro:
             assert not issubclass(C, cls)
     # Also check isinstance()
-    foo = C()
+    foo = C(flx_session=session)
     for cls in mro:
         assert isinstance(foo, cls)
     for cls in all_classes:
@@ -135,8 +139,8 @@ def test_properties():
     assert MyJComponent2.JS.__properties__ == ['foo']
     
     assert MyPComponent2.__actions__ == ['increase_foo']
-    assert MyPComponent2.JS.__actions__ == ['increase_foo']
-    assert MyJComponent2.__actions__ == ['increase_foo']
+    assert MyPComponent2.JS.__actions__ == ['_emit_from_other_side', 'increase_foo']
+    assert MyJComponent2.__actions__ == ['_emit_from_other_side', 'increase_foo']
     assert MyJComponent2.JS.__actions__ == ['increase_foo']
     
     assert MyPComponent2.__reactions__ == ['track_foo']

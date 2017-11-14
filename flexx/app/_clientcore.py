@@ -94,18 +94,18 @@ class Flexx:
         def log(msg):
             window.console.ori_log(msg)
             for session in self.sessions.values():
-                if session.ws is not None:
-                    session.ws.send("PRINT " + msg)
+                if session._ws is not None:
+                    session._ws.send("PRINT " + msg)
         def info(msg):
             window.console.ori_info(msg)
             for session in self.sessions.values():
-                if session.ws is not None:
-                    session.ws.send("INFO " + msg)
+                if session._ws is not None:
+                    session._ws.send("INFO " + msg)
         def warn(msg):
             window.console.ori_warn(msg)
             for session in self.sessions.values():
-                if session.ws is not None:
-                    session.ws.send("WARN " + msg)
+                if session._ws is not None:
+                    session._ws.send("WARN " + msg)
         def error(msg):
             evt = dict(message=str(msg), error=msg, preventDefault=lambda: None)
             on_error(evt)
@@ -124,8 +124,8 @@ class Flexx:
             evt.preventDefault()  # Don't do the standard error 
             window.console.ori_error(msg)
             for session in self.sessions.values():
-                if session.ws is not None:
-                    session.ws.send("ERROR " + evt.message)
+                if session._ws is not None:
+                    session._ws.send("ERROR " + evt.message)
         on_error = on_error.bind(self)
         # Set new versions
         window.console.log = log
@@ -165,7 +165,7 @@ class JsSession:
         self._init_time = time()
         self._pending_commands = []
         self._asset_count = 0
-        self.ws = None
+        self._ws = None
         self.last_msg = None
         # self.classes = {}
         self.instances = {}
@@ -173,15 +173,17 @@ class JsSession:
         self.initSocket()
         
     def exit(self):
-        if self.ws:  # is not null or undefined
-            self.ws.close()
-            self.ws = None
+        if self._ws:  # is not null or undefined
+            self._ws.close()
+            self._ws = None
             # flexx.instances.sessions.pop(self)  might be good, but perhaps not that much neede?
     
-    def instantiate_component(self, module, cname, id):
+    def instantiate_component(self, module, cname, id, args, kwargs):
         m = flexx.require(module)
         Cls = m[cname]  # noqa
-        c = Cls(self, id)
+        kwargs['flx_session'] = self
+        kwargs['flx_id'] = id
+        c = Cls(*args, **kwargs)
         self.instances[id] = c
         return c
     
@@ -222,7 +224,7 @@ class JsSession:
         # Resolve public hostname
         self.ws_url = self.ws_url.replace('0.0.0.0', window.location.hostname)
         # Open web socket in binary mode
-        self.ws = ws = WebSocket(self.ws_url)
+        self._ws = ws = WebSocket(self.ws_url)
         #ws.binaryType = "arraybuffer"  # would need utf-decoding -> slow
         
         def on_ws_open(evt):
@@ -239,7 +241,7 @@ class JsSession:
                     window.setTimeout(self._process_commands, 0)
                 self._pending_commands.push(msg)
         def on_ws_close(evt):
-            self.ws = None
+            self._ws = None
             msg = 'Lost connection with server'
             if evt and evt.reason:
                 msg += ': %s (%i)' % (evt.reason, evt.code)
@@ -249,7 +251,7 @@ class JsSession:
             else:
                 window.console.info(msg)
         def on_ws_error(self, evt):
-            self.ws = None
+            self._ws = None
             window.console.error('Socket error')
         
         # Connect
@@ -280,13 +282,13 @@ class JsSession:
     def _send_command(self, command):
         """ Send a command over the web socket to the server.
         """
-        self.ws.send(command)
+        self._ws.send(command)
     
     def _receive_command(self, msg):
         """ Process a command send from the server.
         """
         if msg.startswith('PING '):
-            self.ws.send('PONG ' + msg[5:])
+            self._ws.send('PONG ' + msg[5:])
         elif msg == 'INIT-DONE':
             window.flexx.spin(None)
             while len(self._pending_commands):
@@ -297,9 +299,14 @@ class JsSession:
             window.console.ori_log(msg[6:])
         elif msg.startswith('EVAL '):
             window._ = eval(msg[5:])
-            self.ws.send('RET ' + window._)  # send back result
+            self._ws.send('RET ' + window._)  # send back result
         elif msg.startswith('EXEC '):
             eval(msg[5:])  # like eval, but do not return result
+        elif msg.startswith('INVOKE '):
+            _, id, name, txt = msg.split(' ', 3)
+            ob = self.instances.get(id, None)
+            if ob is not None:
+                ob[name](*JSON.parse(txt))
         elif msg.startswith('DEFINE-JS ') or msg.startswith('DEFINE-JS-EVAL '):
             window.flexx.spin()
             cmd, name, code = msg.split(' ', 2)

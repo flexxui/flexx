@@ -518,11 +518,13 @@ class Session:
         assets = []
 
         def collect_module_and_deps(mod):
-            if mod.name.startswith('flexx.app'):
-                return  # these are part of flexx-core asset
+            if mod.name.startswith(('flexx.app', 'flexx.event')):
+                return  # these are part of flexx assets
             if mod.name not in self._present_modules:
                 self._present_modules.add(mod.name)
                 for dep in mod.deps:
+                    if dep.startswith(('flexx.app', 'flexx.event')):
+                        continue
                     submod = self._store.modules[dep]
                     collect_module_and_deps(submod)
                 modules.add(mod)
@@ -594,14 +596,14 @@ class Session:
         if command.startswith('RET '):
             print(command[4:])  # Return value
         elif command.startswith('ERROR '):
-            logger.error('JS - ' + command[6:].strip() +
+            logger.error('JS: ' + command[6:].strip() +
                          ' (stack trace in browser console)')
         elif command.startswith('WARN '):
-            logger.warn('JS - ' + command[5:].strip())
+            logger.warn('JS: ' + command[5:].strip())
         elif command.startswith('PRINT '):
-            print(command[5:].strip())
+            print('JS:', command[5:].strip())
         elif command.startswith('INFO '):
-            logger.info('JS - ' + command[5:].strip())
+            logger.info('JS: ' + command[5:].strip())
         elif command.startswith('SET_PROP '):
             _, id, name, txt = command.split(' ', 3)
             ob = self._component_instances.get(id, None)
@@ -613,10 +615,10 @@ class Session:
             if ob is not None:
                 ob._set_event_types(txt)
         elif command.startswith('EVENT '):
-            _, id, name, txt = command.split(' ', 3)
+            _, id, txt = command.split(' ', 2)
             ob = self._component_instances.get(id, None)
             if ob is not None:
-                ob._emit_from_js(name, txt)
+                ob._emit_from_other_side(txt)
         elif command.startswith('INVOKE '):
             _, id, name, txt = command.split(' ', 3)
             ob = self._component_instances.get(id, None)
