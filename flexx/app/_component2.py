@@ -9,9 +9,10 @@ import threading
 
 from ..pyscript import js_rename, window, JSString, undefined
 
-from ..event import Component, loop, StringProp
-from ..event._component import (with_metaclass, new_type, ComponentMeta,
-                                finalize_component_class)
+from .. import event
+
+from ..event import Component, loop
+from ..event._component import (with_metaclass, new_type, ComponentMeta)
 
 from ..event._property import Property
 from ..event._emitter import EmitterDescriptor
@@ -59,6 +60,7 @@ def get_component_classes():
 # to the Tornado event loop while inside a context.
 _active_components_per_thread = {}  # dict of threadid -> list
 
+# todo: move this logic to event.Component too?
 def _get_active_components():
     """ Get list that represents the stack of "active" components.
     Each thread has its own stack. Should only be used directly inside
@@ -133,14 +135,22 @@ class AppComponentMeta(ComponentMeta):
     
     __repr__ = meta_repr
     
-    def __init__(cls, cls_name, bases, dct):
+    def _init_hook(cls, cls_name, bases, dct):
         
+        # Create corresponding class for JS
         if issubclass(cls, LocalComponent):
             cls._make_js_proxy_class(cls_name, bases, dct)
         elif issubclass(cls, ProxyComponent):
             cls._make_js_local_class(cls_name, bases, dct)
         else:  # pragma: no cover
             raise TypeError('Expected class to inherit fro LocalComponent or ProxyComponent.')
+        
+        # Write __jsmodule__; an optimization for our module/asset system
+        cls.__jsmodule__ = get_mod_name(sys.modules[cls.__module__])
+        
+        # Set JS.CODE and CSS
+        cls.JS.CODE = cls._get_js()
+        cls.CSS = cls.__dict__.get('CSS', '')
         
         # Register this class. The classes in this list will be automatically
         # "pushed to JS" in a JIT fashion. We have to make sure that we include
@@ -154,8 +164,6 @@ class AppComponentMeta(ComponentMeta):
         
         for c in bases:
            assert not issubclass(cls, ProxyComponent)
-        
-        OK_MAGICS = '__init__', '__json__', '__from_json__'
         
         # Fix inheritance for JS variant
         jsbases = [getattr(b, 'JS') for b in cls.__bases__ if hasattr(b, 'JS')]
@@ -178,24 +186,12 @@ class AppComponentMeta(ComponentMeta):
                 pass  # no reactions/functions/class attributes on the proxy side
         
         # Create JS class
-        JS = ComponentMetaJS(cls_name, tuple(jsbases), jsdict)
-        # Write __jsmodule__; an optimization for our module/asset system
-        cls.__jsmodule__ = get_mod_name(sys.modules[cls.__module__])
-        
-        # Set JS, META, and CSS for this class
-        cls.JS = JS
-        cls.JS.CODE = cls._get_js()
-        cls.CSS = cls.__dict__.get('CSS', '')
-        
-        # Drop into Component meta class
-        ComponentMeta.__init__(cls, cls_name, bases, dct)
-
+        cls.JS = ComponentMetaJS(cls_name, tuple(jsbases), jsdict)
+    
     def _make_js_local_class(cls, cls_name, bases, dct):
         
         for c in bases:
            assert not issubclass(cls, LocalComponent)
-        
-        OK_MAGICS = '__init__', '__json__', '__from_json__'
         
         # Fix inheritance for JS variant
         jsbases = [getattr(b, 'JS') for b in cls.__bases__ if hasattr(b, 'JS')]
@@ -222,20 +218,9 @@ class AppComponentMeta(ComponentMeta):
                 delattr(cls, name)
                 dct.pop(name)  # is this necessary? 
         
-        # Finalize classes
-        JS = ComponentMetaJS(cls_name, tuple(jsbases), jsdict)
-        # Write __jsmodule__; an optimization for our module/asset system
-        cls.__jsmodule__ = get_mod_name(sys.modules[cls.__module__])
-        
-        # Set JS, META, and CSS for this class
-        cls.JS = JS
-        cls.JS.CODE = cls._get_js()
-        cls.CSS = cls.__dict__.get('CSS', '')
-        
-        # Drop into Component meta class
-        ComponentMeta.__init__(cls, cls_name, bases, dct)
-
-
+        # Create JS class
+        cls.JS = ComponentMetaJS(cls_name, tuple(jsbases), jsdict)
+    
     def _get_js(cls):
         """ Get source code for this class plus the meta info about the code.
         """
@@ -288,10 +273,6 @@ class LocalComponent(Component):
     Base class for PyComponent in Python and JsComponent in JavaScript.
     """
     
-    __jsmodule__ = __name__
-    
-    id = StringProp(doc='The id of this component')
-    
     def __init__(self, *init_args, **kwargs):
         
         # Pop args that we need from the kwargs (because legacy Python does not
@@ -304,17 +285,20 @@ class LocalComponent(Component):
         self._sessions = []
         if session is not None:
             self._sessions.append(session)
-        # active_component = get_active_component()
-        # if active_component is not None:
-        #     self._sessions.extend(active_component._sessions)
         
-        # Init Component, but delay initialization of handlers
-        # We init after producing the JS command to create the corresponding
-        # object, so that subsequent commands work ok
-        super().__init__(_init_reactions=False, **kwargs)
+        super().__init__(*init_args, **kwargs)
+    
+    
+    def _comp_init_property_values(self, property_values):
+        prop_events = super()._comp_init_property_values(property_values)
         
-        # The Component.__init__ sets _id, reset
-        self._owner_id = 'unique id of Process that "owns" the component'
+        # This is a good time to register with the session, and
+        # instantiate the proxy class. Property values have been set at this
+        # point, but init() has not yet been called.
+        
+        # todo: also send property_values to proxy
+        
+        # todo: more id stuff?
         self._id_value = self._id
         
         # Register this component with the session. Sets the id.
@@ -322,57 +306,43 @@ class LocalComponent(Component):
         for session in self._sessions:
             session._register_component(self)
         
+        # active_component = get_active_component()
+        # if active_component is not None:
+        #     self._sessions.extend(active_component._sessions)
+        
+        # We track what events the proxy is listening to
+        self.__event_types_at_proxy = []
         
         # Instantiate JavaScript version of this class
         for session in self._sessions:
             clsname = self.__class__.__name__
             cmd = 'flexx.sessions["%s"].instantiate_component("%s", "%s", "%s");' % (
-                     session.id, self.__module__, clsname, self._id,
-                    # serializer.saves(event_types_py),
-                    # serializer.saves(known_event_types_py)
-                    )
+                     session.id, self.__jsmodule__, clsname, self._id)
             session._exec(cmd)
         
-        
-        # Get event types that we need to register that may come from other end
-        known_event_types = self.__emitters__ + self.__properties__
-        
-        # # Further initialization of attributes
-        # self.__event_types_js = event_types_js
-        # self.__pending_events_from_js = []
-        # self.__pending_props_from_js = []
-        
-        # # Get initial event connections
-        # event_types_local = []
-        # for reaction_name in self.__reactions__:
-        #     descriptor = getattr(self.__class__, reaction_name)
-        #     event_types_local.extend(descriptor.local_connection_strings)
-        #     
-        # Make JS-side events known
-        for name in known_event_types:
-            self._Component__handlers.setdefault(name, [])
-        
-        # Initialize the component further, e.g. Widgets can create
-        # subwidgets etc. This is done here, at the point where the
-        # properties are initialized, but the handlers not yet.
-        with self:
-            self.init(*init_args)
-        # self._session._exec('flexx.instances.%s.init();' % self._id)
-        
-        # Initialize reactions for Python and for JS. Done after init()
-        # so that they can connect to newly created sub Component's.
-        self._init_reactions()
-        # self._session._exec('flexx.instances.%s._init_handlers();' % self._id)
+        return prop_events
+    # 
+    # def _comp_init_events(self):    
+    #     super()._comp_init_events()
+    #     
+    #     # Also 
+    #     
+    #     # self._session._exec('flexx.instances.%s.init();' % self._id)
+    #     
+    #     # Initialize reactions. Done after init()  so that they can
+    #     # connect to newly created sub Component's.
+    #     self._init_reactions()
+    #     for session in self._sessions:
+    #         session._exec('flexx.sessions["%s"].get_instance("%s")._init_reactions();' %
+    #                       (session.id, self._id))
+    #     
         # todo: ? self._session.keep_alive(self)
     
-    def __repr__(self):
-        clsname = self.__class__.__name__
-        return "<%s object '%s' at 0x%s>" % (clsname, self._id, id(self))
-    
     def __json__(self):
-        return {'__type__': 'Flexx-Component',
-                'session_id': self.session.id,
-                'id': self.id}
+        return 'todo: actually send (ref to) instance'
+        #return {'__type__': 'Flexx-Component',
+        #        'session_id': self.session.id,
+        #        'id': self._id}
     
     # @staticmethod
     # def __from_json__(dct):
@@ -392,21 +362,40 @@ class LocalComponent(Component):
         active_components = _get_active_components()
         assert self is active_components.pop(-1)
     
-    def init(self):
-        """ Can be overloaded when creating a custom class to do
-        initialization, such as creating sub components. This function is
-        called with this object as a context manager (the default
-        context is a stub).
-        """
-        pass
-    
     def __check_not_active(self):
         return
-        # active_components = _get_active_components()
-        if self in active_components:
-            raise RuntimeError('It seems that the event loop is processing '
-                               'events while a Component is active. This has a '
-                               'high risk on race conditions.')
+        # # active_components = _get_active_components()
+        # if self in active_components:
+        #     raise RuntimeError('It seems that the event loop is processing '
+        #                        'events while a Component is active. This has a '
+        #                        'high risk on race conditions.')
+    
+    def _set_event_types(self, text):
+        self.__event_types_at_proxy = serializer.loads(text)
+        # todo: self._new_event_type_hook() ?
+    
+    def _register_reaction(self, *args):
+        event_type = args[0].split(':')[0]
+        if len(self.get_event_handlers(event_type)) == 0:
+           self._new_event_type_hook(event_type)
+        return super()._register_reaction(*args)
+    
+    # todo: add to Component?
+    def _new_event_type_hook(self, event_type):
+        """ Called when a new event is registered.
+        """
+        pass
+
+    def emit(self, type, info=None):
+        ev = super().emit(type, info)
+        # todo: do we want a way to keep props local? Or should one just wrap or use a second class?
+        isprop = type in self.__properties__ # and type not in self.__local_properties__
+        if isprop or type in self.__event_types_at_proxy:
+            if not self._disposed:
+                for session in self._sessions:
+                    cmd = 'flexx.sessions["%s"].get_instance("%s")._emit_from_local(JSON.parse(%r));' % (
+                            session.id, self._id, serializer.saves(ev))
+                    session._exec(cmd)
 
 
 class ProxyComponent(Component):
@@ -418,14 +407,13 @@ class ProxyComponent(Component):
     having been disposed?
     """
     
-    __jsmodule__ = __name__
-    
     def __init__(self, session, id):
         
-        super().__init__()
-        
         self._sessions = [session]
-        self._id = id
+        self._flx_app_id = id
+        
+        # todo: kwargs for properties?
+        super().__init__()  # no *args, because no init()
         
         # # Instantiate JavaScript version of this class
         # clsname = 'flexx.classes.' + self.__class__.__name__
@@ -435,8 +423,12 @@ class ProxyComponent(Component):
         #         serializer.saves(known_event_types_py))
         # self._session._exec(cmd)
     
+    def _comp_init_property_values(self, property_values):
+        self._id = self._flx_app_id #property_values.pop('_flx_id')
+        del self._flx_app_id
+        return super()._comp_init_property_values(property_values)
+        
     def _proxy_action(self, name, *args, **kwargs):
-        # print(name, args)
         assert not kwargs
         for session in self._sessions:
             session._send_command('INVOKE %s %s %s' % (self._id, name, repr(args)))
@@ -446,30 +438,60 @@ class ProxyComponent(Component):
     
     def meh(self):
         # todo: use something from serializer (i.e. clientcore module) to trigger it being pushed to JS
-        serializer.saves(''),
+        serializer.saves('')
+    
+    def _reactions_changed_hook(self):
+        if self._disposed:
+            return
+        handlers = self.__handlers
+        types = [name for name in handlers.keys() if len(handlers[name])]
+        text = serializer.saves(types)
+        if self.ws:
+            self.ws.send('SET_EVENT_TYPES ' + [self.id, text].join(' '))
+        
+        # handlers = self._HasEvents__handlers
+        # types = [name for name in handlers.keys() if handlers[name]]
+        # txt = serializer.saves(types)
+        # cmd = 'flexx.instances.%s._set_event_types_py(%s);' % (self._id, txt)
+        # self._session._exec(cmd)
+    
+    @event.action
+    def _emit_from_local(self, ev):
+        """ Action to push an event from the local component to the proxy
+        component. If the event represents a property-update, the mutation
+        is applied, otherwise the event is emitted here.
+        """
+        if ev.type in self.__properties__ and ev.mutation:
+            # Mutate the property - this will cause an emit
+            if ev.mutation == 'set':
+                super()._mutate(ev.type, ev.new_value)
+            else:
+                super()._mutate(ev.type, ev.objects, ev.mutation, ev.index)
+        else:
+            self.emit(ev.type, ev)
 
 
-# Apply proper inheritance for generated JS classes
-# LocalComponent.JS = ProxyComponent
-# ProxyComponent.JS = LocalComponent
-
-
-class StubComponent(Component):
-    """
-    Base class for proxied PyComponents in Python and proxied JsComponents
-    in JavaScript.
-    """
-    # todo: should this perhaps be a singleton?
+# LocalComponent and ProxyComponent need __jsmodule__, but they do not
+# participate in the AppComponentMeta class, so we add it here.
+LocalComponent.__jsmodule__ = ProxyComponent.__jsmodule__ = __name__
 
 
 class PyComponent(with_metaclass(AppComponentMeta, LocalComponent)):
     
     # the meta class will generate a PyComponent proxy class for JS
-    pass
+    
+    def __repr__(self):
+        return "<PyComponent '%s' at 0x%x>" % (self._id, id(self))
 
 
 class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
     
     # the meta class will generate a JsComponent local class for JS
     # and move all props, actions, etc. to it
-    pass
+    
+    def __repr__(self):
+        return "<JsComponent '%s' at 0x%x>" % (self._id, id(self))
+
+
+# Make model objects de-serializable
+# serializer.add_reviver('Flexx-Model', Component.__from_json__)

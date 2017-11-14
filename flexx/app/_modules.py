@@ -225,7 +225,8 @@ class JSModule:
             return  # stubs
         elif name in ('loop', 'logger'):
             # .... maybe should be if val is loop, but what to do about logger?
-            return  # provided by event system
+            self._deps.setdefault('flexx.event.js', ['flexx.event.js']).append('loop')
+            return  # provided by event system'
         elif val is None and not is_global:  # pragma: no cover
             logger.warn('JS in "%s" uses variable %r that is None; '
                         'I will assume its a stub and ignore it. Declare %s '

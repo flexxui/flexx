@@ -433,7 +433,7 @@ class Session:
         # self._component_counter += 1
         # component._id = cls.__name__ + str(self._component_counter)
         # Register the instance using a weakref
-        self._component_instances[component.id] = component
+        self._component_instances[component._id] = component
         # Register the class to that the client has the needed definitions
         self._register_component_class(cls)
 
@@ -611,7 +611,7 @@ class Session:
             _, id, txt = command.split(' ', 3)
             ob = self._component_instances.get(id, None)
             if ob is not None:
-                ob._set_event_types_js(txt)
+                ob._set_event_types(txt)
         elif command.startswith('EVENT '):
             _, id, name, txt = command.split(' ', 3)
             ob = self._component_instances.get(id, None)

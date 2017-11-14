@@ -273,6 +273,11 @@ class Component(with_metaclass(ComponentMeta, object)):
         pass
     
     def init(self):
+        """ Can be overloaded when creating a custom class to do
+        initialization, such as creating sub components. This function is
+        called with this object as a context manager (the default
+        context is a stub).
+        """
         pass
     
     if sys.version_info > (3, 4):

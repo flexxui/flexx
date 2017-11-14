@@ -186,7 +186,7 @@ class JsSession:
         return c
     
     # todo: do we need a global version?
-    def get(self, id):  # todo: rename this to get_instance()?
+    def get_instance(self, id):  # todo: rename this to get_instance()?
         """ Get instance of a Model class.
         """
         if id == 'body':
@@ -381,8 +381,8 @@ def decodeUtf8(arrayBuffer):
             i += 3;
         }
     }
-    return result;
     """)
+    return RawJS("result")
 
 
 # In Python, we need some extras for the serializer to work
