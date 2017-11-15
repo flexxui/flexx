@@ -240,6 +240,13 @@ class AssetStore:
                                ['Component', 'loop', 'logger'],
                                'amd-flexx')
         asset_event = Asset('flexx.event.js', HEADER + mod)
+        # Create asset for bsdf - we replace the UMD loader code with flexx.define()
+        import os
+        import bsdf
+        code = open(os.path.join(bsdf.__file__, '..', '..', 'javascript', 'bsdf.js'), 'rb').read().decode()
+        code = code.split('"use strict";\n', 1)[1]
+        code = 'flexx.define("bsdf", [], (function () {\n"use strict";\n' + code
+        asset_bsdf = Asset('bsdf.js', code)
         
         # Add them
         for a in [asset_reset, asset_loader, asset_pyscript]:
@@ -253,6 +260,7 @@ class AssetStore:
         self.update_modules()  # to collect _component2 and _clientcore
         asset_core = Bundle('flexx-core.js')
         asset_core.add_asset(asset_loader)
+        asset_core.add_asset(asset_bsdf)
         asset_core.add_asset(asset_pyscript)
         asset_core.add_asset(asset_event)
         # todo: add flexx.event here to access loop? What about logger?

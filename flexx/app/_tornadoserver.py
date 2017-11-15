@@ -22,6 +22,7 @@ from ._app import manager
 from ._session import get_page
 from ._server import AbstractServer
 from ._assetstore import assets
+from ._clientcore import serializer
 
 from . import logger
 from .. import config
@@ -31,9 +32,6 @@ if tornado.version_info < (4, ):
 
 # todo: threading, or even multi-process
 #executor = ThreadPoolExecutor(4)
-
-# Use a binary websocket or not?
-BINARY = False
 
 IMPORT_TIME = time.time()
 
@@ -560,11 +558,17 @@ class WSHandler(WebSocketHandler):
         we should at some point define a real formalized protocol.
         """
         self._mps_counter.trigger()
-
+        
+        try:
+            command = serializer.decode(message)
+        except Exception as err:
+            err.skip_tb = 1
+            logger.exception(err)
+        
         self._pongtime = time.time()
         if self._session is None:
-            if message.startswith('hiflexx '):
-                session_id = message.split(' ', 1)[1].strip()
+            if command[0] == 'HI_FLEXX':
+                session_id = command[1]
                 try:
                     self._session = manager.connect_client(self, self.app_name,
                                                            session_id,
@@ -572,12 +576,12 @@ class WSHandler(WebSocketHandler):
                 except Exception as err:
                     self.close(1003, "Could not launch app: %r" % err)
                     raise
-                self.write_message("PRINT Flexx server says hi", binary=BINARY)
-        elif message.startswith('PONG '):
-            self.on_pong2(message[5:])
+                self.write_command(("PRINT", "Flexx server says hi"))
+        elif command[0] == 'PONG':
+            self.on_pong2(command[1])
         else:
             try:
-                self._session._receive_command(message)
+                self._session._receive_command(command)
             except Exception as err:
                 err.skip_tb = 1
                 logger.exception(err)
@@ -657,7 +661,7 @@ class WSHandler(WebSocketHandler):
         while self.close_code is None:
             if self._pong_counter >= self._ping_counter:
                 self._ping_counter += 1
-                self.command('PING %i' % self._ping_counter)
+                self.write_command(("PING", self._ping_counter))
             yield gen.sleep(1.0)
 
     def on_pong2(self, data):
@@ -669,8 +673,10 @@ class WSHandler(WebSocketHandler):
 
     # --- methods
 
-    def command(self, cmd):
-        self.write_message(cmd, binary=BINARY)
+    def write_command(self, cmd):
+        assert isinstance(cmd, tuple) and len(cmd) >= 1
+        bb = serializer.encode(cmd)
+        self.write_message(bb, binary=True)
 
     def close(self, *args):
         try:

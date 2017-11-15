@@ -31,12 +31,11 @@ from . import logger
 # By using something from clientcore in JS here, we make clientcore a
 # dependency of the the current module.
 # todo: replace this with bsdf
-from ._clientcore import serializer
+from ._clientcore import serializer, bsdf
 
 manager = None  # Set by __init__ to prevent circular dependencies
 
 reprs = json.dumps  # todo: used?
-
 
 
 def make_proxy_action(flx_name):
@@ -310,10 +309,9 @@ class LocalComponent(Component):
             # Instantiate JavaScript version of this class
             # todo: how to deal with 0 or more sessions?
             for session in self._sessions:
-                clsname = self.__class__.__name__
-                cmd = 'flexx.sessions["%s"].instantiate_component("%s", "%s", "%s", [], {});' % (
-                        session.id, self.__jsmodule__, clsname, self._id)
-                session._exec(cmd)
+                session.send_command('INSTANTIATE', self.__jsmodule__,
+                                     self.__class__.__name__,
+                                     self._id, [], {})
         
         return prop_events
         
@@ -373,17 +371,18 @@ class LocalComponent(Component):
         if isprop or type in self.__event_types_at_proxy:
             if not self._disposed:
                 for session in self._sessions:
-                    session._send_command('INVOKE %s %s %s' % (self._id, '_emit_from_other_side', serializer.saves([ev])))
+                    session.send_command('INVOKE', self._id, '_emit_from_other_side', [ev])
     
-    def call_js(self, call):
-        if self._disposed:
-            return
-        if not this_is_js():
-            # todo: Not documented; not sure if we keep it. Handy for debugging though
-            for session in self._sessions:
-                cmd = 'flexx.sessions["%s"].get_instance("%s").%s;' % (
-                        session.id, self._id, call)
-                session._exec(cmd)
+    # todo: probably remove this, we have actions now!
+    # def call_js(self, call):
+    #     if self._disposed:
+    #         return
+    #     if not this_is_js():
+    #         # todo: Not documented; not sure if we keep it. Handy for debugging though
+    #         for session in self._sessions:
+    #             cmd = 'flexx.sessions["%s"].get_instance("%s").%s;' % (
+    #                     session.id, self._id, call)
+    #             session._exec(cmd)
 
 
 class ProxyComponent(Component):
@@ -448,11 +447,10 @@ class ProxyComponent(Component):
             # todo: can be exacyly one session!
             assert len(self._sessions) == 1
             for session in self._sessions:
-                clsname = self.__class__.__name__
-                cmd = 'flexx.sessions["%s"].instantiate_component("%s", "%s", "%s", %s, {});' % (
-                        session.id, self.__jsmodule__, clsname, self._id, reprs(self._init_args))
+                session.send_command('INSTANTIATE', self.__jsmodule__,
+                                     self.__class__.__name__,
+                                     self._id, self._init_args, {})
                 del self._init_args
-                session._exec(cmd)
         
         return prop_events
     
@@ -461,21 +459,24 @@ class ProxyComponent(Component):
         """
         assert not kwargs
         for session in self._sessions:
-            session._send_command('INVOKE %s %s %s' % (self._id, name, serializer.saves(list(args))))
+            session.send_command('INVOKE', self._id, name, args)
     
     def _mutate(self, *args, **kwargs):
         """ Disable mutations on the proxy class.
         """
         raise RuntimeError('Cannot mutate properties from a proxy class.')
+        # Reference objects to get them collected into the JS variant of this
+        # module. Do it here, in a place where it wont hurt.
+        serializer  # to bring in _clientcore as a way of bootstrapping
+        BsdfComponentExtension
     
     def _reactions_changed_hook(self):
         if self._disposed:
             return
         handlers = self._Component__handlers
         types = [name for name in handlers.keys() if len(handlers[name])]
-        text = serializer.saves(types)
         for session in self._sessions:
-            session._send_command('SET_EVENT_TYPES ' + ' '.join([self._id, text]))
+            session.send_command('SET_EVENT_TYPES', self._id, types)
         
         # handlers = self._HasEvents__handlers
         # types = [name for name in handlers.keys() if handlers[name]]
@@ -529,7 +530,47 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
     
     def __repr__(self):
         return "<JsComponent '%s' at 0x%x>" % (self._id, id(self))
-    
 
-# Make model objects de-serializable
-# serializer.add_reviver('Flexx-Model', Component.__from_json__)
+
+class BsdfComponentExtension(bsdf.Extension):
+    
+    name = 'flexx.app.component'
+    cls = PyComponent, JsComponent
+    
+    def match(self, c):
+        # This is actually the default behavior, but added for completenes
+        return isinstance(c, self.cls)
+    
+    def encode(self, c):
+        assert len(c._sessions) == 1
+        return dict(session_id=c._sessions[0].id, id=c._id)
+    
+    def decode(self, d):
+        try:
+            session = manager.get_session_by_id(d['session_id'])
+            return session.get_component_instance_by_id(d['id'])
+        except Exception:
+            return d.get('id', 'unknown_component')
+    
+    # The name and below methods get collected to produce a JS BSDF extension
+    
+    def match_js(self, c):
+        return isinstance(c, PyComponent) or isinstance(c, JsComponent)
+        
+    def encode_js(self, c):
+        assert len(c._sessions) == 1
+        return dict(session_id=c._sessions[0].id, id=c._id)
+    
+    def decode_js(self, d):
+        session = window.flexx.sessions[d['session_id']]
+        if session:
+            c = session.get_instance(d['id'])
+            if c:
+                return c
+        return 'unknown_component'
+
+
+# todo: can the mechanism for defining BSDF extensions be simplified?
+# Add BSDF extension for serializing components. The JS variant of the
+# serializer is added by referencing the extension is JS code.
+serializer.add_extension(BsdfComponentExtension)

@@ -9,9 +9,10 @@ import json
 import time
 import types
 
-from ..pyscript import py2js, RawJS, JSConstant, create_js_module, get_all_std_names
+from ..pyscript import py2js, JSString, RawJS, JSConstant, create_js_module, get_all_std_names
 from ..event import Component
 
+from ._clientcore import bsdf
 from ._component2 import PyComponent, JsComponent
 from ._asset import Asset, get_mod_name, module_is_package
 from . import logger
@@ -265,6 +266,20 @@ class JSModule:
                 # not needed per see; bound via window.flexx.classes
                 # todo: \--> not anymore!
                 self._import(val.__jsmodule__, val.__name__, name)
+        
+        elif isinstance(val, type) and issubclass(val, bsdf.Extension):
+            js = 'var %s = {name: "%s"' % (name, val.name)
+            for mname in ('match', 'encode', 'decode'):
+                func = getattr(val, mname + '_js')
+                funccode = py2js(func, indent=1, inline_stdlib=False, docstrings=False)
+                js += ',\n    ' + mname + ':' + funccode.split('=', 1)[1].rstrip(' \n;')
+                self._collect_dependencies(**funccode.meta)
+            js += '};\n'
+            js += 'serializer.add_extension(%s);\n' % name
+            js = JSString(js)
+            js.meta = funccode.meta
+            self._pyscript_code[name] = js
+            self._deps.setdefault('flexx.app._clientcore', ['flexx.app._clientcore']).append('serializer')
         
         elif isinstance(val, pyscript_types) and hasattr(val, '__module__'):
             # Looks like something we can convert using PyScript

@@ -219,12 +219,12 @@ class Session:
         self._ws = ws
         # todo: make icon and title work again. Also in exported docs.
         # Set some app specifics
-        # self._ws.command('ICON %s.ico' % self.id)
-        # self._ws.command('TITLE %s' % self._config.title)
+        # self._ws.write_command('ICON %s.ico' % self.id)
+        # self._ws.write_command('TITLE %s' % self._config.title)
         # Send pending commands
         for command in self._pending_commands:
-            self._ws.command(command)
-        self._ws.command('INIT-DONE')
+            self._ws.write_command(command)
+        self._ws.write_command(('INIT_DONE', ))
 
     def _set_cookies(self, cookies=None):
         """ To set cookies, must be an http.cookie.SimpleCookie object.
@@ -569,21 +569,23 @@ class Session:
             logger.debug('Loading asset %s' % asset.name)
             # Determine command suffix. All our sources come in bundles,
             # for which we use eval because it makes sourceURL work on FF.
+            # todo: is still still an issue in FF 57+?
             suffix = asset.name.split('.')[-1].upper()
             if suffix == 'JS' and isinstance(asset, Bundle):
                 suffix = 'JS-EVAL'
-            t = 'DEFINE-%s %s %s'
-            self._send_command(t % (suffix, asset.name, asset.to_string()))
+            self.send_command('DEFINE', suffix, asset.name, asset.to_string())
 
     ## Communication with the client
 
-    def _send_command(self, command):
-        """ Send the command, add to pending queue.
+    def send_command(self, *command):
+        """ Send a command to the other side. Commands consists of at least one
+        argument (a string representing the type of command).
         """
+        assert len(command) >= 1
         if self._closing:
             pass
         elif self.status == self.STATUS.CONNECTED:
-            self._ws.command(command)
+            self._ws.write_command(command)
         elif self.status == self.STATUS.PENDING:
             self._pending_commands.append(command)
         else:
@@ -593,41 +595,29 @@ class Session:
     def _receive_command(self, command):
         """ Received a command from JS.
         """
-        if command.startswith('RET '):
-            print(command[4:])  # Return value
-        elif command.startswith('ERROR '):
-            logger.error('JS: ' + command[6:].strip() +
-                         ' (stack trace in browser console)')
-        elif command.startswith('WARN '):
-            logger.warn('JS: ' + command[5:].strip())
-        elif command.startswith('PRINT '):
-            print('JS:', command[5:].strip())
-        elif command.startswith('INFO '):
-            logger.info('JS: ' + command[5:].strip())
-        elif command.startswith('SET_PROP '):
-            _, id, name, txt = command.split(' ', 3)
-            ob = self._component_instances.get(id, None)
-            if ob is not None:
-                ob._set_prop_from_js(name, txt)
-        elif command.startswith('SET_EVENT_TYPES '):
-            _, id, txt = command.split(' ', 3)
-            ob = self._component_instances.get(id, None)
-            if ob is not None:
-                ob._set_event_types(txt)
-        elif command.startswith('EVENT '):
-            _, id, txt = command.split(' ', 2)
-            ob = self._component_instances.get(id, None)
-            if ob is not None:
-                ob._emit_from_other_side(txt)
-        elif command.startswith('INVOKE '):
-            _, id, name, txt = command.split(' ', 3)
+        cmd = command[0]
+        if cmd == 'PRINT':
+            print('JS:', command[1])
+        elif cmd == 'INFO':
+            logger.info('JS: ' + command[1])
+        elif cmd == 'WARN':
+            logger.warn('JS: ' + command[1])
+        elif cmd == 'ERROR':
+            logger.error('JS: ' + command[1] + ' (stack trace in browser console)')
+        elif cmd == 'INVOKE':
+            id, name, args = command[1:]
             ob = self._component_instances.get(id, None)
             if ob is not None:
                 action = getattr(ob, name, None)
                 if isinstance(action, Action):
-                    action(*json.loads(txt))
+                    action(*args)
+        # elif command.startswith('SET_EVENT_TYPES'):
+        #     _, id, txt = command.split(' ', 3)
+        #     ob = self._component_instances.get(id, None)
+        #     if ob is not None:
+        #         ob._set_event_types(txt)
         else:
-            logger.warn('Unknown command received from JS:\n%s' % command)
+            logger.error('Unknown command received from JS:\n%s' % command)
 
     def _receive_pong(self, count):
         """ Called by ws when it gets a pong. Thus gets called about
@@ -645,12 +635,7 @@ class Session:
                 entry = self._roundtrip_based_calllaters.pop(i)
                 lifetime, callback, args, kwargs = entry
                 call_later(0, callback, *args, **kwargs)
-
-    def _exec(self, code):
-        """ Like eval, but without returning the result value.
-        """
-        self._send_command('EXEC ' + code)
-
+    
     def eval(self, code):
         """ Evaluate the given JavaScript code in the client
 
@@ -659,7 +644,7 @@ class Session:
         """
         if self._ws is None:
             raise RuntimeError('App not connected')
-        self._send_command('EVAL ' + code)
+        self.send_command('EVAL', code)
 
 
 ## Functions to get page

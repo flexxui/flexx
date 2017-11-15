@@ -94,18 +94,15 @@ class Flexx:
         def log(msg):
             window.console.ori_log(msg)
             for session in self.sessions.values():
-                if session._ws is not None:
-                    session._ws.send("PRINT " + msg)
+                session.send_command("PRINT", str(msg))
         def info(msg):
             window.console.ori_info(msg)
             for session in self.sessions.values():
-                if session._ws is not None:
-                    session._ws.send("INFO " + msg)
+                session.send_command("INFO", str(msg))
         def warn(msg):
             window.console.ori_warn(msg)
             for session in self.sessions.values():
-                if session._ws is not None:
-                    session._ws.send("WARN " + msg)
+                session.send_command("WARN", str(msg))
         def error(msg):
             evt = dict(message=str(msg), error=msg, preventDefault=lambda: None)
             on_error(evt)
@@ -116,7 +113,7 @@ class Flexx:
                 if evt.message in stack[0]:
                     stack.pop(0)
                 msg += '\n' + '\n'.join(stack)
-                session_needle = '?session_id=' + self.session_id
+                session_needle = '?session_id=' + self.id
                 msg = msg.replace('@', ' @ ').replace(session_needle, '')  # Firefox
             elif evt.message and evt.lineno:  # message, url, linenumber
                 msg += "\nIn %s:%i" % (evt.filename, evt.lineno)
@@ -124,8 +121,7 @@ class Flexx:
             evt.preventDefault()  # Don't do the standard error 
             window.console.ori_error(msg)
             for session in self.sessions.values():
-                if session._ws is not None:
-                    session._ws.send("ERROR " + evt.message)
+                session.send_command("ERROR", evt.message)
         on_error = on_error.bind(self)
         # Set new versions
         window.console.log = log
@@ -145,18 +141,18 @@ class Flexx:
 
 class JsSession:
     
-    def __init__(self, app_name, session_id, ws_url=None):
+    def __init__(self, app_name, id, ws_url=None):
         self.app_name = app_name
-        self.session_id = session_id
+        self.id = id
         self.ws_url = ws_url
         
         # Maybe this is JLab
-        if not self.session_id:
+        if not self.id:
             jconfig = window.document.getElementById('jupyter-config-data')
             if jconfig:
                 try:
                     config = JSON.parse(jconfig.innerText)
-                    self.session_id = config.flexx_session_id
+                    self.id = config.flexx_session_id
                     self.app_name = config.flexx_app_name
                 except Exception as err:
                     print(err)
@@ -171,12 +167,17 @@ class JsSession:
         self.instances = {}
         
         self.initSocket()
-        
+    
     def exit(self):
         if self._ws:  # is not null or undefined
             self._ws.close()
             self._ws = None
             # flexx.instances.sessions.pop(self)  might be good, but perhaps not that much neede?
+    
+    def send_command(self, *command):
+        if self._ws is not None:
+            bb = serializer.encode(command)
+            self._ws.send(bb)
     
     def instantiate_component(self, module, cname, id, args, kwargs):
         m = flexx.require(module)
@@ -225,21 +226,22 @@ class JsSession:
         self.ws_url = self.ws_url.replace('0.0.0.0', window.location.hostname)
         # Open web socket in binary mode
         self._ws = ws = WebSocket(self.ws_url)
-        #ws.binaryType = "arraybuffer"  # would need utf-decoding -> slow
+        ws.binaryType = "arraybuffer"
         
         def on_ws_open(evt):
-            window.console.info('Socket opened with session id ' + self.session_id)
-            ws.send('hiflexx ' + self.session_id)
+            window.console.info('Socket opened with session id ' + self.id)
+            self.send_command('HI_FLEXX', self.id)
         def on_ws_message(evt):
-            self.last_msg = msg = evt.data or evt
+            msg = evt.data or evt
+            self.last_command = command = serializer.decode(msg)
             if self._pending_commands is None:
                 # Direct mode
-                self._receive_command(msg)
+                self._receive_command(command)
             else:
                 # Indirect mode, to give browser draw-time during loading
                 if len(self._pending_commands) == 0:
                     window.setTimeout(self._process_commands, 0)
-                self._pending_commands.push(msg)
+                self._pending_commands.push(command)
         def on_ws_close(evt):
             self._ws = None
             msg = 'Lost connection with server'
@@ -266,55 +268,54 @@ class JsSession:
         tradeoff between a smooth spinner and fast load time.
         """
         while self._pending_commands is not None and len(self._pending_commands) > 0:
-            msg = self._pending_commands.pop(0)
+            command = self._pending_commands.pop(0)
             try:
-                self._receive_command(msg)
+                self._receive_command(command)
             except Exception as err:
                 window.setTimeout(self._process_commands, 0)
                 raise err
-            if msg.startswith('DEFINE-'):
+            if command[0] == 'DEFINE':
                 self._asset_count += 1
                 if (self._asset_count % 3) == 0:
                     if len(self._pending_commands):
                         window.setTimeout(self._process_commands, 0)
                     break
     
-    def _send_command(self, command):
-        """ Send a command over the web socket to the server.
-        """
-        self._ws.send(command)
-    
-    def _receive_command(self, msg):
+    def _receive_command(self, command):
         """ Process a command send from the server.
         """
-        if msg.startswith('PING '):
-            self._ws.send('PONG ' + msg[5:])
-        elif msg == 'INIT-DONE':
+        cmd = command[0]
+        if cmd == 'PING':
+            self.send_command('PONG', command[1])
+        elif cmd == 'INIT_DONE':
             window.flexx.spin(None)
             while len(self._pending_commands):
                 self._receive_command(self._pending_commands.pop(0))
             self._pending_commands = None
             # print('init took', time() - self._init_time)
-        elif msg.startswith('PRINT '):
-            window.console.ori_log(msg[6:])
-        elif msg.startswith('EVAL '):
-            window._ = eval(msg[5:])
-            self._ws.send('RET ' + window._)  # send back result
-        elif msg.startswith('EXEC '):
-            eval(msg[5:])  # like eval, but do not return result
-        elif msg.startswith('INVOKE '):
-            _, id, name, txt = msg.split(' ', 3)
+        elif cmd == 'PRINT':
+            window.console.ori_log(command[1])
+        elif cmd == 'EVAL':
+            x = eval(command[1])
+            self.send_command('PRINT', str(x))  # send back result
+        # elif cmd == 'EXEC':
+        #     eval(command[1])  # like eval, but do not return result
+        elif cmd == 'INVOKE':
+            id, name, args = command[1:]
             ob = self.instances.get(id, None)
             if ob is not None:
-                ob[name](*JSON.parse(txt))
-        elif msg.startswith('DEFINE-JS ') or msg.startswith('DEFINE-JS-EVAL '):
+                ob[name](*args)
+        elif cmd == 'INSTANTIATE':
+            self.instantiate_component(*command[1:])  # module, cname, id, args, kwargs
+        elif cmd == 'DEFINE':
+            #and command[1] == 'JS' or command[1] == 'DEFINE-JS-EVAL '):
+            kind, name, code = command[1:]
             window.flexx.spin()
-            cmd, name, code = msg.split(' ', 2)
             address = window.location.protocol + '//' + self.ws_url.split('/')[2]
-            code += '\n//# sourceURL=%s/flexx/assets/shared/%s\n' % (address, name)
-            if msg.startswith('DEFINE-JS-EVAL '):
+            code += '\n/*# sourceURL=%s/flexx/assets/shared/%s*/\n' % (address, name)
+            if kind == 'JS-EVAL':
                 eval(code)
-            else:
+            elif kind == 'JS':
                 # With this method, sourceURL does not work on Firefox,
                 # but eval might not work for assets that don't "use strict"
                 # (e.g. Bokeh). Note, btw, that creating links to assets does
@@ -323,28 +324,27 @@ class JsSession:
                 el.id = name
                 el.innerHTML = code
                 self._asset_node.appendChild(el)
-        elif msg.startswith('DEFINE-CSS '):
-            window.flexx.spin()
-            cmd, name, code = msg.split(' ', 2)
-            address = window.location.protocol + '//' + self.ws_url.split('/')[2]
-            code += '\n/*# sourceURL=%s/flexx/assets/shared/%s*/\n' % (address, name)
-            el = window.document.createElement("style")
-            el.type = "text/css"
-            el.id = name
-            el.innerHTML = code
-            self._asset_node.appendChild(el)
-        elif msg.startswith('TITLE '):
-            window.document.title = msg[6:]
-        elif msg.startswith('ICON '):
+            elif kind == 'CSS':
+                el = window.document.createElement("style")
+                el.type = "text/css"
+                el.id = name
+                el.innerHTML = code
+                self._asset_node.appendChild(el)
+            else:
+                window.console.error('Dont know how to DEFINE ' +
+                                     name + ' with "' + kind + '".')
+        elif cmd == 'TITLE':
+            window.document.title = command[1]
+        elif cmd == 'ICON':
             link = window.document.createElement('link')
             link.rel = 'icon'
-            link.href = msg[5:]
+            link.href = command[1]
             window.document.head.appendChild(link)
             #window.document.getElementsByTagName('head')[0].appendChild(link);
-        elif msg.startswith('OPEN '):
-            window.win1 = window.open(msg[5:], 'new', 'chrome')
+        elif cmd == 'OPEN':
+            window.win1 = window.open(command[1], 'new', 'chrome')
         else:
-            window.console.warn('Invalid command: "' + msg + '"')
+            window.console.error('Invalid command: "' + cmd + '"')
 
 
 # todo: in bsdf there is utf8 encode/decode code, check which is better, put that in bsdf, and use it here
@@ -393,71 +393,72 @@ def decodeUtf8(arrayBuffer):
 
 
 # In Python, we need some extras for the serializer to work
-if not this_is_js():
-    import json
-    
-    class JSON:
-        @staticmethod
-        def parse(text, reviver=None):
-            return json.loads(text, object_hook=reviver)
-        @staticmethod
-        def stringify(obj, replacer=None):
-            return json.dumps(obj, default=replacer)
+if this_is_js():
+    bsdf = RawJS("flexx.require('bsdf')")
+    serializer = bsdf.BsdfSerializer()
+else:
+    # Include bsdf.js
+    # todo: use vendored bsdf.py and on-line version of bsdf.js
+    import bsdf
+    serializer = bsdf.BsdfSerializer()
+    serializer.__module__ = __name__
 
 
-class Serializer:
-    
-    def __init__(self):
-        self._revivers = _revivers = {}
-    
-        def loads(text):
-            return JSON.parse(text, _reviver)
-        
-        def saves(obj):
-            try:
-                res = JSON.stringify(obj, _replacer)
-                if res is undefined:
-                    raise TypeError()
-                return res
-            except TypeError:
-                raise TypeError('Cannot serialize object to JSON: %r' % obj)
-        
-        def add_reviver(type_name, func):
-            assert isinstance(type_name, str)
-            _revivers[type_name] = func
-        
-        def _reviver(dct, val=undefined):
-            if val is not undefined:  # pragma: no cover
-                dct = val
-            if isinstance(dct, dict):
-                type = dct.get('__type__', None)
-                if type is not None:
-                    func = _revivers.get(type, None)
-                    if func is not None:
-                        return func(dct)
-            return dct
-        
-        def _replacer(obj, val=undefined):
-            if val is undefined:  # Py
-                
-                try:
-                    return obj.__json__()  # same as in Pyramid
-                except AttributeError:
-                    raise TypeError('Cannot serialize object to JSON: %r' % obj)
-            else:  # JS - pragma: no cover
-                if (val is not None) and val.__json__ is not undefined:
-                    return val.__json__()
-                return val
-        
-        self.loads = loads
-        self.saves = saves
-        self.add_reviver = add_reviver
+
+# 
+# class Serializer:
+#     
+#     def __init__(self):
+#         self._revivers = _revivers = {}
+#     
+#         def loads(text):
+#             return JSON.parse(text, _reviver)
+#         
+#         def saves(obj):
+#             try:
+#                 res = JSON.stringify(obj, _replacer)
+#                 if res is undefined:
+#                     raise TypeError()
+#                 return res
+#             except TypeError:
+#                 raise TypeError('Cannot serialize object to JSON: %r' % obj)
+#         
+#         def add_reviver(type_name, func):
+#             assert isinstance(type_name, str)
+#             _revivers[type_name] = func
+#         
+#         def _reviver(dct, val=undefined):
+#             if val is not undefined:  # pragma: no cover
+#                 dct = val
+#             if isinstance(dct, dict):
+#                 type = dct.get('__type__', None)
+#                 if type is not None:
+#                     func = _revivers.get(type, None)
+#                     if func is not None:
+#                         return func(dct)
+#             return dct
+#         
+#         def _replacer(obj, val=undefined):
+#             if val is undefined:  # Py
+#                 
+#                 try:
+#                     return obj.__json__()  # same as in Pyramid
+#                 except AttributeError:
+#                     raise TypeError('Cannot serialize object to JSON: %r' % obj)
+#             else:  # JS - pragma: no cover
+#                 if (val is not None) and val.__json__ is not undefined:
+#                     return val.__json__()
+#                 return val
+#         
+#         self.loads = loads
+#         self.saves = saves
+#         self.add_reviver = add_reviver
 
 
 ## Instantiate
 
 
-serializer = Serializer()
+# serializer = Serializer()
 
 if this_is_js():
     window.flexx = Flexx()

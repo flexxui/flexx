@@ -27,11 +27,11 @@ class ExporterWebSocketDummy:
         self.commands = []
         self.ping_counter = 0
         # todo: make icon and title work
-        #self.command('ICON %s.ico' % session.id)
-        # self.command('TITLE %s' % session._runtime_kwargs.get('title',
+        #self.write_command('ICON %s.ico' % session.id)
+        # self.write_command('TITLE %s' % session._runtime_kwargs.get('title',
         #                                                       'Exported flexx app'))
 
-    def command(self, cmd):
+    def write_command(self, cmd):
         self.commands.append(cmd)
 
 
