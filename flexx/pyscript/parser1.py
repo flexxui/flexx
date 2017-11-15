@@ -387,7 +387,7 @@ class Parser1(Parser0):
         if isinstance(node.func_node, ast.Attribute):
             method_name = node.func_node.attr
             base_name = unify(self.parse(node.func_node.value_node))
-            full_name = base_name + '.' + method_name
+            full_name = unify(self.parse(node.func_node))
         elif isinstance(node.func_node, ast.Subscript):
             base_name = unify(self.parse(node.func_node.value_node))
             full_name = unify(self.parse(node.func_node))
@@ -553,7 +553,15 @@ class Parser1(Parser0):
     
     def parse_Attribute(self, node):
         base_name = unify(self.parse(node.value_node))
-        return "%s.%s" % (base_name, self.ATTRIBUTE_MAP.get(node.attr, node.attr))
+        attr = node.attr
+        # Double underscore name mangling
+        if attr.startswith('__') and not attr.endswith('__') and base_name == 'this':
+            for i in range(len(self._stack)-1, -1, -1):
+                if self._stack[i][0] == 'class':
+                    classname = self._stack[i][1]
+                    attr = '_' + classname + attr
+                    break
+        return "%s.%s" % (base_name, self.ATTRIBUTE_MAP.get(attr, attr))
     
     ## Statements
     

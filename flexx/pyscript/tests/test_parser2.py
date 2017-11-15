@@ -780,6 +780,42 @@ class TestClasses:
         # class vars
         assert evaljs(code + 'm.foo;') == '8'
     
+    def test_class_name_mangling1(self):
+        
+        class FooMang1:
+            __y = 12
+            def __init__(self):
+                self.__x = 30
+            def __foo(self):
+                return self.__x + self.__y
+            def bar(self):
+                return self.__foo()
+        
+        code = py2js(FooMang1)
+        code += 'var m=new FooMang1();'
+        
+        assert '._FooMang1__foo' in code
+        assert '._FooMang1__x' in code
+        assert '._FooMang1__y' in code
+        
+        assert evaljs(code + 'm.bar();') == '42'
+        assert evaljs(code + 'm.__x;') == ''
+        assert evaljs(code + 'm.__y;') == ''
+    
+    def test_class_name_mangling2(self):
+        # work well with nested functions
+        class FooMang2:
+            __y = 42
+            def bar(self):
+                def x1():
+                    def x2():
+                        return self.__y
+                    return x2()
+                return x1()
+        
+        code = py2js(FooMang2)
+        code += 'var m=new FooMang2();'
+        assert evaljs(code + 'm.bar();') == '42'
     
     def test_inheritance_and_super(self):
         

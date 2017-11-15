@@ -306,6 +306,8 @@ class Parser0:
         """
         nstype, nsname, ns = self._stack[-1]
         if nstype == 'class':
+            if name.startswith('__') and not name.endswith('__'):
+                name = '_' + nsname + name  # Double underscore name mangling
             return nsname + '.prototype.' + name
         else:
             return name

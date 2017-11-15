@@ -115,6 +115,62 @@ def test_py2js_on_class():
     assert 'Bar.bla = function ' in jscode
 
 
+class Foo2:
+    __x = 42
+    __y__ = 7
+    
+    def res1(self):
+        return self.__x
+    
+    def res2(self):
+        return self.__y__
+
+def foo1():
+    return 42
+
+def foo2(self):
+    return self.__x + self.__y__
+
+
+def test_py2js_rename_class():
+    
+    code = py2js(Foo2, 'Bar')
+    assert 'foo' not in code.lower()
+    assert evaljs(code + 'var m=new Bar(); [m.res1(), m.res2()];') == '[ 42, 7 ]'
+    
+    code = py2js(Foo2, 'xx.Bar')
+    assert 'foo' not in code.lower()
+    assert evaljs('var xx={};\n' + code + 'var m=new xx.Bar(); [m.res1(), m.res2()];') == '[ 42, 7 ]'
+
+
+def test_py2s_rename_function():
+    code = py2js(foo1, 'bar')
+    assert 'foo' not in code.lower()
+    assert evaljs(code + 'bar()') == '42'
+    
+    code = py2js(foo1, 'xx.bar')
+    assert 'foo' not in code.lower()
+    assert evaljs('var xx={};\n' + code + 'xx.bar();') == '42'
+    
+
+def test_py2s_rename_function_to_method():
+    
+    code1 = py2js(Foo2, 'Bar')
+    code = code1 + py2js(foo2, 'Bar.prototype.bar')
+    assert 'foo' not in code.lower()
+    assert evaljs(code + 'var m=new Bar(); m.bar();') == '49'
+    
+    code1 = py2js(Foo2, 'Bar')
+    code = code1 + '\nvar $Bar = Bar.prototype;\n' + py2js(foo2, '$Bar.bar')
+    assert 'foo' not in code.lower()
+    assert evaljs(code + 'var m=new Bar(); m.bar();') == '49'
+    
+    code1 = py2js(Foo2, 'xx.Bar')
+    code = code1 + py2js(foo2, 'xx.Bar.prototype.bar')
+    assert 'foo' not in code.lower()
+    assert evaljs('var xx={};\n' + code + 'var m=new xx.Bar(); m.bar();') == '49'
+    
+
 def test_raw_js():
     
     def func(a, b):

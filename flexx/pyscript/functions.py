@@ -1,3 +1,4 @@
+import re
 import os
 import sys
 import types
@@ -23,8 +24,11 @@ def py2js(ob=None, new_name=None, **parser_options):
     Parameters:
         ob (str, module, function, class): The code, function or class
             to transpile.
-        new_name (str, optional): If given, renames the function or
-            class. This argument is ignored if ob is a string.
+        new_name (str, optional): If given, renames the function or class. This
+            can be used to simply change the name and/or add a prefix. It can
+            also be used to turn functions into methods using
+            "MyClass.prototype.foo". Double-underscore name mangling is taken
+            into account in the process.
         parser_options: Additional options for the parser. See Parser class
             for details.
     
@@ -106,7 +110,9 @@ def py2js(ob=None, new_name=None, **parser_options):
         else:
             p = Parser(pycode, **parser_options)
         jscode = p.dump()
-        if new_name and thetype in ('class', 'def'):
+        if new_name:
+            if thetype not in ('class', 'def'):
+                raise TypeError('py2js() can only rename functions and classes.')
             jscode = js_rename(jscode, ob.__name__, new_name)
         
         # todo: now that we have so much info in the meta, maybe we should
@@ -132,30 +138,71 @@ def py2js(ob=None, new_name=None, **parser_options):
     return py2js_(ob)
 
 
+re_sub1 = re.compile(r'this\.__(\w*?[a-zA-Z0-9](?!__)\W)', re.UNICODE)
+
 def js_rename(jscode, cur_name, new_name):
     """ Rename a function or class in a JavaScript code string.
     
+    The new name can be prefixed (i.e. have dots in it). Functions can be
+    converted to methods by prefixing with a name that starts with a capital
+    letter (and probably ".prototype"). Double-underscore-mangling
+    is taken into account.
+    
     Parameters:
         jscode (str): the JavaScript source code
-        cur_name (str): the current name
+        cur_name (str): the current name (must be an identifier, e.g. no dots).
         new_name (str): the name to replace the current name with
     
     Returns:
         jscode (str): the modified JavaScript source code
     """
-    jscode = jscode.replace('function flx_%s' % cur_name,
-                            'function flx_%s' % (new_name.split('.')[-1]), 1)
+    assert cur_name and '.' not in cur_name
+    
+    isclass = cur_name[0].lower() != cur_name[0]
+    if isclass:
+        cur_cls_name = cur_name
+        new_cls_name = new_name.split('.')[-1]
+    else:
+        new_cls_name = ''
+        parts = new_name.split('.')
+        prefix = '.'.join(parts[:-1])
+        if prefix:
+            maybe_cls = parts[-3] if parts[-2] == 'prototype' else parts[-2]
+            maybe_cls = maybe_cls.strip('$')  # allow special names
+            if maybe_cls[0].lower() != maybe_cls[0]:
+                new_cls_name = maybe_cls
+    
+    cur_name_short = cur_name.split('.')[-1]
+    new_name_short = new_name.split('.')[-1]
+    jscode0 = jscode
+    if isclass:
+        # If this is about a class ...
+        jscode = jscode.replace('_class_name = "%s"' % cur_name_short, 
+                                '_class_name = "%s"' % new_name_short)
+        jscode = jscode.replace('._%s__' % cur_name_short,
+                                '._%s__' % new_name_short)
+        jscode = jscode.replace('%s.prototype' % cur_name, 
+                                '%s.prototype' % new_name)
+    else:
+        # If this is about a function / method
+        jscode = jscode.replace('function flx_%s' % cur_name_short,
+                                'function flx_%s' % new_name_short, 1)
+        if new_cls_name:  # use regexp to match double-underscore but no magics!
+            jscode = re_sub1.sub('this._%s__\\1' % new_cls_name, jscode)
+            #jscode = jscode.replace('this.__', 'this._%s__' % new_cls_name)
+    
+    # Always do this
     jscode = jscode.replace('%s = function' % cur_name, 
-                            '%s = function' % (new_name), 1)
-    jscode = jscode.replace('%s.prototype' % cur_name, 
-                            '%s.prototype' % new_name)
-    jscode = jscode.replace('_class_name = "%s"' % cur_name, 
-                            '_class_name = "%s"' % new_name)
+                            '%s = function' % new_name, 1)
     if '.' in new_name:
         jscode = jscode.replace('var %s;\n' % cur_name, '', 1)
     else:
         jscode = jscode.replace('var %s;\n' % cur_name, 
                                 'var %s;\n' % new_name, 1)
+    
+    if 'this._Component__properties__' in jscode:
+        1/0
+        
     return jscode
 
 
