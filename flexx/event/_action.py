@@ -95,7 +95,7 @@ class ActionDescriptor(BaseDescriptor):
         # action of its super class.
         action._use_once(self._func)
         return action
-    
+
 
 class Action:
     """ Action objects are wrappers around Component methods. They take

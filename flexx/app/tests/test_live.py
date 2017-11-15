@@ -49,7 +49,7 @@ def run_component_live(cls):
             sys.stdout = sys.stderr = fake_stdout
             try:
                 c = app.launch(cls, 'firefox-app')
-                func(c)
+                func(c._sessions[0], c)
                 
                 # To exit
                 isrunning = True
@@ -87,6 +87,7 @@ def run_component_live(cls):
             
             smart_compare('rp', pyref, pyresult, func.__name__ + '() in Python')
             smart_compare('rj', jsref, jsresult, func.__name__ + '() in JavaScript')
+            print(func.__name__, 'ok')
         
         return runner
     return wrapper
@@ -101,7 +102,7 @@ class PyComponentA(app.PyComponent):
 
 
 @run_component_live(PyComponentA)
-def test_pycomponent_simple(c):
+def test_pycomponent_simple(session, c):
     """
     hi foo
     hi bar
@@ -110,7 +111,7 @@ def test_pycomponent_simple(c):
     """
     c.greet('foo')
     c.greet('bar')
-    c.call_js('greet("spam")')
+    session.send_command('INVOKE', c._id, 'greet', ["spam"])
 
 
 class JsComponentA(app.JsComponent):
@@ -121,15 +122,17 @@ class JsComponentA(app.JsComponent):
 
 
 @run_component_live(JsComponentA)
-def test_jscomponent_simple(c):
+def test_jscomponent_simple(session, c):
     """
     ----------
     hi foo
     hi bar
+    hi spam
     """
     
     c.greet('foo')
     c.greet('bar')
+    session.send_command('INVOKE', c._id, 'greet', ["spam"])
 
 
 test_pycomponent_simple()

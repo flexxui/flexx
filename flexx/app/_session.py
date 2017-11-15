@@ -609,7 +609,7 @@ class Session:
             ob = self._component_instances.get(id, None)
             if ob is not None:
                 action = getattr(ob, name, None)
-                if isinstance(action, Action):
+                if action:
                     action(*args)
         # elif command.startswith('SET_EVENT_TYPES'):
         #     _, id, txt = command.split(' ', 3)

@@ -30,21 +30,19 @@ from . import logger
 # corresponding instance from the module that's being used.
 # By using something from clientcore in JS here, we make clientcore a
 # dependency of the the current module.
-# todo: replace this with bsdf
 from ._clientcore import serializer, bsdf
 
 manager = None  # Set by __init__ to prevent circular dependencies
 
-reprs = json.dumps  # todo: used?
 
-
-def make_proxy_action(flx_name):
+def make_proxy_action(action):
     # Note: the flx_prefixes are picked up by the code in flexx.event that
     # compiles component classes, so it can fix /insert the name for JS.
-    
-    def flx_proxy_action(self, *args, **kwargs):
-        self._proxy_action(flx_name, *args, **kwargs)
-    return ActionDescriptor(flx_proxy_action, flx_name, '')
+    flx_name = action._name
+    def flx_proxy_action(self, *args):
+        self._proxy_action(flx_name, *args)
+    flx_proxy_action.__doc__ = action.__doc__  # todo: or action._doc?
+    return flx_proxy_action  # ActionDescriptor(flx_proxy_action, flx_name, '')
 
 
 def get_component_classes():
@@ -180,7 +178,7 @@ class AppComponentMeta(ComponentMeta):
             elif isinstance(val, EmitterDescriptor):
                 pass  # no emitters on the proxy side
             elif isinstance(val, ActionDescriptor):
-                 jsdict[name] = make_proxy_action(name)  # proxy actions
+                 jsdict[name] = make_proxy_action(val)  # proxy actions
             else:
                 pass  # no reactions/functions/class attributes on the proxy side
         
@@ -210,7 +208,7 @@ class AppComponentMeta(ComponentMeta):
             elif isinstance(val, ActionDescriptor):
                 # JS part gets the proper action, Py side gets a proxy action
                 jsdict[name] = val
-                setattr(cls, name, make_proxy_action(name))
+                setattr(cls, name, make_proxy_action(val))
             else:
                 # Move attribute from the Py class to the JS class
                 jsdict[name] = val
@@ -349,7 +347,7 @@ class LocalComponent(Component):
         #                        'high risk on race conditions.')
     
     def _set_event_types(self, text):
-        self.__event_types_at_proxy = serializer.loads(text)
+        pass #self.__event_types_at_proxy = serializer.loads(text)
         # todo: self._new_event_type_hook() ?
     
     def _register_reaction(self, *args):
