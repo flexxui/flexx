@@ -398,8 +398,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     prototype_prefix = '$' + cls_name.split('.')[-1] + '.'
     total_code.append('var %s = %s.prototype;' % (prototype_prefix[:-1], cls_name))
     # Functions to ignore
-    OK_MAGICS = ('__actions__', '__properties__', '__emitters__',
-                 '__reactions__', '__local_properties__')
+    OK_MAGICS = ('__actions__', '__properties__', '__emitters__', '__reactions__')
     
     # Process class items in original order or sorted by name if we cant
     class_items = cls.__dict__.items()
@@ -407,9 +406,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
         class_items = sorted(class_items)
     
     for name, val in class_items:
-        # fix double underscore mangling
-        name = name.replace('_JS__', '_%s__' % cls_name.split('.')[-1])
-        
+
         if isinstance(val, ActionDescriptor):
             # Set underlying function as class attribute. This is overwritten
             # by the instance, but this way super() works.
@@ -467,13 +464,16 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
         elif name in OK_MAGICS:
             const_code.append(prototype_prefix + name + ' = ' + reprs(val))
         elif name.startswith('__'):
-            pass  # we create our own __emitters__, etc.
+            # These are only magics, since class attributes with double-underscores
+            # have already been mangled.
+            pass
         else:
             try:
                 serialized = json.dumps(val)
             except Exception as err:  # pragma: no cover
                 raise ValueError('Attributes on JS Component class must be '
                                  'JSON compatible.\n%s' % str(err))
+            
             const_code.append(prototype_prefix + name + ' = ' + serialized)
     
     if const_code:
@@ -506,6 +506,7 @@ if __name__ == '__main__':
     
     class Foo(Component):
         
+        __x = 3
         foo = event.StringProp('asd', settable=True)
         
         @event.action
@@ -515,6 +516,10 @@ if __name__ == '__main__':
         @event.reaction
         def react2foo(self):
             print(self.foo)
+        
+        def __xx(self):
+            pass
+        
     
     toprint = JS_EVENT  # or JS_LOOP JS_COMPONENT JS_EVENT
     print('-' * 80)

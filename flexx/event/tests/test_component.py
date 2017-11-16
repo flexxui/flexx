@@ -79,18 +79,12 @@ def test_component_pending_events():
     """
     
     f = Foo()
-    if this_is_js():
-        print(len(f.__pending_events.keys()))
-    else:
-        print(len(f._Component__pending_events))
+    print(len(f._Component__pending_events.keys()))
     
     loop.iter()
     
     # Its important that we dont keep collecting events, for obvious reasons
-    if this_is_js():
-        print(f.__pending_events)
-    else:
-        print(f._Component__pending_events)
+    print(f._Component__pending_events)
 
 
 @run_in_both(Foo, Bar, Comp)

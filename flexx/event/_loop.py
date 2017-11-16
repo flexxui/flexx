@@ -340,7 +340,7 @@ class Loop:
                     try:
                         callback(*args)
                     except Exception as why:
-                        print('callback failed: {}:\n{}'.format(callback, why))
+                        logger.warn('callback failed: {}:\n{}'.format(callback, why))
             
             def postEventWithCallback(self, callback, *args):
                 self.queue.put((callback, args))
