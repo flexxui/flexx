@@ -267,16 +267,28 @@ class Component(with_metaclass(ComponentMeta, object)):
             self.emit(ev['type'], ev)
     
     def __enter__(self):
+        loop._activate_component(self)
+        loop.call_later(self.__check_not_active)
         return self
     
     def __exit__(self, type, value, traceback):
-        pass
+        loop._deactivate_component(self)
+    
+    def __check_not_active(self):
+        # todo: disable this in production?
+        active_components = loop.get_active_components()
+        if self in active_components:
+            raise RuntimeError('It seems that the event loop is processing '
+                               'events while a Component is active. This has a '
+                               'high risk on race conditions.')
     
     def init(self):
-        """ Can be overloaded when creating a custom class to do
-        initialization, such as creating sub components. This function is
-        called with this object as a context manager (the default
-        context is a stub).
+        """ Initializer method.
+        
+        This method can be overloaded when creating a custom class. It is
+        called with this component as a context manager (making it the
+        active component), and it gets the positional arguments passed to the
+        Component constructor.
         """
         pass
     

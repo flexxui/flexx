@@ -354,6 +354,48 @@ def test_registering_handlers():
     print('ok')
 
 
+class CompCheckActive(event.Component):
+    
+    def init(self, do_iter=False):
+        if do_iter:
+            loop.iter()
+        else:
+            ac = loop.get_active_components()
+            print('active', len(ac), ac[-2].a_prop)
+
+
+@run_in_both(Foo, CompCheckActive)
+def test_component_active():
+    """
+    0
+    active 2 7
+    active 2 42
+    0
+    ? RuntimeError
+    ? RuntimeError
+    0
+    """
+    print(len(loop.get_active_components()))
+    
+    f = Foo(a_prop=7)
+    with f:
+        CompCheckActive()
+    
+    f.set_a_prop(42)
+    loop.iter()
+    with f:
+        CompCheckActive()
+    
+    print(len(loop.get_active_components()))
+    loop.iter()
+    
+    # Invoke error (once for newly created component, once for f
+    with f:
+        CompCheckActive(True)
+    
+    print(len(loop.get_active_components()))
+
+
 @run_in_both()
 def test_mutate_array1():
     """

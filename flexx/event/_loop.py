@@ -18,10 +18,14 @@ def this_is_js():
 # todo: maybe this can be the base class for the tornado loop that we use in flexx.app
 
 
+# todo: should we rename Loop to ...?
+
 class Loop:
     """ The singleton Flexx event loop at ``flexx.event.loop``. This holds
     the queue of pending calls, actions, and reactions. These are queued
-    separately to realize a consistent one-way data-flow.
+    separately to realize a consistent one-way data-flow. Further, this
+    object keeps track of (per thread) active components (i.e. the components
+    whose context manager is currently active).
     
     Users typically do not need to be aware of this, though it can be
     useful during debugging.
@@ -37,8 +41,14 @@ class Loop:
     def __init__(self):
         self._lock = threading.RLock()
         self._calllaterfunc = lambda x: None
-        self.reset()
         
+        # Keep track of a stack of "active" components for use within Component
+        # context manager. We have one list for each thread. Note that we should
+        # limit its use to context managers, and execution should never be
+        # handed back to the event loop while inside a context.
+        self._active_components = {}  # dict of thread-id -> list
+        self.reset()
+    
     def reset(self):
         """ Reset the loop, allowing for reuse.
         """
@@ -65,6 +75,28 @@ class Loop:
         whether mutations are allowed to be done now.
         """
         return self._processing_action is not None
+    
+    ## Active components
+    
+    def get_active_components(self):
+        """ Get a tuple that represents the stack of "active" components.
+        Each thread has its own stack. Should only be used directly inside
+        a Component context manager.
+        """
+        tid = threading.get_ident()
+        return tuple(self._active_components.setdefault(tid, []))
+    
+    def _activate_component(self, component):
+        """ Friend method of Component. """
+        tid = threading.get_ident()
+        active = self._active_components.setdefault(tid, [])
+        active.append(component)
+    
+    def _deactivate_component(self, component):
+        """ Friend method of Component. """
+        tid = threading.get_ident()
+        active = self._active_components[tid]
+        assert active.pop(-1) is component
     
     ## Adding to queues
     

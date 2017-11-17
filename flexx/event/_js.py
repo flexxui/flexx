@@ -102,6 +102,7 @@ class LoopJS:  # pragma: no cover
     _thread_match = undefined
     
     def __init__(self):
+        self._active_components = {}
         self.reset()
     
     def __enter__(self):
@@ -158,12 +159,6 @@ class ComponentJS:  # pragma: no cover
         # Connect reactions and fire initial events
         self._comp_init_reactions()
         self._comp_init_events(prop_events)
-    
-    def __enter__(self):
-        return self
-    
-    def __exit__(self, type, value, traceback):
-        pass
     
     def _comp_init_property_values(self, property_values):
         events = []
@@ -341,8 +336,8 @@ def _create_js_class(PyClass, JSClass):
                                   '$%s.' % cname)
     # Add the Python class methods
     for name, val in sorted(PyClass.__dict__.items()):
-        #if not name.startswith(('__', '_%s__' % cname)):
-        if callable(val) and not name.startswith('__') and not hasattr(JSClass, name):
+        nameok = name in ('__enter__', '__exit__') or not name.startswith('__')
+        if callable(val) and nameok and not hasattr(JSClass, name):
             jscode.append(mc.py2js(val, '$' + cname + '.' + name))
     # Compose
     jscode = '\n'.join(jscode)
