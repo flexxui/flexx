@@ -12,9 +12,10 @@ import datetime
 from http.cookies import SimpleCookie
 
 from ..event import Action
+from ..event._component import new_type
 
 from ._server import call_later
-from ._component2 import PyComponent, JsComponent, new_type
+from ._component2 import PyComponent, JsComponent
 from ._asset import Asset, Bundle, solve_dependencies
 from ._assetstore import AssetStore, export_assets_and_data, INDEX
 from ._assetstore import assets as assetstore

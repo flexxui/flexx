@@ -253,7 +253,6 @@ from ._asset import Asset, Bundle
 # from ._model import get_model_classes
 
 from ._component2 import LocalComponent, ProxyComponent, PyComponent, JsComponent
-from ._component2 import get_active_component, get_active_components
 from ._component2 import get_component_classes
 
 
