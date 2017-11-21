@@ -970,6 +970,8 @@ class Parser2(Parser1):
             # ns should only consist only of arg names (or helpers)
             for name in argnames:
                 self.vars.discard(name)
+            if node.args_node:
+                self.vars.discard(node.args_node.name)
             ns = self.pop_stack()
             assert set(ns) == kw_argnames
             pre_code.append(self.get_declarations(ns))
