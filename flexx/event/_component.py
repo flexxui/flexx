@@ -259,7 +259,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         # Schedule a call to disable event capturing
         def stop_capturing():
             self.__pending_events = None
-        loop.call_later(stop_capturing)
+        loop.call_soon(stop_capturing)
         
         # Emit initial events for props
         for i in range(len(prop_events)):
@@ -268,7 +268,7 @@ class Component(with_metaclass(ComponentMeta, object)):
     
     def __enter__(self):
         loop._activate_component(self)
-        loop.call_later(self.__check_not_active)
+        loop.call_soon(self.__check_not_active)
         return self
     
     def __exit__(self, type, value, traceback):
@@ -296,7 +296,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         # http://eli.thegreenplace.net/2009/06/12/safely-using-destructors-in-python
         def __del__(self):
             if not self._disposed:
-                loop.call_later(self.dispose)
+                loop.call_soon(self.dispose)
     
     def dispose(self):
         """ Use this to dispose of the object to prevent memory leaks.
@@ -316,9 +316,17 @@ class Component(with_metaclass(ComponentMeta, object)):
         for i in range(len(self.__reactions__)):
             getattr(self, self.__reactions__[i]).dispose()
     
-    def _reactions_changed_hook(self):
-        # Called when the reactions changed, can be implemented in subclasses
-        pass
+    def _registered_reactions_hook(self):
+        """ Called when the reactions changed, can be implemented in subclasses.
+        The original method returns a list of event types for which there is
+        at least one registered reaction. Overloaded methods should return this
+        list too.
+        """
+        used_event_types = []
+        for key, reactions in self.__handlers.items():
+            if len(reactions) > 0:
+                used_event_types.append(key)
+        return used_event_types
     
     def _register_reaction(self, event_type, reaction, force=False):
         # Register a reaction for the given event type. The type
@@ -349,7 +357,8 @@ class Component(with_metaclass(ComponentMeta, object)):
         else:
             reactions.append((label, reaction))
         
-        self._reactions_changed_hook()
+        # Call hook to keep (subclasses of) the component up to date
+        self._registered_reactions_hook()
         
         # Emit any pending events
         if self.__pending_events is not None:
@@ -377,7 +386,7 @@ class Component(with_metaclass(ComponentMeta, object)):
             if not ((label and label != entry[0]) or
                     (reaction and reaction is not entry[1])):
                 reactions.pop(i)
-        self._reactions_changed_hook()
+        self._registered_reactions_hook()
     
     def emit(self, type, info=None):
         """ Generate a new event and dispatch to all event reactions.

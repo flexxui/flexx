@@ -11,7 +11,7 @@ class Person(event.Component):
     
     first_name = event.StringProp('Jane', settable=True)
     last_name = event.StringProp('Doe', settable=True)
-    children = event.ListProp([], 'The children of this person')
+    children = event.ListProp([], doc='The children of this person')
     
     # Actions 
     

@@ -29,7 +29,7 @@ class Test2(event.Component):
     def track_data(self, *events):
         for ev in events:
             if ev.mutation == 'set':
-                self.data[:] = ev.objects
+                self.data[:] = ev.new_value
             elif ev.mutation == 'insert':
                 self.data[ev.index:ev.index] = ev.objects
             elif ev.mutation == 'remove':

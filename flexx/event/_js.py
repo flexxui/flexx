@@ -102,7 +102,7 @@ class LoopJS:  # pragma: no cover
     _thread_match = undefined
     
     def __init__(self):
-        self._active_components = {}
+        self._active_components = []
         self.reset()
     
     def __enter__(self):
@@ -111,7 +111,7 @@ class LoopJS:  # pragma: no cover
     def __exit__(self, type, value, traceback):
         self.iter()
     
-    def _calllaterfunc(self, func):
+    def _call_soon_func(self, func):
         setTimeout(func, 0)
 
 
@@ -357,6 +357,7 @@ def _create_js_class(PyClass, JSClass):
                        re.MULTILINE | re.DOTALL)
         jscode = jscode.replace('this._ensure_thread_', '//this._ensure_thread_')
         jscode = jscode.replace('threading.get_ident()', '0')
+        jscode = jscode.replace('._local.', '.')
         jscode = jscode.replace('this._thread_match(true);\n', '')
         jscode = jscode.replace('if (_pyfunc_truthy(this._thread_match(false)))', '')
     # Almost done
@@ -516,7 +517,7 @@ if __name__ == '__main__':
             pass
         
     
-    toprint = JS_EVENT  # or JS_LOOP JS_COMPONENT JS_EVENT
+    toprint = JS_LOOP  # or JS_LOOP JS_COMPONENT JS_EVENT
     print('-' * 80)
     print(toprint)  
     print('-' * 80)

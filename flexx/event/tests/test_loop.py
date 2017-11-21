@@ -35,8 +35,8 @@ def test_calllater():
     """
     def x():
         print('called later')
-    loop.call_later(x)
-    loop.call_later(x)
+    loop.call_soon(x)
+    loop.call_soon(x)
     print('xx')
     loop.iter()
 
@@ -84,7 +84,7 @@ def test_iter_fail():
         print('ok')
     
     # When handled by the loop, error is printed, but no fail
-    loop.call_later(fail)
+    loop.call_soon(fail)
     loop.iter()
 
 
@@ -131,15 +131,67 @@ def test_loop_reset():
     loop.iter()
 
     
+@run_in_both(Foo)
+def test_loop_cannot_call_iter():
+    """
+    ? Cannot call
+    """
+    def callback():
+        try:
+            loop.iter()
+        except RuntimeError as err:
+            print(err)
+    
+    loop.call_soon(callback)
+    loop.iter()
+
+
 ## Tests for only Python
 
-def test_integrate():
+
+def test_loop_asyncio():
+    import asyncio
+    
+    aio_loop = asyncio.new_event_loop()
+    loop.integrate(aio_loop)
+    
+    res = []
+    def callback():
+        res.append(1)
+    
+    loop.call_soon(callback)
+    aio_loop.stop()
+    aio_loop.run_forever()
+    
+    assert len(res) == 1
+    
+    # Now run wrong loop
+    aio_loop = asyncio.new_event_loop()
+    # loop.integrate(aio_loop)  -> dont do this (yet)
+    
+    loop.call_soon(callback)
+    aio_loop.stop()
+    aio_loop.run_forever()
+    
+    assert len(res) == 1
+    
+    loop.integrate(aio_loop)  # but do it now
+    aio_loop.stop()
+    aio_loop.run_forever()
+    
+    aio_loop.stop()
+    aio_loop.run_forever()
+    
+    assert len(res) == 2
+
+
+def xx_disabled_test_integrate():
     
     res = []
     def calllater(f):
         res.append(f)
     
-    ori = event.loop._calllaterfunc
+    ori = event.loop._call_soon_func
     
     foo = Foo()
     event.loop.integrate(calllater)
@@ -150,7 +202,7 @@ def test_integrate():
     with raises(ValueError):
         event.loop.integrate('not a callable')
     
-    event.loop._calllaterfunc = ori
+    event.loop._call_soon_func = ori
 
 
 run_tests_if_main()
