@@ -146,6 +146,9 @@ class App:
         Returns:
             app (Component): an instance of the given class.
         """
+        # creates server (and event loop) if it did not yet exist
+        current_server()
+        
         # Create session
         if not self._is_served:
             self.serve()
@@ -158,7 +161,6 @@ class App:
             runtime_kwargs['icon'] = self.kwargs['icon']
 
         # Launch web runtime, the server will wait for the connection
-        current_server()  # creates server if it did not yet exist
         url = self.url + '?session_id=%s' % session.id
         session._runtime = webruntime.launch(url, runtime=runtime, **runtime_kwargs)
         return session.app
@@ -260,6 +262,15 @@ class AppManager(event.Component):
         self._session_map = weakref.WeakValueDictionary()
         self._last_check_time = time.time()
 
+    # Disable a few things, since they're not needed here.
+    # todo: I did this to check that loop is not used before we have a server
+    def __enter__(self):
+        return self
+    def __exit__(self, type, value, traceback):
+        pass
+    def _comp_init_events(self, *args):
+        pass
+    
     def register_app(self, app):
         """ Register an app (an object that wraps a Component class plus init args).
         After registering an app (and starting the server) it is

@@ -4,6 +4,7 @@ Serve web page and handle web sockets using Tornado.
 
 import json
 import time
+import asyncio
 import socket
 import mimetypes
 import traceback
@@ -17,6 +18,7 @@ from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketHandler
 from tornado.httpserver import HTTPServer
+from  tornado.platform.asyncio import AsyncIOLoop, AsyncIOMainLoop
 
 from ._app import manager
 from ._session import get_page
@@ -45,26 +47,25 @@ class TornadoServer(AbstractServer):
     """ Flexx Server implemented in Tornado.
     """
 
-    def __init__(self, host, port, new_loop, **kwargs):
-        self._new_loop = new_loop
+    def __init__(self, *args, **kwargs):
         self._app = None
         self._server = None
-        self._get_io_loop()
-        super().__init__(host, port, **kwargs)
-
-    def _get_io_loop(self):
-        # Get a new ioloop or the current ioloop for this thread
-        if self._new_loop:
-            self._loop = IOLoop()
-        else:
-            self._loop = IOLoop.current(instance=is_main_thread())
-            if self._loop is None:
-                self._loop = IOLoop(make_current=True)
+        super().__init__(*args, **kwargs)
 
     def _open(self, host, port, **kwargs):
         # Note: does not get called if host is False. That way we can
         # run Flexx in e.g. JLab's application.
-
+        
+        # Hook Tornado up with asyncio. Flexx' BaseServer makes sure
+        # that the correct asyncio event loop is current (for this thread).
+        # http://www.tornadoweb.org/en/stable/asyncio.html
+        self._io_loop = AsyncIOMainLoop()
+        # I am sorry for this hack, but Tornado wont work otherwise :(
+        # I wonder how long it will take before this will bite me back. I guess
+        # we will be alright as long as there is no other Tornado stuff going on.
+        IOLoop._current.instance = None
+        self._io_loop.make_current()
+        
         # handle ssl, wether from configuration or given args
         if config.ssl_certfile:
             if 'ssl_options' not in kwargs:
@@ -86,9 +87,10 @@ class TornadoServer(AbstractServer):
         self._app = Application([(r"/flexx/ws/(.*)", WSHandler),
                                  (r"/flexx/(.*)", MainHandler),
                                  (r"/(.*)", AppHandler), ], **app_kwargs)
+        self._app._io_loop = self._io_loop
         # Create tornado server, bound to our own ioloop
-        self._server = HTTPServer(self._app, io_loop=self._loop, **kwargs)
-
+        self._server = HTTPServer(self._app, io_loop=self._io_loop, **kwargs)
+        
         # Start server (find free port number if port not given)
         if port:
             # Turn port into int, use hashed port number if a string was given
@@ -120,54 +122,13 @@ class TornadoServer(AbstractServer):
             proto = 'https'
         logger.info('Serving apps at %s://%s:%i/' % (proto, host, port))
 
-    def _start(self):
-        # Ensure that our loop is the current loop for this thread
-        if self._new_loop:
-            self._loop.make_current()
-        elif IOLoop.current(instance=is_main_thread()) is not self._loop:
-            raise RuntimeError('Server must use ioloop that is current to this thread.')
-        # Make use of the semi-standard defined by IPython to determine
-        # if the ioloop is "hijacked" (e.g. in Pyzo). There is no public
-        # way to determine if a loop is already running, but the
-        # AbstractServer class keeps track of this.
-        if not getattr(self._loop, '_in_event_loop', False):
-            self._loop.start()
-
-    def _stop(self):
-        # todo: explicitly close all websocket connections
-        logger.debug('Stopping Tornado server')
-        self._loop.stop()
-
     def _close(self):
         self._server.stop()
-
-    def call_later(self, delay, callback, *args, **kwargs):
-        # We use a wrapper func so that exceptions are processed via our
-        # logging system. Also fixes that Tornado seems to close websockets
-        # when an exception occurs (issue #164) though one could also
-        # use ``with tornado.stack_context.NullContext()`` to make callbacks
-        # be called more "independently".
-        def wrapper():
-            try:
-                callback(*args, **kwargs)
-            except Exception as err:
-                err.skip_tb = 1
-                logger.exception(err)
-
-        if delay <= 0:
-            self._loop.add_callback(wrapper)
-        else:
-            self._loop.call_later(delay, wrapper)
 
     @property
     def app(self):
         """ The Tornado Application object being used."""
         return self._app
-
-    @property
-    def loop(self):
-        """ The Tornado IOLoop object being used."""
-        return self._loop
 
     @property
     def server(self):
@@ -461,8 +422,9 @@ class MainHandler(RequestHandler):
                         )
             self.write(json.dumps(info))
         elif path == 'stop':
-            loop = IOLoop.current()
-            loop.add_callback(loop.stop)
+            asyncio.get_event_loop().stop()
+            # loop = IOLoop.current()
+            # loop.add_callback(loop.stop)
             self.write("Stopping event loop.")
         else:
             self.write('unknown command %r' % path)
@@ -505,7 +467,7 @@ class MessageCounter:
         logger.debug('Websocket messages per second: %1.1f' % (n / T))
 
         if not self._stop:
-            loop = IOLoop.current()
+            loop = asyncio.get_event_loop()
             loop.call_later(self._notify_interval, self._notify)
 
     def stop(self):
@@ -543,8 +505,8 @@ class WSHandler(WebSocketHandler):
 
         logger.debug('New websocket connection %s' % path)
         if manager.has_app_name(self.app_name):
-            IOLoop.current().spawn_callback(self.pinger1)
-            IOLoop.current().spawn_callback(self.pinger2)
+            self.application._io_loop.spawn_callback(self.pinger1)
+            self.application._io_loop.spawn_callback(self.pinger2)
         else:
             self.close(1003, "Could not associate socket with an app.")
 

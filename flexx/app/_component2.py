@@ -158,7 +158,7 @@ class AppComponentMeta(ComponentMeta):
             elif isinstance(val, Property) or (callable(val) and name.endswith('_validate')):
                 jsdict[name] = val  # properties are the same
             elif isinstance(val, EmitterDescriptor):
-                pass  # todo: create stub props for doc purposes
+                pass  # todo: create stub emitters for doc purposes
             elif isinstance(val, ActionDescriptor):
                 # JS part gets the proper action, Py side gets a proxy action
                 jsdict[name] = val
@@ -228,6 +228,9 @@ class LocalComponent(Component):
         
         self._sessions = []
         
+        # Keep track of what events are registered at the proxy
+        self.__event_types_at_proxy = {}  # session_id -> event_types
+        
         # Pop special attribute
         property_values.pop('flx_is_app', None)
         # Pop and apply id if given
@@ -239,6 +242,7 @@ class LocalComponent(Component):
         if session is not None:
             self._sessions.append(session)
         
+        # Call original method
         prop_events = super()._comp_init_property_values(property_values)
         
         if this_is_js():
@@ -265,29 +269,17 @@ class LocalComponent(Component):
         
         # todo: ? self._session.keep_alive(self)
     
-    def _set_event_types(self, text):
-        pass #self.__event_types_at_proxy = serializer.loads(text)
-        # todo: self._new_event_type_hook() ?
+    def _set_event_types(self, session_id, event_types):
+        self.__event_types_at_proxy[session_id] = event_types
     
-    def _register_reaction(self, *args):
-        event_type = args[0].split(':')[0]
-        if len(self.get_event_handlers(event_type)) == 0:
-           self._new_event_type_hook(event_type)
-        return super()._register_reaction(*args)
-    
-    # todo: add to Component?
-    def _new_event_type_hook(self, event_type):
-        """ Called when a new event is registered.
-        """
-        pass
-
     def emit(self, type, info=None):
+        # Overload emit() so we can send events to the proxy object at the other end
         ev = super().emit(type, info)
         # todo: do we want a way to keep props local? Or should one just wrap or use a second class?
-        isprop = type in self.__properties__ # and type not in self.__local_properties__
-        if isprop or type in self.__event_types_at_proxy:
-            if not self._disposed:
-                for session in self._sessions:
+        isprop = type in self.__properties__
+        if not self._disposed:
+            for session in self._sessions:
+                 if isprop or type in self.__event_types_at_proxy.get(session.id, []):
                     session.send_command('INVOKE', self._id, '_emit_from_other_side', [ev])
     
     # todo: probably remove this, we have actions now!
@@ -387,19 +379,18 @@ class ProxyComponent(Component):
         serializer  # to bring in _clientcore as a way of bootstrapping
         BsdfComponentExtension
     
-    def _reactions_changed_hook(self):
-        if self._disposed:
-            return
-        handlers = self._Component__handlers
-        types = [name for name in handlers.keys() if len(handlers[name])]
-        for session in self._sessions:
-            session.send_command('SET_EVENT_TYPES', self._id, types)
-        
-        # handlers = self._HasEvents__handlers
-        # types = [name for name in handlers.keys() if handlers[name]]
-        # txt = serializer.saves(types)
-        # cmd = 'flexx.instances.%s._set_event_types_py(%s);' % (self._id, txt)
-        # self._session._exec(cmd)
+    def _registered_reactions_hook(self):
+        """ Keep the local component informed about what event types this proxy
+        is interested in. This way, the trafic can be minimized, e.g. not send
+        mouse move events if they're not used anyway.
+        """
+        event_types = super()._registered_reactions_hook()
+        try:
+            if not self._disposed:
+                for session in self._sessions:
+                    session.send_command('INVOKE', self._id, '_set_event_types', [session.id, event_types])
+        finally:
+            return event_types
     
     @event.action
     def _emit_from_other_side(self, ev):
@@ -409,7 +400,7 @@ class ProxyComponent(Component):
         """
         if not this_is_js():
             ev = Dict(ev)
-        if ev.type in self.__properties__ and ev.mutation:
+        if ev.type in self.__properties__ and hasattr(ev, 'mutation'):
             # Mutate the property - this will cause an emit
             if ev.mutation == 'set':
                 super()._mutate(ev.type, ev.new_value)

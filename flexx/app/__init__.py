@@ -258,7 +258,7 @@ from ._component2 import get_component_classes
 
 from ._funcs import run, start, stop
 from ._funcs import init_interactive, init_notebook, serve, launch, export
-from ._server import call_later, create_server, current_server
+from ._server import create_server, current_server
 from ._session import Session
 from ._modules import JSModule
 from ._assetstore import assets

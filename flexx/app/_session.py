@@ -7,14 +7,14 @@ import time
 import json
 import random
 import hashlib
+import asyncio
 import weakref
 import datetime
 from http.cookies import SimpleCookie
 
-from ..event import Action
+from ..event import loop, Action
 from ..event._component import new_type
 
-from ._server import call_later
 from ._component2 import PyComponent, JsComponent
 from ._asset import Asset, Bundle, solve_dependencies
 from ._assetstore import AssetStore, export_assets_and_data, INDEX
@@ -102,7 +102,7 @@ class Session:
         self._component_counter = 0
         self._component_instances = weakref.WeakValueDictionary()
         self._instances_guarded = {}  # id: (ping_count, instance)
-        self._roundtrip_based_calllaters = []  # (ping_count, callback, args, kwargs)
+        self._roundtrip_based_calllaters = []  # (ping_count, callback, args)
 
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
@@ -189,7 +189,6 @@ class Session:
         self._roundtrip_based_calllaters = []
         self._closing = True  # suppress warnings for session being closed.
         try:
-
             # Close the websocket
             if self._ws:
                 self._ws.close_this()
@@ -463,14 +462,14 @@ class Session:
     #         self._instances_guarded[obid] = lifetime, ob
     
     # todo: no longer necesary, I suspect, but maybe leave; does no harm?
-    def call_after_roundtrip(self, callback, *args, **kwargs):
-        """ A variant of ``app.call_later()`` that calls a callback after
+    def call_after_roundtrip(self, callback, *args):
+        """ A variant of ``event.loop.call_soon()`` that calls a callback after
         a py-js roundrip. This can be convenient to delay an action until
         after other things have settled down.
         """
         counter = 0 if self._ws is None else self._ws.ping_counter
         lifetime = counter + 2  # a couple of roundtrips, to be safe
-        entry = lifetime, callback, args, kwargs
+        entry = lifetime, callback, args
         self._roundtrip_based_calllaters.append(entry)
 
     ## JIT asset definitions
@@ -629,13 +628,14 @@ class Session:
                            self._instances_guarded.values() if c <= count]
         for ob in objects_to_clear:
             self._instances_guarded.pop(id(ob))
-        # todo: remoe use of _instances_guarded
+        # todo: remove use of _instances_guarded
         
         for i in reversed(range(len(self._roundtrip_based_calllaters))):
             if self._roundtrip_based_calllaters[i][0] <= count:
                 entry = self._roundtrip_based_calllaters.pop(i)
-                lifetime, callback, args, kwargs = entry
-                call_later(0, callback, *args, **kwargs)
+                lifetime, callback, args = entry
+                asyncio.get_event_loop().call_soon(callback, *args)
+                #loop.call_soon(callback, *args)
     
     def eval(self, code):
         """ Evaluate the given JavaScript code in the client

@@ -4,6 +4,7 @@
 import os
 import sys
 import time
+import asyncio
 
 import tornado
 
@@ -15,12 +16,29 @@ from flexx.util.testing import run_tests_if_main, raises, skip
 from flexx.event import loop
 from flexx.event._both_tester import FakeStream, smart_compare
 
-
 ON_TRAVIS = os.getenv('TRAVIS', '') == 'true'
 ON_PYPY = '__pypy__' in sys.builtin_module_names
 
-TIMEOUT1 = 1.0  # Failsafe
-TIMEOUT2 = 1.0
+
+async def roundtrip(*sessions):
+    """ Coroutine to await a roundtrip to all given sessions.
+    """
+    ok = []
+    def up():
+        ok.append(1)
+    for session in sessions:
+        session.call_after_roundtrip(up)
+    # timeout = time.time() + 5.0
+    while len(ok) < len(sessions):
+        await asyncio.sleep(0.02)
+    loop.iter()
+
+
+def launch(cls):
+    """ Shorthand for app.launch() that also returns session.
+    """
+    c = app.launch(cls, 'firefox-app')
+    return c, c._sessions[0]
 
 
 def filter_stdout(text):
@@ -34,64 +52,55 @@ def filter_stdout(text):
     return '\n'.join(py_lines), '\n'.join(js_lines)
 
 
-def run_component_live(cls):
+def run_live(func):
     
-    def wrapper(func):
+    def runner():
+        # Run with a fresh server and loop
+        loop.reset()
+        #asyncio_loop = asyncio.get_event_loop()
+        asyncio_loop = asyncio.new_event_loop()
+        server = app.create_server(port=0, loop=asyncio_loop)
         
-        def runner():
-            # Run with a fresh server and loop
-            loop.reset()
-            server = app.create_server(port=0, new_loop=True)
-            
-            orig_stdout = sys.stdout
-            orig_stderr = sys.stderr
-            fake_stdout = FakeStream()
-            sys.stdout = sys.stderr = fake_stdout
-            try:
-                c = app.launch(cls, 'firefox-app')
-                func(c._sessions[0], c)
-                
-                # To exit
-                isrunning = True
-                def stop1():
-                    c._sessions[0].call_after_roundtrip(stop2)
-                def stop2():
-                    if isrunning:
-                        app.stop()
-                app.call_later(0.1, stop1)
-                
-                # Enter main loop until we get out
-                t0 = time.time()
-                app.start()  # this blocks
-                
-            finally:
-                sys.stdout = orig_stdout
-                sys.stderr = orig_stderr
-                loop.reset()
-            
-            # Clean up / shut down
-            print('ran %f seconds' % (time.time()-t0))
-            # assert not isrunning, "start() did not block, are you running Tornado interactively?"
-            isrunning = False
-            for session in c._sessions:
-                session.close()
-            
-            # Get stdout
-            pyresult, jsresult = filter_stdout(fake_stdout.getvalue())
-            
-            # Get reference text
-            reference = '\n'.join(line[4:] for line in func.__doc__.splitlines())
-            parts = reference.split('-'*10)
-            pyref = parts[0].strip(' \n')
-            jsref = parts[-1].strip(' \n-')
-            
-            smart_compare('rp', pyref, pyresult, func.__name__ + '() in Python')
-            smart_compare('rj', jsref, jsresult, func.__name__ + '() in JavaScript')
-            print(func.__name__, 'ok')
+        print('running', func.__name__, '...', end='')
+        orig_stdout = sys.stdout
+        orig_stderr = sys.stderr
+        fake_stdout = FakeStream()
+        sys.stdout = sys.stderr = fake_stdout
+        t0 = time.time()
+        try:
+            # Call function - it could be a co-routine
+            cr = func()
+            if asyncio.iscoroutine(cr):
+                asyncio_loop.run_until_complete(cr)
+        finally:
+            sys.stdout = orig_stdout
+            sys.stderr = orig_stderr
         
-        return runner
-    return wrapper
+        # Clean up / shut down
+        print('done in %f seconds' % (time.time()-t0))
+        for appname in app.manager.get_app_names():
+            if 'default' not in appname:
+                sessions = app.manager.get_connections(appname)
+                for session in sessions:
+                    if session.app is not None:
+                        session.app.dispose()
+                        session.close()
+        loop.reset()
+        
+        # Get reference text
+        pyresult, jsresult = filter_stdout(fake_stdout.getvalue())
+        reference = '\n'.join(line[4:] for line in func.__doc__.splitlines())
+        parts = reference.split('-'*10)
+        pyref = parts[0].strip(' \n')
+        jsref = parts[-1].strip(' \n-')
+        
+        # Compare
+        smart_compare('rp', pyref, pyresult, func.__name__ + '() in Python')
+        smart_compare('rj', jsref, jsresult, func.__name__ + '() in JavaScript')
+        
+    return runner
 
+##
 
 
 class PyComponentA(app.PyComponent):
@@ -101,19 +110,6 @@ class PyComponentA(app.PyComponent):
         print('hi', msg)
 
 
-@run_component_live(PyComponentA)
-def test_pycomponent_simple(session, c):
-    """
-    hi foo
-    hi bar
-    hi spam
-    ----------
-    """
-    c.greet('foo')
-    c.greet('bar')
-    session.send_command('INVOKE', c._id, 'greet', ["spam"])
-
-
 class JsComponentA(app.JsComponent):
     
     @event.action
@@ -121,20 +117,77 @@ class JsComponentA(app.JsComponent):
         print('hi', msg)
 
 
-@run_component_live(JsComponentA)
-def test_jscomponent_simple(session, c):
+
+class JsComponentB(app.JsComponent):
+    
+    foo = event.IntProp(settable=True)
+    
+    def print_foo(self):
+        print(self.foo)
+
+
+@run_live
+async def test_pycomponent_simple():
+    """
+    hi foo
+    hi bar
+    hi spam
+    ----------
+    """
+    c, s = launch(PyComponentA)
+    
+    c.greet('foo')
+    c.greet('bar')
+    s.send_command('INVOKE', c._id, 'greet', ["spam"])
+    await roundtrip(s)
+
+##
+
+
+@run_live
+async def test_jscomponent_simple():
     """
     ----------
     hi foo
     hi bar
     hi spam
     """
+    c, s = launch(JsComponentA)
     
     c.greet('foo')
     c.greet('bar')
-    session.send_command('INVOKE', c._id, 'greet', ["spam"])
+    s.send_command('INVOKE', c._id, 'greet', ["spam"])
+    await roundtrip(s)
 
 
-test_pycomponent_simple()
-test_jscomponent_simple()
-# run_tests_if_main()
+@run_live
+async def test_jscomponent_props():
+    """
+    0
+    0
+    3
+    ----------
+    0
+    3
+    """
+    c, s = launch(JsComponentB)
+    
+    c.set_foo(3)
+    print(c.foo)
+    s.send_command('INVOKE', c._id, 'print_foo', [])
+    loop.iter()
+    print(c.foo)  # still not set
+    await roundtrip(s)
+    print(c.foo)
+    s.send_command('INVOKE', c._id, 'print_foo', [])
+    await roundtrip(s)
+
+
+##
+
+
+# test_pycomponent_simple()
+# test_jscomponent_simple()
+# test_jscomponent_props()
+run_tests_if_main()
+ 

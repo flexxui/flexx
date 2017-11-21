@@ -585,12 +585,21 @@ class Widget(Model):
 
         CAPTURE_MOUSE = False
         
-        def _new_event_type_hook(self, event_type):
-            # In order to receive JS key events, we need a tabindex.
+        # def _new_event_type_hook(self, event_type):
+        #     # In order to receive JS key events, we need a tabindex.
+        #     if self.tabindex is None:
+        #         if event_type in ('key_down', 'key_up', 'key_press'):
+        #             self.tabindex = -1
+        #     super()._new_event_type_hook(event_type)
+        
+        # todo: verify that the below correctly replaces the above
+        def _registered_reactions_hook(self):
+            event_types = super()._registered_reactions_hook()
             if self.tabindex is None:
-                if event_type in ('key_down', 'key_up', 'key_press'):
-                    self.tabindex = -1
-            super()._new_event_type_hook(event_type)
+                for event_type in event_types:
+                    if event_type in ('key_down', 'key_up', 'key_press'):
+                        self.tabindex = -1
+            return event_types
         
         def _init_events(self):
             # Connect some standard events
