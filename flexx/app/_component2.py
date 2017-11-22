@@ -226,8 +226,6 @@ class LocalComponent(Component):
         # instantiate the proxy class. Property values have been set at this
         # point, but init() has not yet been called.
         
-        self._sessions = []
-        
         # Keep track of what events are registered at the proxy
         self.__event_types_at_proxy = {}  # session_id -> event_types
         
@@ -237,33 +235,41 @@ class LocalComponent(Component):
         id = property_values.pop('flx_id', None)
         if id:
             self._id = id
-        # Pop session
+        # Pop session or derive from active component
+        self._session = None
         session = property_values.pop('flx_session', None)
         if session is not None:
-            self._sessions.append(session)
+            self._session = session
+        else:
+            active = loop.get_active_component()
+            if active is not None:
+                self._session = active._session
+        
+        if self._session is None:
+            raise RuntimeError('%s needs a session!' % self._id)
+        
+        # todo: non-synced, non-observable properties? perhaps simply @property?
+        # self.session = self._session
         
         # Call original method
         prop_events = super()._comp_init_property_values(property_values)
         
         if this_is_js():
-            # This is a proxy PyComponent in JavaScript
+            # This is a local JsComponent in JavaScript
             pass
-        
         else:
-            # This is a proxy JsComponent in Python
-            # A local component can be associated with multiple sessions
+            # This is a local PyComponent in Python
+            
+            # We don't care about active components (I think)
             
             # Register this component with the session. Sets the id.
             # todo: uid + global count
-            for session in self._sessions:
-                session._register_component(self)
+            self._session._register_component(self)
             
             # Instantiate JavaScript version of this class
-            # todo: how to deal with 0 or more sessions?
-            for session in self._sessions:
-                session.send_command('INSTANTIATE', self.__jsmodule__,
-                                     self.__class__.__name__,
-                                     self._id, [], {})
+            self._session.send_command('INSTANTIATE', self.__jsmodule__,
+                                       self.__class__.__name__,
+                                       self._id, [], {})
         
         return prop_events
         
@@ -278,9 +284,8 @@ class LocalComponent(Component):
         # todo: do we want a way to keep props local? Or should one just wrap or use a second class?
         isprop = type in self.__properties__
         if not self._disposed:
-            for session in self._sessions:
-                 if isprop or type in self.__event_types_at_proxy.get(session.id, []):
-                    session.send_command('INVOKE', self._id, '_emit_from_other_side', [ev])
+            if isprop or type in self.__event_types_at_proxy.get(self._session.id, []):
+                self._session.send_command('INVOKE', self._id, '_emit_from_other_side', [ev])
     
     # todo: probably remove this, we have actions now!
     # def call_js(self, call):
@@ -288,10 +293,9 @@ class LocalComponent(Component):
     #         return
     #     if not this_is_js():
     #         # todo: Not documented; not sure if we keep it. Handy for debugging though
-    #         for session in self._sessions:
-    #             cmd = 'flexx.sessions["%s"].get_instance("%s").%s;' % (
-    #                     session.id, self._id, call)
-    #             session._exec(cmd)
+    #         cmd = 'flexx.sessions["%s"].get_instance("%s").%s;' % (
+    #                 self._session.id, self._id, call)
+    #         self._session._exec(cmd)
 
 
 class ProxyComponent(Component):
@@ -324,8 +328,6 @@ class ProxyComponent(Component):
         # instantiate the proxy class. Property values have been set at this
         # point, but init() has not yet been called.
         
-        self._sessions = []
-        
         # Pop special attribute
         property_values.pop('flx_is_app', None)
         # Pop and apply id if given
@@ -333,33 +335,36 @@ class ProxyComponent(Component):
         if id:
             self._id = id
         # Pop session
+        self._session = None
         session = property_values.pop('flx_session', None)
         if session is not None:
-            self._sessions.append(session)
+            self._session = session
+        else:
+            active = loop.get_active_component()
+            if active is not None:
+                self._session = active._session
+        
+        if self._session is None:
+            raise RuntimeError('%s needs session!' % self._id)
         
         prop_events = super()._comp_init_property_values(property_values)
         
         if this_is_js():
             # This is a proxy PyComponent in JavaScript
             pass
-        
+            
         else:
             # This is a proxy JsComponent in Python
-            # A local component can be associated with multiple sessions
             
             # Register this component with the session. Sets the id.
             # todo: uid + global count
-            for session in self._sessions:
-                session._register_component(self)
+            self._session._register_component(self)
             
             # Instantiate JavaScript version of this class
-            # todo: can be exacyly one session!
-            assert len(self._sessions) == 1
-            for session in self._sessions:
-                session.send_command('INSTANTIATE', self.__jsmodule__,
-                                     self.__class__.__name__,
-                                     self._id, self._init_args, {})
-                del self._init_args
+            self._session.send_command('INSTANTIATE', self.__jsmodule__,
+                                       self.__class__.__name__,
+                                       self._id, self._init_args, {})
+            del self._init_args
         
         return prop_events
     
@@ -367,8 +372,7 @@ class ProxyComponent(Component):
         """ To invoke actions on the real object.
         """
         assert not kwargs
-        for session in self._sessions:
-            session.send_command('INVOKE', self._id, name, args)
+        self._session.send_command('INVOKE', self._id, name, args)
     
     def _mutate(self, *args, **kwargs):
         """ Disable mutations on the proxy class.
@@ -387,8 +391,7 @@ class ProxyComponent(Component):
         event_types = super()._registered_reactions_hook()
         try:
             if not self._disposed:
-                for session in self._sessions:
-                    session.send_command('INVOKE', self._id, '_set_event_types', [session.id, event_types])
+                self._session.send_command('INVOKE', self._id, '_set_event_types', [session.id, event_types])
         finally:
             return event_types
     
@@ -450,8 +453,7 @@ class BsdfComponentExtension(bsdf.Extension):
         return isinstance(c, self.cls)
     
     def encode(self, c):
-        assert len(c._sessions) == 1
-        return dict(session_id=c._sessions[0].id, id=c._id)
+        return dict(session_id=c._session.id, id=c._id)
     
     def decode(self, d):
         try:
@@ -466,8 +468,7 @@ class BsdfComponentExtension(bsdf.Extension):
         return isinstance(c, PyComponent) or isinstance(c, JsComponent)
         
     def encode_js(self, c):
-        assert len(c._sessions) == 1
-        return dict(session_id=c._sessions[0].id, id=c._id)
+        return dict(session_id=c._session.id, id=c._id)
     
     def decode_js(self, d):
         session = window.flexx.sessions[d['session_id']]

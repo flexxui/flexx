@@ -205,6 +205,10 @@ class JSModule:
             return
         elif name in self._provided_names and self.name != '__main__':
             return  # in __main__ we allow redefinitions
+        elif name in ('Component', 'loop'):
+            self._deps.setdefault('flexx.event.js', ['event']).append(name)
+            # todo: also add to imported names when we do this trick?
+            return
         if getattr(self._pymodule, '__pyscript__', False):
             return  # everything is transpiled and exported already
         
@@ -251,7 +255,10 @@ class JSModule:
                 raise ValueError(t % (self.filename, val.__name__, '"__pyscript__"'))
         
         elif isinstance(val, type) and issubclass(val, Component):
-            if not issubclass(val, (PyComponent, JsComponent)):
+            if val is Component:
+                self._deps.setdefault('flexx.event.js', ['event']).append('Component')
+                return
+            elif not issubclass(val, (PyComponent, JsComponent)):
                 raise TypeError('Flexx.app can only use components that inherit from PyComponenr or JsComponent')
             # App Component class; we know that we can get the JS for this
             if val.__jsmodule__ == self.name:

@@ -85,6 +85,12 @@ class Loop:
         """
         return tuple(self._local._active_components)
     
+    def get_active_component(self):
+        """ Get the currently "active" component (for this thread), or None.
+        """
+        if len(self._local._active_components) > 0:
+            return self._local._active_components[-1]
+    
     def _activate_component(self, component):
         """ Friend method of Component. """
         self._local._active_components.append(component)
