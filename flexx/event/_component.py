@@ -292,11 +292,9 @@ class Component(with_metaclass(ComponentMeta, object)):
         """
         pass
     
-    if sys.version_info > (3, 4):
-        # http://eli.thegreenplace.net/2009/06/12/safely-using-destructors-in-python
-        def __del__(self):
-            if not self._disposed:
-                loop.call_soon(self.dispose)
+    def __del__(self):
+        if not self._disposed:
+            loop.call_soon(self._dispose)
     
     def dispose(self):
         """ Use this to dispose of the object to prevent memory leaks.
@@ -304,6 +302,12 @@ class Component(with_metaclass(ComponentMeta, object)):
         Make all subscribed reactions forget about this object, clear
         all references to subscribed reactions, disconnect all reactions
         defined on this object.
+        """
+        self._dispose()
+    
+    def _dispose(self):
+        """ Distinguish between private and public method to allow disposing
+        flexx.app.ProxyComponent without disposing its local version.
         """
         self._disposed = True
         if not this_is_js():

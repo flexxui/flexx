@@ -296,7 +296,13 @@ class JsSession:
         elif cmd == 'PRINT':
             window.console.ori_log(command[1])
         elif cmd == 'EVAL':
-            x = eval(command[1])
+            x = None
+            if len(command) == 2:
+                x = eval(command[1])
+            elif len(command) == 3:
+                ob = self.instances.get(command[1], None)
+                if ob is not None:
+                    x = ob[command[2]]
             self.send_command('PRINT', str(x))  # send back result
         # elif cmd == 'EXEC':
         #     eval(command[1])  # like eval, but do not return result

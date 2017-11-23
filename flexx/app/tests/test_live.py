@@ -34,11 +34,11 @@ async def roundtrip(*sessions):
     loop.iter()
 
 
-def launch(cls):
+def launch(cls, *args, **kwargs):
     """ Shorthand for app.launch() that also returns session.
     """
-    c = app.launch(cls, 'firefox-app')
-    return c, c._sessions[0]
+    c = app.App(cls, *args, **kwargs).launch('firefox-app')
+    return c, c._session
 
 
 def filter_stdout(text):
@@ -95,8 +95,11 @@ def run_live(func):
         jsref = parts[-1].strip(' \n-')
         
         # Compare
-        smart_compare('rp', pyref, pyresult, func.__name__ + '() in Python')
-        smart_compare('rj', jsref, jsresult, func.__name__ + '() in JavaScript')
+        where = 'File "%s", line %i, in %s' % (func.__code__.co_filename,
+                                               func.__code__.co_firstlineno,
+                                               func.__name__)
+        smart_compare('rp', pyref, pyresult, 'Python on\n  ' + where)
+        smart_compare('rj', jsref, jsresult, 'JavaScript on\n  ' + where)
         
     return runner
 
@@ -105,6 +108,9 @@ def run_live(func):
 
 class PyComponentA(app.PyComponent):
     
+    foo = event.IntProp(settable=True)
+    sub = event.ComponentProp(settable=True)
+    
     @event.action
     def greet(self, msg):
         print('hi', msg)
@@ -112,22 +118,18 @@ class PyComponentA(app.PyComponent):
 
 class JsComponentA(app.JsComponent):
     
+    foo = event.IntProp(settable=True)
+    sub = event.ComponentProp(settable=True)
+    
     @event.action
     def greet(self, msg):
         print('hi', msg)
 
 
-
-class JsComponentB(app.JsComponent):
-    
-    foo = event.IntProp(settable=True)
-    
-    def print_foo(self):
-        print(self.foo)
-
+## PyComponent basics
 
 @run_live
-async def test_pycomponent_simple():
+async def test_pycomponent_action():
     """
     hi foo
     hi bar
@@ -140,6 +142,31 @@ async def test_pycomponent_simple():
     c.greet('bar')
     s.send_command('INVOKE', c._id, 'greet', ["spam"])
     await roundtrip(s)
+
+
+@run_live
+async def test_pycomponent_prop():
+    """
+    0
+    3
+    3
+    ----------
+    0
+    3
+    """
+    c, s = launch(PyComponentA)
+    
+    c.set_foo(3)
+    print(c.foo)
+    s.send_command('EVAL', c._id, 'foo')
+    loop.iter()
+    print(c.foo)  # this will mutate foo
+    await roundtrip(s)
+    print(c.foo)
+    s.send_command('EVAL', c._id, 'foo')
+    await roundtrip(s)
+    
+
 
 ##
 
@@ -161,7 +188,7 @@ async def test_jscomponent_simple():
 
 
 @run_live
-async def test_jscomponent_props():
+async def test_jscomponent_prop():
     """
     0
     0
@@ -170,24 +197,49 @@ async def test_jscomponent_props():
     0
     3
     """
-    c, s = launch(JsComponentB)
+    c, s = launch(JsComponentA)
     
     c.set_foo(3)
     print(c.foo)
-    s.send_command('INVOKE', c._id, 'print_foo', [])
+    s.send_command('EVAL', c._id, 'foo')
     loop.iter()
     print(c.foo)  # still not set
     await roundtrip(s)
     print(c.foo)
-    s.send_command('INVOKE', c._id, 'print_foo', [])
+    s.send_command('EVAL', c._id, 'foo')
     await roundtrip(s)
+
+
+## Pycomponent in JsComponent
+
+# 
+# c0 = PyComponentA()
+# assert c0._sessions == []
+# 
+# # c1, s1 = launch(JsComponentA, c0)
+# c2, s2 = launch(JsComponentA, sub=c0)
+# c3, s3 = launch(JsComponentA)
+# c3.set_sub(c0)
+# 
+# 
+# assert c0._sessions == [s2, s3]
+# 
+
+
+
+
+## Instanbtiate JsComponent
+
+# Cannot just instantiate JsComponent
+# d = JsComponentA()
+
 
 
 ##
 
-
-# test_pycomponent_simple()
+# test_pycomponent_action()
+test_pycomponent_prop()
 # test_jscomponent_simple()
-# test_jscomponent_props()
-run_tests_if_main()
+test_jscomponent_prop()
+# run_tests_if_main()
  

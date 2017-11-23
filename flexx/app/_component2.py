@@ -231,6 +231,8 @@ class LocalComponent(Component):
         
         # Pop special attribute
         property_values.pop('flx_is_app', None)
+        # Pop whether this local instance has a proxy at the other side
+        self._has_proxy = property_values.pop('flx_has_proxy', False)
         # Pop and apply id if given
         id = property_values.pop('flx_id', None)
         if id:
@@ -260,22 +262,28 @@ class LocalComponent(Component):
         else:
             # This is a local PyComponent in Python
             
-            # We don't care about active components (I think)
-            
             # Register this component with the session. Sets the id.
             # todo: uid + global count
             self._session._register_component(self)
             
             # Instantiate JavaScript version of this class
-            self._session.send_command('INSTANTIATE', self.__jsmodule__,
-                                       self.__class__.__name__,
-                                       self._id, [], {})
+            self._ensure_proxy_instance()
         
         return prop_events
         
         # todo: ? self._session.keep_alive(self)
     
-    def _set_event_types(self, session_id, event_types):
+    def _set_has_proxy(self, has_proxy):
+        self._has_proxy = has_proxy
+    
+    def _ensure_proxy_instance(self):
+        if not self._has_proxy:
+            self._session.send_command('INSTANTIATE', self.__jsmodule__,
+                                       self.__class__.__name__,
+                                       self._id, [], {})
+            self._has_proxy = True
+    
+    def _set_event_types_of_proxy(self, session_id, event_types):
         self.__event_types_at_proxy[session_id] = event_types
     
     def emit(self, type, info=None):
@@ -283,9 +291,15 @@ class LocalComponent(Component):
         ev = super().emit(type, info)
         # todo: do we want a way to keep props local? Or should one just wrap or use a second class?
         isprop = type in self.__properties__
-        if not self._disposed:
+        if self._has_proxy is True and self._disposed is False:
             if isprop or type in self.__event_types_at_proxy.get(self._session.id, []):
                 self._session.send_command('INVOKE', self._id, '_emit_from_other_side', [ev])
+    
+    def _dispose(self):
+        # Let other side know that we no longer exist
+        super()._dispose()
+        if self._has_proxy:
+            self._session.send_command('INVOKE', self._id, 'dispose', [False])
     
     # todo: probably remove this, we have actions now!
     # def call_js(self, call):
@@ -361,9 +375,10 @@ class ProxyComponent(Component):
             self._session._register_component(self)
             
             # Instantiate JavaScript version of this class
+            # todo: only if Python "instantiated" it
             self._session.send_command('INSTANTIATE', self.__jsmodule__,
                                        self.__class__.__name__,
-                                       self._id, self._init_args, {})
+                                       self._id, self._init_args, {'flx_has_proxy': True})
             del self._init_args
         
         return prop_events
@@ -391,7 +406,7 @@ class ProxyComponent(Component):
         event_types = super()._registered_reactions_hook()
         try:
             if not self._disposed:
-                self._session.send_command('INVOKE', self._id, '_set_event_types', [session.id, event_types])
+                self._session.send_command('INVOKE', self._id, '_set_event_types_of_proxy', [session.id, event_types])
         finally:
             return event_types
     
@@ -411,7 +426,18 @@ class ProxyComponent(Component):
                 super()._mutate(ev.type, ev.objects, ev.mutation, ev.index)
         else:
             self.emit(ev.type, ev)
-
+    
+    def dispose(self):
+        super().dispose()  # note: calls _dispose()
+        self._session.send_command('INVOKE', self._id, 'dispose', [])
+    
+    def _dispose(self):
+        # Let other side know that we no longer exist
+        super()._dispose()
+        self._session.send_command('INVOKE', self._id, '_set_has_proxy', [False])
+    
+    
+    
 
 # LocalComponent and ProxyComponent need __jsmodule__, but they do not
 # participate in the AppComponentMeta class, so we add it here.
@@ -453,12 +479,13 @@ class BsdfComponentExtension(bsdf.Extension):
         return isinstance(c, self.cls)
     
     def encode(self, c):
+        c._ensure_proxy_instance()
         return dict(session_id=c._session.id, id=c._id)
     
     def decode(self, d):
         try:
             session = manager.get_session_by_id(d['session_id'])
-            return session.get_component_instance_by_id(d['id'])
+            return session.get_component_instance_by_id(d['id'])  # todo: or dummy
         except Exception:
             return d.get('id', 'unknown_component')
     
@@ -468,6 +495,7 @@ class BsdfComponentExtension(bsdf.Extension):
         return isinstance(c, PyComponent) or isinstance(c, JsComponent)
         
     def encode_js(self, c):
+        c._ensure_proxy_instance()
         return dict(session_id=c._session.id, id=c._id)
     
     def decode_js(self, d):

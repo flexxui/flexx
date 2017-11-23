@@ -32,6 +32,9 @@ from .. import config
 if tornado.version_info < (4, ):
     raise RuntimeError('Flexx requires Tornado v4.0 or higher.')
 
+# todo: generelize -> Make Tornado mnore of an implementation detail.
+# So we can use e.g. https://github.com/aaugustin/websockets
+
 # todo: threading, or even multi-process
 #executor = ThreadPoolExecutor(4)
 
@@ -610,8 +613,8 @@ class WSHandler(WebSocketHandler):
     def pinger2(self):
         """ Ticker so we have a signal of sorts to indicate round-trips.
 
-        This is used to implement session.call_on_next_pong(), which
-        is sort of like call_later(), but waits for both Py and JS to "flush"
+        This is used to implement session.call_after_roundtrip(), which
+        is sort of like call_soon(), but waits for both Py and JS to "flush"
         their current events.
 
         This uses a ping-pong mechanism implemented *atop* the websocket.
