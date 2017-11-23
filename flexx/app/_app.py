@@ -25,7 +25,6 @@ class ExporterWebSocketDummy:
 
     def __init__(self):
         self.commands = []
-        self.ping_counter = 0
         # todo: make icon and title work
         #self.write_command('ICON %s.ico' % session.id)
         # self.write_command('TITLE %s' % session._runtime_kwargs.get('title',

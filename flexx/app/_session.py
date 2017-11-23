@@ -72,7 +72,7 @@ class Session:
         assert isinstance(self._store, AssetStore)
 
         self._creation_time = time.time()  # used by app manager
-
+        
         # Id and name of the app
         self._id = get_random_string()
         self._app_name = app_name
@@ -103,7 +103,8 @@ class Session:
         self._component_instances = weakref.WeakValueDictionary()
         self._instances_guarded = {}  # id: (ping_count, instance)
         self._roundtrip_based_calllaters = []  # (ping_count, callback, args)
-
+        self._ping_counter = 0  # used to identify pongs
+        
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
         self._pending_commands = []
@@ -461,17 +462,6 @@ class Session:
     #     if lifetime > self._instances_guarded.get(obid, (0, ))[0]:
     #         self._instances_guarded[obid] = lifetime, ob
     
-    # todo: no longer necesary, I suspect, but maybe leave; does no harm?
-    def call_after_roundtrip(self, callback, *args):
-        """ A variant of ``event.loop.call_soon()`` that calls a callback after
-        a py-js roundrip. This can be convenient to delay an action until
-        after other things have settled down.
-        """
-        counter = 0 if self._ws is None else self._ws.ping_counter
-        lifetime = counter + 2  # a couple of roundtrips, to be safe
-        entry = lifetime, callback, args
-        self._roundtrip_based_calllaters.append(entry)
-
     ## JIT asset definitions
 
     def _register_component_class(self, cls):
@@ -611,6 +601,8 @@ class Session:
                 action = getattr(ob, name, None)
                 if action:
                     action(*args)
+        elif cmd == 'PONG':
+            self._receive_pong(command[1])
         # elif command.startswith('SET_EVENT_TYPES'):
         #     _, id, txt = command.split(' ', 3)
         #     ob = self._component_instances.get(id, None)
@@ -618,12 +610,33 @@ class Session:
         #         ob._set_event_types(txt)
         else:
             logger.error('Unknown command received from JS:\n%s' % command)
-
-    def _receive_pong(self, count):
-        """ Called by ws when it gets a pong. Thus gets called about
-        every sec. Clear the guarded Component instances for which the
-        "timeout counter" has expired.
+    
+    # could be nice to have here, but maybe better to have in tester code, where
+    # it can be a function that waits for multiple sessions in paralel instead of
+    # in series.
+    # async def roundtrip(self):
+    #     """ Coroutine to await a roundtrip to all given sessions.
+    #     """
+    #     ok = []
+    #     def up():
+    #         ok.append(1)
+    #     self.call_after_roundtrip(up)
+    #     while len(ok) == 0:
+    #         await asyncio.sleep(0.02)
+    
+    def call_after_roundtrip(self, callback, *args):
+        """ A variant of ``call_soon()`` that calls a callback after
+        a py-js roundrip. This can be convenient to delay an action until
+        after other things have settled down.
         """
+        self._ping_counter += 1
+        entry = self._ping_counter, callback, args
+        self._roundtrip_based_calllaters.append(entry)
+        # Delay the ping command a bit, so that e.g. an action invoked just
+        # before this call gets synced to JS before we schedule the ping.
+        asyncio.get_event_loop().call_soon(self.send_command, 'PING', self._ping_counter)
+    
+    def _receive_pong(self, count):
         objects_to_clear = [ob for c, ob in
                            self._instances_guarded.values() if c <= count]
         for ob in objects_to_clear:

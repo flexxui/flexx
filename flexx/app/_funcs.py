@@ -141,13 +141,6 @@ class NoteBookHelper:
     
     def command(self, msg):
         self._commands.append(msg)
-    
-    @property
-    def ping_counter(self):
-        if self._session._ws is self:
-            return self._real_ws.ping_counter
-        else:
-            return self._session._ws.ping_counter
 
 
 def init_notebook():

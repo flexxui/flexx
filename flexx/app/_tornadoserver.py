@@ -509,7 +509,6 @@ class WSHandler(WebSocketHandler):
         logger.debug('New websocket connection %s' % path)
         if manager.has_app_name(self.app_name):
             self.application._io_loop.spawn_callback(self.pinger1)
-            self.application._io_loop.spawn_callback(self.pinger2)
         else:
             self.close(1003, "Could not associate socket with an app.")
 
@@ -542,8 +541,6 @@ class WSHandler(WebSocketHandler):
                     self.close(1003, "Could not launch app: %r" % err)
                     raise
                 self.write_command(("PRINT", "Flexx server says hi"))
-        elif command[0] == 'PONG':
-            self.on_pong2(command[1])
         else:
             try:
                 self._session._receive_command(command)
@@ -601,40 +598,6 @@ class WSHandler(WebSocketHandler):
         is returned by the browser.
         """
         self._pongtime = time.time()
-
-    @property
-    def ping_counter(self):
-        """ Counter indicating the number of pings so far. This measure is
-        used by ``Session.keep_alive()``.
-        """
-        return self._ping_counter
-
-    @gen.coroutine
-    def pinger2(self):
-        """ Ticker so we have a signal of sorts to indicate round-trips.
-
-        This is used to implement session.call_after_roundtrip(), which
-        is sort of like call_soon(), but waits for both Py and JS to "flush"
-        their current events.
-
-        This uses a ping-pong mechanism implemented *atop* the websocket.
-        When JS is working, it is not able to send a pong (which is what we
-        want in this case).
-        """
-        self._ping_counter = 0
-        self._pong_counter = 0
-        while self.close_code is None:
-            if self._pong_counter >= self._ping_counter:
-                self._ping_counter += 1
-                self.write_command(("PING", self._ping_counter))
-            yield gen.sleep(1.0)
-
-    def on_pong2(self, data):
-        """ Called when our ping is returned by Flexx.
-        """
-        self._pong_counter = int(data)
-        if self._session:
-            self._session._receive_pong(self._pong_counter)
 
     # --- methods
 
