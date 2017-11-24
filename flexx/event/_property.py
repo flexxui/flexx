@@ -122,8 +122,7 @@ class IntProp(Property):
         if isinstance(value, (int, float)) or isinstance(value, str):
             return int(value)
         else:
-            raise TypeError('%s property cannot accept %s.' %
-                            (self.__class__.__name__, value.__class__.__name__))
+            raise TypeError('Int property cannot accept %r.' % value)
 
 
 class FloatProp(Property):
@@ -137,8 +136,7 @@ class FloatProp(Property):
         if isinstance(value, (int, float)) or isinstance(value, str):
             return float(value)
         else:
-            raise TypeError('%s property cannot accept %s.' %
-                            (self.__class__.__name__, value.__class__.__name__))
+            raise TypeError('Float property cannot accept %r.' % value)
 
 
 class StringProp(Property):
@@ -149,8 +147,7 @@ class StringProp(Property):
     
     def _validate(self, value):
         if not isinstance(value, str):
-            raise TypeError('%s property cannot accept %s.' %
-                            (self.__class__.__name__, value.__class__.__name__))
+            raise TypeError('String property cannot accept %r.' % value)
         return value
 
 
@@ -163,8 +160,7 @@ class TupleProp(Property):
     
     def _validate(self, value):
         if not isinstance(value, (tuple, list)):
-            raise TypeError('%s property cannot accept %s.' %
-                            (self.__class__.__name__, value.__class__.__name__))
+            raise TypeError('Tuple property cannot accept %r.' % value)
         value = tuple(value)
         if this_is_js():  # pragma: no cover
             # Cripple the object so in-place changes are harder. Note that we
@@ -186,8 +182,7 @@ class ListProp(Property):
     
     def _validate(self, value):
         if not isinstance(value, (tuple, list)):
-            raise TypeError('%s property cannot accept %s.' %
-                            (self.__class__.__name__, value.__class__.__name__))
+            raise TypeError('List property cannot accept %r.' % value)
         return list(value)
 
 
@@ -199,8 +194,7 @@ class ComponentProp(Property):
     
     def _validate(self, value):
         if not (value is None or isinstance(value, Component)):
-            raise TypeError('%s property cannot accept %s.' %
-                            (self.__class__.__name__, value.__class__.__name__))
+            raise TypeError('Component property cannot accept %r.' % value)
         return value
 
 

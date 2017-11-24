@@ -84,43 +84,65 @@ def call_func_in_js(func, classes, extra_nodejs_args=None):
     return evaljs(code, print_result=False, extra_nodejs_args=extra_nodejs_args)
 
 
-def smart_compare(kinds, text1, text2, what=''):
-    """ Compare two texts, first being the reference,
-    raising an error that shows where the texts differ.
+def smart_compare(func, *comparations):
+    """ Compare multiple text-pairs, raising an error that shows where
+    the texts differ for each of the mismatching pairs.
+    Each comparison should be (name, text, reference).
     """
-    lines1 = text1.split('\n')
-    lines2 = text2.split('\n')
+    err_msgs = []
+    for comp in comparations:
+        err_msg = validate_text(*comp)
+        if err_msg:
+            err_msgs.append(err_msg)
+    
+    if err_msgs:
+        j = '_' * 79 + '\n'
+        err_msgs = [''] + err_msgs + ['']
+        t = 'Text mismatch in\nFile "%s", line %i, in %s:\n%s'
+        raise StdoutMismatchError(t % (func.__code__.co_filename,
+                                       func.__code__.co_firstlineno,
+                                       func.__name__,
+                                       j.join(err_msgs)))
+
+def validate_text(name, text, reference):
+    """ Compare text with a reference. Returns None if they match, and otherwise
+    an error message that outlines where they differ.
+    """
+    
+    lines1 = text.split('\n')
+    lines2 = reference.split('\n')
     n = max(len(lines1), len(lines2))
     
     while len(lines1) < n:
-        lines1.append('<empty>')
+        lines1.append('')
     while len(lines2) < n:  # pragma: no cover
-        lines2.append('<empty>')
+        lines2.append('')
     
-    refpfx = '\xaf   '
+    nchars = 35  # 2*35 + 8 for prefix and 1 spacing = 79
     
     for i in range(n):
         line1, line2 = lines1[i], lines2[i]
+        if line1.startswith(('[E ', '[W ', '[I ')):
+            line1 = lines1[i] = line1.split(']', 1)[-1].lstrip()  # remove log prefix
         line1 = line1.lower()
         line2 = line2.lower()
-        if line1.startswith('?'):
-            equal_enough = line1[1:].strip() in line2
+        if line2.startswith('?'):
+            equal_enough = line2[1:].strip() in line1
         else:
             equal_enough = line1 == line2
         if not equal_enough:
-            i1 = max(0, i - 3)
-            i2 = min(n, i + 3)
-            msg = ''
+            i1 = max(0, i - 16)
+            i2 = min(n, i + 16)
+            msg = ' '*8 + name.ljust(nchars) + ' ' + 'Reference'.ljust(nchars) + '\n'
             for j in range(i1, i2):
-                linenr = str(j + 1).rjust(2, '0')
+                linenr = str(j + 1).rjust(3, '0')
                 prefix = ' >> ' if j == i else '    '
-                line1 = lines1[j].replace(' ', '\xb7')
-                line2 = lines2[j].replace(' ', '\xb7')
-                line1 = line1 if len(line1) < 128 else line1[:127] + '…'
-                line2 = line2 if len(line2) < 128 else line2[:127] + '…'
-                msg += '{}{} {} {}'.format(refpfx, kinds[0], linenr, line1 + '\n')
-                msg += '{}{} {} {}'.format(prefix, kinds[1], linenr, line2 + '\n')
-            raise StdoutMismatchError('Text mismatch in %s:\n%s ' % (what, msg))
+                line1 = lines1[j].ljust(nchars, '\xb7')
+                line2 = lines2[j].ljust(nchars, '\xb7')
+                line1 = line1 if len(line1) <= nchars else line1[:nchars-1] + '…'
+                line2 = line2 if len(line2) <= nchars else line2[:nchars-1] + '…'
+                msg += '{}{} {} {}\n'.format(prefix, linenr, line1, line2)
+            return msg
 
 
 def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
@@ -170,10 +192,12 @@ def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
                 jsresult = jsresult.replace('"', "'").split('!!!!')[-1]
                 jsresult = jsresult.replace('null', 'None')
                 #print('JS:\n' + jsresult)
+            args = [func]
             if py:
-                smart_compare('rp', pyref, pyresult, func.__name__ + '() in Python')
+                args.append(('Python', pyresult, pyref))
             if js:
-                smart_compare('rj', jsref, jsresult, func.__name__ + '() in JavaScript')
+                args.append(('JavaScript', jsresult, jsref))
+            smart_compare(*args)
             print(func.__name__, 'ok')
             return True
         return runner1
