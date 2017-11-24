@@ -232,7 +232,7 @@ class LocalComponent(Component):
         # Pop special attribute
         property_values.pop('flx_is_app', None)
         # Pop whether this local instance has a proxy at the other side
-        self._has_proxy = property_values.pop('flx_has_proxy', False)
+        self._set_has_proxy(property_values.pop('flx_has_proxy', False))
         # Pop and apply id if given
         id = property_values.pop('flx_id', None)
         if id:
@@ -258,6 +258,7 @@ class LocalComponent(Component):
         
         if this_is_js():
             # This is a local JsComponent in JavaScript
+            # We don't necessarily need a proxy in Python; keep it light
             pass
         else:
             # This is a local PyComponent in Python
@@ -266,7 +267,7 @@ class LocalComponent(Component):
             # todo: uid + global count
             self._session._register_component(self)
             
-            # Instantiate JavaScript version of this class
+            # A PyComponent always has a corresponding proxy in JS
             self._ensure_proxy_instance()
         
         return prop_events
@@ -274,9 +275,32 @@ class LocalComponent(Component):
         # todo: ? self._session.keep_alive(self)
     
     def _set_has_proxy(self, has_proxy):
+        # Called from proxy class when it instantia
         self._has_proxy = has_proxy
     
     def _ensure_proxy_instance(self):
+        """ Make the other end instantiate a proxy if necessary. This is e.g.
+        called by the BSDF serializer when a LocalComponent gets serialized.
+        
+        A PyComponent always has a Proxy component, and we should not
+        dispose or delete it until the local component is disposed.
+        
+        A JsComponent may be instantiated (as its proxy) from Python, in which
+        case we receive the flx_has_proxy kwarg. Still, Python can "loose" the
+        proxy class. To ensure that it exists in Python when needed, the BSDF
+        serializer will ensure it (by calling this method) when it gets
+        serialized.
+        
+        In certain cases, it might be that the other end *does* have a proxy
+        while this end's _has_proxy is False. In that case the INSTANTIATE
+        command is send, but when handled, will be a no-op.
+        
+        In certain cases, it might be that the other end just lost its
+        reference; this end's _has_proxy is True, and a new reference to this
+        component will fail to resolve. This can be countered by keeping hold
+        of JsComponent proxy classes for at least one roundtrip.
+        """
+        # todo: did we adopt the strategy mentioned above? And test it?
         if not self._has_proxy:
             self._session.send_command('INSTANTIATE', self.__jsmodule__,
                                        self.__class__.__name__,
@@ -436,8 +460,30 @@ class ProxyComponent(Component):
         super()._dispose()
         self._session.send_command('INVOKE', self._id, '_set_has_proxy', [False])
     
+
+class StubComponent(Component):
+    """
+    Class to represent stub proxy components to take the place of components
+    that do not belong to the current session, or that are may not exist 
+    for whatever reason. These objects cannot really be used, but they can
+    be moved around.
+    """
     
+    __jsmodule__ = __name__
     
+    def __init__(self, session, id):
+        super().__init__(flx_session=session, flx_id=id)
+    
+    def _comp_init_property_values(self, property_values):
+        self._id = property_values.pop('flx_id', None)
+        self._session = property_values.pop('flx_session', None)
+        return []
+    
+    def _mutate(self, *args, **kwargs):
+        """ Disable mutations on the dummy class.
+        """
+        raise RuntimeError('Cannot mutate properties from a dummy class.')
+
 
 # LocalComponent and ProxyComponent need __jsmodule__, but they do not
 # participate in the AppComponentMeta class, so we add it here.
@@ -472,39 +518,51 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
 class BsdfComponentExtension(bsdf.Extension):
     
     name = 'flexx.app.component'
-    cls = PyComponent, JsComponent
+    cls = PyComponent, JsComponent, StubComponent
     
     def match(self, c):
         # This is actually the default behavior, but added for completenes
         return isinstance(c, self.cls)
     
     def encode(self, c):
-        c._ensure_proxy_instance()
+        if isinstance(c, PyComponent):  # i.e. LocalComponent in Python
+            c._ensure_proxy_instance()
         return dict(session_id=c._session.id, id=c._id)
     
     def decode(self, d):
-        try:
-            session = manager.get_session_by_id(d['session_id'])
-            return session.get_component_instance_by_id(d['id'])  # todo: or dummy
-        except Exception:
-            return d.get('id', 'unknown_component')
+        c = None
+        session = manager.get_session_by_id(d['session_id'])
+        if session is not None:
+            c = session.get_component_instance_by_id(d['id'])
+        else:
+            session = object()
+            session.id = d['session_id']
+        if c is None:
+            c = StubComponent(session, d['id'])
+        return c
     
     # The name and below methods get collected to produce a JS BSDF extension
     
     def match_js(self, c):
-        return isinstance(c, PyComponent) or isinstance(c, JsComponent)
+        return (isinstance(c, PyComponent) or
+                isinstance(c, JsComponent) or
+                isinstance(c, StubComponent))
         
     def encode_js(self, c):
-        c._ensure_proxy_instance()
+        if isinstance(c, JsComponent):  # i.e. LocalComponent in JS
+            c._ensure_proxy_instance()
         return dict(session_id=c._session.id, id=c._id)
     
     def decode_js(self, d):
-        session = window.flexx.sessions[d['session_id']]
-        if session:
+        c = None
+        session = window.flexx.sessions.get(d['session_id'], None)
+        if session is not None:
             c = session.get_instance(d['id'])
-            if c:
-                return c
-        return 'unknown_component'
+        else:
+            session = dict(_id=d['session_id'])
+        if c is None:
+            c = StubComponent(session, d['id'])
+        return c
 
 
 # todo: can the mechanism for defining BSDF extensions be simplified?

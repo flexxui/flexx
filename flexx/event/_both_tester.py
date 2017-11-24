@@ -90,12 +90,16 @@ def smart_compare(func, *comparations):
     Each comparison should be (name, text, reference).
     """
     err_msgs = []
+    has_errors = False
     for comp in comparations:
         err_msg = validate_text(*comp)
         if err_msg:
+            has_errors = True
             err_msgs.append(err_msg)
+        else:
+            err_msgs.append(' ' * 8 + comp[0] + ' matches the reference\n')
     
-    if err_msgs:
+    if has_errors:
         j = '_' * 79 + '\n'
         err_msgs = [''] + err_msgs + ['']
         t = 'Text mismatch in\nFile "%s", line %i, in %s:\n%s'

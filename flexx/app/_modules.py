@@ -11,9 +11,10 @@ import types
 
 from ..pyscript import py2js, JSString, RawJS, JSConstant, create_js_module, get_all_std_names
 from ..event import Component
+from ..event._js import create_js_component_class
 
 from ._clientcore import bsdf
-from ._component2 import PyComponent, JsComponent
+from ._component2 import PyComponent, JsComponent, StubComponent
 from ._asset import Asset, get_mod_name, module_is_package
 from . import logger
 
@@ -206,9 +207,7 @@ class JSModule:
         elif name in self._provided_names and self.name != '__main__':
             return  # in __main__ we allow redefinitions
         elif name in ('Component', 'loop'):
-            self._deps.setdefault('flexx.event.js', ['event']).append(name)
-            # todo: also add to imported names when we do this trick?
-            return
+            return self._add_dep_from_event_module(name)
         if getattr(self._pymodule, '__pyscript__', False):
             return  # everything is transpiled and exported already
         
@@ -230,8 +229,7 @@ class JSModule:
             return  # stubs
         elif name in ('loop', 'logger'):
             # .... maybe should be if val is loop, but what to do about logger?
-            self._deps.setdefault('flexx.event.js', ['event']).append('loop')
-            return  # provided by event system'
+            return self._add_dep_from_event_module('loop')
         elif val is None and not is_global:  # pragma: no cover
             logger.warn('JS in "%s" uses variable %r that is None; '
                         'I will assume its a stub and ignore it. Declare %s '
@@ -256,24 +254,36 @@ class JSModule:
         
         elif isinstance(val, type) and issubclass(val, Component):
             if val is Component:
-                self._deps.setdefault('flexx.event.js', ['event']).append('Component')
-                return
-            elif not issubclass(val, (PyComponent, JsComponent)):
-                raise TypeError('Flexx.app can only use components that inherit from PyComponenr or JsComponent')
-            # App Component class; we know that we can get the JS for this
-            if val.__jsmodule__ == self.name:
-                # Define here
-                self._provided_names.add(name)
-                self._component_classes[name] = val
-                # Recurse
-                self._collect_dependencies_from_bases(val)
-                self._collect_dependencies(**val.JS.CODE.meta)
+                return self._add_dep_from_event_module('Component')
+            if issubclass(val, (PyComponent, JsComponent)):
+                # App Component class; we know that we can get the JS for this
+                if val.__jsmodule__ == self.name:
+                    # Define here
+                    self._provided_names.add(name)
+                    self._component_classes[name] = val
+                    # Recurse
+                    self._collect_dependencies_from_bases(val)
+                    self._collect_dependencies(**val.JS.CODE.meta)
+                else:
+                    # Import from another module
+                    # not needed per see; bound via window.flexx.classes
+                    # todo: \--> not anymore!
+                    self._import(val.__jsmodule__, val.__name__, name)
             else:
-                # Import from another module
-                # not needed per see; bound via window.flexx.classes
-                # todo: \--> not anymore!
-                self._import(val.__jsmodule__, val.__name__, name)
-        
+                # Similar to other classes, but using create_js_component_class()
+                mod_name = get_mod_name(val)
+                if mod_name == self.name:
+                    # Define here
+                    js = create_js_component_class(val, val.__name__)
+                    self._provided_names.add(name)
+                    self._pyscript_code[name] = js
+                    # Recurse
+                    self._collect_dependencies_from_bases(val)
+                    self._collect_dependencies(**js.meta)
+                else:
+                    # Import from another module
+                    self._import(mod_name, val.__name__, name)
+                
         elif isinstance(val, type) and issubclass(val, bsdf.Extension):
             js = 'var %s = {name: "%s"' % (name, val.name)
             for mname in ('match', 'encode', 'decode'):
@@ -360,17 +370,20 @@ class JSModule:
             raise TypeError('PyScript classes do not (yet) support '
                             'multiple inheritance.')
         if cls is PyComponent or cls is JsComponent:
-            imports = self._deps.setdefault('flexx.event.js', ['flexx.event.js'])
-            self._imported_names.add('Component')
-            for line in ('Component as Component', ):
-                if line not in imports:
-                    imports.append(line)
-            return
+            return self._add_dep_from_event_module('Component')
         for base_cls in cls.__bases__:
             if base_cls is object:
-                break
+                return
+            elif base_cls is Component:
+                return self._add_dep_from_event_module('Component')
             m = self._import(get_mod_name(base_cls), base_cls.__name__, base_cls.__name__)
             m.add_variable(base_cls.__name__)  # note: m can be self, which is ok
+    
+    def _add_dep_from_event_module(self, name):
+        imports = self._deps.setdefault('flexx.event.js', ['event'])
+        self._imported_names.add(name)
+        if name not in imports:
+            imports.append(name)
     
     def get_js(self):
         """ Get the JS code for this module.

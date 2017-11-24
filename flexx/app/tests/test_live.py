@@ -1,6 +1,7 @@
 """ Test components live.
 """
 
+import gc
 import os
 import sys
 import time
@@ -95,12 +96,9 @@ def run_live(func):
         jsref = parts[-1].strip(' \n-')
         
         # Compare
-        where = 'File "%s", line %i, in %s' % (func.__code__.co_filename,
-                                               func.__code__.co_firstlineno,
-                                               func.__name__)
-        smart_compare('rp', pyref, pyresult, 'Python on\n  ' + where)
-        smart_compare('rj', jsref, jsresult, 'JavaScript on\n  ' + where)
-        
+        smart_compare(func, ('Python', pyresult, pyref),
+                            ('JavaScript', jsresult, jsref))
+    
     return runner
 
 ##
@@ -114,6 +112,11 @@ class PyComponentA(app.PyComponent):
     @event.action
     def greet(self, msg):
         print('hi', msg)
+    
+    @event.reaction
+    def _on_foo(self):
+        if self.sub is not None:
+            print('sub foo changed', self.sub.foo)
 
 
 class JsComponentA(app.JsComponent):
@@ -124,12 +127,17 @@ class JsComponentA(app.JsComponent):
     @event.action
     def greet(self, msg):
         print('hi', msg)
+    
+    @event.reaction
+    def _on_foo(self):
+        if self.sub is not None:
+            print('sub foo changed', self.sub.foo)
 
 
 ## PyComponent basics
 
 @run_live
-async def test_pycomponent_action():
+async def test_pycomponent_action1():
     """
     hi foo
     hi bar
@@ -145,7 +153,28 @@ async def test_pycomponent_action():
 
 
 @run_live
-async def test_pycomponent_prop():
+async def test_pycomponent_action2():
+    """
+    hi foo
+    hi bar
+    hi spam
+    ----------
+    """
+    c1, s = launch(PyComponentA)
+    
+    with c1:
+        c = PyComponentA()
+    assert c._session is s
+    
+    
+    c.greet('foo')
+    c.greet('bar')
+    s.send_command('INVOKE', c._id, 'greet', ["spam"])
+    await roundtrip(s)
+
+
+@run_live
+async def test_pycomponent_prop1():
     """
     0
     3
@@ -165,14 +194,93 @@ async def test_pycomponent_prop():
     print(c.foo)
     s.send_command('EVAL', c._id, 'foo')
     await roundtrip(s)
-    
-
-
-##
 
 
 @run_live
-async def test_jscomponent_simple():
+async def test_pycomponent_reaction1():
+    """
+    0
+    sub foo changed 0
+    0
+    sub foo changed 3
+    3
+    ----------
+    """
+    c1, s = launch(PyComponentA)
+    
+    with c1:
+        c2 = PyComponentA()  # PyComponent sub
+    c1.set_sub(c2)
+    
+    print(c2.foo)
+    loop.iter()
+    
+    c2.set_foo(3)
+    
+    print(c2.foo)
+    loop.iter()
+    print(c2.foo)
+    
+    await roundtrip(s)
+
+
+@run_live
+async def test_pycomponent_reaction2():
+    """
+    0
+    sub foo changed 0
+    0
+    sub foo changed 3
+    3
+    ----------
+    """
+    c1, s = launch(PyComponentA)
+    
+    with c1:
+        c2 = JsComponentA()  # JsComponent sub
+    c1.set_sub(c2)
+    
+    print(c2.foo)
+    await roundtrip(s)
+    
+    c2.set_foo(3)
+    
+    print(c2.foo)
+    await roundtrip(s)
+    print(c2.foo)
+    
+    await roundtrip(s)
+
+
+@run_live
+async def test_pycomponent_sub_pycomp1():
+    """
+    0
+    3
+    3
+    ----------
+    0
+    3
+    """
+    c1, s = launch(PyComponentA)
+    
+    # with c1:
+    
+    c.set_foo(3)
+    print(c.foo)
+    s.send_command('EVAL', c._id, 'foo')
+    loop.iter()
+    print(c.foo)  # this will mutate foo
+    await roundtrip(s)
+    print(c.foo)
+    s.send_command('EVAL', c._id, 'foo')
+    await roundtrip(s)
+
+## JsComponent basics
+
+
+@run_live
+async def test_jscomponent_action1():
     """
     ----------
     hi foo
@@ -180,6 +288,26 @@ async def test_jscomponent_simple():
     hi spam
     """
     c, s = launch(JsComponentA)
+    
+    c.greet('foo')
+    c.greet('bar')
+    s.send_command('INVOKE', c._id, 'greet', ["spam"])
+    await roundtrip(s)
+
+
+@run_live
+async def test_jscomponent_action2():
+    """
+    ----------
+    hi foo
+    hi bar
+    hi spam
+    """
+    c1, s = launch(JsComponentA)
+    
+    with c1:
+        c = JsComponentA()
+    assert c._session is s
     
     c.greet('foo')
     c.greet('bar')
@@ -210,7 +338,166 @@ async def test_jscomponent_prop():
     await roundtrip(s)
 
 
+@run_live
+async def test_jscomponent_reaction1():
+    """
+    0
+    0
+    3
+    ----------
+    sub foo changed 0
+    sub foo changed 3
+    """
+    c1, s = launch(JsComponentA)
+    
+    with c1:
+        c2 = PyComponentA()  # PyComponent sub
+    c1.set_sub(c2)
+    
+    print(c2.foo)
+    await roundtrip(s)
+    
+    c2.set_foo(3)
+    
+    print(c2.foo)
+    await roundtrip(s)
+    print(c2.foo)
+    
+    await roundtrip(s)
+
+@run_live
+async def test_jscomponent_reaction2():
+    """
+    0
+    0
+    3
+    ----------
+    sub foo changed 0
+    sub foo changed 3
+    """
+    c1, s = launch(JsComponentA)
+    
+    with c1:
+        c2 = JsComponentA()  # JsComponent sub
+    c1.set_sub(c2)
+    
+    print(c2.foo)
+    await roundtrip(s)
+    
+    c2.set_foo(3)
+    
+    print(c2.foo)
+    await roundtrip(s)
+    print(c2.foo)
+    
+    await roundtrip(s)
+
+
 ## Pycomponent in JsComponent
+
+
+class CreatingPyComponent(PyComponentA):
+    
+    def init(self):
+        self._x = JsComponentA()
+    
+    @event.action
+    def apply_sub(self):
+        self.set_sub(self._x)
+
+
+class CreatingJsComponent(JsComponentA):
+    
+    def init(self):
+        self._x = JsComponentA()
+    
+    @event.action
+    def apply_sub(self):
+        self.set_sub(self._x)
+
+
+@run_live
+async def test_proxy_binding1():
+    """
+    sub foo changed 0
+    sub foo changed 0
+    ----------
+    """
+    c1, s = launch(app.PyComponent)
+    
+    with c1:
+        c2 = CreatingPyComponent()  # PyComponent that has local JsComponent
+    
+    await roundtrip(s)
+    assert c2.sub is None
+    
+    # Get access to the sub component
+    c2.apply_sub()
+    await roundtrip(s)
+    
+    c3 = c2.sub
+    assert isinstance(c3, JsComponentA)
+    
+    # Get id of c3 and get rid of any references
+    id3 = id(c3)
+    c2.set_sub(None)
+    await roundtrip(s)
+    del c3
+    gc.collect()
+    await roundtrip(s)
+    
+    # Get access to the sub component again (proxy thereof, really)
+    c2.apply_sub()
+    await roundtrip(s)
+    c3 = c2.sub
+    assert isinstance(c3, JsComponentA)
+    
+    assert id(c3) == id3
+
+
+@run_live
+async def test_proxy_binding2():
+    """
+    ----------
+    sub foo changed 0
+    sub foo changed 0
+    """
+    c1, s = launch(app.PyComponent)
+    
+    with c1:
+        c2 = CreatingJsComponent()  # JsComponent that has local JsComponent
+    
+    await roundtrip(s)
+    assert c2.sub is None
+    
+    # Get access to the sub component
+    c2.apply_sub()
+    await roundtrip(s)
+    await roundtrip(s)
+    
+    c3 = c2.sub
+    assert isinstance(c3, JsComponentA)
+    
+    # Get id of c3 and get rid of any references
+    id3 = id(c3)
+    c2.set_sub(None)
+    await roundtrip(s)
+    del c3
+    gc.collect()
+    await roundtrip(s)
+    
+    # Get access to the sub component again (proxy thereof, really)
+    c2.apply_sub()
+    await roundtrip(s)
+    c3 = c2.sub
+    assert isinstance(c3, JsComponentA)
+    
+    assert id(c3) != id3
+
+
+test_proxy_binding2()
+test_proxy_binding1()
+1/0
 
 # 
 # c0 = PyComponentA()
@@ -233,13 +520,14 @@ async def test_jscomponent_prop():
 # Cannot just instantiate JsComponent
 # d = JsComponentA()
 
+# todo: init_args is JsComponent
 
 
 ##
 
-# test_pycomponent_action()
-test_pycomponent_prop()
+test_pycomponent_action2()
+# test_pycomponent_prop()
 # test_jscomponent_simple()
-test_jscomponent_prop()
+# test_jscomponent_prop()
 # run_tests_if_main()
  

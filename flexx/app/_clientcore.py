@@ -159,7 +159,7 @@ class JsSession:
         
         # Init internal variables
         self._init_time = time()
-        self._pending_commands = []
+        self._pending_commands = []  # to pend raw commands during init
         self._asset_count = 0
         self._ws = None
         self.last_msg = None
@@ -189,13 +189,14 @@ class JsSession:
         return c
     
     # todo: do we need a global version?
-    def get_instance(self, id):  # todo: rename this to get_instance()?
-        """ Get instance of a Model class.
+    def get_instance(self, id):
+        """ Get instance of a Component class, or None. Or the document body
+        if "body" is given.
         """
         if id == 'body':
             return window.document.body
         else:
-            return self.instances[id]
+            return self.instances.get(id, None)
     
     def dispose_object(self, id):
         """ Dispose the object with the given id.
@@ -232,16 +233,15 @@ class JsSession:
             window.console.info('Socket opened with session id ' + self.id)
             self.send_command('HI_FLEXX', self.id)
         def on_ws_message(evt):
-            msg = evt.data or evt
-            self.last_command = command = serializer.decode(msg)
+            msg = evt.data or evt  # bsdf-encoded command
             if self._pending_commands is None:
                 # Direct mode
-                self._receive_command(command)
+                self._receive_command(msg)
             else:
                 # Indirect mode, to give browser draw-time during loading
                 if len(self._pending_commands) == 0:
                     window.setTimeout(self._process_commands, 0)
-                self._pending_commands.push(command)
+                self._pending_commands.push(msg)
         def on_ws_close(evt):
             self._ws = None
             msg = 'Lost connection with server'
@@ -268,9 +268,9 @@ class JsSession:
         tradeoff between a smooth spinner and fast load time.
         """
         while self._pending_commands is not None and len(self._pending_commands) > 0:
-            command = self._pending_commands.pop(0)
+            msg = self._pending_commands.pop(0)
             try:
-                self._receive_command(command)
+                command = self._receive_command(msg)
             except Exception as err:
                 window.setTimeout(self._process_commands, 0)
                 raise err
@@ -281,9 +281,10 @@ class JsSession:
                         window.setTimeout(self._process_commands, 0)
                     break
     
-    def _receive_command(self, command):
+    def _receive_command(self, raw_command):
         """ Process a command send from the server.
         """
+        command = serializer.decode(raw_command)
         cmd = command[0]
         if cmd == 'PING':
             self.send_command('PONG', command[1])
@@ -351,7 +352,7 @@ class JsSession:
             window.win1 = window.open(command[1], 'new', 'chrome')
         else:
             window.console.error('Invalid command: "' + cmd + '"')
-
+        return command
 
 # todo: in bsdf there is utf8 encode/decode code, check which is better, put that in bsdf, and use it here
 def decodeUtf8(arrayBuffer):

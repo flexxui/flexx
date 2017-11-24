@@ -452,7 +452,7 @@ class AppManager(event.Component):
         return [name for name in sorted(self._appinfo.keys())]
 
     def get_session_by_id(self, id):
-        """ Get session object by its id
+        """ Get session object by its id, or None.
         """
         return self._session_map.get(id, None)
 
