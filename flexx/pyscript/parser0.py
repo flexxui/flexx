@@ -106,7 +106,7 @@ class Parser0:
     }
     
     ATTRIBUTE_MAP = {
-        '__class__': 'constructor.prototype',
+        '__class__': 'Object.getPrototypeOf({})',
     }
     
     BINARY_OP = {

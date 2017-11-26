@@ -561,7 +561,10 @@ class Parser1(Parser0):
                     classname = self._stack[i][1]
                     attr = '_' + classname + attr
                     break
-        return "%s.%s" % (base_name, self.ATTRIBUTE_MAP.get(attr, attr))
+        if attr in self.ATTRIBUTE_MAP:
+            return self.ATTRIBUTE_MAP[attr].replace('{}', base_name)
+        else:
+            return "%s.%s" % (base_name, attr)
     
     ## Statements
     

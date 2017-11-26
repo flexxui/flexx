@@ -177,8 +177,8 @@ def js_rename(jscode, cur_name, new_name):
     jscode0 = jscode
     if isclass:
         # If this is about a class ...
-        jscode = jscode.replace('_class_name = "%s"' % cur_name_short, 
-                                '_class_name = "%s"' % new_name_short)
+        jscode = jscode.replace('.__name__ = "%s"' % cur_name_short, 
+                                '.__name__ = "%s"' % new_name_short)
         jscode = jscode.replace('._%s__' % cur_name_short,
                                 '._%s__' % new_name_short)
         jscode = jscode.replace('%s.prototype' % cur_name, 
