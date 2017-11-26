@@ -306,10 +306,11 @@ class FirefoxRuntime(DesktopRuntime):
                  windowfeatures=windowfeatures)
         
         # Create values that need to be unique
-        # Looks like name does not have to be unique, perhapse because we use
-        # a custom profile dir. If possible, use static name to avoid XUL from
-        # spamming profile dirs (NW did this, so let's be on safe side).
-        D['name'] = 'flexx_stub_xul_profile'
+        # The name must be unique to avoid all sort of oddities when launching
+        # multiple runtimes (as we do in flexx.app tests). Note that we've had
+        # problems with the profile dirs being spammed (NW did, now fixed).
+        # Also see "Profile=" in APPLICATION_INI above.
+        D['name'] = 'flexx_stub_xul_profile_' + id
         D['windowid'] = 'W' + id
         D['id'] = 'app_' + id + '@flexx.io'
         
