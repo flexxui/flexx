@@ -117,6 +117,10 @@ def validate_text(name, text, reference):
     lines2 = reference.split('\n')
     n = max(len(lines1), len(lines2))
     
+    for i in range(len(lines1)):
+        if lines1[i].startswith(('[E ', '[W ', '[I ')):
+            lines1[i] = lines1[i].split(']', 1)[-1].lstrip()  # remove log prefix
+    
     while len(lines1) < n:
         lines1.append('')
     while len(lines2) < n:  # pragma: no cover
@@ -126,8 +130,6 @@ def validate_text(name, text, reference):
     
     for i in range(n):
         line1, line2 = lines1[i], lines2[i]
-        if line1.startswith(('[E ', '[W ', '[I ')):
-            line1 = lines1[i] = line1.split(']', 1)[-1].lstrip()  # remove log prefix
         line1 = line1.lower()
         line2 = line2.lower()
         if line2.startswith('?'):

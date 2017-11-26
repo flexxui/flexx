@@ -126,7 +126,7 @@ class ComponentJS:  # pragma: no cover
     def __init__(self, *init_args, **property_values):
         
         RawJS('Component.prototype._COUNT += 1')
-        self._id = RawJS("this._class_name + Component.prototype._COUNT")
+        self._id = RawJS("this.__name__ + Component.prototype._COUNT")
         self._disposed = False
         
         # Init some internal variables
@@ -393,8 +393,11 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     total_code[0] = prefix + total_code[0]
     prototype_prefix = '$' + cls_name.split('.')[-1] + '.'
     total_code.append('var %s = %s.prototype;' % (prototype_prefix[:-1], cls_name))
-    # Functions to ignore
-    OK_MAGICS = ('__actions__', '__properties__', '__emitters__', '__reactions__')
+    # Magic attributes to copy
+    OK_MAGICS = ('__actions__', '__properties__', '__emitters__', '__reactions__',
+                 '__jsmodule__')
+    # Names for attributes that dont make sense in JS
+    IGNORE = ('__repr__', )
     
     # Process class items in original order or sorted by name if we cant
     class_items = cls.__dict__.items()
@@ -448,6 +451,8 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             default_val = json.dumps(val._default)
             t = '%s_%s_value = %s;'
             const_code.append(t % (prototype_prefix, name, default_val))
+        elif name in IGNORE:
+            pass
         elif callable(val):
             # Functions, including methods attached by the meta class
             code = mc.py2js(val, prototype_prefix + name)
