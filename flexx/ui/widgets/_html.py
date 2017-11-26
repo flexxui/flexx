@@ -80,7 +80,7 @@ class Div(Widget):
             self.node.className = ''
         
         def _init_phosphor_and_node(self):
-            self.phosphor = self._create_phosphor_widget(self._class_name.lower())
+            self.phosphor = self._create_phosphor_widget(self.__class__.__name__.lower())
             self.node = self.phosphor.node
         
         @event.connect('text')

@@ -323,13 +323,13 @@ class Widget(Model):
             self.phosphor.title.changed.connect(_title_changed_in_phosphor)
             
             # Derive css class name from class hierarchy
-            cls_name = self._class_name  # _class_name is a PyScript thing
+            cls_name = self.__class__.__name__  # => constructor.prototype.__name__
             for i in range(32):  # i.e. a safe while-loop
                 self.outernode.classList.add('flx-' + cls_name)
                 cls = window.flexx.classes[cls_name]
                 if not cls:
                     break
-                cls_name = cls.prototype._base_class._class_name
+                cls_name = cls.prototype._base_class.__name__
                 if not cls_name or cls_name == 'Model':
                     break
             else:
