@@ -196,9 +196,11 @@ class FirefoxRuntime(DesktopRuntime):
         if sys.platform.startswith('win'):
             if not op.isfile(exe):
                 return
-            version = subprocess.check_output(['wmic', 'datafile', 'where',
-                                               'name=%r' % exe,
-                                               'get', 'Version', '/value'])
+            # https://stackoverflow.com/a/4644565/2271927
+            version = subprocess.check_output([exe, '--version', '|', 'more'])
+            # version = subprocess.check_output(['wmic', 'datafile', 'where',
+            #                                    'name=%r' % exe,
+            #                                    'get', 'Version', '/value'])
         else:
             version = subprocess.check_output([exe, '--version'])
         
