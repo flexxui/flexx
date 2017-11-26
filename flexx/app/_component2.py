@@ -48,7 +48,7 @@ def make_proxy_action(action):
 def get_component_classes():
     """ Get a list of all known PyComponent and JsComponent subclasses.
     """
-    return [c for c in PyComponentMeta.CLASSES]
+    return [c for c in AppComponentMeta.CLASSES]
 
 
 def meta_repr(cls):
@@ -101,6 +101,7 @@ class AppComponentMeta(ComponentMeta):
         
         # Write __jsmodule__; an optimization for our module/asset system
         cls.__jsmodule__ = get_mod_name(sys.modules[cls.__module__])
+        cls.JS.__jsmodule__ = cls.__jsmodule__  # need in JS to explain to Py how to instantiate
         
         # Set JS.CODE and CSS
         cls.JS.CODE = cls._get_js()
@@ -256,16 +257,16 @@ class LocalComponent(Component):
         # Call original method
         prop_events = super()._comp_init_property_values(property_values)
         
+        # Register this component with the session.
+        # todo: uid + global count
+        self._session._register_component(self)
+    
         if this_is_js():
             # This is a local JsComponent in JavaScript
             # We don't necessarily need a proxy in Python; keep it light
             pass
         else:
             # This is a local PyComponent in Python
-            
-            # Register this component with the session. Sets the id.
-            # todo: uid + global count
-            self._session._register_component(self)
             
             # A PyComponent always has a corresponding proxy in JS
             self._ensure_proxy_instance()
@@ -387,6 +388,10 @@ class ProxyComponent(Component):
         
         prop_events = super()._comp_init_property_values(property_values)
         
+        # Register this component with the session.
+        # todo: uid + global count
+        self._session._register_component(self)
+            
         if this_is_js():
             # This is a proxy PyComponent in JavaScript
             pass
@@ -394,9 +399,7 @@ class ProxyComponent(Component):
         else:
             # This is a proxy JsComponent in Python
             
-            # Register this component with the session. Sets the id.
-            # todo: uid + global count
-            self._session._register_component(self)
+            
             
             # Instantiate JavaScript version of this class
             # todo: only if Python "instantiated" it
@@ -430,7 +433,7 @@ class ProxyComponent(Component):
         event_types = super()._registered_reactions_hook()
         try:
             if not self._disposed:
-                self._session.send_command('INVOKE', self._id, '_set_event_types_of_proxy', [session.id, event_types])
+                self._session.send_command('INVOKE', self._id, '_set_event_types_of_proxy', [self._session.id, event_types])
         finally:
             return event_types
     
@@ -456,10 +459,15 @@ class ProxyComponent(Component):
         self._session.send_command('INVOKE', self._id, 'dispose', [])
     
     def _dispose(self):
+        # This gets called (directly) from dispose(),
+        # and from (via call_soon) by __delete__ .
         # Let other side know that we no longer exist
         super()._dispose()
         self._session.send_command('INVOKE', self._id, '_set_has_proxy', [False])
-    
+        # Keep it alive until JS knows that it is gine, so that the session can
+        # inspect _disposed
+        self._session.keep_alive(self, 1)
+
 
 class StubComponent(Component):
     """
@@ -472,17 +480,13 @@ class StubComponent(Component):
     __jsmodule__ = __name__
     
     def __init__(self, session, id):
-        super().__init__(flx_session=session, flx_id=id)
+        super().__init__()
+        self._session = session
+        self._id = id
     
-    def _comp_init_property_values(self, property_values):
-        self._id = property_values.pop('flx_id', None)
-        self._session = property_values.pop('flx_session', None)
-        return []
-    
-    def _mutate(self, *args, **kwargs):
-        """ Disable mutations on the dummy class.
-        """
-        raise RuntimeError('Cannot mutate properties from a dummy class.')
+    def __repr__(self):
+        return ("<StubComponent for '%s' in session '%s' at 0x%x>" %
+                (self._id, self._session.id, id(self)))
 
 
 # LocalComponent and ProxyComponent need __jsmodule__, but they do not
@@ -532,13 +536,16 @@ class BsdfComponentExtension(bsdf.Extension):
     def decode(self, d):
         c = None
         session = manager.get_session_by_id(d['session_id'])
-        if session is not None:
-            c = session.get_component_instance_by_id(d['id'])
-        else:
+        if session is None:
+            # object from other session
             session = object()
             session.id = d['session_id']
-        if c is None:
             c = StubComponent(session, d['id'])
+        else:
+            c = session.get_component_instance_by_id(d['id'])
+            if c is None:  # This should probably not happen
+                logger.warn('Using stub component for %s.' % d['id'])
+                c = StubComponent(session, d['id'])
         return c
     
     # The name and below methods get collected to produce a JS BSDF extension
@@ -556,12 +563,14 @@ class BsdfComponentExtension(bsdf.Extension):
     def decode_js(self, d):
         c = None
         session = window.flexx.sessions.get(d['session_id'], None)
-        if session is not None:
-            c = session.get_instance(d['id'])
-        else:
-            session = dict(_id=d['session_id'])
-        if c is None:
+        if session is None:
+            session = dict(id=d['session_id'])
             c = StubComponent(session, d['id'])
+        else:
+            c = session.get_instance(d['id'])
+            if c is None:
+                logger.warn('Using stub component for %s.' % d['id'])
+                c = StubComponent(session, d['id'])
         return c
 
 

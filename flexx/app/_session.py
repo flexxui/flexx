@@ -3,6 +3,7 @@ Definition of the Session class.
 """
 
 import re
+import sys
 import time
 import json
 import random
@@ -15,7 +16,7 @@ from http.cookies import SimpleCookie
 from ..event import loop, Action
 from ..event._component import new_type
 
-from ._component2 import PyComponent, JsComponent
+from ._component2 import PyComponent, JsComponent, AppComponentMeta
 from ._asset import Asset, Bundle, solve_dependencies
 from ._assetstore import AssetStore, export_assets_and_data, INDEX
 from ._assetstore import assets as assetstore
@@ -96,7 +97,6 @@ class Session:
         self._component = None
         
         # todo: id assigning maybe no more?
-        # todo: keep alive likely not necessary no more?
         # The session assigns component id's, keeps track of component objects and
         # sometimes keeps them alive for a short while.
         self._component_counter = 0
@@ -437,6 +437,8 @@ class Session:
         self._component_instances[component._id] = component
         # Register the class to that the client has the needed definitions
         self._register_component_class(cls)
+        # self.keep_alive(component)  # we do it when instantiated from JS
+        
 
     def get_component_instance_by_id(self, id):
         """ Get instance of PyComponent or JsComponent class
@@ -446,21 +448,20 @@ class Session:
         try:
             return self._component_instances[id]
         except KeyError:
-            t = 'Component instance %r does not exist in this session (anymore).'
-            logger.warn(t % id)
-            return None  # Could we revive it? ... probably not a good idea
+            return None
 
-    # def keep_alive(self, ob, iters=4):
-    #     """ Keep an object alive for a certain amount of time, expressed
-    #     in Python-JS ping roundtrips. This is intended for making Component
-    #     objects survive jitter due to synchronisation, though any type
-    #     of object can be given.
-    #     """
-    #     obid = id(ob)
-    #     counter = 0 if self._ws is None else self._ws.ping_counter
-    #     lifetime = counter + int(iters)
-    #     if lifetime > self._instances_guarded.get(obid, (0, ))[0]:
-    #         self._instances_guarded[obid] = lifetime, ob
+    def keep_alive(self, ob, iters=4):
+        """ Keep an object alive for a certain amount of time, expressed
+        in Python-JS ping roundtrips. This is intended for making JsComponent
+        (i.e. proxy components) survice the time between instantiation
+        triggered from JS and their attachement to a property, though any type
+        of object can be given.
+        """
+        obid = id(ob)
+        counter = 0 if self._ws is None else self._ping_counter
+        lifetime = counter + int(iters)
+        if lifetime > self._instances_guarded.get(obid, (0, ))[0]:
+            self._instances_guarded[obid] = lifetime, ob
     
     ## JIT asset definitions
 
@@ -495,21 +496,24 @@ class Session:
 
         # Mark the class and the module as used
         logger.debug('Registering Component class %r' % cls.__name__)
-        self._register_module(cls.__jsmodule__, True)
+        self._register_module(cls.__jsmodule__)
 
-    def _register_module(self, mod_name, force=False):
+    def _register_module(self, mod_name):
         """ Register a module with the client, as well as its
         dependencies, and associated assests of the module and its
         dependencies. If the module was already defined, it is
         re-defined.
         """
-
+        
+        if mod_name.startswith(('flexx.app', 'flexx.event')):
+            return  # these are part of flexx core assets
+        
         modules = set()
         assets = []
-
+        
         def collect_module_and_deps(mod):
             if mod.name.startswith(('flexx.app', 'flexx.event')):
-                return  # these are part of flexx assets
+                return  # these are part of flexx core assets
             if mod.name not in self._present_modules:
                 self._present_modules.add(mod.name)
                 for dep in mod.deps:
@@ -596,18 +600,41 @@ class Session:
             logger.error('JS: ' + command[1] + ' (stack trace in browser console)')
         elif cmd == 'INVOKE':
             id, name, args = command[1:]
-            ob = self._component_instances.get(id, None)
-            if ob is not None:
-                action = getattr(ob, name, None)
-                if action:
-                    action(*args)
+            ob = self.get_component_instance_by_id(id)
+            if ob is None:
+                t = 'Component instance %r does not exist in this session (anymore).'
+                logger.warn(t % id)
+            elif ob._disposed:
+                pass  # JS probably send something before it knew that the object was dead
+            else:
+                func = getattr(ob, name, None)
+                if func:
+                    func(*args)
         elif cmd == 'PONG':
             self._receive_pong(command[1])
-        # elif command.startswith('SET_EVENT_TYPES'):
-        #     _, id, txt = command.split(' ', 3)
-        #     ob = self._component_instances.get(id, None)
-        #     if ob is not None:
-        #         ob._set_event_types(txt)
+        elif cmd == 'INSTANTIATE':
+            modulename, cname, id, args, kwargs = command[1:]
+            # Maybe we still have the instance?
+            c = self.get_component_instance_by_id(id)
+            if c and not c._disposed:
+                self.keep_alive(c)
+                return
+            # Try to find the class
+            m, cls, e = None, None, 0
+            if modulename in assetstore.modules:
+                m = sys.modules[modulename]
+                cls = getattr(m, cname, None)
+                if cls is None:
+                    e = 1
+                elif not (isinstance(cls, type) and issubclass(cls, JsComponent)):
+                    cls, e = None, 2
+                elif cls not in AppComponentMeta.CLASSES:
+                    cls, e = None, 3
+            if cls is None:
+                raise RuntimeError('Cannot INSTANTIATE %s.%s (%i)' % (modulename, cname, e))
+            # Instantiate
+            c = cls(flx_session=self, flx_id=id)
+            self.keep_alive(c)
         else:
             logger.error('Unknown command received from JS:\n%s' % command)
     
@@ -638,10 +665,9 @@ class Session:
     
     def _receive_pong(self, count):
         objects_to_clear = [ob for c, ob in
-                           self._instances_guarded.values() if c <= count]
+                            self._instances_guarded.values() if c <= count]
         for ob in objects_to_clear:
             self._instances_guarded.pop(id(ob))
-        # todo: remove use of _instances_guarded
         
         for i in reversed(range(len(self._roundtrip_based_calllaters))):
             if self._roundtrip_based_calllaters[i][0] <= count:

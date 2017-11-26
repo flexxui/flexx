@@ -176,17 +176,30 @@ class JsSession:
     
     def send_command(self, *command):
         if self._ws is not None:
-            bb = serializer.encode(command)
+            try:
+                bb = serializer.encode(command)
+            except Exception as err:
+                print('Command that failed to encode:')
+                print(command)
+                raise err
             self._ws.send(bb)
     
     def instantiate_component(self, module, cname, id, args, kwargs):
+        # Maybe we still have the instance?
+        c = self.instances.get(id, None)
+        if c is not None and c._disposed is False:
+            return c
+        # Find the class
         m = flexx.require(module)
         Cls = m[cname]  # noqa
+        # Instantiate
         kwargs['flx_session'] = self
         kwargs['flx_id'] = id
         c = Cls(*args, **kwargs)
-        self.instances[id] = c
         return c
+    
+    def _register_component(self, c):
+        self.instances[c._id] = c
     
     # todo: do we need a global version?
     def get_instance(self, id):
@@ -236,7 +249,7 @@ class JsSession:
             msg = evt.data or evt  # bsdf-encoded command
             if self._pending_commands is None:
                 # Direct mode
-                self._receive_command(msg)
+                self._receive_raw_command(msg)
             else:
                 # Indirect mode, to give browser draw-time during loading
                 if len(self._pending_commands) == 0:
@@ -270,7 +283,7 @@ class JsSession:
         while self._pending_commands is not None and len(self._pending_commands) > 0:
             msg = self._pending_commands.pop(0)
             try:
-                command = self._receive_command(msg)
+                command = self._receive_raw_command(msg)
             except Exception as err:
                 window.setTimeout(self._process_commands, 0)
                 raise err
@@ -281,17 +294,19 @@ class JsSession:
                         window.setTimeout(self._process_commands, 0)
                     break
     
-    def _receive_command(self, raw_command):
+    def _receive_raw_command(self, msg):
+        return self._receive_command( serializer.decode(msg))
+    
+    def _receive_command(self, command):
         """ Process a command send from the server.
         """
-        command = serializer.decode(raw_command)
         cmd = command[0]
         if cmd == 'PING':
             self.send_command('PONG', command[1])
         elif cmd == 'INIT_DONE':
             window.flexx.spin(None)
             while len(self._pending_commands):
-                self._receive_command(self._pending_commands.pop(0))
+                self._receive_raw_command(self._pending_commands.pop(0))
             self._pending_commands = None
             # print('init took', time() - self._init_time)
         elif cmd == 'PRINT':
@@ -301,10 +316,8 @@ class JsSession:
             if len(command) == 2:
                 x = eval(command[1])
             elif len(command) == 3:
-                ob = self.instances.get(command[1], None)
-                if ob is not None:
-                    x = ob[command[2]]
-            self.send_command('PRINT', str(x))  # send back result
+                x = eval('this.instances.' + command[1] + '.' + command[2])
+            console.log(str(x))  # print and sends back result
         # elif cmd == 'EXEC':
         #     eval(command[1])  # like eval, but do not return result
         elif cmd == 'INVOKE':

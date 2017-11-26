@@ -5,6 +5,7 @@ import gc
 import os
 import sys
 import time
+import weakref
 import asyncio
 
 import tornado
@@ -262,7 +263,7 @@ async def test_pycomponent_sub_pycomp1():
     0
     3
     """
-    c1, s = launch(PyComponentA)
+    c, s = launch(PyComponentA)
     
     # with c1:
     
@@ -293,6 +294,7 @@ async def test_jscomponent_action1():
     c.greet('bar')
     s.send_command('INVOKE', c._id, 'greet', ["spam"])
     await roundtrip(s)
+    await roundtrip(s)
 
 
 @run_live
@@ -312,6 +314,7 @@ async def test_jscomponent_action2():
     c.greet('foo')
     c.greet('bar')
     s.send_command('INVOKE', c._id, 'greet', ["spam"])
+    await roundtrip(s)
     await roundtrip(s)
 
 
@@ -423,6 +426,8 @@ async def test_proxy_binding1():
     sub foo changed 0
     ----------
     """
+    # Get ref to JsComponent instantiated by a PyComponent
+    
     c1, s = launch(app.PyComponent)
     
     with c1:
@@ -439,20 +444,23 @@ async def test_proxy_binding1():
     assert isinstance(c3, JsComponentA)
     
     # Get id of c3 and get rid of any references
-    id3 = id(c3)
+    c3_id = c3._id
+    c3_ref = weakref.ref(c3)
     c2.set_sub(None)
-    await roundtrip(s)
+    for i in range(5):
+        await roundtrip(s)
     del c3
-    gc.collect()
-    await roundtrip(s)
+    for i in range(5):
+        await roundtrip(s)
+    
+    assert c3_ref() is not None  # because PyComponent has it
     
     # Get access to the sub component again (proxy thereof, really)
     c2.apply_sub()
     await roundtrip(s)
     c3 = c2.sub
     assert isinstance(c3, JsComponentA)
-    
-    assert id(c3) == id3
+    assert c3._id == c3_id
 
 
 @run_live
@@ -462,6 +470,10 @@ async def test_proxy_binding2():
     sub foo changed 0
     sub foo changed 0
     """
+    # Get ref to JsComponent instantiated by a JsComponent,
+    # drop that ref, re-get the proxy instance, and verify that its
+    # a different instance representing the same object in JS
+    
     c1, s = launch(app.PyComponent)
     
     with c1:
@@ -480,39 +492,144 @@ async def test_proxy_binding2():
     
     # Get id of c3 and get rid of any references
     id3 = id(c3)
+    c3_ref = weakref.ref(c3)
+    c3_id = c3._id
     c2.set_sub(None)
-    await roundtrip(s)
+    for i in range(5):  # need a few roundtrips for session to drop c3
+        await roundtrip(s)
     del c3
-    gc.collect()
-    await roundtrip(s)
+    for i in range(5):
+        await roundtrip(s)
+        gc.collect()
+    
+    assert c3_ref() is None  # Python dropped it, but JS still has the object!
     
     # Get access to the sub component again (proxy thereof, really)
     c2.apply_sub()
     await roundtrip(s)
     c3 = c2.sub
     assert isinstance(c3, JsComponentA)
+    assert c3._id == c3_id
+
+
+@run_live
+async def test_proxy_binding3():
+    """
+    sub foo changed 0
+    sub foo changed 3
+    sub foo changed 6
+    sub foo changed 7
+    ? Using stub component
+    ? does not exist in this session
+    ----------
+    """
+    # Test that local components only send events when there is a proxy,
+    # and that when events are send anyway, warnings are shown
     
-    assert id(c3) != id3
+    c1, s = launch(PyComponentA)
+    
+    with c1:
+        c2 = JsComponentA()  # JsComponent that has local JsComponent
+    c1.set_sub(c2)
+    id2 = c2._id
+    
+    # Change foo of c2
+    c2.set_foo(3)
+    await roundtrip(s)
+    
+    # Now, we're pretend that to drop the instance
+    s.send_command('INVOKE', c2._id, '_set_has_proxy', [False])
+    await roundtrip(s)
+    
+    # We don't get the events anymore
+    c2.set_foo(4)
+    c2.set_foo(5)
+    await roundtrip(s)
+    
+    # Re-establish
+    s.send_command('INVOKE', c2._id, '_set_has_proxy', [True])
+    await roundtrip(s)
+    
+    # We get these
+    c2.set_foo(6)
+    s.send_command('INVOKE', id2, 'set_foo', [7])  # same thing, really
+    await roundtrip(s)
+    
+    # Now, we simulate destroying the proxy without JS knowing
+    s._component_instances.pop(id2)
+    
+    # And then ... invoking an event will raise one error for not being able
+    # to invoke in Python, and one for not being able to decode the "source"
+    # of the event.
+    s.send_command('INVOKE', id2, 'set_foo', [9])
+    await roundtrip(s)
 
 
-test_proxy_binding2()
-test_proxy_binding1()
-1/0
-
-# 
-# c0 = PyComponentA()
-# assert c0._sessions == []
-# 
-# # c1, s1 = launch(JsComponentA, c0)
-# c2, s2 = launch(JsComponentA, sub=c0)
-# c3, s3 = launch(JsComponentA)
-# c3.set_sub(c0)
-# 
-# 
-# assert c0._sessions == [s2, s3]
-# 
+class JsComponentB(app.JsComponent):
+    
+    sub1 = event.ComponentProp(settable=True)
+    sub2 = event.ComponentProp(settable=True)
+    
+    @event.action
+    def sub1_to_sub2(self):
+        self.set_sub2(self.sub1)
 
 
+@run_live
+async def test_proxy_binding21():
+    """
+    14 None
+    24 None
+    24 24
+    ----------
+    14
+    ? JsComponentA
+    undefined
+    ? JsComponentA
+    undefined
+    """
+    # Test multiple sessions, and sharing objects
+    
+    c2, s2 = launch(JsComponentB)
+    c1, s1 = launch(JsComponentB)
+    
+    with c1:
+        c11 = JsComponentA()  # JsComponent that has local JsComponent
+        c1.set_sub1(c11)
+    
+    with c2:
+        c22 = JsComponentA()  # JsComponent that has local JsComponent
+        c2.set_sub1(c22)
+    await roundtrip(s1, s2)
+    
+    c11.set_foo(14)
+    c22.set_foo(24)
+    await roundtrip(s1, s2)
+    
+    print(c1.sub1 and c1.sub1.foo, c1.sub2 and c1.sub2.foo)
+    s1.send_command('EVAL', c1._id, 'sub1.foo')
+    await roundtrip(s1, s2)
+    
+    # So far, not much news, now break the universe ...
+    
+    c1.set_sub1(c2.sub1)
+    await roundtrip(s1, s2)
+    print(c1.sub1 and c1.sub1.foo, c1.sub2 and c1.sub2.foo)
+    
+    # In JS, c1.sub1 will be a stub
+    s1.send_command('EVAL', c1._id, 'sub1._id')
+    s1.send_command('EVAL', c1._id, 'sub1.foo')
+    await roundtrip(s1, s2)
+    
+    # But we can still "handle" it
+    c1.sub1_to_sub2()
+    await roundtrip(s1, s2)
+    
+    # And now c1.sub2.foo has the value of c2.sub1.foo
+    print(c1.sub1 and c1.sub1.foo, c1.sub2 and c1.sub2.foo)
+    s1.send_command('EVAL', c1._id, 'sub1._id')
+    s1.send_command('EVAL', c1._id, 'sub1.foo')
+    await roundtrip(s1, s2)
 
 
 ## Instanbtiate JsComponent
@@ -525,9 +642,5 @@ test_proxy_binding1()
 
 ##
 
-test_pycomponent_action2()
-# test_pycomponent_prop()
-# test_jscomponent_simple()
-# test_jscomponent_prop()
-# run_tests_if_main()
+run_tests_if_main()
  

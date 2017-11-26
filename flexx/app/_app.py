@@ -158,7 +158,6 @@ class App:
             runtime_kwargs['title'] = self.kwargs['title']
         if runtime_kwargs.get('icon', None) is None and 'icon' in self.kwargs:
             runtime_kwargs['icon'] = self.kwargs['icon']
-
         # Launch web runtime, the server will wait for the connection
         url = self.url + '?session_id=%s' % session.id
         session._runtime = webruntime.launch(url, runtime=runtime, **runtime_kwargs)
@@ -282,8 +281,8 @@ class AppManager(event.Component):
         pending, connected = [], []
         if name in self._appinfo:
             old_app, pending, connected = self._appinfo[name]
-            if app is not old_app:
-                logger.warn('Re-registering app class %r' % name)
+            if app.cls is not old_app.cls:  # if app is not old_app:
+                logger.warn('Re-defining app class %r' % name)
         self._appinfo[name] = app, pending, connected
 
     def create_default_session(self, cls=None):
@@ -394,7 +393,6 @@ class AppManager(event.Component):
         """ Connect a client to a session that was previously created.
         """
         _, pending, connected = self._appinfo[name]
-
         # Search for the session with the specific id
         for session in pending:
             if session.id == session_id:
@@ -405,6 +403,7 @@ class AppManager(event.Component):
                                session_id)
 
         # Add app to connected, set ws
+        assert session.id == session_id
         assert session.status == Session.STATUS.PENDING
         logger.info('New session %s %s' % (name, session_id))
         session._set_cookies(cookies)
