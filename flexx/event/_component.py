@@ -7,6 +7,7 @@ events and changes in properties.
 import sys
 
 from ._dict import Dict
+from ._attribute import Attribute
 from ._action import ActionDescriptor, Action
 from ._reaction import ReactionDescriptor, Reaction, looks_like_method
 from ._property import Property
@@ -68,9 +69,11 @@ class ComponentMeta(type):
             if name.startswith('__'):
                 continue
             val = getattr(cls, name)
-            if isinstance(val, type) and issubclass(val, Property):
-                raise TypeError('Properties should be instantiated, '
+            if isinstance(val, type) and issubclass(val, (Attribute, Property)):
+                raise TypeError('Attributes and Properties should be instantiated, '
                                 'use ``foo = IntProp()`` instead of ``foo = IntProp``.')
+            elif isinstance(val, Attribute):
+                val._set_name(name)  # noqa
             elif isinstance(val, Property):
                 val._set_name(name)  # noqa
                 # Create validator method
@@ -89,19 +92,22 @@ class ComponentMeta(type):
         __properties__, and __reactions__.
         """
         
+        attributes = {}
+        properties = {}
         actions = {}
         emitters = {}
-        properties = {}
         reactions = {}
         
         for name in dir(cls):
             if name.startswith('__'):
                 continue
             val = getattr(cls, name)
-            if isinstance(val, ActionDescriptor):
-                actions[name] = val
+            if isinstance(val, Attribute):
+                attributes[name] = val
             elif isinstance(val, Property):
                 properties[name] = val
+            elif isinstance(val, ActionDescriptor):
+                actions[name] = val
             elif isinstance(val, ReactionDescriptor):
                 reactions[name] = val
             elif isinstance(val, EmitterDescriptor):
@@ -110,10 +116,11 @@ class ComponentMeta(type):
                 raise RuntimeError('Class methods can only be made actions or '
                                    'reactions using the corresponding decorators '
                                    '(%r)' % name)
-        # Cache prop names
+        # Cache names
+        cls.__attributes__ = [name for name in sorted(attributes.keys())]
+        cls.__properties__ = [name for name in sorted(properties.keys())]
         cls.__actions__ = [name for name in sorted(actions.keys())]
         cls.__emitters__ = [name for name in sorted(emitters.keys())]
-        cls.__properties__ = [name for name in sorted(properties.keys())]
         cls.__reactions__ = [name for name in sorted(reactions.keys())]
 
 
@@ -168,6 +175,8 @@ class Component(with_metaclass(ComponentMeta, object)):
     _IS_COMPONENT = True
     _COUNT = 0
     
+    id = Attribute(doc='The string by which this component is identified.')
+    
     def __init__(self, *init_args, **property_values):
         
         Component._COUNT += 1
@@ -216,7 +225,12 @@ class Component(with_metaclass(ComponentMeta, object)):
         # Then process property values given at init time
         for name, value in property_values.items():  # is sorted by occurance in py36
             if name not in self.__properties__:
-                raise AttributeError('%s does not have property %s.' % (self._id, name))
+                if name in self.__attributes__:
+                    raise AttributeError('%s.%s is an attribute, not a property' %
+                                         (self._id, name))
+                else:
+                    raise AttributeError('%s does not have property %s.' %
+                                         (self._id, name))
             if callable(value):
                 self._comp_make_implicit_setter(name, value)
                 continue

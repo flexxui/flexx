@@ -459,6 +459,7 @@ from ._loop import loop
 from ._action import Action, action
 from ._reaction import Reaction, reaction
 from ._emitter import emitter
+from ._attribute import Attribute
 from ._property import *
 from ._component import Component, mutate_array
 

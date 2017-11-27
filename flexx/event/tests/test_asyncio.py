@@ -19,7 +19,7 @@ def append_current_loop(container, make_new_loop=False):
         container.append(str(err))
 
 
-def test_asyncio_thread():
+def test_asyncio_thread1():
     # Tests that asyncio.get_event_loop() returns a different loop instance
     # for each thread.
     
@@ -55,7 +55,7 @@ def make_new_loop_and_run():
     loop.run_forever()
 
 
-def test_asyncio_thread():
+def test_asyncio_thread2():
     # Run multiple loops in multiple threads at the same time.
     
     loop = asyncio.get_event_loop()
@@ -73,5 +73,5 @@ def test_asyncio_thread():
 
 
 if __name__ == '__main__':
-    r = test_asyncio_thread()
-    test_asyncio_thread()
+    r = test_asyncio_thread1()
+    

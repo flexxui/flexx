@@ -22,6 +22,8 @@ class MyCustomProp(event.Property):
 
 class MyObject(event.Component):
     
+    att = event.Attribute()
+    
     # Props to test basic stuff
     foo = event.AnyProp(6, settable=True, doc='can be anything')
     bar = event.StringProp('xx')  # not settable

@@ -24,6 +24,7 @@ from flexx.pyscript.parser2 import get_class_definition
 from flexx.event._loop import Loop
 from flexx.event._action import ActionDescriptor
 from flexx.event._reaction import ReactionDescriptor, Reaction
+from flexx.event._attribute import Attribute
 from flexx.event._property import Property
 from flexx.event._emitter import EmitterDescriptor
 from flexx.event._component import Component, _mutate_array_js
@@ -105,12 +106,6 @@ class LoopJS:  # pragma: no cover
         self._active_components = []
         self.reset()
     
-    def __enter__(self):
-        return self
-    
-    def __exit__(self, type, value, traceback):
-        self.iter()
-    
     def _call_soon_func(self, func):
         setTimeout(func, 0)
 
@@ -148,6 +143,10 @@ class ComponentJS:  # pragma: no cover
             name = self.__properties__[i]
             self.__handlers[name] = []
             self.__create_property(name)
+        # Create attributes
+        for i in range(len(self.__attributes__)):
+            name = self.__attributes__[i]
+            self.__create_attribute(name)
         
         # Init the values of all properties.
         prop_events = self._comp_init_property_values(property_values)
@@ -175,7 +174,12 @@ class ComponentJS:  # pragma: no cover
         # Then process property values given at init time
         for name, value in property_values.items():  # is sorted by occurance in py36
             if name not in self.__properties__:
-                raise AttributeError('%s does not have property %s.' % (self._id, name))
+                if name in self.__attributes__:
+                    raise AttributeError('%s.%s is an attribute, not a property' %
+                                         (self._id, name))
+                else:
+                    raise AttributeError('%s does not have property %s.' %
+                                         (self._id, name))
             if callable(value):
                 self._comp_make_implicit_setter(name, value)
                 continue
@@ -261,6 +265,15 @@ class ComponentJS:  # pragma: no cover
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
     
+    def __create_attribute(self, name):
+        def getter():
+            return self['_' + name]
+        def setter(x):
+            raise AttributeError('Cannot set attribute %r' % name)
+        opts = {'enumerable': False, 'configurable': False,
+                'get': getter, 'set': setter}
+        Object.defineProperty(self, name, opts)
+    
     def __create_property(self, name):
         private_name = '_' + name + '_value'
         def getter():
@@ -321,6 +334,14 @@ class ComponentJS:  # pragma: no cover
 
 ## Compile functions
 
+OK_MAGICS = (# Specific to Flexx
+             '__attributes__', '__properties__', '__actions__',
+             '__emitters__', '__reactions__', '__jsmodule__',
+             # Functions that make sense
+             '__init__', '__enter__', '__exit__',
+             )
+
+
 def _create_js_class(PyClass, JSClass):
     """ Create the JS code for Loop, Reaction and Component based on their
     Python and JS variants.
@@ -336,9 +357,12 @@ def _create_js_class(PyClass, JSClass):
                                   '$%s.' % cname)
     # Add the Python class methods
     for name, val in sorted(PyClass.__dict__.items()):
-        nameok = name in ('__enter__', '__exit__') or not name.startswith('__')
-        if callable(val) and nameok and not hasattr(JSClass, name):
-            jscode.append(mc.py2js(val, '$' + cname + '.' + name))
+        nameok = name in OK_MAGICS or not name.startswith('__')
+        if nameok and not hasattr(JSClass, name):
+            if callable(val):
+                jscode.append(mc.py2js(val, '$' + cname + '.' + name))
+            elif name in OK_MAGICS:
+                jscode.append('$' + cname + '.' + name + ' = ' + json.dumps(val))
     # Compose
     jscode = '\n'.join(jscode)
     # Add the reaction methods to component
@@ -393,11 +417,6 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     total_code[0] = prefix + total_code[0]
     prototype_prefix = '$' + cls_name.split('.')[-1] + '.'
     total_code.append('var %s = %s.prototype;' % (prototype_prefix[:-1], cls_name))
-    # Magic attributes to copy
-    OK_MAGICS = ('__actions__', '__properties__', '__emitters__', '__reactions__',
-                 '__jsmodule__')
-    # Names for attributes that dont make sense in JS
-    IGNORE = ('__repr__', )
     
     # Process class items in original order or sorted by name if we cant
     class_items = cls.__dict__.items()
@@ -445,13 +464,17 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             # Mark to not bind the func
             funcs_code.append(prototype_prefix + funcname + '.nobind = true;')
             funcs_code.append('')
+        elif isinstance(val, Attribute):
+            pass
         elif isinstance(val, Property):
             # Mutator and validator functions are picked up as normal functions.
             # Set default value on class.
             default_val = json.dumps(val._default)
             t = '%s_%s_value = %s;'
             const_code.append(t % (prototype_prefix, name, default_val))
-        elif name in IGNORE:
+        elif name.startswith('__') and name not in OK_MAGICS:
+            # These are only magics, since class attributes with double-underscores
+            # have already been mangled.
             pass
         elif callable(val):
             # Functions, including methods attached by the meta class
@@ -462,19 +485,13 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
                 code = code.replace("flx_name", "'%s'" % subname)
             funcs_code.append(code.rstrip())
             funcs_code.append('')
-        elif name in OK_MAGICS:
-            const_code.append(prototype_prefix + name + ' = ' + reprs(val))
-        elif name.startswith('__'):
-            # These are only magics, since class attributes with double-underscores
-            # have already been mangled.
-            pass
         else:
+            # Static simple (json serializable) attributes, e.g. __actions__ etc.
             try:
                 serialized = json.dumps(val)
             except Exception as err:  # pragma: no cover
                 raise ValueError('Attributes on JS Component class must be '
                                  'JSON compatible.\n%s' % str(err))
-            
             const_code.append(prototype_prefix + name + ' = ' + serialized)
     
     if const_code:
@@ -522,11 +539,11 @@ if __name__ == '__main__':
             pass
         
     
-    toprint = JS_LOOP  # or JS_LOOP JS_COMPONENT JS_EVENT
+    toprint = JS_COMPONENT  # or JS_LOOP JS_COMPONENT JS_EVENT
     print('-' * 80)
     print(toprint)  
     print('-' * 80)
     print(len(toprint), 'of', len(JS_EVENT), 'bytes in total')  # 29546 before refactor
     print('-' * 80)
     
-    # print(create_js_component_class(Foo, 'Foo'))
+    print(create_js_component_class(Foo, 'Foo'))

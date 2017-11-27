@@ -9,18 +9,21 @@ from flexx import event
 
 loop = event.loop
 
-
-class Comp(event.Component):
-    pass
+Component = event.Component
 
 
 class Foo(event.Component):
     
+    an_attr = event.Attribute()
+     
     spam = 3
     eggs = [1, 2, 3]
     
     a_prop = event.AnyProp(settable=True)
 
+    def init(self):
+        super().init()
+        self._an_attr = 54
 
 class FooSubclass(Foo):
     pass
@@ -50,13 +53,16 @@ class Bar(event.Component):
 @run_in_both(FooSubclass)
 def test_component_id1():
     """
+    ? Component
     ? Foo
     ? FooSubclass
     """
+    f = Component()
+    print(f.id)
     f = Foo()
-    print(f._id)
+    print(f.id)
     f = FooSubclass()
-    print(f._id)
+    print(f.id)
 
 
 @run_in_both(FooSubclass, js=False)
@@ -64,11 +70,14 @@ def test_component_id2():
     """
     true
     true
+    true
     """
+    f = Component()
+    print(f.id in str(f))
     f = Foo()
-    print(f._id in str(f))
+    print(f.id in str(f))
     f = FooSubclass()
-    print(f._id in str(f))
+    print(f.id in str(f))
 
 
 @run_in_both(Foo)
@@ -87,7 +96,7 @@ def test_component_pending_events():
     print(f._Component__pending_events)
 
 
-@run_in_both(Foo, Bar, Comp)
+@run_in_both(Foo, Bar)
 def test_component_class_attributes1():
     """
     Component
@@ -108,7 +117,7 @@ def test_component_class_attributes1():
     """
     
     print('Component')
-    c = Comp()
+    c = Component()
     print(c.__actions__)
     print(c.__reactions__)
     print(c.__emitters__)
@@ -166,7 +175,38 @@ def test_component_init():
     CompWithInit1(1)
 
 
-@run_in_both(Foo, Bar, Comp)
+@run_in_both(Foo)
+def test_component_instance_attributes1():
+    """
+    ? Component
+    54
+    ? cannot set
+    ? attribute, not a property
+    """
+    
+    c = Component()
+    print(c.id)
+    c = Foo()
+    print(c.an_attr)
+    try:
+        c.an_attr = 0
+    except Exception as err:
+        print(err)
+    
+    try:
+        Foo(an_attr=3)
+    except AttributeError as err:
+        print(err)
+
+
+def test_component_instance_attributes2():  # Py only
+    
+    with raises(TypeError):
+        class X(Component):
+            a = event.Attribute(doc=3)
+
+
+@run_in_both(Foo, Bar)
 def test_component_event_types():
     """
     []
@@ -174,7 +214,7 @@ def test_component_event_types():
     ['a_emitter', 'a_prop']
     """
     
-    c = Comp()
+    c = Component()
     print(c.get_event_types())
     c = Foo()
     print(c.get_event_types())
@@ -285,13 +325,13 @@ def test_component_fails():
         print('fail ValueError')
 
 
-@run_in_both(Comp)
+@run_in_both(Component)
 def test_registering_handlers():
     """
     ok
     """
     
-    c = Comp()
+    c = Component()
     
     def handler1(*evts):
         events.extend(evts)
@@ -365,7 +405,7 @@ class CompCheckActive(event.Component):
 
 
 @run_in_both(Foo, CompCheckActive)
-def test_component_active():
+def test_component_active1():
     """
     0
     active 2 7
@@ -394,6 +434,27 @@ def test_component_active():
         CompCheckActive(True)
     
     print(len(loop.get_active_components()))
+
+
+@run_in_both(Foo, Bar)
+def test_component_active2():
+    """
+    None
+    ? Foo
+    ? Bar
+    ? Foo
+    None
+    """
+    f = Foo()
+    b = Bar()
+    
+    print(loop.get_active_component())
+    with f:
+        print(loop.get_active_component().id)
+        with b:
+            print(loop.get_active_component().id)
+        print(loop.get_active_component().id)
+    print(loop.get_active_component())
 
 
 @run_in_both()

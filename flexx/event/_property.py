@@ -1,5 +1,5 @@
 """
-Implements the property decorator, class and desciptor.
+Implements the property class and subclasses.
 """
 
 from ._loop import loop, this_is_js
