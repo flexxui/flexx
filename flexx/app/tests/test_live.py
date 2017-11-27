@@ -135,6 +135,18 @@ class JsComponentA(app.JsComponent):
             print('sub foo changed', self.sub.foo)
 
 
+class PyComponentC(PyComponentA):
+    def init(self, foo):
+        print('init')
+        self.set_foo(foo)
+
+
+class JsComponentC(JsComponentA):
+    def init(self, foo):
+        print('init')
+        self.set_foo(foo)
+
+
 ## PyComponent basics
 
 @run_live
@@ -254,28 +266,28 @@ async def test_pycomponent_reaction2():
 
 
 @run_live
-async def test_pycomponent_sub_pycomp1():
+async def test_pycomponent_init1():
     """
-    0
-    3
-    3
+    init
+    init
+    10
+    20
+    20
     ----------
-    0
-    3
     """
-    c, s = launch(PyComponentA)
+    c1, s = launch(app.PyComponent)
     
-    # with c1:
+    with c1:
+        c2 = PyComponentA(foo=10)
+        c3 = PyComponentC(20)
+        c4 = PyComponentC(20, foo=10)  # What happens in init takes preference
     
-    c.set_foo(3)
-    print(c.foo)
-    s.send_command('EVAL', c.id, 'foo')
-    loop.iter()
-    print(c.foo)  # this will mutate foo
     await roundtrip(s)
-    print(c.foo)
-    s.send_command('EVAL', c.id, 'foo')
-    await roundtrip(s)
+    
+    print(c2.foo)
+    print(c3.foo)
+    print(c4.foo)
+
 
 ## JsComponent basics
 
@@ -319,7 +331,7 @@ async def test_jscomponent_action2():
 
 
 @run_live
-async def test_jscomponent_prop():
+async def test_jscomponent_prop1():
     """
     0
     0
@@ -396,7 +408,42 @@ async def test_jscomponent_reaction2():
     await roundtrip(s)
 
 
-## Pycomponent in JsComponent
+@run_live
+async def test_jscomponent_init1():
+    """
+    0
+    0
+    0
+    10
+    20
+    20
+    ----------
+    init
+    init
+    """
+    # This test is important. We have plenty of tests that ensure that the init
+    # args and kwargs work in both Python and JS variants of Component, but
+    # instantiating a JsComponent in Python will have to communicate these!
+    c1, s = launch(app.PyComponent)
+    
+    with c1:
+        c2 = JsComponentA(foo=10)
+        c3 = JsComponentC(20)
+        c4 = JsComponentC(20, foo=10)  # What happens in init takes preference
+    
+    # Data is not yet synced
+    print(c2.foo)
+    print(c3.foo)
+    print(c4.foo)
+    
+    await roundtrip(s)
+    
+    print(c2.foo)
+    print(c3.foo)
+    print(c4.foo)
+
+
+## With sub components
 
 
 class CreatingPyComponent(PyComponentA):
@@ -761,14 +808,6 @@ async def test_component_id_uniqueness():
     for c in [c1, c11, c11.sub]:
         s.add(c.id.split('_')[-1])
     print(len(s))
-
-
-## Instanbtiate JsComponent
-
-# Cannot just instantiate JsComponent
-# d = JsComponentA()
-
-# todo: init_args is JsComponent
 
 
 ##

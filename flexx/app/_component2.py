@@ -296,8 +296,6 @@ class LocalComponent(BaseAppComponent):
             self._ensure_proxy_instance()
         
         return prop_events
-        
-        # todo: ? self._session.keep_alive(self)
     
     def _set_has_proxy(self, has_proxy):
         # Called from proxy class when it instantia
@@ -323,9 +321,9 @@ class LocalComponent(BaseAppComponent):
         In certain cases, it might be that the other end just lost its
         reference; this end's _has_proxy is True, and a new reference to this
         component will fail to resolve. This can be countered by keeping hold
-        of JsComponent proxy classes for at least one roundtrip.
+        of JsComponent proxy classes for at least one roundtrip (upon
+        initialization as well as disposal).
         """
-        # todo: did we adopt the strategy mentioned above? And test it?
         if not self._has_proxy:
             self._session.send_command('INSTANTIATE', self.__jsmodule__,
                                        self.__class__.__name__,
@@ -375,14 +373,15 @@ class ProxyComponent(BaseAppComponent):
         
         if this_is_js():
             # This is a proxy PyComponent in JavaScript.
-            # Always instantiated via a command from Python.
-            # todo: not true, can also be referenced later, I guess?
+            # Always instantiated via an INSTANTIATE command from Python.
             assert len(init_args) == 0
+            if 'flx_id' not in kwargs:
+                raise RuntimeError('Cannot instantiate a PyComponent from JS.')
             super().__init__(**kwargs)
         else:
             # This is a proxy JsComponent in Python.
             # Can be instantiated in Python, 
-            self._init_args = init_args
+            self._flx_init_args = init_args
             super().__init__(**kwargs)
     
     def _comp_init_property_values(self, property_values):
@@ -411,23 +410,22 @@ class ProxyComponent(BaseAppComponent):
         self._session._register_component(self, custom_id)
         
         # Call original method
-        prop_events = super()._comp_init_property_values(property_values)
+        prop_events = super()._comp_init_property_values({})
         
         if this_is_js():
             # This is a proxy PyComponent in JavaScript
-            pass
-            
+            assert len(property_values.keys()) == 0
         else:
             # This is a proxy JsComponent in Python
-            
             # Instantiate JavaScript version of this class
-            # todo: only if Python "instantiated" it
-            self._session.send_command('INSTANTIATE', self.__jsmodule__,
-                                       self.__class__.__name__,
-                                       self._id, self._init_args, {'flx_has_proxy': True})
-            del self._init_args
+            if custom_id is None:  # i.e. only if Python "instantiated" it
+                property_values['flx_has_proxy'] = True
+                self._session.send_command('INSTANTIATE', self.__jsmodule__,
+                                           self.__class__.__name__, self._id,
+                                           self._flx_init_args, property_values)
+            del self._flx_init_args
         
-        return prop_events
+        return [] # prop_events - Proxy class does not emit events by itself
     
     def _proxy_action(self, name, *args, **kwargs):
         """ To invoke actions on the real object.
