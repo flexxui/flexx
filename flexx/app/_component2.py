@@ -89,6 +89,8 @@ class AppComponentMeta(ComponentMeta):
     
     __repr__ = meta_repr
     
+    _applied_base_js = False
+    
     def _init_hook(cls, cls_name, bases, dct):
         
         # Create corresponding class for JS
@@ -97,7 +99,7 @@ class AppComponentMeta(ComponentMeta):
         elif issubclass(cls, ProxyComponent):
             cls._make_js_local_class(cls_name, bases, dct)
         else:  # pragma: no cover
-            raise TypeError('Expected class to inherit fro LocalComponent or ProxyComponent.')
+            raise TypeError('Expected class to inherit from LocalComponent or ProxyComponent.')
         
         # Write __jsmodule__; an optimization for our module/asset system
         cls.__jsmodule__ = get_mod_name(sys.modules[cls.__module__])
@@ -194,29 +196,58 @@ class AppComponentMeta(ComponentMeta):
         # code.append(c.replace('var %s =' % cls_name,
         #                       'var %s = flexx.classes.%s =' % (cls_name, cls_name), 1))
         
-        # Add JS version of Component when this is the Component class
-        if base_class is LocalComponent:
-            c = create_js_component_class(LocalComponent, 'LocalComponent', 'Component.prototype')
-            # c = c.replace('var LocalComponent =',
-            #               'var LocalComponent = flexx.classes.LocalComponent =', 1)
-            # code.insert(0, 'flexx.classes.Component = Component;')
-            code.insert(0, c)
-            
-        elif base_class is ProxyComponent:
-            c = create_js_component_class(ProxyComponent, 'ProxyComponent', 'Component.prototype')
+        # Add JS version of the base classes?
+        if not AppComponentMeta._applied_base_js:
+            AppComponentMeta._applied_base_js = True
+            c = cls._get_js_of_base_classes()
             for k in ['vars_unknown', 'vars_global', 'std_functions', 'std_methods']:
                 meta[k].update(c.meta[k])
-            # c = c.replace('var ProxyComponent =',
-            #               'var ProxyComponent = flexx.classes.ProxyComponent =', 1)
             code.insert(0, c)
         
         # Return with meta info
         js = JSString('\n'.join(code))
         js.meta = meta
         return js
+    
+    def _get_js_of_base_classes(cls):
+        """ Get JS for BaseAppComponent, LocalComponent, and ProxyComponent.
+        """
+        c1 = create_js_component_class(BaseAppComponent, 'BaseAppComponent', 'Component.prototype')
+        c2 = create_js_component_class(LocalComponent, 'LocalComponent', 'BaseAppComponent.prototype')
+        c3 = create_js_component_class(ProxyComponent, 'ProxyComponent', 'BaseAppComponent.prototype')
+        c4 = create_js_component_class(StubComponent, 'StubComponent', 'BaseAppComponent.prototype')
+        meta = c1.meta
+        for k in ['vars_unknown', 'vars_global', 'std_functions', 'std_methods']:
+            for c in (c2, c3, c4):
+                meta[k].update(c.meta[k])
+        js = JSString('\n'.join([c1, c2, c3, c4]))
+        js.meta = meta
+        return js
 
 
-class LocalComponent(Component):
+class BaseAppComponent(Component):
+    """ Abstract class for Component classes that can be "shared" between
+    Python and JavaScript. The concrete implementations are:
+    
+    * The PyComponent class, which operates in Python, but has a proxy
+      object in JavaSript to which properties are synced and from which actions
+      can be invoked.
+    * The JsComponent class, which operates in JavaScript, but can have a proxy
+      object in Python to which properties are synced and from which actions
+      can be invoked.
+    * The StubComponent class, which represents a component class that is
+      somewhere else, perhaps in another session. It does not have any
+      properties, nor actions. But it can be "moved around".
+    """
+    
+    session = event.Attribute(doc="The session to which this component belongs. " + 
+                                  "It's id is unique within the session.")
+    
+    uid = event.Attribute(doc="A unique identifier for this component; " + 
+                              "a combination of the session and component id's.")
+
+
+class LocalComponent(BaseAppComponent):
     """
     Base class for PyComponent in Python and JsComponent in JavaScript.
     """
@@ -337,7 +368,7 @@ class LocalComponent(Component):
     #         self._session._exec(cmd)
 
 
-class ProxyComponent(Component):
+class ProxyComponent(BaseAppComponent):
     """
     Base class for JSComponent in Python and PyComponent in JavaScript.
     
@@ -469,7 +500,7 @@ class ProxyComponent(Component):
         self._session.keep_alive(self, 1)
 
 
-class StubComponent(Component):
+class StubComponent(BaseAppComponent):
     """
     Class to represent stub proxy components to take the place of components
     that do not belong to the current session, or that are may not exist 
@@ -483,6 +514,7 @@ class StubComponent(Component):
         super().__init__()
         self._session = session
         self._id = id
+        self._uid = session.id + '.' + id
     
     def __repr__(self):
         return ("<StubComponent for '%s' in session '%s' at 0x%x>" %
@@ -491,7 +523,9 @@ class StubComponent(Component):
 
 # LocalComponent and ProxyComponent need __jsmodule__, but they do not
 # participate in the AppComponentMeta class, so we add it here.
-LocalComponent.__jsmodule__ = ProxyComponent.__jsmodule__ = __name__
+LocalComponent.__jsmodule__ = __name__
+ProxyComponent.__jsmodule__ = __name__
+StubComponent.__jsmodule__ = __name__
 
 
 class PyComponent(with_metaclass(AppComponentMeta, LocalComponent)):
@@ -522,7 +556,7 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
 class BsdfComponentExtension(bsdf.Extension):
     
     name = 'flexx.app.component'
-    cls = PyComponent, JsComponent, StubComponent
+    cls = BaseAppComponent  # PyComponent, JsComponent, StubComponent
     
     def match(self, c):
         # This is actually the default behavior, but added for completenes
@@ -551,10 +585,8 @@ class BsdfComponentExtension(bsdf.Extension):
     # The name and below methods get collected to produce a JS BSDF extension
     
     def match_js(self, c):
-        return (isinstance(c, PyComponent) or
-                isinstance(c, JsComponent) or
-                isinstance(c, StubComponent))
-        
+        return isinstance(c, BaseAppComponent)
+
     def encode_js(self, c):
         if isinstance(c, JsComponent):  # i.e. LocalComponent in JS
             c._ensure_proxy_instance()

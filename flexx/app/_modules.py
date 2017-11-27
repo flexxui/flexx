@@ -14,7 +14,7 @@ from ..event import Component
 from ..event._js import create_js_component_class
 
 from ._clientcore import bsdf
-from ._component2 import PyComponent, JsComponent, StubComponent
+from ._component2 import BaseAppComponent, PyComponent, JsComponent, StubComponent
 from ._asset import Asset, get_mod_name, module_is_package
 from . import logger
 
@@ -255,7 +255,9 @@ class JSModule:
         elif isinstance(val, type) and issubclass(val, Component):
             if val is Component:
                 return self._add_dep_from_event_module('Component')
-            if issubclass(val, (PyComponent, JsComponent)):
+            elif val is BaseAppComponent or val.mro()[1] is BaseAppComponent:
+                return
+            elif issubclass(val, (PyComponent, JsComponent)):
                 # App Component class; we know that we can get the JS for this
                 if val.__jsmodule__ == self.name:
                     # Define here
@@ -369,7 +371,7 @@ class JSModule:
         if len(cls.__bases__) != 1:  # pragma: no cover
             raise TypeError('PyScript classes do not (yet) support '
                             'multiple inheritance.')
-        if cls is PyComponent or cls is JsComponent:
+        if cls is PyComponent or cls is JsComponent or cls is StubComponent:
             return self._add_dep_from_event_module('Component')
         for base_cls in cls.__bases__:
             if base_cls is object:

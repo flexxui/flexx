@@ -302,7 +302,8 @@ class JsSession:
         """
         cmd = command[0]
         if cmd == 'PING':
-            self.send_command('PONG', command[1])
+            # Used for roundtrip stuff, do at least one iter loop here ...
+            window.setTimeout(self.send_command, 10, 'PONG', command[1])
         elif cmd == 'INIT_DONE':
             window.flexx.spin(None)
             while len(self._pending_commands):

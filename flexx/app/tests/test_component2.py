@@ -1,9 +1,23 @@
-from flexx.app._component2 import PyComponent, JsComponent, LocalComponent, ProxyComponent
+from flexx.app._component2 import PyComponent, JsComponent
+from flexx.app._component2 import BaseAppComponent, LocalComponent, ProxyComponent
 from flexx.event import Component
 
 from flexx import event, app
 
 from flexx.util.testing import run_tests_if_main, raises, skip
+
+
+class StubSession:
+    id = ''
+    
+    def _register_component(self, c):
+        pass
+    
+    def send_command(self, *command):
+        pass
+    
+    def keep_alive(self, ob):
+        pass
 
 
 class MyPComponent1(PyComponent):
@@ -44,6 +58,7 @@ all_classes = [MyPComponent2, MyJComponent2, MyPComponent2.JS, MyJComponent2.JS,
                MyPComponent1, MyJComponent1, MyPComponent1.JS, MyJComponent1.JS,
                PyComponent, JsComponent, PyComponent.JS, JsComponent.JS,
                LocalComponent, ProxyComponent,
+               BaseAppComponent,
                Component]
 
 
@@ -57,8 +72,8 @@ def test_pycomponent_heritage():
     assert not 'proxy' in repr(C) and 'proxy' in repr(C.JS)
     assert not 'JS' in repr(C) and 'for JS' in repr(C.JS)
     
-    mro = [MyPComponent2, MyPComponent1, PyComponent, LocalComponent, Component, object]
-     
+    mro = [MyPComponent2, MyPComponent1, PyComponent, LocalComponent, BaseAppComponent, Component, object]
+    
     # Validate inheritance of py class
     assert C.mro() == mro
     # Also check issubclass()
@@ -68,14 +83,14 @@ def test_pycomponent_heritage():
         if cls not in mro:
             assert not issubclass(C, cls)
     # Also check isinstance()
-    foo = C()
+    foo = C(flx_session=StubSession())
     for cls in mro:
         assert isinstance(foo, cls)
     for cls in all_classes:
         if cls not in mro:
             assert not isinstance(foo, cls)
 
-    mro = [MyPComponent2.JS, MyPComponent1.JS, PyComponent.JS, ProxyComponent, Component, object]
+    mro = [MyPComponent2.JS, MyPComponent1.JS, PyComponent.JS, ProxyComponent, BaseAppComponent, Component, object]
     
     # Validate inheritance of JS class
     assert C.JS.mro() == mro
@@ -101,7 +116,7 @@ def test_jscomponent_heritage():
     assert 'proxy' in repr(C) and 'proxy' not in repr(C.JS)
     assert not 'JS' in repr(C) and 'for JS' in repr(C.JS)
     
-    mro = [MyJComponent2, MyJComponent1, JsComponent, ProxyComponent, Component, object]
+    mro = [MyJComponent2, MyJComponent1, JsComponent, ProxyComponent, BaseAppComponent, Component, object]
      
     # Validate inheritance of py class
     assert C.mro() == mro
@@ -119,7 +134,7 @@ def test_jscomponent_heritage():
         if cls not in mro:
             assert not isinstance(foo, cls)
 
-    mro = [MyJComponent2.JS, MyJComponent1.JS, JsComponent.JS, LocalComponent, Component, object]
+    mro = [MyJComponent2.JS, MyJComponent1.JS, JsComponent.JS, LocalComponent, BaseAppComponent, Component, object]
     
     # Validate inheritance of JS class
     assert C.JS.mro() == mro
@@ -149,6 +164,18 @@ def test_properties():
     assert MyJComponent2.JS.__reactions__ == ['track_foo']
 
 
-foo = MyPComponent2()
-print(foo.JS)
+
+def test_generated_js():
+    m = app.assets.modules['flexx.app._component2']
+    js = m.get_js()
+    classes = []
+    for line in js.splitlines():
+        if '._base_class =' in line:
+            classes.append(line.split('.')[0])
+    assert classes == ['BaseAppComponent',
+                       'LocalComponent', 'ProxyComponent', 'StubComponent',
+                       'PyComponent', 'JsComponent']
+    print(classes)
+
+
 run_tests_if_main()

@@ -40,7 +40,7 @@ def launch(cls, *args, **kwargs):
     """ Shorthand for app.launch() that also returns session.
     """
     c = app.App(cls, *args, **kwargs).launch('firefox-app')
-    return c, c._session
+    return c, c.session
 
 
 def filter_stdout(text):
@@ -149,7 +149,7 @@ async def test_pycomponent_action1():
     
     c.greet('foo')
     c.greet('bar')
-    s.send_command('INVOKE', c._id, 'greet', ["spam"])
+    s.send_command('INVOKE', c.id, 'greet', ["spam"])
     await roundtrip(s)
 
 
@@ -165,12 +165,12 @@ async def test_pycomponent_action2():
     
     with c1:
         c = PyComponentA()
-    assert c._session is s
+    assert c.session is s
     
     
     c.greet('foo')
     c.greet('bar')
-    s.send_command('INVOKE', c._id, 'greet', ["spam"])
+    s.send_command('INVOKE', c.id, 'greet', ["spam"])
     await roundtrip(s)
 
 
@@ -188,12 +188,12 @@ async def test_pycomponent_prop1():
     
     c.set_foo(3)
     print(c.foo)
-    s.send_command('EVAL', c._id, 'foo')
+    s.send_command('EVAL', c.id, 'foo')
     loop.iter()
     print(c.foo)  # this will mutate foo
     await roundtrip(s)
     print(c.foo)
-    s.send_command('EVAL', c._id, 'foo')
+    s.send_command('EVAL', c.id, 'foo')
     await roundtrip(s)
 
 
@@ -269,12 +269,12 @@ async def test_pycomponent_sub_pycomp1():
     
     c.set_foo(3)
     print(c.foo)
-    s.send_command('EVAL', c._id, 'foo')
+    s.send_command('EVAL', c.id, 'foo')
     loop.iter()
     print(c.foo)  # this will mutate foo
     await roundtrip(s)
     print(c.foo)
-    s.send_command('EVAL', c._id, 'foo')
+    s.send_command('EVAL', c.id, 'foo')
     await roundtrip(s)
 
 ## JsComponent basics
@@ -292,7 +292,7 @@ async def test_jscomponent_action1():
     
     c.greet('foo')
     c.greet('bar')
-    s.send_command('INVOKE', c._id, 'greet', ["spam"])
+    s.send_command('INVOKE', c.id, 'greet', ["spam"])
     await roundtrip(s)
     await roundtrip(s)
 
@@ -309,11 +309,11 @@ async def test_jscomponent_action2():
     
     with c1:
         c = JsComponentA()
-    assert c._session is s
+    assert c.session is s
     
     c.greet('foo')
     c.greet('bar')
-    s.send_command('INVOKE', c._id, 'greet', ["spam"])
+    s.send_command('INVOKE', c.id, 'greet', ["spam"])
     await roundtrip(s)
     await roundtrip(s)
 
@@ -332,12 +332,12 @@ async def test_jscomponent_prop():
     
     c.set_foo(3)
     print(c.foo)
-    s.send_command('EVAL', c._id, 'foo')
+    s.send_command('EVAL', c.id, 'foo')
     loop.iter()
     print(c.foo)  # still not set
     await roundtrip(s)
     print(c.foo)
-    s.send_command('EVAL', c._id, 'foo')
+    s.send_command('EVAL', c.id, 'foo')
     await roundtrip(s)
 
 
@@ -444,7 +444,7 @@ async def test_proxy_binding1():
     assert isinstance(c3, JsComponentA)
     
     # Get id of c3 and get rid of any references
-    c3_id = c3._id
+    c3_id = c3.id
     c3_ref = weakref.ref(c3)
     c2.set_sub(None)
     for i in range(5):
@@ -460,7 +460,7 @@ async def test_proxy_binding1():
     await roundtrip(s)
     c3 = c2.sub
     assert isinstance(c3, JsComponentA)
-    assert c3._id == c3_id
+    assert c3.id == c3_id
 
 
 @run_live
@@ -493,7 +493,7 @@ async def test_proxy_binding2():
     # Get id of c3 and get rid of any references
     id3 = id(c3)
     c3_ref = weakref.ref(c3)
-    c3_id = c3._id
+    c3_id = c3.id
     c2.set_sub(None)
     for i in range(5):  # need a few roundtrips for session to drop c3
         await roundtrip(s)
@@ -509,7 +509,7 @@ async def test_proxy_binding2():
     await roundtrip(s)
     c3 = c2.sub
     assert isinstance(c3, JsComponentA)
-    assert c3._id == c3_id
+    assert c3.id == c3_id
 
 
 @run_live
@@ -531,14 +531,14 @@ async def test_proxy_binding3():
     with c1:
         c2 = JsComponentA()  # JsComponent that has local JsComponent
     c1.set_sub(c2)
-    id2 = c2._id
+    id2 = c2.id
     
     # Change foo of c2
     c2.set_foo(3)
     await roundtrip(s)
     
     # Now, we're pretend that to drop the instance
-    s.send_command('INVOKE', c2._id, '_set_has_proxy', [False])
+    s.send_command('INVOKE', c2.id, '_set_has_proxy', [False])
     await roundtrip(s)
     
     # We don't get the events anymore
@@ -547,7 +547,7 @@ async def test_proxy_binding3():
     await roundtrip(s)
     
     # Re-establish
-    s.send_command('INVOKE', c2._id, '_set_has_proxy', [True])
+    s.send_command('INVOKE', c2.id, '_set_has_proxy', [True])
     await roundtrip(s)
     
     # We get these
@@ -607,7 +607,7 @@ async def test_proxy_binding21():
     await roundtrip(s1, s2)
     
     print(c1.sub1 and c1.sub1.foo, c1.sub2 and c1.sub2.foo)
-    s1.send_command('EVAL', c1._id, 'sub1.foo')
+    s1.send_command('EVAL', c1.id, 'sub1.foo')
     await roundtrip(s1, s2)
     
     # So far, not much news, now break the universe ...
@@ -617,8 +617,8 @@ async def test_proxy_binding21():
     print(c1.sub1 and c1.sub1.foo, c1.sub2 and c1.sub2.foo)
     
     # In JS, c1.sub1 will be a stub
-    s1.send_command('EVAL', c1._id, 'sub1._id')
-    s1.send_command('EVAL', c1._id, 'sub1.foo')
+    s1.send_command('EVAL', c1.id, 'sub1.id')
+    s1.send_command('EVAL', c1.id, 'sub1.foo')
     await roundtrip(s1, s2)
     
     # But we can still "handle" it
@@ -627,8 +627,8 @@ async def test_proxy_binding21():
     
     # And now c1.sub2.foo has the value of c2.sub1.foo
     print(c1.sub1 and c1.sub1.foo, c1.sub2 and c1.sub2.foo)
-    s1.send_command('EVAL', c1._id, 'sub1._id')
-    s1.send_command('EVAL', c1._id, 'sub1.foo')
+    s1.send_command('EVAL', c1.id, 'sub1.id')
+    s1.send_command('EVAL', c1.id, 'sub1.foo')
     await roundtrip(s1, s2)
 
 
