@@ -145,6 +145,7 @@ class JsSession:
         self.app_name = app_name
         self.id = id
         self.ws_url = ws_url
+        self._component_counter = 0
         
         # Maybe this is JLab
         if not self.id:
@@ -198,7 +199,12 @@ class JsSession:
         c = Cls(*args, **kwargs)
         return c
     
-    def _register_component(self, c):
+    def _register_component(self, c, id=None):
+        if id is None:
+            self._component_counter += 1
+            id = c.__name__ + '_' + str(self._component_counter) + 'js'
+        c._id = id
+        c._uid = self.id + '_' + id
         self.instances[c._id] = c
     
     # todo: do we need a global version?

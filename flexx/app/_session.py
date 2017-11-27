@@ -423,16 +423,18 @@ class Session:
 
     ## Keeping track of component objects
 
-    # todo: still need this? only for JsComponent? 
-    def _register_component(self, component):
+    def _register_component(self, component, id=None):
         """ Called by PyComponent and JsComponent to give them an id and register with the session.
         """
         assert isinstance(component, (PyComponent, JsComponent))
         # todo: what to do instead of assert component.session is self
         cls = component.__class__
         # Set id
-        # self._component_counter += 1
-        # component._id = cls.__name__ + str(self._component_counter)
+        if id is None:
+            self._component_counter += 1
+            id = cls.__name__ + '_' + str(self._component_counter)
+        component._id = id
+        component._uid = self.id + '_' + id
         # Register the instance using a weakref
         self._component_instances[component._id] = component
         # Register the class to that the client has the needed definitions

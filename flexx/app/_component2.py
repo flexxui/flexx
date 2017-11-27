@@ -266,9 +266,7 @@ class LocalComponent(BaseAppComponent):
         # Pop whether this local instance has a proxy at the other side
         self._set_has_proxy(property_values.pop('flx_has_proxy', False))
         # Pop and apply id if given
-        id = property_values.pop('flx_id', None)
-        if id:
-            self._id = id
+        custom_id = property_values.pop('flx_id', None)
         # Pop session or derive from active component
         self._session = None
         session = property_values.pop('flx_session', None)
@@ -279,19 +277,14 @@ class LocalComponent(BaseAppComponent):
             if active is not None:
                 self._session = active._session
         
+        # Register this component with the session (sets _id and _uid)
         if self._session is None:
-            raise RuntimeError('%s needs a session!' % self._id)
-        
-        # todo: non-synced, non-observable properties? perhaps simply @property?
-        # self.session = self._session
+            raise RuntimeError('%s needs a session!' % (custom_id or self._id))
+        self._session._register_component(self, custom_id)
         
         # Call original method
         prop_events = super()._comp_init_property_values(property_values)
         
-        # Register this component with the session.
-        # todo: uid + global count
-        self._session._register_component(self)
-    
         if this_is_js():
             # This is a local JsComponent in JavaScript
             # We don't necessarily need a proxy in Python; keep it light
@@ -401,9 +394,7 @@ class ProxyComponent(BaseAppComponent):
         # Pop special attribute
         property_values.pop('flx_is_app', None)
         # Pop and apply id if given
-        id = property_values.pop('flx_id', None)
-        if id:
-            self._id = id
+        custom_id = property_values.pop('flx_id', None)
         # Pop session
         self._session = None
         session = property_values.pop('flx_session', None)
@@ -414,23 +405,20 @@ class ProxyComponent(BaseAppComponent):
             if active is not None:
                 self._session = active._session
         
+        # Register this component with the session (sets _id and _uid)
         if self._session is None:
-            raise RuntimeError('%s needs session!' % self._id)
+            raise RuntimeError('%s needs a session!' % (custom_id or self._id))
+        self._session._register_component(self, custom_id)
         
+        # Call original method
         prop_events = super()._comp_init_property_values(property_values)
         
-        # Register this component with the session.
-        # todo: uid + global count
-        self._session._register_component(self)
-            
         if this_is_js():
             # This is a proxy PyComponent in JavaScript
             pass
             
         else:
             # This is a proxy JsComponent in Python
-            
-            
             
             # Instantiate JavaScript version of this class
             # todo: only if Python "instantiated" it
@@ -514,7 +502,7 @@ class StubComponent(BaseAppComponent):
         super().__init__()
         self._session = session
         self._id = id
-        self._uid = session.id + '.' + id
+        self._uid = session.id + '_' + id
     
     def __repr__(self):
         return ("<StubComponent for '%s' in session '%s' at 0x%x>" %

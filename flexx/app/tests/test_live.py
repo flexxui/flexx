@@ -565,6 +565,9 @@ async def test_proxy_binding3():
     await roundtrip(s)
 
 
+## Multi-session 
+
+
 class JsComponentB(app.JsComponent):
     
     sub1 = event.ComponentProp(settable=True)
@@ -590,8 +593,8 @@ async def test_proxy_binding21():
     """
     # Test multiple sessions, and sharing objects
     
-    c2, s2 = launch(JsComponentB)
     c1, s1 = launch(JsComponentB)
+    c2, s2 = launch(JsComponentB)
     
     with c1:
         c11 = JsComponentA()  # JsComponent that has local JsComponent
@@ -630,6 +633,134 @@ async def test_proxy_binding21():
     s1.send_command('EVAL', c1.id, 'sub1.id')
     s1.send_command('EVAL', c1.id, 'sub1.foo')
     await roundtrip(s1, s2)
+
+
+@run_live
+async def test_sharing_state_between_sessions():
+    """
+    7
+    7
+    42
+    42
+    ----------
+    7
+    7
+    42
+    42
+    """
+    # Test sharing state between multiple sessions
+    
+    class SharedComponent(event.Component):
+        foo = event.IntProp(0, settable=True)
+    
+    shared = SharedComponent()
+    
+    # This lambda thingy at a PyComponent is the magic to share state
+    # Note that this needs to be setup for each property. It would be nice
+    # to really share a component (proxy), but this would mean that a
+    # PyComponent could have multiple sessions, which would complicate things
+    # too much to be worthwhile.
+    c1 = app.App(PyComponentA, foo=lambda:shared.foo).launch()
+    c2 = app.App(PyComponentA, foo=lambda:shared.foo).launch()
+    s1, s2 = c1.session, c2.session
+    
+    with c1:
+        c11 = JsComponentA()
+    with c2:
+        c22 = JsComponentA()
+    await roundtrip(s1, s2)
+    
+    shared.set_foo(7)
+    await roundtrip(s1, s2)
+    
+    print(c1.foo)
+    s1.send_command('EVAL', c1.id, 'foo')
+    await roundtrip(s1, s2)
+    print(c2.foo)
+    s2.send_command('EVAL', c2.id, 'foo')
+    
+    shared.set_foo(42)
+    await roundtrip(s1, s2)
+    
+    print(c1.foo)
+    s1.send_command('EVAL', c1.id, 'foo')
+    await roundtrip(s1, s2)
+    print(c2.foo)
+    s2.send_command('EVAL', c2.id, 'foo')
+    
+    await roundtrip(s1, s2)
+
+
+class CreatingJsComponent2(app.JsComponent):
+    
+    sub = event.ComponentProp(settable=True)
+    
+    @event.action
+    def create_sub(self):
+        with self:
+            c = CreatingJsComponent2()
+            self.set_sub(c)
+
+
+@run_live
+async def test_component_id_uniqueness():
+    """
+    JsComponentB_1
+    CreatingJsComponent2_2
+    CreatingJsComponent2_2js
+    JsComponentB_1
+    CreatingJsComponent2_2
+    CreatingJsComponent2_2js
+    3
+    6
+    3
+    ----------
+    JsComponentB_1
+    CreatingJsComponent2_2
+    CreatingJsComponent2_2js
+    JsComponentB_1
+    CreatingJsComponent2_2
+    CreatingJsComponent2_2js
+    """
+    # Test uniqueness of component id's
+    
+    c1, s1 = launch(JsComponentB)
+    c2, s2 = launch(JsComponentB)
+    
+    with c1:
+        c11 = CreatingJsComponent2()  # JsComponent that has local JsComponent
+        c11.create_sub()
+        c11.create_sub()
+    with c2:
+        c22 = CreatingJsComponent2()  # JsComponent that has local JsComponent
+        c22.create_sub()
+        c22.create_sub()
+    await roundtrip(s1, s2)
+    
+    cc = [c1, c11, c11.sub, c2, c22, c22.sub]
+    
+    for c in cc:
+        print(c.id)
+        c.session.send_command('EVAL', c.id, 'id')
+        await roundtrip(s1, s2)
+    
+    # That was not very unique though
+    s = set()
+    for c in cc:
+        s.add(c.id)
+    print(len(s))
+    
+    # But this is
+    s = set()
+    for c in cc:
+        s.add(c.uid)
+    print(len(s))
+    
+    # And this should be too
+    s = set()
+    for c in [c1, c11, c11.sub]:
+        s.add(c.id.split('_')[-1])
+    print(len(s))
 
 
 ## Instanbtiate JsComponent

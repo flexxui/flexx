@@ -191,7 +191,7 @@ class JSModule:
         """
         return self._provided_names
     
-    def add_variable(self, name, is_global=False):
+    def add_variable(self, name, is_global=False, _dept_stack=None):
         """ Mark the variable with the given name as used by JavaScript.
         The corresponding object must be a module, Component, class or function,
         or a json serializable value.
@@ -202,14 +202,18 @@ class JSModule:
         
         If ``is_global``, the name is considered declared global in this module.
         """
+        _dept_stack = _dept_stack or []
         if name in self._imported_names:
             return
+        elif name in _dept_stack:
+            return  # avoid dependency recursion
         elif name in self._provided_names and self.name != '__main__':
             return  # in __main__ we allow redefinitions
         elif name in ('Component', 'loop'):
             return self._add_dep_from_event_module(name)
         if getattr(self._pymodule, '__pyscript__', False):
             return  # everything is transpiled and exported already
+        _dept_stack.append(name)
         
         # todo: do a check to disallow using Components that are not PyComponent or JsComponent
         
@@ -265,7 +269,7 @@ class JSModule:
                     self._component_classes[name] = val
                     # Recurse
                     self._collect_dependencies_from_bases(val)
-                    self._collect_dependencies(**val.JS.CODE.meta)
+                    self._collect_dependencies(_dept_stack, **val.JS.CODE.meta)
                 else:
                     # Import from another module
                     # not needed per see; bound via window.flexx.classes
@@ -281,7 +285,7 @@ class JSModule:
                     self._pyscript_code[name] = js
                     # Recurse
                     self._collect_dependencies_from_bases(val)
-                    self._collect_dependencies(**js.meta)
+                    self._collect_dependencies(_dept_stack, **js.meta)
                 else:
                     # Import from another module
                     self._import(mod_name, val.__name__, name)
@@ -292,7 +296,7 @@ class JSModule:
                 func = getattr(val, mname + '_js')
                 funccode = py2js(func, indent=1, inline_stdlib=False, docstrings=False)
                 js += ',\n    ' + mname + ':' + funccode.split('=', 1)[1].rstrip(' \n;')
-                self._collect_dependencies(**funccode.meta)
+                self._collect_dependencies(_dept_stack, **funccode.meta)
             js += '};\n'
             js += 'serializer.add_extension(%s);\n' % name
             js = JSString(js)
@@ -315,7 +319,7 @@ class JSModule:
                 # Recurse
                 if isinstance(val, type):
                     self._collect_dependencies_from_bases(val)
-                self._collect_dependencies(**js.meta)
+                self._collect_dependencies(_dept_stack, **js.meta)
             else:
                 # Import from another module
                 self._import(mod_name, val.__name__, name)
@@ -353,7 +357,7 @@ class JSModule:
             t = 'JS in "%s" uses %r but cannot convert %s to JS.'
             raise ValueError(t % (self.filename, name, val.__class__))
     
-    def _collect_dependencies(self, vars_unknown=None, vars_global=None, **kwargs):
+    def _collect_dependencies(self, _dept_stack, vars_unknown=None, vars_global=None, **kwargs):
         """
         Collect dependencies corresponding to names used in the JS.
         """
@@ -362,7 +366,7 @@ class JSModule:
             if name == 'event':
                 self._deps.setdefault('flexx.event.js', ['event'])
             else:
-                self.add_variable(name, name in vars_global)
+                self.add_variable(name, name in vars_global, _dept_stack=_dept_stack)
     
     def _collect_dependencies_from_bases(self, cls):
         """
