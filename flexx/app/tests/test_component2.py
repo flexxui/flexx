@@ -8,10 +8,12 @@ from flexx.util.testing import run_tests_if_main, raises, skip
 
 
 class StubSession:
-    id = ''
+    id = 'y'
     
-    def _register_component(self, c):
-        pass
+    def _register_component(self, c, id=None):
+        id = id or 'x'
+        c._id = id
+        c._uid = self.id + '_' + id
     
     def send_command(self, *command):
         pass
@@ -154,8 +156,8 @@ def test_properties():
     assert MyJComponent2.JS.__properties__ == ['foo']
     
     assert MyPComponent2.__actions__ == ['increase_foo']
-    assert MyPComponent2.JS.__actions__ == ['_emit_from_other_side', 'increase_foo']
-    assert MyJComponent2.__actions__ == ['_emit_from_other_side', 'increase_foo']
+    assert MyPComponent2.JS.__actions__ == ['_emit_at_proxy']
+    assert MyJComponent2.__actions__ == ['_emit_at_proxy']
     assert MyJComponent2.JS.__actions__ == ['increase_foo']
     
     assert MyPComponent2.__reactions__ == ['track_foo']

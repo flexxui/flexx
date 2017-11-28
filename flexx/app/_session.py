@@ -101,8 +101,7 @@ class Session:
         # sometimes keeps them alive for a short while.
         self._component_counter = 0
         self._component_instances = weakref.WeakValueDictionary()
-        self._instances_guarded = {}  # id: (ping_count, instance)
-        self._roundtrip_based_calllaters = []  # (ping_count, callback, args)
+        self._ping_calls = []
         self._ping_counter = 0  # used to identify pongs
         
         # While the client is not connected, we keep a queue of
@@ -185,9 +184,7 @@ class Session:
         """ Close the session: close websocket, close runtime, dispose app.
         """
         # Stop guarding objects to break down any circular refs
-        for id in list(self._instances_guarded.keys()):
-            self._instances_guarded.pop(id)
-        self._roundtrip_based_calllaters = []
+        self._ping_calls = []
         self._closing = True  # suppress warnings for session being closed.
         try:
             # Close the websocket
@@ -440,8 +437,13 @@ class Session:
         # Register the class to that the client has the needed definitions
         self._register_component_class(cls)
         # self.keep_alive(component)  # we do it when instantiated from JS
-        
-
+    
+    def _unregister_component(self, component):
+        self.keep_alive(component, 1)
+        # Because we use weak refs, and we want to be able to keep the object
+        # so that INVOKE on it can be silently ignored (because it is disposed).
+        # The object gets removed by the DISPOSE_ACK command.
+    
     def get_component_instance_by_id(self, id):
         """ Get instance of PyComponent or JsComponent class
         corresponding to the given id, or None if it does not exist.
@@ -459,13 +461,13 @@ class Session:
         triggered from JS and their attachement to a property, though any type
         of object can be given.
         """
-        obid = id(ob)
-        counter = 0 if self._ws is None else self._ping_counter
-        lifetime = counter + int(iters)
-        if lifetime > self._instances_guarded.get(obid, (0, ))[0]:
-            self._instances_guarded[obid] = lifetime, ob
+        # The object is kept alive as part of the args of a callback function
+        def call_keep_alive(ob, iters):
+            if iters > 1:
+                self.keep_alive(ob, iters-1)
+        self.call_after_roundtrip(call_keep_alive, ob, iters)
     
-    ## JIT asset definitions
+   ## JIT asset definitions
 
     def _register_component_class(self, cls):
         """ Mark the given PyComponent or JsComponent class as used; ensure
@@ -604,8 +606,8 @@ class Session:
             id, name, args = command[1:]
             ob = self.get_component_instance_by_id(id)
             if ob is None:
-                t = 'Component instance %r does not exist in this session (anymore).'
-                logger.warn(t % id)
+                t = 'Cannot invoke %s.%s; session does not know it (anymore).'
+                logger.warn(t % (id, name))
             elif ob._disposed:
                 pass  # JS probably send something before it knew that the object was dead
             else:
@@ -637,6 +639,15 @@ class Session:
             # Instantiate
             c = cls(flx_session=self, flx_id=id)
             self.keep_alive(c)
+        elif cmd == 'DISPOSE':  # Gets send from local to proxy
+            id = command[1]
+            c = self.get_component_instance_by_id(id)
+            if c and not c._disposed:  # no need to warn if component does not exist
+                c._dispose()
+            self.send_command('DISPOSE_ACK', command[1])
+            self._component_instances.pop(id, None)  # Drop local ref now
+        elif cmd == 'DISPOSE_ACK':  # Gets send from proxy to local
+            self._component_instances.pop(command[1], None)
         else:
             logger.error('Unknown command received from JS:\n%s' % command)
     
@@ -653,30 +664,25 @@ class Session:
     #     while len(ok) == 0:
     #         await asyncio.sleep(0.02)
     
+    
     def call_after_roundtrip(self, callback, *args):
         """ A variant of ``call_soon()`` that calls a callback after
         a py-js roundrip. This can be convenient to delay an action until
         after other things have settled down.
         """
+        ping_to_schedule_at = self._ping_counter + 1
+        if len(self._ping_calls) == 0 or self._ping_calls[-1][0] < ping_to_schedule_at:
+            asyncio.get_event_loop().call_soon(self._send_ping)
+        self._ping_calls.append((ping_to_schedule_at, callback, args))
+    
+    def _send_ping(self):
         self._ping_counter += 1
-        entry = self._ping_counter, callback, args
-        self._roundtrip_based_calllaters.append(entry)
-        # Delay the ping command a bit, so that e.g. an action invoked just
-        # before this call gets synced to JS before we schedule the ping.
-        asyncio.get_event_loop().call_soon(self.send_command, 'PING', self._ping_counter)
+        self.send_command('PING', self._ping_counter)
     
     def _receive_pong(self, count):
-        objects_to_clear = [ob for c, ob in
-                            self._instances_guarded.values() if c <= count]
-        for ob in objects_to_clear:
-            self._instances_guarded.pop(id(ob))
-        
-        for i in reversed(range(len(self._roundtrip_based_calllaters))):
-            if self._roundtrip_based_calllaters[i][0] <= count:
-                entry = self._roundtrip_based_calllaters.pop(i)
-                lifetime, callback, args = entry
-                asyncio.get_event_loop().call_soon(callback, *args)
-                #loop.call_soon(callback, *args)
+        while len(self._ping_calls) > 0 and self._ping_calls[0][0] <= count:
+            _, callback, args = self._ping_calls.pop(0)
+            asyncio.get_event_loop().call_soon(callback, *args)
     
     def eval(self, code):
         """ Evaluate the given JavaScript code in the client

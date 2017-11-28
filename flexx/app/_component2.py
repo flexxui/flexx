@@ -246,25 +246,9 @@ class BaseAppComponent(Component):
     uid = event.Attribute(doc="A unique identifier for this component; " + 
                               "a combination of the session and component id's.")
 
-
-class LocalComponent(BaseAppComponent):
-    """
-    Base class for PyComponent in Python and JsComponent in JavaScript.
-    """
-    
-    def _comp_init_property_values(self, property_values):
-        
-        # This is a good time to register with the session, and
-        # instantiate the proxy class. Property values have been set at this
-        # point, but init() has not yet been called.
-        
-        # Keep track of what events are registered at the proxy
-        self.__event_types_at_proxy = {}  # session_id -> event_types
-        
+    def _comp_init_app_component(self, property_values):
         # Pop special attribute
         property_values.pop('flx_is_app', None)
-        # Pop whether this local instance has a proxy at the other side
-        self._set_has_proxy(property_values.pop('flx_has_proxy', False))
         # Pop and apply id if given
         custom_id = property_values.pop('flx_id', None)
         # Pop session or derive from active component
@@ -282,16 +266,38 @@ class LocalComponent(BaseAppComponent):
             raise RuntimeError('%s needs a session!' % (custom_id or self._id))
         self._session._register_component(self, custom_id)
         
+        # Return whether this instance was instantiated locally
+        return custom_id is None
+
+
+class LocalComponent(BaseAppComponent):
+    """
+    Base class for PyComponent in Python and JsComponent in JavaScript.
+    """
+    
+    def _comp_init_property_values(self, property_values):
+        
+        # This is a good time to register with the session, and
+        # instantiate the proxy class. Property values have been set at this
+        # point, but init() has not yet been called.
+        
+        # Keep track of what events are registered at the proxy
+        self.__event_types_at_proxy = []
+        
+        # Init more
+        self._comp_init_app_component(property_values)  # pops items 
+        
+        # Pop whether this local instance has a proxy at the other side
+        self._set_has_proxy(property_values.pop('flx_has_proxy', False))
+        
         # Call original method
         prop_events = super()._comp_init_property_values(property_values)
         
         if this_is_js():
             # This is a local JsComponent in JavaScript
-            # We don't necessarily need a proxy in Python; keep it light
-            pass
+            pass  # no action required
         else:
             # This is a local PyComponent in Python
-            
             # A PyComponent always has a corresponding proxy in JS
             self._ensure_proxy_instance()
         
@@ -299,6 +305,7 @@ class LocalComponent(BaseAppComponent):
     
     def _set_has_proxy(self, has_proxy):
         # Called from proxy class when it instantia
+        # todo: it seems that newly created proxies dont update this
         self._has_proxy = has_proxy
     
     def _ensure_proxy_instance(self):
@@ -330,33 +337,32 @@ class LocalComponent(BaseAppComponent):
                                        self._id, [], {})
             self._has_proxy = True
     
-    def _set_event_types_of_proxy(self, session_id, event_types):
-        self.__event_types_at_proxy[session_id] = event_types
+    def _set_event_types_of_proxy(self, event_types):
+        self.__event_types_at_proxy = event_types
     
     def emit(self, type, info=None):
         # Overload emit() so we can send events to the proxy object at the other end
         ev = super().emit(type, info)
-        # todo: do we want a way to keep props local? Or should one just wrap or use a second class?
         isprop = type in self.__properties__
         if self._has_proxy is True and self._disposed is False:
-            if isprop or type in self.__event_types_at_proxy.get(self._session.id, []):
-                self._session.send_command('INVOKE', self._id, '_emit_from_other_side', [ev])
+            if isprop or type in self.__event_types_at_proxy:
+                self._session.send_command('INVOKE', self._id, '_emit_at_proxy', [ev])
     
     def _dispose(self):
-        # Let other side know that we no longer exist
+        # Let proxy side know that we no longer exist, and that it should
+        # dispose too. Send regardless of whether we have a proxy!
+        # todo: check for _disposed everywhere where we try to send?
+        was_disposed = self._disposed
         super()._dispose()
-        if self._has_proxy:
-            self._session.send_command('INVOKE', self._id, 'dispose', [False])
+        self._session._unregister_component(self)
+        self._has_proxy = False  # because we will tell it to dispose
+        if was_disposed is False:
+            self._session.send_command('DISPOSE', self._id)
+            # self._session.send_command('INVOKE', self._id, '_dispose', [])
     
     # todo: probably remove this, we have actions now!
-    # def call_js(self, call):
-    #     if self._disposed:
-    #         return
-    #     if not this_is_js():
-    #         # todo: Not documented; not sure if we keep it. Handy for debugging though
-    #         cmd = 'flexx.sessions["%s"].get_instance("%s").%s;' % (
-    #                 self._session.id, self._id, call)
-    #         self._session._exec(cmd)
+    def call_js(self, call):
+        raise RuntimeError('call_js() is deprecated; use actions or session.send_command("INVOKE", ..).')
 
 
 class ProxyComponent(BaseAppComponent):
@@ -386,28 +392,8 @@ class ProxyComponent(BaseAppComponent):
     
     def _comp_init_property_values(self, property_values):
         
-        # This is a good time to register with the session, and
-        # instantiate the proxy class. Property values have been set at this
-        # point, but init() has not yet been called.
-        
-        # Pop special attribute
-        property_values.pop('flx_is_app', None)
-        # Pop and apply id if given
-        custom_id = property_values.pop('flx_id', None)
-        # Pop session
-        self._session = None
-        session = property_values.pop('flx_session', None)
-        if session is not None:
-            self._session = session
-        else:
-            active = loop.get_active_component()
-            if active is not None:
-                self._session = active._session
-        
-        # Register this component with the session (sets _id and _uid)
-        if self._session is None:
-            raise RuntimeError('%s needs a session!' % (custom_id or self._id))
-        self._session._register_component(self, custom_id)
+        # Init more
+        local_inst = self._comp_init_app_component(property_values)  # pops items 
         
         # Call original method
         prop_events = super()._comp_init_property_values({})
@@ -418,7 +404,7 @@ class ProxyComponent(BaseAppComponent):
         else:
             # This is a proxy JsComponent in Python
             # Instantiate JavaScript version of this class
-            if custom_id is None:  # i.e. only if Python "instantiated" it
+            if local_inst is True:  # i.e. only if Python "instantiated" it
                 property_values['flx_has_proxy'] = True
                 self._session.send_command('INSTANTIATE', self.__jsmodule__,
                                            self.__class__.__name__, self._id,
@@ -450,12 +436,12 @@ class ProxyComponent(BaseAppComponent):
         event_types = super()._registered_reactions_hook()
         try:
             if not self._disposed:
-                self._session.send_command('INVOKE', self._id, '_set_event_types_of_proxy', [self._session.id, event_types])
+                self._session.send_command('INVOKE', self._id, '_set_event_types_of_proxy', [event_types])
         finally:
             return event_types
     
     @event.action
-    def _emit_from_other_side(self, ev):
+    def _emit_at_proxy(self, ev):
         """ Action used by the local component to push an event to the proxy
         component. If the event represents a property-update, the mutation
         is applied, otherwise the event is emitted here.
@@ -472,18 +458,24 @@ class ProxyComponent(BaseAppComponent):
             self.emit(ev.type, ev)
     
     def dispose(self):
-        super().dispose()  # note: calls _dispose()
-        self._session.send_command('INVOKE', self._id, 'dispose', [])
+        if this_is_js():
+            # The server is leading ...
+            raise RuntimeError('Cannot dispose a PyComponent from JS.')
+        else:
+            # Disposing a JsComponent from JS is like invoking an action;
+            # we don't actually dispose ourselves just yet.
+            self._session.send_command('INVOKE', self._id, 'dispose', [])
+            # super().dispose()  don't!
     
     def _dispose(self):
-        # This gets called (directly) from dispose(),
-        # and from (via call_soon) by __delete__ .
-        # Let other side know that we no longer exist
+        # This gets called by the session upon a DISPOSE command,
+        # or on Python from __delete__ (via call_soon).
+        was_disposed = self._disposed
         super()._dispose()
-        self._session.send_command('INVOKE', self._id, '_set_has_proxy', [False])
-        # Keep it alive until JS knows that it is gine, so that the session can
-        # inspect _disposed
-        self._session.keep_alive(self, 1)
+        self._session._unregister_component(self)
+        if was_disposed is False:
+            # Let other side know that we no longer exist.
+            self._session.send_command('INVOKE', self._id, '_set_has_proxy', [False])
 
 
 class StubComponent(BaseAppComponent):
@@ -540,6 +532,9 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
 
 
 class BsdfComponentExtension(bsdf.Extension):
+    """ A BSDF extension to encode flexx.app Component objects based on their
+    session id and component id.
+    """
     
     name = 'flexx.app.component'
     cls = BaseAppComponent  # PyComponent, JsComponent, StubComponent

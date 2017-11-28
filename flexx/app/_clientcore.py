@@ -146,6 +146,7 @@ class JsSession:
         self.id = id
         self.ws_url = ws_url
         self._component_counter = 0
+        self._disposed_ob = {'_disposed': True}
         
         # Maybe this is JLab
         if not self.id:
@@ -207,6 +208,9 @@ class JsSession:
         c._uid = self.id + '_' + id
         self.instances[c._id] = c
     
+    def _unregister_component(self, c):
+        pass  # c gets popped from self.instances by DISPOSE_ACK command
+    
     # todo: do we need a global version?
     def get_instance(self, id):
         """ Get instance of a Component class, or None. Or the document body
@@ -215,14 +219,10 @@ class JsSession:
         if id == 'body':
             return window.document.body
         else:
-            return self.instances.get(id, None)
-    
-    def dispose_object(self, id):
-        """ Dispose the object with the given id.
-        """
-        ob = self.instances[id]
-        if ob is not undefined:
-            ob.dispose()  # Model.dispose() removes itself from flexx.instances
+            c = self.instances.get(id, None)
+            if c == 'disposed':
+                c = None
+            return c
     
     def initSocket(self):
         """ Make the connection to Python.
@@ -330,10 +330,24 @@ class JsSession:
         elif cmd == 'INVOKE':
             id, name, args = command[1:]
             ob = self.instances.get(id, None)
-            if ob is not None:
+            if ob is None:
+                console.warn('Cannot invoke %s.%s; '
+                             'session does not know it (anymore).' % (id, name))
+            elif ob._disposed is True:
+                 pass  # deleted, but other end might not be aware when command was send
+            else:
                 ob[name](*args)
         elif cmd == 'INSTANTIATE':
             self.instantiate_component(*command[1:])  # module, cname, id, args, kwargs
+        elif cmd == 'DISPOSE':
+            id = command[1]
+            c = self.instances.get(id, None)
+            if c is not None and c._disposed is False:  # else: no need to warn
+                c._dispose()
+            self.send_command('DISPOSE_ACK', command[1])
+            self.instances.pop(id, None)  # Drop local reference now
+        elif cmd == 'DISPOSE_ACK':
+            self.instances.pop(command[1], None)  # Drop reference
         elif cmd == 'DEFINE':
             #and command[1] == 'JS' or command[1] == 'DEFINE-JS-EVAL '):
             kind, name, code = command[1:]
@@ -373,6 +387,22 @@ class JsSession:
         else:
             window.console.error('Invalid command: "' + cmd + '"')
         return command
+    
+    def call_after_roundtrip(self, callback, *args):
+        ping_to_schedule_at = self._ping_counter + 1
+        if len(self._ping_calls) == 0 or self._ping_calls[-1][0] < ping_to_schedule_at:
+            window.setTimeout(self._send_ping, 0)
+        self._ping_calls.push((ping_to_schedule_at, callback, args))
+    
+    def _send_ping(self):
+        self._ping_counter += 1
+        self.send_command('PING', self._ping_counter)
+    
+    def _receive_pong(self, count):
+        while len(self._ping_calls) > 0 and self._ping_calls[0][0] <= count:
+            _, callback, args = self._ping_calls.pop(0)
+            window.setTimeout(callback, 0, *args)
+
 
 # todo: in bsdf there is utf8 encode/decode code, check which is better, put that in bsdf, and use it here
 def decodeUtf8(arrayBuffer):
