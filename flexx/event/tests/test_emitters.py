@@ -3,7 +3,7 @@ Test event emitters.
 """
 
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
-from flexx.event._both_tester import run_in_both, this_is_js
+from flexx.event.both_tester import run_in_both, this_is_js
 
 from flexx import event
 

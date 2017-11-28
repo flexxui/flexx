@@ -7,7 +7,7 @@ import sys
 import weakref
 
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
-from flexx.event._both_tester import run_in_both, this_is_js
+from flexx.event.both_tester import run_in_both, this_is_js
 from flexx.util.logging import capture_log
 
 from flexx import event

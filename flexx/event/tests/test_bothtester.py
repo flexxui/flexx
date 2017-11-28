@@ -5,7 +5,7 @@ moments.
 """
 
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
-from flexx.event._both_tester import run_in_both, StdoutMismatchError
+from flexx.event.both_tester import run_in_both, StdoutMismatchError
 
 from flexx import event
 

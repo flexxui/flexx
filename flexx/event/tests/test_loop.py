@@ -3,7 +3,7 @@ Test the main use of the event loop.
 """
 
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
-from flexx.event._both_tester import run_in_both
+from flexx.event.both_tester import run_in_both
 
 from flexx import event
 from flexx.event._dict import isidentifier

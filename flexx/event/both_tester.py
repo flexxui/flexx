@@ -143,12 +143,45 @@ def validate_text(name, text, reference):
             for j in range(i1, i2):
                 linenr = str(j + 1).rjust(3, '0')
                 prefix = ' >> ' if j == i else '    '
-                line1 = lines1[j].ljust(nchars, '\xb7')
-                line2 = lines2[j].ljust(nchars, '\xb7')
-                line1 = line1 if len(line1) <= nchars else line1[:nchars-1] + '…'
-                line2 = line2 if len(line2) <= nchars else line2[:nchars-1] + '…'
-                msg += '{}{} {} {}\n'.format(prefix, linenr, line1, line2)
+                msg += '{}{} '.format(prefix, linenr)
+                msg += _zip(_wrap(lines1[j], nchars, 3), _wrap(lines2[j], nchars, 3), 8)
+                # line1 = lines1[j].ljust(nchars, '\xb7')
+                # line2 = lines2[j].ljust(nchars, '\xb7')
+                # line1 = line1 if len(line1) <= nchars else line1[:nchars-1] + '…'
+                # line2 = line2 if len(line2) <= nchars else line2[:nchars-1] + '…'
+                # msg += '{}{} {} {}\n'.format(prefix, linenr, line1, line2)
             return msg
+
+def _wrap(line, nchars, maxlines):
+    line = line.replace('\n', '\\n').replace('\r', '\\r')
+    lines = []
+    while line:
+        lines.append(line[:nchars])
+        line = line[nchars:].lstrip()
+    if not lines:
+        lines.append('\xb7' * nchars)
+    elif len(lines) == 1:
+        lines[-1] = lines[-1].ljust(nchars, '\xb7')
+    elif len(lines) > maxlines:
+        lines = lines[:maxlines]
+        lines[-1] = lines[-1][:-1] + '…'
+    return lines
+
+def _zip(lines1, lines2, offset):
+    n = max(len(lines1), len(lines2))
+    nchars = len(lines1[0])
+    while len(lines1) < n:
+        lines1.append(' ' * nchars)
+    while len(lines2) < n:  # pragma: no cover
+        lines2.append(' ' * nchars)
+    text = ''
+    i = 0
+    for line1, line2 in zip(lines1, lines2):
+        if i > 0:
+            text += ' ' * offset
+        i += 1
+        text += line1 + ' ' + line2 + '\n'
+    return text
 
 
 def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
