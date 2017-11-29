@@ -160,7 +160,7 @@ def js_rename(jscode, cur_name, new_name):
     
     isclass = cur_name[0].lower() != cur_name[0]
     if isclass:
-        cur_cls_name = cur_name
+        # cur_cls_name = cur_name
         new_cls_name = new_name.split('.')[-1]
     else:
         new_cls_name = ''
@@ -174,7 +174,6 @@ def js_rename(jscode, cur_name, new_name):
     
     cur_name_short = cur_name.split('.')[-1]
     new_name_short = new_name.split('.')[-1]
-    jscode0 = jscode
     if isclass:
         # If this is about a class ...
         jscode = jscode.replace('.__name__ = "%s"' % cur_name_short, 

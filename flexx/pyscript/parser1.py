@@ -454,7 +454,8 @@ class Parser1(Parser0):
                 start = ['.call(', base_name, ', '] 
             else:
                 start = ['(']
-            return start + ['{', 'flx_args: ', args_array, ', flx_kwargs: ', kwargs, '})']
+            return start + ['{', 'flx_args: ', args_array,
+                               ', flx_kwargs: ', kwargs, '})']
         elif args_simple is None:
             # Need to use apply
             return [".apply(", base_name, ', ', args_array, ")"]
@@ -534,7 +535,8 @@ class Parser1(Parser0):
             else:  # foo=xx
                 if not (kwargs and isinstance(kwargs[-1], list)):
                     kwargs.append([])
-                kwargs[-1].append('%s: %s' % (kwnode.name, unify(self.parse(kwnode.value_node))))
+                kwargs[-1].append('%s: %s' % (kwnode.name,
+                                              unify(self.parse(kwnode.value_node))))
         
         # Resolve sequneces of loose kwargs
         for i in range(len(kwargs)):

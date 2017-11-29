@@ -273,7 +273,8 @@ class Parser2(Parser1):
         
         # Build code to throw
         if err_cls:
-            code = self.use_std_function('op_error', ["'%s'" % err_cls, err_msg or '""'])
+            code = self.use_std_function('op_error', 
+                                         ["'%s'" % err_cls, err_msg or '""'])
         else:
             code = err_msg
         return [self.lf('throw ' + code + ';')]
@@ -871,10 +872,8 @@ class Parser2(Parser1):
                 vararg_code2 = '%s = arguments[0].flx_args.slice(%i);' % x
         
         # Handle keyword arguments and kwargs
-        parse_kwargs = False
         kw_argnames = set()  # variables that come from keyword args, or helper vars
         if node.kwarg_nodes or node.kwargs_node:
-            parse_kwargs = True
             # Collect names and default values
             names, values = [], []
             for arg in node.kwarg_nodes:
@@ -893,7 +892,7 @@ class Parser2(Parser1):
                 kw_argnames.add(values_var)
                 code += [self.lf(values_var), ' = ', values, ';']
             else:
-                values_var = values;
+                values_var = values
             # Enter if to actually parse kwargs
             code.append(self.lf(
                 "if (arguments.length == 1 && typeof arguments[0] == 'object' && "
