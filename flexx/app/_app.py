@@ -243,6 +243,9 @@ def valid_app_name(name):
     return name and name[0] in T[:-10] and all([c in T for c in name])
 
 
+# Note that the AppManager is a Component (but not a PyComponent)
+# todo: give this class a better API and document it
+
 class AppManager(event.Component):
     """ Manage apps, or more specifically, the session objects.
 
@@ -250,7 +253,7 @@ class AppManager(event.Component):
     purpose is to manage the application classes and instances. Intended
     for internal use.
     """
-
+    
     total_sessions = 0  # Keep track how many sessesions we've served in total
 
     def __init__(self):
@@ -260,15 +263,6 @@ class AppManager(event.Component):
         self._session_map = weakref.WeakValueDictionary()
         self._last_check_time = time.time()
 
-    # Disable a few things, since they're not needed here.
-    # todo: I did this to check that loop is not used before we have a server
-    def __enter__(self):
-        return self
-    def __exit__(self, type, value, traceback):
-        pass
-    def _comp_init_events(self, *args):
-        pass
-    
     def register_app(self, app):
         """ Register an app (an object that wraps a Component class plus init args).
         After registering an app (and starting the server) it is

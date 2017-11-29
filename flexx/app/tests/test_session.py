@@ -332,4 +332,125 @@ def test_module_loading5():
 # test_module_loading5()
 # clear_test_classes()
 
+##
+
+def test_keep_alive():
+    
+    session = app.manager.get_default_session()
+    if session is None:
+        app.manager.create_default_session()
+    
+    class Foo:
+        pass
+    
+    foo1, foo2, foo3 = Foo(), Foo(), Foo()
+    foo1_ref = weakref.ref(foo1)
+    foo2_ref = weakref.ref(foo2)
+    foo3_ref = weakref.ref(foo3)
+    
+    session.keep_alive(foo1, 10)
+    session.keep_alive(foo1, 5)  # should do nothing, longest time counts
+    session.keep_alive(foo2, 5)
+    session.keep_alive(foo2, 11)  # longest timeout counts
+    session.keep_alive(foo3, 15)
+    
+    # Delete objects, session keeps them alive
+    del foo1, foo2, foo3
+    gc.collect()
+    assert foo1_ref() is not None
+    assert foo2_ref() is not None
+    assert foo3_ref() is not None
+    
+    # Pong 4, too soon for the session to release the objects
+    session._receive_pong(4)
+    gc.collect()
+    assert foo1_ref() is not None
+    assert foo2_ref() is not None
+    assert foo3_ref() is not None
+    
+    # Pong 7, still too soon
+    session._receive_pong(7)
+    gc.collect()
+    assert foo1_ref() is not None
+    assert foo2_ref() is not None
+    assert foo3_ref() is not None
+    
+    # Pong 10, should remove foo1
+    session._receive_pong(10)
+    gc.collect()
+    assert foo1_ref() is None
+    assert foo2_ref() is not None
+    assert foo3_ref() is not None
+    
+    # Pong 11, should remove foo2
+    session._receive_pong(11)
+    gc.collect()
+    assert foo1_ref() is None
+    assert foo2_ref() is None
+    assert foo3_ref() is not None
+    
+    # Pong 20, should remove foo3
+    session._receive_pong(20)
+    gc.collect()
+    assert foo1_ref() is None
+    assert foo2_ref() is None
+    assert foo3_ref() is None
+
+
+def test_keep_alive_noleak1():
+    
+    class Foo:
+        pass
+    
+    # Create a session and an object that has a reference to it (like Model)
+    session = app.Session('test')
+    foo = Foo()
+    foo.session = session
+    
+    # Let the session keep the object alive, so it keeps its reference
+    session.keep_alive(foo)
+    
+    session_ref = weakref.ref(session)
+    foo_ref = weakref.ref(foo)
+    
+    # Removing object wont delete it
+    del foo
+    gc.collect()
+    assert foo_ref() is not None
+    
+    # But closing the session will; session clears up after itself
+    session.close()
+    gc.collect()
+    assert foo_ref() is None
+
+
+def test_keep_alive_noleak2():
+    # Even if the above would not work ...
+    
+    class Foo:
+        pass
+    
+    # Create a session and an object that has a reference to it (like Model)
+    session = app.Session('test')
+    foo = Foo()
+    foo.session = session
+    
+    # Let the session keep the object alive, so it keeps its reference
+    session.keep_alive(foo)
+    
+    session_ref = weakref.ref(session)
+    foo_ref = weakref.ref(foo)
+    
+    # Removing session wont delete it
+    del session
+    gc.collect()
+    assert session_ref() is not None
+    
+    # But removing both will; gc is able to clear circular ref
+    del foo
+    gc.collect()
+    assert session_ref() is None
+    assert foo_ref() is None
+
+
 run_tests_if_main()

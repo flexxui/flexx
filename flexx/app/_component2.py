@@ -1,6 +1,7 @@
 """
-Implementation of LocalComponent and ProxyComponent classes, which form
-the basis for the PyComponent and JsComponent classes (and their proxies).
+Implementation of the app Component classes (LocalComponent,
+ProxyComponent, StubComponent), which form the basis for the
+PyComponent and JsComponent classes (and their proxies).
 """
 
 import sys
@@ -99,11 +100,12 @@ class AppComponentMeta(ComponentMeta):
         elif issubclass(cls, ProxyComponent):
             cls._make_js_local_class(cls_name, bases, dct)
         else:  # pragma: no cover
-            raise TypeError('Expected class to inherit from LocalComponent or ProxyComponent.')
+            raise TypeError('Expected class to inherit from '
+                            'LocalComponent or ProxyComponent.')
         
         # Write __jsmodule__; an optimization for our module/asset system
         cls.__jsmodule__ = get_mod_name(sys.modules[cls.__module__])
-        cls.JS.__jsmodule__ = cls.__jsmodule__  # need in JS to explain to Py how to instantiate
+        cls.JS.__jsmodule__ = cls.__jsmodule__  # need it in JS too
         
         # Set JS.CODE and CSS
         cls.JS.CODE = cls._get_js()
@@ -158,7 +160,8 @@ class AppComponentMeta(ComponentMeta):
         for name, val in list(cls.__dict__.items()):
             if name.startswith('__') and name.endswith('__'):
                 continue
-            elif isinstance(val, Property) or (callable(val) and name.endswith('_validate')):
+            elif (isinstance(val, Property) or (callable(val) and
+                  name.endswith('_validate'))):
                 jsdict[name] = val  # properties are the same
             elif isinstance(val, EmitterDescriptor):
                 pass  # todo: create stub emitters for doc purposes
@@ -183,7 +186,7 @@ class AppComponentMeta(ComponentMeta):
         # But flexx.classes.X remains the "official" 
         # namespace, so that things work easlily accross modules, and we can
         # even re-define classes (e.g. in the notebook).
-        # todo: actually, we got rid of flexx.classes, does that break notebook interactivity?
+        # todo: did getting rid of flexx.classes break notebook interactivity?
         cls_name = cls.__name__
         base_class = cls.JS.mro()[1]
         base_class_name = '%s.prototype' % base_class.__name__
@@ -194,7 +197,7 @@ class AppComponentMeta(ComponentMeta):
         meta = c.meta
         code.append(c)
         # code.append(c.replace('var %s =' % cls_name,
-        #                       'var %s = flexx.classes.%s =' % (cls_name, cls_name), 1))
+        #                   'var %s = flexx.classes.%s =' % (cls_name, cls_name), 1))
         
         # Add JS version of the base classes?
         if not AppComponentMeta._applied_base_js:
@@ -212,10 +215,14 @@ class AppComponentMeta(ComponentMeta):
     def _get_js_of_base_classes(cls):
         """ Get JS for BaseAppComponent, LocalComponent, and ProxyComponent.
         """
-        c1 = create_js_component_class(BaseAppComponent, 'BaseAppComponent', 'Component.prototype')
-        c2 = create_js_component_class(LocalComponent, 'LocalComponent', 'BaseAppComponent.prototype')
-        c3 = create_js_component_class(ProxyComponent, 'ProxyComponent', 'BaseAppComponent.prototype')
-        c4 = create_js_component_class(StubComponent, 'StubComponent', 'BaseAppComponent.prototype')
+        c1 = create_js_component_class(BaseAppComponent, 'BaseAppComponent',
+                                       'Component.prototype')
+        c2 = create_js_component_class(LocalComponent, 'LocalComponent',
+                                       'BaseAppComponent.prototype')
+        c3 = create_js_component_class(ProxyComponent, 'ProxyComponent',
+                                       'BaseAppComponent.prototype')
+        c4 = create_js_component_class(StubComponent, 'StubComponent',
+                                       'BaseAppComponent.prototype')
         meta = c1.meta
         for k in ['vars_unknown', 'vars_global', 'std_functions', 'std_methods']:
             for c in (c2, c3, c4):
@@ -276,7 +283,6 @@ class LocalComponent(BaseAppComponent):
     """
     
     def _comp_init_property_values(self, property_values):
-        
         # This is a good time to register with the session, and
         # instantiate the proxy class. Property values have been set at this
         # point, but init() has not yet been called.
@@ -288,7 +294,7 @@ class LocalComponent(BaseAppComponent):
         self._comp_init_app_component(property_values)  # pops items 
         
         # Pop whether this local instance has a proxy at the other side
-        self._set_has_proxy(property_values.pop('flx_has_proxy', False))
+        self._has_proxy = property_values.pop('flx_has_proxy', False)
         
         # Call original method
         prop_events = super()._comp_init_property_values(property_values)
@@ -302,11 +308,6 @@ class LocalComponent(BaseAppComponent):
             self._ensure_proxy_instance()
         
         return prop_events
-    
-    def _set_has_proxy(self, has_proxy):
-        # Called from proxy class when it instantia
-        # todo: it seems that newly created proxies dont update this
-        self._has_proxy = has_proxy
     
     def _ensure_proxy_instance(self):
         """ Make the other end instantiate a proxy if necessary. This is e.g.
@@ -327,55 +328,56 @@ class LocalComponent(BaseAppComponent):
         
         In certain cases, it might be that the other end just lost its
         reference; this end's _has_proxy is True, and a new reference to this
-        component will fail to resolve. This can be countered by keeping hold
+        component will fail to resolve. This is countered by keeping hold
         of JsComponent proxy classes for at least one roundtrip (upon
         initialization as well as disposal).
         """
-        if not self._has_proxy:
-            self._session.send_command('INSTANTIATE', self.__jsmodule__,
-                                       self.__class__.__name__,
-                                       self._id, [], {})
-            self._has_proxy = True
-    
-    def _set_event_types_of_proxy(self, event_types):
-        self.__event_types_at_proxy = event_types
+        if self._has_proxy is False and self._disposed is False:
+            if self._session.status > 0:
+                self._session.send_command('INSTANTIATE', self.__jsmodule__,
+                                        self.__class__.__name__,
+                                        self._id, [], {})
+                self._has_proxy = True
     
     def emit(self, type, info=None):
-        # Overload emit() so we can send events to the proxy object at the other end
+        # Overload emit() to send events to the proxy object at the other end
         ev = super().emit(type, info)
         isprop = type in self.__properties__
-        if self._has_proxy is True and self._disposed is False:
+        if self._has_proxy is True and self._session.status > 0:
+            # implicit: and self._disposed is False:
             if isprop or type in self.__event_types_at_proxy:
-                self._session.send_command('INVOKE', self._id, '_emit_at_proxy', [ev])
+                self._session.send_command('INVOKE', self._id,
+                                           '_emit_at_proxy', [ev])
     
     def _dispose(self):
         # Let proxy side know that we no longer exist, and that it should
         # dispose too. Send regardless of whether we have a proxy!
-        # todo: check for _disposed everywhere where we try to send?
         was_disposed = self._disposed
         super()._dispose()
-        self._session._unregister_component(self)
         self._has_proxy = False  # because we will tell it to dispose
-        if was_disposed is False:
+        self._session._unregister_component(self)
+        if was_disposed is False and self._session.status > 0:
             self._session.send_command('DISPOSE', self._id)
-            # self._session.send_command('INVOKE', self._id, '_dispose', [])
+
+    def _flx_set_has_proxy(self, has_proxy):
+        self._has_proxy = has_proxy
+    
+    def _flx_set_event_types_at_proxy(self, event_types):
+        self.__event_types_at_proxy = event_types
     
     # todo: probably remove this, we have actions now!
     def call_js(self, call):
-        raise RuntimeError('call_js() is deprecated; use actions or session.send_command("INVOKE", ..).')
-
+        raise RuntimeError('call_js() is deprecated; '
+                           'use actions or session.send_command("INVOKE", ..).')
+    
 
 class ProxyComponent(BaseAppComponent):
     """
     Base class for JSComponent in Python and PyComponent in JavaScript.
-    
-    We keep a pool of these, and only really remove when disposed from JS, or
-    when the session closes. Or not? What if a JS component is deleted without
-    having been disposed?
     """
     
     def __init__(self, *init_args, **kwargs):
-        # Need to overload __init__() to handle init_args
+        # Need to overload this to handle init_args
         
         if this_is_js():
             # This is a proxy PyComponent in JavaScript.
@@ -417,6 +419,7 @@ class ProxyComponent(BaseAppComponent):
         """ To invoke actions on the real object.
         """
         assert not kwargs
+        # if self._session.status > 0, mmm, or rather error?
         self._session.send_command('INVOKE', self._id, name, args)
     
     def _mutate(self, *args, **kwargs):
@@ -435,8 +438,10 @@ class ProxyComponent(BaseAppComponent):
         """
         event_types = super()._registered_reactions_hook()
         try:
-            if not self._disposed:
-                self._session.send_command('INVOKE', self._id, '_set_event_types_of_proxy', [event_types])
+            if self._disposed is False and self._session.status > 0:
+                self._session.send_command('INVOKE', self._id,
+                                           '_flx_set_event_types_at_proxy',
+                                           [event_types])
         finally:
             return event_types
     
@@ -464,8 +469,10 @@ class ProxyComponent(BaseAppComponent):
         else:
             # Disposing a JsComponent from JS is like invoking an action;
             # we don't actually dispose ourselves just yet.
-            self._session.send_command('INVOKE', self._id, 'dispose', [])
-            # super().dispose()  don't!
+            if self._session.status > 0:
+                self._session.send_command('INVOKE', self._id, 'dispose', [])
+            else:
+                super().dispose()
     
     def _dispose(self):
         # This gets called by the session upon a DISPOSE command,
@@ -473,9 +480,10 @@ class ProxyComponent(BaseAppComponent):
         was_disposed = self._disposed
         super()._dispose()
         self._session._unregister_component(self)
-        if was_disposed is False:
+        if was_disposed is False and self._session.status > 0:
             # Let other side know that we no longer exist.
-            self._session.send_command('INVOKE', self._id, '_set_has_proxy', [False])
+            self._session.send_command('INVOKE', self._id,
+                                       '_flx_set_has_proxy', [False])
 
 
 class StubComponent(BaseAppComponent):
@@ -485,8 +493,6 @@ class StubComponent(BaseAppComponent):
     for whatever reason. These objects cannot really be used, but they can
     be moved around.
     """
-    
-    __jsmodule__ = __name__
     
     def __init__(self, session, id):
         super().__init__()
@@ -510,25 +516,42 @@ class PyComponent(with_metaclass(AppComponentMeta, LocalComponent)):
     """ Base component class that operates in Python, but is accessible
     in JavaScript, where its properties and events can be observed,
     and actions can be invoked.
+    
+    PyComponents can only be instantiated in Python, and always have
+    a corresponding proxy object in JS. PyComponents can be disposed only
+    from Python. Disposal also happens if the Python garbage collector
+    collects a PyComponent.
+    
     """
     
-    # the meta class will generate a PyComponent proxy class for JS
+    # The meta class generates a PyComponent proxy class for JS.
     
     def __repr__(self):
-        return "<PyComponent '%s' at 0x%x>" % (self._id, id(self))
+        d = ' (disposed)' if self._disposed else ''
+        return "<PyComponent '%s'%s at 0x%x>" % (self._id, d, id(self))
 
 
 class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
     """ Base component class that operates in JavaScript, but is accessible
     in Python, where its properties and events can be observed,
     and actions can be invoked.
+    
+    JsComponents can be instantiated from both JavaScript and Python. A
+    corresponding proxy component is not necessarily present in Python. It
+    is created automatically when needed (e.g. when referenced by a property).
+    A JsComponent can be explicitly disposed from both Python and JavaScript.
+    When the Python garbage collector collects a JsComponent (or really, the
+    proxy thereof), only the Python side proxy is disposed; the JsComponent
+    in JS itself will be unaffected.
+    
     """
     
-    # the meta class will generate a JsComponent local class for JS
-    # and move all props, actions, etc. to it
+    # The meta class will generate a JsComponent local class for JS
+    # and move all props, actions, etc. to it.
     
     def __repr__(self):
-        return "<JsComponent '%s' at 0x%x>" % (self._id, id(self))
+        d = ' (disposed)' if self._disposed else ''
+        return "<JsComponent '%s'%s at 0x%x>" % (self._id, d, id(self))
 
 
 class BsdfComponentExtension(bsdf.Extension):
@@ -557,7 +580,7 @@ class BsdfComponentExtension(bsdf.Extension):
             session.id = d['session_id']
             c = StubComponent(session, d['id'])
         else:
-            c = session.get_component_instance_by_id(d['id'])
+            c = session.get_component_instance(d['id'])
             if c is None:  # This should probably not happen
                 logger.warn('Using stub component for %s.' % d['id'])
                 c = StubComponent(session, d['id'])

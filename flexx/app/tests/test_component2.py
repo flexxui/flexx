@@ -9,6 +9,7 @@ from flexx.util.testing import run_tests_if_main, raises, skip
 
 class StubSession:
     id = 'y'
+    status = 2
     
     def _register_component(self, c, id=None):
         id = id or 'x'

@@ -144,6 +144,7 @@ class JsSession:
     def __init__(self, app_name, id, ws_url=None):
         self.app_name = app_name
         self.id = id
+        self.status = 1
         self.ws_url = ws_url
         self._component_counter = 0
         self._disposed_ob = {'_disposed': True}
@@ -174,7 +175,8 @@ class JsSession:
         if self._ws:  # is not null or undefined
             self._ws.close()
             self._ws = None
-            # flexx.instances.sessions.pop(self)  might be good, but perhaps not that much neede?
+            self.status = 0
+            # flexx.instances.sessions.pop(self)  might be good, but perhaps not that much need?
     
     def send_command(self, *command):
         if self._ws is not None:
@@ -211,18 +213,14 @@ class JsSession:
     def _unregister_component(self, c):
         pass  # c gets popped from self.instances by DISPOSE_ACK command
     
-    # todo: do we need a global version?
-    def get_instance(self, id):
+    def get_component_instance(self, id):
         """ Get instance of a Component class, or None. Or the document body
         if "body" is given.
         """
         if id == 'body':
             return window.document.body
         else:
-            c = self.instances.get(id, None)
-            if c == 'disposed':
-                c = None
-            return c
+            return self.instances.get(id, None)
     
     def initSocket(self):
         """ Make the connection to Python.
@@ -247,6 +245,7 @@ class JsSession:
         # Open web socket in binary mode
         self._ws = ws = WebSocket(self.ws_url)
         ws.binaryType = "arraybuffer"
+        self.status = 2
         
         def on_ws_open(evt):
             window.console.info('Socket opened with session id ' + self.id)
@@ -263,6 +262,7 @@ class JsSession:
                 self._pending_commands.push(msg)
         def on_ws_close(evt):
             self._ws = None
+            self.status = 0
             msg = 'Lost connection with server'
             if evt and evt.reason:
                 msg += ': %s (%i)' % (evt.reason, evt.code)
@@ -273,6 +273,7 @@ class JsSession:
                 window.console.info(msg)
         def on_ws_error(self, evt):
             self._ws = None
+            self.status = 0
             window.console.error('Socket error')
         
         # Connect

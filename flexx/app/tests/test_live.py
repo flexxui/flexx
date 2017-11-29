@@ -476,7 +476,7 @@ async def test_proxy_binding3():
     sub foo changed 6
     sub foo changed 7
     ? Using stub component
-    ? does not exist in this session
+    ? session does not know it 
     ----------
     """
     # Test that local components only send events when there is a proxy,
@@ -494,7 +494,7 @@ async def test_proxy_binding3():
     await roundtrip(s)
     
     # Now, we're pretend that to drop the instance
-    s.send_command('INVOKE', c2.id, '_set_has_proxy', [False])
+    s.send_command('INVOKE', c2.id, '_flx_set_has_proxy', [False])
     await roundtrip(s)
     
     # We don't get the events anymore
@@ -503,7 +503,7 @@ async def test_proxy_binding3():
     await roundtrip(s)
     
     # Re-establish
-    s.send_command('INVOKE', c2.id, '_set_has_proxy', [True])
+    s.send_command('INVOKE', c2.id, '_flx_set_has_proxy', [True])
     await roundtrip(s)
     
     # We get these
@@ -520,8 +520,7 @@ async def test_proxy_binding3():
     s.send_command('INVOKE', id2, 'set_foo', [9])
     await roundtrip(s)
 
-test_proxy_binding3()
-1/0
+
 ## Multi-session 
 
 

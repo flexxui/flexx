@@ -96,7 +96,6 @@ class Session:
         # PyComponent or JsComponent instance, can be None if app_name is __default__
         self._component = None
         
-        # todo: id assigning maybe no more?
         # The session assigns component id's, keeps track of component objects and
         # sometimes keeps them alive for a short while.
         self._component_counter = 0
@@ -156,7 +155,7 @@ class Session:
         """ The status of this session. The lifecycle for each session is:
 
         * status 1: pending
-        * statys 2: connected
+        * status 2: connected
         * status 0: closed
         """
         if self._ws is None:
@@ -317,7 +316,7 @@ class Session:
 
     ## Data
     
-    # todo: clean up
+    # todo: clean up, remove all, restore some of it?
     # def _send_data(self, id, data, meta):
     #     """ Send data to a component on the JS side. The corresponding object's
     #     receive_data() method is called when the data is available in JS.
@@ -356,67 +355,67 @@ class Session:
     #         raise TypeError('session.send_data() data must be a bytes or a URL, '
     #                         'not %s.' % data.__class__.__name__)
 
-   ##       # Tell JS to retrieve data
+    #       # Tell JS to retrieve data
     #     t = 'window.flexx.instances.%s.retrieve_data("%s", %s);'
     #     self._exec(t % (id, url, reprs(meta)))
 
-    def add_data(self, name, data):
-        """ Add data to serve to the client (e.g. images), specific to this
-        session. Returns the link at which the data can be retrieved.
-        See ``Session.send_data()`` for a send-and-forget mechanism, and
-        ``app.assets.add_shared_data()`` to provide shared data.
+    # def add_data(self, name, data):
+    #     """ Add data to serve to the client (e.g. images), specific to this
+    #     session. Returns the link at which the data can be retrieved.
+    #     See ``Session.send_data()`` for a send-and-forget mechanism, and
+    #     ``app.assets.add_shared_data()`` to provide shared data.
 
-        Parameters:
-            name (str): the name of the data, e.g. 'icon.png'. If data has
-                already been set on this name, it is overwritten.
-            data (bytes): the data blob.
+   ##       Parameters:
+    #         name (str): the name of the data, e.g. 'icon.png'. If data has
+    #             already been set on this name, it is overwritten.
+    #         data (bytes): the data blob.
 
-        Returns:
-            url: the (relative) url at which the data can be retrieved.
-        """
-        if not isinstance(name, str):
-            raise TypeError('Session.add_data() name must be a str.')
-        if name in self._data:
-            raise ValueError('Session.add_data() got existing name %r.' % name)
-        if not isinstance(data, bytes):
-            raise TypeError('Session.add_data() data must be bytes.')
-        self._data[name] = data
-        return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
+   ##       Returns:
+    #         url: the (relative) url at which the data can be retrieved.
+    #     """
+    #     if not isinstance(name, str):
+    #         raise TypeError('Session.add_data() name must be a str.')
+    #     if name in self._data:
+    #         raise ValueError('Session.add_data() got existing name %r.' % name)
+    #     if not isinstance(data, bytes):
+    #         raise TypeError('Session.add_data() data must be bytes.')
+    #     self._data[name] = data
+    #     return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
 
-    def remove_data(self, name):
-        """ Remove the data associated with the given name. If you need this,
-        also consider ``send_data()``. Also note that data is automatically
-        released when the session is closed.
-        """
-        self._data.pop(name, None)
+   ##   def remove_data(self, name):
+    #     """ Remove the data associated with the given name. If you need this,
+    #     also consider ``send_data()``. Also note that data is automatically
+    #     released when the session is closed.
+    #     """
+    #     self._data.pop(name, None)
 
-    def get_data_names(self):
-        """ Get a list of names of the data provided by this session.
-        """
-        return list(self._data.keys())
+   ##   def get_data_names(self):
+    #     """ Get a list of names of the data provided by this session.
+    #     """
+    #     return list(self._data.keys())
 
-    def get_data(self, name):
-        """ Get the data corresponding to the given name. This can be
-        data local to the session, or global data. Returns None if data
-        by that name is unknown.
-        """
-        if True:
-            data = self._data_volatile.pop(name, None)
-        if data is None:
-            data = self._data.get(name, None)
-        if data is None:
-            data = self._store.get_data(name)
-        return data
+   ##   def get_data(self, name):
+    #     """ Get the data corresponding to the given name. This can be
+    #     data local to the session, or global data. Returns None if data
+    #     by that name is unknown.
+    #     """
+    #     if True:
+    #         data = self._data_volatile.pop(name, None)
+    #     if data is None:
+    #         data = self._data.get(name, None)
+    #     if data is None:
+    #         data = self._store.get_data(name)
+    #     return data
 
-    def _export_data(self, dirname, clear=False):
-        """ Export all assets and data specific to this session.
-        Private method, used by app.export().
-        """
-        # Note that self.id will have been set to the app name.
-        assets = []
-        data = [(name, self.get_data(name)) for name in self.get_data_names()]
-        export_assets_and_data(assets, data, dirname, self.id, clear)
-        logger.info('Exported data for %r to %r.' % (self.id, dirname))
+   ##   def _export_data(self, dirname, clear=False):
+    #     """ Export all assets and data specific to this session.
+    #     Private method, used by app.export().
+    #     """
+    #     # Note that self.id will have been set to the app name.
+    #     assets = []
+    #     data = [(name, self.get_data(name)) for name in self.get_data_names()]
+    #     export_assets_and_data(assets, data, dirname, self.id, clear)
+    #     logger.info('Exported data for %r to %r.' % (self.id, dirname))
 
     ## Keeping track of component objects
 
@@ -424,7 +423,7 @@ class Session:
         """ Called by PyComponent and JsComponent to give them an id and register with the session.
         """
         assert isinstance(component, (PyComponent, JsComponent))
-        # todo: what to do instead of assert component.session is self
+        assert component.session is self
         cls = component.__class__
         # Set id
         if id is None:
@@ -436,25 +435,22 @@ class Session:
         self._component_instances[component._id] = component
         # Register the class to that the client has the needed definitions
         self._register_component_class(cls)
-        # self.keep_alive(component)  # we do it when instantiated from JS
+        # self.keep_alive(component)  # Only when instantiated from JS
     
     def _unregister_component(self, component):
-        self.keep_alive(component, 1)
+        self.keep_alive(component)
         # Because we use weak refs, and we want to be able to keep the object
         # so that INVOKE on it can be silently ignored (because it is disposed).
         # The object gets removed by the DISPOSE_ACK command.
     
-    def get_component_instance_by_id(self, id):
-        """ Get instance of PyComponent or JsComponent class
-        corresponding to the given id, or None if it does not exist.
+    def get_component_instance(self, id):
+        """ Get PyComponent or JsComponent instance that is associated with
+        this session and has the corresponding id. The returned value can be
+        None if it does not exist, and a returned component can be disposed.
         """
-        # todo: bla provided its used in this session or something
-        try:
-            return self._component_instances[id]
-        except KeyError:
-            return None
-
-    def keep_alive(self, ob, iters=4):
+        return self._component_instances.get(id, None)
+    
+    def keep_alive(self, ob, iters=1):
         """ Keep an object alive for a certain amount of time, expressed
         in Python-JS ping roundtrips. This is intended for making JsComponent
         (i.e. proxy components) survice the time between instantiation
@@ -567,7 +563,7 @@ class Session:
             logger.debug('Loading asset %s' % asset.name)
             # Determine command suffix. All our sources come in bundles,
             # for which we use eval because it makes sourceURL work on FF.
-            # todo: is still still an issue in FF 57+?
+            # todo: is still still an issue in Firefox 57+?
             suffix = asset.name.split('.')[-1].upper()
             if suffix == 'JS' and isinstance(asset, Bundle):
                 suffix = 'JS-EVAL'
@@ -604,7 +600,7 @@ class Session:
             logger.error('JS: ' + command[1] + ' (stack trace in browser console)')
         elif cmd == 'INVOKE':
             id, name, args = command[1:]
-            ob = self.get_component_instance_by_id(id)
+            ob = self.get_component_instance(id)
             if ob is None:
                 t = 'Cannot invoke %s.%s; session does not know it (anymore).'
                 logger.warn(t % (id, name))
@@ -619,7 +615,7 @@ class Session:
         elif cmd == 'INSTANTIATE':
             modulename, cname, id, args, kwargs = command[1:]
             # Maybe we still have the instance?
-            c = self.get_component_instance_by_id(id)
+            c = self.get_component_instance(id)
             if c and not c._disposed:
                 self.keep_alive(c)
                 return
@@ -641,7 +637,7 @@ class Session:
             self.keep_alive(c)
         elif cmd == 'DISPOSE':  # Gets send from local to proxy
             id = command[1]
-            c = self.get_component_instance_by_id(id)
+            c = self.get_component_instance(id)
             if c and not c._disposed:  # no need to warn if component does not exist
                 c._dispose()
             self.send_command('DISPOSE_ACK', command[1])
@@ -650,20 +646,6 @@ class Session:
             self._component_instances.pop(command[1], None)
         else:
             logger.error('Unknown command received from JS:\n%s' % command)
-    
-    # could be nice to have here, but maybe better to have in tester code, where
-    # it can be a function that waits for multiple sessions in paralel instead of
-    # in series.
-    # async def roundtrip(self):
-    #     """ Coroutine to await a roundtrip to all given sessions.
-    #     """
-    #     ok = []
-    #     def up():
-    #         ok.append(1)
-    #     self.call_after_roundtrip(up)
-    #     while len(ok) == 0:
-    #         await asyncio.sleep(0.02)
-    
     
     def call_after_roundtrip(self, callback, *args):
         """ A variant of ``call_soon()`` that calls a callback after
@@ -683,16 +665,6 @@ class Session:
         while len(self._ping_calls) > 0 and self._ping_calls[0][0] <= count:
             _, callback, args = self._ping_calls.pop(0)
             asyncio.get_event_loop().call_soon(callback, *args)
-    
-    def eval(self, code):
-        """ Evaluate the given JavaScript code in the client
-
-        Intended for use during development and debugging. Deployable
-        code should avoid making use of this function.
-        """
-        if self._ws is None:
-            raise RuntimeError('App not connected')
-        self.send_command('EVAL', code)
 
 
 ## Functions to get page

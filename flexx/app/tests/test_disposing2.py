@@ -1,7 +1,6 @@
 """ Test disposing of app Components.
 flexx/event/tests/test_disposing.py is focused on Component disposing by itself.
 The tests in this module focus on app Components.
-
 """
 
 import gc
