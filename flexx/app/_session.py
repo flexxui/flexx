@@ -13,7 +13,6 @@ import weakref
 import datetime
 from http.cookies import SimpleCookie
 
-from ..event import loop, Action
 from ..event._component import new_type
 
 from ._component2 import PyComponent, JsComponent, AppComponentMeta
@@ -359,68 +358,69 @@ class Session:
     #     t = 'window.flexx.instances.%s.retrieve_data("%s", %s);'
     #     self._exec(t % (id, url, reprs(meta)))
 
-    # def add_data(self, name, data):
-    #     """ Add data to serve to the client (e.g. images), specific to this
-    #     session. Returns the link at which the data can be retrieved.
-    #     See ``Session.send_data()`` for a send-and-forget mechanism, and
-    #     ``app.assets.add_shared_data()`` to provide shared data.
+    def add_data(self, name, data):
+        """ Add data to serve to the client (e.g. images), specific to this
+        session. Returns the link at which the data can be retrieved.
+        See ``Session.send_data()`` for a send-and-forget mechanism, and
+        ``app.assets.add_shared_data()`` to provide shared data.
 
-   ##       Parameters:
-    #         name (str): the name of the data, e.g. 'icon.png'. If data has
-    #             already been set on this name, it is overwritten.
-    #         data (bytes): the data blob.
+        Parameters:
+            name (str): the name of the data, e.g. 'icon.png'. If data has
+                already been set on this name, it is overwritten.
+            data (bytes): the data blob.
 
-   ##       Returns:
-    #         url: the (relative) url at which the data can be retrieved.
-    #     """
-    #     if not isinstance(name, str):
-    #         raise TypeError('Session.add_data() name must be a str.')
-    #     if name in self._data:
-    #         raise ValueError('Session.add_data() got existing name %r.' % name)
-    #     if not isinstance(data, bytes):
-    #         raise TypeError('Session.add_data() data must be bytes.')
-    #     self._data[name] = data
-    #     return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
+        Returns:
+            url: the (relative) url at which the data can be retrieved.
+        """
+        if not isinstance(name, str):
+            raise TypeError('Session.add_data() name must be a str.')
+        if name in self._data:
+            raise ValueError('Session.add_data() got existing name %r.' % name)
+        if not isinstance(data, bytes):
+            raise TypeError('Session.add_data() data must be bytes.')
+        self._data[name] = data
+        return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
 
-   ##   def remove_data(self, name):
-    #     """ Remove the data associated with the given name. If you need this,
-    #     also consider ``send_data()``. Also note that data is automatically
-    #     released when the session is closed.
-    #     """
-    #     self._data.pop(name, None)
+    def remove_data(self, name):
+        """ Remove the data associated with the given name. If you need this,
+        also consider ``send_data()``. Also note that data is automatically
+        released when the session is closed.
+        """
+        self._data.pop(name, None)
 
-   ##   def get_data_names(self):
-    #     """ Get a list of names of the data provided by this session.
-    #     """
-    #     return list(self._data.keys())
+    def get_data_names(self):
+        """ Get a list of names of the data provided by this session.
+        """
+        return list(self._data.keys())
 
-   ##   def get_data(self, name):
-    #     """ Get the data corresponding to the given name. This can be
-    #     data local to the session, or global data. Returns None if data
-    #     by that name is unknown.
-    #     """
-    #     if True:
-    #         data = self._data_volatile.pop(name, None)
-    #     if data is None:
-    #         data = self._data.get(name, None)
-    #     if data is None:
-    #         data = self._store.get_data(name)
-    #     return data
+    def get_data(self, name):
+        """ Get the data corresponding to the given name. This can be
+        data local to the session, or global data. Returns None if data
+        by that name is unknown.
+        """
+        if True:
+            data = self._data_volatile.pop(name, None)
+        if data is None:
+            data = self._data.get(name, None)
+        if data is None:
+            data = self._store.get_data(name)
+        return data
 
-   ##   def _export_data(self, dirname, clear=False):
-    #     """ Export all assets and data specific to this session.
-    #     Private method, used by app.export().
-    #     """
-    #     # Note that self.id will have been set to the app name.
-    #     assets = []
-    #     data = [(name, self.get_data(name)) for name in self.get_data_names()]
-    #     export_assets_and_data(assets, data, dirname, self.id, clear)
-    #     logger.info('Exported data for %r to %r.' % (self.id, dirname))
+    def _export_data(self, dirname, clear=False):
+        """ Export all assets and data specific to this session.
+        Private method, used by app.export().
+        """
+        # Note that self.id will have been set to the app name.
+        assets = []
+        data = [(name, self.get_data(name)) for name in self.get_data_names()]
+        export_assets_and_data(assets, data, dirname, self.id, clear)
+        logger.info('Exported data for %r to %r.' % (self.id, dirname))
 
     ## Keeping track of component objects
 
     def _register_component(self, component, id=None):
-        """ Called by PyComponent and JsComponent to give them an id and register with the session.
+        """ Called by PyComponent and JsComponent to give them an id
+        and register with the session.
         """
         assert isinstance(component, (PyComponent, JsComponent))
         assert component.session is self
@@ -458,12 +458,13 @@ class Session:
         of object can be given.
         """
         # The object is kept alive as part of the args of a callback function
-        def call_keep_alive(ob, iters):
-            if iters > 1:
-                self.keep_alive(ob, iters-1)
-        self.call_after_roundtrip(call_keep_alive, ob, iters)
+        self.call_after_roundtrip(self._call_keep_alive, ob, iters)
     
-   ## JIT asset definitions
+    def _call_keep_alive(self, ob, iters):
+        if iters > 1:
+            self.keep_alive(ob, iters-1)
+    
+    ## JIT asset definitions
 
     def _register_component_class(self, cls):
         """ Mark the given PyComponent or JsComponent class as used; ensure
@@ -472,7 +473,8 @@ class Session:
         modules.
         """
         if not (isinstance(cls, type) and issubclass(cls, (PyComponent, JsComponent))):
-            raise TypeError('_register_component_class() needs a PyComponent or JsComponent class')
+            raise TypeError('_register_component_class() needs a PyComponent '
+                            'or JsComponent class')
         # Early exit if we know the class already
         if cls in self._present_classes:
             return
@@ -490,9 +492,10 @@ class Session:
             same_name.append(cls)
             is_dynamic_cls = all([c.__module__ == '__main__' for c in same_name])
             if not (is_interactive and is_dynamic_cls):
-                raise RuntimeError('Cannot have multiple Component classes with the same '
-                                   'name unless using interactive session and the '
-                                   'classes are dynamically defined: %r' % same_name)
+                raise RuntimeError('Cannot have multiple Component classes with '
+                                   'the same name unless using interactive session '
+                                   'and the classes are dynamically defined: %r'
+                                   % same_name)
 
         # Mark the class and the module as used
         logger.debug('Registering Component class %r' % cls.__name__)
@@ -605,7 +608,7 @@ class Session:
                 t = 'Cannot invoke %s.%s; session does not know it (anymore).'
                 logger.warn(t % (id, name))
             elif ob._disposed:
-                pass  # JS probably send something before it knew that the object was dead
+                pass  # JS probably send something before knowing the object was dead
             else:
                 func = getattr(ob, name, None)
                 if func:
@@ -631,7 +634,8 @@ class Session:
                 elif cls not in AppComponentMeta.CLASSES:
                     cls, e = None, 3
             if cls is None:
-                raise RuntimeError('Cannot INSTANTIATE %s.%s (%i)' % (modulename, cname, e))
+                raise RuntimeError('Cannot INSTANTIATE %s.%s (%i)' %
+                                   (modulename, cname, e))
             # Instantiate
             c = cls(flx_session=self, flx_id=id)
             self.keep_alive(c)
@@ -654,7 +658,7 @@ class Session:
         """
         ping_to_schedule_at = self._ping_counter + 1
         if len(self._ping_calls) == 0 or self._ping_calls[-1][0] < ping_to_schedule_at:
-            asyncio.get_event_loop().call_soon(self._send_ping)
+            weak_call_to_ping(self)
         self._ping_calls.append((ping_to_schedule_at, callback, args))
     
     def _send_ping(self):
@@ -665,6 +669,16 @@ class Session:
         while len(self._ping_calls) > 0 and self._ping_calls[0][0] <= count:
             _, callback, args = self._ping_calls.pop(0)
             asyncio.get_event_loop().call_soon(callback, *args)
+
+
+def weak_call_to_ping(session):
+    # This is to prevent session from being discarded due to a ref
+    # lingering in an asyncio loop.
+    def x(weaksession):
+        s = weaksession()
+        if s is not None:
+            s._send_ping()
+    asyncio.get_event_loop().call_soon(x, weakref.ref(session))
 
 
 ## Functions to get page

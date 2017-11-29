@@ -243,7 +243,8 @@ class AssetStore:
         # Create asset for bsdf - we replace the UMD loader code with flexx.define()
         import os
         import bsdf
-        code = open(os.path.join(bsdf.__file__, '..', '..', 'javascript', 'bsdf.js'), 'rb').read().decode()
+        bsdf_fname = os.path.join(bsdf.__file__, '..', '..', 'javascript', 'bsdf.js')
+        code = open(bsdf_fname, 'rb').read().decode()
         code = code.split('"use strict";\n', 1)[1]
         code = 'flexx.define("bsdf", [], (function () {\n"use strict";\n' + code
         asset_bsdf = Asset('bsdf.js', code)

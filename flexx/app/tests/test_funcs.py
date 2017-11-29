@@ -1,10 +1,9 @@
 from flexx.util.testing import run_tests_if_main, raises
 
 import time
+import asyncio
 import threading
 import multiprocessing
-
-from tornado.ioloop import IOLoop
 
 from flexx import app, event
 
@@ -29,28 +28,28 @@ def test_restarting():
             res.append('RTE')
         
     # Create new ioloop always
-    loop = IOLoop()
-    loop.make_current()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     # Make Flexx use it
     server = app.create_server()
     
-    app.call_later(0, add_res, 1)
-    app.call_later(0, add_res, 2)
-    app.call_later(0, app.stop)  # actually, just calling stop() would work as well
+    loop.call_soon(add_res, 1)
+    loop.call_soon(add_res, 2)
+    loop.call_soon(app.stop)  # actually, just calling stop() would work as well
     app.start()
     assert server._running == False
     
-    app.call_later(0, try_start)  # test that cannot start twice
-    app.call_later(0, add_res, 3)
-    app.call_later(0, add_res, 4)
-    app.call_later(0, app.stop)
+    loop.call_soon(try_start)  # test that cannot start twice
+    loop.call_soon(add_res, 3)
+    loop.call_soon(add_res, 4)
+    loop.call_soon(app.stop)
     app.start()
     assert server._running == False
     
-    app.call_later(0, try_start)  # test that cannot start twice
-    app.call_later(0, add_res, 5)
-    app.call_later(0, add_res, 6)
-    app.call_later(0, app.stop)
+    loop.call_soon(try_start)  # test that cannot start twice
+    loop.call_soon(add_res, 5)
+    loop.call_soon(add_res, 6)
+    loop.call_soon(app.stop)
     app.start()
     assert server._running == False
     
@@ -64,8 +63,8 @@ def test_more_stopping():
     # This is why you want to create new IOLoop instances for each test
     
     # Create new ioloop and make Flexx use it
-    loop = IOLoop()
-    loop.make_current()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     server = app.create_server()
     
     app.stop()  # triggers event to stop
@@ -75,13 +74,13 @@ def test_more_stopping():
     
     # Which means the next stop does hardly block
     t0 = time.time()
-    app.call_later(0.2, app.stop)
+    loop.call_later(0.2, app.stop)
     app.start()
     assert time.time() - t0 < 0.1
     
     
-    loop = IOLoop()
-    loop.make_current()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     server = app.create_server()
     
     # But stops dont stack
@@ -96,7 +95,7 @@ def test_more_stopping():
     
     # ... so that we now have an expected loop
     t0 = time.time()
-    app.call_later(0.2, app.stop)
+    loop.call_later(0.2, app.stop)
     app.start()
     assert time.time() - t0 >= 0.1
 
@@ -110,8 +109,8 @@ def test_rebinding_ioloop():
         res.append(i)
     
     # Create new ioloop
-    loop = IOLoop()
-    loop.make_current()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     
     # Create new flexx server, which binds to that loop
     server1 = app.create_server()
@@ -120,8 +119,8 @@ def test_rebinding_ioloop():
     assert loop is server1._loop
     
     # Create new ioloop
-    loop = IOLoop()
-    loop.make_current()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     
     # This is a new loop
     assert loop is not server1._loop
@@ -139,15 +138,15 @@ def test_flexx_in_thread1():
     """
     
     def main():
-        loop2.make_current()
+        asyncio.set_event_loop(loop2)
         app.create_server()
     
     # Create 3 loops, nr 2 is made current in the thread
-    loop1 = IOLoop()
-    loop2 = IOLoop()
-    loop3 = IOLoop()
+    loop1 = asyncio.new_event_loop()
+    loop2 = asyncio.new_event_loop()
+    loop3 = asyncio.new_event_loop()
     
-    loop1.make_current()
+    asyncio.set_event_loop(loop1)
     server1 = app.create_server()
     
     t = threading.Thread(target=main)
@@ -155,7 +154,7 @@ def test_flexx_in_thread1():
     t.join()
     server2 = app.current_server()  # still current as set by the thread
     
-    loop3.make_current()
+    asyncio.set_event_loop(loop3)
     server3 = app.create_server()
     
     assert server1._loop is loop1
@@ -168,32 +167,33 @@ def test_flexx_in_thread2():
     """
     res = []
     
-    class MyModel1(event.HasEvents):
-        @event.prop
-        def foo(self, v=0):
-            return v
+    class MyModel1(event.Component):
+        foo = event.IntProp(0, settable=True)
         
-        @event.connect('foo')
+        @event.reaction('foo')
         def on_foo(self, *events):
             for ev in events:
                 res.append(ev.new_value)
     
     def main():
         # Create fresh ioloop and make flexx use it
-        loop = IOLoop()
-        loop.make_current()
+        # event.loop.reset()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         app.create_server()
         # Create model and manipulate prop
         model = MyModel1()
-        model.foo = 3
-        model.foo = 4
+        model.set_foo(3)
+        model.set_foo(4)
         # Run mainloop for one iterartion
-        app.call_later(0, app.stop)
+        loop.call_later(0.2, app.stop)
         app.start()
 
     t = threading.Thread(target=main)
+    event.loop.reset()
     t.start()
     t.join()
+    event.loop.integrate()
     
     assert res == [0, 3, 4]
 
@@ -205,9 +205,9 @@ def test_flexx_in_thread3():
     
     def main():
         # Create fresh ioloop and make flexx use it
-        loop = IOLoop()
-        loop.make_current()
-        app.create_server()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        app.create_server()  # calls event.loop.integrate()
         app.start()
     
     def try_start():
@@ -220,7 +220,7 @@ def test_flexx_in_thread3():
         try:
             main()
         except RuntimeError:
-            res.append('create-fail')
+            res.append('create-fail')  # because create_server() cannot close current
 
     t = threading.Thread(target=main)
     t.start()
@@ -246,7 +246,6 @@ def test_flexx_in_thread3():
     # Stop
     app.stop()  # Start does not work, but we can stop it!
     t.join()  # Otherwise it would never join
-    
     # Note that we cannot start it right after calling stop, because it wont
     # stop *at once*. We need to join first.
     
@@ -258,8 +257,8 @@ def test_flexx_in_thread4():
     """
     res = []
     
-    loop = IOLoop()
-    loop.make_current()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     app.create_server()
     
     def try_start():
@@ -272,7 +271,7 @@ def test_flexx_in_thread4():
             res.append('start-ok')
     
     def main():
-        app.create_server()
+        app.create_server(loop=asyncio.new_event_loop())
         try_start()
     
     # Try to start server that was created in other thread -> fail
@@ -289,25 +288,32 @@ def test_flexx_in_thread4():
 
 
 def test_flexx_in_thread5():
-    """ Test using new_loop for easier use.
+    """ Test using loop arg for easier use.
     """
     res = []
     
-    server = app.create_server(new_loop=True)
+    server = app.create_server(loop=asyncio.new_event_loop())
     assert server.serving
-    assert server.loop is not IOLoop.current()
+    # note: mmmm, I don;t particularly like this, but need it to get Tornado working
+    assert server._loop is asyncio.get_event_loop()
     
     def main():
-        app.stop()
-        app.start()
-        assert server.loop is IOLoop.current()
-        res.append(3)
+        # likewise, we cannot do this atm
+        # app.stop()
+        # app.start()
+        try:
+            curloop = asyncio.get_event_loop()
+        except RuntimeError:
+            res.append(4)
+        else:
+            assert server._loop is curloop
+            res.append(3)
     
     t = threading.Thread(target=main)
     t.start()
     t.join()
     
-    assert res == [3]
+    assert res == [4]
 
 
 def multiprocessing_func():

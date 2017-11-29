@@ -16,6 +16,9 @@ class StubSession:
         c._id = id
         c._uid = self.id + '_' + id
     
+    def _unregister_component(self, c):
+        pass
+    
     def send_command(self, *command):
         pass
     

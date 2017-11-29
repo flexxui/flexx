@@ -3,16 +3,13 @@ from flexx.util.testing import run_tests_if_main, raises
 from flexx import app, event
 
 
-class MyPropClass1(app.Model):
-    @event.prop
-    def foo(self, v=1):
-        return v
+class MyPropClass1(app.PyComponent):
+    foo = event.IntProp(1, settable=True)
 
 
 class MyPropClass2(MyPropClass1):
     def init(self, foo_val=11):
-        self.foo = foo_val
-
+        self.set_foo(foo_val)
 
 
 def test_launching_with_props():
@@ -29,10 +26,12 @@ def test_launching_with_props():
 def test_launching_with_init_args():
     
     m = app.launch(MyPropClass2)
+    event.loop.iter()
     assert m.foo == 11
     m.session.close()
     
     m = app.App(MyPropClass2, 13).launch()
+    event.loop.iter()
     assert m.foo == 13
     m.session.close()
 

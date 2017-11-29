@@ -94,25 +94,32 @@ class AbstractServer:
     """
     
     def __init__(self, host, port, loop=None, **kwargs):
-       # First off, create new event loop and integrate event.loop
+        # First off, create new event loop and integrate event.loop
         if loop is None:
             self._loop = asyncio.get_event_loop()
         else:
             assert isinstance(loop, asyncio.AbstractEventLoop)
             self._loop = loop
         asyncio.set_event_loop(self._loop)
-        _loop.loop.integrate(self._loop)
+        _loop.loop.integrate(self._loop, reset=False)
         
         self._serving = None
         if host is not False:
             self._open(host, port, **kwargs)
             assert self._serving  # Check that subclass set private variable
-        self._running = False
+    
+    @property
+    def _running(self):
+        return self._loop.is_running()
     
     def start(self):
         """ Start the event loop. """
         if not self._serving:
             raise RuntimeError('Cannot start a closed or non-serving server!')
+        if self._running:
+            raise RuntimeError('Cannot start a running server.')
+        if asyncio.get_event_loop() is not self._loop:
+            raise RuntimeError('Can only start server in same thread that created it.')
         # Make use of the semi-standard defined by IPython to determine
         # if the ioloop is "hijacked" (e.g. in Pyzo).
         if not getattr(self._loop, '_in_event_loop', False):
@@ -121,7 +128,7 @@ class AbstractServer:
     def stop(self):
         """ Stop the event loop. This does not close the connection; the server
         can be restarted. Thread safe. """
-        self._loop.stop()
+        self._loop.call_soon_threadsafe(self._loop.stop)
     
     def close(self):
         """ Close the connection. A closed server cannot be used again. """

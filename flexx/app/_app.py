@@ -323,7 +323,7 @@ class AppManager(event.Component):
             if sessions:
                 return sessions[-1]
 
-    def _clear_old_pending_sessions(self):
+    def _clear_old_pending_sessions(self, max_age=30):
         try:
 
             count = 0
@@ -332,7 +332,7 @@ class AppManager(event.Component):
                     continue
                 _, pending, _ = self._appinfo[name]
                 to_remove = [s for s in pending
-                             if (time.time() - s._creation_time) > 30]
+                             if (time.time() - s._creation_time) > max_age]
                 for s in to_remove:
                     self._session_map.pop(s.id, None)
                     pending.remove(s)

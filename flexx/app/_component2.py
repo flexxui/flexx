@@ -5,10 +5,8 @@ PyComponent and JsComponent classes (and their proxies).
 """
 
 import sys
-import json
-import threading
 
-from ..pyscript import window, JSString, undefined, this_is_js
+from ..pyscript import window, JSString, this_is_js
 
 from .. import event
 
@@ -18,7 +16,6 @@ from ..event._component import (with_metaclass, ComponentMeta)
 from ..event._property import Property
 from ..event._emitter import EmitterDescriptor
 from ..event._action import ActionDescriptor
-from ..event._reaction import ReactionDescriptor
 from ..event._js import create_js_component_class
 
 from ._asset import get_mod_name
@@ -94,6 +91,9 @@ class AppComponentMeta(ComponentMeta):
     
     def _init_hook(cls, cls_name, bases, dct):
         
+        # Take CSS from the class now
+        CSS = cls.__dict__.get('CSS', '')
+        
         # Create corresponding class for JS
         if issubclass(cls, LocalComponent):
             cls._make_js_proxy_class(cls_name, bases, dct)
@@ -108,8 +108,12 @@ class AppComponentMeta(ComponentMeta):
         cls.JS.__jsmodule__ = cls.__jsmodule__  # need it in JS too
         
         # Set JS.CODE and CSS
+        cls.CSS = CSS
+        try:
+            delattr(cls.JS, 'CSS')
+        except AttributeError:
+            pass
         cls.JS.CODE = cls._get_js()
-        cls.CSS = cls.__dict__.get('CSS', '')
         
         # Register this class. The classes in this list will be automatically
         # "pushed to JS" in a JIT fashion. We have to make sure that we include
@@ -119,7 +123,7 @@ class AppComponentMeta(ComponentMeta):
     def _make_js_proxy_class(cls, cls_name, bases, dct):
         
         for c in bases:
-           assert not issubclass(cls, ProxyComponent)
+            assert not issubclass(cls, ProxyComponent)
         
         # Fix inheritance for JS variant
         jsbases = [getattr(b, 'JS') for b in cls.__bases__ if hasattr(b, 'JS')]
@@ -137,7 +141,7 @@ class AppComponentMeta(ComponentMeta):
             elif isinstance(val, EmitterDescriptor):
                 pass  # no emitters on the proxy side
             elif isinstance(val, ActionDescriptor):
-                 jsdict[name] = make_proxy_action(val)  # proxy actions
+                jsdict[name] = make_proxy_action(val)  # proxy actions
             else:
                 pass  # no reactions/functions/class attributes on the proxy side
         
@@ -147,7 +151,7 @@ class AppComponentMeta(ComponentMeta):
     def _make_js_local_class(cls, cls_name, bases, dct):
         
         for c in bases:
-           assert not issubclass(cls, LocalComponent)
+            assert not issubclass(cls, LocalComponent)
         
         # Fix inheritance for JS variant
         jsbases = [getattr(b, 'JS') for b in cls.__bases__ if hasattr(b, 'JS')]
@@ -267,6 +271,9 @@ class BaseAppComponent(Component):
             active = loop.get_active_component()
             if active is not None:
                 self._session = active._session
+            else:
+                if not this_is_js():
+                    self._session = manager.get_default_session()
         
         # Register this component with the session (sets _id and _uid)
         if self._session is None:
@@ -398,7 +405,7 @@ class ProxyComponent(BaseAppComponent):
         local_inst = self._comp_init_app_component(property_values)  # pops items 
         
         # Call original method
-        prop_events = super()._comp_init_property_values({})
+        prop_events = super()._comp_init_property_values({})  # noqa - we return [] 
         
         if this_is_js():
             # This is a proxy PyComponent in JavaScript
@@ -413,7 +420,7 @@ class ProxyComponent(BaseAppComponent):
                                            self._flx_init_args, property_values)
             del self._flx_init_args
         
-        return [] # prop_events - Proxy class does not emit events by itself
+        return []  # prop_events - Proxy class does not emit events by itself
     
     def _proxy_action(self, name, *args, **kwargs):
         """ To invoke actions on the real object.
@@ -603,7 +610,7 @@ class BsdfComponentExtension(bsdf.Extension):
             session = dict(id=d['session_id'])
             c = StubComponent(session, d['id'])
         else:
-            c = session.get_instance(d['id'])
+            c = session.get_component_instance(d['id'])
             if c is None:
                 logger.warn('Using stub component for %s.' % d['id'])
                 c = StubComponent(session, d['id'])

@@ -18,7 +18,7 @@ from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
 from tornado.websocket import WebSocketHandler
 from tornado.httpserver import HTTPServer
-from  tornado.platform.asyncio import AsyncIOLoop, AsyncIOMainLoop
+from tornado.platform.asyncio import AsyncIOMainLoop
 
 from ._app import manager
 from ._session import get_page

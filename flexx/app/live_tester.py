@@ -57,7 +57,7 @@ def run_live(func):
         loop.reset()
         #asyncio_loop = asyncio.get_event_loop()
         asyncio_loop = asyncio.new_event_loop()
-        server = app.create_server(port=0, loop=asyncio_loop)
+        app.create_server(port=0, loop=asyncio_loop)
         
         print('running', func.__name__, '...', end='')
         orig_stdout = sys.stdout

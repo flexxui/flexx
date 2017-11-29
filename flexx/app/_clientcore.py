@@ -3,7 +3,7 @@ The client's core Flexx engine, implemented in PyScript.
 """
 
 from ..pyscript import this_is_js, RawJS
-from ..pyscript.stubs import window, undefined, time
+from ..pyscript.stubs import window, undefined, time, console, JSON
 
 # This module gets transpiled to JavaScript as a whole
 __pyscript__ = True
@@ -38,9 +38,9 @@ class Flexx:
     def init(self):
         """ Called after document is loaded. """
         # Create div to put dynamic CSS assets in
-        self._asset_node = window.document.createElement("div")
-        self._asset_node.id = 'Flexx asset container'
-        window.document.body.appendChild(self._asset_node)
+        self.asset_node = window.document.createElement("div")
+        self.asset_node.id = 'Flexx asset container'
+        window.document.body.appendChild(self.asset_node)
         
         if self.is_exported:
             if self.is_notebook:
@@ -176,7 +176,8 @@ class JsSession:
             self._ws.close()
             self._ws = None
             self.status = 0
-            # flexx.instances.sessions.pop(self)  might be good, but perhaps not that much need?
+            # flexx.instances.sessions.pop(self) might be good,
+            # but perhaps not that much need, and leaving is nice for debugging.
     
     def send_command(self, *command):
         if self._ws is not None:
@@ -194,7 +195,7 @@ class JsSession:
         if c is not None and c._disposed is False:
             return c
         # Find the class
-        m = flexx.require(module)
+        m = window.flexx.require(module)
         Cls = m[cname]  # noqa
         # Instantiate
         kwargs['flx_session'] = self
@@ -302,7 +303,7 @@ class JsSession:
                     break
     
     def _receive_raw_command(self, msg):
-        return self._receive_command( serializer.decode(msg))
+        return self._receive_command(serializer.decode(msg))
     
     def _receive_command(self, command):
         """ Process a command send from the server.
@@ -335,7 +336,7 @@ class JsSession:
                 console.warn('Cannot invoke %s.%s; '
                              'session does not know it (anymore).' % (id, name))
             elif ob._disposed is True:
-                 pass  # deleted, but other end might not be aware when command was send
+                pass  # deleted, but other end might not be aware when command was send
             else:
                 ob[name](*args)
         elif cmd == 'INSTANTIATE':
@@ -365,13 +366,13 @@ class JsSession:
                 el = window.document.createElement("script")
                 el.id = name
                 el.innerHTML = code
-                self._asset_node.appendChild(el)
+                window.flexx.asset_node.appendChild(el)
             elif kind == 'CSS':
                 el = window.document.createElement("style")
                 el.type = "text/css"
                 el.id = name
                 el.innerHTML = code
-                self._asset_node.appendChild(el)
+                window.flexx.asset_node.appendChild(el)
             else:
                 window.console.error('Dont know how to DEFINE ' +
                                      name + ' with "' + kind + '".')
@@ -405,7 +406,8 @@ class JsSession:
             window.setTimeout(callback, 0, *args)
 
 
-# todo: in bsdf there is utf8 encode/decode code, check which is better, put that in bsdf, and use it here
+# todo: in bsdf there is utf8 encode/decode code,
+# check which is better, put that in bsdf, and use it here
 def decodeUtf8(arrayBuffer):
     RawJS("""
     var result = "",

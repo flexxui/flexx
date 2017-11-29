@@ -12,7 +12,7 @@ import shutil
 from flexx.util.testing import run_tests_if_main, raises
 from flexx.util.logging import capture_log
 
-from flexx import ui, app
+from flexx import app
 from flexx.app._modules import JSModule
 
 tempdirname = os.path.join(tempfile.gettempdir(), 'flexx_module_test')
@@ -40,13 +40,12 @@ files['foo'] = """
     def do_more():
         return atan(1) + random(magic_number)
     
-    class Foo(app.Model):
+    class Foo(app.JsComponent):
         
         CSS = ".foo-css-rule {}"
         
-        class JS:
-            def init(self):
-                do_something()
+        def init(self):
+            do_something()
 """
 
 files['bar'] = """
@@ -77,8 +76,11 @@ files['bar'] = """
         pass
     
     def cannot_transpile():
-        with AA(object):  # no with-statement in Flexx
-            pass
+        # functionality not supported by PyScript. Note that some may be at some point
+        f"format strings"
+        {'no', 'set', 'in', 'js'}
+        a[1:2:3]  # no slicing with step
+        import xx
     
     cannot_serialize = [1, 2, use_lib1]
     
@@ -168,9 +170,9 @@ def teardown_module():
     
     # Remove trace of these classes, since their source no longer exists,
     # Pyscript wont be able to resolve them for JS
-    for cls in list(app.Model.CLASSES):
+    for cls in list(app._component2.AppComponentMeta.CLASSES):
         if cls.__jsmodule__.startswith(PKG_NAME + '.'):
-            app.Model.CLASSES.remove(cls)
+            app._component2.AppComponentMeta.CLASSES.remove(cls)
 
 
 def test_modules():
@@ -186,17 +188,17 @@ def test_modules():
     # Add Foo, this will bring everything else in
     m.add_variable('Foo')
     
-    assert len(m.model_classes) == 1
-    assert m.model_classes.pop().__name__ == 'Foo'
+    assert len(m.component_classes) == 1
+    assert m.component_classes.pop().__name__ == 'Foo'
     
     # Modules exists
-    assert len(store) == 7
+    assert len(store) == 6
     assert 'flxtest.foo' in store
     assert 'flxtest.lib1' in store
     assert 'flxtest.lib2' in store
     assert 'flxtest.lib3' in store
     assert 'flxtest.__init__' in store  # different from how Python works!
-    assert 'flexx.app._model' in store  # + what it depends on
+    assert 'flexx.app._component2' in store
     
     # CSS
     assert 'foo-css-rule' in store['flxtest.foo'].get_css()
@@ -243,7 +245,7 @@ def test_modules():
     m.add_variable('do_more')
     
     # Now, lib4 is used
-    assert len(store) == 8
+    assert len(store) == 7
     assert 'flxtest.lib4' in store
     
     # And names added in foo
@@ -272,7 +274,7 @@ def test_misc():
     #
     m.add_variable('Foo')
     assert len(m.deps) == 3
-    assert 'flexx.app._model' in m.deps
+    assert 'flexx.app._component2' in m.deps
 
 
 def test_add_variable():
@@ -356,7 +358,7 @@ def test_subclasses():
     #
     m.add_variable('Spam')
     assert 'flxtest.foo' in store
-    assert 'flexx.app._model' in store
+    assert 'flexx.app._component2' in store
     
     # Using Foo in modules that imports it
     store = {}
@@ -365,7 +367,7 @@ def test_subclasses():
     #
     m.add_variable('Foo')
     assert 'flxtest.foo' in store
-    assert 'flexx.app._model' in store
+    assert 'flexx.app._component2' in store
 
 
 def test_fails():

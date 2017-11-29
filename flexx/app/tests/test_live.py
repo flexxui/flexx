@@ -14,6 +14,10 @@ from flexx.app.live_tester import run_live, roundtrip, launch
 from flexx.event import loop
 
 
+def setup_module():
+    app.manager._clear_old_pending_sessions(1)
+
+
 class PyComponentA(app.PyComponent):
     
     foo = event.IntProp(settable=True)
@@ -251,9 +255,14 @@ async def test_jscomponent_prop1():
     """
     c, s = launch(JsComponentA)
     
+    # Note: set_foo() immediately sends an INVOKE command. If the
+    # subsequent (now commented) EVAL command is not handled in the same
+    # event loop iter, the value will already have been updated.
+    
+    s.send_command('EVAL', c.id, 'foo')
     c.set_foo(3)
     print(c.foo)
-    s.send_command('EVAL', c.id, 'foo')
+    # s.send_command('EVAL', c.id, 'foo')
     loop.iter()
     print(c.foo)  # still not set
     await roundtrip(s)

@@ -23,6 +23,9 @@ def start():
     Start the server and event loop. This function generally does not
     return until the application is stopped (although it may in
     interactive environments (e.g. Pyzo)).
+    
+    In more detail, this calls run_forever() on the asyncio event loop
+    associated with the current server.
     """
     server = current_server()
     logger.info('Starting Flexx event loop.')
@@ -42,7 +45,7 @@ def run():
 def stop():
     """
     Stop the event loop. This function is thread safe (it can be used
-    even if ``flexx.start()`` was called from another thread). 
+    even if ``app.start()`` was called from another thread). 
     The server can be restarted after it has been stopped. Note that
     calling ``stop()`` too often will cause a subsequent call to `start()``
     to return almost immediately.

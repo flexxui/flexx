@@ -9,7 +9,8 @@ import json
 import time
 import types
 
-from ..pyscript import py2js, JSString, RawJS, JSConstant, create_js_module, get_all_std_names
+from ..pyscript import (py2js, JSString, RawJS, JSConstant, create_js_module,
+                        get_all_std_names)
 from ..event import Component, loop
 from ..event._js import create_js_component_class
 
@@ -303,7 +304,8 @@ class JSModule:
             js = JSString(js)
             js.meta = funccode.meta
             self._pyscript_code[name] = js
-            self._deps.setdefault('flexx.app._clientcore', ['flexx.app._clientcore']).append('serializer')
+            self._deps.setdefault('flexx.app._clientcore',
+                                 ['flexx.app._clientcore']).append('serializer')
         
         elif isinstance(val, pyscript_types) and hasattr(val, '__module__'):
             # Looks like something we can convert using PyScript
@@ -358,7 +360,8 @@ class JSModule:
             t = 'JS in "%s" uses %r but cannot convert %s to JS.'
             raise ValueError(t % (self.filename, name, val.__class__))
     
-    def _collect_dependencies(self, _dep_stack, vars_unknown=None, vars_global=None, **kwargs):
+    def _collect_dependencies(self, _dep_stack,
+                              vars_unknown=None, vars_global=None, **kwargs):
         """
         Collect dependencies corresponding to names used in the JS.
         """
@@ -383,7 +386,8 @@ class JSModule:
                 return
             elif base_cls is Component:
                 return self._add_dep_from_event_module('Component')
-            m = self._import(get_mod_name(base_cls), base_cls.__name__, base_cls.__name__)
+            m = self._import(get_mod_name(base_cls),
+                             base_cls.__name__, base_cls.__name__)
             m.add_variable(base_cls.__name__)  # note: m can be self, which is ok
     
     def _add_dep_from_event_module(self, name, asname=None):

@@ -9,11 +9,11 @@ import sys
 import tempfile
 import shutil
 
-from flexx.util.testing import run_tests_if_main, raises
+from flexx.util.testing import run_tests_if_main, raises, skip
 
 from flexx.app._asset import solve_dependencies, get_mod_name, module_is_package
 from flexx.util.logging import capture_log
-from flexx import ui, app
+from flexx import app
 
 
 N_STANDARD_ASSETS = 3
@@ -26,8 +26,8 @@ class WTF:
 
 
 def test_get_mod_name(): 
-    assert get_mod_name(app.Model) == 'flexx.app._model'
-    assert get_mod_name(app._model) == 'flexx.app._model'
+    assert get_mod_name(app.PyComponent) == 'flexx.app._component2'
+    assert get_mod_name(app._component2) == 'flexx.app._component2'
     assert get_mod_name(app) == 'flexx.app.__init__'
 
 
@@ -189,7 +189,10 @@ def test_lazy_asset():
 
 def test_bundle():
     
-    from flexx import ui
+    try:
+        from flexx import ui
+    except ImportError:
+        skip('no flexx.ui')
     
     store = {}
     m1 = app.JSModule('flexx.ui.widgets._button', store)

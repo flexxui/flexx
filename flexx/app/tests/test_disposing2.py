@@ -18,6 +18,10 @@ from flexx.event import loop
 from flexx.app import PyComponent, JsComponent
 
 
+def setup_module():
+    app.manager._clear_old_pending_sessions(1)
+
+
 class MyPyComponent(PyComponent):
     
     def _dispose(self):
@@ -33,8 +37,8 @@ class MyJsComponent(JsComponent):
 
 
 def check_alive(s, id1, id2):
-    print(getattr(s.get_component_instance_by_id(id1), 'id', None))
-    print(getattr(s.get_component_instance_by_id(id2), 'id', None))
+    print(getattr(s.get_component_instance(id1), 'id', None))
+    print(getattr(s.get_component_instance(id2), 'id', None))
     s.send_command('EVAL', 'flexx.s1.instances.%s && flexx.s1.instances.%s.id || null' % (id1, id1))
     s.send_command('EVAL', 'flexx.s1.instances.%s && flexx.s1.instances.%s.id || null' % (id2, id2))
 
