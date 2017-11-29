@@ -153,7 +153,7 @@ def test_loop_asyncio():
     import asyncio
     
     aio_loop = asyncio.new_event_loop()
-    loop.integrate(aio_loop)
+    loop.integrate(aio_loop, reset=False)
     
     res = []
     def callback():
@@ -167,7 +167,7 @@ def test_loop_asyncio():
     
     # Now run wrong loop
     aio_loop = asyncio.new_event_loop()
-    # loop.integrate(aio_loop)  -> dont do this (yet)
+    # loop.integrate(aio_loop, reset=False)  -> dont do this (yet)
     
     loop.call_soon(callback)
     aio_loop.stop()
@@ -175,7 +175,7 @@ def test_loop_asyncio():
     
     assert len(res) == 1
     
-    loop.integrate(aio_loop)  # but do it now
+    loop.integrate(aio_loop, reset=False)  # but do it now
     aio_loop.stop()
     aio_loop.run_forever()
     

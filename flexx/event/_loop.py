@@ -7,7 +7,6 @@ event loop such as tornado or Qt.
 # These are there to avoid inefficient JS code as this code is transpiled
 # using PyScript. This code is quite performance crirical.
 
-import sys
 import asyncio
 import threading
 
@@ -45,7 +44,6 @@ class Loop:
         # limit its use to context managers, and execution should never be
         # handed back to the event loop while inside a context.
         self._local = threading.local()
-        self._local._active_components = []
         self.reset()
         self.integrate()
     
@@ -105,9 +103,23 @@ class Loop:
         # Make sure to call this with the lock
         if self._scheduled_call_to_iter is False:
             self._scheduled_call_to_iter = True
-            self._call_soon_func(self.iter)
+            self._call_soon_func(self._iter_callback)
     
     def call_soon(self, func, *args):
+        """ Arrange for a callback to be called as soon as possible.
+        The callback is called after ``call_soon()`` returns, when control
+        returns to the event loop.
+
+        This operates as a FIFO queue, callbacks are called in the order in
+        which they are registered. Each callback will be called exactly once.
+
+        Any positional arguments after the callback will be passed to
+        the callback when it is called.
+        
+        This method is thread-safe: the callback will be called in the thread
+        corresponding with the loop. It is therefore actually more similar to
+        asyncio's ``call_soon_threadsafe()``.
+        """
         with self._lock:
             self._pending_calls.append(func)
             self._schedule_iter()
@@ -209,6 +221,12 @@ class Loop:
             raise RuntimeError('Flexx is supposed to run a single event loop a once.')
         return True
     
+    def _iter_callback(self):
+        if threading.get_ident() != self._thread_id:
+            return  # probably an old pending callback
+        self._scheduled_call_to_iter = False
+        self.iter()
+    
     # We need a way to run our own little event system, because we cannot do
     # async in JavaScript. Therefore this is public, and therefore call_soon()
     # invokations are queued locally instead of being delegated to asyncio.
@@ -218,12 +236,12 @@ class Loop:
         in separate queues, and are handled in the aforementioned order.
         """
         with self._lock:
-            self._scheduled_call_to_iter = False
             self._thread_match(True)
         
         # Guard against inproper use
         if self._in_iter is True:
-            raise RuntimeError('Cannot call flexx.event.loop.iter() while it is processing.')
+            raise RuntimeError('Cannot call flexx.event.loop.iter() while it '
+                               'is processing.')
         
         self._in_iter = True
         try:
@@ -316,20 +334,27 @@ class Loop:
     
     ## Integration
     
-    def integrate(self, loop=None):
+    def integrate(self, loop=None, reset=True):
         """ Integrate the Flexx event system with the given asyncio
         event loop (or the default one). Also binds the event system
         to the current thread.
         
-        Does not call reset(). In fact, it should be possible to
-        hot-swap the system from one loop (and/or thread) to another.
+        From this point, any (pending) calls to the iter callback by the 
+        previous thread will be ignored.
+        
+        By not calling reset, it should be possible to hot-swap the
+        system from one loop (and/or thread) to another.
         """
         if loop is None:
             loop = asyncio.get_event_loop()
         with self._lock:
             self._thread_id = threading.get_ident()
+            self._local._active_components = []
             self._call_soon_func = loop.call_soon_threadsafe
-            self._call_soon_func(self.iter)
+            self._call_soon_func(self._iter_callback)
+            if reset:
+                self.reset()
+
     
     # Below is deprecated, but I leavae it here for a bit; we may want to
     # revive some of it.

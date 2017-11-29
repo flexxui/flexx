@@ -193,7 +193,7 @@ class ComponentProp(Property):
     _default = None
     
     def _validate(self, value):
-        if not (value is None or isinstance(value, Component)):
+        if not (value is None or hasattr(value, '_IS_COMPONENT')):
             raise TypeError('Component property cannot accept %r.' % value)
         return value
 
@@ -240,6 +240,3 @@ for name, cls in list(globals().items()):
         __all__.append(name)
 
 del name, cls
-
-# Delayed import; deal with circular ref
-from ._component import Component

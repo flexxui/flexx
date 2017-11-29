@@ -108,6 +108,10 @@ class LoopJS:  # pragma: no cover
     
     def _call_soon_func(self, func):
         setTimeout(func, 0)
+    
+    def _iter_callback(self):
+        self._scheduled_call_to_iter = False
+        return self.iter()
 
 
 class ComponentJS:  # pragma: no cover
@@ -334,7 +338,8 @@ class ComponentJS:  # pragma: no cover
 
 ## Compile functions
 
-OK_MAGICS = (# Specific to Flexx
+OK_MAGICS = (
+             # Specific to Flexx
              '__attributes__', '__properties__', '__actions__',
              '__emitters__', '__reactions__', '__jsmodule__',
              # Functions that make sense
@@ -515,7 +520,7 @@ JS_COMPONENT = mc.update(_create_js_class(Component, ComponentJS))
 JS_EVENT = JS_FUNCS + JS_LOGGER + JS_LOOP + JS_COMPONENT
 JS_EVENT = mc.attach_meta(JS_EVENT.replace('    ', '\t'))
 del mc
-
+assert JS_LOOP.count('._scheduled_call_to_iter') > 2  # prevent error after refactor
 
 if __name__ == '__main__':
     
