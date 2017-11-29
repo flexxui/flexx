@@ -256,7 +256,6 @@ class AssetStore:
         if getattr(self, '_test_mode', False):
             return
         
-        # todo: need for big bundle seems less, since we push via ws anyway?
         # Create flexx-core bootstrap bundle
         self.update_modules()  # to collect _component2 and _clientcore
         asset_core = Bundle('flexx-core.js')
@@ -264,7 +263,6 @@ class AssetStore:
         asset_core.add_asset(asset_bsdf)
         asset_core.add_asset(asset_pyscript)
         asset_core.add_asset(asset_event)
-        # todo: add flexx.event here to access loop? What about logger?
         asset_core.add_module(self.modules['flexx.app._clientcore'])
         asset_core.add_module(self.modules['flexx.app._component2'])
         self.add_shared_asset(asset_core)
