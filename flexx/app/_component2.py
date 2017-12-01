@@ -43,6 +43,16 @@ def make_proxy_action(action):
     return flx_proxy_action  # ActionDescriptor(flx_proxy_action, flx_name, '')
 
 
+def make_proxy_emitter(emitter):
+    # Note: the flx_prefixes are picked up by the code in flexx.event that
+    # compiles component classes, so it can fix /insert the name for JS.
+    flx_name = emitter._name
+    def flx_proxy_emitter(self, *args):
+        self._proxy_emitter(flx_name, *args)
+    flx_proxy_emitter.__doc__ = emitter.__doc__  # todo: or emitter._doc?
+    return flx_proxy_emitter  # EmitterDescriptor(flx_proxy_emitter, flx_name, '')
+
+
 def get_component_classes():
     """ Get a list of all known PyComponent and JsComponent subclasses.
     """
@@ -139,7 +149,7 @@ class AppComponentMeta(ComponentMeta):
             elif isinstance(val, Property):
                 jsdict[name] = val  # properties are the same
             elif isinstance(val, EmitterDescriptor):
-                pass  # no emitters on the proxy side
+                jsdict[name] = make_proxy_emitter(val)  # proxy emitter
             elif isinstance(val, ActionDescriptor):
                 jsdict[name] = make_proxy_action(val)  # proxy actions
             else:
@@ -168,9 +178,11 @@ class AppComponentMeta(ComponentMeta):
                   name.endswith('_validate'))):
                 jsdict[name] = val  # properties are the same
             elif isinstance(val, EmitterDescriptor):
-                pass  # todo: create stub emitters for doc purposes
+                # JS part gets the proper emitter, Py side gets a proxy
+                jsdict[name] = val
+                setattr(cls, name, make_proxy_emitter(val))
             elif isinstance(val, ActionDescriptor):
-                # JS part gets the proper action, Py side gets a proxy action
+                # JS part gets the proper action, Py side gets a proxy
                 jsdict[name] = val
                 setattr(cls, name, make_proxy_action(val))
             else:
@@ -362,9 +374,10 @@ class LocalComponent(BaseAppComponent):
         was_disposed = self._disposed
         super()._dispose()
         self._has_proxy = False  # because we will tell it to dispose
-        self._session._unregister_component(self)
-        if was_disposed is False and self._session.status > 0:
-            self._session.send_command('DISPOSE', self._id)
+        if was_disposed is False and self._session is not None:
+            self._session._unregister_component(self)
+            if self._session.status > 0:
+                self._session.send_command('DISPOSE', self._id)
 
     def _flx_set_has_proxy(self, has_proxy):
         self._has_proxy = has_proxy
@@ -373,9 +386,9 @@ class LocalComponent(BaseAppComponent):
         self.__event_types_at_proxy = event_types
     
     # todo: probably remove this, we have actions now!
-    def call_js(self, call):
-        raise RuntimeError('call_js() is deprecated; '
-                           'use actions or session.send_command("INVOKE", ..).')
+    # def call_js(self, call):
+    #     raise RuntimeError('call_js() is deprecated; '
+    #                        'use actions or session.send_command("INVOKE", ..).')
     
 
 class ProxyComponent(BaseAppComponent):
@@ -429,7 +442,17 @@ class ProxyComponent(BaseAppComponent):
         # if self._session.status > 0, mmm, or rather error?
         self._session.send_command('INVOKE', self._id, name, args)
     
-    def _mutate(self, *args, **kwargs):
+    def _proxy_emitter(self, name, *args, **kwargs):
+        """ To handle use of placeholder emitters.
+        """
+        # todo: I am not sure yet whether to allow or disallow it. We disallow now;
+        # we can always INVOKE the emitter at the other side if that proves needed
+        if this_is_js():
+            logger.error('Cannot use emitters of a PyComponent in JS.')
+        else:
+            logger.error('Cannot use emitters of a JsComponent in Py.')
+        
+    def _mutate(self, *args, **kwargs):  # pragma: no cover
         """ Disable mutations on the proxy class.
         """
         raise RuntimeError('Cannot mutate properties from a proxy class.')
@@ -486,11 +509,12 @@ class ProxyComponent(BaseAppComponent):
         # or on Python from __delete__ (via call_soon).
         was_disposed = self._disposed
         super()._dispose()
-        self._session._unregister_component(self)
-        if was_disposed is False and self._session.status > 0:
-            # Let other side know that we no longer exist.
-            self._session.send_command('INVOKE', self._id,
-                                       '_flx_set_has_proxy', [False])
+        if was_disposed is False and self._session is not None:
+            self._session._unregister_component(self)
+            if self._session.status > 0:
+                # Let other side know that we no longer exist.
+                self._session.send_command('INVOKE', self._id,
+                                           '_flx_set_has_proxy', [False])
 
 
 class StubComponent(BaseAppComponent):
@@ -595,15 +619,15 @@ class BsdfComponentExtension(bsdf.Extension):
     
     # The name and below methods get collected to produce a JS BSDF extension
     
-    def match_js(self, c):
+    def match_js(self, c):  # pragma: no cover
         return isinstance(c, BaseAppComponent)
 
-    def encode_js(self, c):
+    def encode_js(self, c):  # pragma: no cover
         if isinstance(c, JsComponent):  # i.e. LocalComponent in JS
             c._ensure_proxy_instance()
         return dict(session_id=c._session.id, id=c._id)
     
-    def decode_js(self, d):
+    def decode_js(self, d):  # pragma: no cover
         c = None
         session = window.flexx.sessions.get(d['session_id'], None)
         if session is None:

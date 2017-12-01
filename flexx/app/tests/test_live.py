@@ -27,10 +27,18 @@ class PyComponentA(app.PyComponent):
     def greet(self, msg):
         print('hi', msg)
     
+    @event.emitter
+    def bar_event(self, v):
+        return dict(value=v)
+    
     @event.reaction
     def _on_foo(self):
         if self.sub is not None:
             print('sub foo changed', self.sub.foo)
+    
+    @event.reaction('bar_event')
+    def _on_bar(self, *events):
+        print('got bar event', [ev.value for ev in events])
 
 
 class JsComponentA(app.JsComponent):
@@ -42,10 +50,21 @@ class JsComponentA(app.JsComponent):
     def greet(self, msg):
         print('hi', msg)
     
+    @event.emitter
+    def bar_event(self, v):
+        return dict(value=v)
+    
     @event.reaction
     def _on_foo(self):
         if self.sub is not None:
             print('sub foo changed', self.sub.foo)
+    
+    @event.reaction('bar_event')
+    def _on_bar(self, *events):
+        for ev in events:
+            print('got bar event', ev.value)
+        # Hard to guarantee that events from Py get handled in same iter
+        #print('got bar event', [ev.value for ev in events])
 
 
 class PyComponentC(PyComponentA):
@@ -175,6 +194,36 @@ async def test_pycomponent_reaction2():
     await roundtrip(s)
     print(c2.foo)
     
+    await roundtrip(s)
+
+
+@run_live
+async def test_pycomponent_emitter1():
+    """
+    got bar event [6, 7]
+    got bar event [8, 9]
+    ----------
+    ? Cannot use emitter
+    ? Cannot use emitter
+    ? Cannot use emitter
+    ? Cannot use emitter
+    """
+    c, s = launch(PyComponentA)
+    
+    c.bar_event(6)
+    c.bar_event(7)
+    await roundtrip(s)
+    
+    c.bar_event(8)
+    c.bar_event(9)
+    await roundtrip(s)
+    
+    s.send_command('INVOKE', c.id, 'bar_event', [16])
+    s.send_command('INVOKE', c.id, 'bar_event', [17])
+    await roundtrip(s)
+    
+    s.send_command('INVOKE', c.id, 'bar_event', [18])
+    s.send_command('INVOKE', c.id, 'bar_event', [19])
     await roundtrip(s)
 
 
@@ -323,6 +372,38 @@ async def test_jscomponent_reaction2():
     await roundtrip(s)
     print(c2.foo)
     
+    await roundtrip(s)
+
+
+@run_live
+async def test_jscomponent_emitter1():
+    """
+    ? Cannot use emitter
+    ? Cannot use emitter
+    ? Cannot use emitter
+    ? Cannot use emitter
+    ----------
+    got bar event 16
+    got bar event 17
+    got bar event 18
+    got bar event 19
+    """
+    c, s = launch(JsComponentA)
+    
+    c.bar_event(6)
+    c.bar_event(7)
+    await roundtrip(s)
+    
+    c.bar_event(8)
+    c.bar_event(9)
+    await roundtrip(s)
+    
+    s.send_command('INVOKE', c.id, 'bar_event', [16])
+    s.send_command('INVOKE', c.id, 'bar_event', [17])
+    await roundtrip(s)
+    
+    s.send_command('INVOKE', c.id, 'bar_event', [18])
+    s.send_command('INVOKE', c.id, 'bar_event', [19])
     await roundtrip(s)
 
 

@@ -170,6 +170,18 @@ def test_properties():
     assert MyJComponent2.JS.__reactions__ == ['track_foo']
 
 
+def test_cannot_instantiate_without_session():
+    
+    app.manager.remove_default_session()
+    
+    with raises(RuntimeError) as err:
+        PyComponent()
+    assert 'needs a session!' in str(err)
+    
+    with raises(RuntimeError) as err:
+        JsComponent()
+    assert 'needs a session!' in str(err)
+
 
 def test_generated_js():
     m = app.assets.modules['flexx.app._component2']
@@ -182,6 +194,17 @@ def test_generated_js():
                        'LocalComponent', 'ProxyComponent', 'StubComponent',
                        'PyComponent', 'JsComponent']
     print(classes)
+
+
+def test_misc():
+    clss = app.get_component_classes()
+    assert PyComponent in clss and JsComponent in clss
+    assert LocalComponent not in clss and ProxyComponent not in clss
+    assert BaseAppComponent not in clss
+    
+    # Assert that the list is a copy
+    clss.remove(PyComponent)
+    assert PyComponent in app.get_component_classes()
 
 
 run_tests_if_main()

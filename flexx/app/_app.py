@@ -287,7 +287,7 @@ class AppManager(event.Component):
             raise RuntimeError('The default session can only be created once.')
 
         if cls is None:
-            cls = JsComponent  # todo: allow PyComponent?
+            cls = JsComponent  # Could also be a PyComponent, I guess
         if not isinstance(cls, type) and issubclass(cls, JsComponent):
             raise TypeError('create_default_session() needs a JsComponent subclass.')
 
@@ -306,7 +306,15 @@ class AppManager(event.Component):
         session._set_app(component_instance)
 
         return session
-
+    
+    def remove_default_session(self):
+        """ Remove default session if there is one, closing the session.
+        """
+        s = self.get_default_session()
+        if s is not None:
+            s.close()
+        self._appinfo.pop('__default__', None)
+    
     def get_default_session(self):
         """ Get the default session that is used for interactive use.
         Returns None unless create_default_session() was called earlier.

@@ -232,7 +232,7 @@ def clean_dirs():
                 except ValueError:
                     continue  # we probably did not make this
                 if pid not in pids:
-                    remove(path)
+                    remove(path, True)
     
     # Remove lockfiles in runtime dirs
     dirs_with_lockfiles = set()
