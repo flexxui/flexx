@@ -11,6 +11,7 @@ import types
 
 from ..pyscript import (py2js, JSString, RawJS, JSConstant, create_js_module,
                         get_all_std_names)
+from ..pyscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
 from ..event import Component, loop
 from ..event._js import create_js_component_class
 
@@ -406,7 +407,10 @@ class JSModule:
             js = [cls.JS.CODE for cls in self._component_classes.values()]
             js += list(self._pyscript_code.values())
             js.sort(key=lambda x: x.meta['linenr'])
-            # todo: collect stdlib funcs here
+            used_std_functions, used_std_methods = set(), set()
+            for code in js:
+                used_std_functions.update(code.meta['std_functions'])
+                used_std_methods.update(code.meta['std_methods'])
             # Insert serialized values
             value_lines = []
             for key in sorted(self._js_values):
@@ -428,12 +432,17 @@ class JSModule:
                     pieces = ['%s = %s.%s' % (as_name, mod_name, name)]
                     js.insert(0, 'var ' + (', '.join(pieces)) + ';')
             # Import stdlib
-            # todo: either include only std of what we use, or use _py.xxx
-            # todo: !!! this is so ugly!
             func_names, method_names = get_all_std_names()
-            pre1 = ', '.join(['%s = _py.%s' % (n, n) for n in func_names])
-            pre2 = ', '.join(['%s = _py.%s' % (n, n) for n in method_names])
-            js.insert(0, 'var %s;\nvar %s;' % (pre1, pre2))
+            pre1 = ', '.join(['%s%s = _py.%s%s' %
+                              (FUNCTION_PREFIX, n, FUNCTION_PREFIX, n)
+                              for n in sorted(used_std_functions)])
+            pre2 = ', '.join(['%s%s = _py.%s%s' %
+                              (METHOD_PREFIX, n,METHOD_PREFIX,  n)
+                              for n in sorted(used_std_methods)])
+            if pre2:
+                js.insert(0, 'var %s;' % pre2)
+            if pre1:
+                js.insert(0, 'var %s;' % pre1)
             # Create module
             self._js_cache = create_js_module(self.name, '\n\n'.join(js),
                                               imports, exports, 'amd-flexx')

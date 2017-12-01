@@ -410,6 +410,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     
     # Collect meta information of all code pieces that we collect
     mc = MetaCollector()
+    mc.meta['std_functions'].add('op_instantiate')  # b/c we use get_class_definition
     
     total_code = []
     funcs_code = []  # functions and emitters go below class constants
