@@ -8,6 +8,7 @@ import sys
 import json
 import time
 import types
+import logging
 
 from ..pyscript import (py2js, JSString, RawJS, JSConstant, create_js_module,
                         get_all_std_names)
@@ -210,8 +211,6 @@ class JSModule:
             return  # avoid dependency recursion
         elif name in self._provided_names and self.name != '__main__':
             return  # in __main__ we allow redefinitions
-        # elif name in ('Component', 'loop'):
-        #     return self._add_dep_from_event_module(name)
         if getattr(self._pymodule, '__pyscript__', False):
             return  # everything is transpiled and exported already
         _dep_stack.append(name)
@@ -232,8 +231,8 @@ class JSModule:
             return  # stubs
         elif val is loop:
             return self._add_dep_from_event_module('loop', name)
-        elif name == 'logger':  # todo: hehe, we can do more here
-            return self._add_dep_from_event_module('logger')
+        elif isinstance(val, logging.Logger):  # todo: hehe, we can do more here
+            return self._add_dep_from_event_module('logger', name)
         elif val is None and not is_global:  # pragma: no cover
             logger.warn('JS in "%s" uses variable %r that is None; '
                         'I will assume its a stub and ignore it. Declare %s '
@@ -437,7 +436,7 @@ class JSModule:
                               (FUNCTION_PREFIX, n, FUNCTION_PREFIX, n)
                               for n in sorted(used_std_functions)])
             pre2 = ', '.join(['%s%s = _py.%s%s' %
-                              (METHOD_PREFIX, n,METHOD_PREFIX,  n)
+                              (METHOD_PREFIX, n, METHOD_PREFIX, n)
                               for n in sorted(used_std_methods)])
             if pre2:
                 js.insert(0, 'var %s;' % pre2)
