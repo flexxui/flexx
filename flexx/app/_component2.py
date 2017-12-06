@@ -593,16 +593,16 @@ class BsdfComponentExtension(bsdf.Extension):
     name = 'flexx.app.component'
     cls = BaseAppComponent  # PyComponent, JsComponent, StubComponent
     
-    def match(self, c):
+    def match(self, s, c):
         # This is actually the default behavior, but added for completenes
         return isinstance(c, self.cls)
     
-    def encode(self, c):
+    def encode(self, s, c):
         if isinstance(c, PyComponent):  # i.e. LocalComponent in Python
             c._ensure_proxy_instance()
         return dict(session_id=c._session.id, id=c._id)
     
-    def decode(self, d):
+    def decode(self, s, d):
         c = None
         session = manager.get_session_by_id(d['session_id'])
         if session is None:
@@ -619,15 +619,15 @@ class BsdfComponentExtension(bsdf.Extension):
     
     # The name and below methods get collected to produce a JS BSDF extension
     
-    def match_js(self, c):  # pragma: no cover
+    def match_js(self, s, c):  # pragma: no cover
         return isinstance(c, BaseAppComponent)
 
-    def encode_js(self, c):  # pragma: no cover
+    def encode_js(self, s, c):  # pragma: no cover
         if isinstance(c, JsComponent):  # i.e. LocalComponent in JS
             c._ensure_proxy_instance()
         return dict(session_id=c._session.id, id=c._id)
     
-    def decode_js(self, d):  # pragma: no cover
+    def decode_js(self, s, d):  # pragma: no cover
         c = None
         session = window.flexx.sessions.get(d['session_id'], None)
         if session is None:
