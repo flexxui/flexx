@@ -58,6 +58,10 @@ class ComponentMeta(type):
         """
         pass
     
+    def _set_cls_attr(cls, dct, name, att):
+        dct[name] = att
+        setattr(cls, name, att)
+    
     def _finish_properties(cls, dct):
         """ Finish properties:
         
@@ -65,7 +69,7 @@ class ComponentMeta(type):
         * Create validator function.
         * If needed, create a corresponding set_xx action.
         """
-        for name in dct:
+        for name in list(dct.keys()):
             if name.startswith('__'):
                 continue
             val = getattr(cls, name)
@@ -77,15 +81,15 @@ class ComponentMeta(type):
             elif isinstance(val, Property):
                 val._set_name(name)  # noqa
                 # Create validator method
-                setattr(cls, '_' + name + '_validate', val._validate)
+                cls._set_cls_attr(dct, '_' + name + '_validate', val._validate)
                 # Create mutator method
-                setattr(cls, '_mutate_' + name, val.make_mutator())
+                cls._set_cls_attr(dct, '_mutate_' + name, val.make_mutator())
                 # Create setter action?
                 action_name = 'set_' + name
                 if val._settable and not hasattr(cls, action_name):
                     action_des = ActionDescriptor(val.make_set_action(), action_name,
                                                 'Setter for %s.' % name)
-                    setattr(cls, action_name, action_des)
+                    cls._set_cls_attr(dct, action_name, action_des)
     
     def _set_summaries(cls):
         """ Analyse the class and set lists __actions__, __emitters__,
