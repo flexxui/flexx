@@ -48,7 +48,7 @@ class ComponentMeta(type):
     """
     
     def __init__(cls, name, bases, dct):
-        cls._finish_properties()
+        cls._finish_properties(dct)
         cls._init_hook(name, bases, dct)
         cls._set_summaries()
         type.__init__(cls, name, bases, dct)
@@ -58,14 +58,14 @@ class ComponentMeta(type):
         """
         pass
     
-    def _finish_properties(cls):
+    def _finish_properties(cls, dct):
         """ Finish properties:
         
         * Create a mutator function for convenience.
         * Create validator function.
         * If needed, create a corresponding set_xx action.
         """
-        for name in dir(cls):
+        for name in dct:
             if name.startswith('__'):
                 continue
             val = getattr(cls, name)

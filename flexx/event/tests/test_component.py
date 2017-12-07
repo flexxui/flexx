@@ -3,6 +3,7 @@
 
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
 from flexx.event.both_tester import run_in_both, this_is_js
+from flexx.event._js import create_js_component_class
 
 from flexx.event import mutate_array, Dict
 from flexx import event
@@ -48,7 +49,11 @@ class Bar(event.Component):
     @event.emitter  # deliberately define it twice
     def a_emitter(self, v):
         return {'x':1}
-    
+
+
+class Bar2(Bar):
+    pass
+
 
 @run_in_both(FooSubclass)
 def test_component_id1():
@@ -276,7 +281,7 @@ def test_that_methods_starting_with_on_are_not_autoconverted():
     # Because we did that at some point
     
     # There is also a warning, but seems a bit of a fuzz to test
-    class Foo(event.Component):
+    class Foo3(event.Component):
         
         def on_foo(self, *events):
             pass
@@ -285,7 +290,7 @@ def test_that_methods_starting_with_on_are_not_autoconverted():
         def on_bar(self, *events):
             pass
     
-    foo = Foo()
+    foo = Foo3()
     assert isinstance(foo.on_bar, event.Reaction)
     assert not isinstance(foo.on_foo, event.Reaction)
 
@@ -508,6 +513,21 @@ def test_mutate_array2():
     
     mutate_array(a, dict(mutation='replace', index=(1, 2), objects=np.zeros((2,2))))
     print(list(a.flat))
+
+
+def test_produced_js():
+    js1 = create_js_component_class(Bar, 'Bar')
+    js2 = create_js_component_class(Bar2, 'Bar2')
+    
+    assert '__properties__ = ["a_prop"]' in js1
+    assert '__properties__ = ["a_prop"]' in js2
+    assert js1.count('a_prop') >= 3
+    assert js2.count('a_prop') == 1
+    
+    assert '__actions__ = ["a_action"]' in js1
+    assert '__actions__ = ["a_action"]' in js2
+    assert js1.count('a_action') >= 2
+    assert js2.count('a_action') == 1
 
 
 run_tests_if_main()
