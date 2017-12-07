@@ -99,8 +99,12 @@ class AppComponentMeta(ComponentMeta):
     
     def _init_hook(cls, cls_name, bases, dct):
         
-        # Take CSS from the class now
-        CSS = cls.__dict__.get('CSS', '')
+        # cls is the class to be
+        # cls.__dict__ is its current dict, which may contain inherited items
+        # dct is the dict represented by exactly this class (no inheritance)
+        
+        # Get CSS from the class now
+        CSS = dct.get('CSS', '')
         
         # Create corresponding class for JS
         if issubclass(cls, LocalComponent):
@@ -141,7 +145,7 @@ class AppComponentMeta(ComponentMeta):
         
         # Copy properties from this class to the JS proxy class.
         # in Python 3.6 we iterate in the order in which the items are defined,
-        for name, val in cls.__dict__.items():
+        for name, val in dct.items():
             if name.startswith('__') and name.endswith('__'):
                 continue
             elif isinstance(val, Property):
@@ -169,7 +173,7 @@ class AppComponentMeta(ComponentMeta):
         
         # Copy properties from this class to the JS proxy class.
         # in Python 3.6 we iterate in the order in which the items are defined,
-        for name, val in list(cls.__dict__.items()):
+        for name, val in list(dct.items()):
             if name.startswith('__') and name.endswith('__'):
                 if name not in ('__init__'):
                     continue
@@ -189,6 +193,7 @@ class AppComponentMeta(ComponentMeta):
                 jsdict[name] = val
                 delattr(cls, name)
                 dct.pop(name, None)  # is this necessary? 
+        
         
         # Create JS class
         cls.JS = ComponentMetaJS(cls_name, tuple(jsbases), jsdict)
