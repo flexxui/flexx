@@ -233,9 +233,9 @@ def test_module_loading1():
     Mb = m1.make_component_class('Mbb')
     Mc = m2.make_component_class('Mcc')
     
-    s._register_component(Ma(s))
-    s._register_component(Mb(s))
-    s._register_component(Mc(s))
+    s._register_component(Ma(flx_session=s))
+    s._register_component(Mb(flx_session=s))
+    s._register_component(Mc(flx_session=s))
     
     assert s.assets_js == add_prefix(['foo.m1.js', 'foo.m2.js'])
     assert s.assets_css == add_prefix(['foo.m1.css', 'foo.m2.css'])
@@ -256,7 +256,7 @@ def test_module_loading2():
     # m2.deps = add_prefix(['foo.m3'])
     # m3.deps = add_prefix(['foo.m1'])
     
-    s._register_component(Ma(s))
+    s._register_component(Ma(flx_session=s))
     
     assert s.assets_js == add_prefix(['foo.m2.js'])
 
@@ -276,7 +276,7 @@ def test_module_loading3():
     m2.deps = add_prefix(['foo.m3'])
     m3.deps = add_prefix(['foo.m1'])
     
-    s._register_component(Ma(s))
+    s._register_component(Ma(flx_session=s))
     
     assert s.assets_js == add_prefix(['foo.m1.js', 'foo.m3.js', 'foo.m2.js'])
 
@@ -298,7 +298,7 @@ def test_module_loading4():
     Mb = m3.make_component_class('Mb', Ma)
     Mc = m1.make_component_class('Mc', Mb)
     
-    s._register_component(Mc(s))
+    s._register_component(Mc(flx_session=s))
     
     assert s.assets_js == add_prefix(['foo.m2.js', 'foo.m3.js', 'foo.m1.js'])
 
@@ -327,9 +327,9 @@ def test_module_loading5():
     Mb = m2.make_component_class('Mb')
     Mc = m3.make_component_class('Mc')
     
-    s._register_component(Ma(s))
-    s._register_component(Mb(s))
-    s._register_component(Mc(s))
+    s._register_component(Ma(flx_session=s))
+    s._register_component(Mb(flx_session=s))
+    s._register_component(Mc(flx_session=s))
     
     assert s.assets_js == add_prefix(['spam.js', 'foo.m1.js', 'eggs.js', 'foo.m2.js', 'foo.m3.js'])
     assert s.assets_css == add_prefix(['foo.m1.css', 'bla.css', 'foo.m2.css', 'foo.m3.css'])
@@ -350,6 +350,17 @@ def pongit(session, n):
         for j in range(2):
             loop.call_soon(loop.stop)
             loop.run_forever()
+        session._ping_counter = c + 1
+
+# def pongit(session, n):
+#     max_timeout = session._ping_counter + n
+#     loop = asyncio.get_event_loop()
+#     def check():
+#         if session._ping_counter >= max_timeout:
+#             loop.stop()
+#         else:
+#             loop.call_soon(check)
+#     loop.run_forever()
 
 
 def test_keep_alive():
@@ -472,6 +483,7 @@ def test_keep_alive_noleak2():
     gc.collect()
     assert session_ref() is None
     assert foo_ref() is None
+
 
 
 run_tests_if_main()

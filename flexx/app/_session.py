@@ -95,12 +95,14 @@ class Session:
         # PyComponent or JsComponent instance, can be None if app_name is __default__
         self._component = None
         
-        # The session assigns component id's, keeps track of component objects and
-        # sometimes keeps them alive for a short while.
+        # The session assigns component id's and keeps track of component objects
         self._component_counter = 0
         self._component_instances = weakref.WeakValueDictionary()
+        
+        # Keep track of roundtrips. The _ping_calls elements are:
+        # [ping_count, {objects}, *(callback, args)]
         self._ping_calls = []
-        self._ping_counter = 0  # used to identify pongs
+        self._ping_counter = 0
         
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
@@ -450,20 +452,6 @@ class Session:
         """
         return self._component_instances.get(id, None)
     
-    def keep_alive(self, ob, iters=1):
-        """ Keep an object alive for a certain amount of time, expressed
-        in Python-JS ping roundtrips. This is intended for making JsComponent
-        (i.e. proxy components) survice the time between instantiation
-        triggered from JS and their attachement to a property, though any type
-        of object can be given.
-        """
-        # The object is kept alive as part of the args of a callback function
-        self.call_after_roundtrip(self._call_keep_alive, ob, iters)
-    
-    def _call_keep_alive(self, ob, iters):
-        if iters > 1:
-            self.keep_alive(ob, iters-1)
-    
     ## JIT asset definitions
 
     def _register_component_class(self, cls):
@@ -654,34 +642,77 @@ class Session:
         else:
             logger.error('Unknown command received from JS:\n%s' % command)
     
+    def keep_alive(self, ob, iters=1):
+        """ Keep an object alive for a certain amount of time, expressed
+        in Python-JS ping roundtrips. This is intended for making JsComponent
+        (i.e. proxy components) survice the time between instantiation
+        triggered from JS and their attachement to a property, though any type
+        of object can be given.
+        """
+        ping_to_schedule_at = self._ping_counter + iters
+        el = self._get_ping_call_list(ping_to_schedule_at)
+        el[1][id(ob)] = ob  # add to dict of objects to keep alive
+    
     def call_after_roundtrip(self, callback, *args):
         """ A variant of ``call_soon()`` that calls a callback after
         a py-js roundrip. This can be convenient to delay an action until
         after other things have settled down.
         """
+        # The ping_counter represents the ping count that is underway.
+        # Since we want at least a full ping, we want one count further.
         ping_to_schedule_at = self._ping_counter + 1
-        if len(self._ping_calls) == 0 or self._ping_calls[-1][0] < ping_to_schedule_at:
-            weak_call_to_ping(self)
-        self._ping_calls.append((ping_to_schedule_at, callback, args))
+        el = self._get_ping_call_list(ping_to_schedule_at)
+        el.append((callback, args))
     
-    def _send_ping(self):
-        self._ping_counter += 1
-        self.send_command('PING', self._ping_counter)
+    def _get_ping_call_list(self, ping_count):
+        """ Get an element from _ping_call for the specified ping_count.
+        The element is a list [ping_count, {objects}, *(callback, args)]
+        """
+        # No pending ping_calls?
+        if len(self._ping_calls) == 0:
+            # Start pinging
+            send_ping_later(self)
+            # Append element
+            el = [ping_count, {}]
+            self._ping_calls.append(el)
+            return el
+        
+        # Try to find existing element, or insert it
+        for i in reversed(range(len(self._ping_calls))):
+            el = self._ping_calls[i]
+            if el[0] == ping_count:
+                return el
+            elif el[0] < ping_count:
+                el = [ping_count, {}]
+                self._ping_calls.insert(i + 1, el)
+                return el
+        else:
+            el = [ping_count, {}]
+            self._ping_calls.insert(0, el)
+            return el
     
     def _receive_pong(self, count):
+        # Process ping calls
         while len(self._ping_calls) > 0 and self._ping_calls[0][0] <= count:
-            _, callback, args = self._ping_calls.pop(0)
-            asyncio.get_event_loop().call_soon(callback, *args)
+            _, objects, *callbacks = self._ping_calls.pop(0)
+            objects.clear()
+            del objects
+            for callback, args in callbacks:
+                asyncio.get_event_loop().call_soon(callback, *args)
+        # Continue pinging?
+        if len(self._ping_calls) > 0:
+            send_ping_later(self)
 
-
-def weak_call_to_ping(session):
-    # This is to prevent session from being discarded due to a ref
-    # lingering in an asyncio loop.
+def send_ping_later(session):
+    # This is to prevent the prevention of the session from being discarded due
+    # to a ref lingering in an asyncio loop.
     def x(weaksession):
         s = weaksession()
         if s is not None:
-            s._send_ping()
-    asyncio.get_event_loop().call_soon(x, weakref.ref(session))
+            s._ping_counter += 1
+            s.send_command('PING', s._ping_counter)
+    # asyncio.get_event_loop().call_soon(x, weakref.ref(session))
+    asyncio.get_event_loop().call_later(0.01, x, weakref.ref(session))
 
 
 ## Functions to get page

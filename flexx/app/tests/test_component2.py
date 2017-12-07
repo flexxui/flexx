@@ -192,7 +192,7 @@ def test_generated_js():
             classes.append(line.split('.')[0])
     assert classes == ['BaseAppComponent',
                        'LocalComponent', 'ProxyComponent', 'StubComponent',
-                       'PyComponent', 'JsComponent']
+                       'JsComponent', 'PyComponent']
     print(classes)
 
 

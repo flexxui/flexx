@@ -640,7 +640,6 @@ class BsdfComponentExtension(bsdf.Extension):
             else:
                 # Keep it alive for a bit
                 session.keep_alive(c)
-                # todo: this seems heavy, optimize keep_alive (e.g. dont keep alive twice!)
         return c
     
     # The name and below methods get collected to produce a JS BSDF extension
