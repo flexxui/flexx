@@ -637,7 +637,10 @@ class Session:
                 raise RuntimeError('Cannot INSTANTIATE %s.%s (%i)' %
                                    (modulename, cname, e))
             # Instantiate
-            c = cls(flx_session=self, flx_id=id)
+            kwargs['flx_session'] = self
+            kwargs['flx_id'] = id
+            assert len(args) == 0
+            c = cls(**kwargs)
             self.keep_alive(c)
         elif cmd == 'DISPOSE':  # Gets send from local to proxy
             id = command[1]

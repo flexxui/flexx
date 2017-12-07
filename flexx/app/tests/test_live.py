@@ -448,7 +448,7 @@ async def test_jscomponent_init1():
 class CreatingPyComponent(PyComponentA):
     
     def init(self):
-        self._x = JsComponentA()
+        self._x = JsComponentA(foo=7)
     
     @event.action
     def apply_sub(self):
@@ -458,7 +458,7 @@ class CreatingPyComponent(PyComponentA):
 class CreatingJsComponent(JsComponentA):
     
     def init(self):
-        self._x = JsComponentA()
+        self._x = JsComponentA(foo=7)
     
     @event.action
     def apply_sub(self):
@@ -468,8 +468,10 @@ class CreatingJsComponent(JsComponentA):
 @run_live
 async def test_proxy_binding1():
     """
-    sub foo changed 0
-    sub foo changed 0
+    sub foo changed 7
+    7
+    sub foo changed 7
+    7
     ----------
     """
     # Get ref to JsComponent instantiated by a PyComponent
@@ -488,6 +490,7 @@ async def test_proxy_binding1():
     
     c3 = c2.sub
     assert isinstance(c3, JsComponentA)
+    print(c3.foo)
     
     # Get id of c3 and get rid of any references
     c3_id = c3.id
@@ -507,14 +510,17 @@ async def test_proxy_binding1():
     c3 = c2.sub
     assert isinstance(c3, JsComponentA)
     assert c3.id == c3_id
+    print(c3.foo)
 
 
 @run_live
 async def test_proxy_binding2():
     """
+    7
+    7
     ----------
-    sub foo changed 0
-    sub foo changed 0
+    sub foo changed 7
+    sub foo changed 7
     """
     # Get ref to JsComponent instantiated by a JsComponent,
     # drop that ref, re-get the proxy instance, and verify that its
@@ -535,6 +541,7 @@ async def test_proxy_binding2():
     
     c3 = c2.sub
     assert isinstance(c3, JsComponentA)
+    print(c3.foo)
     
     # Get id of c3 and get rid of any references
     id3 = id(c3)
@@ -556,6 +563,7 @@ async def test_proxy_binding2():
     c3 = c2.sub
     assert isinstance(c3, JsComponentA)
     assert c3.id == c3_id
+    print(c3.foo)
 
 
 @run_live

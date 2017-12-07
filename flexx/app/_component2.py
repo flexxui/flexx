@@ -97,8 +97,6 @@ class AppComponentMeta(ComponentMeta):
     
     __repr__ = meta_repr
     
-    _applied_base_js = False
-    
     def _init_hook(cls, cls_name, bases, dct):
         
         # Take CSS from the class now
@@ -173,8 +171,9 @@ class AppComponentMeta(ComponentMeta):
         # in Python 3.6 we iterate in the order in which the items are defined,
         for name, val in list(cls.__dict__.items()):
             if name.startswith('__') and name.endswith('__'):
-                continue
-            elif (isinstance(val, Property) or (callable(val) and
+                if name not in ('__init__'):
+                    continue
+            if (isinstance(val, Property) or (callable(val) and
                   name.endswith('_validate'))):
                 jsdict[name] = val  # properties are the same
             elif isinstance(val, EmitterDescriptor):
@@ -215,9 +214,8 @@ class AppComponentMeta(ComponentMeta):
         # code.append(c.replace('var %s =' % cls_name,
         #                   'var %s = flexx.classes.%s =' % (cls_name, cls_name), 1))
         
-        # Add JS version of the base classes?
-        if not AppComponentMeta._applied_base_js:
-            AppComponentMeta._applied_base_js = True
+        # Add JS version of the base classes - but only once
+        if cls.__name__ == 'JsComponent':
             c = cls._get_js_of_base_classes()
             for k in ['vars_unknown', 'vars_global', 'std_functions', 'std_methods']:
                 meta[k].update(c.meta[k])
@@ -320,15 +318,15 @@ class LocalComponent(BaseAppComponent):
         
         if this_is_js():
             # This is a local JsComponent in JavaScript
-            pass  # no action required
+            self._event_listeners = []
         else:
             # This is a local PyComponent in Python
             # A PyComponent always has a corresponding proxy in JS
-            self._ensure_proxy_instance()
+            self._ensure_proxy_instance(False)
         
         return prop_events
     
-    def _ensure_proxy_instance(self):
+    def _ensure_proxy_instance(self, include_props=True):
         """ Make the other end instantiate a proxy if necessary. This is e.g.
         called by the BSDF serializer when a LocalComponent gets serialized.
         
@@ -353,9 +351,13 @@ class LocalComponent(BaseAppComponent):
         """
         if self._has_proxy is False and self._disposed is False:
             if self._session.status > 0:
+                props = {}
+                if include_props:
+                    for name in self.__properties__:
+                        props[name] = getattr(self, name)
                 self._session.send_command('INSTANTIATE', self.__jsmodule__,
-                                        self.__class__.__name__,
-                                        self._id, [], {})
+                                           self.__class__.__name__,
+                                           self._id, [], props)
                 self._has_proxy = True
     
     def emit(self, type, info=None):
@@ -417,8 +419,9 @@ class ProxyComponent(BaseAppComponent):
         # Init more
         local_inst = self._comp_init_app_component(property_values)  # pops items 
         
-        # Call original method
-        prop_events = super()._comp_init_property_values({})  # noqa - we return [] 
+        # Call original method, only set props if this is instantiated "by the local"
+        props2set = {} if local_inst else property_values
+        prop_events = super()._comp_init_property_values(props2set)  # noqa - we return [] 
         
         if this_is_js():
             # This is a proxy PyComponent in JavaScript
@@ -428,9 +431,12 @@ class ProxyComponent(BaseAppComponent):
             # Instantiate JavaScript version of this class
             if local_inst is True:  # i.e. only if Python "instantiated" it
                 property_values['flx_has_proxy'] = True
+                active_components = [c for c in loop.get_active_components()
+                                     if isinstance(c, (PyComponent, JsComponent))]
                 self._session.send_command('INSTANTIATE', self.__jsmodule__,
                                            self.__class__.__name__, self._id,
-                                           self._flx_init_args, property_values)
+                                           self._flx_init_args, property_values,
+                                           active_components)
             del self._flx_init_args
         
         return []  # prop_events - Proxy class does not emit events by itself
@@ -584,6 +590,22 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
         d = ' (disposed)' if self._disposed else ''
         return "<JsComponent '%s'%s at 0x%x>" % (self._id, d, id(self))
 
+    def _addEventListener(self, node, type, callback, capture=False):
+        """ Register events with DOM nodes, to be automatically cleaned up
+        when this object is disposed.
+        """
+        node.addEventListener(type, callback, capture)
+        self._event_listeners.append((node, type, callback, capture))
+    
+    def _dispose(self):
+        super()._dispose()
+        while len(self._event_listeners) > 0:
+            try:
+                node, type, callback, capture = self._event_listeners.pop()
+                node.removeEventListener(type, callback, capture)
+            except Exception as err:
+                print(err)
+
 
 class BsdfComponentExtension(bsdf.Extension):
     """ A BSDF extension to encode flexx.app Component objects based on their
@@ -615,6 +637,10 @@ class BsdfComponentExtension(bsdf.Extension):
             if c is None:  # This should probably not happen
                 logger.warn('Using stub component for %s.' % d['id'])
                 c = StubComponent(session, d['id'])
+            else:
+                # Keep it alive for a bit
+                session.keep_alive(c)
+                # todo: this seems heavy, optimize keep_alive (e.g. dont keep alive twice!)
         return c
     
     # The name and below methods get collected to produce a JS BSDF extension

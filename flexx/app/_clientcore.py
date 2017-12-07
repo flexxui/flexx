@@ -20,6 +20,7 @@ class Flexx:
         # setting them on this object before the init() is called.
         self.is_notebook = False
         self.is_exported = False
+        self.need_main_widget = True
         
         # Copy attributes from temporary flexx object
         if window.flexx.init:
@@ -189,7 +190,7 @@ class JsSession:
                 raise err
             self._ws.send(bb)
     
-    def instantiate_component(self, module, cname, id, args, kwargs):
+    def instantiate_component(self, module, cname, id, args, kwargs, active_components):
         # Maybe we still have the instance?
         c = self.instances.get(id, None)
         if c is not None and c._disposed is False:
@@ -197,10 +198,18 @@ class JsSession:
         # Find the class
         m = window.flexx.require(module)
         Cls = m[cname]  # noqa
-        # Instantiate
+        # Instantiate. If given, replicate the active components by which the
+        # JsComponent was instantiated in Python.
         kwargs['flx_session'] = self
         kwargs['flx_id'] = id
-        c = Cls(*args, **kwargs)
+        active_components = active_components or []
+        for ac in active_components:
+            ac.__enter__()
+        try:
+            c = Cls(*args, **kwargs)
+        finally:
+            for ac in reversed(active_components):
+                ac.__exit__()
         return c
     
     def _register_component(self, c, id=None):
