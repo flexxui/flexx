@@ -83,4 +83,4 @@ from ._widget import Widget
 from .layouts import *
 from .widgets import *
 
-from ._plotlayout import PlotLayout
+# from ._plotlayout import PlotLayout
