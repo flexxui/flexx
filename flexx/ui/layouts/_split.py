@@ -111,8 +111,8 @@ class SplitPanel(Layout):
     def set_divider_positions(self, *positions):
         """ Set relative divider posisions (values between 0 and 1).
         """
-        bar_size = 8
-        available_size = self.node.clientWidth - bar_size * len(self._seps)
+        print(positions)
+        total_size, available_size = self._get_available_size()
         
         positions = [max(0, min(1, pos)) * available_size for pos in positions]
         self._set_absolute_divider_positions(*positions)
@@ -155,8 +155,7 @@ class SplitPanel(Layout):
             for sep in self._seps:
                 sep.classList.remove('flx-horizontal')
                 sep.classList.add('flx-vertical')
-        
-        self.set_divider_positions([sep.rel_pos for sep in self._seps])
+        self.set_divider_positions(*[sep.rel_pos for sep in self._seps])
     
     @event.reaction('children', 'children*.flex')
     def __set_flexes(self, *events):
@@ -167,9 +166,10 @@ class SplitPanel(Layout):
     def _get_available_size(self):
         bar_size = 8
         if 'h' in self.orientation:
-            return self.node.clientWidth - bar_size * len(self._seps)
+            total_size = self.node.clientWidth
         else:
-            return self.node.clientHeight - bar_size * len(self._seps)
+            total_size = self.node.clientHeight
+        return total_size, total_size - bar_size * len(self._seps)
     
     def _ensure_seps(self, n):
         """ Ensure that we have exactly n seperators.
@@ -190,7 +190,7 @@ class SplitPanel(Layout):
     def _set_absolute_divider_positions(self, *positions):
         children = self.children
         bar_size = 8
-        available_size = self._get_available_size()
+        total_size, available_size = self._get_available_size()
         ori = self.orientation
         
         if len(children) != len(self._seps) + 1:
@@ -244,6 +244,7 @@ class SplitPanel(Layout):
         
         # Apply
         is_horizonal = 'h' in ori
+        is_reversed = 'r' in ori
         offset = 0
         last_sep_pos = 0
         for i in range(len(children)):
@@ -252,32 +253,39 @@ class SplitPanel(Layout):
                 return
             ref_pos = self._seps[i].abs_pos if i < len(self._seps) else available_size
             size = ref_pos - last_sep_pos
-            # widget.outernode.style.position = 'absolute'
-            if is_horizonal:
-                widget.outernode.style.width = size + 'px'
-                widget.outernode.style.left = last_sep_pos + offset + 'px'
-                widget.outernode.style.height = '100%'
-                widget.outernode.style.top = '0'
-            else:
-                widget.outernode.style.height = size + 'px'
-                widget.outernode.style.top = last_sep_pos + offset + 'px'
-                widget.outernode.style.width = '100%'
-                widget.outernode.style.left = '0'
-            if i < len(self._seps):
-                sep = self._seps[i]
-                if is_horizonal:
-                    sep.style.width = bar_size + 'px'
-                    sep.style.left = sep.abs_pos + offset + 'px'
-                    sep.style.height = '100%'
-                    sep.style.top = '0'
+            if True:
+                # Position widget
+                pos = last_sep_pos + offset
+                if is_reversed is True:
+                    pos = total_size - pos - size
+                if is_horizonal is True:
+                    widget.outernode.style.left = pos + 'px'
+                    widget.outernode.style.width = size + 'px'
+                    widget.outernode.style.top = '0'
+                    widget.outernode.style.height = '100%'
                 else:
+                    widget.outernode.style.top = pos + 'px'
+                    widget.outernode.style.height = size + 'px'
+                    widget.outernode.style.left = '0'
+                    widget.outernode.style.width = '100%'
+            if i < len(self._seps):
+                # Position divider
+                sep = self._seps[i]
+                pos = sep.abs_pos + offset
+                if is_reversed is True:
+                    pos = total_size - pos - bar_size
+                if is_horizonal is True:
+                    sep.style.left = pos + 'px'
+                    sep.style.width = bar_size + 'px'
+                    sep.style.top = '0'
+                    sep.style.height = '100%'
+                else:
+                    sep.style.top = pos + 'px'
                     sep.style.height = bar_size + 'px'
-                    sep.style.top = sep.abs_pos + offset + 'px'
-                    sep.style.width = '100%'
                     sep.style.left = '0'
+                    sep.style.width = '100%'
                 offset += bar_size
                 last_sep_pos = sep.abs_pos
-            # print(widget.id, offset, size)
     
     @event.emitter
     def mouse_down(self, e):
@@ -302,7 +310,8 @@ class SplitPanel(Layout):
             if ori == self.orientation:
                 x_or_y2 = e.clientX if 'h' in self.orientation else e.clientY
                 positions = [None for i in range(len(self._seps))]
-                positions[i] = max(0, ref_pos + (x_or_y2 - x_or_y1))
+                diff = (x_or_y1 - x_or_y2) if 'r' in ori else (x_or_y2 - x_or_y1)
+                positions[i] = max(0, ref_pos + diff)
                 self._set_absolute_divider_positions(*positions)
         else:
             return super().mouse_move(e)
