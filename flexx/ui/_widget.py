@@ -203,7 +203,10 @@ class Widget(app.JsComponent):
         # Use parent session unless session was given
         if parent is not None and not kwargs.get('flx_session', None):
             kwargs['flx_session'] = parent.session
-
+        
+        # todo: document this
+        style = kwargs.pop('style', '')
+        
         # todo: it seems like we can get rid of this is_app thing
         # if kwargs.get('is_app', False):
         #     kwargs['container'] = 'body'
@@ -237,6 +240,9 @@ class Widget(app.JsComponent):
             cls = cls._base_class
         else:
             raise RuntimeError('Error determining class names for %s' % self.id)
+        
+        if style:
+            self.apply_style(style)
         
         # Setup JS events to enter Flexx' event system
         self._init_events()
@@ -686,7 +692,8 @@ class Widget(app.JsComponent):
                 elif e.type == 'mouseup':
                     release()
                     self.mouse_up(e)
-
+        
+        # todo: only start capturing move events when mouse is down, unless some flag is set
         # Setup capturing and releasing
         self._addEventListener(self.node, 'mousedown', capture, True)
         self._addEventListener(self.node, "losecapture", release)
