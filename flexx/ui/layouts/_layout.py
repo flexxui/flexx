@@ -18,17 +18,16 @@ class Layout(Widget):
     body {
         margin: 0;
         padding: 0;
-        /*overflow: hidden;*/
     }
     
     .flx-Layout {
         /* sizing of widgets/layouts inside layout is defined per layout */
         width: 100%;
         height: 100%;
-        margin: 0px;
-        padding: 0px;
-        border-spacing: 0px;
-        border: 0px;
+        margin: 0;
+        padding: 0;
+        border-spacing: 0;
+        border: 0;
     }
     
     """

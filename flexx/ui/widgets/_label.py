@@ -43,36 +43,32 @@ class Label(Widget):
             -ms-user-select: text;
         }"""
     
-    class Both:
-            
-        @event.prop
-        def text(self, v=''):
-            """ The text on the label.
-            """
-            return str(v)
-        
-        @event.prop
-        def wrap(self, v=False):
-            """ Whether the content is allowed to be wrapped on multiple
-            lines. Set to 0/False for no wrap, 1/True for word-wrap, 2 for
-            character wrap.
-            """
-            return {0: 0, 1: 1, 2: 2}.get(v, int(bool(v)))
+    text = event.StringProp('', settable=True, doc="""
+        The text on the label.
+        """)
     
-    class JS:
-        
-        def _init_phosphor_and_node(self):
-            self.phosphor = self._create_phosphor_widget('div')
-            self.node = self.phosphor.node
-        
-        @event.connect('text')
-        def _text_changed(self, *events):
-            self.node.innerHTML = self.text
-            self._check_real_size(True)
-        
-        @event.connect('wrap')
-        def _wrap_changed(self, *events):
-            wrap = self.wrap
-            self.node.style['word-wrap'] = ['initial', 'normal', 'break-word'][wrap]
-            self.node.style['white-space'] = ['nowrap', 'normal', 'normal'][wrap]
-            self._check_real_size(True)
+    wrap = event.IntProp(0, doc="""
+        Whether the content is allowed to be wrapped on multiple
+        lines. Set to 0/False for no wrap, 1/True for word-wrap, 2 for
+        character wrap.
+        """)
+
+    @event.action
+    def set_wrap(self, wrap):
+        """ Set wrap"""
+        wrap = int(wrap)
+        if wrap < 0 or wrap > 2:
+            wrap = 0
+        self._mutate_wrap(wrap)
+    
+    @event.reaction('text')
+    def _text_changed(self, *events):
+        self.node.innerHTML = self.text
+        self.check_real_size(True)
+    
+    @event.reaction('wrap')
+    def _wrap_changed(self, *events):
+        wrap = self.wrap
+        self.node.style['word-wrap'] = ['initial', 'normal', 'break-word'][wrap]
+        self.node.style['white-space'] = ['nowrap', 'normal', 'normal'][wrap]
+        self.check_real_size(True)

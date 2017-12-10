@@ -78,26 +78,32 @@ class Widget(app.JsComponent):
     .flx-Widget {
         box-sizing: border-box;
         overflow: hidden;
+        position: relative;  /* helps with absolute positioning of content */
     }
     
     /* in a notebook or otherwise embedded in classic HTML */
     .flx-container {
-        min-height: 10px;
+        min-height: 20px;
     }
     
     /* Main widget to fill the whole page */
     .flx-main-widget {
        position: absolute;
-       top: 0;
-       left: 0;
        left: 0;
        right: 0;
        width: 100%;
+       top: 0;
+       bottom: 0;
        height: 100%;
     }
     
     /* to position children absolute */
     .flx-abs-children > .flx-Widget {
+        position: absolute;
+    }
+    
+    /* Fix issue flexbox > Widget > layout on Chrome */
+    .flx-Widget:not(.flx-Layout) > .flx-Layout {
         position: absolute;
     }
     """
@@ -166,13 +172,13 @@ class Widget(app.JsComponent):
     
     size = FloatPairProp((0, 0), settable=False, doc="""
         The actual size of the widget. Flexx tries to keep this value
-        up-to-date, but when in a layout like BoxLayout, a change in a Button's
+        up-to-date, but in e.g. a box layout, a change in a Button's
         text can change the size of sibling widgets.
         """)
     
     # todo: turn this into an intProp None->-2?
     # Also see size readonly defined in JS
-    tabindex = event.AnyProp(None, doc="""
+    tabindex = event.AnyProp(None, settable=True, doc="""
         The index used to determine widget order when the user
         iterates through the widgets using tab. This also determines
         if a widget is able to receive key events. Flexx automatically
@@ -445,39 +451,37 @@ class Widget(app.JsComponent):
         else:
             self.node.tabIndex = ti
     
-    # todo: still need this?
-    @event.reaction('children')
-    def __make_singleton_container_widgets_work(self, *events):
-        # This fixes an issue related to a vbox in a widget in a
-        # vbox on Chrome. If this is a plain widget, and it has one
-        # child that is a HBox or VBox, we need to act like a flex
-        # container.
-        # Note that we should *not* set the display style attribute
-        # directly, as that would break down in situations where
-        # the widget must be hidden, such as in a tab panel.
-        if 'flx-Layout' not in self.outernode.className:
-            self.outernode.classList.remove('flx-hbox')
-            self.outernode.classList.remove('flx-vbox')
-            self.outernode.classList.remove('flx-abs-children')
-            children = self.children
-            if len(children) == 1:
-                subClassName = children[0].outernode.className
-                if 'flx-BoxLayout' in subClassName:
-                    if 'flx-VBox' in subClassName:
-                        self.outernode.classList.add('flx-hbox')
-                    else:
-                        self.outernode.classList.add('flx-vbox')
-                elif ('flx-BoxPanel' in subClassName or 
-                        'flx-SplitPanel' in subClassName or
-                        'flx-DockPanel' in subClassName or
-                        'flx-StackPanel' in subClassName or
-                        'flx-TabPanel' in subClassName):
-                    self.outernode.classList.add('flx-abs-children')
+    # Now solved with CSS, which seems to work, but leaving this code for now ...
+    # @event.reaction('children', '!children*.mode', '!children*.orientation')
+    # def __make_singleton_container_widgets_work(self, *events):
+    #     classNames = self.outernode.classList
+    #     if not classNames.contains('flx-Layout'):
+    #         # classNames.remove('flx-box')
+    #         # classNames.remove('flx-horizontal')
+    #         # classNames.remove('flx-vertical')
+    #         classNames.remove('flx-abs-children')
+    #         children = self.children
+    #         if len(children) == 1:
+    #             subClassNames = children[0].outernode.classList
+    #             if subClassNames.contains('flx-Layout'):
+    #                 classNames.add('flx-abs-children')
+    #             # This seems to be enough, though previously we did:
+    #             # if subClassNames.contains('flx-box'):
+    #             #     # classNames.add('flx-box')
+    #             #     vert = subClassNames.contains('flx-vertical')
+    #             #     classNames.add('flx-horizontal' if vert else 'flx-horizontal')
+    #             # else:
+    #             #     # If child is a layout that uses absolute position, make
+    #             #     # out children absolute.
+    #             #     for name in ('split', 'StackPanel', 'TabPanel', 'DockPanel'):
+    #             #         if subClassNames.contains('flx-' + name):
+    #             #             classNames.add('flx-abs-children')
+    #             #             break
     
     ## Sizing
     
     @event.action
-    def check_real_size(self, notify_parent=False):
+    def check_real_size(self):
         """ Check whether the current size has changed. It should usually not
         be necessary to invoke this action, since a widget does so by itself,
         but it some situations the widget may not be aware of possible size
@@ -487,18 +491,6 @@ class Widget(app.JsComponent):
         cursize = self.size
         if cursize[0] != n.clientWidth or cursize[1] != n.clientHeight:
             self._mutate_size([n.clientWidth, n.clientHeight])
-            # Notify parent? This is basically a hook for box layout
-            if notify_parent and self.parent is not None:
-                if self.parent._let_children_check_size:
-                    # todo: remove the if and only implement that method where its needed?
-                    self.parent._let_children_check_size()
-    
-    def _let_children_check_size(self):
-        """ Hook to allow a size changes in child widgets to
-        propagate to sibling widgets.
-        """
-        for widget in self.children:
-            widget.check_real_size()
     
     @event.reaction('container', 'parent.size', 'children')
     def __size_may_have_changed(self, *events):
@@ -519,7 +511,7 @@ class Widget(app.JsComponent):
                 size[i] = size[i] * 100 + '%'
         self.outernode.style[prefix + 'width'] = size[0]
         self.outernode.style[prefix + 'height'] = size[1]
-
+    
     ## Parenting
     
     @event.action

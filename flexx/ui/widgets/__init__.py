@@ -10,7 +10,7 @@ from ._button import BaseButton, Button, ToggleButton, RadioButton, CheckBox
 # from ._tree import TreeWidget, TreeItem
 # from ._dropdown import ComboBox, DropdownContainer
 # from ._lineedit import LineEdit
-# from ._label import Label
+from ._label import Label
 # from ._group import GroupWidget
 # from ._progressbar import ProgressBar
 # from ._plotwidget import PlotWidget
