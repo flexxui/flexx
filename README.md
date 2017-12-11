@@ -5,6 +5,8 @@ Flexx
 [![Build Status](https://travis-ci.org/zoofIO/flexx.svg)](https://travis-ci.org/zoofIO/flexx)
 [![Documentation Status](https://readthedocs.org/projects/flexx/badge/?version=latest)](https://flexx.readthedocs.org)
 
+<i>Notice: Flexx is being [refactored](https://github.com/zoofIO/flexx/pull/408) right now, which should be ready before/in Januari 2018. These changes are driven by feedback from building real world Flexx-based apps over the past year and a half, and will improve Flexx on many fronts (e.g. make it scale better). It does mean that the API will change in a few ways though!</i>
+
 Introduction
 ------------
 
@@ -43,7 +45,8 @@ Flexx from being usable at a large scale.
 
 We've since looked at what does boundaries are and how Flexx would need to
 change to be able to remove or move beyond these boundaries. This has culminated
-in a [plan](https://github.com/zoofIO/flexx/pull/367) to refactor Flexx.
+in a [plan](https://github.com/zoofIO/flexx/pull/367) to refactor Flexx, and the
+refactoring is currently [being done](https://github.com/zoofIO/flexx/pull/408).
 
 These changes are quite substantial. E.g. a central idea of the current
 Flexx is having objects that exist in both Python and JS and have
