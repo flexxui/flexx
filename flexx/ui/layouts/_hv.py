@@ -455,7 +455,48 @@ class HVLayout(Layout):
     
     ## General reactions and hooks
     
-    @event.reaction('size')
+    @event.reaction('children*.size_min_max', 'orientation', 'spacing', 'padding')
+    def __update_min_max(self, *events):
+        self._check_min_max_size()
+    
+    def _query_min_max_size(self):
+        """ Overload to also take child limits into account.
+        """
+        # Own limits
+        mima = super()._query_min_max_size()
+        
+        # Add contributions of child widgets
+        hori = 'h' in self.orientation
+        for child in self.children:
+            mima2 = child.size_min_max
+            if hori is True:
+                mima[0] += mima2[0]
+                mima[1] += mima2[1]
+                mima[2] = max(mima[2], mima2[2])
+                mima[3] = min(mima[3], mima2[3])
+            else:
+                mima[0] = max(mima[0], mima2[0])
+                mima[1] = min(mima[1], mima2[1])
+                mima[2] += mima2[2]
+                mima[3] += mima2[3]
+        
+        # Dont forget padding and spacing
+        extra_padding = self.padding * 2
+        extra_spacing = self.spacing * (len(self.children) - 1)
+        mima[0] += extra_padding
+        mima[1] += extra_padding
+        mima[2] += extra_padding
+        mima[3] += extra_padding
+        if hori is True:
+            mima[0] += extra_spacing
+            mima[1] += extra_spacing
+        else:
+            mima[2] += extra_spacing
+            mima[3] += extra_spacing
+        
+        return mima
+    
+    @event.reaction('size', 'size_min_max')
     def __size_changed(self, *events):
         self._rerender()
     
@@ -619,6 +660,10 @@ class HVLayout(Layout):
     def __render(self, *events):
         """ Set the slider positions, subject to constraints.
         """
+        # todo: this is a use-case where it would be nice to be able to notify
+        # the loop that this reacion does not care about order in relation to
+        # other events as much; we'd much rather process the events at once.
+        
         if self.mode != 'box':
             
             # Apply specific positional changes
@@ -675,28 +720,28 @@ class HVLayout(Layout):
                 for j in reversed(range(0, i)):
                     if positions[j] is None:
                         cur = self._seps[j].abs_pos
-                        mi, ma = _get_min_max(ori, available_size, children[j+1].outernode)
+                        mi, ma = _get_min_max(children[j+1], ori)
                         self._seps[j].abs_pos = ref_pos = max(ref_pos - ma, min(ref_pos - mi, cur))
                 # Move seps on the right, as needed
                 ref_pos = pos
                 for j in range(i+1, len(self._seps)):
                     if positions[j] is None:
                         cur = self._seps[j].abs_pos
-                        mi, ma = _get_min_max(ori, available_size, children[j].outernode)
+                        mi, ma = _get_min_max(children[j], ori)
                         self._seps[j].abs_pos = ref_pos = max(ref_pos + mi, min(ref_pos + ma, cur))
         
         # Correct seps from the right edge
         ref_pos = available_size
         for j in reversed(range(0, len(self._seps))):
             cur = self._seps[j].abs_pos
-            mi, ma = _get_min_max(ori, available_size, children[j+1].outernode)
+            mi, ma = _get_min_max(children[j+1], ori)
             self._seps[j].abs_pos = ref_pos = max(ref_pos - ma, min(ref_pos - mi, cur))
         
         # Correct seps from the left edge
         ref_pos = 0
         for j in range(0, len(self._seps)):
             cur = self._seps[j].abs_pos
-            mi, ma = _get_min_max(ori, available_size, children[j].outernode)
+            mi, ma = _get_min_max(children[j], ori)
             self._seps[j].abs_pos = ref_pos = max(ref_pos + mi, min(ref_pos + ma, cur))
         
         # Store relative posisions
@@ -800,70 +845,12 @@ def _applyBoxStyle(e, sty, value):
         e.style[prefix + sty] = value
 
 
-def _get_min_max(orientation, available_size, node):
-    mi = _get_min_size(available_size, node)
-    ma = _get_max_size(available_size, node)
-    if 'h' in orientation:
-        return mi[0], ma[0]
+def _get_min_max(widget, ori):
+    mima = widget.size_min_max
+    if 'h' in ori:
+        return mima[0], mima[1]
     else:
-        return mi[1], ma[1]
-    # todo: can we reduce half the queries here, because half is unused?
-
-
-# todo: woops, should use computed values!
-def _get_min_size(available_size, node):
-    """ Get minimum and maximum size of a node, expressed in pixels.
-    """
-    x = node.style.minWidth
-    if x == '0' or len(x) == 0:
-        x = 0
-    elif x.endswith('px'):
-        x = float(x[:-2])
-    elif x.endswith('%'):
-        x = float(x[:-1]) * available_size
-    else:
-        x = 0
-    
-    y = node.style.minHeight
-    if y == '0' or len(y) == 0:
-        y = 0
-    elif y.endswith('px'):
-        y = float(y[:-2])
-    elif y.endswith('%'):
-        y = float(y[:-1]) * available_size
-    else:
-        y = 0
-    
-    return x, y
-    
-    
-def _get_max_size(available_size, node):
-    
-    x = node.style.maxWidth
-    if x == '0':
-        x = 0
-    elif not x:
-        x = 1e9
-    elif x.endswith('px'):
-        x = float(x[:-2])
-    elif x.endswith('%'):
-        x = float(x[:-1]) * available_size
-    else:
-        x = 1e9
-   
-    y = node.style.maxHeight
-    if y == '0':
-        y = 0
-    elif not y:
-        y = 1e9
-    elif y.endswith('px'):
-        y = float(y[:-2])
-    elif y.endswith('%'):
-        y = float(y[:-1]) * available_size
-    else:
-        y = 1e9
-    
-    return x, y
+        return mima[2], mima[3]
 
 
 ## Convenience subclasses

@@ -176,6 +176,11 @@ class Widget(app.JsComponent):
         text can change the size of sibling widgets.
         """)
     
+    size_min_max = event.TupleProp((0, 1e9, 0, 1e9), settable=False, doc="""
+        A 4-element tuple (min-width, max-width, min-height, max-height)
+        derived from the element's style, in pixels.
+        """)
+    
     # todo: turn this into an intProp None->-2?
     # Also see size readonly defined in JS
     tabindex = event.AnyProp(None, settable=True, doc="""
@@ -249,6 +254,7 @@ class Widget(app.JsComponent):
         
         if style:
             self.apply_style(style)
+        self._check_min_max_size()
         
         # Setup JS events to enter Flexx' event system
         self._init_events()
@@ -394,16 +400,17 @@ class Widget(app.JsComponent):
                 size_limits_changed = True
         
         if size_limits_changed:
-            # Clear phosphor's limit cache (no need for getComputedStyle())
-            values = [self.outernode.style[k] for k in size_limits_keys]
-            for k, v in zip(size_limits_keys, values):
-                self.outernode.style[k] = v
-            # Allow parent to re-layout
-            parent = self.parent
-            # todo: do we need to tell the parent to "refit"?
-            # if parent:
-            #     parent.phosphor.fit()  # i.e. p.processMessage(p.MsgFitRequest)
-            # self.phosphor.update()
+             self._check_min_max_size()
+        #     # Clear phosphor's limit cache (no need for getComputedStyle())
+        #     values = [self.outernode.style[k] for k in size_limits_keys]
+        #     for k, v in zip(size_limits_keys, values):
+        #         self.outernode.style[k] = v
+        #     # Allow parent to re-layout
+        #     parent = self.parent
+        #     # todo: do we need to tell the parent to "refit"?
+        #     # if parent:
+        #     #     parent.phosphor.fit()  # i.e. p.processMessage(p.MsgFitRequest)
+        #     # self.phosphor.update()
     
     
     ## Reactions
@@ -491,6 +498,32 @@ class Widget(app.JsComponent):
         cursize = self.size
         if cursize[0] != n.clientWidth or cursize[1] != n.clientHeight:
             self._mutate_size([n.clientWidth, n.clientHeight])
+    
+    @event.action
+    def _check_min_max_size(self):
+        """ Query the minimum and maxium size.
+        """
+        mima = self._query_min_max_size()
+        self._mutate_size_min_max(mima)
+    
+    def _query_min_max_size(self):
+        # Query
+        style = window.getComputedStyle(self.outernode)
+        mima = [style.minWidth, style.maxWidth, style.minHeight, style.maxHeight]
+        # Pixelize - we dont handle % or em or whatever
+        for i in range(4):
+            if mima[i] == '0':
+                mima[i] = 0
+            elif mima[i].endswith('px'):
+                mima[i] = float(mima[i][:-2])
+            else:
+                mima[i] = 0 if (i == 0 or i == 2) else 1e9
+        # Protect against min > max
+        if mima[0] > mima[1]:
+            mima[0] = mima[1] = 0.5 * (mima[0] + mima[1])
+        if mima[2] > mima[3]:
+            mima[2] = mima[3] = 0.5 * (mima[2] + mima[3])
+        return mima
     
     @event.reaction('container', 'parent.size', 'children')
     def __size_may_have_changed(self, *events):
