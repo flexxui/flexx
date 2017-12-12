@@ -169,8 +169,13 @@ class JsSession:
         self.last_msg = None
         # self.classes = {}
         self.instances = {}
+        self.instances_to_check_size = {}
         
         self.initSocket()
+        
+        # Initiate service to track resize
+        window.addEventListener('resize', self._check_size_of_objects, False)
+        window.setInterval(self._check_size_of_objects, 1000)
     
     def exit(self):
         if self._ws:  # is not null or undefined
@@ -221,6 +226,7 @@ class JsSession:
         self.instances[c._id] = c
     
     def _unregister_component(self, c):
+        self.instances_to_check_size.pop(c.id)
         pass  # c gets popped from self.instances by DISPOSE_ACK command
     
     def get_component_instance(self, id):
@@ -411,6 +417,19 @@ class JsSession:
         while len(self._ping_calls) > 0 and self._ping_calls[0][0] <= count:
             _, callback, args = self._ping_calls.pop(0)
             window.setTimeout(callback, 0, *args)
+    
+    def keep_checking_size_of(self, ob, check=True):
+        """ This is a service that the session provides.
+        """
+        if check:
+            self.instances_to_check_size[ob.id] = ob
+        else:
+            self.instances_to_check_size.pop(ob.id, None)
+    
+    def _check_size_of_objects(self):
+        for ob in self.instances_to_check_size.values():
+            if ob._disposed is False:
+                ob.check_real_size()
 
 
 # In Python, we need some extras for the serializer to work

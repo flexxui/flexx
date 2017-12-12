@@ -586,10 +586,14 @@ class Widget(app.JsComponent):
             #     err.message += ' (%s)' % self.id
             #     raise err
             # todo: disconnect too? Maybe register/unregister at flexx object to get called?
-            self._addEventListener(window, 'resize',
-                self.check_real_size
-                #lambda: (self.phosphor.update(), self._check_real_size())
-                )
+            # self._addEventListener(window, 'resize',
+            #     self.check_real_size
+            #     #lambda: (self.phosphor.update(), self._check_real_size())
+            #     )
+        
+        # Let session keep us up to date about size changes
+        self._session.keep_checking_size_of(self, bool(id))
+        
         if id == 'body':
             self.outernode.classList.add('flx-main-widget')
             window.document.title = self.title or 'Flexx app'
