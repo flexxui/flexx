@@ -43,6 +43,8 @@ class StackLayout(Layout):
             position: absolute;
             left: 0;
             top: 0;
+            right: 0;
+            bottom: 0;
             width: 100%;
             height: 100%;
         }
@@ -51,15 +53,33 @@ class StackLayout(Layout):
         }
     """
     
-    current = event.ComponentProp(settable=True, doc="""
+    current = event.ComponentProp(doc="""
             The currently shown widget (or None).
             """)
+    
+    @event.action
+    def set_current(self, current):
+        """ Setter for current widget. Can also set using an integer index.
+        """
+        if isinstance(current, (float, int)):
+            current = self.children[int(current)]
+        self._mutate_current(current)
     
     @event.reaction
     def __set_current_widget(self):
         current = self.current
-        for widget in self.children:
-            if widget is current:
-                widget.outernode.classList.add('flx-current')
-            else:
-                widget.outernode.classList.remove('flx-current')
+        children = self.children
+        
+        if len(children) == 0:
+            if current is not None:
+                self.set_current(None)
+        else:
+            if current is None:
+                current = children[0]
+                self.set_current(current)
+        
+            for widget in self.children:
+                if widget is current:
+                    widget.outernode.classList.add('flx-current')
+                else:
+                    widget.outernode.classList.remove('flx-current')

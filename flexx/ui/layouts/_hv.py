@@ -549,7 +549,7 @@ class HVLayout(Layout):
         
         # Remove any children
         while len(self.outernode.children) > 0:
-            c =self.outernode.children[0]
+            c = self.outernode.children[0]
             self.outernode.removeChild(c)
         
         # Add new children and maybe interleave with separater widgets
