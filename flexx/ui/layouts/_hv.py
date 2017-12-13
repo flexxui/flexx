@@ -393,7 +393,7 @@ class HVLayout(Layout):
             sizes.append(widget.flex[dim])
         
         # Normalize size, so that total is one
-        size_sum = sum(sizes)
+        size_sum = 0 if len(sizes) == 0 else sum(sizes)
         if size_sum == 0:
             # Convenience: all zeros probably means to divide equally
             sizes = [1/len(sizes) for i in sizes]
