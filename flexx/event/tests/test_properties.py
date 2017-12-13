@@ -45,6 +45,8 @@ class MyObject(event.Component):
     myprop = MyCustomProp(settable=True)
     # nullprop = event.NullProp(None, settable=True)
     # eitherprop = event.EitherProp(event.IntProp, event.NoneProp)
+    
+    _privateprop = event.IntProp(settable=True)
 
 
 @run_in_both(MyObject)
@@ -75,6 +77,22 @@ def test_property_setting():
         print('fail ok')  # js
     print(m.bar)
 
+
+@run_in_both(MyObject)
+def test_private_property():
+    """
+    0
+    0
+    3
+    """
+    
+    m = MyObject()
+    print(m._privateprop)
+   
+    m.set__privateprop(3)
+    print(m._privateprop)
+    loop.iter()
+    print(m._privateprop)
 
 
 @run_in_both(MyObject)

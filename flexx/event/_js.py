@@ -478,9 +478,11 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             default_val = json.dumps(val._default)
             t = '%s_%s_value = %s;'
             const_code.append(t % (prototype_prefix, name, default_val))
-        elif name.startswith('__') and name not in OK_MAGICS:
+        elif (name.startswith('__') and name not in OK_MAGICS and
+                not name.endswith('_validate')):
             # These are only magics, since class attributes with double-underscores
-            # have already been mangled.
+            # have already been mangled. Note that we need to exclude validator
+            # funcs of private properties though.
             pass
         elif callable(val):
             # Functions, including methods attached by the meta class
