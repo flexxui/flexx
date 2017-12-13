@@ -525,6 +525,10 @@ class Widget(app.JsComponent):
             mima[2] = mima[3] = 0.5 * (mima[2] + mima[3])
         return mima
     
+    @event.reaction('children', 'children*.size_min_max')
+    def __min_max_size_may_have_changed(self, *events):
+        self._check_min_max_size()
+    
     @event.reaction('container', 'parent.size', 'children')
     def __size_may_have_changed(self, *events):
         # Invoke actions, i.e. check size in *next* event loop iter to
