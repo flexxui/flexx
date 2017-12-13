@@ -296,6 +296,12 @@ class HVLayout(Layout):
         overflow: hidden;
     }
     
+    .flx-split.flx-dragging { /* Fix for odd drag behavior on Chrome */
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
     .flx-split.flx-horizontal > .flx-split-sep,
     .flx-split.flx-horizontal.flx-dragging {
         cursor: ew-resize;  
@@ -312,8 +318,8 @@ class HVLayout(Layout):
         -ms-user-select: none;
         user-select: none;
         box-sizing: border-box;
-        /*background: rgba(0, 0, 0, 0);*/
-        background: #fff;  /* hide underlying widgets */
+        background: rgba(0, 0, 0, 0); /* transparent */
+        /* background: #fff;  /* hide underlying widgets */
     }
     """
     

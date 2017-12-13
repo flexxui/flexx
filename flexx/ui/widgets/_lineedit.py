@@ -23,10 +23,9 @@ Interactive example:
                 ui.Label(flex=0, text='copy:')
                 self.label = ui.Label(flex=1)
         
-        class JS:
-            @event.connect('line.text')
-            def _change_label(self, *events):
-                self.label.text = events[-1].new_value
+        @event.reaction
+        def __change_label(self):
+            self.label.set_text(self.line.text)
 """
 
 from ... import event
@@ -34,7 +33,7 @@ from ...pyscript import window, RawJS
 from . import Widget
 
 
-_phosphor_widget = RawJS("flexx.require('phosphor/lib/ui/widget')")
+# _phosphor_widget = RawJS("flexx.require('phosphor/lib/ui/widget')")
 
 
 class LineEdit(Widget):
@@ -48,114 +47,107 @@ class LineEdit(Widget):
     }
     """
     
-    class Both:
-            
-        @event.prop
-        def text(self, v=''):
-            """ The current text."""
-            return str(v)
-        
-        @event.prop
-        def password_mode(self, v=False):
-            """ Whether the insered text should be hidden or not.
-            """
-            return bool(v)
-        
-        @event.prop
-        def placeholder_text(self, v=''):
-            """ The placeholder text (shown when the text is an empty string)."""
-            return str(v)
-        
-        @event.prop
-        def autocomp(self, v=()):
-            """ A tuple/list of strings for autocompletion. Might not work
-            in all browsers.
-            """
-            return tuple([str(i) for i in v])
-
-        @event.prop
-        def disabled(self, v=False):
-            """ Whether the line edit is disabled.
-            """
-            return bool(v)
-
-    class JS:
+    ## Properties
     
-        def _init_phosphor_and_node(self):
-            
-            # Create node element
-            d = window.document.createElement('div')
-            d.innerHTML = '<input type="text", list="%s" />' % self.id
-            node = d.childNodes[0]
-            
-            # Wrap up in Phosphor
-            self.phosphor = _phosphor_widget.Widget({'node': node})
-            self.node = self.phosphor.node
-            
-            self._autocomp = window.document.createElement('datalist')
-            self._autocomp.id = self.id
-            self.node.appendChild(self._autocomp)
-            
-            f1 = lambda ev: self._set_prop('user_text', self.node.value)
-            f2 = lambda ev: self.submit() if ev.which == 13 else None
-            self._addEventListener(self.node, 'input', f1, False)
-            self._addEventListener(self.node, 'keydown', f2, False)
-            #if IE10:
-            #    self._addEventListener(self.node, 'change', f1, False)
+    text = event.StringProp(settable=True, doc="""
+        The current text of the line edit. Settable. If this is an empty
+        string, the placeholder_text is displayed instead.
+        """)
+    
+    user_text = event.StringProp(settable=False, doc="""
+        The text set by the user (updates on each keystroke).
+        """)
+    
+    password_mode = event.BoolProp(False, settable=True, doc="""
+        Whether the insered text should be hidden.
+        """)
+    
+    placeholder_text = event.StringProp(settable=True, doc="""
+        The placeholder text (shown when the text is an empty string).
+        """)
+    
+    autocomp = event.TupleProp(settable=True, doc="""
+        A tuple/list of strings for autocompletion. Might not work in all browsers.
+        """)
+    
+    disabled = event.BoolProp(False, settable=True, doc="""
+        Whether the line edit is disabled.
+        """)
+    
+    ## Methods, actions, emitters
+    
+    def _init_dom(self):
         
-        @event.emitter
-        def key_down(self, e):
-            # Prevent propating the key
-            ev = super().key_down(e)
-            pkeys = 'Escape',  # keys to propagate
-            if (ev.modifiers and ev.modifiers != ('Shift', )) or ev.key in pkeys:
-                pass
-            else:
-                e.stopPropagation()
-            return ev
+        # Create node element
+        d = window.document.createElement('div')
+        d.innerHTML = '<input type="text", list="%s" />' % self.id
+        self.node = d.childNodes[0]
+        self.outernode = self.node
         
-        @event.readonly
-        def user_text(self, v=None):
-            """ The text set by the user (updates on each keystroke). """
-            if v is not None:
-                v = str(v)
-                self.text = v
-            return v
+        self._autocomp = window.document.createElement('datalist')
+        self._autocomp.id = self.id
+        self.node.appendChild(self._autocomp)
         
-        @event.emitter
-        def submit(self):
-            """ Event emitted when the user strikes the enter or return key.
-            """
-            return {}
-        
-        @event.connect('text')
-        def __text_changed(self, *events):
-            self.node.value = self.text
-        
-        @event.connect('password_mode')
-        def __password_mode_changed(self, *events):
-            self.node.type = ['text', 'password'][int(bool(self.password_mode))]
-        
-        @event.connect('placeholder_text')
-        def __placeholder_text_changed(self, *events):
-            self.node.placeholder = self.placeholder_text
-        
-        # todo: this works in the browser but not in e.g. firefox-app
-        @event.connect('autocomp')
-        def __autocomp_changed(self, *events):
-            autocomp = self.autocomp
-            # Clear
-            for op in self._autocomp:
-                self._autocomp.removeChild(op)
-            # Add new options
-            for option in autocomp:
-                op = window.document.createElement('option')
-                op.value = option
-                self._autocomp.appendChild(op)
+        f1 = self._set_user_text
+        f2 = lambda ev: self.submit() if ev.which == 13 else None
+        self._addEventListener(self.node, 'input', f1, False)
+        self._addEventListener(self.node, 'keydown', f2, False)
+        #if IE10:
+        #    self._addEventListener(self.node, 'change', f1, False)
+    
+    @event.action
+    def _set_user_text(self):
+        text = self.node.value
+        self._mutate_user_text(text)
+        self._mutate_text(text)
+    
+    @event.emitter
+    def key_down(self, e):
+        # Prevent propating the key
+        ev = super().key_down(e)
+        pkeys = 'Escape',  # keys to propagate
+        if (ev.modifiers and ev.modifiers != ('Shift', )) or ev.key in pkeys:
+            pass
+        else:
+            e.stopPropagation()
+        return ev
+    
+    @event.emitter
+    def submit(self):
+        """ Event emitted when the user strikes the enter or return key.
+        """
+        return {}
+    
+    ## Reactions
+    
+    @event.reaction
+    def __text_changed(self):
+        self.node.value = self.text
+    
+    @event.reaction
+    def __password_mode_changed(self):
+        self.node.type = ['text', 'password'][int(bool(self.password_mode))]
+    
+    @event.reaction
+    def __placeholder_text_changed(self):
+        self.node.placeholder = self.placeholder_text
+    
+    # todo: this works in the browser but not in e.g. firefox-app
+    @event.reaction
+    def __autocomp_changed(self):
+        autocomp = self.autocomp
+        # Clear
+        for op in self._autocomp:
+            self._autocomp.removeChild(op)
+        # Add new options
+        for option in autocomp:
+            op = window.document.createElement('option')
+            op.value = option
+            self._autocomp.appendChild(op)
 
-        @event.connect('disabled')
-        def __disabled_changed(self, *events):
-            if events[-1].new_value:
-                self.node.setAttribute("disabled", "disabled")
-            else:
-                self.node.removeAttribute("disabled")
+    @event.reaction
+    def __disabled_changed(self):
+        if self.disabled:
+            self.node.setAttribute("disabled", "disabled")
+        else:
+            self.node.removeAttribute("disabled")

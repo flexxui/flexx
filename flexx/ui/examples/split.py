@@ -6,19 +6,19 @@ Splitter widgets are cool!
 from flexx import app, ui
 
 
-class Split(ui.Widget):
-    
+class Split(app.PyComponent):
+
     def init(self):
-        
-        with ui.SplitPanel(orientation='horizontal'):
+
+        with ui.HSplit():
             ui.Widget(style='background:#f00')
-            with ui.SplitPanel(orientation='vertical'):
+            with ui.VSplit():
                 ui.Widget(style='background:#0f0')
-                with ui.SplitPanel(orientation='horizontal'):
+                with ui.HSplit():
                     ui.Widget(style='background:#ff0')
-                    with ui.SplitPanel(orientation='vertical'):
+                    with ui.VSplit():
                         ui.Widget(style='background:#f0f')
-                        with ui.SplitPanel(orientation='horizontal'):
+                        with ui.HSplit():
                             ui.Widget(style='background:#0ff')
                             ui.Widget(style='background:#00f')
 
