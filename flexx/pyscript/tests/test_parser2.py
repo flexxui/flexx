@@ -228,7 +228,18 @@ class TestConrolFlow:
         code1 = 'corners = [[(p[i] + 0.5) for i in range(3)] for p in corners_local]'
         js = py2js(code1)
         assert 'p' not in js.meta['vars_unknown']
-    
+        
+        def foo1():
+            i = 3
+            x = [i for i in range(4, 7)]
+            return x
+        def foo2():
+            x = [i for i in range(4, 7)]
+            return x
+        js1 = py2js(foo1) + '\nfoo1()'
+        js2 = py2js(foo2) + '\nfoo2()'
+        assert evaljs(js1) == '[ 4, 5, 6 ]'
+        assert evaljs(js2) == '[ 4, 5, 6 ]'
     
     def xx_test_list_comprehension_speed(self):
         # https://developers.google.com/speed/articles/optimizing-javascript

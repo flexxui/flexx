@@ -692,7 +692,9 @@ class Parser2(Parser1):
                           comprehension.target_node.element_nodes]
             else:
                 target = [comprehension.target_node.name]
-            target = [prefix + t for t in target]
+            for i in range(len(target)):
+                if target[i] not in self.vars:
+                    target[i] = prefix + target[i]
             for t in target:
                 self.vars.add(t)
             self.vars.add(prefix + 'i%i' % iter)
