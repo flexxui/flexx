@@ -5,12 +5,7 @@ from . import Widget
 
 
 class Layout(Widget):
-    """ Abstract class for widgets that organize their child widgets.
-    
-    Panel widgets are layouts that do not take the natural size of their
-    content into account, making them more efficient and suited for
-    high-level layout. Other layouts, like HBox, are more suited for
-    laying out content where the natural size is important.
+    """ Abstract class for widgets that layout their child widgets.
     """
     
     CSS = """

@@ -36,7 +36,6 @@ class Label(Widget):
     CSS = """
         .flx-Label {
             border: 0px solid #454;
-            /* phosphor sets this to none */
             user-select: text;
             -moz-user-select: text;
             -webkit-user-select: text;

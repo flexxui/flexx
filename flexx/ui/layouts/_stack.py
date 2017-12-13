@@ -30,10 +30,6 @@ from ...pyscript import RawJS
 from . import Widget, Layout
 
 
-_phosphor_stackedpanel = RawJS("flexx.require('phosphor/lib/ui/stackedpanel')")
-_phosphor_iteration = RawJS("flexx.require('phosphor/lib/algorithm/iteration')")
-
-
 class StackLayout(Layout):
     """ A panel which shows only one of its children at a time.
     """

@@ -16,23 +16,6 @@ from ..pyscript import undefined, window, RawJS, this_is_js
 from ..util.getresource import get_resource
 from . import logger
 
-# # Associate Phosphor assets
-# for asset_name in ('phosphor-all.css', 'phosphor-all.js'):
-#     code = get_resource(asset_name).decode()
-#     app.assets.associate_asset(__name__, asset_name, code)
-
-
-# _phosphor_panel = RawJS("flexx.require('phosphor/lib/ui/panel')")
-# _phosphor_widget = RawJS("flexx.require('phosphor/lib/ui/widget')")
-# _phosphor_messaging = RawJS("flexx.require('phosphor/lib/core/messaging')")
-
-
-# To give both JS and Py a parent property without having it synced,
-# it is set explicitly for both sides. We need to sync either parent
-# or children to communicate the parenting structure, otherwise we end
-# up in endless loops. We use the children for this, because it contains
-# ordering information which cannot be communicated by the parent prop
-# alone.
 
 # todo: move to flexx.event.properties?
 class FloatPairProp(event.Property):
@@ -258,26 +241,6 @@ class Widget(app.JsComponent):
         
         # Setup JS events to enter Flexx' event system
         self._init_events()
-        
-        # if False:  # was JS
-        #     # Let widget create Phoshor and DOM nodes
-        #     self._init_phosphor_and_node()
-        #     self.phosphor.id = self.id
-        #     # Set outernode. Usually, but not always equal to self.node
-        #     self.outernode = self.phosphor.node
-        # 
-        #     # Keep track of size, children, closing. The size is all that really
-        #     # matters. Would be nice if we can keep Flexx up-to-date even when
-        #     # children are changed from the outside, but this is non-trivial
-        #     # and easily leads to strange recursions. E.g. we temporarily remove
-        #     # widgets ourselves to get the order straight.
-        #     _phosphor_messaging.installMessageHook(self.phosphor,
-        #                                            self._phosphor_msg_hook)
-        #     
-        #     # Keep track of Phosphor. Phosphor clears this ref when it is disposed.
-        #     def _title_changed_in_phosphor(title):
-        #         self.title = title.label
-        #     self.phosphor.title.changed.connect(_title_changed_in_phosphor)
     
     def init(self):
         """ Overload this to initialize a custom widget. When called, this
@@ -328,35 +291,6 @@ class Widget(app.JsComponent):
     #     self._session.keep_alive(self)
     # todo: not necessary because we keep_alive when a Component is send over, or is that too heavy?
     
-    # def _phosphor_msg_hook(self, handler, msg):
-    #     if msg.type == 'resize':
-    #         self._check_real_size()
-    #     elif msg.type == 'close-request':
-    #         pass  # not sure what close means in Phosphor
-    #     elif msg.type == 'child-added':
-    #         if msg.child.id not in window.flexx.instances:
-    #             if not msg.child.node.classList.contains('p-TabBar'):
-    #                 print('Phosphor child %r added to %r that is not '
-    #                     'managed by Flexx.' % (msg.child.id, self.id))
-    #         elif window.flexx.instances[msg.child.id] not in self.children:
-    #             print('Phosphor child %s added without Flexx knowing' %
-    #                     msg.child.id)
-    #     elif msg.type == 'child-removed':
-    #         pass
-    #     return True  # resume processing the message as normal
-
-    #   def _init_phosphor_and_node(self):
-    #     """ Overload this in sub widgets.
-    #     """
-    #     self.phosphor = _phosphor_panel.Panel()
-    #     self.node = self.phosphor.node
-    # 
-    # def _create_phosphor_widget(self, element_name='div'):
-    #     """ Convenience func to create a Phosphor widget from a div element name.
-    #     """
-    #     node = window.document.createElement(element_name)
-    #     return _phosphor_widget.Widget({'node': node})
-    
     
     ## Actions
     
@@ -401,17 +335,6 @@ class Widget(app.JsComponent):
         
         if size_limits_changed:
              self._check_min_max_size()
-        #     # Clear phosphor's limit cache (no need for getComputedStyle())
-        #     values = [self.outernode.style[k] for k in size_limits_keys]
-        #     for k, v in zip(size_limits_keys, values):
-        #         self.outernode.style[k] = v
-        #     # Allow parent to re-layout
-        #     parent = self.parent
-        #     # todo: do we need to tell the parent to "refit"?
-        #     # if parent:
-        #     #     parent.phosphor.fit()  # i.e. p.processMessage(p.MsgFitRequest)
-        #     # self.phosphor.update()
-    
     
     ## Reactions
     
@@ -428,9 +351,6 @@ class Widget(app.JsComponent):
     
     @event.reaction('title')
     def __title_changed(self, *events):
-        # # All Phosphor widgets have a title
-        # self.phosphor.title.label = events[-1].new_value
-        # # todo: title also supports caption, icon, closable, and more
         if self.parent is None and self.container == 'body':
             window.document.title = self.title or 'Flexx app'
     
@@ -598,52 +518,21 @@ class Widget(app.JsComponent):
     def __container_changed(self, *events):
         id = events[-1].new_value
         self.outernode.classList.remove('flx-main-widget')
-        if self.parent:# or self.phosphor.parent:
-            return  # e.g. embedded in a larger phosphor app
-        # # Detach
-        # if self.phosphor.isAttached:
-        #     try:
-        #         _phosphor_widget.Widget.detach(self.phosphor)
-        #     except Exception as err:
-        #         err.message += ' (%s)' % self.id
-        #         raise err
-        # if self.outernode.parentNode is not None:  # detachWidget not enough
-        #     self.outernode.parentNode.removeChild(self.outernode)
-        # Attach
-        if id:
-            if id == 'body':
-                el = window.document.body
-            else:
-                el = window.document.getElementById(id)
-            
-            el.appendChild(self.outernode)
-            # try:
-            #     _phosphor_widget.Widget.attach(self.phosphor, el)
-            # except Exception as err:
-            #     err.message += ' (%s)' % self.id
-            #     raise err
-            # todo: disconnect too? Maybe register/unregister at flexx object to get called?
-            # self._addEventListener(window, 'resize',
-            #     self.check_real_size
-            #     #lambda: (self.phosphor.update(), self._check_real_size())
-            #     )
+        if self.parent:
+            return
         
         # Let session keep us up to date about size changes
         self._session.keep_checking_size_of(self, bool(id))
         
-        if id == 'body':
-            self.outernode.classList.add('flx-main-widget')
-            window.document.title = self.title or 'Flexx app'
-        elif id:
-            # Update style. If there is stuff like min-height set (which
-            # would be common in the notebook), we need to reapply style
-            # because Phosphor sets some of the size-styling too.
-            # todo: no phosphor, so not needed no more?
-            pass
-            # style = self.style
-            # window.setTimeout(lambda: (self._set_prop('style', ''),
-            #                             self._set_prop('style', style)), 1)
-
+        if id:
+            if id == 'body':
+                el = window.document.body
+                self.outernode.classList.add('flx-main-widget')
+                window.document.title = self.title or 'Flexx app'
+            else:
+                el = window.document.getElementById(id)
+            el.appendChild(self.outernode)
+    
     @event.reaction('children')
     def __children_changed(self, *events):
         """ Make child widgets appear (in the right order) in a layout.

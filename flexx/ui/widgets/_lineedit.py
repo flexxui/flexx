@@ -33,9 +33,6 @@ from ...pyscript import window, RawJS
 from . import Widget
 
 
-# _phosphor_widget = RawJS("flexx.require('phosphor/lib/ui/widget')")
-
-
 class LineEdit(Widget):
     """ An input widget to edit a line of text (aka HTML text input).
     """

@@ -1,6 +1,11 @@
 """
 The HVLayout and its subclasses provide a simple mechanism to horizontally
-or vertically stack child widgets.
+or vertically stack child widgets. This can be done in different "modes":
+box mode is suited for aligning content, where natural size matters. The
+fix mode and split mode are more suited for high-level layout. See
+the HVLayout class for details.
+
+Here is an example that uses the various modes:
 
 
 .. UIExample:: 250
@@ -155,9 +160,6 @@ More reading:
 from ... import event
 from ...pyscript import RawJS
 from . import Layout
-
-
-# _phosphor_boxpanel = RawJS("flexx.require('phosphor/lib/ui/boxpanel')")
 
 
 class OrientationProp(event.Property):

@@ -32,12 +32,8 @@ from . import Layout, Widget
 from ._stack import StackLayout
 
 
-#_phosphor_tabbar = RawJS("flexx.require('phosphor/lib/ui/tabbar')")
-# _phosphor_tabpanel = RawJS("flexx.require('phosphor/lib/ui/tabpanel')")
-
 class TabLayout(StackLayout):
-    """ A layout which provides a tabbed layout for child widgets.
-    
+    """ A StackLayout which provides a tabbar for selecting the current widget.
     The title of each child widget is used for the tab label.
     """
     
@@ -74,7 +70,7 @@ class TabLayout(StackLayout):
         
         background: #ddd;
         border: 1px solid #777;
-        border-radius: 6px 6px 0px 0px;
+        border-radius: 4px 4px 0px 0px;
         margin-left: -1px;
     }
     
