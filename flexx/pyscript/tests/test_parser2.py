@@ -367,7 +367,7 @@ class TestContextManagers:
         
         assert evaljs(py2js(contexttest, 'f') + 'f()') == 'enter\n42\nexit\n.'
     
-    def test_with_as(self):
+    def test_with_as1(self):
         
         def contexttest():
             c = dict(__enter__=lambda: 7,
@@ -380,6 +380,21 @@ class TestContextManagers:
             return undefined
         
         assert evaljs(py2js(contexttest, 'f') + 'f()') == '42\n7\n43\nexit\n.'
+
+    def test_with_as2(self):
+        
+        def contexttest():
+            c = dict(__enter__=lambda: 7,
+                     __exit__=lambda: print('exit'))
+            with c as c.item:
+                print(42)
+                print(c.item)
+                print(43)
+            print(c.item)
+            print('.')
+            return undefined
+        
+        assert evaljs(py2js(contexttest, 'f') + 'f()') == '42\n7\n43\nexit\n7\n.'
 
     def test_with_exception(self):
         

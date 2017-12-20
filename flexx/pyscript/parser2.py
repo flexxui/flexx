@@ -381,10 +381,13 @@ class Parser2(Parser1):
         # for with_item in node.item_nodes: ...
         if with_item.as_node is None:
             code.append(self.lf(''))
-        else:
-            assert isinstance(with_item.as_node, ast.Name)
+        elif isinstance(with_item.as_node, ast.Name):
             self.vars.add(with_item.as_node.name)
             code.append(self.lf(with_item.as_node.name + ' = '))
+        elif isinstance(with_item.as_node, ast.Attribute):
+            code += [self.lf()] + self.parse(with_item.as_node) + [' = ']
+        else:
+            raise JSError('The as-node in a with-statement must be a name or attr.')
         code += [context_name, '.__enter__();']
         
         # Try
