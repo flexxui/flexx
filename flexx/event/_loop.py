@@ -95,7 +95,10 @@ class Loop:
     
     def _deactivate_component(self, component):
         """ Friend method of Component. """
-        assert self._local._active_components.pop(-1) is component
+        top = self._local._active_components.pop(-1)
+        if top is not component:
+            raise RuntimeError('loop._deactivate_component: %s is not %s' %
+                               (component.id, top and top.id))
     
     ## Adding to queues
     
