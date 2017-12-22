@@ -9,6 +9,17 @@ from flexx.util.testing import run_tests_if_main, raises
 from flexx.pyscript import py2js, evaljs, evalpy, script2js
 
 
+def test_dotted_unknowns():
+    
+    def func1():
+        x = ui._layouts.SomeLayout()
+        y = ui.SomeLayout.YYY
+        z = ui.SomeOtherLayout
+    
+    js = py2js(func1)
+    assert js.meta['vars_unknown'] == set(['ui._layouts.SomeLayout', 'ui.SomeLayout.YYY', 'ui.SomeOtherLayout'])
+
+
 def test_py2js_on_wrong_vals():
     
     raises(ValueError, py2js, [])

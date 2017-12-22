@@ -241,10 +241,10 @@ class Parser1(Parser0):
     def pop_scope_prefix(self):
         self._scope_prefix.pop(-1)
 
-    def parse_Name(self, node):
+    def parse_Name(self, node, fullname=None):
         # node.ctx can be Load, Store, Del -> can be of use somewhere?
         name = node.name
-        if self.vars.get(name, None):
+        if self.vars.is_known(name):
             return self.with_prefix(name)
         if self._scope_prefix:
             for stackitem in reversed(self._stack):
@@ -257,7 +257,9 @@ class Parser1(Parser0):
             return self.NAME_MAP[name]
         # Else ...
         if not (name in self._functions or name in ('undefined', 'window')):
-            self.vars.use(name)  # mark as used (not defined)
+            # mark as used (not defined)
+            used_name = (name + '.' + fullname) if fullname else name
+            self.vars.use(name, used_name)
         return name
     
     def parse_Starred(self, node):
@@ -385,9 +387,12 @@ class Parser1(Parser0):
         # Get full function name and method name if it exists
         
         if isinstance(node.func_node, ast.Attribute):
+            # We dont want to parse twice, because it may add to the vars_unknown
             method_name = node.func_node.attr
-            base_name = unify(self.parse(node.func_node.value_node))
-            full_name = unify(self.parse(node.func_node))
+            nameparts = self.parse(node.func_node)
+            full_name = unify(nameparts)
+            nameparts[-1] = nameparts[-1].rsplit('.', 1)[0]
+            base_name = unify(nameparts)
         elif isinstance(node.func_node, ast.Subscript):
             base_name = unify(self.parse(node.func_node.value_node))
             full_name = unify(self.parse(node.func_node))
@@ -553,8 +558,14 @@ class Parser1(Parser0):
             self.use_std_function('merge_dicts', [])
             return stdlib.FUNCTION_PREFIX + 'merge_dicts(' + ', '.join(kwargs) + ')'
     
-    def parse_Attribute(self, node):
-        base_name = unify(self.parse(node.value_node))
+    def parse_Attribute(self, node, fullname=None):
+        fullname = node.attr + '.' + fullname if fullname else node.attr
+        if isinstance(node.value_node, ast.Name):
+            base_name = self.parse_Name(node.value_node, fullname)
+        elif isinstance(node.value_node, ast.Attribute):
+            base_name = self.parse_Attribute(node.value_node, fullname)
+        else:
+            base_name = unify(self.parse(node.value_node))
         attr = node.attr
         # Double underscore name mangling
         if attr.startswith('__') and not attr.endswith('__') and base_name == 'this':

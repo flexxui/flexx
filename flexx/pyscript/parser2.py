@@ -370,9 +370,15 @@ class Parser2(Parser1):
         code = []
         
         if len(node.item_nodes) != 1:
-            raise JSError('With statement only supported with singleton contexts.')
+            raise JSError('With statement only supported for singleton contexts.')
         with_item = node.item_nodes[0]
         context_name = unify(self.parse(with_item.expr_node))
+        
+        # Store context expression in a variable?
+        if '(' in context_name or '[' in context_name:
+            ctx = self.dummy('context')
+            code.append(self.lf(ctx + ' = ' + context_name + ';'))
+            context_name = ctx
         
         err_name1 = 'err_%i' % self._indent
         err_name2 = self.dummy('err')
@@ -696,10 +702,9 @@ class Parser2(Parser1):
             else:
                 target = [comprehension.target_node.name]
             for i in range(len(target)):
-                if target[i] not in self.vars:
+                if not self.vars.is_known(target[i]):
                     target[i] = prefix + target[i]
-            for t in target:
-                self.vars.add(t)
+                    self.vars.add(target[i])
             self.vars.add(prefix + 'i%i' % iter)
             self.vars.add(prefix + 'iter%i' % iter)
             
@@ -1072,8 +1077,7 @@ class Parser2(Parser1):
     
     def parse_Global(self, node):
         for name in node.names:
-            self._globals.append(name)  # Keep track of globals
-            self.vars.set_nonlocal(name)
+            self.vars.set_global(name)
         return '' 
     
     def parse_Nonlocal(self, node):

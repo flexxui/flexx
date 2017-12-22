@@ -115,6 +115,13 @@ def py2js(ob=None, new_name=None, **parser_options):
                 raise TypeError('py2js() can only rename functions and classes.')
             jscode = js_rename(jscode, ob.__name__, new_name)
         
+        # Collect undefined variables
+        # vars_unknown = [name for name, s in p.vars.get_undefined()]
+        vars_unknown = set()
+        for name, usages in p.vars.get_undefined():
+            for usage in usages:
+                vars_unknown.add(usage)
+        
         # todo: now that we have so much info in the meta, maybe we should
         # use use py2js everywhere where we now use Parser and move its docs here.
         
@@ -125,12 +132,11 @@ def py2js(ob=None, new_name=None, **parser_options):
         jscode.meta['linenr'] = linenr
         jscode.meta['pycode'] = pycode
         jscode.meta['pyhash'] = hash
-        jscode.meta['vars_defined'] = set(n for n in p.vars if p.vars[n])
-        jscode.meta['vars_unknown'] = set(n for n in p.vars if not p.vars[n])
-        jscode.meta['vars_global'] = set(n for n in p.vars if p.vars[n] is False)
         jscode.meta['std_functions'] = p._std_functions
         jscode.meta['std_methods'] = p._std_methods
-        
+        jscode.meta['vars_defined'] = p.vars.get_defined()
+        jscode.meta['vars_global'] = p.vars.get_globals()
+        jscode.meta['vars_unknown'] = vars_unknown
         return jscode
     
     if ob is None:

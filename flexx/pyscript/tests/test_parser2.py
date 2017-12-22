@@ -395,7 +395,21 @@ class TestContextManagers:
             return undefined
         
         assert evaljs(py2js(contexttest, 'f') + 'f()') == '42\n7\n43\nexit\n7\n.'
-
+    
+    def test_with_calculated_context(self):
+        
+        def contexttest():
+            def get_ctx():
+                print('making')
+                return dict(__enter__=lambda: 7,
+                            __exit__=lambda: print('exit'))
+            with get_ctx() as item:
+                print(item)
+                print(42)
+            return undefined
+        
+        assert evaljs(py2js(contexttest, 'f') + 'f()') == 'making\n7\n42\nexit'
+    
     def test_with_exception(self):
         
         def contexttest(x):
@@ -756,6 +770,34 @@ class TestFunctions:
         """
         assert evaljs(py2js(func3_code)+'func3()') == '3'
     
+    @skipif(sys.version_info < (3,), reason='no nonlocal on legacy Python')
+    def test_global_vs_nonlocal(self):
+        js1 = py2js('global foo;foo = 3')
+        js2 = py2js('nonlocal foo;foo = 3')
+        
+        assert js1.meta['vars_unknown'] == set()
+        assert js2.meta['vars_unknown'] == set()
+        assert js1.meta['vars_global'] == set(['foo'])
+        assert js2.meta['vars_global'] == set()
+        
+        code = """if True:
+        x = 1
+        y = 1
+        def inner1():
+            x = 2
+            y = 2
+            def inner2():
+                global x
+                nonlocal y
+                print(x, y)
+            inner2()
+        inner1()
+        undefined
+        """
+        # In Python, this produces "1 2", but its hard to replicate that in JS, and
+        # probably not worth the effort.
+        # assert evalpy(code) == '1 2'
+        
     def test_raw_js(self):
         
         def func(a, b):
@@ -899,7 +941,6 @@ class TestClasses:
         assert evaljs(code + 'm3 instanceof MyClass2;') == 'true'
         assert evaljs(code + 'm3 instanceof MyClass1;') == 'true'
         assert evaljs(code + 'm3 instanceof Object;') == 'true'
-    
     
     def test_inheritance_super_more(self):
         
