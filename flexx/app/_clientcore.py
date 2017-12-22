@@ -226,7 +226,7 @@ class JsSession:
         self.instances[c._id] = c
     
     def _unregister_component(self, c):
-        self.instances_to_check_size.pop(c.id)
+        self.instances_to_check_size.pop(c.id, None)
         pass  # c gets popped from self.instances by DISPOSE_ACK command
     
     def get_component_instance(self, id):

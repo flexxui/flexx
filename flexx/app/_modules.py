@@ -4,6 +4,7 @@ The code here resolves dependencies of names used in the JS code, either
 by including more JS or by adding a dependency on another JSModule.
 """
 
+import re
 import sys
 import json
 import time
@@ -39,6 +40,20 @@ else:  # pragma: no cover
 #   module dependencies.
 # * In the Bundle class, again some dependencies are resolved due to bundling,
 #   and others propagate to dependencies between bundles.
+
+
+def mangle_dotted_vars(jscode, names_to_mangle):
+    """ Mangle the names of unknown variables that have dots in them, so that
+    they become simple identifiers. We use $ because thats not valid in Python
+    (i.e. no name clashes).
+    """
+    for name in list(names_to_mangle):
+        if '.' in name:
+            name1 = name.replace('.', r'\.')
+            name2 = name.replace('.', '$')
+            jscode = re.sub(r"\b(" + name1 + r")\b", name2, jscode,
+                            flags=re.UNICODE | re.MULTILINE)
+    return jscode
 
 
 class JSModule:
@@ -202,7 +217,9 @@ class JSModule:
         this module. Otherwise this module will import the name from 
         another module.
         
-        If ``is_global``, the name is considered declared global in this module.
+        If ``is_global``, the name is considered global; it may be declared in
+        this module, but it may also be a JS global. So we try to resolve the
+        name, but do not care if it fails.
         """
         _dep_stack = _dep_stack or []
         if name in self._imported_names:
@@ -218,29 +235,28 @@ class JSModule:
         # Try getting value. We warn if there is no variable to match, but
         # if we do find a value we're either including it or raising an error
         try:
-            val = getattr(self._pymodule, name)
+            val = self._pymodule
+            nameparts = name.split('.')
+            for i in range(len(nameparts)):
+                val = getattr(val, nameparts[i])
+                # Maybe we "know" (this kind of) value ...
+                if isinstance(val, type) and issubclass(val, JsComponent):
+                    name = '.'.join(nameparts[:i+1])
+                    break
+                elif val is loop and i == 0:
+                    return self._add_dep_from_event_module('loop', nameparts[0])
+                elif isinstance(val, logging.Logger) and i == 0:
+                    # todo: hehe, we can do more here
+                    return self._add_dep_from_event_module('logger', nameparts[0])
         except AttributeError:
-            msg = 'JS in "%s" uses undefined variable %r.' % (self.filename, name)
-            if is_global:
-                raise ValueError(msg)
-            logger.warn(msg)
+            if not is_global:  # else, it may be a JS-global
+                msg = 'JS in "%s" uses undefined variable %r.' % (self.filename, name)
+                logger.warn(msg)
             return
         
         # Early exit
         if isinstance(val, (JSConstant, Asset)) or name in ('Infinity', 'NaN'):
             return  # stubs
-        elif val is loop:
-            return self._add_dep_from_event_module('loop', name)
-        elif isinstance(val, logging.Logger):  # todo: hehe, we can do more here
-            return self._add_dep_from_event_module('logger', name)
-        elif val is None and not is_global:  # pragma: no cover
-            logger.warn('JS in "%s" uses variable %r that is None; '
-                        'I will assume its a stub and ignore it. Declare %s '
-                        'as global (where it\'s used) to use it anyway, or '
-                        'use "from flexx.pyscript.stubs import %s" to mark '
-                        'it as a stub'
-                        % (self.filename, name, name, name))
-            return
         
         # Mark dirty
         self._changed_time = time.time()
@@ -270,7 +286,7 @@ class JSModule:
                     self._component_classes[name] = val
                     # Recurse
                     self._collect_dependencies_from_bases(val)
-                    self._collect_dependencies(_dep_stack, **val.JS.CODE.meta)
+                    self._collect_dependencies(val.JS.CODE, _dep_stack)
                 else:
                     # Import from another module
                     self._import(val.__jsmodule__, val.__name__, name)
@@ -285,7 +301,7 @@ class JSModule:
                     self._pyscript_code[name] = js
                     # Recurse
                     self._collect_dependencies_from_bases(val)
-                    self._collect_dependencies(_dep_stack, **js.meta)
+                    self._collect_dependencies(js, _dep_stack)
                 else:
                     # Import from another module
                     self._import(mod_name, val.__name__, name)
@@ -298,7 +314,7 @@ class JSModule:
                 func = getattr(val, mname + '_js')
                 funccode = py2js(func, indent=1, inline_stdlib=False, docstrings=False)
                 js += ',\n    ' + mname + ':' + funccode.split('=', 1)[1].rstrip(' \n;')
-                self._collect_dependencies(_dep_stack, **funccode.meta)
+                self._collect_dependencies(funccode, _dep_stack)
             js += '};\n'
             js += 'serializer.add_extension(%s);\n' % name
             js = JSString(js)
@@ -322,7 +338,7 @@ class JSModule:
                 # Recurse
                 if isinstance(val, type):
                     self._collect_dependencies_from_bases(val)
-                self._collect_dependencies(_dep_stack, **js.meta)
+                self._collect_dependencies(js, _dep_stack)
             else:
                 # Import from another module
                 self._import(mod_name, val.__name__, name)
@@ -360,17 +376,20 @@ class JSModule:
             t = 'JS in "%s" uses %r but cannot convert %s to JS.'
             raise ValueError(t % (self.filename, name, val.__class__))
     
-    def _collect_dependencies(self, _dep_stack,
-                              vars_unknown=None, vars_global=None, **kwargs):
+    def _collect_dependencies(self, js, _dep_stack):
         """
         Collect dependencies corresponding to names used in the JS.
         """
-        assert not (vars_unknown is None or vars_global is None)
+        vars_unknown = js.meta['vars_unknown']
+        vars_global = js.meta['vars_global']
         for name in reversed(sorted(vars_unknown)):
             if name == 'event':
+                assert False, 'why was this again?'  # todo: remove or explain
                 self._deps.setdefault('flexx.event.js', ['event'])
             else:
-                self.add_variable(name, name in vars_global, _dep_stack=_dep_stack)
+                self.add_variable(name, _dep_stack=_dep_stack)
+        for name in reversed(sorted(vars_global)):
+            self.add_variable(name, True, _dep_stack=_dep_stack)
     
     def _collect_dependencies_from_bases(self, cls):
         """
@@ -410,6 +429,9 @@ class JSModule:
             for code in js:
                 used_std_functions.update(code.meta['std_functions'])
                 used_std_methods.update(code.meta['std_methods'])
+            # Mangle dotted names
+            for i in range(len(js)):
+                js[i] = mangle_dotted_vars(js[i], self._imported_names)
             # Insert serialized values
             value_lines = []
             for key in sorted(self._js_values):
@@ -422,12 +444,13 @@ class JSModule:
             # Handle dependency imports
             for dep_name in reversed(sorted(self._deps)):
                 names = self._deps[dep_name]
-                mod_name = names[0].replace('.', '_')  # can still be dep_name
+                mod_name = names[0].replace('.', '$')  # mangle module name
                 imports.append(dep_name + ' as ' + mod_name)
                 for name in names[1:]:
                     as_name = name
                     if ' as ' in name:
                         name, _, as_name = name.partition(' as ')
+                        as_name = as_name.replace('.', '$')  # mangle dotted name
                     pieces = ['%s = %s.%s' % (as_name, mod_name, name)]
                     js.insert(0, 'var ' + (', '.join(pieces)) + ';')
             # Import stdlib

@@ -554,7 +554,8 @@ class Session:
             logger.debug('Loading asset %s' % asset.name)
             # Determine command suffix. All our sources come in bundles,
             # for which we use eval because it makes sourceURL work on FF.
-            # todo: is still still an issue in Firefox 57+?
+            # todo: is this still an issue in Firefox 57+? Yes.
+            # todo: but the sourcefile thing seems to not work at all on Chrome
             suffix = asset.name.split('.')[-1].upper()
             if suffix == 'JS' and isinstance(asset, Bundle):
                 suffix = 'JS-EVAL'

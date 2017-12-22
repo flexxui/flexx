@@ -140,6 +140,35 @@ files['lib4'] = """
         return 1
 """
 
+files['globals0'] = """
+    def apply():
+        console = 4
+    def main():
+        apply()
+        print(console)
+"""
+
+files['globals1'] = """
+    console = 3
+    def apply():
+        global console
+        console = 4
+    def main():
+        global console
+        apply()
+        print(console)
+"""
+
+files['globals2'] = """
+    def apply():
+        global console
+        console.xx = 4
+    def main():
+        global console
+        apply()
+        print(console.xx)
+"""
+
 
 PKG_NAME = 'flxtest'
 
@@ -192,7 +221,7 @@ def test_modules():
     assert m.component_classes.pop().__name__ == 'Foo'
     
     # Modules exists
-    assert len(store) == 6
+    assert len(store) == 7
     assert 'flxtest.foo' in store
     assert 'flxtest.lib1' in store
     assert 'flxtest.lib2' in store
@@ -215,9 +244,9 @@ def test_modules():
     assert 'do_something = function' in store['flxtest.foo'].get_js()
     
     # Function defs imported
-    assert 'sin = flxtest_lib1.sin' in store['flxtest.lib3'].get_js()
-    assert 'cos = flxtest_lib2.cos' in store['flxtest.lib3'].get_js()
-    assert 'tan = flxtest_lib3.tan' in store['flxtest.foo'].get_js()
+    assert 'sin = flxtest$lib1.sin' in store['flxtest.lib3'].get_js()
+    assert 'cos = flxtest$lib2.cos' in store['flxtest.lib3'].get_js()
+    assert 'tan = flxtest$lib3.tan' in store['flxtest.foo'].get_js()
     
     # Unused constants 
     assert 'sys' not in store['flxtest.foo'].get_js()
@@ -232,7 +261,7 @@ def test_modules():
     
     # But RawJS constants can be shared!
     assert 'bias = []' in store['flxtest.lib2'].get_js()
-    assert 'bias = flxtest_lib2.bias' in store['flxtest.lib3'].get_js()
+    assert 'bias = flxtest$lib2.bias' in store['flxtest.lib3'].get_js()
     
     # So ,,, lib4 is omitted, right?
     assert 'flxtest.lib4' not in store
@@ -245,7 +274,7 @@ def test_modules():
     m.add_variable('do_more')
     
     # Now, lib4 is used
-    assert len(store) == 7
+    assert len(store) == 8
     assert 'flxtest.lib4' in store
     
     # And names added in foo
@@ -299,8 +328,9 @@ def test_add_variable():
         store['flxtest.lib2'].add_variable('spam')  
     assert len(log) == 1 and 'undefined variable' in log[0]
     
-    with raises(ValueError):
+    with capture_log('info') as log:
         store['flxtest.lib2'].add_variable('spam', is_global=True)
+    assert not log
     
     m = JSModule('flxtest.bar', store)
     
@@ -310,11 +340,8 @@ def test_add_variable():
     # Even if name makes no sense; maybe it has exports that we do not know of
     m.add_variable('use_lib1_wrong')
     
-    # But not for regular modules
-    with raises(ValueError) as err:
-        m.add_variable('use_lib2')
-    assert '__pyscript__' in str(err)
-    
+    # Also for dotted names
+    m.add_variable('use_lib2')
     
     # Has changed flag
     our_time = time.time(); time.sleep(0.01)
@@ -368,6 +395,39 @@ def test_subclasses():
     m.add_variable('Foo')
     assert 'flxtest.foo' in store
     assert 'flexx.app._component2' in store
+
+
+def test_globals():
+    
+    import flxtest.globals0
+    import flxtest.globals1
+    import flxtest.globals2
+    
+    store = {}
+    m0 = JSModule('flxtest.globals0', store)
+    m1 = JSModule('flxtest.globals1', store)
+    m2 = JSModule('flxtest.globals2', store)
+    
+    with capture_log('info') as log:
+        m0.add_variable('main')
+    assert len(log) == 1 and 'undefined variable' in log[0]
+    
+    with capture_log('info') as log:
+        m1.add_variable('main')
+    assert not log
+    
+    with capture_log('info') as log:
+        m2.add_variable('main')
+    assert not log
+    
+    # m0 has local definitions, but no global
+    assert '\nvar console' not in m0.get_js()
+    assert '  var console' in m0.get_js()
+    # m1 has global definition but no local
+    assert '\nvar console' in m1.get_js()
+    assert '  var console' not in m1.get_js()
+    # m2 has neither
+    assert 'var console' not in m2.get_js()
 
 
 def test_fails():
