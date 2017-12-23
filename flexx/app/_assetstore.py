@@ -10,6 +10,7 @@ import shutil
 from ..event._js import JS_EVENT
 from ..pyscript import create_js_module, get_all_std_names, get_full_std_lib
 from ..pyscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
+from ..util.getresource import get_resoure_path
 
 from ._component2 import AppComponentMeta
 from ._asset import Asset, Bundle, HEADER
@@ -241,11 +242,8 @@ class AssetStore:
                                'amd-flexx')
         asset_event = Asset('flexx.event.js', HEADER + mod)
         # Create asset for bsdf - we replace the UMD loader code with flexx.define()
-        import os
-        import bsdf
-        bsdf_fname = os.path.join(bsdf.__file__, '..', '..', 'javascript', 'bsdf.js')
-        code = open(bsdf_fname, 'rb').read().decode()
-        code = code.split('"use strict";\n', 1)[1]
+        code = open(get_resoure_path('bsdf.js'), 'rb').read().decode()
+        code = code.split('"use strict";\n', 1)[1]  # put in the Flexx loader instead
         code = 'flexx.define("bsdf", [], (function () {\n"use strict";\n' + code
         asset_bsdf = Asset('bsdf.js', code)
         

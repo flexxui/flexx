@@ -434,13 +434,13 @@ class JsSession:
 
 # In Python, we need some extras for the serializer to work
 if this_is_js():
+    # Include bsdf.js
     window.flexx = Flexx()
     bsdf = RawJS("flexx.require('bsdf')")
     serializer = bsdf.BsdfSerializer()
     window.flexx.serializer = serializer
 else:
-    # Include bsdf.js
-    # todo: use vendored bsdf.py and on-line version of bsdf.js
-    import bsdf
-    serializer = bsdf.BsdfSerializer()
+    # Import vendored bsdf lite module
+    from . import bsdf_lite as bsdf
+    serializer = bsdf.BsdfLiteSerializer()
     serializer.__module__ = __name__
