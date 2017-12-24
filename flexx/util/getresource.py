@@ -26,7 +26,7 @@ except ImportError:
 # Definition of remote resources, optionally versioned ('{}' in url becomes tag)
 phosphor_url = 'https://raw.githubusercontent.com/zoofIO/phosphor-all/{}/dist/'
 RESOURCES = {
-    'bsdf.js': ('https://gitlab.com/almarklein/bsdf/raw/{}/javascript/bsdf.js', 'master'),
+    #'bsdf.js': ('https://gitlab.com/almarklein/bsdf/raw/{}/javascript/bsdf.js', ''),
     'phosphor-all.js': (phosphor_url + 'phosphor-all.js', '94d59b003849f'),
     'phosphor-all.css': (phosphor_url + 'phosphor-all.css', '94d59b003849f'),
 }

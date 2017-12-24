@@ -11,10 +11,9 @@
 
 from ..event import loop
 from .. import event, app
-from ..app import JsComponent
-from ..pyscript import undefined, window, RawJS, this_is_js
-from ..util.getresource import get_resource
-from . import logger
+from ..pyscript import undefined, window, this_is_js
+
+from . import logger  # noqa
 
 
 # todo: move to flexx.event.properties?
@@ -104,8 +103,9 @@ class Widget(app.JsComponent):
         old and new parent.
         """)
         
-    children = event.TupleProp((), doc="""
-        The child widgets of this widget (not directly settable).
+    children = app.LocalProperty((), doc="""
+        The child widgets of this widget. This property is not settable and
+        only present in JavaScript.
         """)
     
     title = event.StringProp('', settable=True, doc="""

@@ -49,11 +49,17 @@ class ComponentMeta(type):
     
     def __init__(cls, name, bases, dct):
         cls._finish_properties(dct)
-        cls._init_hook(name, bases, dct)
+        cls._init_hook1(name, bases, dct)
         cls._set_summaries()
+        cls._init_hook2(name, bases, dct)
         type.__init__(cls, name, bases, dct)
     
-    def _init_hook(cls, name, bases, dct):
+    def _init_hook1(cls, name, bases, dct):
+        """ Overloaded in flexx.app.AppComponentMeta.
+        """
+        pass
+    
+    def _init_hook2(cls, name, bases, dct):
         """ Overloaded in flexx.app.AppComponentMeta.
         """
         pass

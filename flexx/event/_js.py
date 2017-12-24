@@ -344,6 +344,8 @@ OK_MAGICS = (
              '__emitters__', '__reactions__', '__jsmodule__',
              # Functions that make sense
              '__init__', '__enter__', '__exit__',
+             # For flexx.ui
+             '__proxy_properties__',
              )
 
 
@@ -430,7 +432,6 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
         class_items = sorted(class_items)
     
     for name, val in class_items:
-
         if isinstance(val, ActionDescriptor):
             # Set underlying function as class attribute. This is overwritten
             # by the instance, but this way super() works.
