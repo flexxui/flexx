@@ -93,15 +93,19 @@ class BaseButton(Widget):
         """
         return self._create_mouse_event(e)
 
+    def _render_dom(self):
+        pass  # Widget._render_dom() resets based on children
+
 
 class Button(BaseButton):
     """ A push button.
     """
 
-    def _init_dom(self):
-        self.node = window.document.createElement('button')
-        self.outernode = self.node
-        self._addEventListener(self.node, 'click', self.mouse_click, 0)
+    def _create_dom(self):
+        global window
+        node = window.document.createElement('button')
+        self._addEventListener(node, 'click', self.mouse_click, 0)
+        return node
 
     @event.reaction('text')
     def __text_changed(self, *events):
@@ -125,12 +129,13 @@ class ToggleButton(BaseButton):
             font-weight: bolder;
         }
     """
-
-    def _init_dom(self):
-        self.node = window.document.createElement('button')
-        self.outernode = self.node
-        self._addEventListener(self.node, 'click', self.mouse_click, 0)
-
+    
+    def _create_dom(self):
+        global window
+        node = window.document.createElement('button')
+        self._addEventListener(node, 'click', self.mouse_click, 0)
+        return node
+    
     @event.reaction('text')
     def __text_changed(self, *events):
         self.node.innerHTML = events[-1].new_value
@@ -153,14 +158,15 @@ class RadioButton(BaseButton):
     same parent, only one can be active.
     """
 
-    def _init_dom(self):
+    def _create_dom(self):
+        global window
         template = '<input type="radio" id="ID"><label for="ID">'
-        self.outernode = window.document.createElement('div')
-        self.outernode.innerHTML = template.replace('ID', self.id)
-        self.node = self.outernode.childNodes[0]
-        self.text_node = self.outernode.childNodes[1]
-        
-        self._addEventListener(self.node, 'click', self._check_radio_click, 0)
+        outernode = window.document.createElement('div')
+        outernode.innerHTML = template.replace('ID', self.id)
+        node = outernode.childNodes[0]
+        self.text_node = outernode.childNodes[1]
+        self._addEventListener(node, 'click', self._check_radio_click, 0)
+        return outernode, node
     
     @event.reaction('parent')
     def __update_group(self, *events):
@@ -195,17 +201,19 @@ class RadioButton(BaseButton):
 class CheckBox(BaseButton):
     """ A checkbox button.
     """
-
-    def _init_dom(self):
+   
+    def _create_dom(self):
+        global window
         template = '<input type="checkbox" id="ID"><label for="ID">'
-        self.outernode = window.document.createElement('div')
-        self.outernode.innerHTML = template.replace('ID', self.id)
-        self.node = self.outernode.childNodes[0]
-        self.text_node = self.outernode.childNodes[1]
+        outernode = window.document.createElement('div')
+        outernode.innerHTML = template.replace('ID', self.id)
+        node = outernode.childNodes[0]
+        self.text_node = outernode.childNodes[1]
 
-        self._addEventListener(self.node, 'click', self.mouse_click, 0)
-        self._addEventListener(self.node, 'change', self._check_changed_from_dom, 0)
-
+        self._addEventListener(node, 'click', self.mouse_click, 0)
+        self._addEventListener(node, 'change', self._check_changed_from_dom, 0)
+        return outernode, node
+    
     @event.reaction('text')
     def __text_changed(self, *events):
         self.text_node.innerHTML = events[-1].new_value

@@ -497,7 +497,9 @@ class HVLayout(Layout):
     
     @event.reaction('mode')
     def __set_mode(self, *events):
-        self._update_layout(self.children)  # pass children to reset their style
+        # reset children style
+        for child in self.children:
+            self._release_child(child)
         
         if self.mode == 'box':
             self.outernode.classList.remove('flx-split')
@@ -534,31 +536,26 @@ class HVLayout(Layout):
             widget.check_real_size()
         self._rerender()
     
-    def _update_layout(self, old_children, new_children=None):
-        """ Can be overloaded in (Layout) subclasses.
-        """
+    def _release_child(self, widget):
+        for n in ['margin', 'left', 'width', 'top', 'height']:
+            widget.outernode.style[n] = ''
+    
+    def _render_dom(self):
         children = self.children
-        use_seps = self.mode == 'split'
-        if self.mode == 'box':
+        mode = self.mode
+        use_seps = mode == 'split'
+        if mode == 'box':
             self._ensure_seps(0)
         else:
             self._ensure_seps(len(children) - 1)
         
-        # Reset style of old children
-        for child in old_children:
-            for n in ['margin', 'left', 'width', 'top', 'height']:
-                child.outernode.style[n] = ''
-        
-        # Remove any children
-        while len(self.outernode.children) > 0:
-            c = self.outernode.children[0]
-            self.outernode.removeChild(c)
-        
         # Add new children and maybe interleave with separater widgets
+        nodes = []
         for i in range(len(children)):
-            self.outernode.appendChild(children[i].outernode)
+            nodes.append(children[i].outernode)
             if use_seps and i < len(self._seps):
-                self.outernode.appendChild(self._seps[i])
+                nodes.append(self._seps[i])
+        return nodes
     
     def _ensure_seps(self, n):
         """ Ensure that we have exactly n seperators.

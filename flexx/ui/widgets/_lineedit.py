@@ -29,7 +29,7 @@ Interactive example:
 """
 
 from ... import event
-from ...pyscript import window, RawJS
+from ...pyscript import window
 from . import Widget
 
 
@@ -73,24 +73,24 @@ class LineEdit(Widget):
     
     ## Methods, actions, emitters
     
-    def _init_dom(self):
+    def _create_dom(self):
         
         # Create node element
         d = window.document.createElement('div')
         d.innerHTML = '<input type="text", list="%s" />' % self.id
-        self.node = d.childNodes[0]
-        self.outernode = self.node
+        node = d.childNodes[0]
         
         self._autocomp = window.document.createElement('datalist')
         self._autocomp.id = self.id
-        self.node.appendChild(self._autocomp)
+        node.appendChild(self._autocomp)
         
         f1 = self._set_user_text
         f2 = lambda ev: self.submit() if ev.which == 13 else None
-        self._addEventListener(self.node, 'input', f1, False)
-        self._addEventListener(self.node, 'keydown', f2, False)
+        self._addEventListener(node, 'input', f1, False)
+        self._addEventListener(node, 'keydown', f2, False)
         #if IE10:
         #    self._addEventListener(self.node, 'change', f1, False)
+        return node
     
     @event.action
     def _set_user_text(self):

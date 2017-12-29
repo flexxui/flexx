@@ -46,6 +46,16 @@ class FloatPairProp(event.Property):
         return value
 
 
+def create_element(type, props=None, children=None):
+    """ Convenience function to create a dictionary to represent
+    a virtual DOM node. Intended for use inside ``Widget._render_dom()``.
+    """
+    return dict(type=type,
+                props=props or {},
+                children=children,
+                )
+
+
 class Widget(app.JsComponent):
     """ Base widget class.
 
@@ -137,7 +147,7 @@ class Widget(app.JsComponent):
         the minimum size. Flex is a two-element tuple, but both values
         can be specified at once by specifying a scalar.
         """)
-        # todo: make a custom 2Tuple prop to allow specifying as scalar, also pos and size etc
+    # todo: make a custom 2Tuple prop to allow specifying as scalar, also pos and size etc
     
     # todo: PinBoardLayout and GridPanel or not used a lot, deprecate?
     pos = FloatPairProp((0, 0), settable=True, doc="""
@@ -222,8 +232,18 @@ class Widget(app.JsComponent):
                 self.set_container('body')
         
         # Create DOM nodes
-        # todo: how does_render() fit into this?
-        self._init_dom()
+        # outernode is the root node
+        # node is an inner (representative) node, often the same, but not always
+        nodes = self._create_dom()
+        assert nodes is not None
+        if not isinstance(nodes, list):
+            nodes = [nodes]
+        assert len(nodes) == 1 or len(nodes) == 2
+        if len(nodes) == 1:
+            self.outernode = self.node = self.__render_resolve(nodes[0])
+        else:
+            self.outernode = self.__render_resolve(nodes[0])
+            self.node = self.__render_resolve(nodes[1])
         
         # Derive css class name from class hierarchy
         cls = self.__class__
@@ -250,11 +270,119 @@ class Widget(app.JsComponent):
         # specific docstring here.
         pass
     
-    def _init_dom(self):
-        """ Initialize DOM nodes for this widget. Overload in subclasses.
+    def _create_dom(self):
+        """ Create DOM node(s) for this widget.
+        
+        This method must return two (real or virtual) DOM nodes which
+        will be available as ``self.outernode`` and ``self.node``
+        respectively. If a single node is given, it is used for both
+        values. These attributes must remain unchanged throughout the
+        lifetime of a widget. This method can be overloaded in
+        subclasses.
         """
-        self.node = window.document.createElement('div')
-        self.outernode = self.node
+        return create_element('div')
+    
+    def _render_dom(self):
+        """ Update the content of the DOM for this widget.
+        
+        This method must return a DOM structure that can consist of (a mix of)
+        virtual nodes and real nodes. The widget will use this structure to
+        update the real DOM in a relatively efficient manner (new nodes are
+        only (re)created if needed). The root element must match the type of
+        this widget's outernode. This method may also return a list or string
+        to use as the root node's content.
+        
+        Note that this method is called from an implicit reaction: it will
+        auto-connect to any properties that are accessed. Combined with the
+        above, this allows for a very declarative way to write widgets.
+        
+        Virtual nodes are represented as dicts with fields "type", "props"
+        and "children". Children may also be string to use as innerHTML.
+        The ``create_element()`` function makes it easier to define nodes.
+        
+        The default ``_render_dom()`` method simply places the outer node of
+        the child widgets as the content of this DOM node. Overload as needed.
+        """
+        return [c.outernode for c in self.children]
+    
+    @event.reaction
+    def __render(self):
+        # Call render method
+        vnode = self._render_dom()
+        # Validate output, allow it to return content instead of a vnode
+        if vnode is None or vnode is self.outernode:
+            return
+        elif isinstance(vnode, str) or isinstance(vnode, list):
+            vnode = dict(type=self.outernode.nodeName, props={}, children=vnode)
+        elif isinstance(vnode, dict):
+            if vnode.type.lower() != self.outernode.nodeName.lower():
+                raise ValueError('Widget._render_dom() must return root node with '
+                                 'same element type as outernode.')
+        else:
+            raise TypeError('Widget._render_dom() '
+                            'must return None, str, list or dict.')
+        # Resolve
+        node = self.__render_resolve(vnode, self.outernode)
+        assert node is self.outernode
+    
+    def __render_resolve(self, vnode, node=None):
+        """ Given a DOM node and its virtual representation,
+        update or create a new DOM node as necessary.
+        """
+        
+        # Check vnode (we check vnode.children further down)
+        if vnode and vnode.nodeName:  # is DOM node
+            return vnode
+        if not isinstance(vnode, dict):
+            raise TypeError('Widget._render_dom() needs virtual nodes '
+                            'to be dicts, not ' + vnode)
+        if not isinstance(vnode.type, str):
+            raise TypeError('Widget._render_dom() needs virtual node '
+                            'type to be str, not ' + vnode.type)
+        if not isinstance(vnode.props, dict):
+            raise TypeError('Widget._render_dom() needs virtual node '
+                            'props as dict, not ' + vnode.props)
+        
+        # Resolve the node itself
+        if node is None or node.nodeName.lower() != vnode.type.lower():
+            node = window.document.createElement(vnode.type)
+        
+        # Resolve props (i.e. attributes)
+        for key, val in vnode.props.items():
+            ob = node
+            parts = key.replace('__', '.').split('.')
+            for i in range(len(parts)-1):
+                ob = ob[parts[i]]
+            ob[parts[len(parts)-1]] = val
+        
+        # Resolve content
+        if vnode.children is None:
+            pass  # dont touch it
+        elif isinstance(vnode.children, str):
+            node.innerHTML = vnode.children
+        elif isinstance(vnode.children, list):
+            # Truncate children
+            while len(node.children) > len(vnode.children):
+                node.removeChild(node.children[len(node.children)-1])
+            # Resolve children
+            i1 = -1
+            for i2 in range(len(vnode.children)):
+                i1 += 1
+                vsubnode = vnode.children[i2]
+                subnode = None
+                if i1 < len(node.children):
+                    subnode = node.children[i1]
+                new_subnode = self.__render_resolve(vsubnode, subnode)
+                if subnode is None:
+                    node.appendChild(new_subnode)
+                elif subnode is not new_subnode:
+                    node.insertBefore(new_subnode, subnode)
+                    node.removeChild(subnode)
+        else:
+            raise TypeError('Widget._render_dom() '
+                            'needs virtual node children to be str or list.')
+        
+        return node
     
     # todo: mmm, need this at the Python side
     def _repr_html_(self):
@@ -334,7 +462,7 @@ class Widget(app.JsComponent):
                 size_limits_changed = True
         
         if size_limits_changed:
-             self._check_min_max_size()
+            self._check_min_max_size()
     
     ## Reactions
     
@@ -533,19 +661,10 @@ class Widget(app.JsComponent):
                 el = window.document.getElementById(id)
             el.appendChild(self.outernode)
     
-    @event.reaction('children')
-    def __children_changed(self, *events):
-        """ Make child widgets appear (in the right order) in a layout.
+    def _release_child(self, widget):
+        """ Overload to restore a child widget, e.g. to its normal style.
         """
-        self._update_layout(events[0].old_value, events[-1].new_value)
-    
-    def _update_layout(self, old_children, new_children):
-        """ Can be overloaded in (Layout) subclasses.
-        """
-        for w in old_children:
-            self.node.removeChild(w.outernode)
-        for w in new_children:
-            self.node.appendChild(w.outernode)
+        pass
     
     ## Events
 

@@ -50,6 +50,11 @@ class MyWidget(ui.Label):
             elif ev.key == 'o':
                 ori = {'h': 'v', 'v': 'h'}.get(self.parent.orientation, 'h')
                 self.parent.set_orientation(ori)
+            elif ev.key == ']':
+                with self.parent:
+                    MyWidget()
+            elif ev.key == '[':
+                self.dispose()
     
     @event.reaction('parent.mode', 'flex')
     def _update_text(self, *events):

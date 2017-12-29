@@ -86,16 +86,18 @@ class TabLayout(StackLayout):
     }
     """
     
-    def _init_dom(self):
-        super()._init_dom()
+    def _create_dom(self):
+        outernode = window.document.createElement('div')
         self._tabbar = window.document.createElement('div')
         self._tabbar.classList.add('flx-tabbar')
         self._addEventListener(self._tabbar, 'mousedown', self._tabbar_click)
-        self.node.appendChild(self._tabbar)
+        outernode.appendChild(self._tabbar)
+        return outernode
     
-    def _update_layout(self, old_children, new_children):
-        super()._update_layout(old_children, new_children)
-        self.node.appendChild(self._tabbar)
+    def _render_dom(self):
+        nodes = [child.outernode for child in self.children]
+        nodes.append(self._tabbar)
+        return nodes
     
     @event.reaction
     def __update_tabs(self):

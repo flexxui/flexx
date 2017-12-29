@@ -12,7 +12,7 @@ class Form(ui.Widget):
     
     def init(self):
         
-        with ui.BoxPanel():
+        with ui.HFix():
             with ui.FormLayout() as self.form:
                 self.b1 = ui.Button(title='Name:', text='Hola')
                 self.b2 = ui.Button(title='Age:', text='Hello world')
@@ -25,5 +25,5 @@ class Form(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Form, 'browser')
+    m = app.launch(Form, 'firefox-browser')
     app.run()

@@ -383,8 +383,7 @@ class JSModule:
         vars_unknown = js.meta['vars_unknown']
         vars_global = js.meta['vars_global']
         for name in reversed(sorted(vars_unknown)):
-            if name == 'event':
-                assert False, 'why was this again?'  # todo: remove or explain
+            if name.startswith('event.'):
                 self._deps.setdefault('flexx.event.js', ['event'])
             else:
                 self.add_variable(name, _dep_stack=_dep_stack)

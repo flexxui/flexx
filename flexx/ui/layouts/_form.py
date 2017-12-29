@@ -17,6 +17,7 @@ Example:
 from ... import event
 from ...pyscript import window, undefined
 from . import Layout
+from .. import create_element
 
 
 class BaseTableLayout(Layout):
@@ -171,9 +172,21 @@ class FormLayout(BaseTableLayout):
     }
     """
     
-    def _init_dom(self):
-        self.node = window.document.createElement('table')
-        self.outernode = self.node
+    def _create_dom(self):
+        return window.document.createElement('table')
+    
+    def _render_dom(self):
+        rows = []
+        for widget in self.children:
+            row = create_element('tr', {}, [
+                    create_element('td', {'class': 'flx-title'}, widget.title),
+                    create_element('td', {}, [widget.outernode]),
+                  ])
+            widget.outernode.hflex = 1
+            widget.outernode.vflex = widget.flex[1]
+            rows.append(row)
+        event.loop.call_soon(self._apply_table_layout)
+        return rows
     
     def _apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):
         AUTOFLEX = 729
@@ -192,51 +205,3 @@ class FormLayout(BaseTableLayout):
             col.style.width = '100%'
             className += 'flx-hflex'
         col.className = className
-    
-    def _update_layout(self, old_children, new_children):
-        """ Can be overloaded in (Layout) subclasses.
-        """
-        imin = min(len(old_children), len(new_children))
-        
-        for i in range(imin):
-            if old_children[i] is not new_children[i]:
-                break
-        
-        # Remove old children
-        for widget in old_children[i:]:
-            row = widget.outernode.parentNode.parentNode
-            self.node.removeChild(row)
-            if widget._title_elem:
-                del widget._title_elem
-        
-        # Add new children
-        for widget in new_children[i:]:
-            # Create row
-            row = window.document.createElement('tr')
-            self.node.appendChild(row)
-            # Create element for label
-            td = window.document.createElement("td")
-            td.classList.add('flx-title')
-            row.appendChild(td)
-            widget._title_elem = td
-            td.innerHTML = widget.title
-            # Create element for widget
-            td = window.document.createElement("td")
-            row.appendChild(td)
-            td.appendChild(widget.outernode)
-            #
-            widget.outernode.hflex = 1
-            widget.outernode.vflex = widget.flex[1]
-            self._apply_table_layout()
-    
-    @event.reaction('children', 'children*.flex')
-    def __update_flexes(self, *events):
-        for widget in self.children:
-            widget.outernode.vflex = widget.flex[1]
-        self._apply_table_layout()
-    
-    @event.reaction('children', 'children*.title')
-    def __update_titles(self, *events):
-        for widget in self.children:
-            if hasattr(widget, '_title_elem'):
-                widget._title_elem.innerHTML = widget.title
