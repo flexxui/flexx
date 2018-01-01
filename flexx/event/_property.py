@@ -96,6 +96,8 @@ class Property(BaseDescriptor):
         return value
 
 
+## Basic properties
+
 class AnyProp(Property):
     """ A property that can be anything (like Property). Default None.
     """
@@ -195,6 +197,37 @@ class ComponentProp(Property):
     def _validate(self, value):
         if not (value is None or hasattr(value, '_IS_COMPONENT')):
             raise TypeError('Component property cannot accept %r.' % value)
+        return value
+
+## Advanced properties
+
+
+class FloatPairProp(Property):
+    """ A property that represents a pair of float values, which can also be
+    set using a scalar.
+    """
+    
+    _default = (0.0, 0.0)
+    
+    def _validate(self, value):
+        if not isinstance(value, (tuple, list)):
+            value = value, value
+        if len(value) != 2:
+            raise TypeError('FloatPair property needs a scalar '
+                            'or two values, not %i' % len(value))
+        if not isinstance(value[0], (int, float)):
+            raise TypeError('FloatPair 1st value cannot be %r.' % value[0])
+        if not isinstance(value[1], (int, float)):
+            raise TypeError('FloatPair 2nd value cannot be %r.' % value[1])
+        value = float(value[0]), float(value[1])
+        if this_is_js():  # pragma: no cover
+            # Cripple the object so in-place changes are harder. Note that we
+            # cannot prevent setting or deletion of items.
+            value.push = undefined
+            value.splice = undefined
+            value.push = undefined
+            value.reverse = undefined
+            value.sort = undefined
         return value
 
 

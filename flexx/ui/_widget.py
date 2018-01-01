@@ -16,36 +16,6 @@ from ..pyscript import undefined, window, this_is_js
 from . import logger  # noqa
 
 
-# todo: move to flexx.event.properties?
-class FloatPairProp(event.Property):
-    """ A property that represents a pair of float values, which can also be
-    set using a scalar.
-    """
-    
-    _default = (0, 0)
-    
-    def _validate(self, value):
-        if not isinstance(value, (tuple, list)):
-            value = value, value
-        if not len(value) == 2:
-            raise TypeError('FloatPair property needs a scalar '
-                            'or two values, not %i' % len(value))
-        if not (isinstance(value[0], (int, float)) or isinstance(value[0], str)):
-            raise TypeError('FloatPair 1st value cannot be %r.' % value[0])
-        if not (isinstance(value[1], (int, float)) or isinstance(value[1], str)):
-            raise TypeError('FloatPair 2nd value cannot be %r.' % value[1])
-        value = float(value[0]), float(value[1])
-        if this_is_js():  # pragma: no cover
-            # Cripple the object so in-place changes are harder. Note that we
-            # cannot prevent setting or deletion of items.
-            value.push = undefined
-            value.splice = undefined
-            value.push = undefined
-            value.reverse = undefined
-            value.sort = undefined
-        return value
-
-
 def create_element(type, props=None, children=None):
     """ Convenience function to create a dictionary to represent
     a virtual DOM node. Intended for use inside ``Widget._render_dom()``.
@@ -140,7 +110,7 @@ class Widget(app.JsComponent):
         its class (e.g. 'flx-Widget) and all its superclasses.
         """)
     
-    flex = FloatPairProp((0, 0), settable=True, doc="""
+    flex = event.FloatPairProp((0, 0), settable=True, doc="""
         How much space this widget takes (relative to the other
         widgets) when contained in a flexible layout such as BoxLayout,
         BoxPanel, FormLayout or GridPanel. A flex of 0 means to take
@@ -150,20 +120,20 @@ class Widget(app.JsComponent):
     # todo: make a custom 2Tuple prop to allow specifying as scalar, also pos and size etc
     
     # todo: PinBoardLayout and GridPanel or not used a lot, deprecate?
-    pos = FloatPairProp((0, 0), settable=True, doc="""
+    pos = event.FloatPairProp((0, 0), settable=True, doc="""
         The position of the widget when it is in a layout that allows
         positioning, this can be an arbitrary position (e.g. in
         PinBoardLayout) or the selection of column and row in a
         GridPanel.
         """)
     
-    base_size = FloatPairProp((32, 32), settable=True, doc="""
+    base_size = event.FloatPairProp((32, 32), settable=True, doc="""
         The given size of the widget when it is in a layout that
         allows explicit sizing, or the base-size in a BoxPanel or
         GridPanel.
         """)
     
-    size = FloatPairProp((0, 0), settable=False, doc="""
+    size = event.FloatPairProp((0, 0), settable=False, doc="""
         The actual size of the widget. Flexx tries to keep this value
         up-to-date, but in e.g. a box layout, a change in a Button's
         text can change the size of sibling widgets.
