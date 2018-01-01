@@ -93,9 +93,6 @@ class BaseButton(Widget):
         """
         return self._create_mouse_event(e)
 
-    def _render_dom(self):
-        pass  # Widget._render_dom() resets based on children
-
 
 class Button(BaseButton):
     """ A push button.
@@ -142,7 +139,6 @@ class ToggleButton(BaseButton):
 
     @event.reaction('mouse_click')
     def __toggle_checked(self, *events):
-        # todo: or invoke self.toggle()?
         self.set_checked(not self.checked)
 
     @event.reaction('checked')

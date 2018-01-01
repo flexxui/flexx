@@ -192,10 +192,13 @@ class AppComponentMeta(ComponentMeta):
             jsbases.append(LocalComponent)
         jsdict = {}
         
+        # Names that should stay in Python in addition to magic methods
+        py_only = ['_repr_html_']
+        
         # Copy properties from this class to the JS proxy class.
         # in Python 3.6 we iterate in the order in which the items are defined,
         for name, val in list(dct.items()):
-            if name.startswith('__') and name.endswith('__'):
+            if name in py_only or name.startswith('__') and name.endswith('__'):
                 if name not in ('__init__'):
                     continue
             if (isinstance(val, Property) or (callable(val) and

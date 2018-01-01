@@ -130,7 +130,7 @@ class BaseDropdown(Widget):
     """
     
     def init(self):
-        self.tabindex = -1
+        self.set_tabindex(-1)
     
     def expand(self):
         """ Expand the dropdown and give it focus, so that it can be used

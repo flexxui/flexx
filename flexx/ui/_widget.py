@@ -11,7 +11,7 @@
 
 from ..event import loop
 from .. import event, app
-from ..pyscript import undefined, window, this_is_js
+from ..pyscript import undefined, window
 
 from . import logger  # noqa
 
@@ -32,7 +32,15 @@ class Widget(app.JsComponent):
     When *subclassing* a Widget to create a compound widget (a widget
     that acts as a container for other widgets), use the ``init()``
     method to initialize the child widgets. This method is called while
-    the widget is the current widget. 
+    the widget is the current widget.
+    
+    Special class attributes
+    ------------------------
+    CAPTURE_MOUSE (int): If 0, the mouse is not captured, and move events are
+        only emitted when the mouse is pressed down (not recommended). If 1
+        (default) the mouse is captured when pressed down, so move and up
+        events are received also when the mouse is outside the widget. If 2,
+        move events are also emitted when the mouse is not pressed down.
     """
 
     CSS = """
@@ -117,21 +125,6 @@ class Widget(app.JsComponent):
         the minimum size. Flex is a two-element tuple, but both values
         can be specified at once by specifying a scalar.
         """)
-    # todo: make a custom 2Tuple prop to allow specifying as scalar, also pos and size etc
-    
-    # todo: PinBoardLayout and GridPanel or not used a lot, deprecate?
-    pos = event.FloatPairProp((0, 0), settable=True, doc="""
-        The position of the widget when it is in a layout that allows
-        positioning, this can be an arbitrary position (e.g. in
-        PinBoardLayout) or the selection of column and row in a
-        GridPanel.
-        """)
-    
-    base_size = event.FloatPairProp((32, 32), settable=True, doc="""
-        The given size of the widget when it is in a layout that
-        allows explicit sizing, or the base-size in a BoxPanel or
-        GridPanel.
-        """)
     
     size = event.FloatPairProp((0, 0), settable=False, doc="""
         The actual size of the widget. Flexx tries to keep this value
@@ -144,12 +137,10 @@ class Widget(app.JsComponent):
         derived from the element's style, in pixels.
         """)
     
-    # todo: turn this into an intProp None->-2?
-    # Also see size readonly defined in JS
-    tabindex = event.AnyProp(None, settable=True, doc="""
+    tabindex = event.AnyProp(None, settable=False, doc="""
         The index used to determine widget order when the user
         iterates through the widgets using tab. This also determines
-        if a widget is able to receive key events. Flexx automatically
+        whether a widget is able to receive key events. Flexx automatically
         sets this property when it should emit key events.
         Effect of possible values on underlying DOM element:
         
@@ -161,6 +152,15 @@ class Widget(app.JsComponent):
         * 1 and up: element can have focus, and the tab-order is determined
             by the value of tabindex.
         """)
+    
+    @event.action
+    def set_tabindex(self, value):
+        """ Setter for tabindex.
+        """
+        if value is None or isinstance(value, (int, float)):  # only int not in JS
+            self._mutate('tabindex', value)
+        else:
+            raise TypeError('Tabindex must be None or int.')
     
     ## Methods
     
@@ -178,16 +178,19 @@ class Widget(app.JsComponent):
         if parent is not None and not kwargs.get('flx_session', None):
             kwargs['flx_session'] = parent.session
         
-        # todo: document this
+        # Allow initial styling via property-like mechanism
         style = kwargs.pop('style', '')
         
-        # todo: it seems like we can get rid of this is_app thing
-        # if kwargs.get('is_app', False):
-        #     kwargs['container'] = 'body'
+        # Whether this was the component that represents the app.
+        # We use window.flexx.need_main_widget for a similar purpose,
+        # but we might use it in the future.
+        is_app = kwargs.get('flx_is_app', False)  # noqa
         
         # Init this component (e.g. create properties and actions)
         super().__init__(*init_args, **kwargs)
-        # Now we can initialize further ...
+        
+        # Some further initialization ...
+        # Note that the _comp_init_property_values() will get called first.
         
         # Attach this widget in the widget hierarchy, if we can
         if parent is not None:
@@ -200,6 +203,18 @@ class Widget(app.JsComponent):
             if window.flexx.need_main_widget:
                 window.flexx.need_main_widget = False
                 self.set_container('body')
+        
+        # Invoke some actions
+        if style:
+            self.apply_style(style)
+        self._check_min_max_size()
+    
+    def _comp_init_property_values(self, property_values):
+        # This is a good time to do further initialization. The JsComponent
+        # does its init here, property values have been set at this point,
+        # but init() has not yet been called.
+        
+        prop_events = super()._comp_init_property_values(property_values)
         
         # Create DOM nodes
         # outernode is the root node
@@ -215,7 +230,7 @@ class Widget(app.JsComponent):
             self.outernode = self.__render_resolve(nodes[0])
             self.node = self.__render_resolve(nodes[1])
         
-        # Derive css class name from class hierarchy
+        # Derive css class name from class hierarchy (needs self.outernode)
         cls = self.__class__
         for i in range(32):  # i.e. a safe while-loop
             self.outernode.classList.add('flx-' + cls.__name__)
@@ -225,12 +240,10 @@ class Widget(app.JsComponent):
         else:
             raise RuntimeError('Error determining class names for %s' % self.id)
         
-        if style:
-            self.apply_style(style)
-        self._check_min_max_size()
-        
-        # Setup JS events to enter Flexx' event system
+        # Setup JS events to enter Flexx' event system (needs self.node)
         self._init_events()
+        
+        return prop_events
     
     def init(self):
         """ Overload this to initialize a custom widget. When called, this
@@ -271,9 +284,17 @@ class Widget(app.JsComponent):
         The ``create_element()`` function makes it easier to define nodes.
         
         The default ``_render_dom()`` method simply places the outer node of
-        the child widgets as the content of this DOM node. Overload as needed.
+        the child widgets as the content of this DOM node, while preserving
+        nodes that do not represent a widget. Overload as needed.
         """
-        return [c.outernode for c in self.children]
+        nodes = []
+        for i in range(len(self.outernode.children)):
+            node = self.outernode.children[i]
+            if not node.classList.contains('flx-Widget'):
+                nodes.append(node)
+        for widget in self.children:
+            nodes.append(widget.outernode)
+        return nodes
     
     @event.reaction
     def __render(self):
@@ -354,7 +375,8 @@ class Widget(app.JsComponent):
         
         return node
     
-    # todo: mmm, need this at the Python side
+    # Note that this method is only present at the Python side
+    # (because the # JsComponent meta class makes it so).
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
         """
@@ -382,14 +404,6 @@ class Widget(app.JsComponent):
         self.set_parent(None)
         self._children_value = ()
     
-    # @event.connect('parent:aaa')
-    # def __keep_alive(self, *events):
-    #     # When the parent changes, we prevent the widget from being deleted
-    #     # for a few seconds, to it will survive parent-children "jitter".
-    #     self._session.keep_alive(self)
-    # todo: not necessary because we keep_alive when a Component is send over, or is that too heavy?
-    
-    
     ## Actions
     
     
@@ -398,6 +412,9 @@ class Widget(app.JsComponent):
         """ Apply CSS style to this widget object. e.g.
         ``"background: #f00; color: #0f0;"``. If the given value is a
         dict, its key-value pairs are converted to a CSS style string.
+        
+        Initial styling can also be given in a property-like fashion:
+        ``MyWidget(style='background:red;')``
         
         For static styling it is often better to define a CSS class attribute
         and/or use ``css_class``.
@@ -640,17 +657,9 @@ class Widget(app.JsComponent):
 
     # todo: events: focus, enter, leave ... ?
     
-    # todo: document this hook-like class attribute
-    CAPTURE_MOUSE = False
-    
-    # def _new_event_type_hook(self, event_type):
-    #     # In order to receive JS key events, we need a tabindex.
-    #     if self.tabindex is None:
-    #         if event_type in ('key_down', 'key_up', 'key_press'):
-    #             self.tabindex = -1
-    #     super()._new_event_type_hook(event_type)
-    
-    # todo: verify that the below correctly replaces the above
+    # mouse capture mode, default 1 (capture, but only emit move events if mouse down)
+    CAPTURE_MOUSE = 1
+
     def _registered_reactions_hook(self):
         event_types = super()._registered_reactions_hook()
         if self.tabindex is None:
@@ -671,46 +680,67 @@ class Widget(app.JsComponent):
         # a widget, it "captures" the mouse, and will continue to receive
         # move and up events, even if the mouse is not over the widget.
 
-        self._capture_flag = None
-
-        def capture(e):
-            # On FF, capture so we get events when outside browser viewport
-            if self.CAPTURE_MOUSE and self.node.setCapture:
-                self.node.setCapture()
-            self._capture_flag = 2
-            window.document.addEventListener("mousemove", mouse_outside, True)
-            window.document.addEventListener("mouseup", mouse_outside, True)
-
-        def release():
-            self._capture_flag = 1
-            window.document.removeEventListener("mousemove", mouse_outside, True)
-            window.document.removeEventListener("mouseup", mouse_outside, True)
-
-        def mouse_inside(e):
-            if self._capture_flag == 1:
-                self._capture_flag = 0
-            elif not self._capture_flag:
-                if e.type == 'mousemove':
-                    self.mouse_move(e)
-                elif e.type == 'mouseup':
-                    self.mouse_up(e)
-
-        def mouse_outside(e):
-            if self._capture_flag:  # Should actually always be 0
-                e = window.event if window.event else e
-                if e.type == 'mousemove':
-                    self.mouse_move(e)
-                elif e.type == 'mouseup':
-                    release()
-                    self.mouse_up(e)
+        self._capture_flag = 0
+        # 0: mouse not down, 1: mouse down (no capture), 2: captured, -1: capture end
         
-        # todo: only start capturing move events when mouse is down, unless some flag is set
+        def mdown(e):
+            # Start emitting move events, maybe follow the mouse outside widget bounds
+            if self.CAPTURE_MOUSE == 0:
+                self._capture_flag = 1
+            else:
+                self._capture_flag = 2
+                window.document.addEventListener("mousemove", mmove_outside, True)
+                window.document.addEventListener("mouseup", mup_outside, True)
+                # On FF, capture so we get events when outside browser viewport.
+                # This seems not neccessary, but maybe it was on earlier versions?
+                if self.node.setCapture:
+                    self.node.setCapture()
+
+        def mmove_inside(e):
+            # maybe emit move event
+            if self._capture_flag == -1:
+                self._capture_flag = 0
+            elif self._capture_flag == 1:
+                self.mouse_move(e)
+            elif self._capture_flag == 0 and self.CAPTURE_MOUSE > 1:
+                self.mouse_move(e)
+        
+        def mup_inside(e):
+            if self._capture_flag == 1:
+                self.mouse_up(e)
+            self._capture_flag = 0
+        
+        def mmove_outside(e):
+            # emit move event
+            if self._capture_flag == 2:  # can hardly be anything else, but be safe
+                e = window.event if window.event else e
+                self.mouse_move(e)
+        
+        def mup_outside(e):
+            # emit mouse up event, and stop capturing
+            if self._capture_flag == 2:
+                e = window.event if window.event else e
+                stopcapture()
+                self.mouse_up(e)
+        
+        def stopcapture():
+            # Stop capturing
+            if self._capture_flag == 2:
+                self._capture_flag = -1
+                window.document.removeEventListener("mousemove", mmove_outside, True)
+                window.document.removeEventListener("mouseup", mup_outside, True)
+        
+        def losecapture(e):
+            # We lost the capture, emit mouse up to "drop" the target
+            stopcapture()
+            # self.mouse_up(e)  # mmm, better not
+        
         # Setup capturing and releasing
-        self._addEventListener(self.node, 'mousedown', capture, True)
-        self._addEventListener(self.node, "losecapture", release)
+        self._addEventListener(self.node, 'mousedown', mdown, True)
+        self._addEventListener(self.node, "losecapture", losecapture)
         # Subscribe to normal mouse events
-        self._addEventListener(self.node, "mousemove", mouse_inside, False)
-        self._addEventListener(self.node, "mouseup", mouse_inside, False)
+        self._addEventListener(self.node, "mousemove", mmove_inside, False)
+        self._addEventListener(self.node, "mouseup", mup_inside, False)
 
     @event.emitter
     def mouse_down(self, e):

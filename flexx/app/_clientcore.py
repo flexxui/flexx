@@ -20,7 +20,7 @@ class Flexx:
         # setting them on this object before the init() is called.
         self.is_notebook = False
         self.is_exported = False
-        self.need_main_widget = True
+        self.need_main_widget = True  # Used/set in ui/_widget.py
         
         # Copy attributes from temporary flexx object
         if window.flexx.init:

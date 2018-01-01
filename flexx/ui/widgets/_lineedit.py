@@ -129,7 +129,7 @@ class LineEdit(Widget):
     def __placeholder_text_changed(self):
         self.node.placeholder = self.placeholder_text
     
-    # todo: this works in the browser but not in e.g. firefox-app
+    # note: this works in the browser but not in e.g. firefox-app
     @event.reaction
     def __autocomp_changed(self):
         autocomp = self.autocomp
