@@ -10,9 +10,6 @@ from flexx import app, ui, event
 
 class Drawing(ui.CanvasWidget):
     
-    # Set mouse capture mode (0, 1, or 2), default 1 for widgets.
-    CAPTURE_MOUSE = 1
-    
     CSS = """
     .flx-Drawing {background: #fff; border: 5px solid #000;}
     """
@@ -21,6 +18,9 @@ class Drawing(ui.CanvasWidget):
         super().init()
         self.ctx = self.node.getContext('2d')
         self._last_pos = (0, 0)
+        
+        # Set mouse capturing mode
+        self.set_capture_mouse(1)
         
         # Label to show current mouse position
         self.wpos = ui.Label()
@@ -33,7 +33,7 @@ class Drawing(ui.CanvasWidget):
         for ev in events:
             
             # Effective way to only draw if mouse is down, but disabled for
-            # sake of example. Not necessary if CAPTURE_MOUSE == 1.
+            # sake of example. Not necessary if capture_mouse == 1.
             # if 1 not in ev.buttons:
             #     return
             

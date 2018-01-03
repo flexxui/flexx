@@ -34,13 +34,6 @@ class Widget(app.JsComponent):
     method to initialize the child widgets. This method is called while
     the widget is the current widget.
     
-    Special class attributes
-    ------------------------
-    CAPTURE_MOUSE (int): If 0, the mouse is not captured, and move events are
-        only emitted when the mouse is pressed down (not recommended). If 1
-        (default) the mouse is captured when pressed down, so move and up
-        events are received also when the mouse is outside the widget. If 2,
-        move events are also emitted when the mouse is not pressed down.
     """
 
     CSS = """
@@ -151,6 +144,17 @@ class Widget(app.JsComponent):
             at which the element is defined.
         * 1 and up: element can have focus, and the tab-order is determined
             by the value of tabindex.
+        """)
+    
+    capture_mouse = event.IntProp(1, settable=True, doc="""
+        To what extend the mouse is "captured":
+        
+        * If 0, the mouse is not captured, and move events are only emitted
+          when the mouse is pressed down (not recommended).
+        * If 1 (default) the mouse is captured when pressed down, so move
+          and up events are received also when the mouse is outside the widget.
+        * If 2, move events are also emitted when the mouse is not pressed down
+          and inside the widget.
         """)
     
     @event.action
@@ -657,9 +661,6 @@ class Widget(app.JsComponent):
 
     # todo: events: focus, enter, leave ... ?
     
-    # mouse capture mode, default 1 (capture, but only emit move events if mouse down)
-    CAPTURE_MOUSE = 1
-
     def _registered_reactions_hook(self):
         event_types = super()._registered_reactions_hook()
         if self.tabindex is None:
@@ -685,7 +686,7 @@ class Widget(app.JsComponent):
         
         def mdown(e):
             # Start emitting move events, maybe follow the mouse outside widget bounds
-            if self.CAPTURE_MOUSE == 0:
+            if self.capture_mouse == 0:
                 self._capture_flag = 1
             else:
                 self._capture_flag = 2
@@ -702,7 +703,7 @@ class Widget(app.JsComponent):
                 self._capture_flag = 0
             elif self._capture_flag == 1:
                 self.mouse_move(e)
-            elif self._capture_flag == 0 and self.CAPTURE_MOUSE > 1:
+            elif self._capture_flag == 0 and self.capture_mouse > 1:
                 self.mouse_move(e)
         
         def mup_inside(e):

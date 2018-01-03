@@ -29,8 +29,12 @@ class CanvasWidget(Widget):
     }
     """ 
     
-    CAPTURE_MOUSE = 1  # can be useful to set to 2 in many cases
-    CAPTURE_WHEEL = False
+    capture_wheel = event.BoolProp(False, settable=True, doc="""
+        Whether the wheel event is "captured", i.e. not propagated to result
+        into scrolling of the parent widget (or page). If True, if no scrolling
+        must have been performed outside of the widget for about half a second
+        in order for the widget to capture scroll events.
+        """)
     
     def _create_dom(self):
         
@@ -74,7 +78,7 @@ class CanvasWidget(Widget):
     
     @event.emitter
     def mouse_wheel(self, e):
-        if not self.CAPTURE_WHEEL:
+        if self.capture_wheel <= 0:
             return super().mouse_wheel(e)  # normal behavior
         elif window.flexx._wheel_timestamp[0] == self.node.id:
             e.preventDefault()
