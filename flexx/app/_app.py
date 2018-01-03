@@ -61,7 +61,7 @@ class App:
         # Handle good defaults
         if hasattr(cls, 'title') and self.kwargs.get('title', None) is None:
             self.kwargs['title'] = 'Flexx app - ' + cls.__name__
-        if hasattr(cls, 'icon') and self.kwargs.get('icon', None) is None:
+        if hasattr(cls, 'set_icon') and self.kwargs.get('icon', None) is None:
             # Set icon as base64 str; exported apps can still be standalone
             fname = os.path.abspath(os.path.join(__file__, '..', '..',
                                                     'resources', 'flexx.ico'))

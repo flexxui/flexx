@@ -219,6 +219,7 @@ class Session:
         # Set some app specifics
         # self._ws.write_command('ICON %s.ico' % self.id)
         # self._ws.write_command('TITLE %s' % self._config.title)
+        self._ws.write_command(("PRINT", "Flexx session says hi"))
         # Send pending commands
         for command in self._pending_commands:
             self._ws.write_command(command)

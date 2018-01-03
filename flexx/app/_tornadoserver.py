@@ -540,7 +540,6 @@ class WSHandler(WebSocketHandler):
                 except Exception as err:
                     self.close(1003, "Could not launch app: %r" % err)
                     raise
-                self.write_command(("PRINT", "Flexx server says hi"))
         else:
             try:
                 self._session._receive_command(command)
