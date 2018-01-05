@@ -42,6 +42,7 @@ class ProgressBar(Widget):
     
     .flx-ProgressBar {
         min-height: 10px;
+        min-width: 40px;
         border-radius: 10px;
         background: rgba(0, 0, 0, 0.1);
     }
