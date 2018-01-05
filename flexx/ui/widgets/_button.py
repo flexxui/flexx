@@ -81,9 +81,15 @@ class BaseButton(Widget):
 
     """
 
-    text = event.StringProp('', doc=""" The text on the button. """)
-    checked = event.BoolProp(False, doc=""" Whether the button is checked. """)
-    disabled = event.BoolProp(False, doc=""" Whether the button is disabled. """)
+    text = event.StringProp('', settable=True, doc="""
+        The text on the button.
+        """)
+    checked = event.BoolProp(False, settable=True, doc="""
+        Whether the button is checked.
+        """)
+    disabled = event.BoolProp(False, settable=True, doc="""
+        Whether the button is disabled.
+        """)
     
     @event.emitter
     def mouse_click(self, e):

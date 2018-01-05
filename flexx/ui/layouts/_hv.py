@@ -304,6 +304,10 @@ class HVLayout(Layout):
         -ms-user-select: none;
         user-select: none;
     }
+    .flx-split.flx-dragging iframe {  /* disable iframe during drag */
+        pointer-events: none;
+    }
+    
     .flx-split.flx-horizontal > .flx-split-sep,
     .flx-split.flx-horizontal.flx-dragging {
         cursor: ew-resize;  

@@ -249,9 +249,14 @@ class JSModule:
                     # todo: hehe, we can do more here
                     return self._add_dep_from_event_module('logger', nameparts[0])
         except AttributeError:
-            if not is_global:  # else, it may be a JS-global
-                msg = 'JS in "%s" uses undefined variable %r.' % (self.filename, name)
+            msg = 'JS in "%s" uses undefined variable %r.' % (self.filename, name)
+            if is_global:
+                pass  # it may be a JS-global
+            elif val is self._pymodule:
+                # Did not resolve first part of the name, so cannot be a JS global
                 logger.warn(msg)
+            else:
+                raise RuntimeError(msg)  # E.g. typo in ui.Buttom
             return
         
         # Early exit
