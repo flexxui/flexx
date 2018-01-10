@@ -158,7 +158,6 @@ More reading:
 """
 
 from ... import event, app
-from ...pyscript import RawJS
 from . import Layout
 
 
@@ -564,8 +563,9 @@ class HVLayout(Layout):
     def _ensure_seps(self, n):
         """ Ensure that we have exactly n seperators.
         """
+        global window
         n = max(0, n)
-        to_remove = self._seps[n:]
+        to_remove = self._seps[n:]  # noqa
         self._seps = self._seps[:n]
         # hv = 'flx-horizontal' if 'h' in self.orientation else 'flx-vertical'
         while len(self._seps) < n:
@@ -601,7 +601,7 @@ class HVLayout(Layout):
         i = 0 if ori in (0, 'h', 'hr') else 1
         for widget in self.children:
             _applyBoxStyle(widget.outernode, 'flex-grow', widget.flex[i])
-            _applyBoxStyle(widget.outernode, 'flex-shrink', widget.flex[i] or 1)  # default value is 1
+            _applyBoxStyle(widget.outernode, 'flex-shrink', widget.flex[i] or 1)
         for widget in self.children:
             widget.check_real_size()
     
@@ -730,8 +730,6 @@ class HVLayout(Layout):
         """
         
         children = self.children
-        bar_size = self.spacing
-        pad_size = self.padding
         total_size, available_size = self._get_available_size()
         ori = self.orientation
         positions = self.splitter_positions

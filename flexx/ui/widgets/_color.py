@@ -46,6 +46,7 @@ class ColorSelectWidget(Widget):
         self._mutate_color(v)
     
     def _create_dom(self):
+        global window
         node = window.document.createElement('input')
         node.type = 'color'
         self._addEventListener(node, 'input', self._color_changed_from_dom, 0)

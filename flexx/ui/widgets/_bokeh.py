@@ -27,7 +27,7 @@ Simple example:
 import os
 
 from ... import event, app
-from ...pyscript.stubs import window, Bokeh
+from ...pyscript.stubs import window
 from . import Widget
 
 
@@ -59,7 +59,7 @@ def make_bokeh_widget(plot):
     from bokeh.embed import components
     # Set plot prop
     if not isinstance(plot, Plot):
-        raise ValueError('%s.plot must be a Bokeh plot object.' % self.id)
+        raise ValueError('plot must be a Bokeh plot object.')
     # The sizing_mode is fixed by default, but that's silly in this context
     if plot.sizing_mode == 'fixed':
         plot.sizing_mode = 'stretch_both'
@@ -115,7 +115,7 @@ class BokehWidget(Widget):
         self.node.appendChild(el)
         # Get plot from id in next event-loop iter
         def getplot():
-            self._plot = plot = window.Bokeh.index[d.id]
+            self._plot = window.Bokeh.index[d.id]
             self.__resize_plot()
         window.setTimeout(getplot, 10)
     

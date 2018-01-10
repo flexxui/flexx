@@ -27,8 +27,7 @@ Example:
 """
 
 from ... import event
-from ...pyscript import window, RawJS
-from . import Layout, Widget
+from ...pyscript import window
 from ._stack import StackLayout
 
 

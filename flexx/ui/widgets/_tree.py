@@ -64,7 +64,7 @@ and custom styling:
                 self.label.set_text(text + '<br />' +  self.label.text)
 """
 
-from ... import event, app
+from ... import event
 from .._widget import Widget, create_element
 
 window = None
@@ -528,7 +528,7 @@ class TreeItem(Widget):
     @event.action
     def set_parent(self, parent, pos=None):
         # Verify that this class is used correctly
-        if not (isinstance(parent, TreeItem) or  isinstance(parent, TreeWidget)):
+        if not (isinstance(parent, TreeItem) or isinstance(parent, TreeWidget)):
             raise RuntimeError('TreeItems can only be created in the context '
                                'of a TreeWidget or TreeItem.')
         super().set_parent(parent, pos)

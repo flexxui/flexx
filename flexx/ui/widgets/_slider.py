@@ -118,7 +118,7 @@ class Slider(Widget):
         """)
     
     def init(self):
-        self.set_value(self.value) # Apply bounds
+        self.set_value(self.value)  # Apply bounds
     
     @event.action
     def set_value(self, value):
@@ -143,9 +143,10 @@ class Slider(Widget):
         attr = {'className': 'slider disabled' if self.disabled else 'slider',
                 'style__left': 'calc(' + perc + '% - 5px)'
                 }
-        return [create_element('div', {'className': 'gutter'}, 
-                [create_element('span', {}, label),
-                 create_element('div', attr),])
+        return [create_element('div', {'className': 'gutter'}, [
+                    create_element('span', {}, label),
+                    create_element('div', attr),
+                    ])
                 ]
     
     # Use the Flexx mouse event system, so we can make use of capturing ...
@@ -154,7 +155,6 @@ class Slider(Widget):
     def mouse_down(self, e):
         if e.target.classList.contains("slider") and not self.disabled:
             e.stopPropagation()
-            slider = e.target
             x1 = e.clientX
             self._dragging = self.value, x1
             self.outernode.classList.add('flx-dragging')

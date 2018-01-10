@@ -6,9 +6,6 @@ browsers.
 
 from flexx import event, app, ui
 
-# todo: Can I use ui in JS???
-from flexx.ui import Button
-
 
 class MyWidget(ui.Label):
     """ A Widget that reacts to key presses.
@@ -102,9 +99,12 @@ class TestApp(app.PyComponent):
                     self.w3 = MyWidget(text='hi')
                     self.w4 = MyWidget(text='hello world! ' * 4)
                 with MyLayout('v'):
-                    self.w5 = MyWidget(text='min-size: 50', style='min-width:50px; min-height:50px')
-                    self.w6 = MyWidget(text='min-size: 100', style='min-width:100px; min-height:100px')
-                    self.w7 = MyWidget(text='min-size: 150', style='min-width:150px; min-height:150px')
+                    self.w5 = MyWidget(text='min-size: 50',
+                                       style='min-width:50px; min-height:50px')
+                    self.w6 = MyWidget(text='min-size: 100',
+                                       style='min-width:100px; min-height:100px')
+                    self.w7 = MyWidget(text='min-size: 150',
+                                       style='min-width:150px; min-height:150px')
         
             with ui.Widget(flex=1):
                 with MyLayout('h'):

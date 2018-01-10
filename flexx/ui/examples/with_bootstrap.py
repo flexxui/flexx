@@ -5,7 +5,8 @@ Example demonstrating the use of Bootstrap to style element and do layout.
 from flexx import app, event, ui
 
 # Associate bootstrap CSS with this module
-app.assets.associate_asset(__name__, "https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.3/css/bootstrap.min.css")
+url = "https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.3/css/bootstrap.min.css"
+app.assets.associate_asset(__name__, url)
 
 
 class Example(ui.Widget):
@@ -47,12 +48,16 @@ class Example(ui.Widget):
         # Define the final layout. Note how the nodes of the input widgets are embedded
         return ui.create_element('div', {'class': 'container'}, [
                     ui.create_element('div', {'class': 'row'}, [
-                        ui.create_element('div', {'class': 'col-sm-4'}, [self.name.outernode]),
-                        ui.create_element('div', {'class': 'col-sm-4'}, [self.info.outernode]),
-                        ui.create_element('div', {'class': 'col-sm-4'}, [self.but.outernode]),
+                        ui.create_element('div', {'class': 'col-sm-4'},
+                                          [self.name.outernode]),
+                        ui.create_element('div', {'class': 'col-sm-4'},
+                                          [self.info.outernode]),
+                        ui.create_element('div', {'class': 'col-sm-4'},
+                                          [self.but.outernode]),
                         ]),
                     ui.create_element('div', {'class': 'row'}, 
-                        [ui.create_element('div', {'class': 'col-sm-5'}, [node]) for node in nodes]),
+                        [ui.create_element('div', {'class': 'col-sm-4'}, [node])
+                         for node in nodes]),
                     ])
 
 

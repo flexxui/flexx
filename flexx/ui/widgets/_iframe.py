@@ -34,7 +34,8 @@ class IFrame(Widget):
         """)
    
     def _create_dom(self):
-        return window.document.createElement('iframe')
+        global document
+        return document.createElement('iframe')
     
     @event.reaction('size')
     def __on_size(self, *events):

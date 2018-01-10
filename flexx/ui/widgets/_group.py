@@ -28,7 +28,7 @@ Interactive example:
 """
 
 from ... import event
-from ...pyscript import window, RawJS
+from ...pyscript import window
 from . import Widget
 
 

@@ -44,9 +44,7 @@
             self.label.set_text(text)
 """
 
-from collections import OrderedDict
-
-from ...pyscript import window, this_is_js
+from ...pyscript import window
 from ... import event, app
 from .._widget import Widget, create_element
 
@@ -299,7 +297,7 @@ class ComboBox(BaseDropdown):
     
     def init(self):
         super().init()
-        self.set_options(self.options) # use action to do more validation
+        self.set_options(self.options)  # use action to do more validation
         # todo: I think we should make it that this is not needed
     
     @event.action
