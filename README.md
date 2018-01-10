@@ -1,8 +1,8 @@
 Flexx
 =====
 
-[![Join the chat at https://gitter.im/zoofIO/flexx](https://badges.gitter.im/zoofIO/flexx.svg)](https://gitter.im/zoofIO/flexx?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/zoofIO/flexx.svg)](https://travis-ci.org/zoofIO/flexx)
+[![Join the chat at https://gitter.im/flexxui/flexx](https://badges.gitter.im/flexxui/flexx.svg)](https://gitter.im/flexxui/flexx?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/flexxui/flexx.svg)](https://travis-ci.org/flexxui/flexx)
 [![Documentation Status](https://readthedocs.org/projects/flexx/badge/?version=latest)](https://flexx.readthedocs.org)
 
 Introduction
@@ -18,7 +18,7 @@ applications, and (if designed well) export an app to a standalone HTML
 document. It also works in the Jupyter notebook.
 
 The docs are on [Readthedocs](http://flexx.readthedocs.io).
-the code is on [Github](http://github.com/zoofio/flexx).
+the code is on [Github](http://github.com/flexxui/flexx).
 Flexx is currently in alpha status; any part of the public API may
 change without notice. Feedback is welcome.
 
@@ -43,7 +43,7 @@ Flexx from being usable at a large scale.
 
 We've since looked at what does boundaries are and how Flexx would need to
 change to be able to remove or move beyond these boundaries. This has culminated
-in a [plan](https://github.com/zoofIO/flexx/pull/367) to refactor Flexx.
+in a [plan](https://github.com/flexxui/flexx/pull/367) to refactor Flexx.
 
 These changes are quite substantial. E.g. a central idea of the current
 Flexx is having objects that exist in both Python and JS and have

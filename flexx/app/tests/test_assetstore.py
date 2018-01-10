@@ -126,7 +126,7 @@ def test_asset_store_data():
         s.add_shared_data('xx', b'zzzz')
     
     # # Add url data
-    # s.add_shared_data('readme', 'https://github.com/zoofIO/flexx/blob/master/README.md')
+    # s.add_shared_data('readme', 'https://github.com/flexxui/flexx/blob/master/README.md')
     # # assert 'Flexx is' in s.get_data('readme').decode()
     # assert s.get_data('readme').startswith('https://github')
     
