@@ -163,6 +163,8 @@ class Slider(Widget):
     
     @event.emitter
     def mouse_up(self, e):
+        if self._dragging is not None:
+            self.outernode.blur()
         self._dragging = None
         self.outernode.classList.remove('flx-dragging')
         return super().mouse_down(e)
@@ -182,7 +184,9 @@ class Slider(Widget):
     @event.reaction('key_down')
     def __on_key(self, *events):
         for ev in events:
-            if ev.key == 'ArrowRight':
+            if ev.key == 'Escape':
+                self.outernode.blur()
+            elif ev.key == 'ArrowRight':
                 self.set_value(self.value + self.step)
             elif ev.key == 'ArrowLeft':
                 self.set_value(self.value - self.step)
