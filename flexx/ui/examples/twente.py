@@ -12,7 +12,7 @@ This app can be exported to a standalone HTML document.
 from flexx import app, ui, event
 
 # Raw data obtained from 
-# http://www.knmi.nl/klimatologie/maandgegevens/datafiles/mndgeg_290_tg.txt
+# http://cdn.knmi.nl/knmi/map/page/klimatologie/gegevens/maandgegevens/mndgeg_290_tg.txt
 
 raw_data = """
 Deze gegevens mogen vrij worden gebruikt mits de volgende bronvermelding wordt gegeven:
@@ -94,6 +94,9 @@ STN,YYYY,   JAN,   FEB,   MAR,   APR,   MAY,   JUN,   JUL,   AUG,   SEP,   OCT, 
 290,2012,    36,     1,    77,    82,   145,   145,   169,   184,   134,    96,    64,    41,    98
 290,2013,    15,     9,    12,    82,   116,   154,   188,   179,   138,   118,    59,    55,    94
 290,2014,    48,    64,    81,   118,   127,   157,   195,   157,   153,   132,    80,    41,   113
+290,2015,    34,    26,    57,    87,   120,   153,   184,   185,   132,    94,    91,    92,   105
+290,2016,    34,    39,    49,    82,   144,   171,   181,   175,   171,    89,    48,    41,   102
+290,2017,     2,    44,    85,    79,   149,   179,   180,   172,   135,   126,    63,    42,   105
 """
 
 months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 
@@ -116,57 +119,50 @@ class Twente(ui.Widget):
     
     def init(self):
         
-        with ui.HBox():
+        with ui.HFix():
             ui.Widget(flex=1)
-            with ui.VBox(flex=0):
-                with ui.GroupWidget(title='Plot options'):
-                    with ui.VBox():
-                        self.month_label = ui.Label(text='Month')
-                        self.month = ui.Slider(max=12, step=1, value=12)
-                        self.smoothing_label = ui.Label(text='Smoothing')
-                        self.smoothing = ui.Slider(max=20, step=2)
+            with ui.VBox(flex=1):
                 ui.Widget(flex=1)
+                with ui.GroupWidget(title='Plot options'):
+                    self.month_label = ui.Label(text='Month')
+                    self.month = ui.Slider(max=12, step=1, value=12)
+                    self.smoothing_label = ui.Label(text='Smoothing')
+                    self.smoothing = ui.Slider(max=20, step=2)
+                ui.Widget(flex=3)
             with ui.VBox(flex=4):
                 self.plot = ui.PlotWidget(flex=1,
                                             xdata=years, yrange=(-5, 20),
                                             title='Average monthly temperature',
                                             xlabel='year', ylabel=u'temperature (°C)')
-                # ui.Widget(flex=0, style='height:30px')
             ui.Widget(flex=1)
 
-    class JS:
+    @event.reaction
+    def _update_plot(self):
+        month = self.month.value
+        smoothing = self.smoothing.value
+        self.month_label.set_text('Month (%s)' % months[month])
+        self.smoothing_label.set_text('Smoothing (%i)' % smoothing)
         
-        def init(self):
-            super().init()
-            self._update_plot()
+        yy1 = data[month]
+        yy2 = []
         
-        @event.connect('month.value', 'smoothing.value')
-        def _update_plot(self, *events):
-            month = self.month.value
-            smoothing = self.smoothing.value
-            self.month_label.text = 'Month (%s)' % months[month]
-            self.smoothing_label.txt = 'Smoothing (%i)' % smoothing
-            
-            yy1 = data[month]
-            yy2 = []
-            
-            sm2 = int(smoothing / 2)
-            for i in range(len(yy1)):
-                val = 0
-                n = 0
-                for j in range(max(0, i-sm2), min(len(yy1), i+sm2+1)):
-                    val += yy1[j]
-                    n += 1
-                if n == 0:
-                    yy2.append(yy1[i])
-                else:
-                    yy2.append(val / n)
-            
-            self.plot.ydata = yy2
+        sm2 = int(smoothing / 2)
+        for i in range(len(yy1)):
+            val = 0
+            n = 0
+            for j in range(max(0, i-sm2), min(len(yy1), i+sm2+1)):
+                val += yy1[j]
+                n += 1
+            if n == 0:
+                yy2.append(yy1[i])
+            else:
+                yy2.append(val / n)
+        
+        self.plot.set_data(self.plot.xdata, yy2)
 
 
 if __name__ == '__main__':
-    m = app.launch(Twente, runtime='app', title='Temperature 1951 - 2014',
+    m = app.launch(Twente, runtime='chrome', title='Temperature 1951 - 2014',
                    size=(900, 400))
     m.style = 'background:#eee;'  # more desktop-like
     app.run()
