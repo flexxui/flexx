@@ -184,9 +184,11 @@ class Widget(app.JsComponent):
         # Handle parent
         parent = kwargs.pop('parent', None)
         if parent is None:
-            active_component = loop.get_active_component()
-            if isinstance(active_component, Widget):
-                parent = active_component
+            active_components = loop.get_active_components()
+            for active_component in reversed(active_components):
+                if isinstance(active_component, Widget):
+                    parent = active_component
+                    break
         # -> we apply via set_parent below
         
         # Use parent session unless session was given

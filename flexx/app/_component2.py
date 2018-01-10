@@ -198,9 +198,13 @@ class AppComponentMeta(ComponentMeta):
         # Copy properties from this class to the JS proxy class.
         # in Python 3.6 we iterate in the order in which the items are defined,
         for name, val in list(dct.items()):
-            if name in py_only or name.startswith('__') and name.endswith('__'):
+            # Skip?
+            if isinstance(val, classmethod):
+                continue
+            elif name in py_only or name.startswith('__') and name.endswith('__'):
                 if name not in ('__init__'):
                     continue
+            # Move over to JS
             if (isinstance(val, Property) or (callable(val) and
                   name.endswith('_validate'))):
                 jsdict[name] = val  # properties are the same
