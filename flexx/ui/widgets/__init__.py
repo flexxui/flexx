@@ -21,5 +21,3 @@ from ._dropdown import ComboBox, DropdownContainer
 
 # from ._plotwidget import PlotWidget
 # from ._bokeh import BokehWidget
-
-# from ._html import Div, html
