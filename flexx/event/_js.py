@@ -37,10 +37,10 @@ reprs = json.dumps
 
 class MetaCollector:
     
-    def __init__(self):
+    def __init__(self, filename=None):
         self.meta = {'vars_unknown': set(), 'vars_global': set(),
                      'std_functions': set(), 'std_methods': set(),
-                     'linenr': 1e9}
+                     'filename': filename, 'linenr': 1e9}
     
     def py2js(self, *args, **kwargs):
         kwargs['inline_stdlib'] = False
@@ -50,8 +50,12 @@ class MetaCollector:
     
     def update(self, code):
         for key in self.meta:
-            if key == 'linenr':
-                self.meta[key] = min(self.meta[key], code.meta[key])
+            if key == 'filename':
+                pass
+            elif key == 'linenr':
+                if self.meta['filename'] is not None:
+                    if code.meta['filename'] == self.meta['filename']:
+                        self.meta[key] = min(self.meta[key], code.meta[key])
             else:
                 self.meta[key].update(code.meta[key])
         return code
@@ -353,7 +357,7 @@ def _create_js_class(PyClass, JSClass):
     """ Create the JS code for Loop, Reaction and Component based on their
     Python and JS variants.
     """
-    mc = MetaCollector()
+    mc = MetaCollector(sys.modules[PyClass.__module__].__file__)
     cname = PyClass.__name__
     # Start with our special JS version
     jscode = [mc.py2js(JSClass, cname)]
@@ -409,9 +413,9 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     """
     
     assert cls_name != 'Component'  # we need this special class above instead
-    
+      
     # Collect meta information of all code pieces that we collect
-    mc = MetaCollector()
+    mc = MetaCollector(sys.modules[cls.__module__].__file__)
     mc.meta['std_functions'].add('op_instantiate')  # b/c we use get_class_definition
     
     total_code = []
