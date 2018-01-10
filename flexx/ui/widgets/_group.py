@@ -39,6 +39,18 @@ class GroupWidget(Widget):
     HTML fieldset.
     """
     
+    CSS = """
+    
+    .flx-GroupWidget {
+        padding: 5px;
+    }
+    .flx-GroupWidget > .flx-Layout {
+        width: calc(100% - 10px);
+        height: calc(100% - 10px);
+    }
+    
+    """
+    
     def _create_dom(self):
         node = window.document.createElement('fieldset')
         self._legend = window.document.createElement('legend')
