@@ -2,34 +2,36 @@ Event API
 =========
 
 
-Decorators
+Component
+---------
+
+.. autoclass:: flexx.event.Component
+    :members:
+    :private-members:
+
+Properties
 ----------
 
-.. autofunction:: flexx.event.connect
+.. automodule:: flexx.event._properties
+  :members:
 
-.. autofunction:: flexx.event.prop
 
-.. autofunction:: flexx.event.readonly
+Reactions
+---------
+
+.. autofunction:: flexx.event.reaction
+
+.. autoclass:: flexx.event.Reaction
+    :members:
+
+Emitter
+-------
 
 .. autofunction:: flexx.event.emitter
 
 
-HasEvents
----------
-
-.. autoclass:: flexx.event.HasEvents
-    :members:
-    :private-members:
-
-Handler
--------
-
-.. autoclass:: flexx.event.Handler
-    :members:
-
 Dict
 ----
-
 
 .. autoclass:: flexx.event.Dict
     :members:

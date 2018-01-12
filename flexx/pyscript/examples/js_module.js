@@ -30,6 +30,7 @@ var _pyfunc_op_instantiate = function (ob, args) { // nargs: 2
         if (Object[name] === undefined &&
             typeof ob[name] === 'function' && !ob[name].nobind) {
             ob[name] = ob[name].bind(ob);
+            ob[name].__name__ = name;
         }
     }
     if (ob.__init__) {
@@ -67,15 +68,15 @@ Foo = function () {
     _pyfunc_op_instantiate(this, arguments);
 }
 Foo.prototype._base_class = Object;
-Foo.prototype._class_name = "Foo";
+Foo.prototype.__name__ = "Foo";
 
 Foo.prototype.a_constant = [1, 2, 3];
-Foo.prototype.ham = function ham (x) {
+Foo.prototype.ham = function (x) {
     this.x = x;
     return null;
 };
 
-Foo.prototype.eggs = function eggs (y) {
+Foo.prototype.eggs = function (y) {
     this.y = _pyfunc_op_mult(this.x, y);
     _pyfunc_hasattr(y, str);
     return null;
@@ -87,9 +88,9 @@ Bar = function () {
 }
 Bar.prototype = Object.create(Foo.prototype);
 Bar.prototype._base_class = Foo.prototype;
-Bar.prototype._class_name = "Bar";
+Bar.prototype.__name__ = "Bar";
 
-Bar.prototype.bla = function bla (z) {
+Bar.prototype.bla = function (z) {
     console.log(z);
     return null;
 };

@@ -15,15 +15,13 @@ Functions related to the event loop
 
 .. autofunction:: flexx.app.init_notebook
 
-.. autofunction:: flexx.app.call_later
-
 .. autofunction:: flexx.app.create_server
 
 .. autofunction:: flexx.app.current_server
 
 
-Functions related to us Model classes as apps
----------------------------------------------
+Functions related to us Component classes as apps
+-------------------------------------------------
 
 .. autofunction:: flexx.app.App
 
@@ -33,17 +31,16 @@ Functions related to us Model classes as apps
 
 .. autofunction:: flexx.app.export
 
-.. autofunction:: flexx.app.get_model_classes
-
-.. autofunction:: flexx.app.get_active_model
-
-.. autofunction:: flexx.app.get_active_models
+.. autofunction:: flexx.app.get_component_classes
 
 
-The Model class
----------------
+The Component classes
+---------------------
 
-.. autoclass:: flexx.app.Model
+.. autoclass:: flexx.app.PyComponent
+    :members:
+
+.. autoclass:: flexx.app.JsComponent
     :members:
 
 

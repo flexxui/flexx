@@ -101,7 +101,8 @@ The *pyscript* module provides a system for translating Python code to
 JavaScript.
 In the *app* module the app mainloop is defined, running the server to
 which the web runtime connects (via a websocket). Further, it combines
-the *event* and *pyscript* functionalities into the ``Model`` class;
+the *event* and *pyscript* functionalities into the ``PyComponent`` and
+``JsComponent`` classes;
 a class for which its instances have a corresponding representation in
 JavaScript. Properties are synced both ways, and it allows subclasses
 to define methods for the JS version of the object in Python code (or

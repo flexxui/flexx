@@ -92,7 +92,8 @@ def create_ui_example(filename, to_root, height=300):
         err_text = str(err)
         msg = 'Example not generated. <pre>%s</pre>' % err_text
         open(filename_abs, 'wt', encoding='utf-8').write(msg.replace('\\n', '<br />'))
-        print('ERROR: Could not export ui example: %s\n%s' % (err_text, code) )
+        print('==========\n%s\n==========' % code)
+        print('ERROR: Could not export ui example: %s in %s\nSee code above.' % (err_text, fname))
         raise err
     
     all_examples.append((class_name, mod_name, filename_parts[-1]))

@@ -20,7 +20,7 @@ equivalents.
     
     # Lists and dicts
     foo = [1, 2, 3]
-    bar = {'a': 1, b: 2}
+    bar = {'a': 1, 'b': 2}
 
 
 Slicing and subscriping

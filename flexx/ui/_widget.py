@@ -110,8 +110,8 @@ class Widget(app.JsComponent):
     
     flex = event.FloatPairProp((0, 0), settable=True, doc="""
         How much space this widget takes (relative to the other
-        widgets) when contained in a flexible layout such as BoxLayout,
-        BoxPanel, FormLayout or GridPanel. A flex of 0 means to take
+        widgets) when contained in a flexible layout such as HBox,
+        HFix, HSplit or FormLayout. A flex of 0 means to take
         the minimum size. Flex is a two-element tuple, but both values
         can be specified at once by specifying a scalar.
         """)

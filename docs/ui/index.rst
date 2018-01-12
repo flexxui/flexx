@@ -8,7 +8,7 @@ client-side code in Python.
 
 This module builds on the app module, implementing the
 :class:`Widget <flexx.ui.Widget>` class based on the 
-:class:`Model <flexx.app.Model>` class.
+:class:`JsComponent <flexx.app.JsComponent>` class.
 
 .. toctree::
     :maxdepth: 1

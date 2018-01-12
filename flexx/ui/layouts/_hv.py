@@ -12,7 +12,7 @@ Here is an example that uses the various modes:
     
     from flexx import ui, app
     
-    class Example1(app.PyComponent):
+    class Example(app.PyComponent):
     
         def init(self):
             
@@ -78,7 +78,7 @@ Interactive Box layout example:
     
     from flexx import ui, event
     
-    class Example3(ui.HBox):
+    class Example(ui.HBox):
         def init(self):
             self.b1 = ui.Button(text='Horizontal', flex=0)
             self.b2 = ui.Button(text='Vertical', flex=1)
