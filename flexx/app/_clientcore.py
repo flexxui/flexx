@@ -48,12 +48,12 @@ class Flexx:
                 print('Flexx: I am in an exported notebook!')
             else:
                 print('Flexx: I am in an exported app!')
-                self.runExportedApp()
+                self.run_exported_app()
         else:
             print('Flexx: Initializing')
             if not self.is_notebook:
                 self._remove_querystring()
-            self.initLogging()
+            self.init_logging()
     
     def _remove_querystring(self):
         # remove querystring ?session=x
@@ -81,7 +81,7 @@ class Flexx:
         }
         """)
     
-    def initLogging(self):
+    def init_logging(self):
         """ Setup logging so that messages are proxied to Python.
         """
         if window.console.ori_log:
@@ -171,7 +171,8 @@ class JsSession:
         self.instances = {}
         self.instances_to_check_size = {}
         
-        self.initSocket()
+        if not flexx.is_exported:
+            self.init_socket()
         
         # Initiate service to track resize
         window.addEventListener('resize', self._check_size_of_objects, False)
@@ -238,7 +239,7 @@ class JsSession:
         else:
             return self.instances.get(id, None)
     
-    def initSocket(self):
+    def init_socket(self):
         """ Make the connection to Python.
         """
         # Check WebSocket support
@@ -334,7 +335,7 @@ class JsSession:
             self._pending_commands = None
             # print('init took', time() - self._init_time)
         elif cmd == 'PRINT':
-            window.console.ori_log(command[1])
+            (window.console.ori_log or window.console.log)(command[1])
         elif cmd == 'EVAL':
             x = None
             if len(command) == 2:

@@ -163,18 +163,18 @@ class App:
         session._runtime = webruntime.launch(url, runtime=runtime, **runtime_kwargs)
         return session.app
 
-    def export(self, filename=None, link=None, write_shared=True):
+    def export(self, filename=None, link=0, write_shared=True):
         """ Export the app to an HTML document.
 
         Arguments:
             filename (str, optional): Path to write the HTML document to.
                 If not given or None, will return the html as a string.
-            link (int): whether to link assets or embed them:
+            link (int): whether to link (JS and CSS) assets or embed them:
 
-                * 0: all assets are embedded.
+                * 0: all assets are embedded (default).
                 * 1: normal assets are embedded, remote assets remain remote.
                 * 2: all assets are linked (as separate files).
-                * 3: (default) normal assets are linked, remote assets remain remote.
+                * 3: normal assets are linked, remote assets remain remote.
             write_shared (bool): if True (default) will also write shared assets
                 when linking to assets. This can be set to False when
                 exporting multiple apps to the same location. The shared assets can
@@ -206,10 +206,13 @@ class App:
 
         # Clean up again - NO keep in memory to ensure two sessions dont get same id
         # manager.disconnect_client(session)
-
+        
+        assert link in (0, 1, 2, 3), "Expecting link to be in (0, 1, 2, 3)."
+        
         # Warn if this app has data and is meant to be run standalone
-        if (not link) and session.get_data_names():
-            logger.warn('Exporting a standalone app, but it has registered data.')
+        if link in (0, 1) and session.get_data_names():
+            logger.warn('Exporting app with embedded assets, '
+                        'but it has registered data.')
 
         # Get HTML - this may be good enough
         html = get_page_for_export(session, exporter.commands, link)
@@ -225,14 +228,14 @@ class App:
         # Save to file. If standalone, all assets will be included in the main html
         # file, if not, we need to export shared assets and session assets too.
         filename = os.path.abspath(os.path.expanduser(filename))
-        if link:
+        if link >= 2:
             if write_shared:
                 assets.export(os.path.dirname(filename))
-            session._export_data(os.path.dirname(filename))
+            session._export_data(os.path.dirname(filename))  # todo: remove?
         with open(filename, 'wb') as f:
             f.write(html.encode())
 
-        app_type = 'standalone app' if link else 'app'
+        app_type = 'standalone app' if link in (0, 1) else 'app'
         logger.info('Exported %s to %r' % (app_type, filename))
 
 

@@ -246,6 +246,11 @@ class AssetStore:
         code = code.split('"use strict";\n', 1)[1]  # put in the Flexx loader instead
         code = 'flexx.define("bsdf", [], (function () {\n"use strict";\n' + code
         asset_bsdf = Asset('bsdf.js', code)
+        # Create asset for bb64 - we replace the UMD loader code with flexx.define()
+        code = open(get_resoure_path('bb64.js'), 'rb').read().decode()
+        code = code.split('"use strict";\n', 1)[1]  # put in the Flexx loader instead
+        code = 'flexx.define("bb64", [], (function () {\n"use strict";\n' + code
+        asset_bb64 = Asset('bb64.js', code)
         
         # Add them
         for a in [asset_reset, asset_loader, asset_pyscript]:
@@ -259,6 +264,7 @@ class AssetStore:
         asset_core = Bundle('flexx-core.js')
         asset_core.add_asset(asset_loader)
         asset_core.add_asset(asset_bsdf)
+        asset_core.add_asset(asset_bb64)
         asset_core.add_asset(asset_pyscript)
         asset_core.add_asset(asset_event)
         asset_core.add_module(self.modules['flexx.app._clientcore'])

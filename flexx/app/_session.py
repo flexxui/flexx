@@ -6,6 +6,7 @@ import re
 import sys
 import time
 import json
+import base64
 import random
 import hashlib
 import asyncio
@@ -19,6 +20,7 @@ from ._component2 import PyComponent, JsComponent, AppComponentMeta
 from ._asset import Asset, Bundle, solve_dependencies
 from ._assetstore import AssetStore, export_assets_and_data, INDEX
 from ._assetstore import assets as assetstore
+from ._clientcore import serializer
 from . import logger
 
 from .. import config
@@ -758,10 +760,18 @@ def get_page_for_export(session, commands, link=0):
     # over the websocket)
     lines = []
     lines.append('flexx.is_exported = true;\n')
-    lines.append('flexx.runExportedApp = function () {')
-    lines.extend(['    flexx.command(%s);' % reprs(c) for c in commands
-                  if not c.startswith('DEFINE-')])
-    lines.append('};\n')
+    lines.append('flexx.run_exported_app = function () {')
+    lines.append('    var commands_b64 = [')
+    for command in commands:
+        if command[0] != 'DEFINE':
+            command_str = base64.encodebytes(serializer.encode(command)).decode()
+            lines.append('        "' + command_str.replace('\n', '') + '",')
+    lines.append('        ];')
+    lines.append('    bb64 =  flexx.require("bb64");')
+    lines.append('    for (var i=0; i<commands_b64.length; i++) {')
+    lines.append('        var command = flexx.serializer.decode(bb64.decode(commands_b64[i]));')
+    lines.append('        flexx.s1._receive_command(command);')
+    lines.append('    }\n};\n')
     # Create a session asset for it, "-export.js" is always embedded
     export_asset = Asset('flexx-export.js', '\n'.join(lines))
     js_assets.append(export_asset)
@@ -778,7 +788,7 @@ def _get_page(session, js_assets, css_assets, link, export):
     
     for assets in [css_assets, js_assets]:
         for asset in assets:
-            if not link:
+            if link in (0, 1):
                 html = asset.to_html('{}', link)
             else:
                 if asset.name.endswith(('-info.js', '-export.js')):
@@ -794,7 +804,7 @@ def _get_page(session, js_assets, css_assets, link, export):
                  (session.app_name, session.id))
 
     src = INDEX
-    if not link:
+    if link in (0, 1):
         asset_names = [a.name for a in css_assets + js_assets]
         toc = '<!-- Contents:\n\n- ' + '\n- '.join(asset_names) + '\n\n-->'
         codes.insert(0, toc)
