@@ -23,11 +23,11 @@ class Loop:
     object keeps track of (per thread) active components (i.e. the components
     whose context manager is currently active).
     
-    Users typically do not need to be aware of this, though it can be
-    useful during debugging.
+    Users typically do not need to be aware of the loop object, as it is
+    used internally by Flexx, though it can be useful during debugging.
     
-    This sevent system integrates with Python's builtin asyncio system,
-    configurable via ``integrate(loop)``. This system can run in a separate
+    This event system integrates with Python's builtin asyncio system,
+    configurable via ``Loop.integrate()``. This system can run in a separate
     thread, but there can be only one active flexx event loop per process.
     
     This object can also be used as a context manager; events get

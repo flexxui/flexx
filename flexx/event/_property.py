@@ -11,7 +11,7 @@ undefined = None
 class Property(BaseDescriptor):
     """ Base property class. Properties are (readonly) attributes associated
     with Component classes. Properties can be mutated by actions.
-    The ``Property`` class can have any value, the other property classes
+    The base ``Property`` class can have any value, the subclasses
     validate/convert the value when it is mutated.
     
     Usage:
@@ -20,7 +20,7 @@ class Property(BaseDescriptor):
         
         class MyComponent(event.Component):
             
-            foo = event.Property(7, doc="A property that can be anything")
+            foo = event.AnyProp(7, doc="A property that can be anything")
             bar = event.StringProp(doc='A property that can only be string')
             spam = event.IntProp(8, settable=True)
     
@@ -34,15 +34,15 @@ class Property(BaseDescriptor):
 
     .. code-block:: python
         
-    class MyCustomProp(event.Property):
-        ''' A property that can only be 'a', 'b' or 'c'. '''
-        
-        _default = 'a'
-        
-        def _validate(self, value):
-            if value not in 'abc':
-                raise TypeError('MyCustomProp value must be "a", "b" or "c".')
-            return value
+        class MyCustomProp(event.Property):
+            ''' A property that can only be 'a', 'b' or 'c'. '''
+            
+            _default = 'a'
+            
+            def _validate(self, value):
+                if value not in 'abc':
+                    raise TypeError('MyCustomProp value must be "a", "b" or "c".')
+                return value
     
     """
     

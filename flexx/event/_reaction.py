@@ -37,8 +37,7 @@ def reaction(*connection_strings):
     dynamism and labels for further information on the possibilities
     of connection strings.
 
-    To connect functions or methods to an event from another Component
-    object, use that object's
+    Also see the
     :func:`Component.reaction() <flexx.event.Component.reaction>` method.
 
     .. code-block:: py
@@ -229,7 +228,7 @@ class Reaction:
         return '<%s %r with %s connections at 0x%x>' % (cname, self._name, c, id(self))
     
     def is_explicit(self):
-        """ Whether this reaction is explicit (has connection strings),
+        """ Get whether this reaction is explicit (has connection strings),
         or implicit (auto-connects to used properties).
         """
         return len(self._connections) > 0

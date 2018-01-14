@@ -135,18 +135,17 @@ class ComponentMeta(type):
 
 
 class Component(with_metaclass(ComponentMeta, object)):
-    """ Base component class.
+    """ The base component class.
     
-    Components have properties, actions that can mutate properties, and
-    reactions that react to changes in properties and to other events.
+    Components have attributes, properties, actions that can mutate
+    properties, and reactions that react to changes in properties and
+    to other events.
     
     Initial values of properties can be provided by passing them
-    as keyword arguments. This only works if a corresponding ``set_xx()``
-    action is available.
+    as keyword arguments.
     
-    Objects of this class can emit events through their ``emit()``
-    method. Subclasses can use :func:`Property <flexx.event.Property>` to
-    define properties, and the  :func:`action <flexx.event.action>`, 
+    Subclasses can use :class:`Property <flexx.event.Property>` to
+    define properties, and the :func:`action <flexx.event.action>`, 
     :func:`reaction <flexx.event.reaction>`, and 
     :func:`emitter <flexx.event.emitter>` decorators to create actions,
     reactions. and emitters, respectively. 
@@ -155,11 +154,8 @@ class Component(with_metaclass(ComponentMeta, object)):
     
         class MyComponent(event.Component):
             
-            foo = evene.FloatProp(7, settable=True)
-            
-            @event.emitter
-            def bar(self, v):
-                return dict(value=v)  # the event to emit
+            foo = event.FloatProp(7, settable=True)
+            spam = event.Attribute()
             
             @event.action
             def inrease_foo(self):
@@ -173,12 +169,10 @@ class Component(with_metaclass(ComponentMeta, object)):
             def on_bar(self, *events):
                 for ev in events:
                     print('bar event was emitted')
-        
-        ob = MyComponent(foo=42)
-        
-        @ob.reaction('foo')
-        def another_foo_reaction(*events):
-            print('foo was set %i times' % len(events))
+            
+            @event.emitter
+            def bar(self, v):
+                return dict(value=v)  # the event to emit
     
     """
     
@@ -274,9 +268,8 @@ class Component(with_metaclass(ComponentMeta, object)):
                 loop.add_reaction_event(reaction, ev)
     
     def _comp_init_events(self, prop_events):
-        """ Initialize handlers and properties. You should only do this once,
-        and only when using the object is initialized with _init_reactions=False.
-        """
+        # Initialize handlers and properties. You should only do this once,
+        # and only when using the object is initialized with _init_reactions=False.
         
         if self.__pending_events is None:  # pragma: no cover
             return
@@ -311,8 +304,8 @@ class Component(with_metaclass(ComponentMeta, object)):
         
         This method can be overloaded when creating a custom class. It is
         called with this component as a context manager (making it the
-        active component), and it gets the positional arguments passed to the
-        Component constructor.
+        active component), and it gets any positional arguments that were
+        passed to the ``Component`` constructor.
         """
         pass
     
@@ -322,7 +315,6 @@ class Component(with_metaclass(ComponentMeta, object)):
     
     def dispose(self):
         """ Use this to dispose of the object to prevent memory leaks.
-        
         Make all subscribed reactions forget about this object, clear
         all references to subscribed reactions, disconnect all reactions
         defined on this object.
@@ -330,9 +322,9 @@ class Component(with_metaclass(ComponentMeta, object)):
         self._dispose()
     
     def _dispose(self):
-        """ Distinguish between private and public method to allow disposing
-        flexx.app.ProxyComponent without disposing its local version.
-        """
+        # Distinguish between private and public method to allow disposing
+        # flexx.app.ProxyComponent without disposing its local version.
+        
         self._disposed = True
         if not this_is_js():
             logger.debug('Disposing Component %r' % self)
@@ -345,10 +337,10 @@ class Component(with_metaclass(ComponentMeta, object)):
             getattr(self, self.__reactions__[i]).dispose()
     
     def _registered_reactions_hook(self):
-        """ Called when the reactions changed, can be implemented in subclasses.
-        The original method returns a list of event types for which there is
-        at least one registered reaction. Overloaded methods should return this
-        list too.
+        """ This method is called when the reactions changed, can be implemented
+        in subclasses. The original method returns a list of event types for
+        which there is at least one registered reaction. Overloaded methods
+        should return this list too.
         """
         used_event_types = []
         for key, reactions in self.__handlers.items():
@@ -467,8 +459,8 @@ class Component(with_metaclass(ComponentMeta, object)):
             index (int): the index at which to insert, remove or replace items.
             
         The 'replace' mutation also supports multidensional (numpy) arrays.
-        In this case value can be an ndarray to patch the data with, and
-        index a tuple of elements.
+        In this case ``value`` can be an ndarray to patch the data with, and
+        ``index`` a tuple of elements.
         """
         if not isinstance(prop_name, str):
             raise TypeError("_set_prop's first arg must be str, not %s" %
@@ -520,7 +512,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         """ Get the known event types for this HasEvent object. Returns
         a list of event type names, for which there is a
         property/emitter or for which any reactions are registered.
-        Sorted alphabetically.
+        Sorted alphabetically. Intended mostly for debugging/introspection purposes.
         """
         types = list(self.__handlers)  # avoid using sorted (one less stdlib func)
         types.sort()

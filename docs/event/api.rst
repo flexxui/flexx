@@ -9,12 +9,53 @@ Component
     :members:
     :private-members:
 
+Attributes
+----------
+
+.. autoclass:: flexx.event.Attribute
+  :members:
+    
 Properties
 ----------
 
-.. automodule:: flexx.event._properties
+.. autoclass:: flexx.event.Property
+  :members:
+      
+.. autoclass:: flexx.event.AnyProp
   :members:
 
+.. autoclass:: flexx.event.BoolProp
+  :members:
+
+.. autoclass:: flexx.event.IntProp
+  :members:
+
+.. autoclass:: flexx.event.FloatProp
+  :members:
+
+.. autoclass:: flexx.event.StringProp
+  :members:
+
+.. autoclass:: flexx.event.TupleProp
+  :members:
+
+.. autoclass:: flexx.event.ListProp
+  :members:
+
+.. autoclass:: flexx.event.ComponentProp
+  :members:
+
+.. autoclass:: flexx.event.FloatPairProp
+  :members:
+
+
+Actions
+-------
+
+.. autofunction:: flexx.event.action
+
+.. autoclass:: flexx.event.Action
+  :members:
 
 Reactions
 ---------
@@ -28,6 +69,9 @@ Emitter
 -------
 
 .. autofunction:: flexx.event.emitter
+
+.. autoclass:: flexx.event.Emitter
+    :members:
 
 
 Dict

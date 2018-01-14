@@ -5,42 +5,12 @@ Implements the attribute class.
 from ._action import BaseDescriptor
 
 
-# todo: fix docs below
 class Attribute(BaseDescriptor):
-    """ Attributes are (readonly) attributes associated
-    with Component classes. Properties can be mutated by actions.
-    The ``Property`` class can have any value, the other property classes
-    validate/convert the value when it is mutated.
-    
-    Usage:
-    
-    .. code-block:: python
-        
-        class MyComponent(event.Component):
-            
-            foo = event.Property(7, doc="A property that can be anything")
-            bar = event.StringProp(doc='A property that can only be string')
-            spam = event.IntProp(8, settable=True)
-    
-    In the example above, one can see how the initial value can be specified.
-    If omitted, a sensible default value is used. The docstring for the
-    property can be provided using the ``doc`` keyword argument. The ``spam``
-    property is marked as ``settable``; a ``set_spam()`` action is
-    automatically generated.
-    
-    One can also implement custom properties:
-
-    .. code-block:: python
-        
-    class MyCustomProp(event.Property):
-        ''' A property that can only be 'a', 'b' or 'c'. '''
-        
-        _default = 'a'
-        
-        def _validate(self, value):
-            if value not in 'abc':
-                raise TypeError('MyCustomProp value must be "a", "b" or "c".')
-            return value
+    """ Attributes are (readonly, and usually static) values associated with
+    Component classes. They expose and document a value without
+    providing means of observing changes like ``Property`` does. (The
+    actual value is taken from ``component._xx``, with "xx" the name
+    of the attribute.)
     
     """
     
