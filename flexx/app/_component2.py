@@ -285,19 +285,19 @@ class BaseAppComponent(Component):
     """ Abstract class for Component classes that can be "shared" between
     Python and JavaScript. The concrete implementations are:
     
-    * The PyComponent class, which operates in Python, but has a proxy
+    * The ``PyComponent`` class, which operates in Python, but has a proxy
       object in JavaSript to which properties are synced and from which actions
       can be invoked.
-    * The JsComponent class, which operates in JavaScript, but can have a proxy
+    * The ``JsComponent`` class, which operates in JavaScript, but can have a proxy
       object in Python to which properties are synced and from which actions
       can be invoked.
-    * The StubComponent class, which represents a component class that is
+    * The ``StubComponent`` class, which represents a component class that is
       somewhere else, perhaps in another session. It does not have any
       properties, nor actions. But it can be "moved around".
     """
     
     session = event.Attribute(doc="The session to which this component belongs. " + 
-                                  "It's id is unique within the session.")
+                                  "The component id is unique within its session.")
     
     uid = event.Attribute(doc="A unique identifier for this component; " + 
                               "a combination of the session and component id's.")
@@ -561,7 +561,7 @@ class ProxyComponent(BaseAppComponent):
 class StubComponent(BaseAppComponent):
     """
     Class to represent stub proxy components to take the place of components
-    that do not belong to the current session, or that are may not exist 
+    that do not belong to the current session, or that do not exist 
     for whatever reason. These objects cannot really be used, but they can
     be moved around.
     """

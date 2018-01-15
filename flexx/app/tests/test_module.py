@@ -378,7 +378,7 @@ def test_subclasses():
     assert 'BB' in m.get_js()
     assert 'AA' in store['flxtest.lib2'].get_js()
     
-    # Using a class Spam > Bar > Foo > Model
+    # Using a class Spam > Bar > Foo > Component
     store = {}
     m = JSModule('flxtest.bar', store)
     assert 'flxtest.foo' not in store

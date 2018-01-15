@@ -1,53 +1,86 @@
 """
 The app module implements the connection between Python and JavaScript.
 It runs a web server and websocket server based on Tornado, provides
-an asset (and data) management system, and provides the ``Model`` class,
-which allows definition of objects that have both a Python and JavaScript
-representation, forming the basis for widgets etc.
+an asset (and data) management system, and provides the
+:class:`PyComponent <flexx.app.PyComponent>` and
+:class:`JsComponent <flexx.app.JsComponent>` classes, which form the
+basis for e.g. Widgets.
 
-Writing code with the Model class
----------------------------------
+Writing app components
+----------------------
 
-An application will typically consists of a custom Model class (or Widget).
-In the class, one can define Python behavior, JavaScript behavior, define
-properties etc. Using the event system explained in ``flexx.event``, one
-can listen for events on either side (Python or JavaScript). Check out
-the examples and this simplistic code:
+A Flexx application consists of components that exist in either Python or
+JavaScript, and which can communicate with each-other in a variety of ways.
+
+:class:`PyComponent <flexx.app.PyComponent>` and
+:class:`JsComponent <flexx.app.JsComponent>` are
+:class:`Component <flexx.event.Component>` classes that are associated with a
+:class:`Session <flexx.app.Session>`, and live in Python and JavaScript,
+respectively. A ``PyComponent`` always has a corresponding proxy object
+in JavaScript. A ``JsComponent`` *may* have a proxy object in Python;
+These proxy objects are created automatically when Python references
+the component.
+
+The proxy objects allows the "other side" to inspect properties, invoke
+actions and connect to events. The component is aware of what events
+the proxy has reactions for, and will only communictate these events.
+
+A ``PyComponent`` can only be instantiated in Python, a ``JsComponent`` can
+be instantiated in both Python and JavaScript.
+
+
+An example:
 
 .. code-block:: py
 
     from flexx import app, event
     
-    class MyModel(app.Model):
+    class Person(app.JsComponent):
+        firstname = event.StringProp(settable=True)
+        lastname = event.StringProp(settable=True)
+    
+    class PersonDatabase(app.PyComponent):
+        persons = event.ListProp()
         
-        def init(self):
-            ...
+        @event.action
+        def add_person(self, firstname, lastname):
+            p = Person(firstname=firstname, lastname=lastname)
+            self._mutate_persons([p], 'insert', 99999)
+
+
+In the above code, the database can be used to create new ``Person`` objects,
+which live in JS. In practice, these will e.g. have a visual representation in
+the browser. The database could be a ``JsComponent`` as well, but let's assume
+that we need it in Python because it synchronizes to a mysql database or something.
+
+Now what if we also want to add persons from JavaScript? We only have to get the
+database object (or a proxy object, really) into a JsComponent. For example:
+
+.. code-block:: py
+
+    class PersonView(app.JsComponent):
         
-        # Listen for changes of foo in Python
-        @event.connect('foo')
-        def on_foo(self, *events):
-            ...
-        
-        class Both:
-            
-            # A property that exists on both ends (and is synced)
-            @event.property
-            def foo(self, v=0):
-                return v
-        
-        class JS:
-            
-            # Listen for changes of foo in JS
-            @event.connect('foo')
-            def on_foo(self, *events):
-                ...
+        def init(self, db):
+            self.db = db
+            # now we can call self.db.add_person() from JavaScript!
+    
+    ...
+    
+    # Somewhere in Python ...
+    PersonView(database)
+
+
+Note that ``PyComponents`` can instantiate ``JsComponents``, but not the other
+way around. Therefore, the root of an app is formed by ``PyComponents``.
+It depend on the needs of an application how much ``PyComponents`` are used, if any.
+
 
 The scope of modules
 --------------------
 
-The above demonstrates how one can write code that is executed in JavaScript.
-In this code, you can make use of functions, classes, and values that are
-defined in the same module (as long as they can be transpiled / serialized).
+Inside the methods of a component you can make use of functions, classes, and
+values that are defined in the same module. Even in a ``JsComponent``
+(as long as they can be transpiled / serialized).
 
 For every Python module that defines code that is used in JS, a corresponding
 JS module is created. Flexx detects what variable names are used in the JS
@@ -65,18 +98,16 @@ the module. You can even import functions/classes from other modules.
     
     info = {'x': 1, 'y': 2}
     
-    class MyModel(app.Model):
-    
-        class JS:
-        
-            @event.connect('some.event')
-            def handler(self, *events):
-                func1(info)
-                func2()
+    class MyComponent(app.JsComponent):
+
+        @event.reaction('some.event')
+        def handler(self, *events):
+            func1(info)
+            func2()
 
 In the code above, Flexx will include the definition of ``func2`` and
-``info`` in the same module that defines ``MyModel``, and include
-``func1`` in the JS module ``foo``. If the JS in ``MyModel`` would not
+``info`` in the same module that defines ``MyComponent``, and include
+``func1`` in the JS module ``foo``. If ``MyComponent`` would not
 use these functions, neither definition would be included in the JavaScript.
 
 A useful feature is that the ``RawJS`` class from PyScript can be used
@@ -88,11 +119,11 @@ in modules to define objects in JS:
     
     my_js_module = RawJS('require("myjsmodule.js")')
     
-    class MyModel(app.Model):
+    class MyComponent(app.JsComponent):
     
         class JS:
         
-            @event.connect('some.event')
+            @event.reaction('some.event')
             def handler(self, *events):
                 my_js_module.foo.bar()
 
@@ -101,23 +132,53 @@ transpile a module as a whole. A downside is that (at the moment) such
 modules cannot use import.
 
 
-Applications
-------------
+Local properties
+----------------
 
-A ``Model`` class can be made into an application by passing it to
-``app.serve``. This registers the application, so that clients can connect
-to the app based on its name (or using a custom name specified in
-``app.serve()``). One instance of this class is created
+Regular methods of a ``JsComponent`` are only available in JavaScript. On the
+other hand, all properties are available on the proxy object as well. This may
+not always be useful. It is possible to create properties that are local
+to JavaScript (or to Python in a ``PyComponent``) using ``app.LocalProp``.
+An alternative may also be to use ``event.Attribute``; these are also local
+to JavaScript/Python.
+
+
+Serving and launching apps
+--------------------------
+
+Each application has a root app component. This can be either a ``Pycomponent``
+or a ``JsComponent``. The app can be wrapped into an application like so
+(any additional arguments are passed to the component when it is instantiated):
+
+.. code-block:: py
+    
+    root = app.App(PersonDatabase)
+
+For a web server approach use ``serve()``:
+
+.. code-block:: py
+    
+    root.serve()
+    
+
+The serve method registers the application, so that clients can connect
+to the app based on its name (or using a custom name specified). One instance of this class is created
 per connection. Multiple apps can be hosted from the same process simply
 be specifying more app classes. To connect to the application
 corresponding to the `MyApp` class, one should connect to
 "http://domain:port/MyApp".
 
-An app can also be launched (via ``app.launch()``), which will invoke
-a client webruntime which is connected to the returned app object. This
+An app can also be launched:
+
+.. code-block:: py
+    
+    root.launch()  # argument can be e.g. "app" or "firefox-browser"
+
+This will serve the app and then invoke
+a client webruntime which is connected to the app object. This
 is the intended way to launch desktop-like apps.
 
-An app can also be exported to HTML via ``app.export()``. One can
+An app can also be exported to HTML via ``App.export()``. One can
 create a drectory structure that contains multiple exported apps that
 share assets, or export apps as standalone html documents.
 
@@ -134,7 +195,7 @@ Interactive use
 
 Further, Flexx can be used interactively, from an IDE or from the Jupyter
 notebook. Use ``app.init_interactive()`` to launch a runtime in the same
-way as ``app.launch()``, except one can now interactively (re)define models
+way as ``app.launch()``, except one can now interactively (re)define components
 and widgets, and make them appear in the runtime/browser.
 
 In the IPython/Jupyter notebook, the user needs to run
@@ -159,8 +220,8 @@ Flexx will then automatically load it when code from that module is used in JS:
     # Sometimes a more lightweight *remote* asset is prefered
     app.assets.associate_asset(__name__, 'http://some.cdn/lib.css')
     
-    # Create Model (or Widget) that needs the asset at the client
-    class MyMode(app.Model):
+    # Create component (or Widget) that needs the asset at the client
+    class MyComponent(app.JsComponent):
         ....
 
 It is also possible to provide assets that are not automatically loaded
@@ -171,6 +232,7 @@ on the main app page, e.g. for sub-pages or web workers:
     # Register asset
     asset_url = app.assets.add_shared_asset('mydep.js', js_code)
 
+
 Data management
 ---------------
 
@@ -179,30 +241,13 @@ Data can be provided per session or shared between sessions:
 .. code-block:: py
     
     # Add session-specific data
-    link = your_model.session.add_data('some_name.png', binary_blob)
+    link = my_component.session.add_data('some_name.png', binary_blob)
     
     # Add shared data
     link = app.assets.add_shared_data('some_name.png', binary_blob)
 
-Futher, it is possible to send data from Python to JS within a model class:
-
-
-.. code-block:: py
-
-    class MyModel(app.Model):
-    
-        def some_method(self):
-            self.send_data(binary_blob, meta_dict)
-        
-        class JS:
-        
-            def receive_data(self, array_buffer, meta_dict):
-                # This gets called when the data arrives.
-                
-                ...  # handle the data
-
-In this case, ``binary_blob`` can also be a URL where the client should
-download the binary data from.
+Note that it is also possible to send data from Python to JS via an
+action invokation (the data is send over the websocket in this case).
 
 
 Some background info on the server process
@@ -214,14 +259,15 @@ tornado IOLoop, and exactly one Tornado Application object.
 
 When a client connects to the server, it is served an HTML page, which
 contains the information needed to connect to a websocket. From there,
-all communication happens over this websocket.
+all communication happens over this websocket, including the definition
+of CSS and JavaScript modules.
 
 """
 
 _DEV_NOTES = """
 Overview of classes:
 
-* Model: the base class for creating Python-JS objects.
+* PyComponent and JsComponent: the base class for creating Python/JS component.
 * JSModule: represents a module in JS that corresponds to a Python module.
 * Asset: represents an asset.
 * Bundle: an Asset subclass to represent a collecton of JSModule's in one asset.
@@ -248,13 +294,9 @@ del logging
 # flake8: noqa
 from ._app import App, manager
 from ._asset import Asset, Bundle
-
-# from ._model import Model, get_active_model, get_active_models
-# from ._model import get_model_classes
-
-from ._component2 import LocalComponent, ProxyComponent, PyComponent, JsComponent, StubComponent
+from ._component2 import BaseAppComponent, LocalComponent, ProxyComponent
+from ._component2 import PyComponent, JsComponent, StubComponent
 from ._component2 import get_component_classes, LocalProperty
-
 
 from ._funcs import run, start, stop
 from ._funcs import init_interactive, init_notebook, serve, launch, export

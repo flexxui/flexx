@@ -37,7 +37,7 @@ class ExporterWebSocketDummy:
 class App:
     """ Specification of a Flexx app.
 
-    In the strict sense, this is a container for a PyComponent/JsComponent
+    In the strict sense, this is a container for a ``PyComponent``/``JsComponent``
     class plus the args and kwargs that it is to be instantiated with.
 
     Arguments:
@@ -143,7 +143,7 @@ class App:
                 ('title' and 'icon').
 
         Returns:
-            app (Component): an instance of the given class.
+            Component: an instance of the given class.
         """
         # creates server (and event loop) if it did not yet exist
         current_server()
@@ -181,8 +181,7 @@ class App:
                 then be exported last using ``app.assets.export(dirname)``.
 
         Returns:
-            html (str): The resulting html. If a filename was specified
-            this returns None.
+            str: The resulting html. If a filename was specified this returns None.
 
         Notes:
             If the given filename ends with .hta, a Windows HTML Application is

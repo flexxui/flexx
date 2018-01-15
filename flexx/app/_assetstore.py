@@ -387,7 +387,7 @@ class AssetStore:
                   assets without causing side effects when they're not used.
         
         Returns:
-            url: the (relative) url at which the asset can be retrieved.
+            str: the (relative) url at which the asset can be retrieved.
             
         """
         if isinstance(asset_name, Asset):
@@ -420,7 +420,7 @@ class AssetStore:
                 source if the asset_name is already registered.
         
         Returns:
-            url: the (relative) url at which the asset can be retrieved.
+            str: the (relative) url at which the asset can be retrieved.
         """
         # Get or create asset
         if asset_name in self._assets:
@@ -456,7 +456,7 @@ class AssetStore:
             data (bytes): the data blob.
         
         Returns:
-            url: the (relative) url at which the data can be retrieved.
+            str: the (relative) url at which the data can be retrieved.
         
         """
         if not isinstance(name, str):

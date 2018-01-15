@@ -25,10 +25,10 @@ def test_in_thread2():
         # event.loop.reset()
         loop = asyncio.new_event_loop()
         event.loop.integrate(loop, reset=True)
-        # Create model and manipulate prop
-        model = MyComp1()
-        model.set_foo(3)
-        model.set_foo(4)
+        # Create component and manipulate prop
+        component = MyComp1()
+        component.set_foo(3)
+        component.set_foo(4)
         # Run mainloop for one iterartion
         loop.call_later(0.2, loop.stop)
         loop.run_forever()
@@ -63,11 +63,11 @@ def test_in_thread3():
         loop.call_later(0.2, loop.stop)
         loop.run_forever()
     
-    # Create model and manipulate prop
+    # Create component and manipulate prop
     event.loop.reset()
-    model = MyComp1()
-    model.set_foo(3)
-    model.set_foo(4)
+    component = MyComp1()
+    component.set_foo(3)
+    component.set_foo(4)
     
     t = threading.Thread(target=main)
     t.start()
@@ -96,19 +96,19 @@ def test_in_thread4():
         loop = asyncio.new_event_loop()
         event.loop.integrate(loop, reset=False)  # no reset!
         # set foo
-        model.set_foo(3)
+        component.set_foo(3)
         # Run mainloop for one iterartion
         loop.call_later(0.4, loop.stop)
         loop.run_forever()
     
-    # Create model and manipulate prop
+    # Create component and manipulate prop
     event.loop.reset()
-    model = MyComp1()
+    component = MyComp1()
    
     t = threading.Thread(target=main)
     t.start()
     time.sleep(0.2)
-    model.set_foo(4)  # invoke from main thread
+    component.set_foo(4)  # invoke from main thread
     t.join()
     event.loop.integrate(reset=True)  # restore
     

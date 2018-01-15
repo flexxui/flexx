@@ -155,7 +155,8 @@ class Session:
 
     @property
     def status(self):
-        """ The status of this session. The lifecycle for each session is:
+        """ The status of this session.
+        The lifecycle for each session is:
 
         * status 1: pending
         * status 2: connected
@@ -375,7 +376,7 @@ class Session:
             data (bytes): the data blob.
 
         Returns:
-            url: the (relative) url at which the data can be retrieved.
+            str: the (relative) url at which the data can be retrieved.
         """
         if not isinstance(name, str):
             raise TypeError('Session.add_data() name must be a str.')

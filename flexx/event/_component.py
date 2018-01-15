@@ -604,7 +604,7 @@ def _mutate_array_py(array, ev):
     if is_nd:
         if mutation == 'set':  # pragma: no cover
             raise NotImplementedError('Cannot set numpy array in-place')
-        elif mutation in ('extend', 'insert', 'remove'):  # pragma: no cover
+        elif mutation in ('insert', 'remove'):  # pragma: no cover
             raise NotImplementedError('Cannot resize numpy arrays')
         elif mutation == 'replace':
             if isinstance(index, tuple):  # nd-replacement

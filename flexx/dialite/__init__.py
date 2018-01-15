@@ -141,7 +141,7 @@ def ask_ok(title='Confirm', message=''):
         message (str): the message to show in the body of the dialog.
     
     Returns:
-        result (bool): Whether the user selected "OK".
+        bool: Whether the user selected "OK".
     """
     if not isinstance(title, string_types):
         raise TypeError('ask_ok() title must be a string.')
@@ -158,7 +158,7 @@ def ask_retry(title='Retry', message=''):
         message (str): the message to show in the body of the dialog.
     
     Returns:
-        result (bool): Whether the user selected "Retry".
+        bool: Whether the user selected "Retry".
     """
     if not isinstance(title, string_types):
         raise TypeError('ask_retry() title must be a string.')
@@ -175,7 +175,7 @@ def ask_yesno(title='Question', message=''):
         message (str): the message to show in the body of the dialog.
     
     Returns:
-        result (bool):  Whether the user selected "Yes".
+        bool:  Whether the user selected "Yes".
     """
     if not isinstance(title, string_types):
         raise TypeError('ask_yesno() title must be a string.')

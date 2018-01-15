@@ -25,7 +25,7 @@ def test_session_basics():
     assert 'xx' in repr(s)
 
 
-def test_get_model_instance_by_id():
+def test_get_component_instance_by_id():
     # is really a test for the session, but historically, the test is done here
     
     # This test needs a default session
@@ -148,20 +148,20 @@ def clear_test_classes():
             classes.remove(cls)
 
 
-def fakemodel_init(self, s):
+def fakecomponent_init(self, s):
     self._session = s
-    self._id = 'FakeModel'
+    self._id = 'FakeComponent'
 
-def fakemodel_setattr(self, s, v):
+def fakecomponent_setattr(self, s, v):
     return object.__setattr__(self, s, v)
 
-def fakemodel_del(self):
+def fakecomponent_del(self):
     pass
 
-Model_overload = dict(__init__=fakemodel_init,
-                      __setattr__=fakemodel_setattr,
-                      __del__=fakemodel_del,
-                      )
+Component_overload = dict(__init__=fakecomponent_init,
+                          __setattr__=fakecomponent_setattr,
+                          __del__=fakecomponent_del,
+                          )
 
 
 class SessionTester(Session):
@@ -200,7 +200,7 @@ class FakeModule:
         store._assets[b2.name] = b2
     
     def make_component_class(self, name, base=app.JsComponent):
-        cls = new_type(name, (base, ), Model_overload)
+        cls = new_type(name, (base, ), Component_overload)
         self.component_classes.add(cls)
         cls.__module__ = self.name
         cls.__jsmodule__ = self.name
@@ -434,7 +434,7 @@ def test_keep_alive_noleak1():
     class Foo:
         pass
     
-    # Create a session and an object that has a reference to it (like Model)
+    # Create a session and an object that has a reference to it (like Component)
     session = app.Session('test')
     foo = Foo()
     foo.session = session
@@ -462,7 +462,7 @@ def test_keep_alive_noleak2():
     class Foo:
         pass
     
-    # Create a session and an object that has a reference to it (like Model)
+    # Create a session and an object that has a reference to it (like Component)
     session = app.Session('test')
     foo = Foo()
     foo.session = session

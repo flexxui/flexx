@@ -167,7 +167,7 @@ def test_flexx_in_thread2():
     """
     res = []
     
-    class MyModel1(event.Component):
+    class MyComponent1(event.Component):
         foo = event.IntProp(0, settable=True)
         
         @event.reaction('foo')
@@ -181,10 +181,10 @@ def test_flexx_in_thread2():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         app.create_server()
-        # Create model and manipulate prop
-        model = MyModel1()
-        model.set_foo(3)
-        model.set_foo(4)
+        # Create component and manipulate prop
+        comp = MyComponent1()
+        comp.set_foo(3)
+        comp.set_foo(4)
         # Run mainloop for one iterartion
         loop.call_later(0.2, app.stop)
         app.start()

@@ -20,10 +20,11 @@ Functions related to the event loop
 .. autofunction:: flexx.app.current_server
 
 
-Functions related to us Component classes as apps
--------------------------------------------------
+Wrapping a Component into an Application
+----------------------------------------
 
-.. autofunction:: flexx.app.App
+.. autoclass:: flexx.app.App
+    :members:
 
 .. autofunction:: flexx.app.serve
 
@@ -31,11 +32,12 @@ Functions related to us Component classes as apps
 
 .. autofunction:: flexx.app.export
 
-.. autofunction:: flexx.app.get_component_classes
-
 
 The Component classes
 ---------------------
+
+.. autoclass:: flexx.app.BaseAppComponent
+    :members:
 
 .. autoclass:: flexx.app.PyComponent
     :members:
@@ -43,15 +45,20 @@ The Component classes
 .. autoclass:: flexx.app.JsComponent
     :members:
 
+.. autoclass:: flexx.app.StubComponent
+    :members:
+
+.. autofunction:: flexx.app.get_component_classes
+
 
 Session and Assets
 ------------------
 
 An asset is represented using an ``Asset`` object that defines its sources,
-dependencies, etc. Assets can be shared or specific to the session.
-The AssetStore provides all shared assets for clients connected to the current
+dependencies, etc. Assets can be specific to the session or shared across sessions.
+The ``AssetStore`` provides all shared assets for clients connected to the current
 process. The global store is at ``flexx.app.assets``.
-The session object handles the connection between Python and the JavaScript,
+The session object handles the connection between Python and JavaScript,
 and it allows adding client-side assets, which for instance makes it
 easy to create extensions based on existing JS libraries.
 

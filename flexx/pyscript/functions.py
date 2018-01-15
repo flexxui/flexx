@@ -33,7 +33,7 @@ def py2js(ob=None, new_name=None, **parser_options):
             for details.
     
     Returns:
-        jscode (str): The JavaScript code as a special str object that
+        str: The JavaScript code as a special str object that
         has a ``meta`` attribute that contains the following fields:
         
         * filename (str): the name of the file that defines the object.
@@ -161,7 +161,7 @@ def js_rename(jscode, cur_name, new_name):
         new_name (str): the name to replace the current name with
     
     Returns:
-        jscode (str): the modified JavaScript source code
+        str: the modified JavaScript source code
     """
     assert cur_name and '.' not in cur_name
     
@@ -236,7 +236,7 @@ _eval_count = 0
 def evaljs(jscode, whitespace=True, print_result=True, extra_nodejs_args=None):
     """ Evaluate JavaScript code in Node.js.
     
-    parameters:
+    Parameters:
         jscode (str): the JavaScript code to evaluate.
         whitespace (bool): if whitespace is False, the whitespace
             is removed from the result. Default True.
@@ -245,8 +245,8 @@ def evaljs(jscode, whitespace=True, print_result=True, extra_nodejs_args=None):
             because we can use file-mode.
         extra_nodejs_args (list): Extra command line args to pass to nodejs.
     
-    returns:
-        result (str): the last result as a string.
+    Returns:
+        str: the last result as a string.
     """
     global _eval_count
     
@@ -304,13 +304,13 @@ def evaljs(jscode, whitespace=True, print_result=True, extra_nodejs_args=None):
 def evalpy(pycode, whitespace=True):
     """ Evaluate PyScript code in Node.js (after translating to JS).
     
-    parameters:
+    Parameters:
         pycode (str): the PyScript code to evaluate.
         whitespace (bool): if whitespace is False, the whitespace is
             removed from the result. Default True.
     
-    returns:
-        result (str): the last result as a string.
+    Returns:
+        str: the last result as a string.
     """
     # delibirate numpy doc style to see if napoleon handles it the same
     return evaljs(py2js(pycode), whitespace)

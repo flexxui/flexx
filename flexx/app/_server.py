@@ -37,7 +37,7 @@ def create_server(host=None, port=None, loop=None, backend='tornado',
         **server_kwargs: keyword arguments passed to the server constructor.
     
     Returns:
-        server: The server object, see ``current_server()``.
+        AbstractServer: The server object, see ``current_server()``.
     """
     # Lazy load tornado, so that we can use anything we want there without
     # preventing other parts of flexx.app from using *this* module.
@@ -68,9 +68,10 @@ def current_server(create=True):
     
     * serving: a tuple ``(hostname, port)`` specifying the location
       being served (or ``None`` if the server is closed).
+    * protocol: the protocol (e.g. "http") being used.
     * app: the ``tornado.web.Application`` instance
-    * loop: the ``tornado.ioloop.IOLoop`` instance
     * server: the ``tornado.httpserver.HttpServer`` instance
+    
     """
     if create and not _current_server:
         create_server()

@@ -214,7 +214,7 @@ def test_bundle():
     
     # Deps are agregated
     assert 'flexx.app.js' in bundle.deps
-    assert 'flexx.app._model.js' in bundle.deps
+    assert 'flexx.app._components.js' in bundle.deps
     assert not any('flexx.ui' in dep for dep in bundle.deps)
     
     # Strings are combined
