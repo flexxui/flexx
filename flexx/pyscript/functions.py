@@ -42,6 +42,7 @@ def py2js(ob=None, new_name=None, **parser_options):
         * pyhash (str): a hash of the Python code.
         * vars_defined (set): names defined in the toplevel namespace.
         * vars_unknown (set): names used in the code but not defined in it.
+          This includes namespaces, e.g. "foo.some_function".
         * vars_global (set): names explicitly declared global.
         * std_functions (set): stdlib functions used in this code.
         * std_method (set): stdlib methods used in this code.
