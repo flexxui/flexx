@@ -55,9 +55,10 @@ class WindowsApp(BaseApp):
     
     def _message(self, type, title, message):
         message = message.replace('"', '\u201C').replace("'", '\u2018')
-        retcode, res = check_output(['cscript', '//Nologo', self._filename,
-                                     str(type), title, message])
-        assert retcode == 0
+        retcode, res = check_output(['cscript', '//Nologo', '//E:JScript',
+                                     self._filename, str(type), title, message])
+        print(res)
+        # assert retcode == 0
         resmap = {'0': False, '2': False, '7': False,
                   '1': True, '4': True, '6': True}
         return resmap.get(res.strip(), None)

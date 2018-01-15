@@ -1,8 +1,8 @@
 """
 Dialite is a pure Python package to show dialogs. It is lightweight,
 cross-platform, and has no dependencies. It provides a handful of
-functions, each a verb, that can be used to inform(), warn() or fail()
-the user, or to ask_ok(), ask_retry() or ask_yesno().
+functions, each a verb, that can be used to ``inform()``, ``warn()``
+or ``fail()`` the user, or to ``ask_ok()``, ``ask_retry()`` or ``ask_yesno()``.
 
 Dialite can show dialogs on Window, OS X and Linux, and falls back to
 a terminal interface if dialogs are unavailable (e.g. if not supported
