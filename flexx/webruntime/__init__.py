@@ -2,6 +2,16 @@
 The webruntime module can be used to launch a runtime for applications
 based on HTML/JS/CSS. This can be a browser or something that looks like
 a desktop app.
+
+Example:
+
+.. code-block:: python
+    
+    >>> from flexx.webruntime import launch
+    >>> rt = launch('http://xkcd.com', 'app')
+    ...
+    >>> rt.close()
+
 """
 
 """
@@ -80,14 +90,14 @@ def launch(url, runtime=None, **kwargs):
             desktop-app-like runtime, 'browser' in a browser runtime. One can
             target specific runtimes, e.g. 'nw-app' or 'edge-browser', or
             a selection, e.g. 'chrome-browser or firefox-browser'. If not given
-            uses the value of ``flexx.config.webruntime``, which defaults to
+            the value of ``flexx.config.webruntime`` is used, which defaults to
             ``'app or browser'``.
             See below for more information on available runtimes.
         kwargs: addition arguments specific to the runtime. See the
             docs of the runtime classes.
     
     Returns:
-        runtime (BaseRuntime): An object that represents the runtime. For
+        BaseRuntime: An object that represents the runtime. For
         Desktop runtimes it can be used to close the runtime.
     
     Browser runtimes:
@@ -115,7 +125,7 @@ def launch(url, runtime=None, **kwargs):
     The most developed app runtimes are Firefox and NW. The former requires
     the user to have Firefox installed. The latter can be installed by the user
     simply by downloading the archive. Firefox is lighter (memory-wise), while
-    NW is based on Chromium, making it heavier, but generally faster. The other
+    NW is based on Chromium, making it heavier. The other
     app runtimes are useful for testing or development, but should generally be
     avoided when distributing apps.
     

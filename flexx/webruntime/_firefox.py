@@ -120,7 +120,7 @@ class FirefoxRuntime(DesktopRuntime):
     This runtime is visible in the task manager under a custom process name
     (``sys.executable + '-ui'``), making it easy to spot in the task manager,
     and avoids task-bar grouping. Compared to the NW runtime, this runtime
-    is leaner in terms of memory and number of processes.
+    is leaner in terms of memory and number of processes, and is also faster.
     """
     
     def _get_name(self):
