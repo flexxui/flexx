@@ -91,7 +91,7 @@ class ReactionDescriptor(BaseDescriptor):
         self._name = func.__name__
         self._ob = None if ob is None else weakref.ref(ob)
         self._connection_strings = connection_strings
-        self.__doc__ = '*%s*: %s' % ('event reaction', func.__doc__ or self._name)
+        self.__doc__ = self._format_doc('reaction', self._name, func.__doc__)
 
     def __get__(self, instance, owner):
         if instance is None:
@@ -155,7 +155,7 @@ class Reaction:
         self._func = func
         self._func_once = func
         self._name = func.__name__
-        self.__doc__ = '*%s*: %s' % ('event reaction', func.__doc__ or self._name)
+        self.__doc__ = BaseDescriptor._format_doc('reaction', self._name, func.__doc__)
 
         self._init(connection_strings)
     

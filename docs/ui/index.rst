@@ -2,13 +2,8 @@
 Reference for flexx.ui
 ----------------------
 
-The ui module provides a GUI toolkit based on web technology with a
-Pythonic API, a powerful property and event system, and supports writing
-client-side code in Python.
-
-This module builds on the app module, implementing the
-:class:`Widget <flexx.ui.Widget>` class based on the 
-:class:`JsComponent <flexx.app.JsComponent>` class.
+The ui module provides a variety of :class:`widget <flexx.ui.Widget>`
+classes based on :class:`JsComponent <flexx.app.JsComponent>`.
 
 .. toctree::
     :maxdepth: 1

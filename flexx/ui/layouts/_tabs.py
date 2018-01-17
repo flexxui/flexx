@@ -1,11 +1,14 @@
-"""
+""" TabLayout
+
+A ``StackLayout`` subclass that uses tabs to let the user select a child widget.
+
 Example:
 
 .. UIExample:: 100
     
     from flexx import app, ui, event
     
-    class Example(app.PyComponent):
+    class Example(ui.Widget):
         def init(self):
             with ui.TabLayout() as self.t:
                 self.a = ui.Widget(title='red', style='background:#a00;')

@@ -23,7 +23,7 @@ class Attribute(BaseDescriptor):
     
     def _set_name(self, name):
         self._name = name  # or func.__name__
-        self.__doc__ = '*attribute*: %s' % (self._doc or self._name)
+        self.__doc__ = self._format_doc('attribute', name, self._doc)
                                      
     def __set__(self, instance, value):
         t = 'Cannot set attribute %r.'

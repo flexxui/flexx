@@ -1,5 +1,6 @@
-"""
-Simple example:
+""" BokehWidget
+
+Show Bokeh plots in Flexx. Example:
 
 .. UIExample:: 300
     

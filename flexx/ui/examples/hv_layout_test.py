@@ -86,7 +86,7 @@ the layout:<br>
 * b, f, s: set the layout to box, fix, or split mode<br>
 """
 
-class TestApp(app.PyComponent):
+class TestApp(ui.Widget):
     
     def init(self):
         

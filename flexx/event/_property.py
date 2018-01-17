@@ -67,8 +67,8 @@ class Property(BaseDescriptor):
     
     def _set_name(self, name):
         self._name = name  # or func.__name__
-        self.__doc__ = '*property*: %s' % (self._doc or self._name)
-                                     
+        self.__doc__ = self._format_doc(self.__class__.__name__, name, self._doc)
+    
     def __set__(self, instance, value):
         t = 'Cannot set property %r; properties can only be mutated by actions.'
         raise AttributeError(t % self._name)
@@ -121,7 +121,8 @@ class IntProp(Property):
     _default = 0
     
     def _validate(self, value):
-        if isinstance(value, (int, float)) or isinstance(value, str):
+        if (isinstance(value, (int, float)) or isinstance(value, bool) or
+                                               isinstance(value, str)):
             return int(value)
         else:
             raise TypeError('Int property cannot accept %r.' % value)

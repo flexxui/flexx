@@ -1,4 +1,4 @@
-""" Layout widgets
+""" Layout
 """
 
 from . import Widget

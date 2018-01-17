@@ -1,17 +1,8 @@
-"""
-Simple example:
+""" GroupWidget
 
-.. UIExample:: 100
-    
-    with ui.GroupWidget(title='This is a panel'):
-        with ui.VBox():
-            ui.ProgressBar(value=0.2)
-            ui.Button(text='click me')
+Visually group a collection of input widgets. Example:
 
-
-Interactive example:
-
-.. UIExample:: 100
+.. UIExample:: 150
 
     from flexx import app, ui, event
     
@@ -19,12 +10,12 @@ Interactive example:
         def init(self):
             self.set_title('A silly panel')
             with ui.VBox():
-                ui.ProgressBar(value=0.2)
+                self.progress = ui.ProgressBar(min=0, max=9, text='Clicked {value} times')
                 self.but = ui.Button(text='click me')
         
         @event.reaction('but.mouse_down')
-        def _change_group_title(self, *events):
-            self.set_title(self.title + '-')
+        def _button_pressed(self, *events):
+            self.progress.set_value(self.progress.value + 1)
 """
 
 from ... import event

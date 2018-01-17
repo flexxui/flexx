@@ -33,7 +33,7 @@ def emitter(func):
         raise TypeError('The event.emitter() decorator needs a function.')
     if getattr(func, '__self__', None) is not None:  # builtin funcs have __self__
         raise TypeError('Invalid use of emitter decorator.')
-    return EmitterDescriptor(func, func.__name__, func.__doc__ or func.__name__)
+    return EmitterDescriptor(func, func.__name__, func.__doc__)
 
 
 class EmitterDescriptor(BaseDescriptor):
@@ -43,8 +43,7 @@ class EmitterDescriptor(BaseDescriptor):
     def __init__(self, func, name, doc):
         self._func = func
         self._name = name
-        self._doc = doc
-        self.__doc__ = '*emitter*: {}'.format(doc)
+        self.__doc__ = self._format_doc('emitter', name, doc, func)
     
     def __get__(self, instance, owner):
         if instance is None:
@@ -54,7 +53,7 @@ class EmitterDescriptor(BaseDescriptor):
         try:
             emitter = getattr(instance, private_name)
         except AttributeError:
-            emitter = Emitter(instance, self._func, self._name, self._doc)
+            emitter = Emitter(instance, self._func, self._name, self.__doc__)
             setattr(instance, private_name, emitter)
 
         emitter._use_once(self._func)  # make super() work, see _action.py
@@ -76,7 +75,7 @@ class Emitter:
         self._func = func
         self._func_once = func
         self._name = name
-        self.__doc__ = '*emitter*: {}'.format(doc)
+        self.__doc__ = doc
     
     def __repr__(self):
         cname = self.__class__.__name__

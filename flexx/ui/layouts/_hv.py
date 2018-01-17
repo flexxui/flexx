@@ -1,7 +1,8 @@
-"""
+""" HVLayout
+
 The HVLayout and its subclasses provide a simple mechanism to horizontally
-or vertically stack child widgets. This can be done in different "modes":
-box mode is suited for aligning content, where natural size matters. The
+or vertically stack child widgets. This can be done in different *modes*:
+box mode is suited for aligning content where natural size matters. The
 fix mode and split mode are more suited for high-level layout. See
 the HVLayout class for details.
 
@@ -12,7 +13,7 @@ Here is an example that uses the various modes:
     
     from flexx import ui, app
     
-    class Example(app.PyComponent):
+    class Example(ui.Widget):
     
         def init(self):
             
@@ -29,44 +30,43 @@ Here is an example that uses the various modes:
                             
                         ui.Label(text='Flex 0 0 0')
                         with ui.HBox(flex=0):
-                            self.b1 = ui.Button(text='Hi', flex=0)
-                            self.b2 = ui.Button(text='Helloooo world!', flex=0)
-                            self.b3 = ui.Button(text='Foo bar', flex=0)
+                            self.b1 = ui.Button(text='Hi')
+                            self.b2 = ui.Button(text='Helloooo world!')
+                            self.b3 = ui.Button(text='Foo bar')
+                        
+                        ui.Label(text='Flex 1 1 1')
+                        with ui.HBox(flex=0):
+                            self.b1 = ui.Button(flex=1, text='Hi')
+                            self.b2 = ui.Button(flex=1, text='Helloooo world!')
+                            self.b3 = ui.Button(flex=1, text='Foo bar')
                         
                         ui.Label(text='Flex 1 0 3')
                         with ui.HBox(flex=0):
-                            self.b1 = ui.Button(text='Hi', flex=1)
-                            self.b2 = ui.Button(text='Helloooo world!', flex=0)
-                            self.b3 = ui.Button(text='Foo bar', flex=3)
+                            self.b1 = ui.Button(flex=1, text='Hi')
+                            self.b2 = ui.Button(flex=0, text='Helloooo world!')
+                            self.b3 = ui.Button(flex=3, text='Foo bar')
                         
-                        ui.Label(text='padding 16 (around layout)')
-                        with ui.HBox(flex=0, padding=16):
-                            self.b1 = ui.Button(text='Hi', flex=1)
-                            self.b2 = ui.Button(text='Helloooo world!', flex=1)
-                            self.b3 = ui.Button(text='Foo bar', flex=1)
-                        
-                        ui.Label(text='spacing 16 (inter-widget)')
-                        with ui.HBox(flex=0, spacing=16):
-                            self.b1 = ui.Button(text='Hi', flex=1)
-                            self.b2 = ui.Button(text='Helloooo world!', flex=1)
-                            self.b3 = ui.Button(text='Foo bar', flex=1)
-                        
-                        ui.Widget(flex=1)  # spacer widget
-                        ui.Label(text='Note the spacer Widget above')
+                        # ui.Widget(flex=1)  # spacer widget
                     
                     with ui.VFix(style='border:1px solid #777;'):
                         
                         ui.Label(text='Flex 0 0 0 (space divided equally)', style='')
                         with ui.HFix():
-                            self.b1 = ui.Button(text='Hi', flex=0)
-                            self.b2 = ui.Button(text='Helloooo world!', flex=0)
-                            self.b3 = ui.Button(text='Foo bar', flex=0)
+                            self.b1 = ui.Button(text='Hi')
+                            self.b2 = ui.Button(text='Helloooo world!')
+                            self.b3 = ui.Button(text='Foo bar')
+                        
+                        ui.Label(text='Flex 1 1 1', style='')
+                        with ui.HFix():
+                            self.b1 = ui.Button(flex=1, text='Hi')
+                            self.b2 = ui.Button(flex=1, text='Helloooo world!')
+                            self.b3 = ui.Button(flex=1, text='Foo bar')
                         
                         ui.Label(text='Flex 1 0 3 (the widget with zero collapses')
                         with ui.HFix():
-                            self.b1 = ui.Button(text='Hi', flex=1)
-                            self.b2 = ui.Button(text='Helloooo world!', flex=0)
-                            self.b3 = ui.Button(text='Foo bar', flex=3)
+                            self.b1 = ui.Button(flex=1, text='Hi')
+                            self.b2 = ui.Button(flex=0, text='Helloooo world!')
+                            self.b3 = ui.Button(flex=3, text='Foo bar')
                         
                         # If we would put a spacer widget with flex 1 here, the
                         # above widgets would collapse due to their zero flex value.

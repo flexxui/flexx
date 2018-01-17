@@ -1,11 +1,10 @@
-"""
+""" PlotWidget
 
 The plot widget provides rudimentary plotting functionality, mostly to
 demonstrate how plots can be embedded in a Flexx GUI. It may be
 sufficient for simple cases, but don't expect it to ever support
-log-plotting, legends, and other fancy stuff. For real plotting, we
-should probably have a ``BokehWidget`` and a ``VispyWidget``. Or maybe
-it makes sense to have a visualization library based on Flexx.
+log-plotting, legends, and other fancy stuff. For real plotting, see
+e.g. ``BokehWidget``. There might be a Plotly widget at some point. 
 
 
 Simple example:
@@ -21,7 +20,6 @@ Interactive example:
 .. UIExample:: 300
     
     from flexx import app, ui, event
-    from flexx.pyscript import window
     
     class Example(ui.Widget):
         def init(self):
@@ -37,10 +35,11 @@ Interactive example:
         
         @event.reaction
         def __update_amplitude(self, *events):
+            global Math
             freq, phase = self.slider1.value, self.slider2.value
             ydata = []
             for x in self.plot.xdata:
-                ydata.append(window.Math.sin(freq*x*2*window.Math.PI+phase))
+                ydata.append(Math.sin(freq*x*2*Math.PI+phase))
             self.plot.set_data(self.plot.xdata, ydata)
 """
 

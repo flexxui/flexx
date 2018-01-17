@@ -1,11 +1,12 @@
-"""
-Example:
+""" PinboardLayout
+
+Free positioning (absolute or relative) of child widgets. Example:
 
 .. UIExample:: 200
     
     from flexx import ui, app
     
-    class Example(app.PyComponent):
+    class Example(ui.Widget):
     
         def init(self):
         

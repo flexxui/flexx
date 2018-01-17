@@ -1,4 +1,4 @@
-"""
+""" Button classes
 
 Simple example:
 

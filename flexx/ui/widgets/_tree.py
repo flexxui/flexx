@@ -1,7 +1,7 @@
-"""
+""" TreeWidget
 
-A TreeWidget object can contain TreeItems, which in turn, can contain
-TreeItems to construct a tree. First an example flat list with items
+A ``TreeWidget`` can contain ``TreeItems``, which in turn can contain
+``TreeItems`` to construct a tree. First an example flat list with items
 that are selectable and checkable:
 
 
@@ -540,18 +540,18 @@ class TreeItem(Widget):
         return node
     
     def _render_dom(self):
-        """ We render more or less this
-        <li>
-            <span class='flx-TreeItem'>     # the row that represents the item
-                <span class='padder'></span>    # padding
-                <span class='collapsebut'></span>   # the collapse button
-                <span class='checkbut'></span>  # the check button
-                <span class='title'></span>     # the title text for this item
-                <span class='text'></span>      # the text for this item
-                </span>
-            <ul></ul>                           # to hold sub items
-        </li>
-        """
+        # We render more or less this:
+        # <li>
+        #     <span class='flx-TreeItem'>     # the row that represents the item
+        #         <span class='padder'></span>    # padding
+        #         <span class='collapsebut'></span>   # the collapse button
+        #         <span class='checkbut'></span>  # the check button
+        #         <span class='title'></span>     # the title text for this item
+        #         <span class='text'></span>      # the text for this item
+        #         </span>
+        #     <ul></ul>                           # to hold sub items
+        # </li>
+        
         subnodes = [item.outernode for item in self.children]
         
         # Get class names to apply to the li and row. We apply the clases to

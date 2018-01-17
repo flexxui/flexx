@@ -1,5 +1,6 @@
-"""
-Example:
+""" FormLayout
+
+Layout a series of (input) widgets in a form. Example:
 
 .. UIExample:: 200
     
@@ -11,7 +12,7 @@ Example:
                 self.b1 = ui.LineEdit(title='Name:')
                 self.b2 = ui.LineEdit(title="Age:")
                 self.b3 = ui.LineEdit(title="Favorite color:")
-                ui.Widget(flex=1)
+                ui.Widget(flex=1)  # Spacing
 """
 
 from ... import event
@@ -159,10 +160,11 @@ class BaseTableLayout(Layout):
 
 
 class FormLayout(BaseTableLayout):
-    """ A form layout vertically alligns its child widgets.
+    """ A layout that vertically alligns its child widgets in a form. A label
+    is placed to the left of each widget (based on the widget's title).
     
-    A label is placed to the left of each widget (based on the widget's
-    title).
+    At the moment, this layout is based on ``<table>``, we may change this to
+    use CSS instead.
     """
     
     CSS = """

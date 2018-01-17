@@ -6,7 +6,7 @@ Splitter widgets are cool!
 from flexx import app, ui
 
 
-class Split(app.PyComponent):
+class Split(ui.Widget):
 
     def init(self):
 

@@ -1,12 +1,4 @@
-"""
-
-Simple example:
-
-.. UIExample:: 50
-    
-    label = ui.Label(text='This is a label')
-
-Interactive example:
+""" Label
 
 .. UIExample:: 50
     from flexx import app, ui, event
@@ -17,11 +9,10 @@ Interactive example:
             with ui.HBox():
                 self.but = ui.Button(text='Push me')
                 self.label = ui.Label(flex=1, wrap=True, text='This is a label. ')
-        
-        class JS:
-            @event.connect('but.mouse_down')
-            def _add_label_text(self, *events):
-                self.label.text = self.label.text + 'Yes it is. '
+    
+        @event.reaction('but.mouse_down')
+        def _add_label_text(self, *events):
+            self.label.set_text(self.label.text + 'Yes it is. ')
 
 """
 

@@ -1,4 +1,4 @@
-"""
+""" CanvasWidget
 """
 
 from ... import event
@@ -7,10 +7,15 @@ from .. import Widget
 
 perf_counter = None  # exists in PyScript, time.perf_counter only in Python 3.3+
 
+# todo: make it easy to enable high-res aa
+
 
 class CanvasWidget(Widget):
     """ A widget that provides an HTML5 canvas. The canvas is scaled with
     the available space.
+    
+    Use ``self.node.getContext('2d')`` or `self.node.getContext('webgl')`` in 
+    the ``init()`` method to get a contex to perform the actual drawing.
     """
     
     CSS = """

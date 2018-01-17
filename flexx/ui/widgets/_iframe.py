@@ -1,6 +1,4 @@
-"""
-
-Example:
+""" IFrame
 
 .. UIExample:: 100
 

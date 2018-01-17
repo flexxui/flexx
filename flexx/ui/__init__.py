@@ -1,18 +1,23 @@
 """
-This module consists solely of widget classes. Once you are familiar with the
-Widget class, understanding all other widgets should be straightforward.
-The Widget class is the base component of all other ui classes. On
-itself it does not do or show much, though we can make it visible:
+
+Once you are familiar with :class:`JsComponent <flexx.app.JsComponent>` and 
+the :class:`Widget <flexx.ui.Widget>` class, understanding all other widgets
+should be relatively straightforward. The ``Widget`` class is the base class
+of all other ui classes. On itself it does not do or show much, though we can make it
+visible by changing the background color:
 
 .. UIExample:: 100
     
     from flexx import app, ui
     
-    # A red widget
-    class Example(ui.Widget):
-        CSS = ".flx-Example {background:#f00; min-width: 20px; min-height:20px}"
+    class Example(ui.HSplit):
+        
+        def init(self):
+            ui.Widget(style='background:red;')
+            ui.Widget(style='background:blue;')
 
-Widgets are also used as a container class:
+
+Widgets can also used as a container for other widgets:
 
 .. UIExample:: 100
     
@@ -41,9 +46,12 @@ per thread.)
     class Example(ui.Widget):
         
         def init(self):
-            with ui.HBox():
-                ui.Button(flex=1, text='hello')
-                ui.Button(flex=1, text='world')
+            with ui.HSplit():
+                ui.Button(text='foo')
+                with ui.VBox():
+                    ui.Button(flex=1, text='bar')
+                    ui.Button(flex=1, text='spam')
+
 
 To create an actual app from a widget, there are three possibilities:
 ``serve()`` it as a web app, ``launch()`` it as a desktop app or
@@ -61,12 +69,59 @@ To create an actual app from a widget, there are three possibilities:
     example = app.launch(Example)
     app.export(Example, 'example.html')
 
-To lean about the individual widgets, check the 
-:doc:`list of widget classes <api>`.
 
-Web developers may want to have a look at the :class:`Div class <flexx.ui.Div>`
-and :ref:`this example <classic_web_dev.py>` for a more classic way of
-creating HTML content.
+
+Using widgets the classic way
+-----------------------------
+
+In the above examples, we've used the "classic" way to build applications
+up from basic components. Flexx provides a variety of layout widgets as well
+as leaf widgets (i.e. controls), see the  :doc:`list of widget classes <api>`.
+
+
+Using widgets the web way
+-------------------------
+
+An approach that might be more familiar for web developers, and which is
+inspired by frameworks such as React is to build custom widgets using 
+html elements:
+
+.. UIExample:: 150
+    
+    from flexx import app, event, ui
+    
+    class Example(ui.Widget):
+        
+        name = event.StringProp('John Doe', settable=True)
+        age =  event.IntProp(22, settable=True)
+        
+        @event.action
+        def increase_age(self):
+            self._mutate_age(self.age + 1)
+        
+        def _create_dom(self):
+            # Use this method to create a root element for this widget
+            return ui.create_element('div')  # this is the default
+        
+        def _render_dom(self):
+            # Use this to determine the content. This method may return a string,
+            # a list of virtual nodes, or a virtual node (which must match the
+            # type produced in _create_dom()).
+            return [ui.create_element('span', {},
+                        'Hello <b>%s</b>,' % self.name),
+                    ui.create_element('span', {},
+                        'I happen to know that your age is %i.<br>' % self.age),
+                    ui.create_element('button', {'onclick': self.increase_age},
+                        'Next year ...')
+                    ]
+
+The ``_render_dom()`` method is called from an implicit reaction. This means
+that when any properties that are accessed during this function change,
+the function is automatically called. This thus provides a declerative way
+to define the appearance of a widget using HTML elements.
+
+Above, the third argument in ``create_element()`` is a string, but this may
+also be a list of dicts (``create_element()`` returns a dict).
 """
 
 import logging

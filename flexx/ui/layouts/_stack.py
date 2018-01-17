@@ -1,11 +1,12 @@
-"""
-Example:
+""" StackLayout
+
+Show only one child at any time. Example:
 
 .. UIExample:: 200
     
-    from flexx import ui, event
+    from flexx import ui, event, app
 
-    class Example(app.PyComponent):
+    class Example(ui.Widget):
         
         def init(self):
             with ui.HBox():

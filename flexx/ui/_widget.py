@@ -1,11 +1,13 @@
 """
+The base ``Widget`` class.
+
 .. UIExample:: 100
 
     from flexx import app, ui
 
     class Example(ui.Widget):
         ''' A red widget '''
-        CSS = ".flx-Example {background:#f00; min-width:20px; min-height:20px;}"
+        CSS = ".flx-Example {background:#f00;}"
 
 """
 
@@ -144,7 +146,7 @@ class Widget(app.JsComponent):
         """)
     
     capture_mouse = event.IntProp(1, settable=True, doc="""
-        To what extend the mouse is "captured":
+        To what extend the mouse is "captured".
         
         * If 0, the mouse is not captured, and move events are only emitted
           when the mouse is pressed down (not recommended).
@@ -155,7 +157,7 @@ class Widget(app.JsComponent):
         """)
     
     @event.action
-    def set_icon(self, value):
+    def set_icon(self, val):
         """ Set the icon for this widget. This is used is some widgets classes,
         and is used as the app's icon if this is the main widget.
         It is settable from Python, but the property is not available in Python.
@@ -164,16 +166,16 @@ class Widget(app.JsComponent):
         encoded image. In the future this may also support names in
         icon packs like fontaweome.
         """
-        if not isinstance(value, str):
+        if not isinstance(val, str):
             raise TypeError('Icon must be a string')
-        self._mutate_icon(value)
+        self._mutate_icon(val)
     
     @event.action
-    def set_tabindex(self, value):
+    def set_tabindex(self, val):
         """ Setter for tabindex.
         """
-        if value is None or isinstance(value, (int, float)):  # only int not in JS
-            self._mutate('tabindex', value)
+        if val is None or isinstance(val, (int, float)):  # only int not in JS
+            self._mutate('tabindex', val)
         else:
             raise TypeError('Tabindex must be None or int.')
     

@@ -33,7 +33,7 @@ all_examples = []
 class uiexample(nodes.raw): pass
 
 
-def create_ui_example(filename, to_root, height=300):
+def create_ui_example(filename, to_root, height=300, source=None):
     """ Given a filename, export the containing app to HTML, return
     generated HTML. Needs to be done via filename, not direct code, so
     that PyScript can obtain source.
@@ -62,7 +62,7 @@ def create_ui_example(filename, to_root, height=300):
         if os.environ.get('READTHEDOCS', False):
             msg = 'This example is not build on read-the-docs. <pre>%s</pre>' % err_text
         open(filename_abs, 'wt', encoding='utf-8').write(msg)
-        warnings.warn('Could not import ui example in %s: %s' % (filename, err_text))
+        warnings.warn('Could not import ui example in %s: %s' % (source or filename, err_text))
         return get_html(filename_rel, 60)
     
     # Get class name
@@ -142,7 +142,7 @@ def visit_uiexample_html(self, node):
         f.write(code.encode())
     
     # Get html file
-    html = create_ui_example(filename_py, '..', node.height)
+    html = create_ui_example(filename_py, '..', node.height, source=node.source)
     self.body.append(html + '<br />')
 
 
@@ -175,9 +175,6 @@ class UIExampleDirective(Directive):
 
 
 def setup(Sphynx):
-    
-    #Sphynx.add_javascript('js-image-slider.js')
-    #Sphynx.add_stylesheet('js-image-slider.css')
     
     Sphynx.add_node(uiexample, html=(visit_uiexample_html, depart_uiexample_html))
     Sphynx.add_directive('uiexample', UIExampleDirective)

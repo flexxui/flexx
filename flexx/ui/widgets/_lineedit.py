@@ -1,13 +1,5 @@
-"""
+""" LineEdit
 
-Simple example:
-
-.. UIExample:: 50
-
-    line = ui.LineEdit(text='edit me')
-
-
-Interactive example:
 
 .. UIExample:: 100
 
@@ -17,15 +9,8 @@ Interactive example:
     
         def init(self):
             with ui.VBox():
-                self.line = ui.LineEdit(flex=0,
-                                        placeholder_text='type here',
-                                        autocomp=['foo', 'bar'])
-                ui.Label(flex=0, text='copy:')
-                self.label = ui.Label(flex=1)
-        
-        @event.reaction
-        def __change_label(self):
-            self.label.set_text(self.line.text)
+                line = ui.LineEdit(flex=0, placeholder_text='type here')
+                ui.Label(flex=1, text=lambda: 'Copy: ' + line.text)
 """
 
 from ... import event

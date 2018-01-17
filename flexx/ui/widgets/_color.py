@@ -1,6 +1,4 @@
-"""
-
-Simple example:
+""" ColorSelectWidget
 
 .. UIExample:: 50
     
@@ -11,9 +9,9 @@ Simple example:
         def init(self):
             self.c = ui.ColorSelectWidget()
     
-        @event.reaction('c.color')
-        def _color_changed(self, *events):
-            self.node.style.background = events[-1].new_value
+        @event.reaction
+        def _color_changed(self):
+            self.node.style.background = self.c.color
 """
 
 from ... import event

@@ -1,10 +1,14 @@
-"""
+""" ProgressBar
 
 Simple example:
 
 .. UIExample:: 50
-
-    p = ui.ProgressBar(value=0.7)
+    
+    from flexx import app, ui
+    
+    class Example(ui.HFix):
+        def init(self):
+            ui.ProgressBar(value=0.7)
 
 
 Interactive example:
@@ -62,6 +66,7 @@ class ProgressBar(Widget):
         -ms-justify-content: center;
         -moz-justify-content: center;
         justify-content: center;
+        white-space: nowrap;
         
         background: #8af;
         text-align: center;

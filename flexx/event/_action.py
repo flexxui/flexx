@@ -3,6 +3,7 @@ Implements the action decorator, class and desciptor.
 """
 
 import weakref
+import inspect
 
 from ._loop import loop
 from . import logger
@@ -65,6 +66,22 @@ class BaseDescriptor:
         cname = self.__class__.__name__
         cname = cname[:-10] if cname.endswith('Descriptor') else cname
         raise AttributeError('Cannot delete %s %r.' % (cname, self._name))
+    
+    @staticmethod
+    def _format_doc(kind, name, doc, func=None):
+        prefix, betweenfix = '', ' '
+        
+        doc = (doc or '').strip()
+        # Prevent Sphinx doing something weird when it sees a colon on first line
+        if doc.count('\n') and doc.split('\n')[0].strip().count(':'):
+            line2 = doc.split('\n')[1]
+            betweenfix = '\n' + ' ' * (len(line2) - len(line2.lstrip()))
+        if doc:
+            if func:
+                sig = str(inspect.signature(func))
+                sig = '(' + sig[5:].lstrip(', ') if sig.startswith('(self') else sig
+                prefix = '{}{}\n'.format(name, sig)
+            return '{}*{}* –{}{}\n'.format(prefix, kind, betweenfix, doc or name)
 
 
 class ActionDescriptor(BaseDescriptor):
@@ -74,9 +91,8 @@ class ActionDescriptor(BaseDescriptor):
     def __init__(self, func, name, doc):
         self._func = func
         self._name = name
-        self._doc = doc
-        self.__doc__ = '*action*: {}'.format(doc)
-
+        self.__doc__ = self._format_doc('action', name, doc, func)
+    
     def __get__(self, instance, owner):
         # Return Action object, which we cache on the instance
         if instance is None:
@@ -86,7 +102,7 @@ class ActionDescriptor(BaseDescriptor):
         try:
             action = getattr(instance, private_name)
         except AttributeError:
-            action = Action(instance, self._func, self._name, self._doc)
+            action = Action(instance, self._func, self._name, self.__doc__)
             setattr(instance, private_name, action)
 
         # Make the action use *our* func one time. In most situations
@@ -113,7 +129,7 @@ class Action:
         self._func = func
         self._func_once = func
         self._name = name
-        self.__doc__ = '*action*: {}'.format(doc)
+        self.__doc__ = doc
     
     def __repr__(self):
         cname = self.__class__.__name__

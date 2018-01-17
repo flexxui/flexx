@@ -39,7 +39,8 @@ def make_proxy_action(action):
     flx_name = action._name
     def flx_proxy_action(self, *args):
         self._proxy_action(flx_name, *args)
-    flx_proxy_action.__doc__ = action.__doc__  # todo: or action._doc?
+    flx_proxy_action.__doc__ = action.__doc__
+    flx_proxy_action.__qualname__ = 'flx_proxy_action'
     return flx_proxy_action  # ActionDescriptor(flx_proxy_action, flx_name, '')
 
 
@@ -49,7 +50,8 @@ def make_proxy_emitter(emitter):
     flx_name = emitter._name
     def flx_proxy_emitter(self, *args):
         self._proxy_emitter(flx_name, *args)
-    flx_proxy_emitter.__doc__ = emitter.__doc__  # todo: or emitter._doc?
+    flx_proxy_emitter.__doc__ = emitter.__doc__
+    flx_proxy_emitter.__qualname__ = 'flx_proxy_emitter'
     return flx_proxy_emitter  # EmitterDescriptor(flx_proxy_emitter, flx_name, '')
 
 
