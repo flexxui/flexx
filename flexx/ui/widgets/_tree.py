@@ -535,6 +535,8 @@ class TreeItem(Widget):
     
     def _create_dom(self):
         node = window.document.createElement('li')
+        self._row = window.document.createElement('span')  # we need this node
+        node.appendChild(self._row)
         self._addEventListener(node, 'click', self._on_click)
         self._addEventListener(node, 'dblclick', self._on_double_click)
         return node

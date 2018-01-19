@@ -26,39 +26,46 @@ p2.line(t, np.sin(t))
 p3 = figure(tools=TOOLS, sizing_mode='scale_width')
 p3.line(t, np.cos(t))
 
-class Example(ui.Widget):
+
+class Example(app.PyComponent):
     
     def init(self):
         
-        with ui.SplitPanel():
-            self.plot1 = ui.BokehWidget(plot=p1, title='Scatter')
-            with ui.VBox(title='Sine'):
-                with ui.FormLayout():
-                    self.amp = ui.Slider(title='Amplitude', max=2, value=1)
-                    self.freq = ui.Slider(title='Frequency', max=10, value=5)
-                    self.phase = ui.Slider(title='Phase', max=3, value=1)
+        with ui.HSplit():
+            self.plot1 = ui.BokehWidget.from_plot(p1, title='Scatter')
+            with ui.VFix(title='Sine'):
+                Controls()
                 with ui.Widget(style='overflow-y:auto;', flex=1):
-                    self.plot2 = ui.BokehWidget(plot=p2)
-                    self.plot3 = ui.BokehWidget(plot=p3)
-    
-    class JS:
+                    self.plot2 = ui.BokehWidget.from_plot(p2)
+                    self.plot3 = ui.BokehWidget.from_plot(p3)
         
-        @event.connect('amp.value', 'freq.value', 'phase.value')
-        def _update_sine(self, *events):
-            amp, freq, phase = self.amp.value, self.freq.value, self.phase.value
-            # Get reference to data source
-            ds = None
-            plot = self.plot2.plot
-            if plot:
-                for ren in plot.model.renderers.values():
-                    if ren.data_source:
-                        ds = ren.data_source
-                        break
-            # Update
-            if ds:
-                window.ds = ds
-                ds.data.y = [amp*window.Math.sin(x*freq+phase) for x in ds.data.x]
-                ds.trigger('change')
+
+class Controls(ui.FormLayout):
+    
+    def init(self):
+        self.amp = ui.Slider(title='Amplitude', max=2, value=1)
+        self.freq = ui.Slider(title='Frequency', max=10, value=5)
+        self.phase = ui.Slider(title='Phase', max=3, value=1)
+        
+        
+    @event.reaction
+    def _update_sine(self):
+        amp, freq, phase = self.amp.value, self.freq.value, self.phase.value
+        # Get reference to data source
+        ds = None
+        plot2 = self.parent.children[1].children[0]
+        plot = plot2.plot
+        if plot:
+            for ren in plot.model.renderers.values():
+                if ren.data_source:
+                    ds = ren.data_source
+                    break
+        
+        # Update
+        if ds:
+            window.plot = plot
+            ds.data.y = [amp*window.Math.sin(x*freq+phase) for x in ds.data.x]
+            ds.change.emit()  # or trigger('change') in older versions
 
 
 if __name__ == '__main__':

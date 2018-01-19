@@ -55,7 +55,7 @@ app.assets.associate_asset(__name__, 'bokeh.js', _load_bokeh_js)
 app.assets.associate_asset(__name__, 'bokeh.css', _load_bokeh_css)
 
 
-def make_bokeh_widget(plot):
+def make_bokeh_widget(plot, **kwargs):
     from bokeh.models import Plot
     from bokeh.embed import components
     # Set plot prop
@@ -67,7 +67,7 @@ def make_bokeh_widget(plot):
     # Get components and apply to widget
     script, div = components(plot)
     script = '\n'.join(script.strip().split('\n')[1:-1])
-    widget = BokehWidget()
+    widget = BokehWidget(**kwargs)
     widget.set_plot_components(
         dict(script=script, div=div, id=plot.ref['id']))
     return widget
@@ -94,10 +94,10 @@ class BokehWidget(Widget):
     """
     
     @classmethod
-    def from_plot(cls, plot):
+    def from_plot(cls, plot, **kwargs):
         """ Create a BokehWidget using a Bokeh plot.
         """
-        return make_bokeh_widget(plot)
+        return make_bokeh_widget(plot, **kwargs)
     
     plot = event.Attribute(doc="""The JS-side of the Bokeh plot object.""")
     

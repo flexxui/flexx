@@ -15,6 +15,7 @@ app.assets.associate_asset(__name__, base_url + 'ace.js')
 app.assets.associate_asset(__name__, base_url + 'mode-python.js')
 app.assets.associate_asset(__name__, base_url + 'theme-solarized_dark.js')
 
+
 class CodeEditor(ui.Widget):
     """ A CodeEditor widget based on Ace.
     """
@@ -25,19 +26,19 @@ class CodeEditor(ui.Widget):
         height: 100%;
     }
     """
-    
-    class JS:
-        def init(self):
-            # https://ace.c9.io/#nav=api
-            self.ace = window.ace.edit(self.node, "editor")
-            self.ace.setValue("import os\n\ndirs = os.walk")
-            self.ace.navigateFileEnd()  # otherwise all lines highlighted
-            self.ace.setTheme("ace/theme/solarized_dark")
-            self.ace.getSession().setMode("ace/mode/python")
-            
-        @event.connect('size')
-        def __on_size(self, *events):
-            self.ace.resize()
+
+    def init(self):
+        # https://ace.c9.io/#nav=api
+        self.ace = window.ace.edit(self.node, "editor")
+        self.ace.setValue("import os\n\ndirs = os.walk")
+        self.ace.navigateFileEnd()  # otherwise all lines highlighted
+        self.ace.setTheme("ace/theme/solarized_dark")
+        self.ace.getSession().setMode("ace/mode/python")
+        
+    @event.reaction('size')
+    def __on_size(self, *events):
+        self.ace.resize()
+
 
 if __name__ == '__main__':
     app.launch(CodeEditor, 'app')

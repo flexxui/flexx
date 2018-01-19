@@ -18,6 +18,7 @@ app.assets.associate_asset(__name__, base_url + '5.21.0/theme/solarized.css')
 app.assets.associate_asset(__name__, base_url + '5.21.0/addon/selection/active-line.js')
 app.assets.associate_asset(__name__, base_url + '5.21.0/addon/edit/matchbrackets.js')
 
+
 class CodeEditor(ui.Widget):
     """ A CodeEditor widget based on CodeMirror.
     """
@@ -28,28 +29,28 @@ class CodeEditor(ui.Widget):
         height: 100%;
     }
     """
+
+    def init(self):
+        # https://codemirror.net/doc/manual.html
+        options = dict(value='import os\n\ndirs = os.walk',
+                        mode='python',
+                        theme='solarized dark',
+                        autofocus=True,
+                        styleActiveLine=True,
+                        matchBrackets=True,
+                        indentUnit=4,
+                        smartIndent=True,
+                        lineWrapping=True,
+                        lineNumbers=True,
+                        firstLineNumber=1,
+                        readOnly=False,
+                        )
+        self.cm = window.CodeMirror(self.node, options)
     
-    class JS:
-        def init(self):
-            # https://codemirror.net/doc/manual.html
-            options = dict(value='import os\n\ndirs = os.walk',
-                           mode='python',
-                           theme='solarized dark',
-                           autofocus=True,
-                           styleActiveLine=True,
-                           matchBrackets=True,
-                           indentUnit=4,
-                           smartIndent=True,
-                           lineWrapping=True,
-                           lineNumbers=True,
-                           firstLineNumber=1,
-                           readOnly=False,
-                           )
-            self.cm = window.CodeMirror(self.node, options)
-        
-        @event.connect('size')
-        def __on_size(self, *events):
-            self.cm.refresh()
+    @event.reaction('size')
+    def __on_size(self, *events):
+        self.cm.refresh()
+
 
 if __name__ == '__main__':
     app.launch(CodeEditor, 'app')

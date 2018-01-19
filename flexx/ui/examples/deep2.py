@@ -20,11 +20,11 @@ class Deep2(ui.Widget):
             ui.Label(text='Widgets in BoxPanels in a widget in a vbox')
         
             with ui.Widget(flex=1):
-                with ui.BoxPanel(orientation='v'):
-                    with ui.BoxPanel(orientation='h'):
+                with ui.VFix():
+                    with ui.HFix():
                         Red(flex=1)
                         Red(flex=1)
-                    with ui.BoxPanel(orientation='h'):
+                    with ui.HFix():
                         Red(flex=1)
                         Red(flex=1)
 

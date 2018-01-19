@@ -44,26 +44,30 @@ def get_img_blob(name):
     return urlopen(url_root + name, timeout=2.0).read()
 
 
-# Randomly select a shared image
-app.assets.add_shared_data('image.png', get_img_blob(random.choice(image_names)))
+# Randomly select a shared image at server start
+link1 = app.assets.add_shared_data('image.png',
+                                   get_img_blob(random.choice(image_names)))
 
 
-class Example(ui.Widget):
-    
+class Example(app.PyComponent):
+
     def init(self):
-        
         # Randomly select image - different between sessions
-        link = self.session.add_data('image.png',
-                                     get_img_blob(random.choice(image_names)))
+        link2 = self.session.add_data('image.png',
+                                      get_img_blob(random.choice(image_names)))
+        
+        # Create widget to show images
+        View(link1, link2)
 
-        # Create HTML with the two images
+
+class View(ui.Label):
+    def init(self, link1, link2):
         html = '<p>Hit F5 to reload the page (i.e. create a new session'
         html += ', unless this is an exported app)</p>'
         html += '<p>This is session "%s"</p>' % self.session.id
-        html += '<img src="%s" />' % "_data/shared/image.png"
-        html += '<img src="%s" />' % link
-        
-        ui.Label(text=html, flex=1)
+        html += '<img src="%s" />' % link1
+        html += '<img src="%s" />' % link2
+        self.set_text(html)
 
 
 if __name__ == '__main__':

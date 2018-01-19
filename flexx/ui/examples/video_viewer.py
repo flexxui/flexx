@@ -47,21 +47,19 @@ class VideoViewer(ui.Widget):
     
     def init(self):
         
-        with ui.BoxPanel():
+        with ui.HSplit():
             with ui.TreeWidget(max_selected=1, flex=1) as self.videolist:
                 for name in sorted(videos):
                     ui.TreeItem(text=name)
             
             self.player = ui.VideoWidget(flex=5)
-    
-    class JS:
-        
-        @event.connect('videolist.items*.selected')
-        def on_select(self, *events):
-            for ev in events:
-                if ev.source.selected:
-                    fname = ev.source.text
-                    self.player.source = videos[fname]
+
+    @event.reaction('videolist.children*.selected')
+    def on_select(self, *events):
+        for ev in events:
+            if ev.source.selected:
+                fname = ev.source.text
+                self.player.set_source(videos[fname])
 
 
 if __name__ == '__main__':

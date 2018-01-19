@@ -10,7 +10,6 @@ from flexx import app, ui
 class Main(ui.Widget):
     
     def init(self):
-        
         self.b1 = ui.Button(text='Hello')
         self.b2 = ui.Button(text='World')
 

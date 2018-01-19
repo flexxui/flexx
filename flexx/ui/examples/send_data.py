@@ -1,72 +1,88 @@
 # doc-export: SendData
 """
-Example that demonstrates sending binray data from Python to JS. The
-``Model.send_data()`` mechanism can be a powerful tool to send
-(scientific) data, especially for large amounts of data. The method
-accepts bytes or a URL ("http://" or "https://") where the
-data can be retrieved. At his point AJAX is used to retrieve the data.
-In the future we might push the data over a dedicated binary websocket
-for greater performance.
+Example that demonstrates sending (binary) array data from Python to JS.
 
-If you find that you have a property that is a large list of numbers, maybe
-that should be considered data instead of a property. 
+The ``SendDataView`` widget (a ``JsComponent``) has an action to display the
+data. This action is invoked from Python, with an array as input. The action
+invokation is serialized with BSDF (http://bsdf.io), which natively supports
+bytes and numpy arrays.
 
-Exported apps that use ``send_data()` work, but only if they are served
-(e.g. on a blog, readthedocs or S3), because browsers typically refuse
-to load local files via AJAX.
+In this example we also provide a fallback for when Numpy is not available.
+This fallback illustrates how any kind of data can be send to JS by providing
+the serializer with an extension.
 """
 
-from flexx import ui, app
+from flexx import ui, app, event
 from flexx.pyscript.stubs import window
 
+
+# Prepare data array, preferably using Numpy
 try:
     import numpy as np
+    data_array = np.random.normal(0, 1, 1000)
+
 except ImportError:
-    np = None
-
-
-N = 1000
-
-# Create array of N random float values. On numpy its easy
-if np:
-    data = np.random.normal(0, 1, N)
-else:
-    # fallback for when numpy is not avail
+    # Fallback to ctypes when numpy is not available
     import random
     import ctypes
-    data = (ctypes.c_double * N)()
-    for i in range(N):
-        data[i] = random.random()
+    from flexx.app import bsdf_lite
+    
+    # Create data array
+    data_array = (ctypes.c_double * 1000)()
+    for i in range(len(data_array)):
+        data_array[i] = random.random()
+    
+    # Add extension that encodes a ctypes array to ndarray extension data
+    @app.serializer.add_extension
+    class CtypesArrayExtension(bsdf_lite.Extension):
+    
+        name = 'ndarray'
+        cls = ctypes.Array
+        
+        typemap = {
+            ctypes.c_bool: 'uint8', ctypes.c_int8: 'int8', ctypes.c_uint8: 'uint8',
+            ctypes.c_int16: 'int16', ctypes.c_uint16: 'uint16',
+            ctypes.c_int32: 'int32', ctypes.c_uint32: 'uint32',
+            ctypes.c_int64: 'int64', ctypes.c_uint64: 'uint64',
+            ctypes.c_float: 'float32', ctypes.c_double: 'float64',
+            }
+        
+        def encode(self, s, v):
+            return dict(shape=(len(v), ),
+                        dtype=self.typemap[v._type_],
+                        data=bytes(v))
 
 
-class SendData(ui.Widget):
+class SendData(app.PyComponent):
     """ A simple example demonstrating sending binary data from Python to JS.
     """
     
     def init(self):
-        self.label = ui.Label()
-        self.style = 'overflow-y: scroll'  # enable scrolling
-        
-        # Send data to the JS side. In this case we don't need meta data
-        meta = {}
-        bb = data.tobytes() if hasattr(data, 'tobytes') else bytes(data)
-        self.send_data(bb, meta)
+        self.view = SendDataView()
+        self.view.set_data(data_array)
+
+
+class SendDataView(ui.Widget):
+    """ A widget that displays array data.
+    """
     
-    class JS:
+    def init(self):
+        self.label = ui.Label()
+        self.apply_style('overflow-y: scroll;')  # enable scrolling
+    
+    @event.action
+    def set_data(self, data):
+        # We receive the data as a typed array.
+        # If we would send raw bytes, we would receive it as a DataView, which
+        # we can map to e.g. a Int16Array like so:
+        #   data = Int16Array(blob.buffer, blob.byteOffset, blob.byteLength/2)
         
-        def receive_data(self, blob, meta):
-            # This is the method to implement to handle received binary data
-            
-            # The first argument is an (untyped) arraybuffer,
-            # we know its float64 in this case.
-            data = window.Float64Array(blob)
-            
-            # Show the data as text. We could also e.g. plot it.
-            text = ['%i: %f<br />' % (i, data[i]) for i in range(len(data))]
-            header = 'This data was send in binary form:<br />'
-            self.label.text = header + ''.join(text)
+        # Show the data as text. We could also e.g. plot it.
+        text = ['%i: %f<br />' % (i, data[i]) for i in range(len(data))]
+        header = 'This data (%i elements) was send in binary form:<br />' % len(data)
+        self.label.set_text(header + ''.join(text))
 
 
 if __name__ == '__main__':
-    m = app.launch(SendData)
+    m = app.launch(SendData, 'browser')
     app.run()

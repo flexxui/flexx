@@ -7,7 +7,7 @@ a little like this. Best viewed in a square window.
 from flexx import app, ui
 
 
-class MyVBox(ui.BoxLayout):
+class MyVBox(ui.VFix):
     
     def __init__(self, **kwargs):
         kwargs['spacing'] = kwargs.get('spacing', 15)
@@ -15,7 +15,7 @@ class MyVBox(ui.BoxLayout):
         kwargs['orientation'] = 'vertical'
         super().__init__(**kwargs)
 
-class MyHBox(ui.BoxLayout):
+class MyHBox(ui.HFix):
     def __init__(self, **kwargs):
         kwargs['spacing'] = kwargs.get('spacing', 15)
         kwargs['padding'] = 0

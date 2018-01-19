@@ -121,7 +121,7 @@ class Twente(ui.Widget):
         
         with ui.HFix():
             ui.Widget(flex=1)
-            with ui.VBox(flex=1):
+            with ui.VBox(flex=0, style='min-width:200px'):
                 ui.Widget(flex=1)
                 with ui.GroupWidget(title='Plot options'):
                     self.month_label = ui.Label(text='Month')

@@ -106,14 +106,14 @@ class Deep6(ui.Widget):
 class Deep(ui.Widget):
     def init(self):
         
-        with ui.BoxPanel():
+        with ui.HFix():
         
-            with ui.BoxPanel():
+            with ui.HFix():
                 Deep1()
                 Deep2()
                 Deep3()
             
-            with ui.BoxPanel(orientation='vertical'):
+            with ui.VFix():
                 Deep4()
                 Deep5()
                 Deep6()

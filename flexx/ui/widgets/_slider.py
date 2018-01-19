@@ -118,6 +118,7 @@ class Slider(Widget):
         """)
     
     def init(self):
+        self._dragging = None
         self.set_value(self.value)  # Apply bounds
     
     @event.action

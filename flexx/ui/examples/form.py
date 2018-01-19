@@ -14,13 +14,13 @@ class Form(ui.Widget):
         
         with ui.HFix():
             with ui.FormLayout() as self.form:
-                self.b1 = ui.Button(title='Name:', text='Hola')
-                self.b2 = ui.Button(title='Age:', text='Hello world')
-                self.b3 = ui.Button(title='Favorite color:', text='Foo bar')
+                self.b1 = ui.LineEdit(title='Name:', text='Hola')
+                self.b2 = ui.LineEdit(title='Age:', text='Hello world')
+                self.b3 = ui.LineEdit(title='Favorite color:', text='Foo bar')
             with ui.FormLayout() as self.form:
-                self.b4 = ui.Button(title='Name:', text='Hola')
-                self.b5 = ui.Button(title='Age:', text='Hello world')
-                self.b6 = ui.Button(title='Favorite color:', text='Foo bar')
+                self.b4 = ui.LineEdit(title='Name:', text='Hola')
+                self.b5 = ui.LineEdit(title='Age:', text='Hello world')
+                self.b6 = ui.LineEdit(title='Favorite color:', text='Foo bar')
                 ui.Widget(flex=1)  # Add a flexer
 
 

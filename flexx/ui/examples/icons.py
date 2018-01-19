@@ -16,7 +16,6 @@ from flexx import app, ui
 class Icons(ui.Widget):
     
     def init(self):
-        
         ui.Button(text='Not much to see here yet')
 
 
@@ -31,9 +30,11 @@ if __name__ == '__main__':
     # works for setting the aplication icon in a desktop-like app, but not for
     # a web app. File types can be ico or png.
     
+    # << Uncomment any of the lines below >>
+    
     icon = None  # use default
     # icon = 'https://assets-cdn.github.com/favicon.ico'
-    # icon = app.assets.add_shared_asset('ico.icon', open(fname, 'rb'))
+    # icon = app.assets.add_shared_data('ico.icon', open(fname, 'rb').read())
     # icon = 'data:image/png;base64,' + black_png
     # icon = fname
     
