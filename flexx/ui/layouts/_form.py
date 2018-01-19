@@ -180,10 +180,10 @@ class FormLayout(BaseTableLayout):
     def _render_dom(self):
         rows = []
         for widget in self.children:
-            row = create_element('tr', {}, [
+            row = create_element('tr', {},
                     create_element('td', {'class': 'flx-title'}, widget.title),
                     create_element('td', {}, [widget.outernode]),
-                  ])
+                    )
             widget.outernode.hflex = 1
             widget.outernode.vflex = widget.flex[1]
             rows.append(row)

@@ -571,16 +571,16 @@ class TreeItem(Widget):
         cnames = ' '.join(cnames)
         
         # Note that the outernode (the <li>) has not flx-Widget nor flx-TreeItem
-        return create_element('li', {'className': cnames}, [
-                    create_element('span', {'className': 'flx-TreeItem ' + cnames}, [
+        return create_element('li', {'className': cnames},
+                    create_element('span', {'className': 'flx-TreeItem ' + cnames},
                         create_element('span', {'className': 'padder'}),
                         create_element('span', {'className': 'collapsebut'}),
                         create_element('span', {'className': 'checkbut'}),
                         create_element('span', {'className': 'title'}, self.title),
                         create_element('span', {'className': 'text'}, self.text),
-                        ]),
+                        ),
                     create_element('ul', {}, subnodes),
-                    ])
+                    )
     
     @event.action
     def set_checked(self, v):

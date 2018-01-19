@@ -144,10 +144,10 @@ class Slider(Widget):
         attr = {'className': 'slider disabled' if self.disabled else 'slider',
                 'style__left': 'calc(' + perc + '% - 5px)'
                 }
-        return [create_element('div', {'className': 'gutter'}, [
+        return [create_element('div', {'className': 'gutter'},
                     create_element('span', {}, label),
                     create_element('div', attr),
-                    ])
+                    )
                 ]
     
     # Use the Flexx mouse event system, so we can make use of capturing ...

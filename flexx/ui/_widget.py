@@ -18,10 +18,22 @@ from ..pyscript import undefined, window
 from . import logger  # noqa
 
 
-def create_element(type, props=None, children=None):
+def create_element(type, props=None, *children):
     """ Convenience function to create a dictionary to represent
     a virtual DOM node. Intended for use inside ``Widget._render_dom()``.
+    
+    The content of the widget may be given as a series/list of child nodes
+    (virtual or real), or a single string, which will be used as the node's
+    inner HTML.
+    
+    The returned dictionary has three fields: type, props, children.
     """
+    if len(children) == 0:
+        children = None  # means, don't touch children
+    elif len(children) == 1 and (isinstance(children[0], str) or
+                                 isinstance(children[0], list)):
+        children = children[0]
+    
     return dict(type=type,
                 props=props or {},
                 children=children,
@@ -391,8 +403,10 @@ class Widget(app.JsComponent):
                     node.insertBefore(new_subnode, subnode)
                     node.removeChild(subnode)
         else:
+            window.flexx_vnode = vnode
             raise TypeError('Widget._render_dom() '
-                            'needs virtual node children to be str or list.')
+                            'needs virtual node children to be str or list, not %s' %
+                            vnode.children)
         
         return node
     

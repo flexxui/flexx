@@ -1,3 +1,4 @@
+# doc-export: TestApp
 """
 App that has a lot of HVLayouts and allows toggling their mode and orientation
 with key presses. This is very convenient to test these layouts on various

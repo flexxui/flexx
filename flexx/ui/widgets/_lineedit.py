@@ -61,9 +61,9 @@ class LineEdit(Widget):
     def _create_dom(self):
         
         # Create node element
-        d = window.document.createElement('div')
-        d.innerHTML = '<input type="text", list="%s" />' % self.id
-        node = d.childNodes[0]
+        node = window.document.createElement('input')
+        node.setAttribute('type', 'input')
+        node.setAttribute('list', self.id)
         
         self._autocomp = window.document.createElement('datalist')
         self._autocomp.id = self.id

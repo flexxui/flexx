@@ -1,3 +1,4 @@
+# doc-export: Example
 """
 Example demonstrating the use of Bootstrap to style element and do layout. 
 """
@@ -10,15 +11,10 @@ app.assets.associate_asset(__name__, url)
 
 
 class Example(ui.Widget):
-    
-    # A property with (name, info) tuples
+
     persons = event.TupleProp((), doc=""" People to show cards for""")
-    
-    def init(self):
-        # We use Flexx widgets for our input; easier to wire
-        self.name = ui.LineEdit(placeholder_text='name')
-        self.info = ui.LineEdit()
-        self.but = ui.Button(css_class='btn btn-primary', text='hello')
+    first_name = event.StringProp('', settable=True)
+    last_name = event.StringProp('', settable=True)
     
     @event.action
     def add_person(self, name, info):
@@ -27,40 +23,65 @@ class Example(ui.Widget):
         ppl = list(self.persons)
         ppl.append((name, info))
         self._mutate_persons(ppl)
-    
-    @event.reaction('but.mouse_down')
+
     def _button_clicked(self, *events):
-        self.add_person(self.name.text, self.info.text)
-    
+        self.add_person(self.first_name, self.last_name)
+
     def _render_dom(self):
         """ This function gets automatically called when needed; Flexx is aware
         of what properties are used here.
         """
-        # Create virtual DOM nodes for all persons. We use bootstrap cards
-        nodes = []
-        for name, info in self.persons:
-            person_node = ui.create_element('div', {'class': 'card'}, [
-                                ui.create_element('h5', {'class': 'card-title'}, name),
-                                ui.create_element('p', {'class': 'card-text'}, info),
-                                ])
-            nodes.append(person_node)
         
-        # Define the final layout. Note how the nodes of the input widgets are embedded
-        return ui.create_element('div', {'class': 'container'}, [
-                    ui.create_element('div', {'class': 'row'}, [
-                        ui.create_element('div', {'class': 'col-sm-4'},
-                                          [self.name.outernode]),
-                        ui.create_element('div', {'class': 'col-sm-4'},
-                                          [self.info.outernode]),
-                        ui.create_element('div', {'class': 'col-sm-4'},
-                                          [self.but.outernode]),
-                        ]),
-                    ui.create_element('div', {'class': 'row'}, 
-                        [ui.create_element('div', {'class': 'col-sm-4'}, [node])
-                         for node in nodes]),
-                    ])
+        # Create form elements
+        form_nodes = [
+            ui.create_element('div',
+                {'class': 'form-group mb-2'},
+                ui.create_element('input',
+                    {'class': 'form-control',
+                     'id': 'inputFirstName',
+                     'oninput': lambda e: self.set_first_name(e.target.value)
+                    },
+                    'First name'
+                    )
+                ),
+            ui.create_element('div',
+                {'class': 'form-group mx-sm-3 mb-2'},
+                ui.create_element('input',
+                    {'class': 'form-control',
+                     'id': 'inputLastName',
+                     'oninput': lambda e: self.set_last_name(e.target.value)
+                    },
+                    'Last name'
+                    )
+                ),
+            ui.create_element('button',
+                {'class': 'btn btn-primary mb-2',
+                 'onclick': self._button_clicked
+                },
+                'Submit'
+                ),
+            ]
+        
+        # Create virtual DOM nodes for all persons. We use bootstrap cards
+        card_nodes = []
+        for name, info in self.persons:
+            person_node = ui.create_element('div', {'class': 'card'},
+                ui.create_element('div', {'class': 'card-body'},
+                    ui.create_element('h5', {'class': 'card-title'}, name),
+                    ui.create_element('p', {'class': 'card-text'}, info),
+                    )
+                )
+            card_nodes.append(person_node)
+        
+        # Compose finaly DOM tree
+        return ui.create_element('div', {},
+                    ui.create_element('div',
+                        {'class': 'form-inline'},
+                        form_nodes
+                        ),
+                    *card_nodes)
 
 
 if __name__ == '__main__':
-    m = app.launch(Example)
+    m = app.launch(Example, 'browser')
     app.run()

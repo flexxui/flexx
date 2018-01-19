@@ -50,6 +50,10 @@ def main():
         docs += '.. automodule:: %s\n\n' % module_name
         docs += '----\n\n'
         
+        # Include more docs?
+        if module_name.endswith('_widget'):
+            docs += '.. autofunction:: ui.create_element\n\n'
+        
         for cls in classes:
             assert issubclass(cls, app.JsComponent)
             name = cls.__name__

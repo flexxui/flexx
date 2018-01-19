@@ -82,4 +82,3 @@ class KeyboardControlsTester(ui.Widget):
 if __name__ == '__main__':
     m = app.launch(KeyboardControlsTester)
     app.run()
-
