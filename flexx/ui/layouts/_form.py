@@ -207,3 +207,33 @@ class FormLayout(BaseTableLayout):
             col.style.width = '100%'
             className += 'flx-hflex'
         col.className = className
+    
+    def _query_min_max_size(self):
+        """ Overload to also take child limits into account.
+        """
+        
+        # Collect contributions of child widgets
+        mima1 = [0, 1e9, 0, 0]
+        for child in self.children:
+            mima2 = child.size_min_max
+            mima1[0] = max(mima1[0], mima2[0])
+            mima1[1] = min(mima1[1], mima2[1])
+            mima1[2] += mima2[2]
+            mima1[3] += mima2[3]
+        
+        # Dont forget padding and spacing
+        extra_padding = 2
+        extra_spacing = 2
+        for i in range(4):
+            mima1[i] += extra_padding
+        mima1[2] += extra_spacing
+        mima1[3] += extra_spacing
+        
+        # Own limits
+        mima3 = super()._query_min_max_size()
+        
+        # Combine own limits with limits of children
+        return [max(mima1[0], mima3[0]),
+                min(mima1[1], mima3[1]),
+                max(mima1[2], mima3[2]),
+                min(mima1[3], mima3[3])]

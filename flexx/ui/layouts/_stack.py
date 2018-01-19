@@ -77,5 +77,6 @@ class StackLayout(Layout):
             for widget in self.children:
                 if widget is current:
                     widget.outernode.classList.add('flx-current')
+                    widget.check_real_size()
                 else:
                     widget.outernode.classList.remove('flx-current')
