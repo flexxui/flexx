@@ -336,6 +336,8 @@ class JsSession:
             # print('init took', time() - self._init_time)
         elif cmd == 'PRINT':
             (window.console.ori_log or window.console.log)(command[1])
+        elif cmd == 'EXEC':
+            eval(command[1])
         elif cmd == 'EVAL':
             x = None
             if len(command) == 2:

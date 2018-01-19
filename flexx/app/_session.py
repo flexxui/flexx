@@ -316,7 +316,7 @@ class Session:
                 continue
             morsel[k] = v
 
-        self._exec('document.cookie = "%s";' %
+        self.send_command('EXEC', 'document.cookie = "%s";' %
                    morsel.OutputString().replace('"', '\\"'))
 
     ## Data
@@ -579,6 +579,7 @@ class Session:
             self._pending_commands.append(command)
         else:
             #raise RuntimeError('Cannot send commands; app is closed')
+            1/0
             logger.warn('Cannot send commands; app is closed')
 
     def _receive_command(self, command):
@@ -712,7 +713,7 @@ def send_ping_later(session):
     # to a ref lingering in an asyncio loop.
     def x(weaksession):
         s = weaksession()
-        if s is not None:
+        if s is not None and s.status > 0:
             s._ping_counter += 1
             s.send_command('PING', s._ping_counter)
     # asyncio.get_event_loop().call_soon(x, weakref.ref(session))

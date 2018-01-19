@@ -113,7 +113,7 @@ class BsdfLiteSerializer(object):
 
     def add_extension(self, extension_class):
         """ Add an extension to this serializer instance, which must be
-        a subclass of Extension.
+        a subclass of Extension. Can be used as a decorator.
         """
         # Check class
         if not (isinstance(extension_class, type) and
@@ -148,7 +148,8 @@ class BsdfLiteSerializer(object):
         for cls in clss:
             self._extensions_by_cls[cls] = name, extension.encode
         self._extensions[name] = extension
-
+        return extension_class
+    
     def remove_extension(self, name):
         """ Remove a converted by its unique name.
         """
