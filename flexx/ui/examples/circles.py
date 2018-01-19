@@ -27,7 +27,7 @@ class Circles(ui.Widget):
         self.tick()
     
     def tick(self):
-        global Math
+        global Math, window
         t = time()
         for i, circle in enumerate(self._circles):
             x = Math.sin(i*0.2 + t) * 30 + 50

@@ -171,7 +171,7 @@ class JsSession:
         self.instances = {}
         self.instances_to_check_size = {}
         
-        if not flexx.is_exported:
+        if not window.flexx.is_exported:
             self.init_socket()
         
         # Initiate service to track resize

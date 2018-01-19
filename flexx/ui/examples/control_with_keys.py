@@ -12,7 +12,7 @@ consuming keys. Further, an application may want to control the tree widget
 even when it does not have focus.
 """
 
-from flexx import event, ui, app
+from flexx import app, event, ui
 
 
 class TreeWithControls(ui.TreeWidget):

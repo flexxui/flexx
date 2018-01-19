@@ -11,7 +11,7 @@ Here is an example that uses the various modes:
 
 .. UIExample:: 250
     
-    from flexx import ui, app
+    from flexx import app, ui
     
     class Example(ui.Widget):
     
@@ -76,7 +76,7 @@ Interactive Box layout example:
 
 .. UIExample:: 200
     
-    from flexx import ui, event
+    from flexx import app, event, ui
     
     class Example(ui.HBox):
         def init(self):

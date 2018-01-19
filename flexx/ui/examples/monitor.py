@@ -9,7 +9,7 @@ from time import time
 import psutil
 import asyncio
 
-from flexx import app, ui, event
+from flexx import app, event, ui
 
 nsamples = 16
 

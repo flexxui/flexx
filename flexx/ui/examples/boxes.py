@@ -6,7 +6,7 @@ more suited for low-level layout. For higher level layout (e.g. the two
 main panels in this example) the fix or split mode is more appropriate.
 """
 
-from flexx import ui, app
+from flexx import app, ui
 
 
 class Panel(ui.Label):

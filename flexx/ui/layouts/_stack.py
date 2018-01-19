@@ -4,7 +4,7 @@ Show only one child at any time. Example:
 
 .. UIExample:: 200
     
-    from flexx import ui, event, app
+    from flexx import app, event, ui
 
     class Example(ui.Widget):
         

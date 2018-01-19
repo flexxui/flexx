@@ -771,7 +771,8 @@ def get_page_for_export(session, commands, link=0):
     lines.append('        ];')
     lines.append('    bb64 =  flexx.require("bb64");')
     lines.append('    for (var i=0; i<commands_b64.length; i++) {')
-    lines.append('        var command = flexx.serializer.decode(bb64.decode(commands_b64[i]));')
+    lines.append('        var command = flexx.serializer.decode('
+                                            'bb64.decode(commands_b64[i]));')
     lines.append('        flexx.s1._receive_command(command);')
     lines.append('    }\n};\n')
     # Create a session asset for it, "-export.js" is always embedded

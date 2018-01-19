@@ -4,7 +4,7 @@ Free positioning (absolute or relative) of child widgets. Example:
 
 .. UIExample:: 200
     
-    from flexx import ui, app
+    from flexx import app, ui
     
     class Example(ui.Widget):
     

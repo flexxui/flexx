@@ -11,9 +11,7 @@ import base64
 import mimetypes
 
 import flexx
-from flexx import event, app
-from flexx.pyscript.stubs import window, L
-from flexx.ui import Widget
+from flexx import app, event, ui
 
 
 _leaflet_url = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/'
@@ -79,7 +77,7 @@ for icon in _leaflet_icons:
     app.assets.add_shared_data(icon, _get_data('images/%s' % icon))
 
 
-class LeafletWidget(Widget):
+class LeafletWidget(ui.Widget):
     """ A widget that shows a slippy/tile-map using Leaflet.
     """
     
@@ -134,9 +132,9 @@ class LeafletWidget(Widget):
         self._mutate_layers(layers)
 
     def _create_dom(self):
-        global L
-        node = window.document.createElement('div')
-        self.mapnode = window.document.createElement('div')
+        global L, document
+        node = document.createElement('div')
+        self.mapnode = document.createElement('div')
         node.appendChild(self.mapnode)
         self.mapnode.id = 'maproot'
         self.mapnode.style.position = 'absolute'
@@ -156,8 +154,9 @@ class LeafletWidget(Widget):
         return node
 
     def map_handle_zoom(self, e):
+        global isNaN
         zoom = self.map.getZoom()
-        if window.isNaN(zoom):
+        if isNaN(zoom):
             return
         if zoom != self.zoom:
             self.set_zoom(zoom)
@@ -242,8 +241,8 @@ class LeafletExample(flexx.ui.Widget):
                 flex=1,
                 center=(52, 4.1),
                 zoom=12,
-                show_scale=lambda:self.cbs.checked,
-                show_layers=lambda:self.cbl.checked,
+                show_scale=lambda: self.cbs.checked,
+                show_layers=lambda: self.cbl.checked,
             )
             with flexx.ui.VBox():
                 self.btna = flexx.ui.Button(text='Add SeaMap')

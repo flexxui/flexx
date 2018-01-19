@@ -1,7 +1,7 @@
 """ Label
 
 .. UIExample:: 50
-    from flexx import app, ui, event
+    from flexx import app, event, ui
     
     class Example(ui.Widget):
     

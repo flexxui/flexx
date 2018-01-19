@@ -4,7 +4,7 @@ Example that shows deep nesting of layouts. This also functions as a
 test that such deep layouts actually work.
 """
 
-from flexx import ui, app
+from flexx import app, ui
 
 class Red(ui.Widget):
     CSS = '.flx-Red { background: #ff0000;}'

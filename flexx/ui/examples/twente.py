@@ -9,7 +9,7 @@ This app can be exported to a standalone HTML document.
 """
 
 
-from flexx import app, ui, event
+from flexx import app, event, ui
 
 # Raw data obtained from 
 # http://cdn.knmi.nl/knmi/map/page/klimatologie/gegevens/maandgegevens/mndgeg_290_tg.txt

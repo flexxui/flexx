@@ -4,7 +4,7 @@ with key presses. This is very convenient to test these layouts on various
 browsers.
 """
 
-from flexx import event, app, ui
+from flexx import app, event, ui
 
 
 class MyWidget(ui.Label):

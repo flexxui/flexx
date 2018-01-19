@@ -37,7 +37,7 @@ class ErrorsJS(ui.Widget):
             ui.Widget(flex=1)  # spacer
     
     @event.action
-    def do_something_stupid():
+    def do_something_stupid(self):
         self.raise_error(0)
     
     def raise_error(self):

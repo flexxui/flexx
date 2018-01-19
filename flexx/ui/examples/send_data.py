@@ -12,8 +12,7 @@ This fallback illustrates how any kind of data can be send to JS by providing
 the serializer with an extension.
 """
 
-from flexx import ui, app, event
-from flexx.pyscript.stubs import window
+from flexx import app, event, ui
 
 
 # Prepare data array, preferably using Numpy

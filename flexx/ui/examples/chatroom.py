@@ -4,7 +4,7 @@ Simple chat web app inabout 80 lines.
 This app might be running at the demo server: http://flexx1.zoof.io
 """
 
-from flexx import app, ui, event
+from flexx import app, event, ui
 import asyncio
 
 

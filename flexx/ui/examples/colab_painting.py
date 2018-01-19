@@ -10,7 +10,7 @@ This app might be running at the demo server: http://flexx1.zoof.io
 import random
 import asyncio
 
-from flexx import app, ui, event
+from flexx import app, event, ui
 
 COLORS = ('#eee', '#999', '#555', '#111', 
           '#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff',

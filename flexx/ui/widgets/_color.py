@@ -2,7 +2,7 @@
 
 .. UIExample:: 50
     
-    from flexx import ui, event
+    from flexx import event, ui
     
     class Example(ui.Widget):
         

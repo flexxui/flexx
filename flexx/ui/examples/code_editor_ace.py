@@ -5,7 +5,7 @@ This example demonstrates a code editor widget based on Ace.
 
 # todo: Maybe this should be a widget in the library (flexx.ui.Ace) ?
 
-from flexx import ui, app, event
+from flexx import app, event, ui
 from flexx.pyscript import window
 
 # Associate Ace's assets with this module so that Flexx will load

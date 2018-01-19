@@ -4,13 +4,14 @@ Visually group a collection of input widgets. Example:
 
 .. UIExample:: 150
 
-    from flexx import app, ui, event
+    from flexx import app, event, ui
     
     class Example(ui.GroupWidget):
         def init(self):
             self.set_title('A silly panel')
             with ui.VBox():
-                self.progress = ui.ProgressBar(min=0, max=9, text='Clicked {value} times')
+                self.progress = ui.ProgressBar(min=0, max=9,
+                                               text='Clicked {value} times')
                 self.but = ui.Button(text='click me')
         
         @event.reaction('but.mouse_down')

@@ -6,7 +6,7 @@ Show Bokeh plots in Flexx. Example:
     
     import numpy as np
     from bokeh.plotting import figure 
-    from flexx import app, ui, event
+    from flexx import app, event, ui
     
     x = np.linspace(0, 6, 50)
     

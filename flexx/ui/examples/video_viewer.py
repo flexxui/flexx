@@ -13,7 +13,7 @@ When exported, any links to local files wont work, but the remote links will.
 
 import os
 
-from flexx import app, ui, event
+from flexx import app, event, ui
 
 from tornado.web import StaticFileHandler
 

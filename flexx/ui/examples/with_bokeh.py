@@ -8,7 +8,7 @@ import numpy as np
 
 from bokeh.plotting import figure
 
-from flexx import app, ui, event
+from flexx import app, event, ui
 from flexx.pyscript import window
 
 # Plot 1
