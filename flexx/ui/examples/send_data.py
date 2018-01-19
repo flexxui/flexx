@@ -83,5 +83,5 @@ class SendDataView(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(SendData, 'browser')
+    m = app.launch(SendData, 'app')
     app.run()

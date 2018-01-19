@@ -79,4 +79,7 @@ class KeyboardControlsTester(ui.Widget):
             print('combo text is now', ev.new_value)
 
 
-m = app.launch(KeyboardControlsTester)
+if __name__ == '__main__':
+    m = app.launch(KeyboardControlsTester)
+    app.run()
+

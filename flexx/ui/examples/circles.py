@@ -37,5 +37,5 @@ class Circles(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Circles)
+    m = app.App(Circles).launch('app')
     app.run()

@@ -119,6 +119,7 @@ class MonitorView(ui.VBox):
 
 
 if __name__ == '__main__':
-    app.serve(Monitor)
-    # m = app.launch(Monitor)  # for use during development
+    a = app.App(Monitor)
+    a.serve()
+    # m = a.launch('browser')  # for use during development
     app.start()

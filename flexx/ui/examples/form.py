@@ -25,5 +25,5 @@ class Form(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Form, 'firefox-browser')
+    m = app.launch(Form, 'app')
     app.run()

@@ -120,6 +120,7 @@ class ColabPaintingView(ui.Widget):
 
 
 if __name__ == '__main__':
-    app.serve(ColabPainting)
-    # m = app.launch(ColabPainting)  # for use during development
+    a = app.App(ColabPainting)
+    a.serve()
+    # m = a.launch('browser')  # for use during development
     app.start()

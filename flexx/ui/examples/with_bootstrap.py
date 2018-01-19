@@ -61,5 +61,6 @@ class Example(ui.Widget):
                     ])
 
 
-m = app.launch(Example)
-app.run()
+if __name__ == '__main__':
+    m = app.launch(Example)
+    app.run()
