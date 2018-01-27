@@ -4,6 +4,7 @@ Implements the property class and subclasses.
 
 from ._loop import loop, this_is_js
 from ._action import BaseDescriptor
+from ._dict import Dict
 
 undefined = None 
 
@@ -47,15 +48,10 @@ class Property(BaseDescriptor):
     """
     
     _default = None
+    _data = None  # Configurable data
     
     def __init__(self, *args, doc='', settable=False):
-        # Set initial value
-        if len(args) > 1:
-            raise TypeError('event.Property() accepts at most 1 positional argument.')
-        elif len(args) == 1:
-            self._default = args[0]
-            if callable(self._default):
-                raise TypeError('event.Property() is not a decorator (anymore).')
+        self._consume_args(*args)
         # Set doc
         if not isinstance(doc, str):
             raise TypeError('event.Property() doc must be a string.')
@@ -65,9 +61,27 @@ class Property(BaseDescriptor):
         
         self._set_name('anonymous_property')
     
+    def _consume_args(self, *args):
+        # Set initial value
+        if len(args) > 1:
+            raise TypeError('event.Property() accepts at most 1 positional argument.')
+        elif len(args) == 1:
+            self._default = args[0]
+            if callable(self._default):
+                raise TypeError('event.Property() is not a decorator (anymore).')
+    
     def _set_name(self, name):
         self._name = name  # or func.__name__
         self.__doc__ = self._format_doc(self.__class__.__name__, name, self._doc)
+    
+    def _set_data(self, data):
+        # Callable in __init__
+        self._data = data
+    
+    def _get_data(self):
+        # In python, this is used to get prop-specific data.
+        # For JS use the call to this method as a hook.
+        return self._data
     
     def __set__(self, instance, value):
         t = 'Cannot set property %r; properties can only be mutated by actions.'
@@ -113,6 +127,18 @@ class BoolProp(Property):
         return bool(value)
 
 
+class TriStateProp(Property):
+    """ A property who's values can be False, True and None.
+    """
+    
+    _default = None
+    
+    def _validate(self, value):
+        if value is None:
+            return None
+        return bool(value)
+
+
 class IntProp(Property):
     """ A propery who's values are integers. Floats and strings are converted.
     Default 0.
@@ -125,7 +151,8 @@ class IntProp(Property):
                                                isinstance(value, str)):
             return int(value)
         else:
-            raise TypeError('Int property cannot accept %r.' % value)
+            raise TypeError('Int property %r cannot accept %r.' %
+                            (self._name, value))
 
 
 class FloatProp(Property):
@@ -139,7 +166,8 @@ class FloatProp(Property):
         if isinstance(value, (int, float)) or isinstance(value, str):
             return float(value)
         else:
-            raise TypeError('Float property cannot accept %r.' % value)
+            raise TypeError('Float property %r cannot accept %r.' %
+                            (self._name, value))
 
 
 class StringProp(Property):
@@ -150,7 +178,8 @@ class StringProp(Property):
     
     def _validate(self, value):
         if not isinstance(value, str):
-            raise TypeError('String property cannot accept %r.' % value)
+            raise TypeError('String property %r cannot accept %r.' %
+                            (self._name, value))
         return value
 
 
@@ -163,7 +192,8 @@ class TupleProp(Property):
     
     def _validate(self, value):
         if not isinstance(value, (tuple, list)):
-            raise TypeError('Tuple property cannot accept %r.' % value)
+            raise TypeError('Tuple property %r cannot accept %r.' % 
+                            (self._name, value))
         value = tuple(value)
         if this_is_js():  # pragma: no cover
             # Cripple the object so in-place changes are harder. Note that we
@@ -185,7 +215,8 @@ class ListProp(Property):
     
     def _validate(self, value):
         if not isinstance(value, (tuple, list)):
-            raise TypeError('List property cannot accept %r.' % value)
+            raise TypeError('List property %r cannot accept %r.' %
+                            (self._name, value))
         return list(value)
 
 
@@ -197,7 +228,8 @@ class ComponentProp(Property):
     
     def _validate(self, value):
         if not (value is None or hasattr(value, '_IS_COMPONENT')):
-            raise TypeError('Component property cannot accept %r.' % value)
+            raise TypeError('Component property %r cannot accept %r.' %
+                            (self._name, value))
         return value
 
 ## Advanced properties
@@ -214,12 +246,14 @@ class FloatPairProp(Property):
         if not isinstance(value, (tuple, list)):
             value = value, value
         if len(value) != 2:
-            raise TypeError('FloatPair property needs a scalar '
-                            'or two values, not %i' % len(value))
+            raise TypeError('FloatPair property %r needs a scalar '
+                            'or two values, not %i' % (self._name, len(value)))
         if not isinstance(value[0], (int, float)):
-            raise TypeError('FloatPair 1st value cannot be %r.' % value[0])
+            raise TypeError('FloatPair %r 1st value cannot be %r.' %
+                            (self._name, value[0]))
         if not isinstance(value[1], (int, float)):
-            raise TypeError('FloatPair 2nd value cannot be %r.' % value[1])
+            raise TypeError('FloatPair %r 2nd value cannot be %r.' %
+                            (self._name, value[1]))
         value = float(value[0]), float(value[1])
         if this_is_js():  # pragma: no cover
             # Cripple the object so in-place changes are harder. Note that we
@@ -230,6 +264,163 @@ class FloatPairProp(Property):
             value.reverse = undefined
             value.sort = undefined
         return value
+
+
+class EnumProp(Property):
+    """ A property that represents a choice between a fixed set of (string) values.
+    
+    Use as ``foo = EnumProp(['optionA', 'optionB', ...], 'default', ...)``.
+    If no default value is provided, the first option is used.
+    """
+    
+    _default = ''
+    
+    def _consume_args(self, options, *args):
+        if not isinstance(options, (list, tuple)):
+            raise TypeError('EnumProp needs list of options')
+        if not all(isinstance(i, str) for i in options):
+            raise TypeError('EnumProp options must be str')
+        if not args:
+            args = (options[0], )
+        
+        self._set_data([option.upper() for option in options])
+        super()._consume_args(*args)
+    
+    def _validate(self, value):
+        if not isinstance(value, str):
+            raise TypeError('EnumProp %r value must be str.' % self._name)
+        value = value.upper()
+        if value.upper() not in self._get_data():
+            raise ValueError('Invalid value for enum %r: %s' %
+                             (self._name, value))
+        return value
+
+
+class ColorProp(Property):
+    """ A property that represents a color. The value is represented as a
+    (dict-like) object that has the following attributes:
+    
+    * t: a 4-element tuple (RGBA) with values between 0 and 1.
+    * css: a CSS string in the form 'rgba(r,g,b,a)'.
+    * hex: a hex RGB color in the form '#rrggbb' (no transparency).
+    * alpha: a scalar between 0 and 1 indicating the transparency.
+    
+    The color can be set using:
+    
+    * An object as described above.
+    * A tuple (length 3 or 4).
+    * A hex RGB color like '#f00' or '#aa7711'.
+    * A hex RGBA color like '#f002' or '#ff000022'.
+    * A CSS string "rgb(...)" or "rgba(...)"
+    * Simple Matlab-like names like 'k', 'w', 'r', 'g', 'b', etc.
+    * A few common color names like 'red', 'yellow', 'cyan'.
+    * Further, string colors can be prefixed with "light", "lighter",
+      "dark" and "darker".
+    * Setting to None or "" results in fully transparent black.
+    """
+    
+    _default = '#000'  # Black
+    
+    # todo: this code gets inserted at every definition of a ColorProp.
+    # todo: Better factor this out ...
+    
+    def _validate(self, value):
+        # We first convert to a tuple, and then derive the other values ...
+        val = value
+        
+        common_colors = {  # A set of Matlab/Matplotlib colors and small CSS subset
+            "k": '#000000', "black": "#000000",
+            "w": '#ffffff', "white": '#ffffff',
+            "r": '#ff0000', "red": '#ff0000',
+            "g": '#00ff00', "green": '#00ff00', "lime": "#00ff00",
+            "b": '#0000ff', "blue": '#0000ff',
+            "y": '#ffff00', "yellow": '#ffff00',
+            "m": '#ff00ff', "magenta": '#ff00ff', "fuchsia": "#ff00ff",
+            "c": '#00ffff', "cyan": "#00ffff", "aqua": "#00ffff",
+            "gray": "#808080", "grey": "#808080",
+            }
+        common_colors[''] = '#0000'  # empty string resolves to alpha 0, like None
+        M = {'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7,
+             '8': 8, '9': 9, 'a': 10, 'b': 11, 'c': 12, 'd': 13, 'e': 14, 'f': 15}
+        Mi = '0123456789abcdef'
+        
+        # Convert from str
+        if isinstance(val, str):
+            val = val.lower()
+            # Darker / lighter
+            whitefactor = 0.0
+            blackfactor = 0.0
+            if val.startswith('darker'):
+                blackfactor, val = 0.66, val[6:]
+            elif val.startswith('dark'):
+                blackfactor, val = 0.33, val[4:]
+            elif val.startswith('lighter'):
+                whitefactor, val = 0.66, val[7:]
+            elif val.startswith('light'):
+                whitefactor, val = 0.33, val[5:]
+            # Map common colors
+            val = common_colors.get(val, val)
+            # Resolve CSS
+            if val.startswith('#') and len(val) == 4 or len(val) == 5:
+                val = [M.get(val[i], 0) * 17
+                         for i in range(1, len(val), 1)]
+            elif val.startswith('#') and len(val) == 7 or len(val) == 9:
+                val = [M.get(val[i], 0) * 16 + M.get(val[i+1], 0)
+                         for i in range(1, len(val), 2)]
+            elif val.startswith('rgb(') or val.startswith('rgba('):
+                val = [float(x.strip(' ,();')) for x in val[4:-1].split(',')]
+                if len(val) == 4:
+                    val[-1] = val[-1] * 255
+            else:
+                raise ValueError('ColorProp %r got invalid color: %r' %
+                                 (self._name, value))
+            # All values above are in 0-255
+            val = [v / 255 for v in val]
+            # Pull towards black/white (i.e. darken or lighten)
+            for i in range(3):
+                val[i] = (1.0 - whitefactor) * val[i] + whitefactor
+                val[i] = (1.0 - blackfactor) * val[i] + 0
+        
+        # More converts / checks
+        if val is None:
+            val = [0, 0, 0, 0]  # zero alpha
+        elif isinstance(val, dict) and 't' in val:
+            val = val['t']
+        
+        # By now, the value should be a tuple/list
+        if not isinstance(val, (tuple, list)):
+            raise TypeError('ColorProp %r value must be str or tuple.' % self._name)
+        
+        # Resolve to RGBA if RGB is given
+        val = [max(min(float(v), 1.0), 0.0) for v in val]
+        if len(val) == 3:
+            val = val + [1.0]
+        elif len(val) != 4:
+            raise ValueError('ColorProp %r value must have 3 or 4 elements, not %i' %
+                             (self._name, len(val)))
+        
+        # Wrap up the tuple value
+        val = tuple(val)
+        if this_is_js():  # pragma: no cover
+            # Cripple the object so in-place changes are harder. Note that we
+            # cannot prevent setting or deletion of items.
+            val.push = undefined
+            val.splice = undefined
+            val.push = undefined
+            val.reverse = undefined
+            val.sort = undefined
+        
+        # Now compose final object
+        if this_is_js():
+            d = {}
+        else:
+            d = Dict()
+        d.t = val
+        d.alpha = val[3]
+        hex = [int(c * 255) for c in val[:3]]
+        d.hex = '#' + ''.join([Mi[int(c / 16)] + Mi[c % 16] for c in hex])
+        d.css = 'rgba(%i,%i,%i,%f)' % (val[0]*255, val[1]*255, val[2]*255, val[3])
+        return d
 
 
 # todo: For more complex stuff, maybe introduce an EitherProp, e.g. String or None.
@@ -258,15 +449,11 @@ class FloatPairProp(Property):
 
 # todo: more special properties
 # class Auto -> Bokeh has special prop to indicate "automatic" value
-# class Color -> I like this, is quite generic
 # class Date, DateTime
-# class Enum
 # class Either
 # class Instance
 # class Array
-# class MinMax
 
-# NOTE: don't forget to add new property classes to the sphinx docs.
 
 __all__ = []
 for name, cls in list(globals().items()):

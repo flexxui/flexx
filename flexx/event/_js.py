@@ -498,6 +498,10 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             if val.__name__.startswith('flx_'):
                 subname = name[8:] if name.startswith('_mutate_') else name
                 code = code.replace("flx_name", "'%s'" % subname)
+            elif name.endswith('_validate'):
+                data_as_json = json.dumps(val.__self__._data)
+                code = code.replace('this._get_data()', data_as_json)
+                code = code.replace('this._name', json.dumps(name[1:-9]))
             funcs_code.append(code.rstrip())
             funcs_code.append('')
         else:

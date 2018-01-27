@@ -36,6 +36,7 @@ class MyObject(event.Component):
     # All kinds of props, defaults
     anyprop = event.AnyProp(doc='can be anything', settable=True)
     boolprop = event.BoolProp(settable=True)
+    tristateprop = event.TriStateProp(settable=True)
     intprop = event.IntProp(settable=True)
     floatprop = event.FloatProp(settable=True)
     stringprop = event.StringProp(settable=True)
@@ -357,6 +358,30 @@ def test_property_bool():  # Converts to bool, no type checking
     m.set_boolprop(loop)
     loop.iter()
     print(m.boolprop)
+
+
+@run_in_both(MyObject)
+def test_property_tristate():  # Converts to bool, no type checking
+    """
+    None
+    True
+    False
+    None
+    """
+    m = MyObject()
+    print(m.tristateprop)
+    
+    m.set_tristateprop(42)
+    loop.iter()
+    print(m.tristateprop)
+    
+    m.set_tristateprop('')
+    loop.iter()
+    print(m.tristateprop)
+    
+    m.set_tristateprop(None)
+    loop.iter()
+    print(m.tristateprop)
 
 
 @run_in_both(MyObject)

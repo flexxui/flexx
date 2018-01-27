@@ -13,6 +13,9 @@ loop = event.loop
 class MyObject(event.Component):
     
     floatpair = event.FloatPairProp(settable=True)
+    enum1 = event.EnumProp(('foo', 'bar', 'spam'), settable=True)
+    enum2 = event.EnumProp(('foo', 'bar', 'spam'), 'bar', settable=True)
+    color = event.ColorProp('cyan', settable=True)
 
 
 @run_in_both(MyObject)
@@ -69,4 +72,119 @@ def test_property_FloatPair():
         print('append failed')
 
 
+@run_in_both(MyObject)
+def test_property_Enum():
+    """
+    FOO
+    BAR
+    SPAM
+    FOO
+    ? TypeError
+    ? Invalid value for enum 'enum1': EGGS
+    """
+    m = MyObject()
+    print(m.enum1)
+    print(m.enum2)
+    
+    m = MyObject(enum1='spam')
+    print(m.enum1)
+    
+    m.set_enum1('foo')
+    loop.iter()
+    print(m.enum1)
+    
+    m.set_enum1(3)
+    loop.iter()
+    
+    m.set_enum1('eggs')
+    loop.iter()
+
+
+@run_in_both(MyObject)
+def test_property_Color1():
+    """
+    #00ffff 1.0
+    [0.0, 1.0, 1.0, 1.0]
+    ?rgba(0,255,255,1.0
+    ----------
+    #00ffff 1
+    [0, 1, 1, 1]
+    rgba(0,255,255,1)
+    """
+    m = MyObject()
+    print(m.color.hex, m.color.alpha)
+    print(list(m.color.t))
+    print(m.color.css)
+
+
+@run_in_both(MyObject)
+def test_property_Color2():
+    """
+    ? #00ffff 1
+    ? #ff8800 1
+    ? #f48404 1
+    ? #ff8800 0.5
+    ? #f48404 0.5
+    xx
+    ? #00ff00 1
+    ? #ffff00 0.5
+    xx
+    ? #ffff00 1
+    ? #ff00ff 1
+    xx
+    ? #ff0000 1
+    ? #00ff00 0.5
+    """
+    m = MyObject()
+    print(m.color.hex, m.color.alpha)
+    
+    m.set_color('#f80')
+    loop.iter()
+    print(m.color.hex, m.color.alpha)
+    
+    m.set_color('#f48404')
+    loop.iter()
+    print(m.color.hex, m.color.alpha)
+    
+    m.set_color('#f808')
+    loop.iter()
+    print(m.color.hex, m.color.alpha)
+    
+    m.set_color('#f4840488')
+    loop.iter()
+    print(m.color.hex, m.color.alpha)
+    
+    print('xx')
+    
+    m.set_color('rgb(0, 255, 0)')
+    loop.iter()
+    print(m.color.hex, m.color.alpha)
+    
+    m.set_color('rgba(255, 255, 0, 0.5)')
+    loop.iter()
+    print(m.color.hex, m.color.alpha)
+    
+    print('xx')
+    
+    m.set_color('yellow')
+    loop.iter()
+    print(m.color.hex, m.color.alpha)
+    
+    m.set_color('magenta')
+    loop.iter()
+    print(m.color.hex, m.color.alpha)
+    
+    print('xx')
+    
+    m.set_color((1, 0, 0, 1))
+    loop.iter()
+    print(m.color.hex, m.color.alpha)
+    
+    m.set_color((0, 1, 0, 0.5))
+    loop.iter()
+    print(m.color.hex, m.color.alpha)
+
 run_tests_if_main()
+# if __name__ == '__main__':
+    # test_property_Enum()
+    
