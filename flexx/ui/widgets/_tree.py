@@ -513,13 +513,13 @@ class TreeItem(Widget):
         policy (max_selected), this can be set/unset on clicking the item.
         """)
     
-    checked = event.AnyProp(None, settable=True, doc="""
+    checked = event.TriStateProp(settable=True, doc="""
         Whether this item is checked (i.e. has its checkbox set).
-        The value can be None, True or False. None (the default).
+        The value can be None, True or False. None (the default)
         means that the item is not checkable.
         """)
     
-    collapsed = event.AnyProp(None, settable=True, doc="""
+    collapsed = event.TriStateProp(settable=True, doc="""
         Whether this item is expanded (i.e. shows its children).
         The value can be None, True or False. None (the default)
         means that the item is not collapsable (unless it has sub items).
@@ -528,7 +528,10 @@ class TreeItem(Widget):
     @event.action
     def set_parent(self, parent, pos=None):
         # Verify that this class is used correctly
-        if not (isinstance(parent, TreeItem) or isinstance(parent, TreeWidget)):
+        # Note that this action is already called from the init by Widget.
+        if not (parent is None or
+                isinstance(parent, TreeItem) or
+                isinstance(parent, TreeWidget)):
             raise RuntimeError('TreeItems can only be created in the context '
                                'of a TreeWidget or TreeItem.')
         super().set_parent(parent, pos)
@@ -581,20 +584,6 @@ class TreeItem(Widget):
                         ),
                     create_element('ul', {}, subnodes),
                     )
-    
-    @event.action
-    def set_checked(self, v):
-        if v is None:
-            self._mutate_checked(None)
-        else:
-            self._mutate_checked(bool(v))
-    
-    @event.action
-    def set_collapsed(self, v):
-        if v is None:
-            self._mutate_collapsed(None)
-        else:
-            self._mutate_collapsed(bool(v))
     
     # todo: maybe move click and double click events to Widget class?
     # but note that we need the stopPropagation here.

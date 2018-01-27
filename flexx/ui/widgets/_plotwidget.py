@@ -65,6 +65,8 @@ class PlotWidget(CanvasWidget):
     
     @event.action
     def set_data(self, xdata, ydata):
+        """ Set the xdata and ydata.
+        """
         xdata = [float(i) for i in xdata]
         ydata = [float(i) for i in ydata]
         if len(xdata) != len(ydata):
@@ -77,16 +79,12 @@ class PlotWidget(CanvasWidget):
         from the data.
         """)
     
-    line_color = event.StringProp('blue', settable=True, doc="""
-        The color of the line. If this is the empty string, the
-        line is not shown.
+    line_color = event.ColorProp('blue', settable=True, doc="""
+        The color of the line. Set to the empty string to hide the line.
         """)
     
-    # todo: allow setting alpha as #rrggbbaa and #rgba
-    
-    marker_color = event.StringProp('blue', settable=True, doc="""
-        The color of the marker. If this is the empty string, the
-        line is not shown.
+    marker_color = event.ColorProp('blue', settable=True, doc="""
+        The color of the marker. Set to the empty string to hide the marker.
         """)
     
     line_width = event.FloatProp(2, settable=True, doc="""
@@ -244,18 +242,18 @@ class PlotWidget(CanvasWidget):
         ctx.stroke()
         
         # Draw line
-        if lc and lw:
+        if lc.alpha and lw:
             ctx.beginPath()
             ctx.lineWidth= lw
-            ctx.strokeStyle = lc
+            ctx.strokeStyle = lc.css
             ctx.moveTo(sxx[0], h-syy[0])
             for x, y in zip(sxx, syy):
                 ctx.lineTo(x, h-y)
             ctx.stroke()
         
         # Draw markers
-        if mc and ms:
-            ctx.fillStyle = mc
+        if mc.alpha and ms:
+            ctx.fillStyle = mc.css
             for x, y in zip(sxx, syy):
                 ctx.beginPath()
                 ctx.arc(x, h-y, ms/2, 0, 2*window.Math.PI)

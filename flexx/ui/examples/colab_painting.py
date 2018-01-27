@@ -34,7 +34,7 @@ class ColabPainting(app.PyComponent):
     """ The Python side of the app. There is one instance per connection.
     """
     
-    color = event.StringProp('#000', settable=True, doc="Paint color")
+    color = event.ColorProp(settable=True, doc="Paint color")
     
     status = event.StringProp('', settable=True, doc="Status text")
     
@@ -47,7 +47,7 @@ class ColabPainting(app.PyComponent):
     def add_paint(self, pos):
         """ Add paint at the specified position.
         """
-        relay.add_paint_for_all(pos, self.color)
+        relay.add_paint_for_all(pos, self.color.hex)
     
     @relay.reaction('add_paint_for_all')  # note that we connect to relay here
     def _any_user_adds_paint(self, *events):
@@ -101,7 +101,7 @@ class ColabPaintingView(ui.Widget):
 
     @event.reaction
     def __update_color(self):
-        self.canvas.apply_style('border: 10px solid ' + self.model.color)
+        self.canvas.apply_style('border: 10px solid ' + self.model.color.hex)
     
     @event.reaction('canvas.mouse_down')
     def __on_click(self, *events):

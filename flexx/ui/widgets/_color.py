@@ -11,7 +11,7 @@
     
         @event.reaction
         def _color_changed(self):
-            self.node.style.background = self.c.color
+            self.node.style.background = self.c.color.hex
 """
 
 from ... import event
@@ -25,23 +25,13 @@ class ColorSelectWidget(Widget):
     on Firefox and Chrome, but not on IE/Edge last time I checked.
     """
     
-    color = event.StringProp('#000000', settable=False, doc="""
+    color = event.ColorProp('#000000', settable=True, doc="""
         The currently selected color.
         """)
     
     disabled = event.BoolProp(False, settable=True, doc="""
         Whether the color select is disabled.
         """)
-    
-    @event.action
-    def set_color(self, v):
-        """ Set the color property as a HTML hex color.
-        """
-        v = str(v)
-        if not (v.startswith('#') and len(v) == 7):
-            raise ValueError('%s.color must be in #rrggbb format, not %r' %
-                             (self.id, v))
-        self._mutate_color(v)
     
     def _create_dom(self):
         global window
@@ -52,7 +42,7 @@ class ColorSelectWidget(Widget):
     
     @event.reaction('color')
     def _color_changed(self, *events):
-        self.node.value = self.color
+        self.node.value = self.color.hex  # hex is html-compatible, color.css is not
     
     def _color_changed_from_dom(self, e):
         self.set_color(self.node.value)

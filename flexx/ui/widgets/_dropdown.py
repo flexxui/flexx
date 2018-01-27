@@ -271,8 +271,10 @@ class ComboBox(BaseDropdown):
     
     def init(self):
         super().init()
-        self.set_options(self.options)  # use action to do more validation
-        # todo: I think we should make it that this is not needed
+        # Use action to do validation. We could use a custom property to
+        # do the validation/normalization, but this case is quite specific,
+        # and this works too.
+        self.set_options(self.options)
     
     @event.action
     def set_options(self, options):

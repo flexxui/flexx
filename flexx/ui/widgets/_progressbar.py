@@ -99,6 +99,10 @@ class ProgressBar(Widget):
         value = min(self.max, value)
         self._mutate_value(value)
     
+    @event.reaction('min', 'max')
+    def __keep_value_constrained(self, *events):
+        self.set_value(self.value)
+    
     def _render_dom(self):
         global Math
         value = self.value

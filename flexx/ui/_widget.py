@@ -141,14 +141,14 @@ class Widget(app.JsComponent):
         derived from the element's style, in pixels.
         """)
     
-    tabindex = event.AnyProp(None, settable=False, doc="""
+    tabindex = event.IntProp(-2, settable=True, doc="""
         The index used to determine widget order when the user
         iterates through the widgets using tab. This also determines
         whether a widget is able to receive key events. Flexx automatically
         sets this property when it should emit key events.
         Effect of possible values on underlying DOM element:
         
-        * None: element cannot have focus unless its a special element like
+        * -2: element cannot have focus unless its a special element like
             a link or form control (default).
         * -1: element can have focus, but is not reachable via tab.
         * 0: element can have focus, and is reachable via tab in the order
@@ -181,15 +181,6 @@ class Widget(app.JsComponent):
         if not isinstance(val, str):
             raise TypeError('Icon must be a string')
         self._mutate_icon(val)
-    
-    @event.action
-    def set_tabindex(self, val):
-        """ Setter for tabindex.
-        """
-        if val is None or isinstance(val, (int, float)):  # only int not in JS
-            self._mutate('tabindex', val)
-        else:
-            raise TypeError('Tabindex must be None or int.')
     
     ## Methods
     
@@ -518,12 +509,12 @@ class Widget(app.JsComponent):
                 window.document.head.removeChild(oldLink)
             window.document.head.appendChild(link)
     
-    @event.reaction('tabindex')
+    @event.reaction
     def __update_tabindex(self, *events):
         # Note that this also makes the widget able to get focus, and thus
         # able to do key events.
-        ti = events[-1].new_value
-        if ti is None:
+        ti = self.tabindex
+        if ti < -1:
             self.node.removeAttribute('tabIndex')
         else:
             self.node.tabIndex = ti
@@ -694,7 +685,7 @@ class Widget(app.JsComponent):
     
     def _registered_reactions_hook(self):
         event_types = super()._registered_reactions_hook()
-        if self.tabindex is None:
+        if self.tabindex < -1:
             for event_type in event_types:
                 if event_type in ('key_down', 'key_up', 'key_press'):
                     self.set_tabindex(-1)

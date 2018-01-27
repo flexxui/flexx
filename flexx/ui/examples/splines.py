@@ -52,22 +52,19 @@ related audio.
 
 class SplineWidget(ui.CanvasWidget):
     
-    spline_type = event.StringProp('cardinal', doc="The type of spline")
-    closed = event.BoolProp(False, settable=True, doc="Whether the spline is closed")
+    spline_type = event.EnumProp(SPLINES, 'cardinal', settable=True, doc="""
+        "The type of spline
+        """)
+    
+    closed = event.BoolProp(False, settable=True, doc="""
+        Whether the spline is closed
+        """)
+    
     tension = event.FloatProp(0.5, settable=True, doc="""
         The tension parameter for the Cardinal spline.
         """)
     
     _current_node = event.Property(None, settable=True)
-    
-    @event.action
-    def set_spline_type(self, v):
-        """ Set the spline type.
-        """
-        v = v.lower().replace(' ', '')
-        if v not in SPLINES:
-            raise ValueError('Invalid spline type')
-        self._mutate_spline_type(v)
     
     def init(self):
         self.ctx = self.node.getContext('2d')
@@ -249,7 +246,7 @@ class SplineWidget(ui.CanvasWidget):
             ctx.stroke()
         
         # Select interpolation function
-        fun = self['factors_' + self.spline_type]
+        fun = self['factors_' + self.spline_type.lower()]
         if not fun:
             fun = lambda : (0, 1, 0, 0)
         
@@ -260,7 +257,7 @@ class SplineWidget(ui.CanvasWidget):
             ctx.lineCap = "round"
             ctx.lineWidth = 3
             ctx.strokeStyle = '#008'
-            support = 1 if self.spline_type == 'linear' else 2
+            support = 1 if self.spline_type == 'LINEAR' else 2
             if self._current_node is not None:
                 if i - (support + 1) < self._current_node < i + support:
                     ctx.strokeStyle = '#08F'
@@ -336,7 +333,7 @@ class Splines(ui.Widget):
     
     @event.reaction
     def __show_hide_tension_slider(self):
-        if self.spline.spline_type == 'cardinal':
+        if self.spline.spline_type == 'CARDINAL':
             self.tension.apply_style('visibility: visible')
         else:
             self.tension.apply_style('visibility: hidden')

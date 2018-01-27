@@ -328,12 +328,12 @@ class HVLayout(Layout):
     }
     """
     
-    mode = event.StringProp('box', doc="""
+    mode = event.EnumProp(('box', 'fix', 'split'), settable=True, doc="""
         The mode in which this layout operates:
         
+        * box: (default) each widget gets at least its natural size, and
+          additional space is distributed corresponding to the flex values.
         * fix: all available space is distributed corresponding to the flex values.
-        * box: each widget gets at least its natural size, and additional space
-          is distributed corresponding to the flex values.
         * split: available space is initially distributed correspondong to the
           flex values, and can be modified by the user by dragging the splitters.
         """)
@@ -375,15 +375,6 @@ class HVLayout(Layout):
     ## Actions
     
     @event.action
-    def set_mode(self, mode):
-        """ Set the mode (to 'box', 'split', or 'fix').
-        """
-        mode = str(mode)
-        if mode not in ('box', 'split', 'fix'):
-            raise ValueError('Invalid mode: %s.' % mode)
-        self._mutate_mode(mode)
-    
-    @event.action
     def set_from_flex_values(self):
         """ Set the divider positions corresponding to the children's flex values.
         Only has a visual effect in split-mode.
@@ -421,7 +412,7 @@ class HVLayout(Layout):
         Only usable in split-mode.
         """
         # todo: technically, we could allow this in fix-mode too, but *should* we?
-        if self.mode != 'split':
+        if self.mode != 'SPLIT':
             return
         
         positions2 = []
@@ -504,7 +495,7 @@ class HVLayout(Layout):
         for child in self.children:
             self._release_child(child)
         
-        if self.mode == 'box':
+        if self.mode == 'BOX':
             self.outernode.classList.remove('flx-split')
             self.outernode.classList.add('flx-box')
             self._set_box_child_flexes()
@@ -546,8 +537,8 @@ class HVLayout(Layout):
     def _render_dom(self):
         children = self.children
         mode = self.mode
-        use_seps = mode == 'split'
-        if mode == 'box':
+        use_seps = mode == 'SPLIT'
+        if mode == 'BOX':
             self._ensure_seps(0)
         else:
             self._ensure_seps(len(children) - 1)
@@ -581,7 +572,7 @@ class HVLayout(Layout):
     def _rerender(self):
         """ Invoke a re-render. Only necessary for fix/split mode.
         """
-        if self.mode == 'hbox':
+        if self.mode == 'BOX':
             # Sizes may have changed
             for child in self.children:
                 child.check_real_size()
@@ -595,7 +586,7 @@ class HVLayout(Layout):
     
     @event.reaction('orientation', 'children', 'children*.flex')
     def _set_box_child_flexes(self, *events):
-        if self.mode != 'box':
+        if self.mode != 'BOX':
             return
         ori = self.orientation
         i = 0 if ori in (0, 'h', 'hr') else 1
@@ -607,7 +598,7 @@ class HVLayout(Layout):
     
     @event.reaction('spacing', 'orientation', 'children')
     def _set_box_spacing(self, *events):
-        if self.mode != 'box':
+        if self.mode != 'BOX':
             return 
         ori = self.orientation
         children_events = [ev for ev in events if ev.type == 'children']
@@ -662,7 +653,7 @@ class HVLayout(Layout):
         # to ordering with other reactions. We emit the rerender event instead
         # of calling the render method, otherwise that would trigger a lot
         # of unintended propery usage!
-        if self.mode != 'box':
+        if self.mode != 'BOX':
             self.splitter_positions
             self.emit('_render')
         
@@ -883,7 +874,7 @@ class HVLayout(Layout):
     
     @event.emitter
     def mouse_down(self, e):
-        if self.mode == 'split' and e.target.classList.contains("flx-split-sep"):
+        if self.mode == 'SPLIT' and e.target.classList.contains("flx-split-sep"):
             e.stopPropagation()
             sep = e.target
             x_or_y1 = e.clientX if 'h' in self.orientation else e.clientY

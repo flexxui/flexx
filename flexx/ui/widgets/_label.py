@@ -37,20 +37,12 @@ class Label(Widget):
         The text on the label.
         """)
     
-    wrap = event.IntProp(0, doc="""
+    wrap = event.IntProp(0, settable=True, doc="""
         Whether the content is allowed to be wrapped on multiple
         lines. Set to 0/False for no wrap, 1/True for word-wrap, 2 for
         character wrap.
         """)
 
-    @event.action
-    def set_wrap(self, wrap):
-        """ Set wrap"""
-        wrap = int(wrap)
-        if wrap < 0 or wrap > 2:
-            wrap = 0
-        self._mutate_wrap(wrap)
-    
     @event.reaction('text')
     def _text_changed(self, *events):
         self.node.innerHTML = self.text
@@ -59,6 +51,8 @@ class Label(Widget):
     @event.reaction('wrap')
     def _wrap_changed(self, *events):
         wrap = self.wrap
+        if wrap < 0 or wrap > 2:
+            wrap = 0
         self.node.style['word-wrap'] = ['initial', 'normal', 'break-word'][wrap]
         self.node.style['white-space'] = ['nowrap', 'normal', 'normal'][wrap]
         self.check_real_size(True)

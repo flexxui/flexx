@@ -119,7 +119,6 @@ class Slider(Widget):
     
     def init(self):
         self._dragging = None
-        self.set_value(self.value)  # Apply bounds
     
     @event.action
     def set_value(self, value):
@@ -128,6 +127,10 @@ class Slider(Widget):
         value = min(self.max, value)
         value = Math.round(value / self.step) * self.step
         self._mutate_value(value)
+    
+    @event.reaction('min', 'max', 'step')
+    def __keep_value_constrained(self, *events):
+        self.set_value(self.value)
     
     def _render_dom(self):
         global Math
