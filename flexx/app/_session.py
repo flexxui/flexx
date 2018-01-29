@@ -576,7 +576,6 @@ class Session:
             self._pending_commands.append(command)
         else:
             #raise RuntimeError('Cannot send commands; app is closed')
-            1/0
             logger.warn('Cannot send commands; app is closed')
 
     def _receive_command(self, command):

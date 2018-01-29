@@ -193,13 +193,8 @@ server stops when the (last) window is closed).
 Interactive use
 ---------------
 
-Further, Flexx can be used interactively, from an IDE or from the Jupyter
-notebook. Use ``app.init_interactive()`` to launch a runtime in the same
-way as ``app.launch()``, except one can now interactively (re)define components
-and widgets, and make them appear in the runtime/browser.
-
-In the IPython/Jupyter notebook, the user needs to run
-``init_notebook()`` which will inject the necessary JS and CSS.
+Further, Flexx can be used interactively from the Jupyter notebook.
+Use ``init_notebook()`` which will inject the necessary JS and CSS.
 Simple widgets (e.g. buttons) will display just fine, but for other
 widgets you might want to use ``SomeWidget(style='height:300px')`` to
 specify its size.
@@ -299,7 +294,7 @@ from ._component2 import PyComponent, JsComponent, StubComponent
 from ._component2 import get_component_classes, LocalProperty
 
 from ._funcs import run, start, stop
-from ._funcs import init_interactive, init_notebook, serve, launch, export
+from ._funcs import init_notebook, serve, launch, export
 from ._server import create_server, current_server
 from ._session import Session
 from ._modules import JSModule

@@ -71,39 +71,6 @@ def _auto_closer(*events):
 ## App functions
 
 
-def init_interactive(cls=None, runtime=None):
-    """ Initialize Flexx for interactive mode. This creates a default session
-    and launches a runtime to connect to it. 
-    
-    Parameters:
-        cls (None, Component): a subclass of ``app.PyComponent``, ``app.JsComponent``
-            (or ``ui.Widget``) to use as the *default active component*. Only has effect
-            the first time that this function is called.
-        runtime (str): the runtime to launch the application in.
-            Default 'app or browser'.
-    """
-    
-    # Determine default component class (which is a Widget if ui is imported)
-    if cls is None and 'flexx.ui' in sys.modules:
-        from .. import ui
-        cls = ui.Widget
-    
-    # Create the default session
-    session = manager.get_default_session()
-    if session is None:
-        session = manager.create_default_session(cls)
-    else:
-        return  # default session already running
-
-    # Launch web runtime, the server will wait for the connection
-    server = current_server()
-    proto = server.protocol
-    host, port = server.serving
-    url = '%s://%s:%i/%s/?session_id=%s' % (proto, host, port, session.app_name,
-                                            session.id)
-    session._runtime = launch(url, runtime=runtime)
-    
-
 class NoteBookHelper:
     """ Object that captures commands send to the websocket during the
     execution of a cell, and then applies these commands using a script

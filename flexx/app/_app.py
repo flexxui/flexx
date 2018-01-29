@@ -289,8 +289,8 @@ class AppManager(event.Component):
             raise RuntimeError('The default session can only be created once.')
 
         if cls is None:
-            cls = JsComponent  # Could also be a PyComponent, I guess
-        if not isinstance(cls, type) and issubclass(cls, JsComponent):
+            cls = JsComponent
+        if not isinstance(cls, type) and issubclass(cls, (PyComponent, JsComponent)):
             raise TypeError('create_default_session() needs a JsComponent subclass.')
 
         # Create app and register it by __default__ name
