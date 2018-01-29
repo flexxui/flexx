@@ -21,6 +21,7 @@ import json
 from flexx.pyscript import JSString, RawJS, py2js
 from flexx.pyscript.parser2 import get_class_definition
 
+from flexx.event import _property
 from flexx.event._loop import Loop
 from flexx.event._action import ActionDescriptor
 from flexx.event._reaction import ReactionDescriptor, Reaction
@@ -491,6 +492,28 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             # have already been mangled. Note that we need to exclude validator
             # funcs of private properties though.
             pass
+        elif (name.endswith('_validate') and hasattr(val, '__self__') and
+                    isinstance(val.__self__, Property)):
+            # Proxy the validator functions (not inline).
+            prop_class = val.__self__.__class__
+            mod_name_parts = prop_class.__module__.split('.')
+            module_ns = sys.modules[cls.__module__].__dict__
+            # Get canonical class name, included part of the module name, as
+            # needed, depending on what names exist in the component module.
+            prop_class_name = prop_class.__name__
+            if prop_class_name not in module_ns:
+                for ip in reversed(range(0, len(mod_name_parts))):
+                    if mod_name_parts[ip] in module_ns:
+                        prop_class_name = mod_name_parts[ip] + '.' + prop_class_name
+                        break
+            # Create function that calls the _validate function
+            t = ' = function (value) { return %s(value, %s, %s); }\n'
+            code = prototype_prefix + name + t % (
+                prop_class_name + '.prototype._validate',
+                json.dumps(name[1:-9]),
+                json.dumps(val.__self__._data))
+            funcs_code.append(code)
+            mc.meta['vars_unknown'].add(prop_class_name)
         elif callable(val):
             # Functions, including methods attached by the meta class
             code = mc.py2js(val, prototype_prefix + name)
@@ -498,10 +521,6 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             if val.__name__.startswith('flx_'):
                 subname = name[8:] if name.startswith('_mutate_') else name
                 code = code.replace("flx_name", "'%s'" % subname)
-            elif name.endswith('_validate'):
-                data_as_json = json.dumps(val.__self__._data)
-                code = code.replace('this._get_data()', data_as_json)
-                code = code.replace('this._name', json.dumps(name[1:-9]))
             funcs_code.append(code.rstrip())
             funcs_code.append('')
         else:
@@ -526,15 +545,40 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     return mc.attach_meta('\n'.join(total_code))
 
 
+def gen_prop_classes(mc):
+    """ Generate stub Property classes with _validate() methods.
+    """
+    total_code = []
+    # Add JS-specific base Property class
+    total_code.append('var Property = function () {};')
+    total_code.append('Property.prototype._validate = '
+                      'function(value, name, data) {return value;};')
+    # Add code for all other props
+    names = ['Property']
+    for name in dir(_property):
+        val = getattr(_property, name)
+        if isinstance(val, type) and issubclass(val, Property) and val is not Property:
+            names.append(name)
+            total_code.append(mc.py2js(val))
+    # Add event.xx shortcuts for use without flexx.app's binding mechanics.
+    total_code.append('var event = {}; // convenience "module emulator"')
+    for name in names:
+        total_code.append('event.%s = %s;' % (name, name))
+    
+    return '\n'.join(total_code)
+
+
 # Generate the code
 mc = MetaCollector()
 JS_FUNCS = mc.py2js(_mutate_array_js) + '\nvar mutate_array = _mutate_array_js;\n'
 JS_LOOP = mc.update(_create_js_class(Loop, LoopJS)) + '\nvar loop = new Loop();\n'
 JS_COMPONENT = mc.update(_create_js_class(Component, ComponentJS))
-JS_EVENT = JS_FUNCS + JS_LOGGER + JS_LOOP + JS_COMPONENT
+JS_PROP = gen_prop_classes(mc)
+JS_EVENT = JS_FUNCS + JS_LOGGER + JS_LOOP + JS_COMPONENT + JS_PROP
 JS_EVENT = mc.attach_meta(JS_EVENT.replace('    ', '\t'))
 del mc
 assert JS_LOOP.count('._scheduled_call_to_iter') > 2  # prevent error after refactor
+
 
 if __name__ == '__main__':
     
@@ -558,7 +602,7 @@ if __name__ == '__main__':
             pass
         
     
-    toprint = JS_COMPONENT  # or JS_LOOP JS_COMPONENT JS_EVENT
+    toprint = JS_EVENT  # or JS_LOOP JS_COMPONENT JS_EVENT
     print('-' * 80)
     print(toprint)  
     print('-' * 80)

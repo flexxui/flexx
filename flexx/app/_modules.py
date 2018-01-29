@@ -344,6 +344,8 @@ class JSModule:
                 if isinstance(val, type):
                     self._collect_dependencies_from_bases(val)
                 self._collect_dependencies(js, _dep_stack)
+            elif mod_name.endswith('.event._property'):
+                return self._add_dep_from_event_module(name)
             else:
                 # Import from another module
                 self._import(mod_name, val.__name__, name)
@@ -409,6 +411,8 @@ class JSModule:
                 return
             elif base_cls is Component:
                 return self._add_dep_from_event_module('Component')
+            elif base_cls.__module__.endswith('.event._property'):  # base properties
+                return self._add_dep_from_event_module(cls.__name__)
             m = self._import(get_mod_name(base_cls),
                              base_cls.__name__, base_cls.__name__)
             m.add_variable(base_cls.__name__)  # note: m can be self, which is ok

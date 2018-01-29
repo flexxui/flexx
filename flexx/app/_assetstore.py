@@ -7,6 +7,7 @@ etc.) needed by the applications.
 import os
 import shutil
 
+from ..event import _property
 from ..event._js import JS_EVENT
 from ..pyscript import create_js_module, get_all_std_names, get_full_std_lib
 from ..pyscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
@@ -238,7 +239,7 @@ class AssetStore:
         mod = create_js_module('flexx.event.js',
                                'var %s;\nvar %s;\n%s' % (pre1, pre2, JS_EVENT),
                                ['pyscript-std.js as _py'],
-                               ['Component', 'loop', 'logger'],
+                               ['Component', 'loop', 'logger'] + _property.__all__,
                                'amd-flexx')
         asset_event = Asset('flexx.event.js', HEADER + mod)
         # Create asset for bsdf - we replace the UMD loader code with flexx.define()

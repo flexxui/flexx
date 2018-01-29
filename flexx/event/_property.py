@@ -40,9 +40,9 @@ class Property(BaseDescriptor):
             
             _default = 'a'
             
-            def _validate(self, value):
+            def _validate(self, value, name, data):
                 if value not in 'abc':
-                    raise TypeError('MyCustomProp value must be "a", "b" or "c".')
+                    raise TypeError('MyCustomProp %r must be "a", "b" or "c".' % name)
                 return value
     
     """
@@ -78,11 +78,6 @@ class Property(BaseDescriptor):
         # Callable in __init__
         self._data = data
     
-    def _get_data(self):
-        # In python, this is used to get prop-specific data.
-        # For JS use the call to this method as a hook.
-        return self._data
-    
     def __set__(self, instance, value):
         t = 'Cannot set property %r; properties can only be mutated by actions.'
         raise AttributeError(t % self._name)
@@ -106,7 +101,11 @@ class Property(BaseDescriptor):
             self._mutate(flx_name, val)
         return flx_setter
     
-    def _validate(self, value):
+    def _validate_py(self, value):
+        # Called from Python
+        return self._validate(value, self._name, self._data)
+    
+    def _validate(self, value, name, data):
         return value
 
 
@@ -123,7 +122,7 @@ class BoolProp(Property):
     
     _default = False
     
-    def _validate(self, value):
+    def _validate(self, value, name, data):
         return bool(value)
 
 
@@ -133,7 +132,7 @@ class TriStateProp(Property):
     
     _default = None
     
-    def _validate(self, value):
+    def _validate(self, value, name, data):
         if value is None:
             return None
         return bool(value)
@@ -146,13 +145,12 @@ class IntProp(Property):
     
     _default = 0
     
-    def _validate(self, value):
+    def _validate(self, value, name, data):
         if (isinstance(value, (int, float)) or isinstance(value, bool) or
                                                isinstance(value, str)):
             return int(value)
         else:
-            raise TypeError('Int property %r cannot accept %r.' %
-                            (self._name, value))
+            raise TypeError('Int property %r cannot accept %r.' % (name, value))
 
 
 class FloatProp(Property):
@@ -162,12 +160,11 @@ class FloatProp(Property):
     
     _default = 0.0
     
-    def _validate(self, value):
+    def _validate(self, value, name, data):
         if isinstance(value, (int, float)) or isinstance(value, str):
             return float(value)
         else:
-            raise TypeError('Float property %r cannot accept %r.' %
-                            (self._name, value))
+            raise TypeError('Float property %r cannot accept %r.' % (name, value))
 
 
 class StringProp(Property):
@@ -176,10 +173,9 @@ class StringProp(Property):
     
     _default = ''
     
-    def _validate(self, value):
+    def _validate(self, value, name, data):
         if not isinstance(value, str):
-            raise TypeError('String property %r cannot accept %r.' %
-                            (self._name, value))
+            raise TypeError('String property %r cannot accept %r.' % (name, value))
         return value
 
 
@@ -190,10 +186,9 @@ class TupleProp(Property):
     
     _default = ()
     
-    def _validate(self, value):
+    def _validate(self, value, name, data):
         if not isinstance(value, (tuple, list)):
-            raise TypeError('Tuple property %r cannot accept %r.' % 
-                            (self._name, value))
+            raise TypeError('Tuple property %r cannot accept %r.' % (name, value))
         value = tuple(value)
         if this_is_js():  # pragma: no cover
             # Cripple the object so in-place changes are harder. Note that we
@@ -213,10 +208,9 @@ class ListProp(Property):
     
     _default = []
     
-    def _validate(self, value):
+    def _validate(self, value, name, data):
         if not isinstance(value, (tuple, list)):
-            raise TypeError('List property %r cannot accept %r.' %
-                            (self._name, value))
+            raise TypeError('List property %r cannot accept %r.' % (name, value))
         return list(value)
 
 
@@ -226,10 +220,9 @@ class ComponentProp(Property):
     
     _default = None
     
-    def _validate(self, value):
+    def _validate(self, value, name, data):
         if not (value is None or hasattr(value, '_IS_COMPONENT')):
-            raise TypeError('Component property %r cannot accept %r.' %
-                            (self._name, value))
+            raise TypeError('Component property %r cannot accept %r.' % (name, value))
         return value
 
 ## Advanced properties
@@ -242,18 +235,16 @@ class FloatPairProp(Property):
     
     _default = (0.0, 0.0)
     
-    def _validate(self, value):
+    def _validate(self, value, name, data):
         if not isinstance(value, (tuple, list)):
             value = value, value
         if len(value) != 2:
             raise TypeError('FloatPair property %r needs a scalar '
-                            'or two values, not %i' % (self._name, len(value)))
+                            'or two values, not %i' % (name, len(value)))
         if not isinstance(value[0], (int, float)):
-            raise TypeError('FloatPair %r 1st value cannot be %r.' %
-                            (self._name, value[0]))
+            raise TypeError('FloatPair %r 1st value cannot be %r.' % (name, value[0]))
         if not isinstance(value[1], (int, float)):
-            raise TypeError('FloatPair %r 2nd value cannot be %r.' %
-                            (self._name, value[1]))
+            raise TypeError('FloatPair %r 2nd value cannot be %r.' % (name, value[1]))
         value = float(value[0]), float(value[1])
         if this_is_js():  # pragma: no cover
             # Cripple the object so in-place changes are harder. Note that we
@@ -278,7 +269,7 @@ class EnumProp(Property):
     def _consume_args(self, options, *args):
         if not isinstance(options, (list, tuple)):
             raise TypeError('EnumProp needs list of options')
-        if not all(isinstance(i, str) for i in options):
+        if not all([isinstance(i, str) for i in options]):
             raise TypeError('EnumProp options must be str')
         if not args:
             args = (options[0], )
@@ -286,13 +277,12 @@ class EnumProp(Property):
         self._set_data([option.upper() for option in options])
         super()._consume_args(*args)
     
-    def _validate(self, value):
+    def _validate(self, value, name, data):
         if not isinstance(value, str):
-            raise TypeError('EnumProp %r value must be str.' % self._name)
+            raise TypeError('EnumProp %r value must be str.' % name)
         value = value.upper()
-        if value.upper() not in self._get_data():
-            raise ValueError('Invalid value for enum %r: %s' %
-                             (self._name, value))
+        if value.upper() not in data:
+            raise ValueError('Invalid value for enum %r: %s' % (name, value))
         return value
 
 
@@ -324,7 +314,8 @@ class ColorProp(Property):
     # todo: this code gets inserted at every definition of a ColorProp.
     # todo: Better factor this out ...
     
-    def _validate(self, value):
+    def _validate(self, value, name, data):
+        
         # We first convert to a tuple, and then derive the other values ...
         val = value
         
@@ -372,8 +363,7 @@ class ColorProp(Property):
                 if len(val) == 4:
                     val[-1] = val[-1] * 255
             else:
-                raise ValueError('ColorProp %r got invalid color: %r' %
-                                 (self._name, value))
+                raise ValueError('ColorProp %r got invalid color: %r' % (name, value))
             # All values above are in 0-255
             val = [v / 255 for v in val]
             # Pull towards black/white (i.e. darken or lighten)
@@ -389,7 +379,7 @@ class ColorProp(Property):
         
         # By now, the value should be a tuple/list
         if not isinstance(val, (tuple, list)):
-            raise TypeError('ColorProp %r value must be str or tuple.' % self._name)
+            raise TypeError('ColorProp %r value must be str or tuple.' % name)
         
         # Resolve to RGBA if RGB is given
         val = [max(min(float(v), 1.0), 0.0) for v in val]
@@ -397,7 +387,7 @@ class ColorProp(Property):
             val = val + [1.0]
         elif len(val) != 4:
             raise ValueError('ColorProp %r value must have 3 or 4 elements, not %i' %
-                             (self._name, len(val)))
+                             (name, len(val)))
         
         # Wrap up the tuple value
         val = tuple(val)
@@ -429,7 +419,7 @@ class ColorProp(Property):
 # 
 # class NullProp(Property):
 #     
-#     def _validate(self, value):
+#     def _validate(self, value, name, data):
 #         if not value is None:
 #             raise TypeError('Null property can only be None.')
 # 
@@ -438,7 +428,7 @@ class ColorProp(Property):
 #     def __init__(self, *prop_classes, **kwargs):
 #         self._sub_classes = prop_classes
 #     
-#     def _validate(self, value):
+#     def _validate(self, value, name, data):
 #         for cls in self._sub_classes:
 #             try:
 #                 return cls._validate(self, value)

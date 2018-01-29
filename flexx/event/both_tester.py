@@ -10,6 +10,7 @@ import sys
 
 from ._loop import loop, this_is_js  # noqa - import from here by tests
 from ._component import Component
+from ._property import Property
 from ._js import create_js_component_class, JS_EVENT
 
 from ..pyscript.functions import py2js, evaljs 
@@ -68,7 +69,7 @@ def call_func_in_js(func, classes, extra_nodejs_args=None):
     all_classes = []
     for cls in classes:
         for c in cls.mro():
-            if c is Component or c in all_classes:
+            if c is Component or c is Property or c in all_classes:
                 break
             all_classes.append(c)
     # Generate JS code

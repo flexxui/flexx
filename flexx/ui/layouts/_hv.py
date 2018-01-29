@@ -158,17 +158,18 @@ More reading:
 """
 
 from ... import event, app
+from ...event import Property
 from . import Layout
 
 
-class OrientationProp(event.Property):
+class OrientationProp(Property):
     """ A property that represents a pair of float values, which can also be
     set using a scalar.
     """
     
     _default = 'h'
     
-    def _validate(self, v):
+    def _validate(self, v, name, data):
         if isinstance(v, str):
             v = v.lower().replace('-', '')
         v = {'horizontal': 'h', 0: 'h', 'lefttoright': 'h',

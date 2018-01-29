@@ -14,7 +14,7 @@ class MyCustomProp(event.Property):
     
     _default = 'a'
     
-    def _validate(self, value):
+    def _validate(self, value, name, data):
         if value not in 'abc':
             raise TypeError('MyCustomProp must have a value of "a", "b", or "c".')
         return value
@@ -43,11 +43,14 @@ class MyObject(event.Component):
     tupleprop = event.TupleProp(settable=True)
     listprop = event.ListProp(settable=True)
     componentprop = event.ComponentProp(settable=True)  # can be None
-    myprop = MyCustomProp(settable=True)
     # nullprop = event.NullProp(None, settable=True)
     # eitherprop = event.EitherProp(event.IntProp, event.NoneProp)
-    
     _privateprop = event.IntProp(settable=True)
+
+
+class MyObjectWithCustom(event.Component):
+    myprop1 = MyCustomProp(settable=True)
+    myprop2 = MyCustomProp('b', settable=True)
 
 
 @run_in_both(MyObject)
@@ -264,7 +267,6 @@ class MyDefaults(event.Component):
     tupleprop2 = event.TupleProp((2, 'xx'))
     listprop2 = event.ListProp([3, 'yy'])
     componentprop2 = event.ComponentProp(None)
-    myprop2 = MyCustomProp('b', settable=True)
 
 
 class MyDefaults2(MyDefaults):
@@ -283,7 +285,6 @@ def test_property_defaults2():
     [True, 2, 'xx']
     [3, 'yy']
     True
-    b
     """
     m = MyDefaults()
     print(m.anyprop2)
@@ -294,7 +295,6 @@ def test_property_defaults2():
     print([isinstance(m.tupleprop2, tuple)] + list(m.tupleprop2))  # grrr
     print(m.listprop2)
     print(m.componentprop2 is None)
-    print(m.myprop2)
 
 
 @run_in_both(MyDefaults2)
@@ -303,7 +303,6 @@ def test_property_defaults3():
     3.14
     hi
     7
-    b
     """
     m = MyDefaults2()
     # From overloaded class
@@ -311,6 +310,16 @@ def test_property_defaults3():
     print(m.stringprop2)
     # From base class
     print(m.anyprop2)
+
+
+@run_in_both(MyObjectWithCustom, MyCustomProp)
+def test_property_defaults4():
+    """
+    a
+    b
+    """
+    m = MyObjectWithCustom()
+    print(m.myprop1)
     print(m.myprop2)
 
 
@@ -581,7 +590,7 @@ def test_property_component():  # Can be a Component or None
     print([m.componentprop is None, m.componentprop is m1, m.componentprop is m2])
 
 
-@run_in_both(MyObject)
+@run_in_both(MyObjectWithCustom, MyCustomProp)
 def test_property_custom():
     """
     a
@@ -591,17 +600,17 @@ def test_property_custom():
     ? TypeError
     c
     """
-    m = MyObject()
-    print(m.myprop)
+    m = MyObjectWithCustom()
+    print(m.myprop1)
     
-    m.set_myprop('c')
+    m.set_myprop1('c')
     loop.iter()
-    print(m.myprop)
+    print(m.myprop1)
     
     for value in [3, loop, 'd']:
-        m.set_myprop(value)
+        m.set_myprop1(value)
         loop.iter()
-    print(m.myprop)
+    print(m.myprop1)
 
 
 ## Meta-ish tests that are similar for property/emitter/action/reaction

@@ -87,7 +87,7 @@ class ComponentMeta(type):
             elif isinstance(val, Property):
                 val._set_name(name)  # noqa
                 # Create validator method
-                cls._set_cls_attr(dct, '_' + name + '_validate', val._validate)
+                cls._set_cls_attr(dct, '_' + name + '_validate', val._validate_py)
                 # Create mutator method
                 cls._set_cls_attr(dct, '_mutate_' + name, val.make_mutator())
                 # Create setter action?

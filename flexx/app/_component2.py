@@ -129,6 +129,7 @@ class AppComponentMeta(ComponentMeta):
         # Write __jsmodule__; an optimization for our module/asset system
         cls.__jsmodule__ = get_mod_name(sys.modules[cls.__module__])
         cls.JS.__jsmodule__ = cls.__jsmodule__  # need it in JS too
+        cls.JS.__module__ = cls.__module__
         
         # Set CSS
         cls.CSS = CSS
