@@ -299,11 +299,20 @@ class BaseAppComponent(Component):
       properties, nor actions. But it can be "moved around".
     """
     
-    session = event.Attribute(doc="The session to which this component belongs. " + 
-                                  "The component id is unique within its session.")
+    session = event.Attribute(doc="""
+        The session to which this component belongs. The component id
+        is unique within its session.
+        """)
     
-    uid = event.Attribute(doc="A unique identifier for this component; " + 
-                              "a combination of the session and component id's.")
+    root = event.Attribute(doc="""
+        The component that represents the root of the application. Alias for
+        session.app.
+        """)
+    
+    uid = event.Attribute(doc="""
+        A unique identifier for this component; a combination of the
+        session and component id's.
+        """)
 
     def _comp_init_app_component(self, property_values):
         # Pop special attribute
@@ -327,6 +336,7 @@ class BaseAppComponent(Component):
         if self._session is None:
             raise RuntimeError('%s needs a session!' % (custom_id or self._id))
         self._session._register_component(self, custom_id)
+        self._root = self._session.app
         
         # Return whether this instance was instantiated locally
         return custom_id is None

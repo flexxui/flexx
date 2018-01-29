@@ -143,6 +143,7 @@ class Flexx:
 class JsSession:
     
     def __init__(self, app_name, id, ws_url=None):
+        self.app = None  # the root component (can be a PyComponent)
         self.app_name = app_name
         self.id = id
         self.status = 1
@@ -219,6 +220,8 @@ class JsSession:
         return c
     
     def _register_component(self, c, id=None):
+        if self.app is None:
+            self.app = c  # Set our root component; is the first to register
         if id is None:
             self._component_counter += 1
             id = c.__name__ + '_' + str(self._component_counter) + 'js'

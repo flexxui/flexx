@@ -236,11 +236,6 @@ class Session:
         """
         self._cookies = cookies if cookies else SimpleCookie()
 
-    def _set_app(self, component):
-        if self._component is not None:
-            raise RuntimeError('Session already has an associated Component.')
-        self._component = component
-
     def _set_runtime(self, runtime):
         if self._runtime is not None:
             raise RuntimeError('Session already has a runtime.')
@@ -431,6 +426,8 @@ class Session:
         assert isinstance(component, (PyComponent, JsComponent))
         assert component.session is self
         cls = component.__class__
+        if self._component is None:
+            self._component = component  # register root component (i.e. the app)
         # Set id
         if id is None:
             self._component_counter += 1
