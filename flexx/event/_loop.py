@@ -124,7 +124,7 @@ class Loop:
         asyncio's ``call_soon_threadsafe()``.
         """
         with self._lock:
-            self._pending_calls.append(func)  # todo: woops, we dont use args!
+            self._pending_calls.append((func, args))
             self._schedule_iter()
     
     def add_action_invokation(self, action, args):
@@ -267,9 +267,9 @@ class Loop:
         
         # Process
         for i in range(len(pending_calls)):
-            func = pending_calls[i]
+            func, args = pending_calls[i]
             try:
-                func()
+                func(*args)
             except Exception as err:
                 logger.exception(err)
     

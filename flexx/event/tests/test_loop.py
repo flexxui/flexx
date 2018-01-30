@@ -32,11 +32,32 @@ def test_calllater():
     xx
     called later
     called later
+    xx
+    called with 3
+    called with 4
+    xx
+    called with 3 and 4
+    called with 5 and 6
     """
-    def x():
+    def x1():
         print('called later')
-    loop.call_soon(x)
-    loop.call_soon(x)
+    def x2(i):
+        print('called with', i)
+    def x3(i, j):
+        print('called with', i, 'and', j)
+    
+    loop.call_soon(x1)
+    loop.call_soon(x1)
+    print('xx')
+    loop.iter()
+    
+    loop.call_soon(x2, 3)
+    loop.call_soon(x2, 4)
+    print('xx')
+    loop.iter()
+    
+    loop.call_soon(x3, 3, 4)
+    loop.call_soon(x3, 5, 6)
     print('xx')
     loop.iter()
 

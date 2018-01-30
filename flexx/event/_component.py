@@ -292,7 +292,9 @@ class Component(with_metaclass(ComponentMeta, object)):
         loop._deactivate_component(self)
     
     def __check_not_active(self):
-        # todo: disable this in production?
+        # Note: this adds overhead, especially during initialization, but it
+        # is a valuable check ... it is something that could potentially be
+        # disabled in "production mode".
         active_components = loop.get_active_components()
         if self in active_components:
             raise RuntimeError('It seems that the event loop is processing '
