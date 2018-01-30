@@ -114,5 +114,6 @@ class TestApp(ui.Widget):
                     self.w8 = MyWidget()
 
 
-m = app.launch(TestApp)
-app.run()
+if __name__ == '__main__':
+    m = app.launch(TestApp)
+    app.run()

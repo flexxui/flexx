@@ -1,4 +1,4 @@
-# doc-export: MyApplication
+# doc-export: MyApp
 """
 Example that demonstrates the recommended way to handle state, especially
 for larger apps. The trick is to define a single place that represents
@@ -18,7 +18,7 @@ application that react to the name properties.
 from flexx import app, event, ui
 
 
-class MyApplication(app.JsComponent):
+class MyApp(app.JsComponent):
     """ This the root of the app, accessible via self.root on any component.
     It functions as a central data-store. In this case it is a JsComponent,
     but it can also be a PyComponent if that makes more sense.
@@ -71,4 +71,5 @@ class View(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(MyApplication)
+    m = app.launch(MyApp)
+    app.run()

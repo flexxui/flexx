@@ -383,7 +383,7 @@ class ComboBox(BaseDropdown):
         e.stopPropagation()
         
         if key == 'Escape':
-            self.set__highlighted(-1)
+            self._set_highlighted(-1)
             self._collapse()
         
         elif key == 'ArrowUp' or key == 'ArrowDown':
@@ -391,7 +391,7 @@ class ComboBox(BaseDropdown):
                 hl = self._highlighted + 1
             else:
                 hl = self._highlighted - 1
-            self.set__highlighted(min(max(hl, 0), len(self.options)-1))
+            self._set_highlighted(min(max(hl, 0), len(self.options)-1))
         
         elif key == 'Enter' or key == ' ':
             if self._highlighted >= 0 and self._highlighted < len(self.options):

@@ -163,7 +163,7 @@ def test_flexx_in_thread1():
 
 
 def test_flexx_in_thread2():
-    """ Test running a HasEvents object in another thread.
+    """ Test running a component in another thread.
     """
     res = []
     

@@ -34,7 +34,7 @@ else:  # pragma: no cover
 # 
 # * In PyScript we detect unresolved dependencies in JS code, and move these up
 #   the namespace stack.
-# * The create_js_hasevents_class() function and AppComponentMeta class collect the
+# * The create_js_component_class() function and AppComponentMeta class collect the
 #   dependencies from the different code pieces.
 # * In JSModule we resolve some dependencies and let other propagate into
 #   module dependencies.

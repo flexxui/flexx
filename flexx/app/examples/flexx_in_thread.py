@@ -19,7 +19,7 @@ import threading
 from flexx import app, event
 
 
-class MyModel1(event.HasEvents):
+class MyModel1(event.Component):
     @event.prop
     def foo(self, v=0):
         return v

@@ -93,7 +93,7 @@ def test_private_property():
     m = MyObject()
     print(m._privateprop)
    
-    m.set__privateprop(3)
+    m._set_privateprop(3)
     print(m._privateprop)
     loop.iter()
     print(m._privateprop)

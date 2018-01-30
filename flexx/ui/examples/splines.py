@@ -144,10 +144,10 @@ class SplineWidget(ui.CanvasWidget):
                 if 'Shift' in ev.modifiers:  # Remove point
                     self.xx.pop(i)
                     self.yy.pop(i)
-                    self.set__current_node(None)
+                    self._set_current_node(None)
                     self.update()
                 else:
-                    self.set__current_node(i)
+                    self._set_current_node(i)
             else:
                 if 'Shift' in ev.modifiers:
                     # Add point
@@ -186,11 +186,11 @@ class SplineWidget(ui.CanvasWidget):
                         i = closest if a1 < a2 else closest + 1
                     self.xx.insert(i, ev.pos[0] / w)
                     self.yy.insert(i, ev.pos[1] / h)
-                    self.set__current_node(i)
+                    self._set_current_node(i)
     
     @event.reaction('mouse_up')
     def _on_mouse_up(self, *events):
-        self.set__current_node(None)
+        self._set_current_node(None)
     
     @event.reaction('mouse_move')
     def _on_mouse_move(self, *events):
