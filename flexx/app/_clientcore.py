@@ -15,18 +15,22 @@ class Flexx:
     """
     
     def __init__(self):
+        
+        if window.flexx.init:
+            raise RuntimeError('Should not create global Flexx object more than once.')
+        
         # Init (overloadable) variables. These can be set by creating
         # a window.flexx object *before* instantiating this class, or by
         # setting them on this object before the init() is called.
         self.is_notebook = False
         self.is_exported = False
-        self.need_main_widget = True  # Used/set in ui/_widget.py
         
-        # Copy attributes from temporary flexx object
-        if window.flexx.init:
-            raise RuntimeError('Should not create global Flexx object more than once.')
+        # Copy attributes from temporary object (e.g. is_notebook, require, ...)
         for key in window.flexx.keys():
-            self[key] = window.flexx[key]  # session_id, app_name, and maybe more
+            self[key] = window.flexx[key]
+        
+        # We need a global main widget (shared between sessions)
+        self.need_main_widget = True  # Used/set in ui/_widget.py
         
         # Keep track of sessions
         self._session_count = 0
@@ -133,6 +137,8 @@ class Flexx:
         window.addEventListener('error', on_error, False)
     
     def create_session(self, app_name, session_id, ws_url):
+        # The call to this method is embedded by get_page(),
+        # or injected by init_notebook().
         # todo: should this be delayed if we did not call init yet?
         s = JsSession(app_name, session_id, ws_url)
         self._session_count += 1
@@ -286,7 +292,7 @@ class JsSession:
             msg = 'Lost connection with server'
             if evt and evt.reason:
                 msg += ': %s (%i)' % (evt.reason, evt.code)
-            if not self.is_notebook:
+            if not window.flexx.is_notebook:
                 # todo: show modal or cooky-like dialog instead of killing whole page
                 window.document.body.innerHTML = msg
             else:

@@ -2,8 +2,8 @@
 Functional API for flexx.app
 """
 
-import sys
 import json
+import base64
 
 from .. import webruntime, config, set_log_level
 
@@ -11,6 +11,7 @@ from ._app import App, manager
 from ._component2 import PyComponent, JsComponent
 from ._server import current_server
 from ._assetstore import assets
+from ._clientcore import serializer
 from . import logger
 
 reprs = json.dumps
@@ -105,12 +106,21 @@ class NoteBookHelper:
         self._real_ws = None
         if self._commands:
             from IPython.display import display, Javascript
-            commands = ['flexx.command(%s);' % reprs(msg) for msg in self._commands]
+            lines = []
+            lines.append('var bb64 =  flexx.require("bb64");')
+            lines.append('function cmd(c) {'
+                            'flexx.s1._receive_command('
+                            'flexx.serializer.decode('
+                            'bb64.decode(c)));}')
+            for command in self._commands:  # also DEFINE commands!
+                command_str = base64.encodebytes(serializer.encode(command)).decode()
+                lines.append('cmd("' + command_str.replace('\n', '') + '");')
             self._commands = []
-            display(Javascript('\n'.join(commands)))
+            display(Javascript('\n'.join(lines)))
     
-    def command(self, msg):
-        self._commands.append(msg)
+    def write_command(self, cmd):
+        assert isinstance(cmd, tuple) and len(cmd) >= 1
+        self._commands.append(cmd)
 
 
 def init_notebook():
@@ -154,17 +164,11 @@ def init_notebook():
     proto = 'wss' if server.protocol == 'https' else 'ws'
     
     url = '%s://%s:%i/flexx/ws/%s' % (proto, host, port, session.app_name)
-
-    flexx_pre_init = """<script>window.flexx = {};
-                                window.flexx.app_name = "%s";
-                                window.flexx.session_id = "%s";
-                                window.flexx.ws_url = "%s";
-                                window.flexx.is_live_notebook = true;
-                        </script>""" % (session.app_name, session.id, url)
     
-    # Compose HTML to inject
-    t = assets.get_asset('flexx-core.js').to_html('{}', 0)
-    t += """<script>
+    # Determine JS snippets to run before and after init. The former is only
+    # run in live notebooks.
+    flexx_pre_init = "<script>window.flexx = {is_live_notebook: true};</script>"
+    flexx_post_init = """<script>
             flexx.is_notebook = true;
             flexx.is_exported = !flexx.is_live_notebook;
             /* If Phosphor is already loaded, disable our Phosphor CSS. */
@@ -172,7 +176,11 @@ def init_notebook():
                 document.getElementById('phosphor-all.css').disabled = true;
             }
             flexx.init();
-            </script>"""
+            flexx.create_session("%s", "%s", "%s");
+            </script>""" % (session.app_name, session.id, url)
+    # Compose HTML to inject
+    t = assets.get_asset('flexx-core.js').to_html('{}', 0)
+    t += flexx_post_init
     t += "<i>Flexx is ready for use</i>\n"
     
     display(HTML(flexx_pre_init))  # Create initial Flexx info dict
@@ -181,7 +189,13 @@ def init_notebook():
     
     # Note: the Widget._repr_html_() method is responsible for making
     # the widget show up in the notebook output area.
-
+    
+    # Note: asyncio will need to be enabled via %gui asyncio
+    
+    # We briefly start the server, it will start the web server, but exit
+    # the event loop right away.
+    server.stop()
+    server.start()
 
 
 # Keep serve and launch, they are still quite nice shorthands to quickly

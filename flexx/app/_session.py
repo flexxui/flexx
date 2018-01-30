@@ -497,7 +497,8 @@ class Session:
         re-defined.
         """
         
-        if mod_name.startswith(('flexx.app', 'flexx.event')):
+        if (mod_name.startswith(('flexx.app', 'flexx.event')) and
+                                                '.examples' not in mod_name):
             return  # these are part of flexx core assets
         
         modules = set()

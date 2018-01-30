@@ -7,6 +7,8 @@ than CPython and for some tests on par with Pypy.
 
 See also http://brythonista.wordpress.com/2015/03/28
 
+PyStone seems unavailable in Python 3.6 (?), so its commented out.
+
 """
 
 # Measured results, in pystones/second, measured on 05-03-2016,
@@ -26,14 +28,14 @@ RESULTS = [(124863, 'CPython 3.4', 'blue'),
 import sys
 from time import time
 import platform
-from test.pystone import main as pystone_main
-from test import pystone
+# from test.pystone import main as pystone_main
+# from test import pystone
 
-from flexx import app
+from flexx import app, event
 
 # Mark the pystone module to be transpiled as a whole. It uses globals
 # a lot, which somehow causes inifinite loops if its transpiled in parts.
-pystone.__pyscript__ = True
+# pystone.__pyscript__ = True
 
 # Backend selection
 BACKEND = 'firefox-app or chrome-app'
@@ -155,32 +157,33 @@ def bench_str():
     print("  function_call.py", time()-t0)
 
 
-class Benchmarker(app.Model):
+class BenchmarkerPy(app.PyComponent):
     
-    def run_js_benchmark(self):
-        self.call_js('_benchmark()')
-    
+    @event.action
     def benchmark(self):
         print('\n==== Python %s %s =====\n' % (platform.python_implementation(), 
                                                platform.python_version()))
-        pystone_main()
+        # pystone_main()
         convolve()
         bench_str()
-        
-        # Trigger benchmark in JS
-        self.run_js_benchmark()
+
+
+class BenchmarkerJs(app.JsComponent):
     
-    class JS:
-        
-        def _benchmark(self):
-            print()
-            print('==== PyScript on %s =====' % BACKEND)
-            print()
-            pystone_main()
-            convolve()
-            bench_str()
+    @event.action
+    def benchmark(self):
+        print()
+        print('==== PyScript on %s =====' % BACKEND)
+        print()
+        # pystone_main()
+        convolve()
+        bench_str()
 
 
-b = app.launch(Benchmarker, BACKEND)
-b.benchmark()
+b1 = app.launch(BenchmarkerPy, BACKEND)
+with b1:
+    b2 = BenchmarkerJs()
+b1.benchmark()
+b2.benchmark()
+
 app.run()

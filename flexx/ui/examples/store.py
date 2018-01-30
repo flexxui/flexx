@@ -47,13 +47,17 @@ class View(ui.Widget):
         with ui.VBox():
             
             with ui.HBox():
-                self.first_edit = ui.LineEdit(placeholder_text='first name', text='Jane')
-                self.last_edit = ui.LineEdit(placeholder_text='last name', text='Doe')
+                self.first_edit = ui.LineEdit(placeholder_text='first name',
+                                              text='Jane')
+                self.last_edit = ui.LineEdit(placeholder_text='last name',
+                                             text='Doe')
                 ui.Widget(flex=1)  # spacer
                 
             with ui.HBox():
-                ui.Label(text=lambda: self.root.first_name, style='border:1px solid red')
-                ui.Label(text=lambda: self.root.last_name, style='border:1px solid red')
+                ui.Label(text=lambda: self.root.first_name,
+                         style='border:1px solid red')
+                ui.Label(text=lambda: self.root.last_name,
+                         style='border:1px solid red')
                 ui.Widget(flex=1)  # spacer
             
             MyPersonLabel(style='border:1px solid blue')

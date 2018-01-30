@@ -124,7 +124,7 @@ class Loop:
         asyncio's ``call_soon_threadsafe()``.
         """
         with self._lock:
-            self._pending_calls.append(func)
+            self._pending_calls.append(func)  # todo: woops, we dont use args!
             self._schedule_iter()
     
     def add_action_invokation(self, action, args):

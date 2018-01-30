@@ -304,7 +304,7 @@ class AppManager(event.Component):
         pending.append(session)
 
         # Instantiate the component
-        component_instance = app(flx_session=session, flx_is_app=True)
+        app(flx_session=session, flx_is_app=True)
 
         return session
     
@@ -380,7 +380,7 @@ class AppManager(event.Component):
         self._session_map[session.id] = session
         # Instantiate the component
         # This represents the "instance" of the App object (Component class + args)
-        component_instance = app(flx_session=session, flx_is_app=True)
+        app(flx_session=session, flx_is_app=True)
 
         # Now wait for the client to connect. The client will be served
         # a page that contains the session_id. Upon connecting, the id

@@ -122,12 +122,11 @@ class Twente(ui.Widget):
         with ui.HFix():
             ui.Widget(flex=1)
             with ui.VBox(flex=0, style='min-width:200px'):
-                ui.Widget(flex=1)
                 with ui.GroupWidget(title='Plot options'):
-                    self.month_label = ui.Label(text='Month')
-                    self.month = ui.Slider(max=12, step=1, value=12)
+                    ui.Label(text='Month')
+                    self.month = ui.ComboBox(options=months, selected_index=12, style='width: 100%')
                     self.smoothing_label = ui.Label(text='Smoothing')
-                    self.smoothing = ui.Slider(max=20, step=2)
+                    self.smoothing = ui.Slider(max=20, step=2, text='{value} samples')
                 ui.Widget(flex=3)
             with ui.VBox(flex=4):
                 self.plot = ui.PlotWidget(flex=1,
@@ -138,12 +137,8 @@ class Twente(ui.Widget):
 
     @event.reaction
     def _update_plot(self):
-        month = self.month.value
         smoothing = self.smoothing.value
-        self.month_label.set_text('Month (%s)' % months[month])
-        self.smoothing_label.set_text('Smoothing (%i)' % smoothing)
-        
-        yy1 = data[month]
+        yy1 = data[self.month.selected_index]
         yy2 = []
         
         sm2 = int(smoothing / 2)

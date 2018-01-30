@@ -402,16 +402,16 @@ class Widget(app.JsComponent):
         return node
     
     # Note that this method is only present at the Python side
-    # (because the # JsComponent meta class makes it so).
+    # (because the JsComponent meta class makes it so).
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
         """
         if self.container:
-            return "<i>This widget is already shown in this notebook</i>"
+            return "<i>Th widget %s is already shown in this notebook</i>" % self.id
 
         container_id = self.id + '_container'
         self.set_container(container_id)
-        return "<div class='flx-container' id=%s />" % container_id
+        return "<div class='flx-container' id='%s' />" % container_id
 
     def dispose(self):
         """ Overloaded version of dispose() that disposes any child widgets.
@@ -657,7 +657,7 @@ class Widget(app.JsComponent):
     
     @event.reaction('container')
     def __container_changed(self, *events):
-        id = events[-1].new_value
+        id = self.container
         self.outernode.classList.remove('flx-main-widget')
         if self.parent:
             return
@@ -672,6 +672,11 @@ class Widget(app.JsComponent):
                 window.document.title = self.title or 'Flexx app'
             else:
                 el = window.document.getElementById(id)
+                if el is None:  # Try again later
+                    print('conainer %s try again' % id)
+                    window.setTimeout(self.__container_changed, 100)
+                    return
+                print('conainer %s worked!' % id)
             el.appendChild(self.outernode)
     
     def _release_child(self, widget):

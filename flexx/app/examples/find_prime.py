@@ -1,12 +1,12 @@
 """
 This example demonstrates how Python code can be run in a browser, which
-is for many things faster than CPython. We run the exact same code to find
+is faster than CPython in many cases. We run the exact same code to find
 the n-th prime on both Python and JS and measure the performance.
 """
 
 from time import perf_counter
 
-from flexx import app
+from flexx import app, event
 
 
 def find_prime(n):
@@ -32,18 +32,25 @@ def find_prime(n):
     print(i, 'found in ', t1-t0, 'seconds')
 
 
-class PrimeFinder(app.Model):
+class PrimeFinder(app.PyComponent):
     
+    def init(self):
+        self.js = PrimeFinderJs()
+    
+    @event.action
     def find_prime_py(self, n):
         find_prime(n)
     
+    @event.action
     def find_prime_js(self, n):
-        self.call_js('_find_prime(%i)' % n)
+        self.js.find_prime_js(n)
+
+
+class PrimeFinderJs(app.JsComponent):
     
-    class JS:
-        
-        def _find_prime(self, n):
-            find_prime(n)
+    @event.action
+    def find_prime_js(self, n):
+        find_prime(n)
 
 
 if __name__ == '__main__':
@@ -51,7 +58,7 @@ if __name__ == '__main__':
     # Create app instance
     finder = app.launch(PrimeFinder, 'app or chrome-app')
     
-    finder.find_prime_py(2000)  # 0.7 s
-    finder.find_prime_js(2000)  # 0.2 s
+    finder.find_prime_py(2000)  # 0.6-0.7 s
+    finder.find_prime_js(2000)  # 0.1-0.2 s
     
     app.run()

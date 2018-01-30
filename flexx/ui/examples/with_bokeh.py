@@ -1,4 +1,4 @@
-# doc-export: Example
+# doc-export: BokehExample
 """ 
 Example demonstrating a Bokeh plot in Flexx. Includes client-side
 interaction with sliders.
@@ -27,11 +27,11 @@ p3 = figure(tools=TOOLS, sizing_mode='scale_width')
 p3.line(t, np.cos(t))
 
 
-class Example(app.PyComponent):
+class BokehExample(app.PyComponent):
     
     def init(self):
         
-        with ui.HSplit():
+        with ui.HSplit(style='min-height:300px') as self.widget:
             self.plot1 = ui.BokehWidget.from_plot(p1, title='Scatter')
             with ui.VFix(title='Sine'):
                 Controls()
@@ -69,5 +69,5 @@ class Controls(ui.FormLayout):
 
 
 if __name__ == '__main__':
-    m = app.launch(Example, 'app')
+    m = app.launch(BokehExample, 'app')
     app.start()

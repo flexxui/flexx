@@ -416,7 +416,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     assert cls_name != 'Component'  # we need this special class above instead
       
     # Collect meta information of all code pieces that we collect
-    mc = MetaCollector(sys.modules[cls.__module__].__file__)
+    mc = MetaCollector(getattr(sys.modules[cls.__module__], '__file__', ''))
     mc.meta['std_functions'].add('op_instantiate')  # b/c we use get_class_definition
     
     total_code = []

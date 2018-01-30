@@ -14,7 +14,7 @@ import logging
 from ..pyscript import (py2js, JSString, RawJS, JSConstant, create_js_module,
                         get_all_std_names)
 from ..pyscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
-from ..event import Component, loop
+from ..event import Component, Property, loop
 from ..event._js import create_js_component_class
 
 from ._clientcore import bsdf
@@ -146,11 +146,20 @@ class JSModule:
             self._pyscript_code['__all__'] = js
             self._provided_names.update([n for n in js.meta['vars_defined']
                                          if not n.startswith('_')])
+        else:
+            self._init_default_objects()
     
     def __repr__(self):
         return '<%s %s with %i definitions>' % (self.__class__.__name__,
                                                 self.name,
                                                 len(self._provided_names))
+    
+    def _init_default_objects(self):
+        # Component classes
+        # Add property classes ...
+        for name, val in self._pymodule.__dict__.items():
+            if isinstance(val, type) and issubclass(val, Property):
+                self.add_variable(name)
     
     @property
     def name(self):

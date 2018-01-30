@@ -195,6 +195,7 @@ Interactive use
 
 Further, Flexx can be used interactively from the Jupyter notebook.
 Use ``init_notebook()`` which will inject the necessary JS and CSS.
+Also use ``%gui asyncio`` to enable the Flexx event system.
 Simple widgets (e.g. buttons) will display just fine, but for other
 widgets you might want to use ``SomeWidget(style='height:300px')`` to
 specify its size.
