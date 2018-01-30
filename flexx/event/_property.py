@@ -311,9 +311,6 @@ class ColorProp(Property):
     
     _default = '#000'  # Black
     
-    # todo: this code gets inserted at every definition of a ColorProp.
-    # todo: Better factor this out ...
-    
     def _validate(self, value, name, data):
         
         # We first convert to a tuple, and then derive the other values ...

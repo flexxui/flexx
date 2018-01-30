@@ -7,7 +7,7 @@ This feature makes basic plumbing very easy, like e.g. showing values
 of properties in a label widget.
 """
 
-# todo: also a one-liner to invoke actions from emitters
+# todo: also a one-liner to invoke actions from emitters (issue #425)
 
 from flexx import event
 

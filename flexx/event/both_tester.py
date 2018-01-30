@@ -1,8 +1,8 @@
 """
-This module defines a utility to write tests for flexx.event
+This module defines a utility to write tests (for e.g. flexx.event)
 that run both in Python and JS.
 
-This is part of flexx.event and not in flexx/event/tests because (re)import
+This is part of flexx.event and not in flexx/event/tests because of (re)imports
 during tests.
 """
 

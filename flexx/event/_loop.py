@@ -1,6 +1,5 @@
 """
-Implementation of basic event loop object. Can be integrated a real
-event loop such as tornado or Qt.
+Implementation of Flexx' event loop based on asyncio.
 """
 
 # Note: there are some unusual constructs here, such as ``if xx is True``.
@@ -123,9 +122,17 @@ class Loop:
         corresponding with the loop. It is therefore actually more similar to
         asyncio's ``call_soon_threadsafe()``.
         """
+        # We keep track of pending calls locally to our event system, which
+        # gives more control, e.g. during testing.
         with self._lock:
             self._pending_calls.append((func, args))
             self._schedule_iter()
+    
+    # def call_later(self, delay, func, *args)
+    # This would be nice, but we'd have to implement more sophisticated 
+    # scheduling. Unless we'd just call asyncio's call_later, but I am
+    # reluctant to do that while this code is still more or less independent of
+    # asyncio.
     
     def add_action_invokation(self, action, args):
         """ Schedule the handling of an action.
@@ -139,7 +146,7 @@ class Loop:
         """
         
         # In principal, the mechanics of adding items to the queue is not complex,
-        # but this code is performance critical, so we have apply several tricks
+        # but this code is performance critical, so we apply several tricks
         # to make this code run fast.
         # _pending_reactions is a list of tuples (reaction, representing event, events)
         
@@ -248,15 +255,13 @@ class Loop:
         
         self._in_iter = True
         try:
-            self.process_calls()
-            self.process_actions()
-            # todo: while len(self._pending_reactions) > 0? -- Seems not needed so far
-            self.process_reactions()
+            self._process_calls()
+            self._process_actions()
+            self._process_reactions()
         finally:
             self._in_iter = False
     
-    # todo: make private?
-    def process_calls(self):
+    def _process_calls(self):
         """ Process pending function calls.
         """
         # Select pending
@@ -273,7 +278,7 @@ class Loop:
             except Exception as err:
                 logger.exception(err)
     
-    def process_actions(self, n=None):
+    def _process_actions(self, n=None):
         """ Process all (or just one) pending actions.
         """
         # Select pending
@@ -297,7 +302,7 @@ class Loop:
             finally:
                 self._processing_action = None
     
-    def process_reactions(self):
+    def _process_reactions(self):
         """ Process all pending reactions.
         """
         # Select pending

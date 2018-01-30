@@ -481,5 +481,3 @@ from ._emitter import emitter, Emitter
 from ._attribute import Attribute
 from ._property import *
 from ._component import Component, mutate_array
-
-# from ._component import new_type, with_metaclass
