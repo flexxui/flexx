@@ -88,13 +88,13 @@ def test_action_one_by_one():
     m.set_foo("there")
     m.set_foo(42)
     
-    loop.process_actions(1)  # process one
+    loop._process_actions(1)  # process one
     print(m.foo)
-    loop.process_actions(1)  # process one
+    loop._process_actions(1)  # process one
     print(m.foo)
-    loop.process_actions(1)  # process one
+    loop._process_actions(1)  # process one
     print(m.foo)
-    loop.process_actions(1)  # process one
+    loop._process_actions(1)  # process one
     print(m.foo)
     
     print('xx')
@@ -103,9 +103,9 @@ def test_action_one_by_one():
     m.set_foo("bar")
     m.set_foo(0)
     
-    loop.process_actions(2)  # process two
+    loop._process_actions(2)  # process two
     print(m.foo)
-    loop.process_actions(2)  # process two
+    loop._process_actions(2)  # process two
     print(m.foo)
 
 
