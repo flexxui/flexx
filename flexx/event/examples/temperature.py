@@ -1,9 +1,7 @@
 """
 This example demonstrates how two mutually dependent props can be set
 without getting into an infinite loop. Since flexx uses actions, this
-is rather trivial. Technically, one could also react to one property
-and invoke the set action of the other, but that would result in the
-props being set infinitely.
+is rather trivial.
 """
 
 from flexx import event

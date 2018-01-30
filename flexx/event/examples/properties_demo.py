@@ -1,5 +1,5 @@
 """
-Small demo to demonstrate properties:
+Small example to demonstrate properties:
 """
 
 from flexx import event
