@@ -52,7 +52,7 @@ def reaction(*connection_strings):
     reaction: it is invoked automatically when any of the properties
     used in the function changes. This is a convenient feature, but is
     best avoided when a potentially large number of properties are
-    accessed, because the reconnection mechanism of implicit properties
+    accessed, because the reconnection mechanism of implicit reactions
     is less efficient than that of explicit reactions.
     """
     if (not connection_strings):

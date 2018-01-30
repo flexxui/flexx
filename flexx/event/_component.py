@@ -137,18 +137,18 @@ class ComponentMeta(type):
 class Component(with_metaclass(ComponentMeta, object)):
     """ The base component class.
     
-    Components have attributes, properties, actions that can mutate
-    properties, and reactions that react to changes in properties and
-    to other events.
+    Components have attributes to represent static values, properties
+    to represent state, actions that can mutate properties, and
+    reactions that react to events such as property changes.
     
     Initial values of properties can be provided by passing them
     as keyword arguments.
     
-    Subclasses can use :class:`Property <flexx.event.Property>` to
-    define properties, and the :func:`action <flexx.event.action>`, 
-    :func:`reaction <flexx.event.reaction>`, and 
-    :func:`emitter <flexx.event.emitter>` decorators to create actions,
-    reactions. and emitters, respectively. 
+    Subclasses can use :class:`Property <flexx.event.Property>` (or one
+    of its subclasses) to define properties, and the
+    :func:`action <flexx.event.action>`, :func:`reaction <flexx.event.reaction>`,
+    and :func:`emitter <flexx.event.emitter>` decorators to create actions,
+    reactions. and emitters, respectively.
     
     .. code-block:: python
     
@@ -163,7 +163,7 @@ class Component(with_metaclass(ComponentMeta, object)):
             
             @event.reaction('foo')
             def on_foo(self, *events):
-                print('foo was set to', events[-1].new_value)
+                print('foo was set to', self.foo)
             
             @event.reaction('bar')
             def on_bar(self, *events):
@@ -302,12 +302,10 @@ class Component(with_metaclass(ComponentMeta, object)):
                                'high risk on race conditions.')
     
     def init(self):
-        """ Initializer method.
-        
-        This method can be overloaded when creating a custom class. It is
-        called with this component as a context manager (making it the
-        active component), and it gets any positional arguments that were
-        passed to the ``Component`` constructor.
+        """ Initializer method. This method can be overloaded when
+        creating a custom class. It is called with this component as a
+        context manager (i.e. it is the active component), and it receives
+        any positional arguments that were passed to the constructor.
         """
         pass
     
@@ -318,7 +316,7 @@ class Component(with_metaclass(ComponentMeta, object)):
     def dispose(self):
         """ Use this to dispose of the object to prevent memory leaks.
         Make all subscribed reactions forget about this object, clear
-        all references to subscribed reactions, disconnect all reactions
+        all references to subscribed reactions, and disconnect all reactions
         defined on this object.
         """
         self._dispose()
@@ -339,7 +337,7 @@ class Component(with_metaclass(ComponentMeta, object)):
             getattr(self, self.__reactions__[i]).dispose()
     
     def _registered_reactions_hook(self):
-        """ This method is called when the reactions changed, can be implemented
+        """ This method is called when the reactions change, can be overloaded
         in subclasses. The original method returns a list of event types for
         which there is at least one registered reaction. Overloaded methods
         should return this list too.
@@ -511,10 +509,10 @@ class Component(with_metaclass(ComponentMeta, object)):
             return True
     
     def get_event_types(self):
-        """ Get the known event types for this HasEvent object. Returns
+        """ Get the known event types for this component. Returns
         a list of event type names, for which there is a
         property/emitter or for which any reactions are registered.
-        Sorted alphabetically. Intended mostly for debugging/introspection purposes.
+        Sorted alphabetically. Intended mostly for debugging purposes.
         """
         types = list(self.__handlers)  # avoid using sorted (one less stdlib func)
         types.sort()
@@ -523,7 +521,7 @@ class Component(with_metaclass(ComponentMeta, object)):
     def get_event_handlers(self, type):
         """ Get a list of reactions for the given event type. The order
         is the order in which events are handled: alphabetically by
-        label.
+        label. Intended mostly for debugging purposes.
         
         Parameters:
             type (str): the type of event to get reactions for. Should not
@@ -542,23 +540,8 @@ class Component(with_metaclass(ComponentMeta, object)):
     def reaction(self, *connection_strings):
         """ Create a reaction by connecting a function to one or more events of
         this instance. Can also be used as a decorator. See the
-        :func:`reaction <flexx.event.reaction>` decorator for more information.
-        
-        .. code-block:: py
-            
-            h = Component()
-            
-            # Usage as a decorator
-            @h.reaction('first_name', 'last_name')
-            def greet(*events):
-                print('hello %s %s' % (h.first_name, h.last_name))
-            
-            # Direct usage
-            h.reaction(greet, 'first_name', 'last_name')
-            
-            # Order does not matter
-            h.reaction('first_name', greet)
-        
+        :func:`reaction <flexx.event.reaction>` decorator, and the intro
+        docs for more information.
         """
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):

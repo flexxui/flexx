@@ -11,8 +11,6 @@ Functions related to the event loop
 
 .. autofunction:: flexx.app.stop
 
-.. autofunction:: flexx.app.init_interactive
-
 .. autofunction:: flexx.app.init_notebook
 
 .. autofunction:: flexx.app.create_server

@@ -19,34 +19,30 @@ Properties
 ----------
 
 .. autoclass:: flexx.event.Property
-  :members:
-      
+
 .. autoclass:: flexx.event.AnyProp
-  :members:
 
 .. autoclass:: flexx.event.BoolProp
-  :members:
+
+.. autoclass:: flexx.event.TriStateProp
 
 .. autoclass:: flexx.event.IntProp
-  :members:
 
 .. autoclass:: flexx.event.FloatProp
-  :members:
 
 .. autoclass:: flexx.event.StringProp
-  :members:
 
 .. autoclass:: flexx.event.TupleProp
-  :members:
 
 .. autoclass:: flexx.event.ListProp
-  :members:
 
 .. autoclass:: flexx.event.ComponentProp
-  :members:
 
 .. autoclass:: flexx.event.FloatPairProp
-  :members:
+
+.. autoclass:: flexx.event.EnumProp
+
+.. autoclass:: flexx.event.ColorProp
 
 
 Actions
@@ -83,5 +79,5 @@ Dict
 loop
 ----
 
-.. autoclass:: flexx.event._loop.Loop
+.. autoclass:: flexx.event.Loop
     :members:

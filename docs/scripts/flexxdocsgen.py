@@ -13,7 +13,7 @@ def init():
     print('  Generating docs for UI classes.')
     genuiclasses.main()
     print('  Generating examples.')
-    # genexamples.main()
+    genexamples.main()
     #print('  Generating commonast.')
     #gencommonast.main()
 

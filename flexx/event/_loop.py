@@ -29,8 +29,8 @@ class Loop:
     configurable via ``Loop.integrate()``. This system can run in a separate
     thread, but there can be only one active flexx event loop per process.
     
-    This object can also be used as a context manager; events get
-    processed when the context exits.
+    This object can also be used as a context manager; an event loop
+    iteration takes place when the context exits.
     """
     
     def __init__(self):
@@ -47,7 +47,8 @@ class Loop:
         self.integrate()
     
     def reset(self):
-        """ Reset the loop, allowing for reuse.
+        """ Reset the loop, purging all pending calls, actions and reactions.
+        This is mainly intended for test-related code.
         """
         self._in_iter = False
         self._scheduled_call_to_iter = False
@@ -121,6 +122,9 @@ class Loop:
         This method is thread-safe: the callback will be called in the thread
         corresponding with the loop. It is therefore actually more similar to
         asyncio's ``call_soon_threadsafe()``.
+        
+        Also see ``asyncio.get_event_loop().call_soon()`` and
+        ``asyncio.get_event_loop().call_later()``.
         """
         # We keep track of pending calls locally to our event system, which
         # gives more control, e.g. during testing.
@@ -135,14 +139,16 @@ class Loop:
     # asyncio.
     
     def add_action_invokation(self, action, args):
-        """ Schedule the handling of an action.
+        """ Schedule the handling of an action. Automatically called when
+        an action object is called.
         """
         with self._lock:
             self._pending_actions.append((action, args))
             self._schedule_iter()
     
     def add_reaction_event(self, reaction, ev):
-        """ Schulde the handling of a reaction.
+        """ Schulde the handling of a reaction. Automatically called by
+        components.
         """
         
         # In principal, the mechanics of adding items to the queue is not complex,
@@ -350,8 +356,9 @@ class Loop:
         From this point, any (pending) calls to the iter callback by the 
         previous thread will be ignored.
         
-        By not calling reset, it should be possible to hot-swap the
-        system from one loop (and/or thread) to another.
+        By calling this without calling reset(), it should be possible
+        to hot-swap the system from one loop (and/or thread) to another
+        (though this is currently not tested).
         """
         if loop is None:
             loop = asyncio.get_event_loop()

@@ -260,7 +260,7 @@ class FloatPairProp(Property):
 class EnumProp(Property):
     """ A property that represents a choice between a fixed set of (string) values.
     
-    Use as ``foo = EnumProp(['optionA', 'optionB', ...], 'default', ...)``.
+    Useage: ``foo = EnumProp(['optionA', 'optionB', ...], 'default', ...)``.
     If no default value is provided, the first option is used.
     """
     
@@ -298,7 +298,7 @@ class ColorProp(Property):
     The color can be set using:
     
     * An object as described above.
-    * A tuple (length 3 or 4).
+    * A tuple (length 3 or 4) with floats between 0 and 1.
     * A hex RGB color like '#f00' or '#aa7711'.
     * A hex RGBA color like '#f002' or '#ff000022'.
     * A CSS string "rgb(...)" or "rgba(...)"
