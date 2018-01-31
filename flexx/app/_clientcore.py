@@ -401,14 +401,6 @@ class JsSession:
             else:
                 window.console.error('Dont know how to DEFINE ' +
                                      name + ' with "' + kind + '".')
-        elif cmd == 'TITLE':
-            window.document.title = command[1]
-        elif cmd == 'ICON':
-            link = window.document.createElement('link')
-            link.rel = 'icon'
-            link.href = command[1]
-            window.document.head.appendChild(link)
-            #window.document.getElementsByTagName('head')[0].appendChild(link);
         elif cmd == 'OPEN':
             window.win1 = window.open(command[1], 'new', 'chrome')
         else:

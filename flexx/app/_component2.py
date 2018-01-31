@@ -235,11 +235,7 @@ class AppComponentMeta(ComponentMeta):
         """ Get source code for this class plus the meta info about the code.
         """
         # Since classes are defined in a module, we can safely name the classes
-        # by their plain name. 
-        # But flexx.classes.X remains the "official" 
-        # namespace, so that things work easlily accross modules, and we can
-        # even re-define classes (e.g. in the notebook).
-        # todo: did getting rid of flexx.classes break notebook interactivity?
+        # by their plain name.
         cls_name = cls.__name__
         base_class = cls.JS.mro()[1]
         base_class_name = '%s.prototype' % base_class.__name__
@@ -709,7 +705,7 @@ class BsdfComponentExtension(bsdf.Extension):
         return c
 
 
-# todo: can the mechanism for defining BSDF extensions be simplified?
+# todo: can the mechanism for defining BSDF extensions be simplified?  (issue #429)
 # Add BSDF extension for serializing components. The JS variant of the
 # serializer is added by referencing the extension is JS code.
 serializer.add_extension(BsdfComponentExtension)

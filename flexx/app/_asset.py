@@ -73,7 +73,10 @@ def solve_dependencies(things, warn_missing=False):
                 break  # no changes, move to next index
     return [thingmap[name] for name in names]
 
-# todo: minification ...
+# todo: We could do (basic) minification of the JS
+# but it will make the code less readable, so better do this after we've
+# source maps.
+
 
 class Asset:
     """ Class to represent an asset (JS or CSS) to be included on the page.

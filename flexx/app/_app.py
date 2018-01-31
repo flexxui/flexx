@@ -25,11 +25,7 @@ class ExporterWebSocketDummy:
 
     def __init__(self):
         self.commands = []
-        # todo: make icon and title work
-        #self.write_command('ICON %s.ico' % session.id)
-        # self.write_command('TITLE %s' % session._runtime_kwargs.get('title',
-        #                                                       'Exported flexx app'))
-
+    
     def write_command(self, cmd):
         self.commands.append(cmd)
 
@@ -235,7 +231,7 @@ class App:
         if link >= 2:
             if write_shared:
                 assets.export(os.path.dirname(filename))
-            session._export_data(os.path.dirname(filename))  # todo: remove?
+            session._export_data(os.path.dirname(filename))
         with open(filename, 'wb') as f:
             f.write(html.encode())
 
@@ -251,14 +247,15 @@ def valid_app_name(name):
 
 
 # Note that the AppManager is a Component (but not a PyComponent)
-# todo: give this class a better API and document it
 
 class AppManager(event.Component):
     """ Manage apps, or more specifically, the session objects.
 
     There is one AppManager class (in ``flexx.app.manager``). It's
-    purpose is to manage the application classes and instances. Intended
-    for internal use.
+    purpose is to manage the application classes and instances. It is mostly
+    intended for internal use, but users can use it to e.g. monitor connections.
+    Create a reaction using ``@app.manager.reaction('connections_changed')``
+    to track when the number of connected session changes.
     """
     
     total_sessions = 0  # Keep track how many sessesions we've served in total
@@ -462,7 +459,7 @@ class AppManager(event.Component):
         return self._session_map.get(id, None)
 
     def get_connections(self, name):
-        """ Given an app name, return the session connected objects.
+        """ Given an app name, return the connected session objects.
         """
         _, pending, connected = self._appinfo[name]
         return list(connected)
@@ -472,7 +469,7 @@ class AppManager(event.Component):
         """ Emits an event with the name of the app for which a
         connection is added or removed.
         """
-        return {name: str(name)}
+        return dict(name=str(name))
 
 
 # Create global app manager object

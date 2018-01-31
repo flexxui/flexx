@@ -264,7 +264,7 @@ class JSModule:
                 elif isinstance(val, (JSConstant, Asset)):
                     return  # stubs
                 elif isinstance(val, logging.Logger) and i == 0:
-                    # todo: hehe, we can do more here
+                    # todo: hehe, we can do more here (issue #179)
                     return self._add_dep_from_event_module('logger', nameparts[0])
         except AttributeError:
             msg = 'JS in "%s" uses undefined variable %r.' % (self.filename, name)
@@ -327,7 +327,7 @@ class JSModule:
         
         elif isinstance(val, type) and issubclass(val, bsdf.Extension):
             # A bit hacky mechanism to define BSDF extensions that also work in JS.
-            # todo: can we make this better? See also app/_component2.py
+            # todo: can we make this better? See also app/_component2.py (issue #429)
             js = 'var %s = {name: "%s"' % (name, val.name)
             for mname in ('match', 'encode', 'decode'):
                 func = getattr(val, mname + '_js')

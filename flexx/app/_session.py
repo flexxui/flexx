@@ -216,10 +216,6 @@ class Session:
             raise RuntimeError('Session is already connected.')
         # Set websocket object - this is what changes the status to CONNECTED
         self._ws = ws
-        # todo: make icon and title work again. Also in exported docs.
-        # Set some app specifics
-        # self._ws.write_command('ICON %s.ico' % self.id)
-        # self._ws.write_command('TITLE %s' % self._config.title)
         self._ws.write_command(("PRINT", "Flexx session says hi"))
         # Send pending commands
         for command in self._pending_commands:
