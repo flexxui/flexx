@@ -87,8 +87,7 @@ class Session:
 
         # Data for this session (in addition to the data provided by the store)
         self._data = {}
-        self._data_volatile = {}  # deleted after retrieving
-
+        
         # More vars
         self._runtime = None  # init web runtime, will be set when used
         self._ws = None  # init websocket, will be set when a connection is made
@@ -202,7 +201,6 @@ class Session:
                 self._component = None
             # Discard data
             self._data = {}
-            self._data_volatile = {}
         finally:
             self._closing = False
 
@@ -316,54 +314,11 @@ class Session:
 
     ## Data
     
-    # todo: clean up, remove all, restore some of it?
-    # def _send_data(self, id, data, meta):
-    #     """ Send data to a component on the JS side. The corresponding object's
-    #     receive_data() method is called when the data is available in JS.
-    #     This is called by ``JsComponent.send_data()`` and works in the same way.
-    #     """
-    #     # Check id
-    #     if not isinstance(id, str):
-    #         raise TypeError('session.send_data() first arg must be a str id.')
-    #     if not self._component_instances.get(id, None):
-    #         raise ValueError('session.send_data() first arg must be an id '
-    #                          'corresponding to an existing component: %r' % id)
-    #     # Check meta
-    #     if not isinstance(meta, dict):
-    #         raise TypeError('session.send_data() meta must be a dict.')
-    #     # Check data - url or blob
-    #     data_name = None
-    #     if isinstance(data, str):
-    #         # Perhaps a URL: tell client to retrieve it with AJAX
-    #         if data.startswith(('https://', 'http://', '/flexx/data/')):
-    #             url = data
-    #         elif data.startswith('_data/'):
-    #             url = '/flexx/' + data[1:]  # prevent one redirect
-    #         else:
-    #             raise TypeError('session.send_data() got a string, but does '
-    #                             'not look like a URL: %r' % data)
-    #     elif isinstance(data, bytes):
-    #         # Blob: store it, and tell client to retieve it with AJAX
-    #         # todo: have a second ws connection for pushing data
-    #         meta['byteLength'] = len(data)
-    #         data_name = 'blob-' + get_random_string()
-    #         url = '/flexx/data/%s/%s' % (self.id, data_name)
-    #         self._data_volatile[data_name] = data
-    #         if self.id == self.app_name:  # Maintain data if we're being exported
-    #             self._data[data_name] = data
-    #     else:
-    #         raise TypeError('session.send_data() data must be a bytes or a URL, '
-    #                         'not %s.' % data.__class__.__name__)
-
-    #       # Tell JS to retrieve data
-    #     t = 'window.flexx.instances.%s.retrieve_data("%s", %s);'
-    #     self._exec(t % (id, url, reprs(meta)))
-
     def add_data(self, name, data):
         """ Add data to serve to the client (e.g. images), specific to this
         session. Returns the link at which the data can be retrieved.
-        See ``Session.send_data()`` for a send-and-forget mechanism, and
-        ``app.assets.add_shared_data()`` to provide shared data.
+        Use actions to send (binary) data directly to the client (over the
+        websocket).
 
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. If data has
@@ -384,7 +339,7 @@ class Session:
 
     def remove_data(self, name):
         """ Remove the data associated with the given name. If you need this,
-        also consider ``send_data()``. Also note that data is automatically
+        consider using actions instead. Note that data is automatically
         released when the session is closed.
         """
         self._data.pop(name, None)
@@ -400,8 +355,6 @@ class Session:
         by that name is unknown.
         """
         if True:
-            data = self._data_volatile.pop(name, None)
-        if data is None:
             data = self._data.get(name, None)
         if data is None:
             data = self._store.get_data(name)

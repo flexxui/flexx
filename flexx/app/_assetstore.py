@@ -450,7 +450,7 @@ class AssetStore:
         """ Add data to serve to the client (e.g. images), which is shared
         between sessions. It is an error to add data with a name that is
         already registered. See ``Session.add_data()`` to set data per-session
-        and `JsComponent.send_data()`` to send data to JsComponent objects directly.
+        and use actions to send data to JsComponent objects directly.
         
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. 
