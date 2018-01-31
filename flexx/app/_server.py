@@ -20,7 +20,7 @@ def create_server(host=None, port=None, loop=None, backend='tornado',
     don't need this, unless they want to explicitly specify host/port,
     create a fresh server in testing scenarios, or run Flexx in a thread.
     
-    Flexx uses a notion of a single current server object. This function
+    Flexx uses the notion of a single current server object. This function
     (re)creates that object. If there already was a server object, it is
     replaced. It is an error to call this function if the current server
     is still running.

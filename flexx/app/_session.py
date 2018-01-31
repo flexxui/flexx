@@ -52,18 +52,18 @@ def get_random_string(length=24, allowed_chars=None):
 
 
 class Session:
-    """ A session between Python and the client runtime.
-    This class is what holds together the app widget, the web runtime,
+    """ A connection between Python and the client runtime (JavaScript).
+    
+    The session is what holds together the app widget, the web runtime,
     and the websocket instance that connects to it.
 
     Responsibilities:
 
-    * Send messages to the client and parse messages received by the client.
+    * Send messages to the client and process messages received by the client.
     * Keep track of PyComponent instances used by the session.
     * Keep track of JsComponent instances associated with the session.
     * Ensure that the client has all the module definitions it needs.
-    * Allow the user to send data to the client.
-
+    
     """
 
     STATUS = new_type('Enum', (), {'PENDING': 1, 'CONNECTED': 2, 'CLOSED': 0})
@@ -123,7 +123,7 @@ class Session:
 
     @property
     def request(self):
-        """The tornado request that was at the origin of this session
+        """The tornado request that was at the origin of this session.
         """
         return self._request
 
@@ -141,7 +141,7 @@ class Session:
 
     @property
     def app(self):
-        """ The PyComponent or JsComponent instance that represents the app.
+        """ The root PyComponent or JsComponent instance that represents the app.
         """
         return self._component
 
@@ -313,8 +313,8 @@ class Session:
     def add_data(self, name, data):
         """ Add data to serve to the client (e.g. images), specific to this
         session. Returns the link at which the data can be retrieved.
-        Use actions to send (binary) data directly to the client (over the
-        websocket).
+        Note that actions can be used to send (binary) data directly
+        to the client (over the websocket).
 
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. If data has

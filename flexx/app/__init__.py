@@ -6,27 +6,34 @@ an asset (and data) management system, and provides the
 :class:`JsComponent <flexx.app.JsComponent>` classes, which form the
 basis for e.g. Widgets.
 
-Writing app components
-----------------------
+PyComponent and JsComponent
+---------------------------
 
 A Flexx application consists of components that exist in either Python or
 JavaScript, and which can communicate with each-other in a variety of ways.
 
-:class:`PyComponent <flexx.app.PyComponent>` and
-:class:`JsComponent <flexx.app.JsComponent>` are
-:class:`Component <flexx.event.Component>` classes that are associated with a
-:class:`Session <flexx.app.Session>`, and live in Python and JavaScript,
-respectively. A ``PyComponent`` always has a corresponding proxy object
-in JavaScript. A ``JsComponent`` *may* have a proxy object in Python;
-These proxy objects are created automatically when Python references
-the component.
+The :class:`PyComponent <flexx.app.PyComponent>` and
+:class:`JsComponent <flexx.app.JsComponent>` classes derive from the
+:class:`Component <flexx.event.Component>` class (so learn about that one first!).
+What sets ``PyComponent`` and ``JsComponent`` apart is this:
 
-The proxy objects allows the "other side" to inspect properties, invoke
-actions and connect to events. The component is aware of what events
-the proxy has reactions for, and will only communictate these events.
+* They are associated with a :class:`Session <flexx.app.Session>`.
+* They have an ``id`` attribute that is unique within their session,
+  and a ``uid`` attribute that is globally unique.
+* They live (i.e. their methods run) in Python and JavaScript, respectively.
+* A ``PyComponent`` can only be instantiated in Python, a ``JsComponent`` can
+  be instantiated in both Python and JavaScript.
+* A ``PyComponent`` always has a corresponding proxy object in JavaScript.
+* A ``JsComponent`` *may* have a proxy object in Python; these proxy objects
+  are created automatically when Python references the component.
 
-A ``PyComponent`` can only be instantiated in Python, a ``JsComponent`` can
-be instantiated in both Python and JavaScript.
+
+Proxy components
+----------------
+
+The proxy components allow the "other side" to inspect properties, invoke
+actions and connect to events. The real component is aware of what events
+the proxy reacts to, and will only communicate these events.
 
 
 An example:
@@ -35,44 +42,66 @@ An example:
 
     from flexx import app, event
     
-    class Person(app.JsComponent):
-        firstname = event.StringProp(settable=True)
-        lastname = event.StringProp(settable=True)
+    class Person(app.JsComponent):  # Lives in Js
+        name = event.StringProp(settable=True)
+        age = event.IntProp(settable=True)
+        
+        @event.action
+        def increase_age(self):
+            self._mutate_age(self.age + 1)
     
-    class PersonDatabase(app.PyComponent):
+    class PersonDatabase(app.PyComponent):  # Lives in Python
         persons = event.ListProp()
         
         @event.action
-        def add_person(self, firstname, lastname):
-            p = Person(firstname=firstname, lastname=lastname)
+        def add_person(self, name, age):
+            p = Person(name=name, age=age)
             self._mutate_persons([p], 'insert', 99999)
+        
+        @event.action
+        def new_year(self):
+            for p in self.persons:
+                p.increase_age()
 
 
-In the above code, the database can be used to create new ``Person`` objects,
-which live in JS. In practice, these will e.g. have a visual representation in
-the browser. The database could be a ``JsComponent`` as well, but let's assume
-that we need it in Python because it synchronizes to a mysql database or something.
+In the above code, the ``Person`` objects live in JavaScript, while a
+database object that keeps a list of them lives in Python. In practice,
+the ``Person`` components will e.g. have a visual representation in the
+browser. The database could also have been a ``JsComponent``, but let's
+assume that we need it in Python because it synchronizes to a mysql
+database or something.
 
-Now what if we also want to add persons from JavaScript? We only have to get the
-database object (or a proxy object, really) into a JsComponent. For example:
+We can observe that the ``add_person`` action (which executes in Python)
+instantiates new ``Person`` objects. Actually, it instantiates proxy objects that
+automatically get corresponding (real) ``Person`` objects in JavaScript.
+The ``new_year`` action executes in Python, which in turn invokes the ``increase_age``
+action of each person, which execute in JavaScript.
+
+It is also possible for JavaScript to invoke actions of ``PyComponents``. For
+the example above, we would have to get the
+database object into a JsComponent. For example:
+
 
 .. code-block:: py
 
-    class PersonView(app.JsComponent):
-        
+    class Person(app.JsComponent):
+        ...
         def init(self, db):
             self.db = db
             # now we can call self.db.add_person() from JavaScript!
     
     ...
     
-    # Somewhere in Python ...
-    PersonView(database)
+    # To instantiate ...
+    Person(database, name=name, age=age)
 
+Another useful feature is that each component has a ``root`` attribute that
+holds a reference to the component representing the root of the application.
+E.g. if the root is a ``PersonDatabase``, all ``JsComponent`` objects have a
+reference to (a proxy of) this database.
 
 Note that ``PyComponents`` can instantiate ``JsComponents``, but not the other
-way around. Therefore, the root of an app is formed by ``PyComponents``.
-It depend on the needs of an application how much ``PyComponents`` are used, if any.
+way around.
 
 
 The scope of modules
@@ -80,7 +109,7 @@ The scope of modules
 
 Inside the methods of a component you can make use of functions, classes, and
 values that are defined in the same module. Even in a ``JsComponent``
-(as long as they can be transpiled / serialized).
+(as long as they can be transpiled or serialized).
 
 For every Python module that defines code that is used in JS, a corresponding
 JS module is created. Flexx detects what variable names are used in the JS
@@ -139,7 +168,7 @@ Regular methods of a ``JsComponent`` are only available in JavaScript. On the
 other hand, all properties are available on the proxy object as well. This may
 not always be useful. It is possible to create properties that are local
 to JavaScript (or to Python in a ``PyComponent``) using ``app.LocalProp``.
-An alternative may also be to use ``event.Attribute``; these are also local
+An alternative may be to use ``event.Attribute``; these are also local
 to JavaScript/Python.
 
 
@@ -152,33 +181,33 @@ or a ``JsComponent``. The app can be wrapped into an application like so
 
 .. code-block:: py
     
-    root = app.App(PersonDatabase)
+    a = app.App(PersonDatabase)
 
 For a web server approach use ``serve()``:
 
 .. code-block:: py
     
-    root.serve()
+    a.serve()
     
 
 The serve method registers the application, so that clients can connect
 to the app based on its name (or using a custom name specified). One instance of this class is created
 per connection. Multiple apps can be hosted from the same process simply
 be specifying more app classes. To connect to the application
-corresponding to the `MyApp` class, one should connect to
+corresponding to the ``MyApp`` class, one should connect to
 "http://domain:port/MyApp".
 
 An app can also be launched:
 
 .. code-block:: py
     
-    root.launch()  # argument can be e.g. "app" or "firefox-browser"
+    a.launch()  # argument can be e.g. "app" or "firefox-browser"
 
 This will serve the app and then invoke
 a client webruntime which is connected to the app object. This
 is the intended way to launch desktop-like apps.
 
-An app can also be exported to HTML via ``App.export()``. One can
+An app can also be exported to HTML via ``a.export()``. One can
 create a drectory structure that contains multiple exported apps that
 share assets, or export apps as standalone html documents.
 
@@ -190,8 +219,8 @@ applications you can use ``app.run()``, which does what ``start()`` does,
 except the main loop exits when there are no more connections (i.e. the
 server stops when the (last) window is closed).
 
-Interactive use
----------------
+Flexx in the notebook
+---------------------
 
 Further, Flexx can be used interactively from the Jupyter notebook.
 Use ``init_notebook()`` which will inject the necessary JS and CSS.
@@ -251,7 +280,8 @@ Some background info on the server process
 
 Each server process hosts on a single URL (domain+port), but can serve
 multiple applications (via different paths). Each process uses one
-tornado IOLoop, and exactly one Tornado Application object.
+tornado IOLoop, and exactly one Tornado Application object. Flexx' event loop
+is based on asyncio (Tornado is set up to integrate with asyncio).
 
 When a client connects to the server, it is served an HTML page, which
 contains the information needed to connect to a websocket. From there,

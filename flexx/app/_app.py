@@ -33,7 +33,7 @@ class ExporterWebSocketDummy:
 class App:
     """ Specification of a Flexx app.
 
-    In the strict sense, this is a container for a ``PyComponent``/``JsComponent``
+    Strictly speaking, this is a container for a ``PyComponent``/``JsComponent``
     class plus the args and kwargs that it is to be instantiated with.
 
     Arguments:
@@ -114,11 +114,12 @@ class App:
         """ Start serving this app.
 
         This registers the given class with the internal app manager. The
-        app can be loaded via 'http://hostname:port/app_name'.
+        app can be loaded via 'http://hostname:port/name'.
 
         Arguments:
             name (str, optional): the relative URL path to serve the app on.
                 If this is ``''`` (the empty string), this will be the main app.
+                If not given or None, the name of the component class is used.
         """
         # Note: this talks to the manager; it has nothing to do with the server
         if self._is_served:
@@ -165,6 +166,8 @@ class App:
         Arguments:
             filename (str, optional): Path to write the HTML document to.
                 If not given or None, will return the html as a string.
+                If the filename ends with .hta, a Windows HTML Application is
+                created.
             link (int): whether to link (JS and CSS) assets or embed them:
 
                 * 0: all assets are embedded (default).
@@ -174,14 +177,11 @@ class App:
             write_shared (bool): if True (default) will also write shared assets
                 when linking to assets. This can be set to False when
                 exporting multiple apps to the same location. The shared assets can
-                then be exported last using ``app.assets.export(dirname)``.
+                then be exported once using ``app.assets.export(dirname)``.
 
         Returns:
             str: The resulting html. If a filename was specified this returns None.
 
-        Notes:
-            If the given filename ends with .hta, a Windows HTML Application is
-            created.
         """
 
         # Prepare name, based on exported file name (instead of cls.__name__)
@@ -211,7 +211,7 @@ class App:
         
         # Warn for PyComponents
         if issubclass(self.cls, PyComponent):
-            logger.warn('Exporting a PyComponent - any Python interactivity will'
+            logger.warn('Exporting a PyComponent - any Python interactivity will '
                         'not work in exported apps.')
         
         # Get HTML - this may be good enough

@@ -618,7 +618,8 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
     A JsComponent can be explicitly disposed from both Python and JavaScript.
     When the Python garbage collector collects a JsComponent (or really, the
     proxy thereof), only the Python side proxy is disposed; the JsComponent
-    in JS itself will be unaffected.
+    in JS itself will be unaffected. Make sure to call ``dispose()`` when
+    needed!
     
     """
     

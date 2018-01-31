@@ -2,45 +2,45 @@
 Example showing running Flexx' event loop in another thread.
 This is not a recommended use in general.
 
-Most parts of Flexx are not thread-save. E.g. setting properties
-should generally only be done from a single thread. Event handlers
-are *always* called from the same thread that runs the event loop
-(unless manually called).
+Invoking actions is thread-safe. Actions and reactions are always
+executed in the thread that runs the event loop.
 
 The app.create_server() is used to (re)create the server object. It is
-important that the used IOLoop is local to the thread. This can be
-accomplished by calling create_server() and start() from the same
-thread, or using ``new_loop=True`` (as is done here).
+important that the used asyncio loop is local to the thread.
 """
 
 import time
 import threading
+import asyncio
 
 from flexx import app, event
 
 
-class MyModel1(event.Component):
-    @event.prop
-    def foo(self, v=0):
-        return v
+class MyComponent1(event.Component):
     
-    @event.connect('foo')
+    foo = event.Property(0, settable=True)
+    
+    @event.reaction('foo')
     def on_foo(self, *events):
         for ev in events:
             print('foo changed to', ev.new_value)
 
-# Create model in main thread
-model = MyModel1()
+# Create component in main thread
+comp = MyComponent1()
 
 # Start server in its own thread
-app.create_server(new_loop=True)
-t = threading.Thread(target=app.start)
+def start_flexx():
+    app.create_server(loop=asyncio.new_event_loop())
+    app.start()
+
+t = threading.Thread(target=start_flexx)
 t.start()
 
-# Manipulate model from main thread (the model's on_foo() gets called from other thread)
+# Manipulate component from main thread
+# (the component's on_foo() gets called from other thread)
 for i in range(5, 9):
     time.sleep(1)
-    model.foo = i
+    comp.set_foo(i)
 
 # Stop event loop (this is thread-safe) and wait for thread to end
 app.stop()

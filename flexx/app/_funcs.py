@@ -25,7 +25,7 @@ def start():
     return until the application is stopped (although it may in
     interactive environments (e.g. Pyzo)).
     
-    In more detail, this ``calls run_forever()`` on the asyncio event loop
+    In more detail, this calls ``run_forever()`` on the asyncio event loop
     associated with the current server.
     """
     server = current_server()
