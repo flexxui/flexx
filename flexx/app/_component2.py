@@ -434,12 +434,7 @@ class LocalComponent(BaseAppComponent):
     
     def _flx_set_event_types_at_proxy(self, event_types):
         self.__event_types_at_proxy = event_types
-    
-    # todo: probably remove this, we have actions now!
-    # def call_js(self, call):
-    #     raise RuntimeError('call_js() is deprecated; '
-    #                        'use actions or session.send_command("INVOKE", ..).')
-    
+
 
 class ProxyComponent(BaseAppComponent):
     """

@@ -212,7 +212,12 @@ class App:
         if link in (0, 1) and session.get_data_names():
             logger.warn('Exporting app with embedded assets, '
                         'but it has registered data.')
-
+        
+        # Warn for PyComponents
+        if issubclass(self.cls, PyComponent):
+            logger.warn('Exporting a PyComponent - any Python interactivity will'
+                        'not work in exported apps.')
+        
         # Get HTML - this may be good enough
         html = get_page_for_export(session, exporter.commands, link)
         if filename is None:

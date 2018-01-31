@@ -1,6 +1,5 @@
 """
 Logic to run live tests.
-The odd in-line imports are to deal with re-imports before running tests.
 """
 
 import sys
@@ -49,9 +48,7 @@ def filter_stdout(text):
 def run_live(func):
     """ Decorator to run a live test.
     """
-    # from flexx import app
-    # from flexx.event import loop
-
+    
     def runner():
         # Run with a fresh server and loop
         loop.reset()

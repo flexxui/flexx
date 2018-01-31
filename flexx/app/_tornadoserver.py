@@ -32,7 +32,7 @@ from .. import config
 if tornado.version_info < (4, ):
     raise RuntimeError('Flexx requires Tornado v4.0 or higher.')
 
-# todo: generelize -> Make Tornado mnore of an implementation detail.
+# todo: generalize -> Make Tornado mnore of an implementation detail.
 # So we can use e.g. https://github.com/aaugustin/websockets
 
 # todo: threading, or even multi-process

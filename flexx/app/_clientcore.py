@@ -139,7 +139,7 @@ class Flexx:
     def create_session(self, app_name, session_id, ws_url):
         # The call to this method is embedded by get_page(),
         # or injected by init_notebook().
-        # todo: should this be delayed if we did not call init yet?
+        # Can be called before init() is called.
         s = JsSession(app_name, session_id, ws_url)
         self._session_count += 1
         self['s' + self._session_count] = s

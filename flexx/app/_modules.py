@@ -49,10 +49,15 @@ def mangle_dotted_vars(jscode, names_to_mangle):
     """
     for name in list(names_to_mangle):
         if '.' in name:
+            # Replace dots with $
             name1 = name.replace('.', r'\.')
             name2 = name.replace('.', '$')
             jscode = re.sub(r"\b(" + name1 + r")\b", name2, jscode,
                             flags=re.UNICODE | re.MULTILINE)
+            # Fix calls with *args to funcs that have dots in name
+            jscode = jscode.replace(
+                name2 + '.apply(' + name2.rsplit('$', 1)[0] + ', [].concat',
+                name2 + '.apply(null, [].concat')
     return jscode
 
 

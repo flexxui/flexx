@@ -230,7 +230,6 @@ def launch(cls, runtime=None, properties=None, **runtime_kwargs):
 def export(cls, filename, properties=None, **kwargs):
     """ Shorthand for ``app.App(cls).export(filename, ...)``.
     """
-    # todo: perhaps this should only work for JsComponent classes?
     if properties is not None:
         raise RuntimeError('export(... properties) is deprecated, '
                            'use app.App(...).export() instead.')
