@@ -240,6 +240,8 @@ class JSModule:
             return
         elif name in _dep_stack:
             return  # avoid dependency recursion
+        elif name in ('Infinity', 'NaN'):
+            return  # stubs
         elif name in self._provided_names and self.name != '__main__':
             return  # in __main__ we allow redefinitions
         if getattr(self._pymodule, '__pyscript__', False):
@@ -259,6 +261,8 @@ class JSModule:
                     break
                 elif val is loop and i == 0:
                     return self._add_dep_from_event_module('loop', nameparts[0])
+                elif isinstance(val, (JSConstant, Asset)):
+                    return  # stubs
                 elif isinstance(val, logging.Logger) and i == 0:
                     # todo: hehe, we can do more here
                     return self._add_dep_from_event_module('logger', nameparts[0])
@@ -272,10 +276,6 @@ class JSModule:
             else:
                 raise RuntimeError(msg)  # E.g. typo in ui.Buttom
             return
-        
-        # Early exit
-        if isinstance(val, (JSConstant, Asset)) or name in ('Infinity', 'NaN'):
-            return  # stubs
         
         # Mark dirty
         self._changed_time = time.time()

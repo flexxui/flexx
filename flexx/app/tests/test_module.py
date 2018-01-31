@@ -337,8 +337,9 @@ def test_add_variable():
     # Can use stuff from module if its a __pyscript__ modules
     m.add_variable('use_lib1')
     
-    # Even if name makes no sense; maybe it has exports that we do not know of
-    m.add_variable('use_lib1_wrong')
+    # The module code is smart enough that lib1 does not contain sinasappel
+    with raises(RuntimeError):
+        m.add_variable('use_lib1_wrong')
     
     # Also for dotted names
     m.add_variable('use_lib2')

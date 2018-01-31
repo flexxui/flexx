@@ -10,6 +10,7 @@ from flexx.util.testing import run_tests_if_main, raises, skip
 class StubSession:
     id = 'y'
     status = 2
+    app = None
     
     def _register_component(self, c, id=None):
         id = id or 'x'
@@ -196,7 +197,8 @@ def test_generated_js1():
     for line in js.splitlines():
         if '._base_class =' in line:
             classes.append(line.split('.')[0])
-    assert classes == ['BaseAppComponent',
+    assert classes == ['LocalProperty',
+                       'BaseAppComponent',
                        'LocalComponent', 'ProxyComponent', 'StubComponent',
                        'JsComponent', 'PyComponent']
     print(classes)
@@ -211,7 +213,7 @@ def test_generated_js2():
     
     js = MyJComponent2.JS.CODE
     assert '__properties__ = ["foo", "foo2"]' in js
-    assert js.count('foo2') == 1  # in __properties__
+    assert js.count('foo2') == 2  # in __properties__ and __proxy_properties__
     assert js.count('increase_foo') == 1
     assert js.count('_mutate_') == 0
 

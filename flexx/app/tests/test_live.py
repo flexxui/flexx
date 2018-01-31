@@ -347,6 +347,7 @@ async def test_jscomponent_reaction1():
     
     await roundtrip(s)
 
+
 @run_live
 async def test_jscomponent_reaction2():
     """

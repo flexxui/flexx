@@ -16,7 +16,7 @@ import tornado
 from tornado import gen, netutil
 from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
-from tornado.websocket import WebSocketHandler
+from tornado.websocket import WebSocketHandler, WebSocketClosedError
 from tornado.httpserver import HTTPServer
 from tornado.platform.asyncio import AsyncIOMainLoop
 
@@ -603,8 +603,11 @@ class WSHandler(WebSocketHandler):
     def write_command(self, cmd):
         assert isinstance(cmd, tuple) and len(cmd) >= 1
         bb = serializer.encode(cmd)
-        self.write_message(bb, binary=True)
-
+        try:
+            self.write_message(bb, binary=True)
+        except WebSocketClosedError:
+            self.close(1000, 'closed by client')
+    
     def close(self, *args):
         try:
             WebSocketHandler.close(self, *args)

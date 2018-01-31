@@ -51,10 +51,10 @@ def test_asset_store_collect2():
     assert len(s.modules) > 10
     assert 'flexx.ui._widget' in s.modules
     
-    assert '.Widget =' in s.get_asset('flexx.ui._widget.js').to_string()
-    assert '.Widget =' in s.get_asset('flexx.ui.js').to_string()
-    assert '.Widget =' in s.get_asset('flexx.js').to_string()
-    assert '.Widget =' not in s.get_asset('flexx.app.js').to_string()
+    assert '$Widget =' in s.get_asset('flexx.ui._widget.js').to_string()
+    assert '$Widget =' in s.get_asset('flexx.ui.js').to_string()
+    assert '$Widget =' in s.get_asset('flexx.js').to_string()
+    assert '$Widget =' not in s.get_asset('flexx.app.js').to_string()
 
     
 def test_asset_store_adding_assets():

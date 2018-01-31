@@ -214,14 +214,14 @@ def test_bundle():
     
     # Deps are agregated
     assert 'flexx.app.js' in bundle.deps
-    assert 'flexx.app._components.js' in bundle.deps
+    assert 'flexx.app._component2.js' in bundle.deps
     assert not any('flexx.ui' in dep for dep in bundle.deps)
     
     # Strings are combined
     code = bundle.to_string()
-    assert '.Widget =' in code
-    assert '.Button =' in code
-    assert '.TreeWidget =' in code
+    assert '$Widget =' in code
+    assert '$Button =' in code
+    assert '$TreeWidget =' in code
     
     # CSS bundle
     bundle = app.Bundle('flexx.ui.css')
