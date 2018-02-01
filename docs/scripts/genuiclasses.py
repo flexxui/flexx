@@ -52,7 +52,7 @@ def main():
         
         # Include more docs?
         if module_name.endswith('_widget'):
-            docs += '.. autofunction:: ui.create_element\n\n'
+            docs += '.. autofunction:: flexx.ui.create_element\n\n'
         
         for cls in classes:
             assert issubclass(cls, app.JsComponent)

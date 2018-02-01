@@ -1,4 +1,36 @@
 """ CanvasWidget
+
+The canvas can be used for specialized graphics of many sorts. It can
+provide either a WebGL context or a 2d context as in the example below:
+
+.. UIExample:: 100
+    
+    from flexx import app, event, ui
+    
+    class Example(ui.CanvasWidget):
+        
+        def init(self):
+            super().init()
+            self.ctx = self.node.getContext('2d')
+            self.set_capture_mouse(1)
+            self._last_pos = (0, 0)
+        
+        @event.reaction('mouse_move')
+        def on_move(self, *events):
+            for ev in events:
+                self.ctx.beginPath()
+                self.ctx.strokeStyle = '#080'
+                self.ctx.lineWidth = 3
+                self.ctx.lineCap = 'round'
+                self.ctx.moveTo(*self._last_pos)
+                self.ctx.lineTo(*ev.pos)
+                self.ctx.stroke()
+                self._last_pos = ev.pos
+        
+        @event.reaction('mouse_down')
+        def on_down(self, *events):
+            self._last_pos = events[-1].pos
+
 """
 
 from ... import event
@@ -14,7 +46,7 @@ class CanvasWidget(Widget):
     """ A widget that provides an HTML5 canvas. The canvas is scaled with
     the available space.
     
-    Use ``self.node.getContext('2d')`` or `self.node.getContext('webgl')`` in 
+    Use ``self.node.getContext('2d')`` or ``self.node.getContext('webgl')`` in 
     the ``init()`` method to get a contex to perform the actual drawing.
     """
     

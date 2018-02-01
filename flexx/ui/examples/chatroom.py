@@ -5,7 +5,6 @@ This app might be running at the demo server: http://flexx1.zoof.io
 """
 
 from flexx import app, event, ui
-import asyncio
 
 
 class Relay(event.Component):
@@ -69,17 +68,16 @@ class ChatRoom(app.PyComponent):
         for ev in events:
             self.messages.add_message(ev.message)
     
-    def _update_participants(self):
-        # Query the app manager to see who's in the room
-        if not self.session.status:
-            return  # and dont't invoke a new call
-        sessions = app.manager.get_connections(self.session.app_name)
-        names = [s.app.name_edit.text for s in sessions]
-        del sessions
-        text = '<br />%i persons in this chat:<br /><br />' % len(names)
-        text += '<br />'.join([name or 'anonymous' for name in sorted(names)])
-        self.people_label.set_text(text)
-        asyncio.get_event_loop().call_later(3, self._update_participants)
+    @app.manager.reaction('connections_changed')
+    def _update_participants(self, *events):
+        if self.session.status:
+            # Query the app manager to see who's in the room
+            sessions = app.manager.get_connections(self.session.app_name)
+            names = [s.app.name_edit.text for s in sessions]
+            del sessions
+            text = '<br />%i persons in this chat:<br /><br />' % len(names)
+            text += '<br />'.join([name or 'anonymous' for name in sorted(names)])
+            self.people_label.set_text(text)
 
 
 if __name__ == '__main__':

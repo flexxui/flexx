@@ -36,6 +36,7 @@ from ._stack import StackLayout
 
 class TabLayout(StackLayout):
     """ A StackLayout which provides a tabbar for selecting the current widget.
+    
     The title of each child widget is used for the tab label.
     """
     

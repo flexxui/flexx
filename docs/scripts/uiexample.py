@@ -105,7 +105,8 @@ def get_html(filename_rel, height):
     """
     # Styles
     astyle = 'font-size:small; float:right;'
-    dstyle = 'width: 500px; height: %ipx; align: center; resize:both; overflow: hidden; box-shadow: 5px 5px 5px #777;'
+    dstyle = ('width: 500px; height: %ipx; align: center; resize:both; overflow: hidden; '
+              'box-shadow: 5px 5px 5px #777; padding: 4px;')
     istyle = 'width: 100%; height: 100%; border: 2px solid #094;'
     
     # Show app in iframe, wrapped in a resizable div

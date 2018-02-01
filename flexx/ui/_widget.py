@@ -112,7 +112,7 @@ class Widget(app.JsComponent):
     icon = app.LocalProperty('', settable=False, doc="""
         The icon for this widget. This is used is some widgets classes,
         and is used as the app's icon if this is the main widget.
-        It is settable from Python, but not synced.
+        It is settable from Python, but only present in JavaScript.
         """)
     
     css_class = event.StringProp('', settable=True, doc="""
@@ -176,7 +176,7 @@ class Widget(app.JsComponent):
         
         Can be a url, a relative url to a shared asset, or a base64
         encoded image. In the future this may also support names in
-        icon packs like fontaweome.
+        icon packs like FontAwesome.
         """
         if not isinstance(val, str):
             raise TypeError('Icon must be a string')

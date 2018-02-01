@@ -20,7 +20,7 @@ Note that this example will only load random images if its live (i.e.
 not exported).
 
 See video_viewer.py for an example on providing data without reading it
-in memory, and send_data.py for one-shot sending of data from Python to JS.
+in memory.
 """
 
 import random

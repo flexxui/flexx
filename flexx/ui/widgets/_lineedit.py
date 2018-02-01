@@ -19,7 +19,7 @@ from . import Widget
 
 
 class LineEdit(Widget):
-    """ An input widget to edit a line of text (aka HTML text input).
+    """ An input widget to edit a line of text.
     """
     
     CSS = """

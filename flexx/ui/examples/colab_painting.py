@@ -8,7 +8,6 @@ This app might be running at the demo server: http://flexx1.zoof.io
 """
 
 import random
-import asyncio
 
 from flexx import app, event, ui
 
@@ -56,16 +55,13 @@ class ColabPainting(app.PyComponent):
         for ev in events:
             self.widget.add_paint_to_canvas(ev.pos, ev.color)
     
-    def _update_participants(self):
-        """ Keep track of the number of participants.
-        """
-        if not self.session.status:
-            return  # and dont't invoke a new call
-        proxies = app.manager.get_connections(self.__class__.__name__)
-        n = len(proxies)
-        del proxies
-        self.set_status('%i persons are painting' % n)
-        asyncio.get_event_loop().call_later(3, self._update_participants)
+    @app.manager.reaction('connections_changed')
+    def _update_participants(self, *events):
+        if self.session.status:
+            sessions = app.manager.get_connections(self.session.app_name)
+            n = len(sessions)
+            del sessions
+            self.set_status('%i persons are painting' % n)
 
 
 class ColabPaintingView(ui.Widget):

@@ -71,8 +71,8 @@ window = None
 loop = event.loop
 
 
-# todo: icon
-# todo: tooltip
+# todo: icons
+# todo: tooltips
 # todo: a variant that can load data dynamically from Python, for biggish data
 
 
@@ -365,7 +365,6 @@ class TreeWidget(Widget):
     # NOTE: this highlight API is currently not documented, as it lives
     # in JS only. The big refactoring will change all that.
     
-    # todo: revive this
     def highlight_hide(self):
         """ Stop highlighting the "current" item.
         """

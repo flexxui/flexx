@@ -26,8 +26,8 @@ class Relay(event.Component):
     def update_number_of_connections(self, *events):
         n = 0
         for name in app.manager.get_app_names():
-            proxies = app.manager.get_connections(name)
-            n += len(proxies)
+            sessions = app.manager.get_connections(name)
+            n += len(sessions)
         self.set_number_of_connections(n)
     
     @event.emitter

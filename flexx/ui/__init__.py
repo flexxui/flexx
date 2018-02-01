@@ -29,13 +29,17 @@ Widgets can also used as a container for other widgets:
             ui.Button(text='hello')
             ui.Button(text='world')
 
-Such "compound widgets" can be used anywhere in your app. They are
+The above is usually not the layout that you want. Therefore there are layout widgets
+which distribute the space among its children in a more sensible manner. Like the
+``HSplit`` in the first example.
+
+Compound widgets can be used anywhere in your app. They are
 constructed by implementing the ``init()`` method. Inside this method
 the widget is the *default parent*.
 
 Any widget class can also be used as a *context manager*. Within the context,
-the widget is the default parent; any widgets created in that context
-that do not specify a parent, will have the widget as a parent. (The
+the widget is the default parent; any widget that is created in that context
+and that does not specify a parent will have the widget as a parent. (The
 default-parent-mechanism is thread-safe, since there is a default widget
 per thread.)
 
@@ -75,7 +79,7 @@ Using widgets the classic way
 -----------------------------
 
 In the above examples, we've used the "classic" way to build applications
-up from basic components. Flexx provides a variety of layout widgets as well
+from basic components. Flexx provides a variety of layout widgets as well
 as leaf widgets (i.e. controls), see the  :doc:`list of widget classes <api>`.
 
 
@@ -100,13 +104,14 @@ html elements:
             self._mutate_age(self.age + 1)
         
         def _create_dom(self):
-            # Use this method to create a root element for this widget
-            return ui.create_element('div')  # this is the default
+            # Use this method to create a root element for this widget.
+            # If you just want a <div> you don't have to implement this.
+            return ui.create_element('div')  # the default is <div> 
         
         def _render_dom(self):
-            # Use this to determine the content. This method may return a string,
-            # a list of virtual nodes, or a virtual node (which must match the
-            # type produced in _create_dom()).
+            # Use this to determine the content. This method may return a
+            # string, a list of virtual nodes, or a single virtual node
+            # (which must match the type produced in _create_dom()).
             return [ui.create_element('span', {},
                         'Hello <b>%s</b>,' % self.name),
                     ui.create_element('span', {},
@@ -117,8 +122,8 @@ html elements:
 
 The ``_render_dom()`` method is called from an implicit reaction. This means
 that when any properties that are accessed during this function change,
-the function is automatically called. This thus provides a declerative way
-to define the appearance of a widget using HTML elements.
+the function is automatically called again. This thus provides a declerative
+way to define the appearance of a widget using HTML elements.
 
 Above, the third argument in ``create_element()`` is a string, but this may
 also be a list of dicts (``create_element()`` returns a dict).
@@ -137,5 +142,3 @@ del logging
 from ._widget import Widget, create_element
 from .layouts import *
 from .widgets import *
-
-# from ._plotlayout import PlotLayout

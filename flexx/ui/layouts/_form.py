@@ -160,9 +160,9 @@ class BaseTableLayout(Layout):
 
 
 class FormLayout(BaseTableLayout):
-    """ A layout that vertically alligns its child widgets in a form. A label
-    is placed to the left of each widget (based on the widget's title).
+    """ A layout widget that vertically alligns its child widgets in a form.
     
+    A label is placed to the left of each widget (based on the widget's title).
     At the moment, this layout is based on ``<table>``, we may change this to
     use CSS instead.
     """

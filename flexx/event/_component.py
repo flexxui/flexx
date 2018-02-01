@@ -94,7 +94,7 @@ class ComponentMeta(type):
                 action_name = ('_set' if name.startswith('_') else 'set_') + name
                 if val._settable and not hasattr(cls, action_name):
                     action_des = ActionDescriptor(val.make_set_action(), action_name,
-                                                  'Setter for %s.' % name)
+                                                  'Setter for the %r property.' % name)
                     cls._set_cls_attr(dct, action_name, action_des)
     
     def _set_summaries(cls):

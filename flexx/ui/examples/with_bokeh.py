@@ -70,4 +70,4 @@ class Controls(ui.FormLayout):
 
 if __name__ == '__main__':
     m = app.launch(BokehExample, 'app')
-    app.start()
+    app.run()

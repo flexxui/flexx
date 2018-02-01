@@ -34,13 +34,13 @@ class Label(Widget):
         }"""
     
     text = event.StringProp('', settable=True, doc="""
-        The text on the label.
+        The text/html on the label.
         """)
     
     wrap = event.IntProp(0, settable=True, doc="""
         Whether the content is allowed to be wrapped on multiple
-        lines. Set to 0/False for no wrap, 1/True for word-wrap, 2 for
-        character wrap.
+        lines. Set to 0/False for no wrap (default), 1/True for word-wrap,
+        2 for character wrap.
         """)
 
     @event.reaction('text')

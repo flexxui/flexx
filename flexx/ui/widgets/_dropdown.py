@@ -129,7 +129,7 @@ class BaseDropdown(Widget):
                                self.text + '&nbsp;'),
                 create_element('input',
                                {'className': 'flx-dd-edit',
-                                'onkeykdown': f2,
+                                'onkeypress': f2,
                                 'onblur': self._submit_text,
                                 'value': self.text}),
                 create_element('span'),

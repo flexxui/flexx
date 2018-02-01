@@ -181,7 +181,7 @@ class OrientationProp(Property):
 
 
 class HVLayout(Layout):
-    """ Layout to distribute space for widgets horizontally or vertically. 
+    """ A layout widget to distribute child widgets horizontally or vertically. 
     
     This is a versatile layout class which can operate in different
     orientations (horizontal, vertical, reversed), and in different modes:
@@ -332,10 +332,10 @@ class HVLayout(Layout):
     mode = event.EnumProp(('box', 'fix', 'split'), settable=True, doc="""
         The mode in which this layout operates:
         
-        * box: (default) each widget gets at least its natural size, and
+        * 'BOX': (default) each widget gets at least its natural size, and
           additional space is distributed corresponding to the flex values.
-        * fix: all available space is distributed corresponding to the flex values.
-        * split: available space is initially distributed correspondong to the
+        * 'FIX': all available space is distributed corresponding to the flex values.
+        * 'SPLIT': available space is initially distributed correspondong to the
           flex values, and can be modified by the user by dragging the splitters.
         """)
     
@@ -659,7 +659,7 @@ class HVLayout(Layout):
             self.emit('_render')
         
         # todo: we could do more thottling here, or use a scheme to tell the loop
-        # that this reaction does not care about event ordering.
+        # that this reaction does not care about event ordering. (issue #426)
     
     def __apply_one_splitter_pos(self, index, pos):
         """ Set the absolute position of one splitter. Called from move event.

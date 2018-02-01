@@ -150,11 +150,9 @@ in modules to define objects in JS:
     
     class MyComponent(app.JsComponent):
     
-        class JS:
-        
-            @event.reaction('some.event')
-            def handler(self, *events):
-                my_js_module.foo.bar()
+        @event.reaction('some.event')
+        def handler(self, *events):
+            my_js_module.foo.bar()
 
 One can also assign ``__pyscript__ = True`` to a module to make Flexx
 transpile a module as a whole. A downside is that (at the moment) such

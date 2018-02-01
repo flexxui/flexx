@@ -520,7 +520,7 @@ class StreamReader(threading.Thread):
         # Notify
         code = self._process.poll()
         if getattr(self._process, 'we_closed_it', False):
-            logger.info('runtime process terminated by us')
+            logger.info('runtime process terminated from Python')
         elif not code:
             logger.info('runtime process stopped')
         else:  # Unexpected, provide more info

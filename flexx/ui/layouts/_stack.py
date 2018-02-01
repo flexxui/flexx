@@ -31,7 +31,7 @@ from . import Layout
 
 
 class StackLayout(Layout):
-    """ A panel which shows only one of its children at a time.
+    """ A layout widget which shows only one of its children at a time.
     """
     
     CSS = """
