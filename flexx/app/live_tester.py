@@ -2,6 +2,7 @@
 Logic to run live tests.
 """
 
+import gc
 import sys
 import time
 import asyncio
@@ -67,6 +68,7 @@ def run_live(func):
             cr = func()
             if asyncio.iscoroutine(cr):
                 asyncio_loop.run_until_complete(cr)
+            gc.collect()
         finally:
             sys.stdout = orig_stdout
             sys.stderr = orig_stderr

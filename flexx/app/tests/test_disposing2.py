@@ -4,13 +4,14 @@ The tests in this module focus on app Components.
 """
 
 import gc
+import sys
 import weakref
 import asyncio
 
 from flexx import app, event, webruntime
 from flexx.pyscript import this_is_js
 
-from flexx.util.testing import run_tests_if_main, raises, skip
+from flexx.util.testing import run_tests_if_main, raises, skipif, skip
 from flexx.app.live_tester import run_live, roundtrip, launch
 
 from flexx.event import loop
@@ -134,6 +135,7 @@ async def test_dispose_PyComponent2():
     await roundtrip(s)
 
 
+@skipif('__pypy__' in sys.builtin_module_names, reason='pypy gc works different')
 @run_live
 async def test_dispose_PyComponent3():
     """
