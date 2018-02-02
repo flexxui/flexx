@@ -162,7 +162,7 @@ def test_emitter_python_only():
     # Emitter decorator needs proper callable
     with raises(TypeError):
         event.emitter(3)
-    with raises(TypeError):
+    with raises((TypeError, ValueError)):
         event.emitter(isinstance)  
     
     # Check type of the instance attribute

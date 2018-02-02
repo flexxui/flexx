@@ -99,6 +99,7 @@ class Session:
         # The session assigns component id's and keeps track of component objects
         self._component_counter = 0
         self._component_instances = weakref.WeakValueDictionary()
+        self._dead_component_ids = set()
         
         # Keep track of roundtrips. The _ping_calls elements are:
         # [ping_count, {objects}, *(callback, args)]
@@ -390,10 +391,11 @@ class Session:
         # self.keep_alive(component)  # Only when instantiated from JS
     
     def _unregister_component(self, component):
-        self.keep_alive(component)
-        # Because we use weak refs, and we want to be able to keep the object
-        # so that INVOKE on it can be silently ignored (because it is disposed).
-        # The object gets removed by the DISPOSE_ACK command.
+        self._dead_component_ids.add(component.id)
+        # self.keep_alive(component)  # does not work on pypy; deletion in final
+        # Because we use weak refs, and we want to be able to keep (the id of)
+        # the object so that INVOKE on it can be silently ignored (because it
+        # is disposed). The object id gets removed by the DISPOSE_ACK command.
     
     def get_component_instance(self, id):
         """ Get PyComponent or JsComponent instance that is associated with
@@ -544,8 +546,9 @@ class Session:
             id, name, args = command[1:]
             ob = self.get_component_instance(id)
             if ob is None:
-                t = 'Cannot invoke %s.%s; session does not know it (anymore).'
-                logger.warn(t % (id, name))
+                if id not in self._dead_component_ids:
+                    t = 'Cannot invoke %s.%s; session does not know it (anymore).'
+                    logger.warn(t % (id, name))
             elif ob._disposed:
                 pass  # JS probably send something before knowing the object was dead
             else:
@@ -590,6 +593,7 @@ class Session:
             self._component_instances.pop(id, None)  # Drop local ref now
         elif cmd == 'DISPOSE_ACK':  # Gets send from proxy to local
             self._component_instances.pop(command[1], None)
+            self._dead_component_ids.discard(command[1])
         else:
             logger.error('Unknown command received from JS:\n%s' % command)
     
