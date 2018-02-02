@@ -103,9 +103,9 @@ def test_reading_from_base64():
 def test_export():
     
     # Test using some icons over which I have some control
-    B = 'https://bitbucket.org/iep-project/iep/raw/tip/iep/resources/appicons/'
+    B = 'https://raw.githubusercontent.com/pyzo/pyzo/master/pyzo/resources/appicons/'
     
-    for name in ['ieplogo', 'py']:
+    for name in ['pyzologo', 'py']:
         icon = Icon(B + name + '.ico')
         assert len(icon.image_sizes()) > 0
         

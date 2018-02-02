@@ -205,7 +205,7 @@ class AppComponentMeta(ComponentMeta):
             if isinstance(val, classmethod):
                 continue
             elif name in py_only or name.startswith('__') and name.endswith('__'):
-                if name not in ('__init__'):
+                if name not in ('__init__', '__linenr__'):
                     continue
             # Move over to JS
             if (isinstance(val, Property) or (callable(val) and
@@ -588,25 +588,6 @@ ProxyComponent.__jsmodule__ = __name__
 StubComponent.__jsmodule__ = __name__
 
 
-class PyComponent(with_metaclass(AppComponentMeta, LocalComponent)):
-    """ Base component class that operates in Python, but is accessible
-    in JavaScript, where its properties and events can be observed,
-    and actions can be invoked.
-    
-    PyComponents can only be instantiated in Python, and always have
-    a corresponding proxy object in JS. PyComponents can be disposed only
-    from Python. Disposal also happens if the Python garbage collector
-    collects a PyComponent.
-    
-    """
-    
-    # The meta class generates a PyComponent proxy class for JS.
-    
-    def __repr__(self):
-        d = ' (disposed)' if self._disposed else ''
-        return "<PyComponent '%s'%s at 0x%x>" % (self._id, d, id(self))
-
-
 class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
     """ Base component class that operates in JavaScript, but is accessible
     in Python, where its properties and events can be observed,
@@ -645,6 +626,28 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
                 node.removeEventListener(type, callback, capture)
             except Exception as err:
                 print(err)
+
+
+# Note: positioned below JSComponent, because linenr is used to sort JS defs,
+# and the JS for the base component classes is attached to JSComponent.
+
+class PyComponent(with_metaclass(AppComponentMeta, LocalComponent)):
+    """ Base component class that operates in Python, but is accessible
+    in JavaScript, where its properties and events can be observed,
+    and actions can be invoked.
+    
+    PyComponents can only be instantiated in Python, and always have
+    a corresponding proxy object in JS. PyComponents can be disposed only
+    from Python. Disposal also happens if the Python garbage collector
+    collects a PyComponent.
+    
+    """
+    
+    # The meta class generates a PyComponent proxy class for JS.
+    
+    def __repr__(self):
+        d = ' (disposed)' if self._disposed else ''
+        return "<PyComponent '%s'%s at 0x%x>" % (self._id, d, id(self))
 
 
 class BsdfComponentExtension(bsdf.Extension):

@@ -90,7 +90,6 @@ async def test_pycomponent_action1():
     ----------
     """
     c, s = launch(PyComponentA)
-    
     c.greet('foo')
     c.greet('bar')
     s.send_command('INVOKE', c.id, 'greet', ["spam"])

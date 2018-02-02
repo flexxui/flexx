@@ -17,6 +17,7 @@ event system have the same API and behavior.
 import re
 import sys
 import json
+import inspect
 
 from flexx.pyscript import JSString, RawJS, py2js
 from flexx.pyscript.parser2 import get_class_definition
@@ -38,10 +39,16 @@ reprs = json.dumps
 
 class MetaCollector:
     
-    def __init__(self, filename=None):
+    def __init__(self, cls=None):
+        filename = None
+        linenr = 1e9
+        if cls is not None:
+            filename = getattr(sys.modules[cls.__module__], '__file__', None)
+            linenr = (cls.__linenr__ if hasattr(cls, '__linenr__') else
+                      inspect.findsource(cls)[1])
         self.meta = {'vars_unknown': set(), 'vars_global': set(),
                      'std_functions': set(), 'std_methods': set(),
-                     'filename': filename, 'linenr': 1e9}
+                     'filename': filename, 'linenr': linenr}
     
     def py2js(self, *args, **kwargs):
         kwargs['inline_stdlib'] = False
@@ -51,14 +58,9 @@ class MetaCollector:
     
     def update(self, code):
         for key in self.meta:
-            if key == 'filename':
-                pass
-            elif key == 'linenr':
-                if self.meta['filename'] is not None:
-                    if code.meta['filename'] == self.meta['filename']:
-                        self.meta[key] = min(self.meta[key], code.meta[key])
-            else:
-                self.meta[key].update(code.meta[key])
+            if key in ('filename', 'linenr'):
+                continue
+            self.meta[key].update(code.meta[key])
         return code
     
     def attach_meta(self, s):
@@ -358,7 +360,7 @@ def _create_js_class(PyClass, JSClass):
     """ Create the JS code for Loop, Reaction and Component based on their
     Python and JS variants.
     """
-    mc = MetaCollector(sys.modules[PyClass.__module__].__file__)
+    mc = MetaCollector(PyClass)
     cname = PyClass.__name__
     # Start with our special JS version
     jscode = [mc.py2js(JSClass, cname)]
@@ -416,7 +418,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     assert cls_name != 'Component'  # we need this special class above instead
       
     # Collect meta information of all code pieces that we collect
-    mc = MetaCollector(getattr(sys.modules[cls.__module__], '__file__', ''))
+    mc = MetaCollector(cls)
     mc.meta['std_functions'].add('op_instantiate')  # b/c we use get_class_definition
     
     total_code = []

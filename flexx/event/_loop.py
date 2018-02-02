@@ -55,7 +55,6 @@ class Loop:
         
         self._processing_action = None
         self._processing_reaction = None
-        
         self._prop_access = {}
         self._pending_calls = []
         self._pending_actions = []
@@ -214,7 +213,7 @@ class Loop:
         
         # Note that we use a dict here, but for the event reconnecting to
         # be efficient, the order of connections is imporant, so implicit
-        # reactions have really poor performance on Python 2.7 :)
+        # reactions have really poor performance on Python < 3.6
         # Make sure not to count access from other threads
         if self._processing_reaction is not None:
             if self._processing_reaction.is_explicit() is False:

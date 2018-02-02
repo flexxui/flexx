@@ -158,7 +158,8 @@ def fakecomponent_setattr(self, s, v):
 def fakecomponent_del(self):
     pass
 
-Component_overload = dict(__init__=fakecomponent_init,
+Component_overload = dict(__linenr__=0,
+                          __init__=fakecomponent_init,
                           __setattr__=fakecomponent_setattr,
                           __del__=fakecomponent_del,
                           )
@@ -200,7 +201,7 @@ class FakeModule:
         store._assets[b2.name] = b2
     
     def make_component_class(self, name, base=app.JsComponent):
-        cls = new_type(name, (base, ), Component_overload)
+        cls = new_type(name, (base, ), Component_overload.copy())
         self.component_classes.add(cls)
         cls.__module__ = self.name
         cls.__jsmodule__ = self.name

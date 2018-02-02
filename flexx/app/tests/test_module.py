@@ -77,7 +77,7 @@ files['bar'] = """
     
     def cannot_transpile():
         # functionality not supported by PyScript. Note that some may be at some point
-        f"format strings"
+        # f"format strings" - also not in Python < 3.6
         {'no', 'set', 'in', 'js'}
         a[1:2:3]  # no slicing with step
         import xx

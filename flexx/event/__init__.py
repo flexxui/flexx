@@ -518,6 +518,10 @@ import logging
 logger = logging.getLogger(__name__)
 del logging
 
+import sys
+assert sys.version_info > (3, 5), "Flexx.event needs Python 3.5+"
+del sys
+
 # flake8: noqa
 from ._dict import Dict
 from ._loop import Loop, loop
