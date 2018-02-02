@@ -1,21 +1,17 @@
-"""
-
-Simple example:
+""" ColorSelectWidget
 
 .. UIExample:: 50
     
-    from flexx import ui, event
+    from flexx import event, ui
     
     class Example(ui.Widget):
         
         def init(self):
             self.c = ui.ColorSelectWidget()
-        
-        class JS:
-            
-            @event.connect('c.color')
-            def _color_changed(self, *events):
-                self.node.style.background = events[-1].new_value
+    
+        @event.reaction
+        def _color_changed(self):
+            self.node.style.background = self.c.color.hex
 """
 
 from ... import event
@@ -29,42 +25,31 @@ class ColorSelectWidget(Widget):
     on Firefox and Chrome, but not on IE/Edge last time I checked.
     """
     
-    class Both:
-            
-        @event.prop
-        def color(self, v='#000000'):
-            """ The currently selected color.
-            """
-            v = str(v)
-            if not (v.startswith('#') and len(v) == 7):
-                raise ValueError('%s.color must be in #rrggbb format, not %r' %
-                                 (self.id, v))
-            return str(v)
-
-        @event.prop
-        def disabled(self, v=False):
-            """ Whether the color select is disabled.
-            """
-            return bool(v)
-
-    class JS:
+    color = event.ColorProp('#000000', settable=True, doc="""
+        The currently selected color.
+        """)
     
-        def _init_phosphor_and_node(self):
-            self.phosphor = self._create_phosphor_widget('input')
-            self.node = self.phosphor.node
-            self.node.type = 'color'
-            self._addEventListener(self.node, 'input', self._color_changed_from_dom, 0)
-        
-        @event.connect('color')
-        def _color_changed(self, *events):
-            self.node.value = self.color
-        
-        def _color_changed_from_dom(self, e):
-            self.color = self.node.value
+    disabled = event.BoolProp(False, settable=True, doc="""
+        Whether the color select is disabled.
+        """)
+    
+    def _create_dom(self):
+        global window
+        node = window.document.createElement('input')
+        node.type = 'color'
+        self._addEventListener(node, 'input', self._color_changed_from_dom, 0)
+        return node
+    
+    @event.reaction('color')
+    def _color_changed(self, *events):
+        self.node.value = self.color.hex  # hex is html-compatible, color.css is not
+    
+    def _color_changed_from_dom(self, e):
+        self.set_color(self.node.value)
 
-        @event.connect('disabled')
-        def __disabled_changed(self, *events):
-            if events[-1].new_value:
-                self.node.setAttribute("disabled", "disabled")
-            else:
-                self.node.removeAttribute("disabled")
+    @event.reaction('disabled')
+    def __disabled_changed(self, *events):
+        if self.disabled:
+            self.node.setAttribute("disabled", "disabled")
+        else:
+            self.node.removeAttribute("disabled")

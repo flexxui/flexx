@@ -47,9 +47,10 @@ class _Formatter(logging.Formatter):
             sys.last_value = value
             sys.last_traceback = tb
             # Compose message
+            cname = type_.__name__
             out = ''.join(traceback.format_list(traceback.extract_tb(tb)))
             del tb  # we don't want to hold too much references to this
-            return base + str(value) + '\n' + out.rstrip()
+            return base + cname + ': ' + str(value) + '\n' + out.rstrip()
         else:
             out = base + str(record.msg)
             if self.prepend_caller:
@@ -164,6 +165,14 @@ class capture_log:
 logger = logging.getLogger(MODULE_NAME)
 logger.propagate = False
 logger.setLevel(logging.INFO)
+
+# Remove previous handlers, these can be leftovers when flexx is re-imorted,
+# as can happen during tests
+h = None
+for h in list(logger.handlers):
+    if h.__class__.__module__ == __name__:
+        logger.removeHandler(h)
+del h
 
 _handler = _Handler()
 _filter = _MatchFilter()

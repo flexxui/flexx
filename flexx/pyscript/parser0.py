@@ -55,32 +55,86 @@ def unify(x):
 
 
 class NameSpace(dict):
-    """ Variable names can be added to the namespace with or without an
-    initial value.
+    """ Representation of the namespace in a certain scope. It looks a bit like
+    a set, but makes a distinction between used/defined and local/nonlocal.
     
-    * If the value is False, its a global/nonlocal, it should not be declared.
-    * If the value is True, it should be declared.
-    * if the value is a string, it should be declared with the initial value
-      specified by the string.
+    The value of an item in this dict can be:
+    * 1: variable defined in this scope.
+    * 2: nonlocal variable (set nonlocal in this scope).
+    * 3: global variable (set global in this scope).
+    * 4: global variable (set in a subscope).
+    * set: variable used here (or in a subscope) but not defined here.
     """
     
     def set_nonlocal(self, key):
-        """ Explicitly declare a name as nonlocal/global """
-        self[key] = False  # also if already exists
+        """ Explicitly declare a name as nonlocal """
+        self[key] = 2  # also if already exists
     
-    def use(self, key):
-        """ Declare a name as used (but can be defined in higher level) """
-        if key not in self:
-            self[key] = None
+    def set_global(self, key):
+        """ Explicitly declare a name as global """
+        self[key] = 3  # also if already exists
+        # becomes 4 in parent scope
+    
+    def use(self, key, how):
+        """ Declare a name as used and how (the full name.foo.bar). The name
+        may be defined in higher level, or it will end up in vars_unknown.
+        """
+        hows = self.setdefault(key, set())
+        if isinstance(hows, set):
+            hows.add(how)
     
     def add(self, key):
         """ Declare a name as defined in this namespace """
-        if self.get(key, None) is not False:  # overwrite if None
-            self[key] = True
+        # If value is 4, the name is used as a global in a subscope. At this
+        # point, we do not know whether this is the toplevel scope (also
+        # because py2js() is often used to transpile snippets which are later
+        # combined), so we assume that the user know what (s)he is doing.
+        curval = self.get(key, 0)
+        if curval not in (2, 3):  # dont overwrite nonlocal or global
+            self[key] = 1
     
     def discard(self, key):
         """ Discard name from this namespace """
         self.pop(key, None)
+    
+    def leak_stack(self, sub):
+        """ Leak a child namespace into the current one. Undefined variables
+        and nonlocals are moved upwards.
+        """
+        for name in sub.get_globals():
+            sub.discard(name)
+            if name not in self:
+                self[name] = 4
+            # elif self[name] not in (3, 4):  ... dont know whether outer scope
+            #     raise JSError('Cannot use non-global that is global in subscope.')
+        for name, hows in sub.get_undefined():
+            sub.discard(name)
+            for how in hows:
+                self.use(name, how)
+    
+    def is_known(self, name):
+        """ Get whether the given name is defined or declared global/nonlocal
+        in this scope.
+        """
+        return self.get(name, 0) in (1, 2, 3)
+        
+    def get_defined(self):
+        """ Get list of variable names that the current scope defines.
+        """
+        return set([name for name, val in self.items() if val == 1])
+    
+    def get_globals(self):
+        """ Get list of variable names that are declared global in the
+        current scope or its subscopes.
+        """
+        return set([name for name, val in self.items() if val in (3, 4)])
+    
+    def get_undefined(self):
+        """ Get (name, set) tuples for variables that are used, but not
+        defined. The set contains the ways in which the variable is used
+        (e.g. name.foo.bar).
+        """
+        return [(name, val) for name, val in self.items() if isinstance(val, set)]
 
 
 class Parser0:
@@ -106,7 +160,7 @@ class Parser0:
     }
     
     ATTRIBUTE_MAP = {
-        '__class__': 'constructor.prototype',
+        '__class__': 'Object.getPrototypeOf({})',
     }
     
     BINARY_OP = {
@@ -188,7 +242,6 @@ class Parser0:
                 self._methods[name[7:]] = getattr(self, name)
         
         # Prepare
-        self._globals = []
         self.push_stack('module', '')
         
         # Parse
@@ -207,11 +260,9 @@ class Parser0:
         
         # Finish
         ns = self.vars  # do not self.pop_stack() so caller can inspect module vars
-        defined_names = [n for n in ns if ns[n]]
+        defined_names = ns.get_defined()
         if defined_names:
             self._parts.insert(0, self.get_declarations(ns))
-        for name in self._globals:
-            ns[name] = False
         
         # Add part of the stdlib that was actually used
         if inline_stdlib:
@@ -276,11 +327,7 @@ class Parser0:
         """
         # Pop
         nstype, nsname, ns = self._stack.pop(-1)
-        # Leak nonlocals and used-but-not-defined vars into the previous stack
-        for name in [n for n in ns if not ns[n]]:
-            if not ns[name]:
-                self.vars.use(name)
-                ns.discard(name)
+        self.vars.leak_stack(ns)
         return ns
     
     def get_declarations(self, ns):
@@ -291,12 +338,9 @@ class Parser0:
         code = []
         loose_vars = []
         for name, value in sorted(ns.items()):
-            if value and isinstance(value, str):
-                code.append(self.lf('var %s = %s;' % (name, value)))
-            elif value:
+            if value == 1:
                 loose_vars.append(name)
-            else:
-                pass  # global/nonlocal
+            # else: pass global/nonlocal or expected to be defined in outer scope
         if loose_vars:
             code.insert(0, self.lf('var %s;' % ', '.join(loose_vars)))
         return ''.join(code)
@@ -306,6 +350,8 @@ class Parser0:
         """
         nstype, nsname, ns = self._stack[-1]
         if nstype == 'class':
+            if name.startswith('__') and not name.endswith('__'):
+                name = '_' + nsname + name  # Double underscore name mangling
             return nsname + '.prototype.' + name
         else:
             return name

@@ -120,7 +120,7 @@ class FirefoxRuntime(DesktopRuntime):
     This runtime is visible in the task manager under a custom process name
     (``sys.executable + '-ui'``), making it easy to spot in the task manager,
     and avoids task-bar grouping. Compared to the NW runtime, this runtime
-    is leaner in terms of memory and number of processes.
+    is leaner in terms of memory and number of processes, and is also faster.
     """
     
     def _get_name(self):
@@ -196,9 +196,11 @@ class FirefoxRuntime(DesktopRuntime):
         if sys.platform.startswith('win'):
             if not op.isfile(exe):
                 return
-            version = subprocess.check_output(['wmic', 'datafile', 'where',
-                                               'name=%r' % exe,
-                                               'get', 'Version', '/value'])
+            # https://stackoverflow.com/a/4644565/2271927
+            version = subprocess.check_output([exe, '--version', '|', 'more'])
+            # version = subprocess.check_output(['wmic', 'datafile', 'where',
+            #                                    'name=%r' % exe,
+            #                                    'get', 'Version', '/value'])
         else:
             version = subprocess.check_output([exe, '--version'])
         
@@ -306,10 +308,11 @@ class FirefoxRuntime(DesktopRuntime):
                  windowfeatures=windowfeatures)
         
         # Create values that need to be unique
-        # Looks like name does not have to be unique, perhapse because we use
-        # a custom profile dir. If possible, use static name to avoid XUL from
-        # spamming profile dirs (NW did this, so let's be on safe side).
-        D['name'] = 'flexx_stub_xul_profile'
+        # The name must be unique to avoid all sort of oddities when launching
+        # multiple runtimes (as we do in flexx.app tests). Note that we've had
+        # problems with the profile dirs being spammed (NW did, now fixed).
+        # Also see "Profile=" in APPLICATION_INI above.
+        D['name'] = 'flexx_stub_xul_profile_' + id
         D['windowid'] = 'W' + id
         D['id'] = 'app_' + id + '@flexx.io'
         

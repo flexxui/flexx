@@ -19,7 +19,7 @@ Release notes
 
 **v0.4.1** (10-07-2016)
 
-A few [fixes](https://github.com/zoofIO/flexx/milestone/8).
+A few [fixes](https://github.com/flexxui/flexx/milestone/8).
 
 
 **v0.4** (07-07-2016)
@@ -35,9 +35,9 @@ A lot of work and major changes compared to the previous release. Most notably:
 * Better support for testing and running Flexx in a separate thread.
 
 Also see the
-`overview of 0.4 pull request <https://github.com/zoofIO/flexx/issues?q=is%3Apr+milestone%3Av0.4>`_
+`overview of 0.4 pull request <https://github.com/flexxui/flexx/issues?q=is%3Apr+milestone%3Av0.4>`_
 and
-`overview of 0.4 issues <https://github.com/zoofIO/flexx/issues?q=is%3Aissue+milestone%3Av0.4>`_
+`overview of 0.4 issues <https://github.com/flexxui/flexx/issues?q=is%3Aissue+milestone%3Av0.4>`_
 corresponding to this release.
 
 
@@ -48,7 +48,7 @@ on Pypi for v0.3 did not work on Python 2.7. Flexx now includes
 a recipe to build a noarch conda package.
 
 Also see the
-`overview of 0.3.1 pull request <https://github.com/zoofIO/flexx/issues?q=is%3Apr+milestone%3Av0.3.1>`_.
+`overview of 0.3.1 pull request <https://github.com/flexxui/flexx/issues?q=is%3Apr+milestone%3Av0.3.1>`_.
 
 
 **v0.3** (15-02-2016)
@@ -65,9 +65,9 @@ The most important changes with respect to the previous release are:
   as first arg.
 
 Also see the
-`overview of 0.3 pull request <https://github.com/zoofIO/flexx/issues?q=is%3Apr+milestone%3Av0.3>`_
+`overview of 0.3 pull request <https://github.com/flexxui/flexx/issues?q=is%3Apr+milestone%3Av0.3>`_
 and
-`overview of 0.3 issues <https://github.com/zoofIO/flexx/issues?q=is%3Aissue+milestone%3Av0.3>`_
+`overview of 0.3 issues <https://github.com/flexxui/flexx/issues?q=is%3Aissue+milestone%3Av0.3>`_
 corresponding to this release.
 
 
@@ -85,9 +85,9 @@ things. Here's a summary of the most important bits:
 - The assets make it possible to e.g. embed a Bokeh plot, or a jQuery widget.
 
 Also see the
-`overview of 0.2 pull request <https://github.com/zoofIO/flexx/issues?q=is%3Apr+milestone%3Av0.2>`_
+`overview of 0.2 pull request <https://github.com/flexxui/flexx/issues?q=is%3Apr+milestone%3Av0.2>`_
 and
-`overview of 0.2 issues <https://github.com/zoofIO/flexx/issues?q=is%3Aissue+milestone%3Av0.2>`_
+`overview of 0.2 issues <https://github.com/flexxui/flexx/issues?q=is%3Aissue+milestone%3Av0.2>`_
 corresponding to this release.
 
 

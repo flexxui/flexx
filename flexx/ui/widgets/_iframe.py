@@ -1,12 +1,12 @@
-"""
-
-Example:
+""" IFrame
 
 .. UIExample:: 100
-    
-    with ui.BoxPanel():
-        ui.IFrame(url='flexx.readthedocs.io')
-        ui.IFrame(url='flexx.readthedocs.io')
+
+    with ui.HSplit():
+        ui.IFrame(url='bsdf.io')
+        ui.IFrame(url='http://flexx.readthedocs.io')
+        # Note: the rtd page does not seem to load on Firefox 57.04
+
 """
 
 from ... import event
@@ -20,26 +20,28 @@ class IFrame(Widget):
     a cross-source iframe.
     """
     
-    CSS = '.flx-IFrame {border: none;}'
+    CSS = """
+        .flx-IFrame {
+            border: none;
+        }
+    """
     
-    class Both:
-        
-        @event.prop
-        def url(self, v=''):
-            """ The url to show. 'http://' is automatically prepended if the url
-            does not have '://' in it.
-            """
-            v = str(v)
-            if v and '://' not in v:
-                v = 'http://' + v
-            return v
+    url = event.StringProp('', settable=True, doc="""
+        The url to show. 'http://' is automatically prepended if the url
+        does not have '://' in it.
+        """)
+   
+    def _create_dom(self):
+        global document
+        return document.createElement('iframe')
     
-    class JS:
-        
-        def _init_phosphor_and_node(self):
-            self.phosphor = self._create_phosphor_widget('iframe')
-            self.node = self.phosphor.node
-        
-        @event.connect('url')
-        def _update_url(self, *events):
-            self.node.src = self.url
+    @event.reaction('size')
+    def __on_size(self, *events):
+        self.node.width = self.size[0]
+    
+    @event.reaction('url')
+    def _update_url(self, *events):
+        url = self.url
+        if url and '://' not in url:
+            url = 'http://' + url
+        self.node.src = url

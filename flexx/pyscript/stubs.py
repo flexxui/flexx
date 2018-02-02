@@ -27,15 +27,15 @@ class RawJS:
     .. code-block:: py
         
         # Syntax not usable in Py
-        myre = VerbatimJS('/ab+c/')
+        myre = RawJS('/ab+c/')
         
         # Code that should only execute on JS
-        foo = VerbatimJS('require("some.module")')
+        foo = RawJS('require("some.module")')
         
         # Performance
         def bar(n):
             res = []
-            VerbatimJS('''
+            RawJS('''
                 for (var i=0; i<n; i++) {
                     if (is_ok_num(i)) {
                         res.push(i);
@@ -47,7 +47,7 @@ class RawJS:
     
     def __init__(self, code, _resolve_defining_module=True):
         if not isinstance(code, str):
-            raise TypeError('VerbatimJS requires str input.')
+            raise TypeError('RawJS requires str input.')
         self._lines = self._str2lines(code)
         
         # Get the globals of the module in which this instance is defined, so

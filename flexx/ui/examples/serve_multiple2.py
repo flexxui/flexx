@@ -11,7 +11,7 @@ from flexx.ui.examples.split import Split
 from flexx.ui.examples.twente import Twente
 
 
-class MultiApp(ui.DockPanel):
+class MultiApp(ui.TabLayout):
     def init(self):
         Drawing(title='Drawing')
         Split(title='Split')

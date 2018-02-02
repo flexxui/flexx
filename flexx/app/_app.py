@@ -9,7 +9,7 @@ from base64 import encodestring as encodebytes
 
 from .. import event, webruntime
 
-from ._model import Model
+from ._component2 import PyComponent, JsComponent
 from ._server import current_server
 from ._session import Session, get_page_for_export
 from ._assetstore import assets
@@ -25,32 +25,29 @@ class ExporterWebSocketDummy:
 
     def __init__(self):
         self.commands = []
-        self.ping_counter = 0
-        # todo: make icon and title work
-        #self.command('ICON %s.ico' % session.id)
-        # self.command('TITLE %s' % session._runtime_kwargs.get('title',
-        #                                                       'Exported flexx app'))
-
-    def command(self, cmd):
+    
+    def write_command(self, cmd):
         self.commands.append(cmd)
 
 
 class App:
     """ Specification of a Flexx app.
 
-    In the strict sense, this is a container for a Model class plus the
-    args and kwargs that it is to be instantiated with.
+    Strictly speaking, this is a container for a ``PyComponent``/``JsComponent``
+    class plus the args and kwargs that it is to be instantiated with.
 
     Arguments:
-        cls (Model): the Model class (or Widget) that represents this app.
+        cls (Component): the PyComponent or JsComponent class (e.g. Widget) that
+            represents this app.
         args: positional arguments used to instantiate the class (and received
             in its ``init()`` method).
-        kwargs: keyword arguments used to initialize the model's properties.
+        kwargs: keyword arguments used to initialize the component's properties.
     """
 
     def __init__(self, cls, *args, **kwargs):
-        if not isinstance(cls, type) and issubclass(type, Model):
-            raise ValueError('App needs a Model class as its first argument.')
+        if not isinstance(cls, type) and issubclass(type, (PyComponent, JsComponent)):
+            raise ValueError('App needs a PyComponent or JsComponent class '
+                             'as its first argument.')
         self._cls = cls
         self.args = args
         self.kwargs = kwargs
@@ -60,7 +57,7 @@ class App:
         # Handle good defaults
         if hasattr(cls, 'title') and self.kwargs.get('title', None) is None:
             self.kwargs['title'] = 'Flexx app - ' + cls.__name__
-        if hasattr(cls, 'icon') and self.kwargs.get('icon', None) is None:
+        if hasattr(cls, 'set_icon') and self.kwargs.get('icon', None) is None:
             # Set icon as base64 str; exported apps can still be standalone
             fname = os.path.abspath(os.path.join(__file__, '..', '..',
                                                     'resources', 'flexx.ico'))
@@ -80,7 +77,7 @@ class App:
 
     @property
     def cls(self):
-        """ The Model class that is the basis of this app.
+        """ The Component class that is the basis of this app.
         """
         return self._cls
 
@@ -117,11 +114,12 @@ class App:
         """ Start serving this app.
 
         This registers the given class with the internal app manager. The
-        app can be loaded via 'http://hostname:port/app_name'.
+        app can be loaded via 'http://hostname:port/name'.
 
         Arguments:
             name (str, optional): the relative URL path to serve the app on.
                 If this is ``''`` (the empty string), this will be the main app.
+                If not given or None, the name of the component class is used.
         """
         # Note: this talks to the manager; it has nothing to do with the server
         if self._is_served:
@@ -142,8 +140,11 @@ class App:
                 ('title' and 'icon').
 
         Returns:
-            app (Model): an instance of the given class.
+            Component: an instance of the given class.
         """
+        # creates server (and event loop) if it did not yet exist
+        current_server()
+        
         # Create session
         if not self._is_served:
             self.serve()
@@ -154,37 +155,33 @@ class App:
             runtime_kwargs['title'] = self.kwargs['title']
         if runtime_kwargs.get('icon', None) is None and 'icon' in self.kwargs:
             runtime_kwargs['icon'] = self.kwargs['icon']
-
         # Launch web runtime, the server will wait for the connection
-        current_server()  # creates server if it did not yet exist
         url = self.url + '?session_id=%s' % session.id
         session._runtime = webruntime.launch(url, runtime=runtime, **runtime_kwargs)
         return session.app
 
-    def export(self, filename=None, link=None, write_shared=True):
-        """ Export the given Model class to an HTML document.
+    def export(self, filename=None, link=0, write_shared=True):
+        """ Export the app to an HTML document.
 
         Arguments:
             filename (str, optional): Path to write the HTML document to.
                 If not given or None, will return the html as a string.
-            link (int): whether to link assets or embed them:
+                If the filename ends with .hta, a Windows HTML Application is
+                created.
+            link (int): whether to link (JS and CSS) assets or embed them:
 
-                * 0: all assets are embedded.
+                * 0: all assets are embedded (default).
                 * 1: normal assets are embedded, remote assets remain remote.
                 * 2: all assets are linked (as separate files).
-                * 3: (default) normal assets are linked, remote assets remain remote.
+                * 3: normal assets are linked, remote assets remain remote.
             write_shared (bool): if True (default) will also write shared assets
                 when linking to assets. This can be set to False when
                 exporting multiple apps to the same location. The shared assets can
-                then be exported last using ``app.assets.export(dirname)``.
+                then be exported once using ``app.assets.export(dirname)``.
 
         Returns:
-            html (str): The resulting html. If a filename was specified
-            this returns None.
+            str: The resulting html. If a filename was specified this returns None.
 
-        Notes:
-            If the given filename ends with .hta, a Windows HTML Application is
-            created.
         """
 
         # Prepare name, based on exported file name (instead of cls.__name__)
@@ -204,11 +201,19 @@ class App:
 
         # Clean up again - NO keep in memory to ensure two sessions dont get same id
         # manager.disconnect_client(session)
-
+        
+        assert link in (0, 1, 2, 3), "Expecting link to be in (0, 1, 2, 3)."
+        
         # Warn if this app has data and is meant to be run standalone
-        if (not link) and session.get_data_names():
-            logger.warn('Exporting a standalone app, but it has registered data.')
-
+        if link in (0, 1) and session.get_data_names():
+            logger.warn('Exporting app with embedded assets, '
+                        'but it has registered data.')
+        
+        # Warn for PyComponents
+        if issubclass(self.cls, PyComponent):
+            logger.warn('Exporting a PyComponent - any Python interactivity will '
+                        'not work in exported apps.')
+        
         # Get HTML - this may be good enough
         html = get_page_for_export(session, exporter.commands, link)
         if filename is None:
@@ -223,14 +228,14 @@ class App:
         # Save to file. If standalone, all assets will be included in the main html
         # file, if not, we need to export shared assets and session assets too.
         filename = os.path.abspath(os.path.expanduser(filename))
-        if link:
+        if link >= 2:
             if write_shared:
                 assets.export(os.path.dirname(filename))
             session._export_data(os.path.dirname(filename))
         with open(filename, 'wb') as f:
             f.write(html.encode())
 
-        app_type = 'standalone app' if link else 'app'
+        app_type = 'standalone app' if link in (0, 1) else 'app'
         logger.info('Exported %s to %r' % (app_type, filename))
 
 
@@ -241,14 +246,18 @@ def valid_app_name(name):
     return name and name[0] in T[:-10] and all([c in T for c in name])
 
 
-class AppManager(event.HasEvents):
+# Note that the AppManager is a Component (but not a PyComponent)
+
+class AppManager(event.Component):
     """ Manage apps, or more specifically, the session objects.
 
-    There is one AppManager class (in ``flexx.model.manager``). It's
-    purpose is to manage the application classes and instances. Intended
-    for internal use.
+    There is one AppManager class (in ``flexx.app.manager``). It's
+    purpose is to manage the application classes and instances. It is mostly
+    intended for internal use, but users can use it to e.g. monitor connections.
+    Create a reaction using ``@app.manager.reaction('connections_changed')``
+    to track when the number of connected session changes.
     """
-
+    
     total_sessions = 0  # Keep track how many sessesions we've served in total
 
     def __init__(self):
@@ -259,7 +268,7 @@ class AppManager(event.HasEvents):
         self._last_check_time = time.time()
 
     def register_app(self, app):
-        """ Register an app (an object that wraps a model class plus init args).
+        """ Register an app (an object that wraps a Component class plus init args).
         After registering an app (and starting the server) it is
         possible to connect to "http://address:port/app_name".
         """
@@ -270,8 +279,8 @@ class AppManager(event.HasEvents):
         pending, connected = [], []
         if name in self._appinfo:
             old_app, pending, connected = self._appinfo[name]
-            if app is not old_app:
-                logger.warn('Re-registering app class %r' % name)
+            if app.cls is not old_app.cls:  # if app is not old_app:
+                logger.warn('Re-defining app class %r' % name)
         self._appinfo[name] = app, pending, connected
 
     def create_default_session(self, cls=None):
@@ -282,9 +291,9 @@ class AppManager(event.HasEvents):
             raise RuntimeError('The default session can only be created once.')
 
         if cls is None:
-            cls = Model
-        if not isinstance(cls, type) and issubclass(cls, Model):
-            raise TypeError('create_default_session() needs a Model subclass.')
+            cls = JsComponent
+        if not isinstance(cls, type) and issubclass(cls, (PyComponent, JsComponent)):
+            raise TypeError('create_default_session() needs a JsComponent subclass.')
 
         # Create app and register it by __default__ name
         app = App(cls)
@@ -296,17 +305,24 @@ class AppManager(event.HasEvents):
         _, pending, connected = self._appinfo['__default__']
         pending.append(session)
 
-        # Instantiate the model
-        model_instance = app(session=session, is_app=True)
-        session._set_app(model_instance)
+        # Instantiate the component
+        app(flx_session=session, flx_is_app=True)
 
         return session
-
+    
+    def remove_default_session(self):
+        """ Remove default session if there is one, closing the session.
+        """
+        s = self.get_default_session()
+        if s is not None:
+            s.close()
+        self._appinfo.pop('__default__', None)
+    
     def get_default_session(self):
         """ Get the default session that is used for interactive use.
         Returns None unless create_default_session() was called earlier.
 
-        When a Model class is created without a session, this method
+        When a JsComponent class is created without a session, this method
         is called to get one (and will then fail if it's None).
         """
         x = self._appinfo.get('__default__', None)
@@ -318,7 +334,7 @@ class AppManager(event.HasEvents):
             if sessions:
                 return sessions[-1]
 
-    def _clear_old_pending_sessions(self):
+    def _clear_old_pending_sessions(self, max_age=30):
         try:
 
             count = 0
@@ -327,7 +343,7 @@ class AppManager(event.HasEvents):
                     continue
                 _, pending, _ = self._appinfo[name]
                 to_remove = [s for s in pending
-                             if (time.time() - s._creation_time) > 30]
+                             if (time.time() - s._creation_time) > max_age]
                 for s in to_remove:
                     self._session_map.pop(s.id, None)
                     pending.remove(s)
@@ -364,11 +380,9 @@ class AppManager(event.HasEvents):
         if id is not None:
             session._id = id  # used by app.export
         self._session_map[session.id] = session
-        # Instantiate the model
-        # This represents the "instance" of the App object (Model class + args)
-        model_instance = app(session=session, is_app=True)
-        # Session and app model need each-other, thus the _set_app()
-        session._set_app(model_instance)
+        # Instantiate the component
+        # This represents the "instance" of the App object (Component class + args)
+        app(flx_session=session, flx_is_app=True)
 
         # Now wait for the client to connect. The client will be served
         # a page that contains the session_id. Upon connecting, the id
@@ -382,7 +396,6 @@ class AppManager(event.HasEvents):
         """ Connect a client to a session that was previously created.
         """
         _, pending, connected = self._appinfo[name]
-
         # Search for the session with the specific id
         for session in pending:
             if session.id == session_id:
@@ -393,6 +406,7 @@ class AppManager(event.HasEvents):
                                session_id)
 
         # Add app to connected, set ws
+        assert session.id == session_id
         assert session.status == Session.STATUS.PENDING
         logger.info('New session %s %s' % (name, session_id))
         session._set_cookies(cookies)
@@ -440,12 +454,12 @@ class AppManager(event.HasEvents):
         return [name for name in sorted(self._appinfo.keys())]
 
     def get_session_by_id(self, id):
-        """ Get session object by its id
+        """ Get session object by its id, or None.
         """
         return self._session_map.get(id, None)
 
     def get_connections(self, name):
-        """ Given an app name, return the session connected objects.
+        """ Given an app name, return the connected session objects.
         """
         _, pending, connected = self._appinfo[name]
         return list(connected)
@@ -455,7 +469,7 @@ class AppManager(event.HasEvents):
         """ Emits an event with the name of the app for which a
         connection is added or removed.
         """
-        return {name: str(name)}
+        return dict(name=str(name))
 
 
 # Create global app manager object

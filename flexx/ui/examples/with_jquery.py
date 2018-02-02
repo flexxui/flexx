@@ -1,8 +1,7 @@
 # doc-export: Example
 """
-Example to demonstrate a jQuery widget. I'm not that big a fan of
-jQuery, but this demonstrates how Flexx can interact wih other JS
-frameworks.
+Example to demonstrate a jQuery widget.
+This demonstrates how Flexx can interact wih other JS frameworks.
 """
 
 from flexx import app, ui
@@ -18,13 +17,11 @@ app.assets.associate_asset(__name__,
 
 class DatePicker(ui.Widget):
     
-    class JS:
-        
-        def _init_phosphor_and_node(self):
-            self.phosphor = self._create_phosphor_widget('input')
-            self.node = self.phosphor.node
-            
-            RawJS('$')(self.node).datepicker()
+    def _create_dom(self):
+        global window
+        node = window.document.createElement('input')
+        RawJS('$')(node).datepicker()
+        return node
 
 
 class Example(ui.Widget):
@@ -38,5 +35,5 @@ class Example(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Example, 'browser')
+    m = app.launch(Example, 'app')
     app.run()

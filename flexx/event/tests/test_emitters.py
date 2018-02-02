@@ -1,272 +1,183 @@
-""" Basic tests for emitters. Does not contain an awefull extensive
-test suite, as we test emitters quite well in test_both.py.
+"""
+Test event emitters.
 """
 
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
+from flexx.event.both_tester import run_in_both, this_is_js
 
 from flexx import event
 
-
-def test_property():
-    
-    class MyObject(event.HasEvents):
-        
-        @event.prop
-        def foo(self, v=1.2):
-            return float(v)
-        
-        @event.prop
-        def bar(self, v=1.3):
-            return float(v)
-    
-    m = MyObject()
-    assert m.foo == 1.2
-    assert m.bar == 1.3
-    
-    m = MyObject(foo=3)
-    assert m.foo == 3.0
-    
-    m.foo = 5.1
-    m.bar = 5.1
-    assert m.foo == 5.1
-    assert m.bar == 5.1
-    
-    m.foo = '9.3'
-    assert m.foo == 9.3
-    
-    m = MyObject(foo=3)
-    assert m.foo == 3.0
-    
-    # Hacky, but works
-    def foo():
-        pass
-    x = event.prop(foo)
-    assert 'foo' in repr(x)
-    
-    spam = lambda x:None
-    x = event.prop(spam)
-    assert '<lambda>' in repr(x)
-    
-    # fails
-    
-    with raises(ValueError):
-        m.foo = 'bla'
-    
-    with raises(ValueError):
-        MyObject(foo='bla')
-    
-    with raises(TypeError):
-        m._set_prop(3, 3)  # Property name must be a string
-        
-    with raises(AttributeError):
-        m._set_prop('spam', 3)  # MyObject has not spam property
-    
-    with raises(AttributeError):
-        MyObject(spam='bla')  # MyObject has not spam property
-    
-    with raises(TypeError):
-        event.prop(3)  # prop decorator needs callable
-    
-    with raises(AttributeError):
-        del m.foo  # cannot delete a property
-    
-    class MyObject2(event.HasEvents):
-        
-        @event.prop
-        def foo(self, v):
-            return float(v)
-    
-    #with raises(RuntimeError):
-    #    MyObject2()  # no default value for foo
-    ob = MyObject2()
-    assert ob.foo is None
+loop = event.loop
 
 
-def test_prop_recursion():
-    class MyObject(event.HasEvents):
-        count = 0
-        
-        @event.prop
-        def foo(self, v=1):
-            v = float(v)
-            self.bar = v + 1
-            return v
-        
-        @event.prop
-        def bar(self, v=2):
-            v = float(v)
-            self.foo = v - 1
-            return v
-        
-        @event.connect('foo', 'bar')
-        def handle(self, *events):
-            self.count += 1
+class MyObject(event.Component):
     
-    m = MyObject()
-    event.loop.iter()
-    assert m.count == 1
-    assert m.foo == 1
-    assert m.bar== 2
+    @event.emitter
+    def foo(self, v):
+        if not isinstance(v, (int, float)):
+            raise TypeError('Foo emitter expects a number.')
+        return dict(value=float(v))
     
-    m = MyObject(foo=3)
-    event.loop.iter()
-    assert m.count == 1
-    assert m.foo == 3
-    assert m.bar== 4
+    @event.emitter
+    def bar(self, v):
+        return dict(value=float(v)+1)  # note plus 1
     
-    m.foo = 50
-    event.loop.iter()
-    assert m.count == 2
-    assert m.foo == 50
-    assert m.bar== 51
+    @event.emitter
+    def wrong(self, v):
+        return float(v)  # does not return a dict
     
-    m.bar = 50
-    event.loop.iter()
-    assert m.count == 3
-    assert m.foo == 49
-    assert m.bar== 50
+    @event.reaction('foo')
+    def on_foo(self, *events):
+        print('foo', ', '.join([str(ev.value) for ev in events]))
+    
+    @event.reaction('bar')
+    def on_bar(self, *events):
+        print('bar', ', '.join([str(ev.value) for ev in events]))
 
 
-def test_prop_init():
-    class MyObject(event.HasEvents):
-        
-        @event.prop
-        def foo(self, v=1):
-            return float(v)
-        
-        @event.connect('foo')
-        def foo_handler(self, *events):
-            pass
+class MyObject2(MyObject):
     
-    m = MyObject()
-    assert len(m.foo_handler._pending) == 1
-    m.foo = 2
-    m.foo = 3
-    assert len(m.foo_handler._pending) == 3
-    m.foo = 3
-    assert len(m.foo_handler._pending) == 3
-    
-    # Specifying the value in the init will result in just one event
-    m = MyObject(foo=9)
-    assert len(m.foo_handler._pending) == 2
-    m.foo = 2
-    m.foo = 3
-    assert len(m.foo_handler._pending) == 4
-    m.foo = 3
-    assert len(m.foo_handler._pending) == 4
-    
-
-def test_readonly():
-    class MyObject(event.HasEvents):
-        
-        @event.readonly
-        def foo(self, v=1.2):
-            return float(v)
-    
-    m = MyObject()
-    assert m.foo == 1.2
-    
-    
-    m._set_prop('foo', 5.1)
-    assert m.foo == 5.1
-    
-    m._set_prop('foo', '9.3')
-    assert m.foo == 9.3
-    
-    # fails
-    
-    with raises(AttributeError):
-        m.foo = 3.1
-    
-    with raises(AttributeError):
-        m.foo = 'bla'
-    
-    with raises(AttributeError):
-        MyObject(foo=3.2)
-    
-    with raises(TypeError):
-        event.readonly(3)  # readonly decorator needs callable
-    
-    with raises(AttributeError):
-        del m.foo  # cannot delete a readonly
-        
-    class MyObject2(event.HasEvents):
-        
-        @event.readonly
-        def foo(self, v):
-            return float(v)
-    
-    #with raises(RuntimeError):
-    #    MyObject2()  # no default value for foo
-    ob = MyObject2()
-    assert ob.foo is None
+    @event.emitter
+    def bar(self, v):
+        return super().bar(v + 10)
 
 
-def test_emitter():
-    
-    class MyObject(event.HasEvents):
-        
-        @event.emitter
-        def foo(self, v):
-            return dict(value=float(v))
-        
-        @event.emitter
-        def bar(self, v):
-            return dict(value=float(v)+1)  # note plus 1
-        
-        @event.connect('foo')
-        def on_foo(self, *events):
-            self.the_val = events[0].value  # so we can test it
-        
-        @event.connect('bar')
-        def on_bar(self, *events):
-            self.the_val = events[0].value  # so we can test it
+@run_in_both(MyObject)
+def test_emitter_ok():
+    """
+    foo 3.2
+    foo 3.2, 3.3
+    bar 4.8, 4.9
+    bar 4.9
+    """
     
     m = MyObject()
     
-    the_vals = []
-    @m.connect('foo', 'bar')
-    def handle_foo(*events):
-        the_vals.append(events[0].value)
-    
-    with event.loop:
+    with loop:
         m.foo(3.2)
-    assert m.the_val == 3.2
-    assert the_vals[-1] == 3.2
     
-    with event.loop:
-        m.foo('9.1')
-    assert m.the_val == 9.1
-    assert the_vals[-1] == 9.1
+    with loop:
+        m.foo(3.2)
+        m.foo(3.3)
     
-    with event.loop:
+    with loop:
+        m.bar(3.8)
+        m.bar(3.9)
+    
+    with loop:
+        m.bar(3.9)
+
+
+@run_in_both(MyObject2)
+def test_emitter_overloading():  # and super()
+    """
+    bar 14.2, 15.5
+    """
+    m = MyObject2()
+    with loop:
         m.bar(3.2)
-    assert m.the_val == 4.2
-    assert the_vals[-1] == 4.2
+        m.bar(4.5)
+
+
+@run_in_both(MyObject)
+def test_emitter_order():
+    """
+    foo 3.1, 3.2
+    bar 6.3, 6.4
+    foo 3.5, 3.6
+    bar 6.7, 6.8
+    bar 6.9, 6.9
+    """
+    m = MyObject()
     
-    # Fail
+    # Even though we emit foo 4 times between two event loop iterations,
+    # they are only grouped as much as to preserve order. This was not
+    # the case before the 2017 Flexx refactoring.
+    with loop:
+        m.foo(3.1)
+        m.foo(3.2)
+        m.bar(5.3)
+        m.bar(5.4)
+        m.foo(3.5)
+        m.foo(3.6)
+        m.bar(5.7)
+        m.bar(5.8)
     
-    with raises(ValueError):
+    # The last two occur after an event loop iter, so these cannot be grouped
+    # with the previous.
+    with loop:
+        m.bar(5.9)
+        m.bar(5.9)
+
+
+@run_in_both(MyObject)
+def test_emitter_fail():
+    """
+    fail TypeError
+    fail TypeError
+    fail ValueError
+    """
+    
+    m = MyObject()
+    
+    try:
+        m.wrong(1.1)
+    except TypeError:
+        print('fail TypeError')
+    
+    try:
         m.foo('bla')
+    except TypeError:
+        print('fail TypeError')
     
+    try:
+        m.emit('bla:x')
+    except ValueError:
+        print('fail ValueError')
+
+
+## Meta-ish tests that are similar for property/emitter/action/reaction
+
+
+@run_in_both(MyObject)
+def test_emitter_not_settable():
+    """
+    fail AttributeError
+    """
+    
+    m = MyObject()
+    
+    try:
+        m.foo = 3
+    except AttributeError:
+        print('fail AttributeError')
+    
+    # We cannot prevent deletion in JS, otherwise we cannot overload
+
+
+def test_emitter_python_only():
+    
+    m = MyObject()
+    
+    # Emitter decorator needs proper callable
     with raises(TypeError):
-        event.emitter(3)  # emitter decorator needs callable
+        event.emitter(3)
+    with raises((TypeError, ValueError)):  # CPython, Pypy
+        event.emitter(isinstance)  
     
+    # Check type of the instance attribute
+    assert isinstance(m.foo, event._emitter.Emitter)
+    
+    # Cannot set or delete an emitter
     with raises(AttributeError):
-        del m.foo  # cannot delete an emitter
-    
+        m.foo = 3
     with raises(AttributeError):
-        m.foo = None  # cannot set an emitter
+        del m.foo
     
-    class MyObject2(event.HasEvents):
-        
-        @event.emitter
-        def foo(self, v):
-            return float(v)
-    
-    with raises(TypeError):
-        m = MyObject2()
-        m.foo(3.2)  # return value of emitter must be a dict
+    # Repr and docs
+    assert 'emitter' in repr(m.__class__.foo).lower()
+    assert 'emitter' in repr(m.foo).lower()
+    assert 'foo' in repr(m.foo)
 
 
 run_tests_if_main()

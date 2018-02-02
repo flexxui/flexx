@@ -10,17 +10,17 @@ sections below.
 
 PyScript is a tool to write JavaScript using (a subset) of the Python
 language. All relevant buildins, and the methods of list, dict and str
-are supported. Not supported are set, slicing with steps,
-``**kwargs``, ``with``, ``yield``. Imports are not supported. Other than that,
-most Python code should work as expected, though if you try hard enough the
-JavaScript may shine through. As a rule of thumb, the code should behave
-as expected when correct, but error reporting may not be very Pythonic.
+are supported. Not supported are set, slicing with steps, ``yield`` and
+imports. Other than that, most Python code should work as expected ...
+mostly, see caveats below. If you try hard enough the JavaScript may
+shine through. As a rule of thumb, the code should behave as expected
+when correct, but error reporting may not be very Pythonic.
 
 The most important functions you need to know about are
 :func:`py2js <flexx.pyscript.py2js>` and 
 :func:`evalpy <flexx.pyscript.evalpy>`.
 In principal you do not need knowledge of JavaScript to write PyScript
-code.
+code, though it does help in corner cases.
 
 
 Goals
@@ -60,7 +60,7 @@ write JavaScript with a Python syntax. PyScript is just JavaScript.
 
 This means that depending on what you want to achieve, you may still need
 to know a thing or two about how JavaScript works. Further, not all Python
-code can be converted (e.g. ``**kwargs`` are not supported), and
+code can be converted (e.g. import is not supported), and
 lists and dicts are really just JavaScript arrays and objects, respectively.
 
 
@@ -101,6 +101,10 @@ plan to make heavy use of PyScript.
 * Calling an object that starts with a capital letter is assumed to be
   a class instantiation (using ``new``): PyScript classes *must* start
   with a capital letter, and any other callables must not.
+* A function can accept keyword arguments if it has a ``**kwargs`` parameter
+  or named arguments after ``*args``. Passing keywords to a function that does
+  not handle keyword arguments might result in confusing errors.
+
 
 PyScript is valid Python
 ------------------------
@@ -108,9 +112,9 @@ PyScript is valid Python
 Other than e.g. RapydScript, PyScript is valid Python. This allows
 creating modules that are a mix of real Python and PyScript. You can easily
 write code that runs correctly both as Python and PyScript. Raw JS can
-be included by defining a function with only a docstring.
+be included where needed (e.g. for performance).
 
-PyScript itself (the compiler) is written in Python. Perhaps PyScript can
+PyScript's compiler is written in Python. Perhaps PyScript can
 at some point compile itself, so that it becomes possible to define
 PyScript inside HTML documents.
 
@@ -124,9 +128,7 @@ Check out ``examples/app/benchmark.py``.
 Nevertheless, the overhead to realize the more Pythonic behavior can
 have a negative impact on performance in tight loops (in comparison to
 writing the JS by hand). The recommended approach is to write
-performance critical code in pure JavaScript if necessary. This can be
-done by defining a function with only a docstring (containing the JS
-code).
+performance critical code in pure JavaScript if necessary. 
 
 .. _pyscript-support:
 
@@ -141,8 +143,6 @@ Not currently supported:
 * import (maybe we should translate an import to ``require()``?)
 * the ``set`` class (JS has no set, but we could create one?)
 * slicing with steps (JS does not support this)
-* support for ``**kwargs`` (maps badly to JS call mechanism)
-* The ``with`` statement (no equivalent in JS)
 * Generators, i.e. ``yield`` (not widely supported in JS)
 
 Supported basics:
@@ -160,12 +160,16 @@ Supported basics:
 * for-loop over dict/object using ``.keys()``, ``.values()`` and ``.items()``
 * function calls can have ``*args``
 * function defs can have default arguments and ``*args``
+* function calls/defs can use keyword arguments and ``**kwargs``, but
+  use with care (see caveats).
 * lambda expressions
 * list comprehensions
 * classes, with (single) inheritance, and the use of ``super()``
 * raising and catching exceptions, assertions
 * creation of "modules"
 * globals / nonlocal
+* The ``with`` statement (no equivalent in JS)
+* double underscore name mangling
 
 Supported Python conveniences:
 
@@ -180,7 +184,7 @@ Supported Python conveniences:
   round, int, float, str, bool, abs, divmod, all, any, enumerate, zip,
   reversed, sorted, filter, map.
 * all methods of list, dict and str are supported (except a few string
-  methods: encode format format_map isdecimal isdigit isprintable maketrans)
+  methods: encode, format, format_map, isdecimal, isdigit, isprintable, maketrans)
 * the default return value of a function is ``None``/``null`` instead
   of ``undefined``.
 * list concatenation using the plus operator, and list/str repeating

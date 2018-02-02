@@ -118,9 +118,8 @@ def create_js_module(name, code, imports, exports, type='umd'):
             dep, dep_name = imp.split(' as ', 1)
         else:
             dep = dep_name = imp
-        if not isidentifier(dep_name):
-            raise ValueError('Import %r is not an identifier, '
-                             'have you used "as"?' % dep_name)
+        if '.' in dep_name:
+            raise ValueError('Import %r has dots, have you used "as"?' % dep_name)
         deps.append(dep)
         dep_names.append(dep_name)
     

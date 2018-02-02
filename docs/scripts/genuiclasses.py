@@ -2,8 +2,10 @@
 """
 
 import os
+import sys
+
 from types import ModuleType
-from flexx import ui, app
+from flexx import ui, app, event
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -24,7 +26,7 @@ def main():
         if isinstance(mod, ModuleType):
             classes = []
             for w in mod.__dict__.values():
-                if isinstance(w, type) and issubclass(w, app.Model):  # Model, cause e.g. TreeItem
+                if isinstance(w, type) and issubclass(w, (app.PyComponent, app.JsComponent)):
                     if w.__module__ == mod.__name__:
                         classes.append(w)
                         if issubclass(w, ui.Layout):
@@ -37,14 +39,23 @@ def main():
     
     # Create page for each module
     for module_name, classes in sorted(pages.items()):
-        page_name = module_name.split('.')[-1].strip('_').capitalize()
-        docs = '%s\n%s\n\n' % (page_name, '-' * len(page_name))
+        # Get page name and title
+        page_name = page_title = module_name.split('.')[-1].strip('_').capitalize()
+        mdoc = sys.modules[module_name].__doc__
+        if mdoc and 0 < len(mdoc.split('\n', 1)[0].strip()) <= 24:
+            page_title = mdoc.split('\n', 1)[0].strip()
+            sys.modules[module_name].__doc__ = sys.modules[module_name].__doc__.split('\n', 1)[-1]
         
+        docs = '%s\n%s\n\n' % (page_title, '-' * len(page_title))
         docs += '.. automodule:: %s\n\n' % module_name
-        
         docs += '----\n\n'
         
+        # Include more docs?
+        if module_name.endswith('_widget'):
+            docs += '.. autofunction:: flexx.ui.create_element\n\n'
+        
         for cls in classes:
+            assert issubclass(cls, app.JsComponent)
             name = cls.__name__
             
             # Insert info on base clases
@@ -60,12 +71,59 @@ def main():
                 line = '    *Inherits from:* ' + ', '.join(bases)
                 cls.__doc__ = line + '\n\n    ' + (cls.__doc__ or '').lstrip()
             
-            # Create doc for class
+            members = {}
+            include = '_create_dom', '_render_dom'
+            exclude = 'CODE',
+            
+            # Collect all stuff that's on the class.
+            for n in list(cls.JS.__dict__):
+                val = getattr(cls.JS, n)
+                if n in exclude or not val.__doc__:
+                    pass
+                elif n.startswith('_') and n not in include:
+                    pass
+                elif isinstance(val, event._action.BaseDescriptor):
+                    for tname, tclass in (('attributes', event._attribute.Attribute),
+                                          ('properties', event._property.Property),
+                                          ('actions', event._action.ActionDescriptor),
+                                          ('reactions', event._reaction.ReactionDescriptor),
+                                          ('emitters', event._emitter.EmitterDescriptor)):
+                        if isinstance(val, tclass):
+                            members.setdefault(tname, []).append(n)
+                            break
+                    else:
+                        assert False
+                elif getattr(val, '__doc__', None):
+                    members.setdefault('methods', []).append(n)
+            
+            # Get canonical name
+            full_name = '%s.%s' % (module_name, name)
             if getattr(ui, name, None):
-                docs += '.. autoclass:: flexx.ui.%s\n' % name
-            else:
-                docs += '.. autoclass:: %s.%s\n' % (module_name, name)
-            docs += ' :members:\n\n' 
+                full_name = 'flexx.ui.%s' % name
+            
+            # Sort and combine
+            order = 'attributes', 'properties', 'emitters', 'actions', 'reactions', 'methods'
+            member_str = ' :members:'
+            toc_str = '\n'
+            for key in members:
+                members[key].sort()
+            assert not set(members).difference(order)
+            for key in order:
+                if key in members:
+                    # Add to member string and toc
+                    toc_str = toc_str.rstrip(',') + '\n\n    *{}*:'.format(key)
+                    for n in members[key]:
+                        member_str += ' {},'.format(n)
+                        toc_str += ' `{} <#{}.{}>`__,'.format(n, full_name, n)  # __ means anonymous hyperlink
+                    # Hack: put members back on Python class to have them documented
+                    for n in members[key]:
+                        if n not in cls.__dict__:
+                            setattr(cls, n, cls.JS.__dict__[n])
+            cls.__doc__ += toc_str.rstrip(',') + '\n\n'
+            
+            # Create rst for class
+            docs += '.. autoclass:: %s\n' % full_name
+            docs += member_str.rstrip(',') + '\n :member-order: alphabetical\n\n'
         
         # Write doc page
         filename = os.path.join(OUTPUT_DIR, page_name.lower() + '.rst')
@@ -76,9 +134,8 @@ def main():
     docs = 'Ui API'
     docs += '\n' + '=' * len(docs) + '\n\n'
     docs += 'This is a list of all widget classes provided by ``flexx.ui``. '
-    docs += ':class:`Widget <flexx.ui.Widget>` is the base class of all widgets. '
-    docs += 'There is one document per widget type. Each document contains '
-    docs += 'examples with the widget(s) defined within.\n\n'
+    docs += 'The :class:`Widget <flexx.ui.Widget>` class is the base class of all widgets. '
+    docs += '\n\n'
     docs += '\nBase widget:\n\n'
     if True:
         docs += '* :class:`%s <flexx.ui.%s>`\n' % ('Widget', 'Widget')
@@ -96,7 +153,7 @@ def main():
     filename = os.path.join(OUTPUT_DIR, 'api.rst')
     created_files.append(filename)
     open(filename, 'wt', encoding='utf-8').write(docs)
-    
+ 
     print('  generated widget docs with %i pages and %i widgets' % (len(pages), len(class_names)))
 
 

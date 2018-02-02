@@ -520,12 +520,12 @@ class StreamReader(threading.Thread):
         # Notify
         code = self._process.poll()
         if getattr(self._process, 'we_closed_it', False):
-            logger.info('runtime process terminated by us')
+            logger.info('runtime process terminated from Python')
         elif not code:
             logger.info('runtime process stopped')
-        else:
-            logger.error('runtime process stopped (%i), stdout:\n%s' %
-                          (code, '\n'.join(msgs)))
+        else:  # Unexpected, provide more info
+            logger.error('runtime process (0x%x) stopped (%i), stdout:\n%s' %
+                          (id(self._process), code, '\n'.join(msgs)))
 
 
 def find_osx_exe(app_id):

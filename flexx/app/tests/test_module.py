@@ -12,7 +12,7 @@ import shutil
 from flexx.util.testing import run_tests_if_main, raises
 from flexx.util.logging import capture_log
 
-from flexx import ui, app
+from flexx import app
 from flexx.app._modules import JSModule
 
 tempdirname = os.path.join(tempfile.gettempdir(), 'flexx_module_test')
@@ -40,13 +40,12 @@ files['foo'] = """
     def do_more():
         return atan(1) + random(magic_number)
     
-    class Foo(app.Model):
+    class Foo(app.JsComponent):
         
         CSS = ".foo-css-rule {}"
         
-        class JS:
-            def init(self):
-                do_something()
+        def init(self):
+            do_something()
 """
 
 files['bar'] = """
@@ -77,8 +76,11 @@ files['bar'] = """
         pass
     
     def cannot_transpile():
-        with AA(object):  # no with-statement in Flexx
-            pass
+        # functionality not supported by PyScript. Note that some may be at some point
+        # f"format strings" - also not in Python < 3.6
+        {'no', 'set', 'in', 'js'}
+        a[1:2:3]  # no slicing with step
+        import xx
     
     cannot_serialize = [1, 2, use_lib1]
     
@@ -138,6 +140,35 @@ files['lib4'] = """
         return 1
 """
 
+files['globals0'] = """
+    def apply():
+        console = 4
+    def main():
+        apply()
+        print(console)
+"""
+
+files['globals1'] = """
+    console = 3
+    def apply():
+        global console
+        console = 4
+    def main():
+        global console
+        apply()
+        print(console)
+"""
+
+files['globals2'] = """
+    def apply():
+        global console
+        console.xx = 4
+    def main():
+        global console
+        apply()
+        print(console.xx)
+"""
+
 
 PKG_NAME = 'flxtest'
 
@@ -168,9 +199,9 @@ def teardown_module():
     
     # Remove trace of these classes, since their source no longer exists,
     # Pyscript wont be able to resolve them for JS
-    for cls in list(app.Model.CLASSES):
+    for cls in list(app._component2.AppComponentMeta.CLASSES):
         if cls.__jsmodule__.startswith(PKG_NAME + '.'):
-            app.Model.CLASSES.remove(cls)
+            app._component2.AppComponentMeta.CLASSES.remove(cls)
 
 
 def test_modules():
@@ -186,8 +217,8 @@ def test_modules():
     # Add Foo, this will bring everything else in
     m.add_variable('Foo')
     
-    assert len(m.model_classes) == 1
-    assert m.model_classes.pop().__name__ == 'Foo'
+    assert len(m.component_classes) == 1
+    assert m.component_classes.pop().__name__ == 'Foo'
     
     # Modules exists
     assert len(store) == 7
@@ -196,7 +227,7 @@ def test_modules():
     assert 'flxtest.lib2' in store
     assert 'flxtest.lib3' in store
     assert 'flxtest.__init__' in store  # different from how Python works!
-    assert 'flexx.app._model' in store  # + what it depends on
+    assert 'flexx.app._component2' in store
     
     # CSS
     assert 'foo-css-rule' in store['flxtest.foo'].get_css()
@@ -213,9 +244,9 @@ def test_modules():
     assert 'do_something = function' in store['flxtest.foo'].get_js()
     
     # Function defs imported
-    assert 'sin = flxtest_lib1.sin' in store['flxtest.lib3'].get_js()
-    assert 'cos = flxtest_lib2.cos' in store['flxtest.lib3'].get_js()
-    assert 'tan = flxtest_lib3.tan' in store['flxtest.foo'].get_js()
+    assert 'sin = flxtest$lib1.sin' in store['flxtest.lib3'].get_js()
+    assert 'cos = flxtest$lib2.cos' in store['flxtest.lib3'].get_js()
+    assert 'tan = flxtest$lib3.tan' in store['flxtest.foo'].get_js()
     
     # Unused constants 
     assert 'sys' not in store['flxtest.foo'].get_js()
@@ -230,7 +261,7 @@ def test_modules():
     
     # But RawJS constants can be shared!
     assert 'bias = []' in store['flxtest.lib2'].get_js()
-    assert 'bias = flxtest_lib2.bias' in store['flxtest.lib3'].get_js()
+    assert 'bias = flxtest$lib2.bias' in store['flxtest.lib3'].get_js()
     
     # So ,,, lib4 is omitted, right?
     assert 'flxtest.lib4' not in store
@@ -272,7 +303,7 @@ def test_misc():
     #
     m.add_variable('Foo')
     assert len(m.deps) == 3
-    assert 'flexx.app._model' in m.deps
+    assert 'flexx.app._component2' in m.deps
 
 
 def test_add_variable():
@@ -297,22 +328,21 @@ def test_add_variable():
         store['flxtest.lib2'].add_variable('spam')  
     assert len(log) == 1 and 'undefined variable' in log[0]
     
-    with raises(ValueError):
+    with capture_log('info') as log:
         store['flxtest.lib2'].add_variable('spam', is_global=True)
+    assert not log
     
     m = JSModule('flxtest.bar', store)
     
     # Can use stuff from module if its a __pyscript__ modules
     m.add_variable('use_lib1')
     
-    # Even if name makes no sense; maybe it has exports that we do not know of
-    m.add_variable('use_lib1_wrong')
+    # The module code is smart enough that lib1 does not contain sinasappel
+    with raises(RuntimeError):
+        m.add_variable('use_lib1_wrong')
     
-    # But not for regular modules
-    with raises(ValueError) as err:
-        m.add_variable('use_lib2')
-    assert '__pyscript__' in str(err)
-    
+    # Also for dotted names
+    m.add_variable('use_lib2')
     
     # Has changed flag
     our_time = time.time(); time.sleep(0.01)
@@ -349,14 +379,14 @@ def test_subclasses():
     assert 'BB' in m.get_js()
     assert 'AA' in store['flxtest.lib2'].get_js()
     
-    # Using a class Spam > Bar > Foo > Model
+    # Using a class Spam > Bar > Foo > Component
     store = {}
     m = JSModule('flxtest.bar', store)
     assert 'flxtest.foo' not in store
     #
     m.add_variable('Spam')
     assert 'flxtest.foo' in store
-    assert 'flexx.app._model' in store
+    assert 'flexx.app._component2' in store
     
     # Using Foo in modules that imports it
     store = {}
@@ -365,7 +395,40 @@ def test_subclasses():
     #
     m.add_variable('Foo')
     assert 'flxtest.foo' in store
-    assert 'flexx.app._model' in store
+    assert 'flexx.app._component2' in store
+
+
+def test_globals():
+    
+    import flxtest.globals0
+    import flxtest.globals1
+    import flxtest.globals2
+    
+    store = {}
+    m0 = JSModule('flxtest.globals0', store)
+    m1 = JSModule('flxtest.globals1', store)
+    m2 = JSModule('flxtest.globals2', store)
+    
+    with capture_log('info') as log:
+        m0.add_variable('main')
+    assert len(log) == 1 and 'undefined variable' in log[0]
+    
+    with capture_log('info') as log:
+        m1.add_variable('main')
+    assert not log
+    
+    with capture_log('info') as log:
+        m2.add_variable('main')
+    assert not log
+    
+    # m0 has local definitions, but no global
+    assert '\nvar console' not in m0.get_js()
+    assert '  var console' in m0.get_js()
+    # m1 has global definition but no local
+    assert '\nvar console' in m1.get_js()
+    assert '  var console' not in m1.get_js()
+    # m2 has neither
+    assert 'var console' not in m2.get_js()
 
 
 def test_fails():

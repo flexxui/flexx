@@ -1,59 +1,30 @@
-"""
+""" Dropdown widgets
 
 .. UIExample:: 120
-
-    from flexx import app, ui
-    
-    class Example(ui.Widget):
-        
-        def init(self):
-        
-            ui.ComboBox(text='chooce:', options=['foo', 'bar', 'spaaaam'])
-
-
-.. UIExample:: 220
 
     from flexx import app, event, ui
     
     class Example(ui.Widget):
         
-        CSS = '''
-            .flx-DropdownContainer > .flx-TreeWidget {
-                min-height: 150px;
-            }
-        '''
-        
         def init(self):
-            
-            # A nice and cosy tree view
-            with ui.DropdownContainer(text='Scene graph'):
-                with ui.TreeWidget(max_selected=1):
-                    for i in range(20):
-                        ui.TreeItem(text='foo %i' % i, checked=False)
-            
-            # A combobox
             self.combo = ui.ComboBox(editable=True,
                                      options=('foo', 'bar', 'spaaaaaaaaam', 'eggs'))
             self.label = ui.Label()
         
-        class JS:
-            
-            @event.connect('combo.text')
-            def on_combobox_text(self, *events):
-                self.label.text = 'Combobox text: ' + self.combo.text
-                if self.combo.selected_index is not None:
-                    self.label.text += ' (index %i)' % self.combo.selected_index
-
+        @event.reaction
+        def update_label(self):
+            text = 'Combobox text: ' + self.combo.text
+            if self.combo.selected_index is not None:
+                text += ' (index %i)' % self.combo.selected_index
+            self.label.set_text(text)
 """
 
-from collections import OrderedDict
-
-from ...pyscript import window, this_is_js
-from ... import event
-from .. import Widget
+from ...pyscript import window
+from ... import event, app
+from .._widget import Widget, create_element
 
 
-# todo: some form of autocompletetion
+# todo: some form of autocompletetion?
 
 
 class BaseDropdown(Widget):
@@ -93,10 +64,10 @@ class BaseDropdown(Widget):
             -ms-user-select: none;
         }
         
-        .flx-BaseDropdown.editable-yes > .flx-dd-label {
+        .flx-BaseDropdown.editable-true > .flx-dd-label {
             display: none;
         }
-        .flx-BaseDropdown.editable-yes > .flx-dd-edit {
+        .flx-BaseDropdown.editable-true > .flx-dd-edit {
             display: inline-block;
         }
         
@@ -130,96 +101,88 @@ class BaseDropdown(Widget):
     """
     
     def init(self):
-        self.tabindex = -1
+        self.set_tabindex(-1)
     
+    @event.action
     def expand(self):
         """ Expand the dropdown and give it focus, so that it can be used
         with the up/down keys.
         """
-        self.call_js('expand()')
+        self._expand()
+        self.node.focus()
     
-    class JS:
+    def _create_dom(self):
+        return window.document.createElement('span')
+    
+    def _render_dom(self):
+        # Render more or less this:
+        # <span class='flx-dd-label'></span>
+        # <input type='text' class='flx-dd-edit'></input>
+        # <span></span>
+        # <span class='flx-dd-button'></span>
+        # <div class='flx-dd-strud'>&nbsp;</div>
+        f2 = lambda e: self._submit_text() if e.which == 13 else None
         
-        _HTML = """
-            <span class='flx-dd-label'></span>
-            <input type='text' class='flx-dd-edit'></input>
-            <span></span>
-            <span class='flx-dd-button'></span>
-            <div class='flx-dd-strud'>&nbsp;</span>
-            """.replace('  ', '').replace('\n', '')
-        
-        def _init_phosphor_and_node(self):
-            self.phosphor = self._create_phosphor_widget('span')
-            self.node = self.phosphor.node
-            self.node.innerHTML = self._HTML
-            
-            self._label = self.node.childNodes[0]
-            self._edit = self.node.childNodes[1]
-            self._button = self.node.childNodes[3]
-            self._strud = self.node.childNodes[4]
-            
-            f2 = lambda e: self._submit_text() if e.which == 13 else None
-            self._addEventListener(self._edit, 'keydown', f2, False)
-            self._addEventListener(self._edit, 'blur', self._submit_text, False)
-            
-            self._addEventListener(self._label, 'click', self._but_click, 0)
-            self._addEventListener(self._button, 'click', self._but_click, 0)
-        
-        def expand(self):
-            """ Expand the dropdown and give it focus, so that it can be used
-            with the up/down keys.
-            """
+        return [create_element('span', 
+                               {'className': 'flx-dd-label',
+                                'onclick': self._but_click},
+                               self.text + '&nbsp;'),
+                create_element('input',
+                               {'className': 'flx-dd-edit',
+                                'onkeypress': f2,
+                                'onblur': self._submit_text,
+                                'value': self.text}),
+                create_element('span'),
+                create_element('span', {'className': 'flx-dd-button',
+                                        'onclick': self._but_click}),
+                create_element('div', {'className': 'flx-dd-strud'}, '&nbsp;'),
+                ]
+    
+    def _but_click(self):
+        if self.node.classList.contains('expanded'):
+            self._collapse()
+        else:
             self._expand()
-            self.node.focus()
-        
-        @event.connect('text')
-        def __on_text(self, *events):
-            self._label.innerHTML = self.text + '&nbsp;'  # strut it
-            self._edit.value = self.text
-        
-        def _but_click(self):
-            if self.node.classList.contains('expanded'):
+    
+    def _submit_text(self):
+        edit_node = self.outernode.childNodes[1]  # not pretty but we need to get value
+        self.set_text(edit_node.value)
+    
+    def _expand(self):
+        # Expand
+        self.node.classList.add('expanded')
+        # Collapse when the node changes position (e.g. scroll or layout change)
+        rect = self.node.getBoundingClientRect()
+        self._rect_to_check = rect
+        window.setTimeout(self._check_expanded_pos, 100)
+        # Collapse when the mouse is used outside the combobox (or its children)
+        self._addEventListener(window.document, 'mousedown', self._collapse_maybe, 1)
+        # Return rect so subclasses can use it
+        return rect
+    
+    def _collapse_maybe(self, e):
+        # Collapse if the given mouse event is outside the combobox.
+        # Better version of blur event, sort of. Dont use mouseup, as then 
+        # there's mouse capturing (the event will come from the main widget).
+        t = e.target
+        while t is not window.document.body:
+            if t is self.outernode:
+                return
+            t = t.parentElement
+        window.document.removeEventListener('mousedown', self._collapse_maybe, 1)
+        self._collapse()
+    
+    def _collapse(self):
+        self.node.classList.remove('expanded')
+    
+    def _check_expanded_pos(self):
+        if self.node.classList.contains('expanded'):
+            rect = self.node.getBoundingClientRect()
+            if not (rect.top == self._rect_to_check.top and
+                    rect.left == self._rect_to_check.left):
                 self._collapse()
             else:
-                self._expand()
-        
-        def _submit_text(self):
-            self.text = self._edit.value
-        
-        def _expand(self):
-            # Expand
-            self.node.classList.add('expanded')
-            # Collapse when the node changes position (e.g. scroll or layout change)
-            rect = self.node.getBoundingClientRect()
-            self._rect_to_check = rect
-            window.setTimeout(self._check_expanded_pos, 100)
-            # Collapse when the mouse is used outside the combobox (or its children)
-            self._addEventListener(window.document, 'mouseup', self._collapse_maybe, 0)
-            # Return rect so subclasses can use it
-            return rect
-        
-        def _collapse_maybe(self, e):
-            # Collapse if the given mouse event is outside the combobox.
-            # Better version of blur event, sort of,
-            t = e.target
-            while t is not window.document.body:
-                if t is self.node:
-                    return
-                t = t.parentElement
-            window.document.removeEventListener('mouseup', self._collapse_maybe)
-            self._collapse()
-        
-        def _collapse(self):
-            self.node.classList.remove('expanded')
-        
-        def _check_expanded_pos(self):
-            if self.node.classList.contains('expanded'):
-                rect = self.node.getBoundingClientRect()
-                if not (rect.top == self._rect_to_check.top and
-                        rect.left == self._rect_to_check.left):
-                    self._collapse()
-                else:
-                    window.setTimeout(self._check_expanded_pos, 100)
+                window.setTimeout(self._check_expanded_pos, 100)
 
 
 class ComboBox(BaseDropdown):
@@ -228,7 +191,7 @@ class ComboBox(BaseDropdown):
     with an editable text. It can be used to select among a set of
     options in a more compact manner than a TreeWidget would.
     Optionally, the text of the combobox can be edited.
-    Connect to the ``text`` and/or ``selected_index`` properties to keep
+    React to the ``text`` and/or ``selected_index`` properties to keep
     track of interactions.
     
     When the combobox is expanded, the arrow keys can be used to select
@@ -263,227 +226,208 @@ class ComboBox(BaseDropdown):
             box-shadow: inset 0 0 3px 1px rgba(0, 0, 255, 0.4);
         }
     """
+
+    # Note: we don't define text on the base class, because it would be
+    # the only common prop, plus we want a different docstring.
     
-    class Both:
+    text = event.StringProp('', settable=True, doc="""
+        The text displayed on the widget. This property is set
+        when an item is selected from the dropdown menu. When editable,
+        the ``text`` is also set when the text is edited by the user.
+        This property is settable programatically regardless of the
+        value of ``editable``.
+        """)
+    
+    selected_index = event.IntProp(-1, settable=True, doc="""
+        The currently selected item index. Can be -1 if no item has
+        been selected or when the text was changed manually (if editable).
+        Can also be programatically set.
+        """)
+    
+    selected_key = event.StringProp('', settable=True, doc="""
+        The currently selected item key. Can be '' if no item has
+        been selected or when the text was changed manually (if editable).
+        Can also be programatically set.
+        """)
+    
+    placeholder_text = event.StringProp('', settable=True, doc="""
+        The placeholder text to display in editable mode.
+        """)
+    
+    editable = event.BoolProp(False, settable=True, doc="""
+        Whether the combobox's text is editable.
+        """)
+    
+    options = event.TupleProp((), settable=True, doc="""
+        A list of tuples (key, text) representing the options. Both
+        keys and texts are converted to strings if they are not already.
+        For items that are given as a string, the key and text are the same.
+        If a dict is given, it is transformed to key-text pairs.
+        """)
+    
+    _highlighted = app.LocalProperty(-1, settable=True, doc="""
+        The index of the currently highlighted item.
+        """)
+    
+    def init(self):
+        super().init()
+        # Use action to do validation. We could use a custom property to
+        # do the validation/normalization, but this case is quite specific,
+        # and this works too.
+        self.set_options(self.options)
+    
+    @event.action
+    def set_options(self, options):
+        # If dict ...
+        if isinstance(options, dict):
+            keys = options.keys()
+            keys = sorted(keys)  # Sort dict by key
+            options = [(k, options[k]) for k in keys]
+        # Parse
+        options2 = []
+        for opt in options:
+            if isinstance(opt, (tuple, list)):
+                opt = str(opt[0]), str(opt[1])
+            else:
+                opt = str(opt), str(opt)
+            options2.append(opt)
+        self._mutate_options(tuple(options2))
+    
+    def _create_dom(self):
+        node = super()._create_dom()
+        node.onkeydown=self._key_down
+        return node
+    
+    def _render_dom(self):
+        # Create a virtual node for each option
+        options = self.options
+        option_nodes = []
+        strud = ''
+        for i in range(len(options)):
+            key, text = options[i]
+            clsname = 'highlighted-true' if self._highlighted == i else ''
+            li = create_element('li',
+                                dict(index=i, className=clsname),
+                                text if len(text.strip()) else '&nbsp;')
+            strud += text + '&nbsp;&nbsp;<span class="flx-dd-space"></span><br />'
+            option_nodes.append(li)
         
-        # Note: we don't define text on the base class, because it would be
-        # the only common prop, plus we want a different docstring.
+        # Update the list of nodes created by superclass
+        nodes = super()._render_dom()
+        nodes[1].props.placeholder = self.placeholder_text  # the line edit
+        nodes[-1].children = strud  # set strud
+        nodes.append(create_element('ul',
+                                    dict(onmousedown=self._ul_click),
+                                    option_nodes))
+        return nodes
+    
+    @event.reaction
+    def __track_editable(self):
+        if self.editable:
+            self.node.classList.remove('editable-false')
+            self.node.classList.add('editable-true')
+        else:
+            self.node.classList.add('editable-false')
+            self.node.classList.remove('editable-true')
+    
+    @event.reaction('options')
+    def __on_options(self, *events):
+        # Be smart about maintaining item selection
+        keys = [key_text[0] for key_text in self.options]
+        if self.selected_key and self.selected_key in keys:
+            key = self.selected_key
+            self.set_selected_index(-1)
+            self.set_selected_key('')
+            self.set_selected_key(key)
+        elif self.selected_index < len(self.options):
+            index = self.selected_index
+            self.set_selected_key('')
+            self.set_selected_index(-1)
+            self.set_selected_index(index)
+        else:
+            self.set_selected_index(-1)
+            self.set_selected_key('')
+    
+    def _ul_click(self, e):
+        self._select_from_ul(e.target.index)
+    
+    def _select_from_ul(self, index):
+        if index >= 0:
+            key, text = self.options[index]
+            self.set_selected_index(index)
+            self.set_selected_key(key)
+            self.set_text(text)
+        self._collapse()
+    
+    def _key_down(self, e):
+        # Get key
+        key = e.key
+        if not key and e.code:
+            key = e.code
         
-        @event.prop
-        def text(self, v=''):
-            """ The text displayed on the widget. This property is set
-            when an item is selected from the dropdown menu. When editable,
-            the ``text`` is also set when the text is edited by the user.
-            This property is settable programatically regardless of the
-            value of ``editable``.
-            """
-            return str(v)
+        # If collapsed, we may want to expand. Otherwise, do nothing.
+        # In this case, only consume events that dont sit in the way with
+        # the line edit of an editable combobox.
+        if not self.node.classList.contains('expanded'):
+            if key in ['ArrowUp', 'ArrowDown']:
+                e.stopPropagation()
+                self.expand()
+            return
         
-        @event.prop
-        def selected_index(self, v=None):
-            """ The currently selected item index. Can be None if no item has
-            been selected or when the text was changed manually (if editable).
-            Can also be programatically set.
-            """
-            if v is None:
-                return None
-            return max(0, int(v))
+        # Early exit, be specific about the keys that we want to accept
+        if key not in ['Escape', 'ArrowUp', 'ArrowDown', ' ', 'Enter']:
+            return
         
-        @event.prop
-        def selected_key(self, v=None):
-            """ The currently selected item key. Can be None if no item has
-            been selected or when the text was changed manually (if editable).
-            Can also be programatically set.
-            """
-            if v is None:
-                return None
-            return str(v)
+        # Consume the keys
+        e.preventDefault()
+        e.stopPropagation()
         
-        @event.prop
-        def placeholder_text(self, v=''):
-            """ The placeholder text to display in editable mode.
-            """
-            return str(v)
-        
-        @event.prop
-        def options(self, options=[]):
-            """ A list of tuples (key, text) representing the options. Both
-            keys and texts are converted to strings if they are not already.
-            For items that are given as a string, the key and text are the same.
-            If a dict is given, it is transformed to key-text pairs.
-            """
-            # If dict ...
-            if isinstance(options, dict):
-                keys = options.keys()
-                if this_is_js():
-                    keys = sorted(keys)  # Sort dict by key
-                elif isinstance(options, OrderedDict):
-                    # PyScript should not see use of OrderedDict, therefore this
-                    # is in the else clause of "if this_is_js():"
-                    keys = sorted(keys)
-                options = [(k, options[k]) for k in keys]
-            # Parse
-            options2 = []
-            for opt in options:
-                if isinstance(opt, (tuple, list)):
-                    opt = str(opt[0]), str(opt[1])
-                else:
-                    opt = str(opt), str(opt)
-                options2.append(opt)
-            return tuple(options2)
-        
-        @event.prop
-        def editable(self, v=False):
-            """ Whether the combobox's text is editable.
-            """
-            return bool(v)
-            
-    class JS:
-        
-        def _init_phosphor_and_node(self):
-            super()._init_phosphor_and_node()
-            self._ul = window.document.createElement('ul')
-            self.node.appendChild(self._ul)
-            
-            self._addEventListener(self._ul, 'click', self._ul_click, 0)
-            self._addEventListener(self.node, 'keydown', self._key_down, 0)
-            
-            self._highlighted = -1
-        
-        def _ul_click(self, e):
-            self._select_from_ul(e.target.index)
-        
-        def _select_from_ul(self, index):
-            if index >= 0:
-                key, text = self.options[index]
-                self.selected_index = index
-                self.selected_key = key
-                self.text = text
+        if key == 'Escape':
+            self._set_highlighted(-1)
             self._collapse()
         
-        def _key_down(self, e):
-            # Get key
-            key = e.key
-            if not key and e.code:
-                key = e.code
-            
-            # If collapsed, we may want to expand. Otherwise, do nothing.
-            # In this case, only consume events that dont sit in the way with
-            # the line edit of an editable combobox.
-            if not self.node.classList.contains('expanded'):
-                if key in ['ArrowUp', 'ArrowDown']:
-                    e.stopPropagation()
-                    self.expand()
-                return
-            
-            # Early exit, be specific about the keys that we want to accept
-            if key not in ['Escape', 'ArrowUp', 'ArrowDown', ' ', 'Enter']:
-                return
-            
-            # Consume the keys
-            e.preventDefault()
-            e.stopPropagation()
-            
-            childNodes = [self._ul.childNodes[i]
-                          for i in range(len(self._ul.childNodes))]
-            
-            if key == 'Escape':
-                # Clear highlighting and current highlighted index
-                for node in childNodes:
-                    node.classList.remove('highlighted-true')
-                self._highlighted = -1
-                self._collapse()
-            
-            elif key == 'ArrowUp' or key == 'ArrowDown':
-                # Clear current highlight
-                for node in childNodes:
-                    node.classList.remove('highlighted-true')
-                # Update currently highlighted index
-                if key == 'ArrowDown':
-                    self._highlighted += 1
-                else:
-                    self._highlighted -= 1
-                self._highlighted = min(max(self._highlighted, 0), len(childNodes)-1)
-                # Apply highlighting
-                childNodes[self._highlighted].classList.add('highlighted-true')
-            
-            elif key == 'Enter' or key == ' ':
-                # Select the currently highlighted - keep it, for quick re-apply
-                if self._highlighted >= 0 and self._highlighted < len(childNodes):
-                    self._select_from_ul(self._highlighted)
-        
-        def _expand(self):
-            rect = super()._expand()
-            self._ul.style.left = rect.left + 'px'
-            self._ul.style.top = (rect.bottom - 1) + 'px'
-            self._ul.style.width = rect.width + 'px'
-        
-        def _submit_text(self):
-            self.text = self._edit.value
-            # todo: select option if text happens to match it?
-            self.selected_index = None
-            self.selected_key = None
-        
-        @event.connect('selected_index')
-        def __on_selected_index(self, *events):
-            if self.selected_index is not None:
-                if self.selected_index < len(self.options):
-                    key, text = self.options[self.selected_index]
-                    self.text = text
-                    self.selected_key = key
-        
-        @event.connect('selected_key')
-        def __on_selected_key(self, *events):
-            if self.selected_key is not None:
-                key = self.selected_key
-                if self.options[self.selected_index]:
-                    if self.options[self.selected_index][0] == key:
-                        return
-                for index, option in enumerate(self.options):
-                    if option[0] == key:
-                        self.selected_index = index
-        
-        @event.connect('options')
-        def __on_options(self, *events):
-            while self._ul.firstChild:
-                self._ul.removeChild(self._ul.firstChild)
-            strud = ''
-            for i, option in enumerate(self.options):
-                key, text = option
-                li = window.document.createElement('li')
-                li.innerHTML = text if len(text.strip()) else '&nbsp;'
-                li.index = i
-                self._ul.appendChild(li)
-                strud += text + '&nbsp;&nbsp;<span class="flx-dd-space"></span><br />'
-            # Be smart about maintaining item selection
-            keys = [key_text[0] for key_text in self.options]
-            if self.selected_key in keys:
-                self.selected_index = None
-                key = self.selected_key
-                self.selected_key = None
-                self.selected_key = key
-            elif self.selected_index < len(self.options):
-                self.selected_key = None
-                index = self.selected_index
-                self.selected_index = None
-                self.selected_index = index
+        elif key == 'ArrowUp' or key == 'ArrowDown':
+            if key == 'ArrowDown':
+                hl = self._highlighted + 1
             else:
-                self.selected_index = None
-                self.selected_key = None
-            self._strud.innerHTML = strud
+                hl = self._highlighted - 1
+            self._set_highlighted(min(max(hl, 0), len(self.options)-1))
         
-        @event.connect('editable')
-        def __on_editable(self, *events):
-            if self.editable:
-                self.node.classList.add('editable-yes')
-                self.node.classList.remove('editable-no')
-            else:
-                self.node.classList.remove('editable-yes')
-                self.node.classList.add('editable-no')
-        
-        @event.connect('placeholder_text')
-        def __on_placeholder_text(self, *events):
-            self._edit.placeholder = self.placeholder_text
+        elif key == 'Enter' or key == ' ':
+            if self._highlighted >= 0 and self._highlighted < len(self.options):
+                self._select_from_ul(self._highlighted)
+    
+    def _expand(self):
+        rect = super()._expand()
+        ul = self.outernode.children[len(self.outernode.children) - 1]
+        ul.style.left = rect.left + 'px'
+        ul.style.top = (rect.bottom - 1) + 'px'
+        ul.style.width = rect.width + 'px'
+    
+    def _submit_text(self):
+        super()._submit_text()
+        # todo: should this select option if text happens to match it?
+        self.set_selected_index(-1)
+        self.set_selected_key('')
+    
+    @event.reaction('selected_index')
+    def __on_selected_index(self, *events):
+        if self.selected_index >= 0:
+            if self.selected_index < len(self.options):
+                key, text = self.options[self.selected_index]
+                self.set_text(text)
+                self.set_selected_key(key)
+                
+    @event.reaction('selected_key')
+    def __on_selected_key(self, *events):
+        if self.selected_key != '':
+            key = self.selected_key
+            if self.options[self.selected_index]:
+                if self.options[self.selected_index][0] == key:
+                    return
+            for index, option in enumerate(self.options):
+                if option[0] == key:
+                    self.set_selected_index(index)
 
 
 class DropdownContainer(BaseDropdown):
@@ -491,9 +435,15 @@ class DropdownContainer(BaseDropdown):
     A dropdown widget that shows its children when expanded. This can be
     used to e.g. make a collapsable tree widget. Some styling may be required
     for the child widget to be sized appropriately.
+    
+    *Note: This widget is currently broken, because mouse events do not work in the
+    contained widget (at least on Firefox).*
     """
     
     CSS = """
+        .flx-DropdownContainer {
+            min-width: 50px;
+        }
         .flx-DropdownContainer > .flx-Widget {
             position: fixed;
             min-height: 100px;
@@ -508,25 +458,19 @@ class DropdownContainer(BaseDropdown):
         }
     """
     
-    class Both:
-        
-        @event.prop
-        def text(self, v=''):
-            """ The text displayed on the widget.
-            """
-            return str(v)
+    text = event.StringProp('', settable=True, doc="""
+        The text displayed on the dropdown widget.
+        """)
     
-    class JS:
-        
-        def _add_child(self, widget):
-            self.node.appendChild(widget.node)
-        
-        def _remove_child(self, widget):
-            self.node.removeChild(widget.node)
-        
-        def _expand(self):
-            rect = super()._expand()
-            node = self.children[0].node
-            node.style.left = rect.left + 'px'
-            node.style.top = (rect.bottom - 1) + 'px'
-            # node.style.width = (rect.width - 6) + 'px'
+    def _render_dom(self):
+        nodes = super()._render_dom()
+        for widget in self.children:
+            nodes.append(widget.outernode)
+        return nodes
+    
+    def _expand(self):
+        rect = super()._expand()
+        node = self.children[0].outernode
+        node.style.left = rect.left + 'px'
+        node.style.top = (rect.bottom - 1) + 'px'
+        # node.style.width = (rect.width - 6) + 'px'

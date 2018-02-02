@@ -20,7 +20,7 @@ equivalents.
     
     # Lists and dicts
     foo = [1, 2, 3]
-    bar = {'a': 1, b: 2}
+    bar = {'a': 1, 'b': 2}
 
 
 Slicing and subscriping
@@ -207,15 +207,23 @@ class Parser1(Parser0):
         return self.parse_List(node)  # tuple = ~ list in JS
     
     def parse_Dict(self, node):
-        code = ['{']
+        # Oh JS; without the outer braces, it would only be an Object if used
+        # in an assignment ...
+        code = ['({']
         for key, val in zip(node.key_nodes, node.value_nodes):
-            code += self.parse(key)
+            if isinstance(key, (ast.Num, ast.NameConstant)):
+                code += self.parse(key)
+            elif isinstance(key, ast.Str):
+                code += key.value
+            else:
+                # code += ['['] + self.parse(key) + [']']  # this actually breaks on IE
+                raise JSError('Computed dict attributes are not supported on IE :/')
             code.append(': ')
             code += self.parse(val)
             code.append(', ')
         if node.key_nodes:
             code.pop(-1)  # skip last comma
-        code.append('}')
+        code.append('})')
         return code
         
     def parse_Set(self, node):
@@ -233,10 +241,10 @@ class Parser1(Parser0):
     def pop_scope_prefix(self):
         self._scope_prefix.pop(-1)
 
-    def parse_Name(self, node):
+    def parse_Name(self, node, fullname=None):
         # node.ctx can be Load, Store, Del -> can be of use somewhere?
         name = node.name
-        if self.vars.get(name, None):
+        if self.vars.is_known(name):
             return self.with_prefix(name)
         if self._scope_prefix:
             for stackitem in reversed(self._stack):
@@ -249,7 +257,9 @@ class Parser1(Parser0):
             return self.NAME_MAP[name]
         # Else ...
         if not (name in self._functions or name in ('undefined', 'window')):
-            self.vars.use(name)  # mark as used (not defined)
+            # mark as used (not defined)
+            used_name = (name + '.' + fullname) if fullname else name
+            self.vars.use(name, used_name)
         return name
     
     def parse_Starred(self, node):
@@ -335,8 +345,9 @@ class Parser1(Parser0):
         test = ''.join(self.parse(node))
         if (False or test.endswith('.length') or test.startswith('!') or
                      test.isnumeric() or test == 'true' or test == 'false' or
-                     test.count('==') or test.count(eq_name) or
-                     test == '"this_is_js()"' or
+                     test.count('==') or test.count('>') or test.count('<') or
+                     test.count(eq_name) or
+                     test == '"this_is_js()"' or test.startswith('Array.isArray(') or
                      (test.startswith(returning_bool) and '||' not in test)):
             return unify(test)
         else:
@@ -356,7 +367,7 @@ class Parser1(Parser0):
         left = unify(self.parse(node.left_node))
         right = unify(self.parse(node.right_node))
         
-        if node.op in (node.COMP.Eq, node.COMP.NotEq):
+        if node.op in (node.COMP.Eq, node.COMP.NotEq) and not left.endswith('.length'):
             code = self.use_std_function('op_equals', [left, right])
             if node.op == node.COMP.NotEq:
                 code = '!' + code
@@ -376,9 +387,12 @@ class Parser1(Parser0):
         # Get full function name and method name if it exists
         
         if isinstance(node.func_node, ast.Attribute):
+            # We dont want to parse twice, because it may add to the vars_unknown
             method_name = node.func_node.attr
-            base_name = unify(self.parse(node.func_node.value_node))
-            full_name = base_name + '.' + method_name
+            nameparts = self.parse(node.func_node)
+            full_name = unify(nameparts)
+            nameparts[-1] = nameparts[-1].rsplit('.', 1)[0]
+            base_name = unify(nameparts)
         elif isinstance(node.func_node, ast.Subscript):
             base_name = unify(self.parse(node.func_node.value_node))
             full_name = unify(self.parse(node.func_node))
@@ -424,19 +438,56 @@ class Parser1(Parser0):
         handles starargs. The first element in the returned list is either
         "(" or ".apply(".
         """
-        # Check for keywords (not supported) after handling special functions
-        if node.kwarg_nodes:
-            raise JSError('function calls do not support keyword arguments or kwargs')
+        
+        # Can produce:
+        # normal:               foo(.., ..)
+        # use_call_or_apply:    foo.call(base_name, .., ..)
+        # use_starargs:         foo.apply(base_name, vararg_name)
+        #           or:         foo.apply(base_name, [].concat([.., ..], vararg_name)
+        # has_kwargs:           foo({__args: [], __kwargs: {} })
+        #         or:           foo.apply(base_name, ({__args: [], __kwargs: {} })
         
         base_name = base_name or 'null'
         
-        # flatten args and add commas
-        use_starargs = False
+        # Get arguments
+        args_simple, args_array = self._get_positional_args(node)
+        kwargs = self._get_keyword_args(node)
+        
+        if kwargs is not None:
+            # Keyword arguments need a whole special treatment
+            if use_call_or_apply:
+                start = ['.call(', base_name, ', '] 
+            else:
+                start = ['(']
+            return start + ['{', 'flx_args: ', args_array,
+                               ', flx_kwargs: ', kwargs, '})']
+        elif args_simple is None:
+            # Need to use apply
+            return [".apply(", base_name, ', ', args_array, ")"]
+        elif use_call_or_apply:
+            # Need to use call (arg_simple can be empty string)
+            if args_simple:
+                return [".call(", base_name, ', ', args_simple, ")"]
+            else:
+                return [".call(", base_name, ")"]
+        else: 
+            # Normal function call
+            return ["(", args_simple, ")"]
+    
+    def _get_positional_args(self, node):
+        """ Returns:
+        * a string args_simple, which represents the positional args in comma
+          separated form. Can be None if the args cannot be represented that
+          way. Note that it can be empty string.
+        * a string args_array representing the array with positional arguments.
+        """
+        
+        # Generate list of arg lists (has normal positional args and starargs)
+        # Note that there can be multiple starargs and these can alternate.
         argswithcommas = []
         arglists = [argswithcommas]
         for arg in node.arg_nodes:
             if isinstance(arg, ast.Starred):
-                use_starargs = True
                 starname = ''.join(self.parse(arg.value_node))
                 arglists.append(starname)
                 argswithcommas = []
@@ -453,37 +504,80 @@ class Parser1(Parser0):
             elif arglist[-1] == ', ':
                 arglist.pop(-1)
         
-        if use_starargs:
-            # Note that this goes wrong if the original code uses apply()
-            code = ['.apply(', base_name, ', ']
-            if len(arglists) == 1:
-                # the concat thing does not seem to work well with "arguments"
-                code += starname, ')'
-            else:
-                code += ['[].concat(']
-                for arglist in arglists:
-                    if isinstance(arglist, list):
-                        code += ['[']
-                        code += arglist
-                        code += [']']
-                    else:
-                        code += [arglist]
-                    code += [', ']
-                code.pop(-1)
-                code += '))'
-            return code
-        elif use_call_or_apply:
-            if argswithcommas:
-                return [".call(", base_name, ', '] + argswithcommas + [")"]
-            else:
-                return [".call(", base_name, ")"]
+        # Generate code for positional arguments
+        if len(arglists) == 0:
+            return '', '[]'
+        elif len(arglists) == 1 and isinstance(arglists[0], list):
+            args_simple = ''.join(argswithcommas)
+            return args_simple, '[' + args_simple + ']'
+        elif len(arglists) == 1:
+            assert isinstance(arglists[0], str)
+            return None, arglists[0]
         else:
-            # Normal func
-            return ["("] + argswithcommas + [")"]
+            code = ['[].concat(']
+            for arglist in arglists:
+                if isinstance(arglist, list):
+                    code += ['[']
+                    code += arglist
+                    code += [']']
+                else:
+                    code += [arglist]
+                code += [', ']
+            code.pop(-1)
+            code += ')'
+            return None, ''.join(code)
     
-    def parse_Attribute(self, node):
-        base_name = unify(self.parse(node.value_node))
-        return "%s.%s" % (base_name, self.ATTRIBUTE_MAP.get(node.attr, node.attr))
+    def _get_keyword_args(self, node):
+        """ Get a string that represents the dictionary of keyword arguments,
+        or None if there are no keyword arguments (normal nor double-star).
+        """
+        
+        # Collect elements that will make up the total kwarg dict
+        kwargs = []
+        for kwnode in node.kwarg_nodes:
+            if not kwnode.name:  # **xx
+                kwargs.append(unify(self.parse(kwnode.value_node)))
+            else:  # foo=xx
+                if not (kwargs and isinstance(kwargs[-1], list)):
+                    kwargs.append([])
+                kwargs[-1].append('%s: %s' % (kwnode.name,
+                                              unify(self.parse(kwnode.value_node))))
+        
+        # Resolve sequneces of loose kwargs
+        for i in range(len(kwargs)):
+            if isinstance(kwargs[i], list):
+                kwargs[i] = '{' + ', '.join(kwargs[i]) + '}'
+        
+        # Compose, easy if singleton, otherwise we need to merge
+        if len(kwargs) == 0:
+            return None
+        elif len(kwargs) == 1:
+            return kwargs[0]
+        else:
+            # register use of merge_dicts(), but we build the string ourselves
+            self.use_std_function('merge_dicts', [])
+            return stdlib.FUNCTION_PREFIX + 'merge_dicts(' + ', '.join(kwargs) + ')'
+    
+    def parse_Attribute(self, node, fullname=None):
+        fullname = node.attr + '.' + fullname if fullname else node.attr
+        if isinstance(node.value_node, ast.Name):
+            base_name = self.parse_Name(node.value_node, fullname)
+        elif isinstance(node.value_node, ast.Attribute):
+            base_name = self.parse_Attribute(node.value_node, fullname)
+        else:
+            base_name = unify(self.parse(node.value_node))
+        attr = node.attr
+        # Double underscore name mangling
+        if attr.startswith('__') and not attr.endswith('__') and base_name == 'this':
+            for i in range(len(self._stack)-1, -1, -1):
+                if self._stack[i][0] == 'class':
+                    classname = self._stack[i][1]
+                    attr = '_' + classname + attr
+                    break
+        if attr in self.ATTRIBUTE_MAP:
+            return self.ATTRIBUTE_MAP[attr].replace('{}', base_name)
+        else:
+            return "%s.%s" % (base_name, attr)
     
     ## Statements
     
@@ -540,13 +634,15 @@ class Parser1(Parser0):
         
         nl = self.lf()
         if node.op == node.OPS.Add:
-            return [nl, target, '=', self.use_std_function('op_add', [target, value])]
+            return [nl, target, ' = ',
+                    self.use_std_function('op_add', [target, value]), ';']
         elif node.op == node.OPS.Mult:
-            return [nl, target, '=', self.use_std_function('op_mult', [target, value])]
+            return [nl, target, ' = ',
+                    self.use_std_function('op_mult', [target, value]), ';']
         elif node.op == node.OPS.Pow:
-            return [nl, target, " = Math.pow(", target, ", ", value, ")"]
+            return [nl, target, " = Math.pow(", target, ", ", value, ");"]
         elif node.op == node.OPS.FloorDiv:
-            return [nl, target, " = Math.floor(", target, "/", value, ")"]
+            return [nl, target, " = Math.floor(", target, "/", value, ");"]
         else:
             op = ' %s= ' % self.BINARY_OP[node.op]
             return [nl, target, op, value, ';']

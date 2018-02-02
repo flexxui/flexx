@@ -9,12 +9,12 @@ import sys
 import tempfile
 import shutil
 
-from flexx.util.testing import run_tests_if_main, raises
+from flexx.util.testing import run_tests_if_main, raises, skip
 
 from flexx.app._assetstore import assets, AssetStore as _AssetStore
 from flexx.app._session import Session
 
-from flexx import ui, app
+from flexx import app
 
 
 N_STANDARD_ASSETS = 3
@@ -28,25 +28,35 @@ class AssetStore(_AssetStore):
 
 def test_asset_store_collect():
     
-    from flexx import ui
+    s = AssetStore()
+    s.update_modules()
+    assert len(s.modules) > 1
+    assert 'flexx.app._component2' in s.modules
+    
+    assert 'JsComponent.prototype =' in s.get_asset('flexx.app._component2.js').to_string()
+    assert 'JsComponent.prototype =' in s.get_asset('flexx.app.js').to_string()
+    assert 'JsComponent.prototype =' in s.get_asset('flexx.js').to_string()
+    #assert 'JsComponent.prototype =' not in s.get_asset('flexx.ui.js').to_string()
+    assert 'JsComponent.prototype =' not in s.get_asset('pyscript-std.js').to_string()
+
+
+def test_asset_store_collect2():
+    try:
+        from flexx import ui
+    except ImportError:
+        skip('no flexx.ui')
     
     s = AssetStore()
     s.update_modules()
     assert len(s.modules) > 10
     assert 'flexx.ui._widget' in s.modules
-    assert 'flexx.app._model' in s.modules
     
-    assert '.Widget =' in s.get_asset('flexx.ui._widget.js').to_string()
-    assert '.Widget =' in s.get_asset('flexx.ui.js').to_string()
-    assert '.Widget =' in s.get_asset('flexx.js').to_string()
-    assert '.Widget =' not in s.get_asset('flexx.app.js').to_string()
+    assert '$Widget =' in s.get_asset('flexx.ui._widget.js').to_string()
+    assert '$Widget =' in s.get_asset('flexx.ui.js').to_string()
+    assert '$Widget =' in s.get_asset('flexx.js').to_string()
+    assert '$Widget =' not in s.get_asset('flexx.app.js').to_string()
+
     
-    assert '.Model =' in s.get_asset('flexx.app._model.js').to_string()
-    assert '.Model =' in s.get_asset('flexx.app.js').to_string()
-    assert '.Model =' in s.get_asset('flexx.js').to_string()
-    assert '.Model =' not in s.get_asset('flexx.ui.js').to_string()
-
-
 def test_asset_store_adding_assets():
     
     s = AssetStore()
@@ -116,7 +126,7 @@ def test_asset_store_data():
         s.add_shared_data('xx', b'zzzz')
     
     # # Add url data
-    # s.add_shared_data('readme', 'https://github.com/zoofIO/flexx/blob/master/README.md')
+    # s.add_shared_data('readme', 'https://github.com/flexxui/flexx/blob/master/README.md')
     # # assert 'Flexx is' in s.get_data('readme').decode()
     # assert s.get_data('readme').startswith('https://github')
     
@@ -156,8 +166,6 @@ def test_not_allowing_local_files():
 
 def test_asset_store_export():
     
-    from flexx import ui
-    
     dir = os.path.join(tempfile.gettempdir(), 'flexx_export')
     if os.path.isdir(dir):
         shutil.rmtree(dir)
@@ -168,7 +176,7 @@ def test_asset_store_export():
     store.update_modules()
     
     # Getting an asset marks them as used
-    store.get_asset('flexx.ui.js')
+    # store.get_asset('flexx.ui.js')
     store.get_asset('flexx.app.js')
     store.get_asset('flexx.js')
     store.get_asset('reset.css')
@@ -182,10 +190,10 @@ def test_asset_store_export():
     s._export_data(dir)
     assert len(os.listdir(dir)) == 2
     assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'reset.css'))
-    assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.ui.js'))
+    # assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.ui.js'))
     assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.app.js'))
     assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.js'))
-    assert not os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.ui._widget.js'))
+    # assert not os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.ui._widget.js'))
     assert os.path.isfile(os.path.join(dir, '_data', 'shared', 'foo.png'))
     assert os.path.isfile(os.path.join(dir, '_data', s.id, 'bar.png'))
 

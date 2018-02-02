@@ -1,40 +1,27 @@
-"""
-Simple example:
+""" GroupWidget
 
-.. UIExample:: 100
-    
-    with ui.GroupWidget(title='This is a panel'):
-        with ui.VBox():
-            ui.ProgressBar(value=0.2)
-            ui.Button(text='click me')
+Visually group a collection of input widgets. Example:
 
+.. UIExample:: 150
 
-Interactive example:
-
-.. UIExample:: 100
-
-    from flexx import app, ui, event
+    from flexx import app, event, ui
     
     class Example(ui.GroupWidget):
         def init(self):
-            self.title = 'A silly panel'
+            self.set_title('A silly panel')
             with ui.VBox():
-                ui.ProgressBar(value=0.2)
+                self.progress = ui.ProgressBar(min=0, max=9,
+                                               text='Clicked {value} times')
                 self.but = ui.Button(text='click me')
         
-        class JS:
-            @event.connect('but.mouse_down')
-            def _change_group_title(self, *events):
-                self.title = self.title + '-'
-
+        @event.reaction('but.mouse_down')
+        def _button_pressed(self, *events):
+            self.progress.set_value(self.progress.value + 1)
 """
 
 from ... import event
-from ...pyscript import window, RawJS
+from ...pyscript import window
 from . import Widget
-
-
-_phosphor_panel = RawJS("flexx.require('phosphor/lib/ui/panel')")
 
 
 class GroupWidget(Widget):
@@ -44,30 +31,30 @@ class GroupWidget(Widget):
     HTML fieldset.
     """
     
-    class JS:
-        
-        def _init_phosphor_and_node(self):
-            
-            self.phosphor = _phosphor_panel.Panel()
-            
-            # Replace the internal node of the phosphor widget.
-            # Bit of a hack, but I see no other way
-            node = window.document.createElement('fieldset')
-            self.phosphor._node = node
-            node.classList.add('p-Widget')
-            node.classList.add('p-Panel')
-            
-            self._legend = window.document.createElement('legend')
-            self.phosphor.node.appendChild(self._legend)
-            
-            self.node = self.phosphor.node
-        
-        @event.connect('children')
-        def _keep_legend_up(self, *events):
-            if len(self.children):
-                first = self.children[0].outernode
-                self.node.insertBefore(self._legend, first)
-        
-        @event.connect('title')
-        def _title_changed(self, *events):
-            self._legend.innerHTML = self.title
+    CSS = """
+    
+    .flx-GroupWidget {
+        padding: 5px;
+    }
+    .flx-GroupWidget > .flx-Layout {
+        width: calc(100% - 10px);
+        height: calc(100% - 10px);
+    }
+    
+    """
+    
+    def _create_dom(self):
+        node = window.document.createElement('fieldset')
+        self._legend = window.document.createElement('legend')
+        node.appendChild(self._legend)
+        return node
+    
+    def _render_dom(self):
+        nodes = [self._legend]
+        for widget in self.children:
+            nodes.append(widget.outernode)
+        return nodes
+    
+    @event.reaction('title')
+    def _title_changed(self, *events):
+        self._legend.innerHTML = self.title

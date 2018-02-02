@@ -1,11 +1,11 @@
 # doc-export: Drawing
 
 """
-This example demonstrates a simple drawing app. Useful for testing
-canvas and its mouse events.
+This example demonstrates a simple drawing app.
+Also useful for testing canvas and its mouse events.
 """
 
-from flexx import app, ui, event
+from flexx import app, event, ui
 
 
 class Drawing(ui.CanvasWidget):
@@ -13,45 +13,60 @@ class Drawing(ui.CanvasWidget):
     CSS = """
     .flx-Drawing {background: #fff; border: 5px solid #000;}
     """
+
+    def init(self):
+        super().init()
+        self.ctx = self.node.getContext('2d')
+        self._last_pos = (0, 0)
+        
+        # Set mouse capturing mode
+        self.set_capture_mouse(1)
+        
+        # Label to show current mouse position
+        self.wpos = ui.Label()
     
-    class JS:
-        
-        def init(self):
-            super().init()
-            self.ctx = self.node.getContext('2d')
-            self._last_ev = None
-        
-        @event.connect('mouse_move')
-        def on_move(self, *events):
-            for ev in events:
-                last_ev = self._last_ev
-                if 1 in ev.buttons and last_ev is not None:
-                    self.ctx.beginPath()
-                    self.ctx.strokeStyle = '#080'
-                    self.ctx.lineWidth = 3
-                    self.ctx.lineCap = 'round'
-                    self.ctx.moveTo(*last_ev.pos)
-                    self.ctx.lineTo(*ev.pos)
-                    self.ctx.stroke()
-                    self._last_ev = ev
-        
-        @event.connect('mouse_down')
-        def on_down(self, *events):
-            for ev in events:
-                self.ctx.beginPath()
-                self.ctx.fillStyle = '#f00'
-                self.ctx.arc(ev.pos[0], ev.pos[1], 3, 0, 6.2831)
-                self.ctx.fill()
-                self._last_ev = ev
-        
-        @event.connect('mouse_up')
-        def on_up(self, *events):
-            for ev in events:
-                self.ctx.beginPath()
-                self.ctx.fillStyle = '#00f'
-                self.ctx.arc(ev.pos[0], ev.pos[1], 3, 0, 6.2831)
-                self.ctx.fill()
-            self._last_ev = None
+    def show_pos(self, ev):
+        self.wpos.set_text('pos: %s  buttons: %s' % (ev.pos, ev.buttons))
+    
+    @event.reaction('mouse_move')
+    def on_move(self, *events):
+        for ev in events:
+            
+            # Effective way to only draw if mouse is down, but disabled for
+            # sake of example. Not necessary if capture_mouse == 1.
+            # if 1 not in ev.buttons:
+            #     return
+            
+            self.ctx.beginPath()
+            self.ctx.strokeStyle = '#080'
+            self.ctx.lineWidth = 3
+            self.ctx.lineCap = 'round'
+            self.ctx.moveTo(*self._last_pos)
+            self.ctx.lineTo(*ev.pos)
+            self.ctx.stroke()
+            self._last_pos = ev.pos
+            self.show_pos(ev)
+    
+    @event.reaction('mouse_down')
+    def on_down(self, *events):
+        print('down!')
+        for ev in events:
+            self.ctx.beginPath()
+            self.ctx.fillStyle = '#f00'
+            self.ctx.arc(ev.pos[0], ev.pos[1], 3, 0, 6.2831)
+            self.ctx.fill()
+            self._last_pos = ev.pos
+            self.show_pos(ev)
+    
+    @event.reaction('mouse_up')
+    def on_up(self, *events):
+        print('up!')
+        for ev in events:
+            self.ctx.beginPath()
+            self.ctx.fillStyle = '#00f'
+            self.ctx.arc(ev.pos[0], ev.pos[1], 3, 0, 6.2831)
+            self.ctx.fill()
+            self.show_pos(ev)
 
 
 class Main(ui.Widget):
@@ -59,18 +74,19 @@ class Main(ui.Widget):
     """
     
     CSS = """
-    .flx-Drawing {background: #fff; border: 5px solid #000;}
+    .flx-Main {background: #eee;}
     """
     
     def init(self):
         
-        with ui.VBox():
+        with ui.VFix():
             ui.Widget(flex=1)
-            with ui.HBox(flex=2):
+            with ui.HFix(flex=2):
                 ui.Widget(flex=1)
                 Drawing(flex=2)
                 ui.Widget(flex=1)
             ui.Widget(flex=1)
+
 
 if __name__ == '__main__':
     m = app.launch(Main, 'app')

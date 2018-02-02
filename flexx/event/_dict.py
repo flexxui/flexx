@@ -73,7 +73,7 @@ class Dict(_dict):
     def __setattr__(self, key, val):
         if key in Dict.__reserved_names__:
             # Either let OrderedDict do its work, or disallow
-            if key not in Dict.__pure_names__:
+            if key not in Dict.__pure_names__:  # pragma: no cover
                 return _dict.__setattr__(self, key, val)
             else:
                 raise AttributeError('Reserved name, this key can only ' +

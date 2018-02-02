@@ -7,9 +7,13 @@ etc.) needed by the applications.
 import os
 import shutil
 
+from ..event import _property
+from ..event._js import JS_EVENT
 from ..pyscript import create_js_module, get_all_std_names, get_full_std_lib
+from ..pyscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
+from ..util.getresource import get_resoure_path
 
-from ._model import Model
+from ._component2 import AppComponentMeta
 from ._asset import Asset, Bundle, HEADER
 from ._modules import JSModule
 from . import logger
@@ -44,6 +48,10 @@ ASSET-HOOK
 # (re)define module classes. The loader is itself wrapped in a IIFE to
 # create a private namespace. The modules must follow this pattern:
 # define(name, dep_strings, function (name1, name2) {...});
+
+
+# todo: have loaders per session, or allow prefixing with session id, so that
+# each session can bring their own assets and not clash.
 
 LOADER = """
 /*Flexx module loader. Licensed by BSD-2-clause.*/
@@ -202,25 +210,48 @@ class AssetStore:
     Each session object also keeps track of data. 
     
     Assets with additional JS or CSS to load can be used simply by
-    creating/importing them in a module that defines the Model class
+    creating/importing them in a module that defines the JsComponent class
     that needs the asset.
     """
     
     def __init__(self):
-        self._known_model_classes = set()
+        self._known_component_classes = set()
         self._modules = {}
         self._assets = {}
         self._associated_assets = {}
         self._data = {}
         self._used_assets = set()  # between all sessions (for export)
         
-        # Create standard assets
+        # Create asset to reset CSS
         asset_reset = Asset('reset.css', RESET)
+        # Create asset to bootstrap Flexx
         asset_loader = Asset('flexx-loader.js', LOADER)
+        # Create asset for Pyscript std
         func_names, method_names = get_all_std_names()
         mod = create_js_module('pyscript-std.js', get_full_std_lib(),
                                [], func_names + method_names, 'amd-flexx')
         asset_pyscript = Asset('pyscript-std.js', HEADER + mod)
+        # Create asset for the even system
+        pre1 = ', '.join(['%s%s = _py.%s%s' % (FUNCTION_PREFIX, n, FUNCTION_PREFIX, n)
+                          for n in JS_EVENT.meta['std_functions']])
+        pre2 = ', '.join(['%s%s = _py.%s%s' % (METHOD_PREFIX, n, METHOD_PREFIX, n)
+                          for n in JS_EVENT.meta['std_methods']])
+        mod = create_js_module('flexx.event.js',
+                               'var %s;\nvar %s;\n%s' % (pre1, pre2, JS_EVENT),
+                               ['pyscript-std.js as _py'],
+                               ['Component', 'loop', 'logger'] + _property.__all__,
+                               'amd-flexx')
+        asset_event = Asset('flexx.event.js', HEADER + mod)
+        # Create asset for bsdf - we replace the UMD loader code with flexx.define()
+        code = open(get_resoure_path('bsdf.js'), 'rb').read().decode()
+        code = code.split('"use strict";\n', 1)[1]  # put in the Flexx loader instead
+        code = 'flexx.define("bsdf", [], (function () {\n"use strict";\n' + code
+        asset_bsdf = Asset('bsdf.js', code)
+        # Create asset for bb64 - we replace the UMD loader code with flexx.define()
+        code = open(get_resoure_path('bb64.js'), 'rb').read().decode()
+        code = code.split('"use strict";\n', 1)[1]  # put in the Flexx loader instead
+        code = 'flexx.define("bb64", [], (function () {\n"use strict";\n' + code
+        asset_bb64 = Asset('bb64.js', code)
         
         # Add them
         for a in [asset_reset, asset_loader, asset_pyscript]:
@@ -229,13 +260,16 @@ class AssetStore:
         if getattr(self, '_test_mode', False):
             return
         
-        #  Create flexx-core bootstrap bundle
-        self.update_modules()  # to collect _model and _clientcore
+        # Create flexx-core bootstrap bundle
+        self.update_modules()  # to collect _component2 and _clientcore
         asset_core = Bundle('flexx-core.js')
         asset_core.add_asset(asset_loader)
+        asset_core.add_asset(asset_bsdf)
+        asset_core.add_asset(asset_bb64)
         asset_core.add_asset(asset_pyscript)
+        asset_core.add_asset(asset_event)
         asset_core.add_module(self.modules['flexx.app._clientcore'])
-        asset_core.add_module(self.modules['flexx.app._model'])
+        asset_core.add_module(self.modules['flexx.app._component2'])
         self.add_shared_asset(asset_core)
     
     def __repr__(self):
@@ -256,7 +290,7 @@ class AssetStore:
     
     def update_modules(self):
         """ Collect and update the JSModule instances that correspond
-        to Python modules that define Model classes. Any newly created
+        to Python modules that define Component classes. Any newly created
         modules get added to all corresponding assets bundles (creating
         them if needed).
         
@@ -269,12 +303,12 @@ class AssetStore:
         # what modules we know of beforehand.
         current_module_names = set(self._modules)
         
-        # Track all known (i.e. imported classes) Model classes. We keep track
+        # Track all known (i.e. imported) Component classes. We keep track
         # of what classes we've registered, so this is pretty efficient. This
-        # works also if a module got a new or renewed Model class.
-        for cls in Model.CLASSES:
-            if cls not in self._known_model_classes:
-                self._known_model_classes.add(cls)
+        # works also if a module got a new or renewed Component class.
+        for cls in AppComponentMeta.CLASSES:
+            if cls not in self._known_component_classes:
+                self._known_component_classes.add(cls)
                 if cls.__jsmodule__ not in self._modules:
                     JSModule(cls.__jsmodule__, self._modules)  # auto-registers
                 self._modules[cls.__jsmodule__].add_variable(cls.__name__)
@@ -354,7 +388,7 @@ class AssetStore:
                   assets without causing side effects when they're not used.
         
         Returns:
-            url: the (relative) url at which the asset can be retrieved.
+            str: the (relative) url at which the asset can be retrieved.
             
         """
         if isinstance(asset_name, Asset):
@@ -387,7 +421,7 @@ class AssetStore:
                 source if the asset_name is already registered.
         
         Returns:
-            url: the (relative) url at which the asset can be retrieved.
+            str: the (relative) url at which the asset can be retrieved.
         """
         # Get or create asset
         if asset_name in self._assets:
@@ -416,14 +450,14 @@ class AssetStore:
         """ Add data to serve to the client (e.g. images), which is shared
         between sessions. It is an error to add data with a name that is
         already registered. See ``Session.add_data()`` to set data per-session
-        and `Model.send_data()`` to send data to Model objects directly.
+        and use actions to send data to JsComponent objects directly.
         
         Parameters:
             name (str): the name of the data, e.g. 'icon.png'. 
             data (bytes): the data blob.
         
         Returns:
-            url: the (relative) url at which the data can be retrieved.
+            str: the (relative) url at which the data can be retrieved.
         
         """
         if not isinstance(name, str):

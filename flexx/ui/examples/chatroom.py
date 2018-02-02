@@ -1,21 +1,26 @@
 """
-Simple chat web app in less than 80 lines.
+Simple chat web app inabout 80 lines.
 
 This app might be running at the demo server: http://flexx1.zoof.io
 """
 
-from flexx import app, ui, event
+from flexx import app, event, ui
 
 
-class Relay(event.HasEvents):
+class Relay(event.Component):
     """ Global object to relay messages to all participants.
     """
+    
     @event.emitter
-    def new_message(self, msg):
-        return dict(msg=msg + '<br />')
+    def create_message(self, msg):
+        return dict(message=msg)
+
+# Create global relay
+relay = Relay()
 
 
 class MessageBox(ui.Label):
+    
     CSS = """
     .flx-MessageBox {
         overflow-y:scroll;
@@ -24,69 +29,59 @@ class MessageBox(ui.Label):
         margin: 3px;
     }
     """
+    
+    @event.action
+    def add_message(self, msg):
+        self.set_text(self.text + msg + '<br />')
 
 
-# Create global relay
-relay = Relay()
-
-
-class ChatRoom(ui.Widget):
-    """ Despite the name, this represents one connection to the chat room.
+class ChatRoom(app.PyComponent):
+    """ This represents one connection to the chat room.
     """
     
     def init(self):
-        with ui.HBox():
+        with ui.HBox(title='Flexx chatroom demo'):
             ui.Widget(flex=1)
             with ui.VBox():
-                self.name = ui.LineEdit(placeholder_text='your name')
-                self.people = ui.Label(flex=1, base_size=(250, 0))
-            with ui.VBox():
+                self.name_edit = ui.LineEdit(placeholder_text='your name')
+                self.people_label = ui.Label(flex=1, style='min-width: 250px')
+            with ui.VBox(style='min-width: 450px'):
                 self.messages = MessageBox(flex=1)
                 with ui.HBox():
-                    self.message = ui.LineEdit(flex=1, placeholder_text='enter message')
+                    self.msg_edit = ui.LineEdit(flex=1,
+                                                placeholder_text='enter message')
                     self.ok = ui.Button(text='Send')
             ui.Widget(flex=1)
         
         self._update_participants()
     
-    @relay.connect('new_message')  # note that we connect to relay
-    def _push_info(self, *events):
-        for ev in events:
-            self.emit('new_message', ev)
-    
-    def _update_participants(self):
-        if not self.session.status:
-            return  # and dont't invoke a new call
-        sessions = app.manager.get_connections(self.session.app_name)
-        names = [p._chatroom_name for p in sessions]  # _chatroom_name is what we set
-        del sessions
-        text = '<br />%i persons in this chat:<br /><br />' % len(names)
-        text += '<br />'.join([name or 'anonymous' for name in sorted(names)])
-        self.people.text = text
-        app.call_later(3, self._update_participants)
-    
-    @event.connect('ok.mouse_down', 'message.submit')
+    @event.reaction('ok.mouse_down', 'msg_edit.submit')
     def _send_message(self, *events):
-        text = self.message.text
+        text = self.msg_edit.text
         if text:
             name = self.name.text or 'anonymous'
-            relay.new_message('<i>%s</i>: %s' % (name, text))
-            self.message.text = ''
+            relay.create_message('<i>%s</i>: %s' % (name, text))
+            self.msg_edit.set_text('')
     
-    @event.connect('name.text')
-    def _name_changed(self, *events):
-        self.session._chatroom_name = self.name.text
+    @relay.reaction('create_message')  # note that we connect to relay
+    def _push_info(self, *events):
+        for ev in events:
+            self.messages.add_message(ev.message)
     
-    class JS:
-        
-        @event.connect('!new_message')
-        def _update_total_text(self, *events):
-            self.messages.text += ''.join([ev.msg for ev in events])
-
+    @app.manager.reaction('connections_changed')
+    def _update_participants(self, *events):
+        if self.session.status:
+            # Query the app manager to see who's in the room
+            sessions = app.manager.get_connections(self.session.app_name)
+            names = [s.app.name_edit.text for s in sessions]
+            del sessions
+            text = '<br />%i persons in this chat:<br /><br />' % len(names)
+            text += '<br />'.join([name or 'anonymous' for name in sorted(names)])
+            self.people_label.set_text(text)
 
 
 if __name__ == '__main__':
-    a = app.App(ChatRoom, title='Flexx chatroom demo')
+    a = app.App(ChatRoom)
     a.serve()
     # a.launch()  # for use during development
     app.start()

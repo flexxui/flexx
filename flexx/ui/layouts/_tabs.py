@@ -1,88 +1,146 @@
-"""
+""" TabLayout
+
+A ``StackLayout`` subclass that uses tabs to let the user select a child widget.
+
 Example:
 
 .. UIExample:: 100
     
-    from flexx import app, ui, event
+    from flexx import app, event, ui
     
     class Example(ui.Widget):
         def init(self):
-            with ui.TabPanel() as self.t:
+            with ui.TabLayout() as self.t:
                 self.a = ui.Widget(title='red', style='background:#a00;')
                 self.b = ui.Widget(title='green', style='background:#0a0;')
                 self.c = ui.Widget(title='blue', style='background:#00a;')
-                self.d = ui.Widget(title='cyan', style='background:#0aa;')
-    
-        class JS:
+                self.d = ui.Widget(title='unselectable', style='background:#0aa;')
         
-            @event.connect('t.current')
-            def cur_tab_changed(self, *events):
-                prev = events[0].old_value
-                if prev is not None:
-                    prev.title = prev.title.strip(' *')
-                next = events[-1].new_value
-                if next is not None:
-                    next.title = next.title + '*'
-                # Don't like Cyan
-                if next is self.d:
-                    self.t.current = self.a
+        @event.reaction('t.current')
+        def cur_tab_changed(self, *events):
+            prev = events[0].old_value
+            if prev is not None:
+                prev.set_title(prev.title.strip(' *'))
+            next = events[-1].new_value
+            if next is not None:
+                next.set_title(next.title + '*')
+            # Don't like Cyan
+            if next is self.d:
+                self.t.set_current(self.a)
 """
 
 from ... import event
-from ...pyscript import window, RawJS
-from . import Layout, Widget
+from ...pyscript import window
+from ._stack import StackLayout
 
 
-#_phosphor_tabbar = RawJS("flexx.require('phosphor/lib/ui/tabbar')")
-_phosphor_tabpanel = RawJS("flexx.require('phosphor/lib/ui/tabpanel')")
-
-
-# class TabBar(Widget):
-#     """ A widget containing tabs.
-#     """
-#     
-#     def _init_phosphor_and_node(self):
-#         self.phosphor = _phosphor_tabbar.TabBar()
-#         self.node = self.phosphor.node
-# 
-#     def _add_child(self, widget):
-#         raise ValueError('A TabBar cannot have children.')
-
-
-class TabPanel(Layout):
-    """ A panel which provides a tabbed layout for child widgets.
+class TabLayout(StackLayout):
+    """ A StackLayout which provides a tabbar for selecting the current widget.
     
     The title of each child widget is used for the tab label.
-    
-    todo: this needs a way to get/set the current order of the widgets.
     """
     
-    class Both:
-        
-        @event.prop
-        def current(self, v=None):
-            """ The currently shown widget.
-            """
-            if not (v is None or isinstance(v, Widget)):
-                raise ValueError("%s.current should be a Widget, not %r" % (self.id, v))
-            return v
+    CSS = """
     
-    class JS:
+    .flx-TabLayout > .flx-Widget {
+        top: 25px;
+        border: 1px solid #777;
+    }
+    
+    .flx-TabLayout > .flx-tabbar {
+        box-sizing: border-box;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 25px;
+        overflow: hidden;
+    }
+    
+    .flx-tabbar > .flx-tab-item {
+        display: inline-block;
+        height: calc(100% - 6px);  /* 3 margin + 2 borders + 2 padding -1 overlap */
+        margin-top: 3px;
+        padding: 1px 6px;
         
-        def _init_phosphor_and_node(self):
-            self.phosphor = _phosphor_tabpanel.TabPanel()
-            self.node = self.phosphor.node
-            
-            # Keep track of Phosphor. Phosphor clears this ref when it is disposed.
-            def _phosphor_changes_current(v, info):
-                if info.currentWidget:
-                    self.current = window.flexx.instances[info.currentWidget.id]
-            self.phosphor.currentChanged.connect(_phosphor_changes_current)
+        overflow: hidden;
+        min-width: 10px;
+
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
         
-        @event.connect('current')
-        def __current_changed_via_prop(self, *events):
-            w = events[-1].new_value
-            if w is None:
-                self.phosphor.currentWidget = None
+        background: #ddd;
+        border: 1px solid #777;
+        border-radius: 4px 4px 0px 0px;
+        margin-left: -1px;
+    }
+    
+    .flx-tabbar > .flx-tab-item.flx-current {
+        background: #fff;
+        border-bottom: 1px solid white;
+        border-top: 3px solid #777;
+        margin-top: 0;
+    }
+    
+    .flx-tabbar > .flx-tab-item:hover {
+        background: #eee;
+    }
+    """
+    
+    def _create_dom(self):
+        outernode = window.document.createElement('div')
+        self._tabbar = window.document.createElement('div')
+        self._tabbar.classList.add('flx-tabbar')
+        self._addEventListener(self._tabbar, 'mousedown', self._tabbar_click)
+        outernode.appendChild(self._tabbar)
+        return outernode
+    
+    def _render_dom(self):
+        nodes = [child.outernode for child in self.children]
+        nodes.append(self._tabbar)
+        return nodes
+    
+    @event.reaction
+    def __update_tabs(self):
+        children = self.children
+        current = self.current
+        
+        # Add items to tabbar as needed
+        while len(self._tabbar.children) < len(children):
+            node = window.document.createElement('p')
+            node.classList.add('flx-tab-item')
+            node.index = len(self._tabbar.children)
+            self._tabbar.appendChild(node)
+        
+        # Remove items from tabbar as needed
+        while len(self._tabbar.children) > len(children):
+            c = self._tabbar.children[len(self._tabbar.children) - 1]
+            self._tabbar.removeChild(c)
+        
+        # Update titles
+        for i in range(len(children)):
+            widget = children[i]
+            node = self._tabbar.children[i]
+            node.innerHTML = widget.title
+            if widget is current:
+                node.classList.add('flx-current')
             else:
-                self.phosphor.currentWidget = w.phosphor
+                node.classList.remove('flx-current')
+        
+        # Update sizes
+        self.__checks_sizes()
+    
+    @event.reaction('size')
+    def __checks_sizes(self, *events):
+        # Make the tabbar items occupy (nearly) the full width
+        nodes = self._tabbar.children
+        width = (self.size[0] - 10) / len(nodes) - 2 - 12  # - padding and border
+        for i in range(len(nodes)):
+            nodes[i].style.width = width + 'px'
+    
+    def _tabbar_click(self, e):
+        index = e.target.index
+        if index >= 0:
+            self.set_current(index)

@@ -4,6 +4,7 @@ Serve web page and handle web sockets using Tornado.
 
 import json
 import time
+import asyncio
 import socket
 import mimetypes
 import traceback
@@ -15,13 +16,15 @@ import tornado
 from tornado import gen, netutil
 from tornado.web import Application, RequestHandler
 from tornado.ioloop import IOLoop
-from tornado.websocket import WebSocketHandler
+from tornado.websocket import WebSocketHandler, WebSocketClosedError
 from tornado.httpserver import HTTPServer
+from tornado.platform.asyncio import AsyncIOMainLoop
 
 from ._app import manager
 from ._session import get_page
 from ._server import AbstractServer
 from ._assetstore import assets
+from ._clientcore import serializer
 
 from . import logger
 from .. import config
@@ -29,11 +32,11 @@ from .. import config
 if tornado.version_info < (4, ):
     raise RuntimeError('Flexx requires Tornado v4.0 or higher.')
 
+# todo: generalize -> Make Tornado mnore of an implementation detail.
+# So we can use e.g. https://github.com/aaugustin/websockets
+
 # todo: threading, or even multi-process
 #executor = ThreadPoolExecutor(4)
-
-# Use a binary websocket or not?
-BINARY = False
 
 IMPORT_TIME = time.time()
 
@@ -47,26 +50,25 @@ class TornadoServer(AbstractServer):
     """ Flexx Server implemented in Tornado.
     """
 
-    def __init__(self, host, port, new_loop, **kwargs):
-        self._new_loop = new_loop
+    def __init__(self, *args, **kwargs):
         self._app = None
         self._server = None
-        self._get_io_loop()
-        super().__init__(host, port, **kwargs)
-
-    def _get_io_loop(self):
-        # Get a new ioloop or the current ioloop for this thread
-        if self._new_loop:
-            self._loop = IOLoop()
-        else:
-            self._loop = IOLoop.current(instance=is_main_thread())
-            if self._loop is None:
-                self._loop = IOLoop(make_current=True)
+        super().__init__(*args, **kwargs)
 
     def _open(self, host, port, **kwargs):
         # Note: does not get called if host is False. That way we can
         # run Flexx in e.g. JLab's application.
-
+        
+        # Hook Tornado up with asyncio. Flexx' BaseServer makes sure
+        # that the correct asyncio event loop is current (for this thread).
+        # http://www.tornadoweb.org/en/stable/asyncio.html
+        self._io_loop = AsyncIOMainLoop()
+        # I am sorry for this hack, but Tornado wont work otherwise :(
+        # I wonder how long it will take before this will bite me back. I guess
+        # we will be alright as long as there is no other Tornado stuff going on.
+        IOLoop._current.instance = None
+        self._io_loop.make_current()
+        
         # handle ssl, wether from configuration or given args
         if config.ssl_certfile:
             if 'ssl_options' not in kwargs:
@@ -88,9 +90,10 @@ class TornadoServer(AbstractServer):
         self._app = Application([(r"/flexx/ws/(.*)", WSHandler),
                                  (r"/flexx/(.*)", MainHandler),
                                  (r"/(.*)", AppHandler), ], **app_kwargs)
+        self._app._io_loop = self._io_loop
         # Create tornado server, bound to our own ioloop
-        self._server = HTTPServer(self._app, io_loop=self._loop, **kwargs)
-
+        self._server = HTTPServer(self._app, io_loop=self._io_loop, **kwargs)
+        
         # Start server (find free port number if port not given)
         if port:
             # Turn port into int, use hashed port number if a string was given
@@ -122,54 +125,13 @@ class TornadoServer(AbstractServer):
             proto = 'https'
         logger.info('Serving apps at %s://%s:%i/' % (proto, host, port))
 
-    def _start(self):
-        # Ensure that our loop is the current loop for this thread
-        if self._new_loop:
-            self._loop.make_current()
-        elif IOLoop.current(instance=is_main_thread()) is not self._loop:
-            raise RuntimeError('Server must use ioloop that is current to this thread.')
-        # Make use of the semi-standard defined by IPython to determine
-        # if the ioloop is "hijacked" (e.g. in Pyzo). There is no public
-        # way to determine if a loop is already running, but the
-        # AbstractServer class keeps track of this.
-        if not getattr(self._loop, '_in_event_loop', False):
-            self._loop.start()
-
-    def _stop(self):
-        # todo: explicitly close all websocket connections
-        logger.debug('Stopping Tornado server')
-        self._loop.stop()
-
     def _close(self):
         self._server.stop()
-
-    def call_later(self, delay, callback, *args, **kwargs):
-        # We use a wrapper func so that exceptions are processed via our
-        # logging system. Also fixes that Tornado seems to close websockets
-        # when an exception occurs (issue #164) though one could also
-        # use ``with tornado.stack_context.NullContext()`` to make callbacks
-        # be called more "independently".
-        def wrapper():
-            try:
-                callback(*args, **kwargs)
-            except Exception as err:
-                err.skip_tb = 1
-                logger.exception(err)
-
-        if delay <= 0:
-            self._loop.add_callback(wrapper)
-        else:
-            self._loop.call_later(delay, wrapper)
 
     @property
     def app(self):
         """ The Tornado Application object being used."""
         return self._app
-
-    @property
-    def loop(self):
-        """ The Tornado IOLoop object being used."""
-        return self._loop
 
     @property
     def server(self):
@@ -463,8 +425,9 @@ class MainHandler(RequestHandler):
                         )
             self.write(json.dumps(info))
         elif path == 'stop':
-            loop = IOLoop.current()
-            loop.add_callback(loop.stop)
+            asyncio.get_event_loop().stop()
+            # loop = IOLoop.current()
+            # loop.add_callback(loop.stop)
             self.write("Stopping event loop.")
         else:
             self.write('unknown command %r' % path)
@@ -507,7 +470,7 @@ class MessageCounter:
         logger.debug('Websocket messages per second: %1.1f' % (n / T))
 
         if not self._stop:
-            loop = IOLoop.current()
+            loop = asyncio.get_event_loop()
             loop.call_later(self._notify_interval, self._notify)
 
     def stop(self):
@@ -545,8 +508,7 @@ class WSHandler(WebSocketHandler):
 
         logger.debug('New websocket connection %s' % path)
         if manager.has_app_name(self.app_name):
-            IOLoop.current().spawn_callback(self.pinger1)
-            IOLoop.current().spawn_callback(self.pinger2)
+            self.application._io_loop.spawn_callback(self.pinger1)
         else:
             self.close(1003, "Could not associate socket with an app.")
 
@@ -560,11 +522,17 @@ class WSHandler(WebSocketHandler):
         we should at some point define a real formalized protocol.
         """
         self._mps_counter.trigger()
-
+        
+        try:
+            command = serializer.decode(message)
+        except Exception as err:
+            err.skip_tb = 1
+            logger.exception(err)
+        
         self._pongtime = time.time()
         if self._session is None:
-            if message.startswith('hiflexx '):
-                session_id = message.split(' ', 1)[1].strip()
+            if command[0] == 'HI_FLEXX':
+                session_id = command[1]
                 try:
                     self._session = manager.connect_client(self, self.app_name,
                                                            session_id,
@@ -572,12 +540,9 @@ class WSHandler(WebSocketHandler):
                 except Exception as err:
                     self.close(1003, "Could not launch app: %r" % err)
                     raise
-                self.write_message("PRINT Flexx server says hi", binary=BINARY)
-        elif message.startswith('PONG '):
-            self.on_pong2(message[5:])
         else:
             try:
-                self._session._receive_command(message)
+                self._session._receive_command(command)
             except Exception as err:
                 err.skip_tb = 1
                 logger.exception(err)
@@ -633,45 +598,16 @@ class WSHandler(WebSocketHandler):
         """
         self._pongtime = time.time()
 
-    @property
-    def ping_counter(self):
-        """ Counter indicating the number of pings so far. This measure is
-        used by ``Session.keep_alive()``.
-        """
-        return self._ping_counter
-
-    @gen.coroutine
-    def pinger2(self):
-        """ Ticker so we have a signal of sorts to indicate round-trips.
-
-        This is used to implement session.call_on_next_pong(), which
-        is sort of like call_later(), but waits for both Py and JS to "flush"
-        their current events.
-
-        This uses a ping-pong mechanism implemented *atop* the websocket.
-        When JS is working, it is not able to send a pong (which is what we
-        want in this case).
-        """
-        self._ping_counter = 0
-        self._pong_counter = 0
-        while self.close_code is None:
-            if self._pong_counter >= self._ping_counter:
-                self._ping_counter += 1
-                self.command('PING %i' % self._ping_counter)
-            yield gen.sleep(1.0)
-
-    def on_pong2(self, data):
-        """ Called when our ping is returned by Flexx.
-        """
-        self._pong_counter = int(data)
-        if self._session:
-            self._session._receive_pong(self._pong_counter)
-
     # --- methods
 
-    def command(self, cmd):
-        self.write_message(cmd, binary=BINARY)
-
+    def write_command(self, cmd):
+        assert isinstance(cmd, tuple) and len(cmd) >= 1
+        bb = serializer.encode(cmd)
+        try:
+            self.write_message(bb, binary=True)
+        except WebSocketClosedError:
+            self.close(1000, 'closed by client')
+    
     def close(self, *args):
         try:
             WebSocketHandler.close(self, *args)

@@ -76,6 +76,7 @@ def show_coverage_html():
     from coverage import coverage
     
     print('Generating HTML...')
+    os.chdir(ROOT_DIR)
     cov = coverage(auto_data=False, branch=True, data_suffix=None,
                    source=[NAME])  # should match testing/_coverage.py
     cov.load()
@@ -96,7 +97,7 @@ def test_style(rel_path='.'):
         sys.exit('Cannot do style test: ' + str(err))
     # Prepare
     os.chdir(ROOT_DIR)
-    sys.argv[1:] = [rel_path]
+    sys.argv[1:] = ['flexx/' + rel_path]
     # Do test
     print('Running flake8 tests ...')
     app = Application()

@@ -2,21 +2,21 @@
 """
 This example demonstrates what things from Python land can be used in JS.
 
-Flexx detects what names are used in the transpiled JS of a Model (or
-Widget class, and tries to look these up in the module, converting the
-used objects if possible.
+Flexx detects what names are used in the transpiled JS of a JsComponent
+(a widget, in this case), and tries to look these up in the module,
+converting the used objects if possible.
 
 Check out the source of the generated page to see what Flexx did.
 
 Note that once running, there is no interaction with the Python side, so this
-example be exported to standalone HTML.
+example can be exported to standalone HTML.
 """
 
 from flexx import app, ui
 
-# Define a value. This can be used in JS as long as it can be serialized
-# using JSON (None, bool, int, float, str, list, dict).
-# The definition of this value is inside the JS version of this module.
+# Define a value. If used in JS, this value will be included in the definition
+# of the JS module that corresponds to this Python module. Therefore, the value
+# must be serializable using JSON (None, bool, int, float, str, list, dict).
 info = dict(name='John', age=42)
 
 # Import a value from another module. It's still just a value, and there is
@@ -43,25 +43,21 @@ from html import escape
 
 
 class UsingPython(ui.Widget):
-    
+
     def init(self):
-        self.label = ui.Label(wrap=0)
-    
-    class JS:
         
-        def init(self):
-            # A rather boring way to present the info. The point is that
-            # we're using all sorts of Python stuff here, that is automatically
-            # converted for us.
-            lines = []
-            lines.append('This JS was generated from Python ' + version)
-            lines.append('Person %s is %i years old' % (info.name, info.age))
-            lines.append('Evaling 4*x**2 + 5*x + 6 with x=4: ' + poly(4, 4, 5, 6))
-            lines.append('... and with x=12: ' + poly(12, 4, 5, 6))
-            lines.append('String with escaped html: ' + escape('html <tags>!'))
-            lines.append('String with escaped html: ' + escape('Woezel & Pip'))
-            
-            self.label.text = '<br />'.join(lines)
+        # A rather boring way to present the info. The point is that
+        # we're using all sorts of Python stuff here, that is automatically
+        # converted for us.
+        lines = []
+        lines.append('This JS was generated from Python ' + version)
+        lines.append('Person %s is %i years old' % (info['name'], info['age']))
+        lines.append('Evaling 4*x**2 + 5*x + 6 with x=4: ' + poly(4, 4, 5, 6))
+        lines.append('... and with x=12: ' + poly(12, 4, 5, 6))
+        lines.append('String with escaped html: ' + escape('html <tags>!'))
+        lines.append('String with escaped html: ' + escape('Woezel & Pip'))
+        
+        self.label = ui.Label(wrap=0, text='<br />'.join(lines))
 
 
 if __name__ == '__main__':

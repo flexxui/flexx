@@ -2,15 +2,16 @@
 Functional API for flexx.app
 """
 
-import sys
 import json
+import base64
 
 from .. import webruntime, config, set_log_level
 
 from ._app import App, manager
-from ._model import Model
+from ._component2 import PyComponent, JsComponent
 from ._server import current_server
 from ._assetstore import assets
+from ._clientcore import serializer
 from . import logger
 
 reprs = json.dumps
@@ -23,6 +24,9 @@ def start():
     Start the server and event loop. This function generally does not
     return until the application is stopped (although it may in
     interactive environments (e.g. Pyzo)).
+    
+    In more detail, this calls ``run_forever()`` on the asyncio event loop
+    associated with the current server.
     """
     server = current_server()
     logger.info('Starting Flexx event loop.')
@@ -42,16 +46,16 @@ def run():
 def stop():
     """
     Stop the event loop. This function is thread safe (it can be used
-    even if ``flexx.start()`` was called from another thread). 
+    even if ``app.start()`` was called from another thread). 
     The server can be restarted after it has been stopped. Note that
-    calling ``stop()`` too often will cause a subsequent call to `start()``
+    calling ``stop()`` too often will cause a subsequent call to ``start()``
     to return almost immediately.
     """
     server = current_server()
     server.stop()
 
 
-@manager.connect('connections_changed')
+@manager.reaction('connections_changed')
 def _auto_closer(*events):
     server = current_server()
     if not getattr(server, '_auto_stop', False):
@@ -67,39 +71,6 @@ def _auto_closer(*events):
 
 ## App functions
 
-
-def init_interactive(cls=None, runtime=None):
-    """ Initialize Flexx for interactive mode. This creates a default session
-    and launches a runtime to connect to it. 
-    
-    Parameters:
-        cls (None, Model): a subclass of ``app.Model`` (or ``ui.Widget``) to use
-            as the *default active model*. Only has effect the first time that
-            this function is called.
-        runtime (str): the runtime to launch the application in.
-            Default 'app or browser'.
-    """
-    
-    # Determine default model class (which is a Widget if ui is imported)
-    if cls is None and 'flexx.ui' in sys.modules:
-        from .. import ui
-        cls = ui.Widget
-    
-    # Create the default session
-    session = manager.get_default_session()
-    if session is None:
-        session = manager.create_default_session(cls)
-    else:
-        return  # default session already running
-
-    # Launch web runtime, the server will wait for the connection
-    server = current_server()
-    proto = server.protocol
-    host, port = server.serving
-    url = '%s://%s:%i/%s/?session_id=%s' % (proto, host, port, session.app_name,
-                                            session.id)
-    session._runtime = launch(url, runtime=runtime)
-    
 
 class NoteBookHelper:
     """ Object that captures commands send to the websocket during the
@@ -135,19 +106,21 @@ class NoteBookHelper:
         self._real_ws = None
         if self._commands:
             from IPython.display import display, Javascript
-            commands = ['flexx.command(%s);' % reprs(msg) for msg in self._commands]
+            lines = []
+            lines.append('var bb64 =  flexx.require("bb64");')
+            lines.append('function cmd(c) {'
+                            'flexx.s1._receive_command('
+                            'flexx.serializer.decode('
+                            'bb64.decode(c)));}')
+            for command in self._commands:  # also DEFINE commands!
+                command_str = base64.encodebytes(serializer.encode(command)).decode()
+                lines.append('cmd("' + command_str.replace('\n', '') + '");')
             self._commands = []
-            display(Javascript('\n'.join(commands)))
+            display(Javascript('\n'.join(lines)))
     
-    def command(self, msg):
-        self._commands.append(msg)
-    
-    @property
-    def ping_counter(self):
-        if self._session._ws is self:
-            return self._real_ws.ping_counter
-        else:
-            return self._session._ws.ping_counter
+    def write_command(self, cmd):
+        assert isinstance(cmd, tuple) and len(cmd) >= 1
+        self._commands.append(cmd)
 
 
 def init_notebook():
@@ -191,17 +164,11 @@ def init_notebook():
     proto = 'wss' if server.protocol == 'https' else 'ws'
     
     url = '%s://%s:%i/flexx/ws/%s' % (proto, host, port, session.app_name)
-
-    flexx_pre_init = """<script>window.flexx = {};
-                                window.flexx.app_name = "%s";
-                                window.flexx.session_id = "%s";
-                                window.flexx.ws_url = "%s";
-                                window.flexx.is_live_notebook = true;
-                        </script>""" % (session.app_name, session.id, url)
     
-    # Compose HTML to inject
-    t = assets.get_asset('flexx-core.js').to_html('{}', 0)
-    t += """<script>
+    # Determine JS snippets to run before and after init. The former is only
+    # run in live notebooks.
+    flexx_pre_init = "<script>window.flexx = {is_live_notebook: true};</script>"
+    flexx_post_init = """<script>
             flexx.is_notebook = true;
             flexx.is_exported = !flexx.is_live_notebook;
             /* If Phosphor is already loaded, disable our Phosphor CSS. */
@@ -209,7 +176,11 @@ def init_notebook():
                 document.getElementById('phosphor-all.css').disabled = true;
             }
             flexx.init();
-            </script>"""
+            flexx.create_session("%s", "%s", "%s");
+            </script>""" % (session.app_name, session.id, url)
+    # Compose HTML to inject
+    t = assets.get_asset('flexx-core.js').to_html('{}', 0)
+    t += flexx_post_init
     t += "<i>Flexx is ready for use</i>\n"
     
     display(HTML(flexx_pre_init))  # Create initial Flexx info dict
@@ -218,7 +189,13 @@ def init_notebook():
     
     # Note: the Widget._repr_html_() method is responsible for making
     # the widget show up in the notebook output area.
-
+    
+    # Note: asyncio will need to be enabled via %gui asyncio
+    
+    # We briefly start the server, it will start the web server, but exit
+    # the event loop right away.
+    server.stop()
+    server.start()
 
 
 # Keep serve and launch, they are still quite nice shorthands to quickly
@@ -231,7 +208,7 @@ def serve(cls, name=None, properties=None):
         raise RuntimeError('serve(... properties) is deprecated, '
                            'use app.App().serve() instead.')
     # Note: this talks to the manager; it has nothing to do with the server
-    assert (isinstance(cls, type) and issubclass(cls, Model))
+    assert (isinstance(cls, type) and issubclass(cls, (PyComponent, JsComponent)))
     a = App(cls)
     a.serve(name)
     return cls
@@ -245,7 +222,7 @@ def launch(cls, runtime=None, properties=None, **runtime_kwargs):
                            'use app.App().launch() instead.')
     if isinstance(cls, str):
         return webruntime.launch(cls, runtime, **runtime_kwargs)
-    assert (isinstance(cls, type) and issubclass(cls, Model))
+    assert (isinstance(cls, type) and issubclass(cls, (PyComponent, JsComponent)))
     a = App(cls)
     return a.launch(runtime, **runtime_kwargs)
 
@@ -256,6 +233,6 @@ def export(cls, filename, properties=None, **kwargs):
     if properties is not None:
         raise RuntimeError('export(... properties) is deprecated, '
                            'use app.App(...).export() instead.')
-    assert (isinstance(cls, type) and issubclass(cls, Model))
+    assert (isinstance(cls, type) and issubclass(cls, (PyComponent, JsComponent)))
     a = App(cls)
     return a.export(filename, **kwargs)

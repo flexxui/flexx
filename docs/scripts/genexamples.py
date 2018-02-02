@@ -25,7 +25,7 @@ for dname in os.listdir(FLEXX_DIR):
 created_files = []
 
 def get_notebook_list():
-    url = 'https://api.github.com/repos/zoofio/flexx-notebooks/contents'
+    url = 'https://api.github.com/repos/flexxui/flexx-notebooks/contents'
     print('downloading %s ... ' % url, end='')
     # https://github.com/travis-ci/travis-ci/issues/5649
     req = Request(url, headers={'User-Agent': 'flexx/%s' % flexx.__version__})
@@ -62,7 +62,7 @@ def main():
                 text += '%s\n%s\n\n' % (fname, '=' * len(fname))
                 if sub == 'ui' and code.startswith('# doc-export:'):
                     code = code.split('\n', 1)[1].lstrip()
-                    html = create_ui_example(filename, '../..')
+                    html = create_ui_example(filename, '../..', source=filename)
                     text +=  '.. raw:: html\n\n    ' + html + '\n\n'
                 text += '.. code-block:: py\n    :linenos:\n\n'
                 text += '\n    ' + code.replace('\n', '\n    ').rstrip() + '\n'
@@ -104,7 +104,7 @@ def main():
             # Include notebooks?
             for fname in notebook_list:
                 if fname.endswith('.ipynb') and ('_%s.' % sub) in fname:
-                    url = 'https://github.com/zoofIO/flexx-notebooks/blob/master/' + fname
+                    url = 'https://github.com/flexxui/flexx-notebooks/blob/master/' + fname
                     docs += '* `%s <%s>`_ (external notebook)\n' % (fname, url)
             # List examples
             for name in sorted(examples[sub]):

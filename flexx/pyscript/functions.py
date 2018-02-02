@@ -1,3 +1,4 @@
+import re
 import os
 import sys
 import types
@@ -23,13 +24,16 @@ def py2js(ob=None, new_name=None, **parser_options):
     Parameters:
         ob (str, module, function, class): The code, function or class
             to transpile.
-        new_name (str, optional): If given, renames the function or
-            class. This argument is ignored if ob is a string.
+        new_name (str, optional): If given, renames the function or class. This
+            can be used to simply change the name and/or add a prefix. It can
+            also be used to turn functions into methods using
+            "MyClass.prototype.foo". Double-underscore name mangling is taken
+            into account in the process.
         parser_options: Additional options for the parser. See Parser class
             for details.
     
     Returns:
-        jscode (str): The JavaScript code as a special str object that
+        str: The JavaScript code as a special str object that
         has a ``meta`` attribute that contains the following fields:
         
         * filename (str): the name of the file that defines the object.
@@ -38,6 +42,7 @@ def py2js(ob=None, new_name=None, **parser_options):
         * pyhash (str): a hash of the Python code.
         * vars_defined (set): names defined in the toplevel namespace.
         * vars_unknown (set): names used in the code but not defined in it.
+          This includes namespaces, e.g. "foo.some_function".
         * vars_global (set): names explicitly declared global.
         * std_functions (set): stdlib functions used in this code.
         * std_method (set): stdlib methods used in this code.
@@ -106,8 +111,17 @@ def py2js(ob=None, new_name=None, **parser_options):
         else:
             p = Parser(pycode, **parser_options)
         jscode = p.dump()
-        if new_name and thetype in ('class', 'def'):
+        if new_name:
+            if thetype not in ('class', 'def'):
+                raise TypeError('py2js() can only rename functions and classes.')
             jscode = js_rename(jscode, ob.__name__, new_name)
+        
+        # Collect undefined variables
+        # vars_unknown = [name for name, s in p.vars.get_undefined()]
+        vars_unknown = set()
+        for name, usages in p.vars.get_undefined():
+            for usage in usages:
+                vars_unknown.add(usage)
         
         # todo: now that we have so much info in the meta, maybe we should
         # use use py2js everywhere where we now use Parser and move its docs here.
@@ -119,12 +133,11 @@ def py2js(ob=None, new_name=None, **parser_options):
         jscode.meta['linenr'] = linenr
         jscode.meta['pycode'] = pycode
         jscode.meta['pyhash'] = hash
-        jscode.meta['vars_defined'] = set(n for n in p.vars if p.vars[n])
-        jscode.meta['vars_unknown'] = set(n for n in p.vars if not p.vars[n])
-        jscode.meta['vars_global'] = set(n for n in p.vars if p.vars[n] is False)
         jscode.meta['std_functions'] = p._std_functions
         jscode.meta['std_methods'] = p._std_methods
-        
+        jscode.meta['vars_defined'] = p.vars.get_defined()
+        jscode.meta['vars_global'] = p.vars.get_globals()
+        jscode.meta['vars_unknown'] = vars_unknown
         return jscode
     
     if ob is None:
@@ -132,30 +145,70 @@ def py2js(ob=None, new_name=None, **parser_options):
     return py2js_(ob)
 
 
+re_sub1 = re.compile(r'this\.__(\w*?[a-zA-Z0-9](?!__)\W)', re.UNICODE)
+
 def js_rename(jscode, cur_name, new_name):
     """ Rename a function or class in a JavaScript code string.
     
+    The new name can be prefixed (i.e. have dots in it). Functions can be
+    converted to methods by prefixing with a name that starts with a capital
+    letter (and probably ".prototype"). Double-underscore-mangling
+    is taken into account.
+    
     Parameters:
         jscode (str): the JavaScript source code
-        cur_name (str): the current name
+        cur_name (str): the current name (must be an identifier, e.g. no dots).
         new_name (str): the name to replace the current name with
     
     Returns:
-        jscode (str): the modified JavaScript source code
+        str: the modified JavaScript source code
     """
-    jscode = jscode.replace('function flx_%s' % cur_name,
-                            'function flx_%s' % (new_name.split('.')[-1]), 1)
+    assert cur_name and '.' not in cur_name
+    
+    isclass = cur_name[0].lower() != cur_name[0]
+    if isclass:
+        # cur_cls_name = cur_name
+        new_cls_name = new_name.split('.')[-1]
+    else:
+        new_cls_name = ''
+        parts = new_name.split('.')
+        prefix = '.'.join(parts[:-1])
+        if prefix:
+            maybe_cls = parts[-3] if parts[-2] == 'prototype' else parts[-2]
+            maybe_cls = maybe_cls.strip('$')  # allow special names
+            if maybe_cls[0].lower() != maybe_cls[0]:
+                new_cls_name = maybe_cls
+    
+    cur_name_short = cur_name.split('.')[-1]
+    new_name_short = new_name.split('.')[-1]
+    if isclass:
+        # If this is about a class ...
+        jscode = jscode.replace('.__name__ = "%s"' % cur_name_short, 
+                                '.__name__ = "%s"' % new_name_short)
+        jscode = jscode.replace('._%s__' % cur_name_short,
+                                '._%s__' % new_name_short)
+        jscode = jscode.replace('%s.prototype' % cur_name, 
+                                '%s.prototype' % new_name)
+    else:
+        # If this is about a function / method
+        jscode = jscode.replace('function flx_%s' % cur_name_short,
+                                'function flx_%s' % new_name_short, 1)
+        if new_cls_name:  # use regexp to match double-underscore but no magics!
+            jscode = re_sub1.sub('this._%s__\\1' % new_cls_name, jscode)
+            #jscode = jscode.replace('this.__', 'this._%s__' % new_cls_name)
+    
+    # Always do this
     jscode = jscode.replace('%s = function' % cur_name, 
-                            '%s = function' % (new_name), 1)
-    jscode = jscode.replace('%s.prototype' % cur_name, 
-                            '%s.prototype' % new_name)
-    jscode = jscode.replace('_class_name = "%s"' % cur_name, 
-                            '_class_name = "%s"' % new_name)
+                            '%s = function' % new_name, 1)
     if '.' in new_name:
         jscode = jscode.replace('var %s;\n' % cur_name, '', 1)
     else:
         jscode = jscode.replace('var %s;\n' % cur_name, 
                                 'var %s;\n' % new_name, 1)
+    
+    if 'this._Component__properties__' in jscode:
+        1/0
+        
     return jscode
 
 
@@ -180,21 +233,27 @@ def get_node_exe():
 
 _eval_count = 0
 
-def evaljs(jscode, whitespace=True, print_result=True):
+def evaljs(jscode, whitespace=True, print_result=True, extra_nodejs_args=None):
     """ Evaluate JavaScript code in Node.js.
     
-    parameters:
+    Parameters:
         jscode (str): the JavaScript code to evaluate.
         whitespace (bool): if whitespace is False, the whitespace
             is removed from the result. Default True.
         print_result (bool): whether to print the result of the evaluation.
             Default True. If False, larger pieces of code can be evaluated
             because we can use file-mode.
+        extra_nodejs_args (list): Extra command line args to pass to nodejs.
     
-    returns:
-        result (str): the last result as a string.
+    Returns:
+        str: the last result as a string.
     """
     global _eval_count
+    
+    # Init command
+    cmd = [get_node_exe()]
+    if extra_nodejs_args:
+        cmd.extend(extra_nodejs_args)
     
     # Prepare command
     if len(jscode) > 2**14:
@@ -208,24 +267,24 @@ def evaljs(jscode, whitespace=True, print_result=True):
         filename = os.path.join(tempfile.gettempdir(), fname)
         with open(filename, 'wb') as f:
             f.write(jscode.encode())
-        cmd = [get_node_exe(), '--use_strict', filename]
+        cmd += ['--use_strict', filename]
     else:
         filename = None
         p_or_e = ['-p', '-e'] if print_result else ['-e']
-        cmd = [get_node_exe(), '--use_strict'] + p_or_e + [jscode]
+        cmd += ['--use_strict'] + p_or_e + [jscode]
         if sys.version_info[0] < 3:
             cmd = [c.encode('raw_unicode_escape') for c in cmd]
     
     # Call node
     try:
-        res = subprocess.check_output(cmd)
+        res = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
     except Exception as err:
         if hasattr(err, 'output'):
             err = err.output.decode()
         else:
             err = str(err)
-        err = err[:200] + '...' if len(err) > 200 else err
-        raise Exception(err)
+        err = err[:400] + '...' if len(err) > 400 else err
+        raise RuntimeError(err)
     finally:
         if filename is not None:
             try:
@@ -245,13 +304,13 @@ def evaljs(jscode, whitespace=True, print_result=True):
 def evalpy(pycode, whitespace=True):
     """ Evaluate PyScript code in Node.js (after translating to JS).
     
-    parameters:
+    Parameters:
         pycode (str): the PyScript code to evaluate.
         whitespace (bool): if whitespace is False, the whitespace is
             removed from the result. Default True.
     
-    returns:
-        result (str): the last result as a string.
+    Returns:
+        str: the last result as a string.
     """
     # delibirate numpy doc style to see if napoleon handles it the same
     return evaljs(py2js(pycode), whitespace)

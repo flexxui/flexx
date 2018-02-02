@@ -33,7 +33,7 @@ all_examples = []
 class uiexample(nodes.raw): pass
 
 
-def create_ui_example(filename, to_root, height=300):
+def create_ui_example(filename, to_root, height=300, source=None):
     """ Given a filename, export the containing app to HTML, return
     generated HTML. Needs to be done via filename, not direct code, so
     that PyScript can obtain source.
@@ -62,7 +62,7 @@ def create_ui_example(filename, to_root, height=300):
         if os.environ.get('READTHEDOCS', False):
             msg = 'This example is not build on read-the-docs. <pre>%s</pre>' % err_text
         open(filename_abs, 'wt', encoding='utf-8').write(msg)
-        warnings.warn('Could not import ui example in %s: %s' % (filename, err_text))
+        warnings.warn('Could not import ui example in %s: %s' % (source or filename, err_text))
         return get_html(filename_rel, 60)
     
     # Get class name
@@ -92,7 +92,8 @@ def create_ui_example(filename, to_root, height=300):
         err_text = str(err)
         msg = 'Example not generated. <pre>%s</pre>' % err_text
         open(filename_abs, 'wt', encoding='utf-8').write(msg.replace('\\n', '<br />'))
-        print('ERROR: Could not export ui example: %s\n%s' % (err_text, code) )
+        print('==========\n%s\n==========' % code)
+        print('ERROR: Could not export ui example: %s in %s\nSee code above.' % (err_text, fname))
         raise err
     
     all_examples.append((class_name, mod_name, filename_parts[-1]))
@@ -104,7 +105,8 @@ def get_html(filename_rel, height):
     """
     # Styles
     astyle = 'font-size:small; float:right;'
-    dstyle = 'width: 500px; height: %ipx; align: center; resize:both; overflow: hidden; box-shadow: 5px 5px 5px #777;'
+    dstyle = ('width: 500px; height: %ipx; align: center; resize:both; overflow: hidden; '
+              'box-shadow: 5px 5px 5px #777; padding: 4px;')
     istyle = 'width: 100%; height: 100%; border: 2px solid #094;'
     
     # Show app in iframe, wrapped in a resizable div
@@ -141,7 +143,7 @@ def visit_uiexample_html(self, node):
         f.write(code.encode())
     
     # Get html file
-    html = create_ui_example(filename_py, '..', node.height)
+    html = create_ui_example(filename_py, '..', node.height, source=node.source)
     self.body.append(html + '<br />')
 
 
@@ -174,9 +176,6 @@ class UIExampleDirective(Directive):
 
 
 def setup(Sphynx):
-    
-    #Sphynx.add_javascript('js-image-slider.js')
-    #Sphynx.add_stylesheet('js-image-slider.css')
     
     Sphynx.add_node(uiexample, html=(visit_uiexample_html, depart_uiexample_html))
     Sphynx.add_directive('uiexample', UIExampleDirective)

@@ -26,8 +26,8 @@ class TestTheParser:
         assert StubParser("xxx.bar_bar()").dump() == 'xxx;'
         assert StubParser("xxx.foo_foo()").dump() == 'xxx.foo_foo();'
     
-    def test_exceptions(self):
-        raises(JSError, py2js, "foo(**kwargs)")
+    # def test_exceptions(self):
+    #     raises(JSError, py2js, "foo(**kwargs)")
         
 
 class TestExpressions:
@@ -308,7 +308,11 @@ class TestExpressions:
         
         assert py2js('[1,2,3]') == '[1, 2, 3];'
         assert py2js('(1,2,3)') == '[1, 2, 3];'
-        assert py2js('{foo: 3, bar: 4}') == '{foo: 3, bar: 4};'
+        
+        assert py2js('{"foo": 3, "bar": 4}') == '({foo: 3, bar: 4});'
+        assert evalpy('a={"foo": 3, "bar": 4};a') == '{ foo: 3, bar: 4 }'
+        with raises(JSError):
+            assert evalpy('bla="foo";a={bla: 3, bar: 4};a') == '{ foo: 3, bar: 4 }'
     
     def test_ignore_import_of_compiler(self):
         modname = pyscript.__name__

@@ -68,7 +68,12 @@ class CLI:
     def cmd_version(self):
         """ print the version number
         """
-        import flexx
+        import sys
+        try:
+            import flexx
+        except ImportError:
+            sys.path.insert(0, '.')
+            import flexx
         print(flexx.__version__)
     
     def cmd_info(self, port=None):

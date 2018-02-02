@@ -37,3 +37,6 @@ used in your code to let e.g. pyflakes know that the variable exists. E.g.
 ``from flexx.pyscript import undefined, window Infinity, NaN``.
 Arbitrary dummy variables can be imported using
 ``from flexx.pyscript.stubs import JSON, foo, bar``.
+
+Marking a variable as global is also a good approach to tell pyflakes that
+the variable exists.

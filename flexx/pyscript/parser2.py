@@ -272,22 +272,12 @@ class Parser2(Parser1):
         self.vars.add(err_name)
         
         # Build code to throw
-        code = []
         if err_cls:
-            code.append(self.lf("%s = " % err_name))
-            code.append('new Error(')
-            code.append("'%s:' + " % err_cls)
+            code = self.use_std_function('op_error', 
+                                         ["'%s'" % err_cls, err_msg or '""'])
         else:
-            code.append(self.lf("throw "))
-        code.append(err_msg or '""')
-        if err_cls:
-            code.append(');')
-            code.append(' %s.name = "%s";' % (err_name, err_cls))
-            code.append(' throw %s;' % err_name)
-        else:
-            code.append(';')
-        
-        return code
+            code = err_msg
+        return [self.lf('throw ' + code + ';')]
     
     def parse_Assert(self, node):
         
@@ -299,9 +289,8 @@ class Parser2(Parser1):
         code = []
         code.append(self.lf('if (!('))
         code += test
-        code.append(')) {')
-        code.append('throw "AssertionError: " + ')  # don't bother with new Error
-        code.append(reprs(msg))
+        code.append(')) { throw ')
+        code.append(self.use_std_function('op_error', ["'AssertionError'", reprs(msg)]))
         code.append(";}")
         return code
     
@@ -325,12 +314,18 @@ class Parser2(Parser1):
             self._indent += 1
             err_name = 'err_%i' % self._indent
             code.append(' catch(%s) {' % err_name)
+            subcode = []
             for i, handler in enumerate(node.handler_nodes):
                 if i == 0:
                     code.append(self.lf(''))
                 else:
                     code.append(' else ')
-                code += self.parse(handler)
+                subcode = self.parse(handler)
+                code += subcode
+            
+            # Rethrow?
+            if subcode and subcode[0].startswith('if'):
+                code.append(' else { throw %s; }' % err_name)
             
             self._indent -= 1
             code.append(self.lf('}'))  # end catch
@@ -370,6 +365,56 @@ class Parser2(Parser1):
         
         code.append(self.lf('}'))
         return code
+    
+    def parse_With(self, node):
+        code = []
+        
+        if len(node.item_nodes) != 1:
+            raise JSError('With statement only supported for singleton contexts.')
+        with_item = node.item_nodes[0]
+        context_name = unify(self.parse(with_item.expr_node))
+        
+        # Store context expression in a variable?
+        if '(' in context_name or '[' in context_name:
+            ctx = self.dummy('context')
+            code.append(self.lf(ctx + ' = ' + context_name + ';'))
+            context_name = ctx
+        
+        err_name1 = 'err_%i' % self._indent
+        err_name2 = self.dummy('err')
+        
+        # Enter
+        # for with_item in node.item_nodes: ...
+        if with_item.as_node is None:
+            code.append(self.lf(''))
+        elif isinstance(with_item.as_node, ast.Name):
+            self.vars.add(with_item.as_node.name)
+            code.append(self.lf(with_item.as_node.name + ' = '))
+        elif isinstance(with_item.as_node, ast.Attribute):
+            code += [self.lf()] + self.parse(with_item.as_node) + [' = ']
+        else:
+            raise JSError('The as-node in a with-statement must be a name or attr.')
+        code += [context_name, '.__enter__();']
+        
+        # Try
+        code.append(self.lf('try {'))
+        self._indent += 1
+        for n in node.body_nodes:
+            code += self.parse(n)
+        self._indent -= 1
+        code.append(self.lf('}'))
+        
+        # Exit
+        code.append(' catch(%s)  { %s=%s; }' % (err_name1, err_name2, err_name1))
+        code.append(self.lf() + 'if (%s) { '
+                    'if (!%s.__exit__(%s.name || "error", %s, null)) '
+                    '{ throw %s; }' %
+                    (err_name2, context_name, err_name2, err_name2, err_name2))
+        code.append(self.lf() + '} else { %s.__exit__(null, null, null); }' % 
+                    context_name)
+        return code
+    
+    # def parse_Withitem(self, node) -> handled in parse_With
     
     ## Control flow
     
@@ -586,8 +631,8 @@ class Parser2(Parser1):
             code.append(lf('%s = %s;' % (name2, name1)))
         code.append(lf('if ((typeof %s === "object") && '
                        '(!Array.isArray(%s))) {' % (name2, name2)))
-        code.append(lf('    %s = Object.keys(%s);' % (name2, name2)))
-        code.append(lf('}'))
+        code.append(' %s = Object.keys(%s);' % (name2, name2))
+        code.append('}')
         return ''.join(code)
     
     def parse_While(self, node):
@@ -656,9 +701,10 @@ class Parser2(Parser1):
                           comprehension.target_node.element_nodes]
             else:
                 target = [comprehension.target_node.name]
-            target = [prefix + t for t in target]
-            for t in target:
-                self.vars.add(t)
+            for i in range(len(target)):
+                if not self.vars.is_known(target[i]):
+                    target[i] = prefix + target[i]
+                    self.vars.add(target[i])
             self.vars.add(prefix + 'i%i' % iter)
             self.vars.add(prefix + 'iter%i' % iter)
             
@@ -805,12 +851,9 @@ class Parser2(Parser1):
         # Check
         if (not lambda_) and node.decorator_nodes:
             if not (len(node.decorator_nodes) == 1 and
+                    isinstance(node.decorator_nodes[0], ast.Name) and
                     node.decorator_nodes[0].name == 'staticmethod'):
                 raise JSError('No support for function decorators')
-        if node.kwarg_nodes:
-            raise JSError('No support for keyword only arguments')
-        if node.kwargs_node:
-            raise JSError('No support for kwargs')
         
         # Prepare for content
         code.append(') {')
@@ -822,7 +865,87 @@ class Parser2(Parser1):
         for name in argnames:
             self.vars.add(name)
         
-        # Apply defaults
+        # Prepare code for varargs
+        vararg_code1 = vararg_code2 = ''
+        if node.args_node:
+            name = node.args_node.name  # always an ast.Arg
+            self.vars.add(name)
+            if not argnames:
+                # Make available under *arg name
+                #code.append(self.lf('%s = arguments;' % name))
+                vararg_code1 = '%s = Array.prototype.slice.call(arguments);' % name
+                vararg_code2 = '%s = arguments[0].flx_args;' % name
+            else:
+                # Slice it
+                x = name, len(argnames)
+                vararg_code1 = '%s = Array.prototype.slice.call(arguments, %i);' % x
+                vararg_code2 = '%s = arguments[0].flx_args.slice(%i);' % x
+        
+        # Handle keyword arguments and kwargs
+        kw_argnames = set()  # variables that come from keyword args, or helper vars
+        if node.kwarg_nodes or node.kwargs_node:
+            # Collect names and default values
+            names, values = [], []
+            for arg in node.kwarg_nodes:
+                self.vars.add(arg.name)
+                kw_argnames.add(arg.name)
+                names.append("'%s'" % arg.name)
+                values.append(''.join(self.parse(arg.value_node)))
+            # Turn into string representation
+            names = '[' + ', '.join(names) + ']'
+            values = '[' + ', '.join(values) + ']'
+            # Write code to prepare for kwargs
+            if node.kwargs_node:
+                code.append(self.lf('%s = {};' % node.kwargs_node.name))
+            if node.kwarg_nodes:
+                values_var = self.dummy('kw_values')
+                kw_argnames.add(values_var)
+                code += [self.lf(values_var), ' = ', values, ';']
+            else:
+                values_var = values
+            # Enter if to actually parse kwargs
+            code.append(self.lf(
+                "if (arguments.length == 1 && typeof arguments[0] == 'object' && "
+                "Object.keys(arguments[0]).toString() == 'flx_args,flx_kwargs') {"))
+            self._indent += 1
+            # Call function to parse args
+            code += [self.lf()]
+            if node.kwargs_node:
+                kw_argnames.add(node.kwargs_node.name)
+                self.vars.add(node.kwargs_node.name)
+                code += [node.kwargs_node.name, ' = ']
+            self.use_std_function('op_parse_kwargs', [])
+            code += [stdlib.FUNCTION_PREFIX + 'op_parse_kwargs(',
+                     names, ', ', values_var, ', arguments[0].flx_kwargs']
+            if not node.kwargs_node:
+                code.append(", '%s'" % func_name or 'anonymous')
+            code.append(');')
+            # Apply values of positional args
+            # inside if, because standard arguments are invalid
+            args_var = 'arguments[0].flx_args'
+            if len(argnames) > 1:
+                args_var = self.dummy('args')
+                code.append(self.lf('%s = arguments[0].flx_args;' % args_var))
+            for i, name in enumerate(argnames):
+                code.append(self.lf('%s = %s[%i];' % (name, args_var, i)))
+            # End if
+            if vararg_code2:
+                code.append(self.lf(vararg_code2))
+            self._indent -= 1
+            code.append(self.lf('}'))
+            if vararg_code1:
+                code += [' else {', vararg_code1, '}']
+            # Apply values of keyword-only args
+            # outside if, because these need to be assigned always
+            # Note that we cannot use destructuring assignment because not all
+            # browsers support it (meh IE and Safari!)
+            for i, arg in enumerate(node.kwarg_nodes):
+                code.append(self.lf('%s = %s[%i];' % (arg.name, values_var, i)))
+        else:
+            if vararg_code1:
+                code.append(self.lf(vararg_code1))
+        
+        # Apply defaults of positional arguments
         for arg in node.arg_nodes:
             if arg.value_node is not None:
                 name = arg.name
@@ -830,19 +953,6 @@ class Parser2(Parser1):
                 x = '%s = (%s === undefined) ? %s: %s;' % (name, name, d, name)
                 code.append(self.lf(x))
         
-        # Handle varargs
-        if node.args_node:
-            asarray = 'Array.prototype.slice.call(arguments)'
-            name = node.args_node.name  # always an ast.Arg
-            self.vars.add(name)
-            if not argnames:
-                # Make available under *arg name
-                #code.append(self.lf('%s = arguments;' % name))
-                code.append(self.lf('%s = %s;' % (name, asarray)))
-            else:
-                # Slice it
-                code.append(self.lf('%s = %s.slice(%i);' %
-                            (name, asarray, len(argnames))))
         # Apply content
         if lambda_:
             code.append('return ')
@@ -866,9 +976,14 @@ class Parser2(Parser1):
         # Wrap up
         if lambda_:
             code.append('}%s' % binder)
-            # ns should only consist of arg names
+            # ns should only consist only of arg names (or helpers)
+            for name in argnames:
+                self.vars.discard(name)
+            if node.args_node:
+                self.vars.discard(node.args_node.name)
             ns = self.pop_stack()
-            assert not set(ns).difference(argnames)
+            assert set(ns) == kw_argnames
+            pre_code.append(self.get_declarations(ns))
         else:
             if not (code and code[-1].strip().startswith('return ')):
                 code.append(self.lf('return null;'))
@@ -957,17 +1072,12 @@ class Parser2(Parser1):
         base_class = nsname2
         return '%s.prototype._base_class' % base_class
     
-    
-    #def parse_With
-    #def parse_Withitem
-    
     #def parse_Yield
     #def parse_YieldFrom
     
     def parse_Global(self, node):
         for name in node.names:
-            self._globals.append(name)  # Keep track of globals
-            self.vars.set_nonlocal(name)
+            self.vars.set_global(name)
         return '' 
     
     def parse_Nonlocal(self, node):
@@ -991,7 +1101,7 @@ def get_class_definition(name, base='Object', docstring=''):
     if base != 'Object':
         code.append('%s.prototype = Object.create(%s);' % (name, base))
     code.append('%s.prototype._base_class = %s;' % (name, base))
-    code.append('%s.prototype._class_name = %s;' % (name, reprs(name.split('.')[-1])))
+    code.append('%s.prototype.__name__ = %s;' % (name, reprs(name.split('.')[-1])))
     
     code.append('')
     return code

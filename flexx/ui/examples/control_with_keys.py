@@ -12,50 +12,48 @@ consuming keys. Further, an application may want to control the tree widget
 even when it does not have focus.
 """
 
-from flexx import event, ui, app
+from flexx import app, event, ui
 
 
 class TreeWithControls(ui.TreeWidget):
     """ Adds a key press handler to allow controlling the TreeWidget with 
     the arrow keys, space, and enter.
     """
+
+    @event.emitter
+    def key_down(self, e):
+        """Overload key_down emitter to prevent browser scroll."""
+        ev = self._create_key_event(e)
+        if ev.key.startswith('Arrow'):
+            e.preventDefault()
+        return ev
     
-    class JS:
-        
-        @event.emitter
-        def key_down(self, e):
-            """Overload key_down emitter to prevent browser scroll."""
-            ev = self._create_key_event(e)
-            if ev.key.startswith('Arrow'):
-                e.preventDefault()
-            return ev
-        
-        @event.connect('key_down')
-        def _handle_highlighting(self, *events):
-            for ev in events:
-                if ev.modifiers:
-                    continue
-                if ev.key == 'Escape':
-                    self.highlight_hide()
-                elif ev.key == ' ':
-                    if self.max_selected == 0:  # space also checks if no selection
-                        self.highlight_toggle_checked()
-                    else:
-                        self.highlight_toggle_selected()
-                elif ev.key == 'Enter':
+    @event.reaction('key_down')
+    def _handle_highlighting(self, *events):
+        for ev in events:
+            if ev.modifiers:
+                continue
+            if ev.key == 'Escape':
+                self.highlight_hide()
+            elif ev.key == ' ':
+                if self.max_selected == 0:  # space also checks if no selection
                     self.highlight_toggle_checked()
-                elif ev.key == 'ArrowRight':
-                    item = self.highlight_get()
-                    if item and item.items:
-                        item.collapsed = None
-                elif ev.key == 'ArrowLeft':
-                    item = self.highlight_get()
-                    if item and item.items:
-                        item.collapsed = True
-                elif ev.key == 'ArrowDown':
-                    self.highlight_show(1)
-                elif ev.key == 'ArrowUp':
-                    self.highlight_show(-1)
+                else:
+                    self.highlight_toggle_selected()
+            elif ev.key == 'Enter':
+                self.highlight_toggle_checked()
+            elif ev.key == 'ArrowRight':
+                item = self.highlight_get()
+                if item and item.items:
+                    item.collapsed = None
+            elif ev.key == 'ArrowLeft':
+                item = self.highlight_get()
+                if item and item.items:
+                    item.collapsed = True
+            elif ev.key == 'ArrowDown':
+                self.highlight_show(1)
+            elif ev.key == 'ArrowUp':
+                self.highlight_show(-1)
 
 
 class KeyboardControlsTester(ui.Widget):
@@ -73,12 +71,14 @@ class KeyboardControlsTester(ui.Widget):
                 with ui.TreeItem(text=cat):
                     for name in ('Martin', 'Kees', 'Hans'):
                         item = ui.TreeItem(title=name)
-                        item.checked = cat=='foo' or None
+                        item.set_checked(cat=='foo' or None)
     
-    @event.connect('combo.text')
+    @event.reaction('combo.text')
     def _combo_text_changed(self, *events):
         for ev in events:
             print('combo text is now', ev.new_value)
 
 
-m = app.launch(KeyboardControlsTester)
+if __name__ == '__main__':
+    m = app.launch(KeyboardControlsTester)
+    app.run()

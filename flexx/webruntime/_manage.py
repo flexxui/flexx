@@ -104,7 +104,7 @@ def versionstring(version):
     def add_part(i):
         part = version[anchor:i]
         if len(part) > 9:
-            raise ValueError('Version parts can be at most 9 chars')
+            raise ValueError('Version parts can be at most 9 chars in %r' % version)
         elif part.isnumeric():
             parts.append('~' + part.rjust(9, ' '))
         elif part:
@@ -232,7 +232,7 @@ def clean_dirs():
                 except ValueError:
                     continue  # we probably did not make this
                 if pid not in pids:
-                    remove(path)
+                    remove(path, True)
     
     # Remove lockfiles in runtime dirs
     dirs_with_lockfiles = set()

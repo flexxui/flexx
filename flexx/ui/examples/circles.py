@@ -1,16 +1,15 @@
 """
-Example that shows animated circles. The animation is run from Python.
-Doing that in JS would be more efficient, but we have not implemented timers
-yet.
+Example that shows animated circles. Note that it would be more efficient
+to use a canvas for this sort of thing.
 """
 
-import math
 from time import time
 
 from flexx import app, ui
 
 
 class Circle(ui.Label):
+    
     CSS = """
     .flx-Circle {
         background: #f00;
@@ -23,29 +22,20 @@ class Circle(ui.Label):
 class Circles(ui.Widget):
     
     def init(self):
-        self._circles = []
-        
         with ui.PinboardLayout():
-            for i in range(32):
-                x = math.sin(i*0.2)*0.3 + 0.5
-                y = math.cos(i*0.2)*0.3 + 0.5
-                w = Circle(pos=(x, y))
-                self._circles.append(w)
-        
+            self._circles = [Circle() for i in range(32)]
         self.tick()
-        # todo: animate in JS!
     
     def tick(self):
-        if not self.session.status:
-            return
+        global Math, window
         t = time()
         for i, circle in enumerate(self._circles):
-            x = math.sin(i*0.2 + t)*0.3 + 0.5
-            y = math.cos(i*0.2 + t)*0.3 + 0.5
-            circle.pos = x, y
-        app.call_later(0.03, self.tick)
+            x = Math.sin(i*0.2 + t) * 30 + 50
+            y = Math.cos(i*0.2 + t) * 30 + 50
+            circle.apply_style(dict(left=x + '%', top=y + '%'))
+        window.setTimeout(self.tick, 30)
 
 
 if __name__ == '__main__':
-    m = app.launch(Circles)
+    m = app.App(Circles).launch('app')
     app.run()

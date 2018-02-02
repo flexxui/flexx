@@ -1,8 +1,8 @@
 Flexx
 =====
 
-[![Join the chat at https://gitter.im/zoofIO/flexx](https://badges.gitter.im/zoofIO/flexx.svg)](https://gitter.im/zoofIO/flexx?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/zoofIO/flexx.svg)](https://travis-ci.org/zoofIO/flexx)
+[![Join the chat at https://gitter.im/flexxui/flexx](https://badges.gitter.im/flexxui/flexx.svg)](https://gitter.im/flexxui/flexx?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/flexxui/flexx.svg)](https://travis-ci.org/flexxui/flexx)
 [![Documentation Status](https://readthedocs.org/projects/flexx/badge/?version=latest)](https://flexx.readthedocs.org)
 
 <i>Notice: Flexx is being [refactored](https://github.com/zoofIO/flexx/pull/408) right now, which should be ready before/in Januari 2018. These changes are driven by feedback from building real world Flexx-based apps over the past year and a half, and will improve Flexx on many fronts (e.g. make it scale better). It does mean that the API will change in a few ways though!</i>
@@ -20,7 +20,7 @@ applications, and (if designed well) export an app to a standalone HTML
 document. It also works in the Jupyter notebook.
 
 The docs are on [Readthedocs](http://flexx.readthedocs.io).
-the code is on [Github](http://github.com/zoofio/flexx).
+the code is on [Github](http://github.com/flexxui/flexx).
 Flexx is currently in alpha status; any part of the public API may
 change without notice. Feedback is welcome.
 

@@ -2,19 +2,19 @@
 Example to demonstrate simple transpiling and evaluating.
 """
 
-from flexx.pyscript import js, py2js, evaljs, evalpy
+from flexx.pyscript import py2js, evaljs, evalpy
 
 def foo(a, b=1, *args):
     print(a)
     return b
 
 # Create jscode object
-jscode = js(foo)
+jscode = py2js(foo)
 
 # Print some info that we have on the code
-print(jscode.name)
-print(jscode.pycode)
-print(jscode.jscode)
+print(jscode.meta['filename'])
+print(jscode.meta['pycode'])
+print(jscode)
 
 # Convert strings of Python to JS
 print(py2js('isinstance(x, str)'))

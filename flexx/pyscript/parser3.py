@@ -224,9 +224,9 @@ class Parser3(Parser2):
             if not isinstance(node.arg_nodes[0], ast.Str):
                 raise JSError('RawJS needs a verbatim string (use multiple '
                               'args to bypass PyScript\'s RawJS).')
-            lines = RawJS._str2lines(node.arg_nodes[0].value)
-            indent = (self._indent * 4) * ' '
-            return '\n'.join([indent + line for line in lines])
+            lines = RawJS._str2lines(node.arg_nodes[0].value.strip())
+            nl = '\n' + (self._indent * 4) * ' '
+            return nl.join(lines)
         else:
             return None  # maybe RawJS is a thing
     
@@ -256,15 +256,19 @@ class Parser3(Parser2):
         
         cmp = MAP.get(cls, cls)
         
-        if cmp.lower() in BASIC_TYPES:
+        if cmp == 'array':
+            return ['Array.isArray(', ob, ')']
+        elif cmp.lower() in BASIC_TYPES:
             # Basic type, use Object.prototype.toString
-            # http://stackoverflow.com/questions/11108877
+            return ["Object.prototype.toString.call(", ob ,
+                    ").slice(8,-1).toLowerCase() === '%s'" % cmp.lower()]
+            # In http://stackoverflow.com/questions/11108877 the following is
+            # proposed, which might be better in theory, but is > 50% slower
             return ["({}).toString.call(",
                     ob,
                     ").match(/\s([a-zA-Z]+)/)[1].toLowerCase() === ",
                     "'%s'" % cmp.lower()
                     ]
-        
         else:
             # User defined type, use instanceof
             # http://tobyho.com/2011/01/28/checking-types-in-javascript/

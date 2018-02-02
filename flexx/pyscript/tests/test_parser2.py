@@ -228,7 +228,18 @@ class TestConrolFlow:
         code1 = 'corners = [[(p[i] + 0.5) for i in range(3)] for p in corners_local]'
         js = py2js(code1)
         assert 'p' not in js.meta['vars_unknown']
-    
+        
+        def foo1():
+            i = 3
+            x = [i for i in range(4, 7)]
+            return x
+        def foo2():
+            x = [i for i in range(4, 7)]
+            return x
+        js1 = py2js(foo1) + '\nfoo1()'
+        js2 = py2js(foo2) + '\nfoo2()'
+        assert evaljs(js1) == '[ 4, 5, 6 ]'
+        assert evaljs(js2) == '[ 4, 5, 6 ]'
     
     def xx_test_list_comprehension_speed(self):
         # https://developers.google.com/speed/articles/optimizing-javascript
@@ -265,6 +276,17 @@ class TestExceptions:
         assert evaljs(catcher % py2js('assert false')).count('AssertionError')
         assert evaljs(catcher % py2js('assert false, "foo"')).count('foo')
     
+    def test_assert_catch(self):
+        
+        def catchtest(x):
+            try:
+                assert False
+            except AssertionError:
+                print('assertion-error')
+            return undefined
+        
+        assert evaljs(py2js(catchtest, 'f') + 'f(1)') == 'assertion-error'
+    
     def test_catching(self):
         
         def catchtest(x):
@@ -298,6 +320,22 @@ class TestExceptions:
         
         assert evaljs(py2js(catchtest, 'f') + 'f(1)').endswith('foo')
     
+    def test_catching3(self):
+        
+        def catchtest(x):
+            try:
+                try:
+                    raise ValueError('foo')
+                except AttributeError:
+                    print('not here')
+                except IndexError:
+                    print('not here either')
+            except Exception:
+                print('ok')
+            return undefined
+        
+        assert evaljs(py2js(catchtest, 'f') + 'f(1)') == 'ok'
+    
     def test_finally(self):
         
         def catchtest(x):
@@ -315,6 +353,84 @@ class TestExceptions:
         assert evaljs(py2js(catchtest, 'f') + 'f(1)').endswith('xx\nyy')
 
 
+class TestContextManagers:
+    
+    def test_with_simple(self):
+        
+        def contexttest():
+            c = dict(__enter__=lambda: print('enter'),
+                     __exit__=lambda: print('exit'))
+            with c:
+                print(42)
+            print('.')
+            return undefined
+        
+        assert evaljs(py2js(contexttest, 'f') + 'f()') == 'enter\n42\nexit\n.'
+    
+    def test_with_as1(self):
+        
+        def contexttest():
+            c = dict(__enter__=lambda: 7,
+                     __exit__=lambda: print('exit'))
+            with c as item:
+                print(42)
+                print(item)
+                print(43)
+            print('.')
+            return undefined
+        
+        assert evaljs(py2js(contexttest, 'f') + 'f()') == '42\n7\n43\nexit\n.'
+
+    def test_with_as2(self):
+        
+        def contexttest():
+            c = dict(__enter__=lambda: 7,
+                     __exit__=lambda: print('exit'))
+            with c as c.item:
+                print(42)
+                print(c.item)
+                print(43)
+            print(c.item)
+            print('.')
+            return undefined
+        
+        assert evaljs(py2js(contexttest, 'f') + 'f()') == '42\n7\n43\nexit\n7\n.'
+    
+    def test_with_calculated_context(self):
+        
+        def contexttest():
+            def get_ctx():
+                print('making')
+                return dict(__enter__=lambda: 7,
+                            __exit__=lambda: print('exit'))
+            with get_ctx() as item:
+                print(item)
+                print(42)
+            return undefined
+        
+        assert evaljs(py2js(contexttest, 'f') + 'f()') == 'making\n7\n42\nexit'
+    
+    def test_with_exception(self):
+        
+        def contexttest(x):
+            c = dict(__enter__=lambda: print('enter'),
+                     __exit__=lambda et, ev, tb: print(et))
+            try:
+                with c:
+                    print(42)
+                    if x != 1:
+                        raise AttributeError('fooerror')
+                    print(43)
+            except Exception as e:
+                print(e.message)
+            print('.')
+            return undefined
+        
+        assert evaljs(py2js(contexttest, 'f') + 'f(1)') == 'enter\n42\n43\nnull\n.'
+        s = 'enter\n42\nAttributeError\nAttributeError: fooerror\n.'
+        assert evaljs(py2js(contexttest, 'f') + 'f(0)') == s
+
+
 def func1():
     return 2 + 3
 
@@ -325,28 +441,53 @@ class TestFunctions:
         assert evalpy('def foo():pass\nprint(foo(), 1)') == 'null 1'
         assert evalpy('def foo():return\nprint(foo(), 1)') == 'null 1'
     
-    def test_func_calls(self):
+    def test_func_call_compilation(self):
         assert py2js('foo()') == 'foo();'
         assert py2js('foo(3, 4)') == 'foo(3, 4);'
         assert py2js('foo(3, 4+1)') == 'foo(3, 4 + 1);'
         assert py2js('foo(3, *args)')  # JS is complex, just test it compiles
         assert py2js('a.foo(3, *args)')  # JS is complex, just test it compiles
+
+    def test_simple_funcs_dont_parse_kwargs(self):
         
-        # Does not work
-        raises(JSError, py2js, 'foo(x=1, y=2)')
-        raises(JSError, py2js, 'foo(**kwargs)')
+        # Simplest function does not parse kwargs
+        code = py2js('def foo(): pass')
+        assert 'parse_kwargs' not in code
+        assert 'kw_values' not in code
         
-        code = "def foo(x): return x + 1\nd = {'foo':foo}\n"
-        assert evalpy(code + 'foo(3)') == '4'
-        assert evalpy(code + 'd.foo(3)') == '4'
+        # Also not with positional args
+        code = py2js('def foo(a, b, c): pass')
+        assert 'parse_kwargs' not in code
+        assert 'kw_values' not in code
         
-        code = "def foo(x, *xx): return x + sum(xx)\nd = {'foo':foo}\nfive=[2, 3]\n"
-        assert evalpy(code + 'foo(1, 2, 3)') == '6'
-        assert evalpy(code + 'd.foo(1, 2, 3)') == '6'
-        #
-        assert evalpy(code + 'foo(1, *five)') == '6'
-        assert evalpy(code + 'd.foo(1, *five)') == '6'
-    
+        # Also not with varargs
+        code = py2js('def foo(a, *c): pass')
+        assert 'parse_kwargs' not in code
+        assert 'kw_values' not in code
+        
+        # Also not with positional args that have defaults
+        code = py2js('def foo(a, b=1, c="foo"): pass')
+        assert 'parse_kwargs' not in code
+        assert 'kw_values' not in code
+        
+    def test_when_funcs_do_parse_kwargs(self):
+        
+        # We do for **kwargs
+        code = py2js('def foo(a, **c): pass')
+        assert 'parse_kwargs' in code
+        assert 'kw_values' not in code
+        
+        # We do for keyword only args
+        if sys.version_info > (3, ):
+            code = py2js('def foo(a, *, b=1, c="foo"): pass')
+            assert 'parse_kwargs' in code
+            assert 'kw_values' in code
+        
+        # We do for keyword only args and **kwargs
+        if sys.version_info > (3, ):
+            code = py2js('def foo(a, *, b=1, c="foo", **d): pass')
+            assert 'parse_kwargs' in code
+            assert 'kw_values' in code
     
     def test_func1(self):
         code = py2js(func1)
@@ -357,6 +498,105 @@ class TestFunctions:
         assert lines[2].startswith('  ')  # indented
         assert lines[3] == '};'  # dedented
     
+    
+    def test_function_call_simple(self):
+        code = "def foo(x): return x + 1\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(3)') == '4'
+        assert evalpy(code + 'd.foo(3)') == '4'
+    
+    def test_function_call_varargs(self):
+        code = "def foo(x, *xx): return x + sum(xx)\nd = {'foo':foo}\nfive=[2, 3]\n"
+        assert evalpy(code + 'foo(1, 2, 3)') == '6'
+        assert evalpy(code + 'd.foo(1, 2, 3)') == '6'
+        #
+        assert evalpy(code + 'foo(1, *five)') == '6'
+        assert evalpy(code + 'd.foo(1, *five)') == '6'
+    
+    def test_function_call_default_args(self):
+        code = "def foo(a=2, b=3, c=4): return a+b+c;\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(1, 2, 3)') == '6'
+        assert evalpy(code + 'd.foo(1, 2, 3)') == '6'
+        #
+        assert evalpy(code + 'foo(1, 2)') == '7'
+        assert evalpy(code + 'd.foo(1, 2)') == '7'
+        #
+        assert evalpy(code + 'foo(1)') == '8'
+        assert evalpy(code + 'd.foo(1)') == '8'
+        #
+        assert evalpy(code + 'foo()') == '9'
+        assert evalpy(code + 'd.foo()') == '9'
+    
+    @skipif(sys.version_info < (3,), reason='no keyword only args in legacy py')
+    def test_function_call_keyword_only_args(self):
+        code = "def foo(*, a=2, b=3, c=4): return a+b+c;\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(a=1, b=2, c=3)') == '6'
+        assert evalpy(code + 'd.foo(a=1, b=2, c=3)') == '6'
+        #
+        assert evalpy(code + 'foo(b=10)') == '16'
+        assert evalpy(code + 'd.foo(b=10)') == '16'
+        
+        # Also with varargs
+        code = "def foo(*x, a=2, b=3, c=4): return (sum(x) if x else 0) + a+b+c;\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(a=1, b=2, c=3)') == '6'
+        assert evalpy(code + 'd.foo(a=1, b=2, c=3)') == '6'
+        #
+        assert evalpy(code + 'foo(b=10)') == '16'
+        assert evalpy(code + 'd.foo(b=10)') == '16'
+        #
+        assert evalpy(code + 'foo(100, 200, b=10)') == '316'
+        assert evalpy(code + 'd.foo(100, 200, b=10)') == '316'
+        
+        # Cannot pass invalid kwargs
+        assert evalpy(code + 'try:\n  foo(d=4)\nexcept TypeError:\n  print("ha")') == 'ha'
+        assert evalpy(code + 'try:\n  d.foo(d=4)\nexcept TypeError:\n  print("ha")') == 'ha'
+        
+        # NOTE: if we use kwargs on a simple func, we just get weird args.
+        # Checking for this case adds overhead, and quite a bit of boilerplate code
+        code = "def foo(a=2): return a\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(a=3)') == '{ flx_args: [], flx_kwargs: { a: 3 } }'
+        assert evalpy(code + 'd.foo(a=3)') == '{ flx_args: [], flx_kwargs: { a: 3 } }'
+    
+    def test_function_call_kwargs(self):
+        code = "def foo(a, b=9, **x): return repr([a, b]) + repr(x);\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(1, 2)') == '[1,2]{}'
+        assert evalpy(code + 'foo(1, 2, 3)') == '[1,2]{}'  # 3d arg is ignored
+        assert evalpy(code + 'foo(1, b=3)') == '[1,9]{"b":3}'
+        assert evalpy(code + 'foo(1, b=3, c=4)') == '[1,9]{"b":3,"c":4}'
+        #
+        assert evalpy(code + 'd.foo(1, 2)') == '[1,2]{}'
+        assert evalpy(code + 'd.foo(1, b=3, c=4)') == '[1,9]{"b":3,"c":4}'
+    
+    def test_function_call_args_and_kwargs(self):
+        # Func returns args
+        code = "def foo(*args, **kwargs): return args;\n"
+        assert evalpy(code + 'foo(1, 2, 3)') == '[ 1, 2, 3 ]'
+        assert evalpy(code + 'foo(1, 2, 3, a=3)') == '[ 1, 2, 3 ]'
+        assert evalpy(code + 'foo(1, 2, 3, **{"b":4})') == '[ 1, 2, 3 ]'
+        assert evalpy(code + 'foo(a=3, **{"b":4})') == '[]'
+        
+        # Func return kwargs
+        code = "def foo(*args, **kwargs): return kwargs;\n"
+        assert evalpy(code + 'foo(1, 2, 3)') == '{}'
+        assert evalpy(code + 'foo(1, 2, 3, a=3)') == '{ a: 3 }'
+        assert evalpy(code + 'foo(1, 2, 3, **{"b":4})') == '{ b: 4 }'
+        assert evalpy(code + 'foo(a=3, **{"b":4})') == '{ a: 3, b: 4 }'
+    
+    @skipif(sys.version_info < (3,), reason='no keyword only args in legacy py')
+    def test_function_call_keyword_only_args_and_kwargs(self):
+        code = "def foo(*, a=3, b=4, **x): return repr([a, b]) + repr(x);\nd = {'foo':foo}\n"
+        assert evalpy(code + 'foo(1)') == '[3,4]{}'
+        assert evalpy(code + 'foo(a=1, b=2)') == '[1,2]{}'
+        assert evalpy(code + 'foo(a=1, b=2, c=5)') == '[1,2]{"c":5}'
+        #
+        assert evalpy(code + 'd.foo(1)') == '[3,4]{}'
+        assert evalpy(code + 'd.foo(a=1, b=2, c=5)') == '[1,2]{"c":5}'
+        
+        # All the args
+        code = "def foo(a, b=2, *, c=3, **x): return repr([a, b, c]) + repr(x);\n"
+        assert evalpy(code + 'foo(1)') == '[1,2,3]{}'
+        assert evalpy(code + 'foo(1, b=8)') == '[1,2,3]{"b":8}'  # this one might be surprising
+        assert evalpy(code + 'foo(1, c=8)') == '[1,2,8]{}'
+        assert evalpy(code + 'foo(1, d=8)') == '[1,2,3]{"d":8}'
     
     def method1(self):
         return
@@ -530,6 +770,34 @@ class TestFunctions:
         """
         assert evaljs(py2js(func3_code)+'func3()') == '3'
     
+    @skipif(sys.version_info < (3,), reason='no nonlocal on legacy Python')
+    def test_global_vs_nonlocal(self):
+        js1 = py2js('global foo;foo = 3')
+        js2 = py2js('nonlocal foo;foo = 3')
+        
+        assert js1.meta['vars_unknown'] == set()
+        assert js2.meta['vars_unknown'] == set()
+        assert js1.meta['vars_global'] == set(['foo'])
+        assert js2.meta['vars_global'] == set()
+        
+        code = """if True:
+        x = 1
+        y = 1
+        def inner1():
+            x = 2
+            y = 2
+            def inner2():
+                global x
+                nonlocal y
+                print(x, y)
+            inner2()
+        inner1()
+        undefined
+        """
+        # In Python, this produces "1 2", but its hard to replicate that in JS, and
+        # probably not worth the effort.
+        # assert evalpy(code) == '1 2'
+        
     def test_raw_js(self):
         
         def func(a, b):
@@ -580,6 +848,42 @@ class TestClasses:
         # class vars
         assert evaljs(code + 'm.foo;') == '8'
     
+    def test_class_name_mangling1(self):
+        
+        class FooMang1:
+            __y = 12
+            def __init__(self):
+                self.__x = 30
+            def __foo(self):
+                return self.__x + self.__y
+            def bar(self):
+                return self.__foo()
+        
+        code = py2js(FooMang1)
+        code += 'var m=new FooMang1();'
+        
+        assert '._FooMang1__foo' in code
+        assert '._FooMang1__x' in code
+        assert '._FooMang1__y' in code
+        
+        assert evaljs(code + 'm.bar();') == '42'
+        assert evaljs(code + 'm.__x;') == ''
+        assert evaljs(code + 'm.__y;') == ''
+    
+    def test_class_name_mangling2(self):
+        # work well with nested functions
+        class FooMang2:
+            __y = 42
+            def bar(self):
+                def x1():
+                    def x2():
+                        return self.__y
+                    return x2()
+                return x1()
+        
+        code = py2js(FooMang2)
+        code += 'var m=new FooMang2();'
+        assert evaljs(code + 'm.bar();') == '42'
     
     def test_inheritance_and_super(self):
         
@@ -638,7 +942,6 @@ class TestClasses:
         assert evaljs(code + 'm3 instanceof MyClass1;') == 'true'
         assert evaljs(code + 'm3 instanceof Object;') == 'true'
     
-    
     def test_inheritance_super_more(self):
         
         class MyClass4:
@@ -691,8 +994,8 @@ class TestClasses:
         err = 'Class constructor is called as a function.'
         assert evaljs(code + 'try { var m = new MyClass13(); "ok"} catch (err) { err; }') == 'ok'
         assert evaljs(code + 'try { var m = MyClass13();} catch (err) { err; }') == err
-        assert evaljs(code + 'try { MyClass13.apply(root);} catch (err) { err; }') == err
-        assert evaljs(code + 'var window = root;try { MyClass13.apply(window);} catch (err) { err; }') == err
+        assert evaljs(code + 'try { MyClass13.apply(global);} catch (err) { err; }') == err
+        assert evaljs(code + 'var window = global;try { MyClass13.apply(window);} catch (err) { err; }') == err
         
     
     def test_bound_methods(self):

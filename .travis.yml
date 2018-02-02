@@ -19,15 +19,11 @@ matrix:
           env: TEST_UNIT=0 TEST_DOCS=1
         #
         - python: "2.7"
-          env: TEST_UNIT=1 TEST_INSTALL=1
+          env: TEST_UNIT=legacy TEST_INSTALL=1
         - python: "pypy-5.7.1"
-          env: TEST_UNIT=1 TEST_INSTALL=1
+          env: TEST_UNIT=legacy TEST_INSTALL=1
         #
-        #- python: "pypy3-???"
-        #  env: TEST_UNIT=1
-        - python: "3.3"
-          env: TEST_UNIT=1
-        - python: "3.4"
+        - python: "pypy3"
           env: TEST_UNIT=1
         - python: "3.5"
           env: TEST_UNIT=1 TEST_INSTALL=1
@@ -67,6 +63,10 @@ before_install:
 install:
     - cd ${SRC_DIR}
     - pip install invoke
+    - if [ "${TEST_UNIT}" == "legacy" ]; then
+        pip install pytest-cov;
+        pip install tornado;
+      fi;
     - if [ "${TEST_UNIT}" == "1" ]; then
         pip install pytest-cov;
         pip install tornado;
@@ -94,6 +94,10 @@ before_script:
 script: 
     - cd ${SRC_DIR};
     - python -c "import sys; print(sys.version, '\n', sys.prefix)"
+    - if [ "${TEST_UNIT}" == "legacy" ]; then
+        invoke test --unit=dialite;
+        invoke test --unit=pyscript;
+      fi;
     - if [ "${TEST_UNIT}" == "1" ]; then
         invoke test --unit;
       fi;

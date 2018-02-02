@@ -103,7 +103,8 @@ class NWRuntime(DesktopRuntime):
     This runtime is visible in the task manager under a custom process name
     (``sys.executable + '-ui'``), making it easy to spot in the task manager,
     and avoids task-bar grouping. Compared to the Firefox app runtime,
-    this runtime uses more processes and memory, but is generally faster.
+    this runtime uses more processes and memory. Chrome used to be faster, but
+    since Firefox Quantum this is no longer the case.
     
     The supported ``windowmode`` values are 'normal', 'fullscreen',
     'kiosk' ('maximized' is ignored).

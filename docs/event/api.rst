@@ -2,34 +2,76 @@ Event API
 =========
 
 
-Decorators
-----------
-
-.. autofunction:: flexx.event.connect
-
-.. autofunction:: flexx.event.prop
-
-.. autofunction:: flexx.event.readonly
-
-.. autofunction:: flexx.event.emitter
-
-
-HasEvents
+Component
 ---------
 
-.. autoclass:: flexx.event.HasEvents
+.. autoclass:: flexx.event.Component
     :members:
     :private-members:
 
-Handler
+Attributes
+----------
+
+.. autoclass:: flexx.event.Attribute
+  :members:
+    
+Properties
+----------
+
+.. autoclass:: flexx.event.Property
+
+.. autoclass:: flexx.event.AnyProp
+
+.. autoclass:: flexx.event.BoolProp
+
+.. autoclass:: flexx.event.TriStateProp
+
+.. autoclass:: flexx.event.IntProp
+
+.. autoclass:: flexx.event.FloatProp
+
+.. autoclass:: flexx.event.StringProp
+
+.. autoclass:: flexx.event.TupleProp
+
+.. autoclass:: flexx.event.ListProp
+
+.. autoclass:: flexx.event.ComponentProp
+
+.. autoclass:: flexx.event.FloatPairProp
+
+.. autoclass:: flexx.event.EnumProp
+
+.. autoclass:: flexx.event.ColorProp
+
+
+Actions
 -------
 
-.. autoclass:: flexx.event.Handler
+.. autofunction:: flexx.event.action
+
+.. autoclass:: flexx.event.Action
+  :members:
+
+Reactions
+---------
+
+.. autofunction:: flexx.event.reaction
+
+.. autoclass:: flexx.event.Reaction
     :members:
+
+Emitter
+-------
+
+.. autofunction:: flexx.event.emitter
+
+.. autoclass:: flexx.event.Emitter
+    :members:
+
 
 Dict
 ----
-
 
 .. autoclass:: flexx.event.Dict
     :members:
@@ -37,5 +79,5 @@ Dict
 loop
 ----
 
-.. autoclass:: flexx.event._loop.Loop
+.. autoclass:: flexx.event.Loop
     :members:
