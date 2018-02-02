@@ -23,7 +23,7 @@ matrix:
         - python: "pypy-5.7.1"
           env: TEST_UNIT=legacy TEST_INSTALL=1
         #
-        - python: "Pypy3"
+        - python: "pypy3"
           env: TEST_UNIT=1
         - python: "3.5"
           env: TEST_UNIT=1 TEST_INSTALL=1
@@ -64,6 +64,7 @@ install:
     - cd ${SRC_DIR}
     - pip install invoke
     - if [ "${TEST_UNIT}" == "legacy" ]; then
+        pip install pytest-cov;
         pip install tornado;
       fi;
     - if [ "${TEST_UNIT}" == "1" ]; then

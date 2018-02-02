@@ -163,9 +163,12 @@ def _wrap(line, nchars, maxlines):
         lines.append('\xb7' * nchars)
     elif len(lines) == 1:
         lines[-1] = lines[-1].ljust(nchars, '\xb7')
-    elif len(lines) > maxlines:
+    elif len(lines) <= maxlines:
+        lines[-1] = lines[-1].ljust(nchars, ' ')
+    else:
         lines = lines[:maxlines]
         lines[-1] = lines[-1][:-1] + '…'
+        
     return lines
 
 def _zip(lines1, lines2, offset):

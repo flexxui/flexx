@@ -211,6 +211,7 @@ def test_reaction_init3():
     print('end')
 
 
+@skipif(sys.version_info < (3,6), reason='need ordered kwargs')
 @run_in_both(MyObject_init)
 def test_reaction_init4():
     """
@@ -220,7 +221,7 @@ def test_reaction_init4():
     2 2
     end
     """
-    # Order of first two is determined by order of connection strings
+    # Order of first two is determined by order of keyword args in constructor
     # the next two by the property name, the next two by order of actions.
     m = MyObject_init(foo=4, bar=4)
     m.set_foo(2)
