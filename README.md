@@ -5,7 +5,7 @@ Flexx
 [![Build Status](https://travis-ci.org/flexxui/flexx.svg)](https://travis-ci.org/flexxui/flexx)
 [![Documentation Status](https://readthedocs.org/projects/flexx/badge/?version=latest)](https://flexx.readthedocs.org)
 
-<i>Notice: Flexx is being [refactored](https://github.com/zoofIO/flexx/pull/408) right now, which should be ready before/in Januari 2018. These changes are driven by feedback from building real world Flexx-based apps over the past year and a half, and will improve Flexx on many fronts (e.g. make it scale better). It does mean that the API will change in a few ways though!</i>
+<i>Notice: Flexx has recently been [refactored](https://github.com/zoofIO/flexx/pull/408), improving Flexx on many fronts (e.g. make it scale better). Note that the API has changed in several ways though! We're now moving towards a release that brings us to beta status.</i>
 
 Introduction
 ------------
@@ -33,26 +33,6 @@ also be used by themselves:
 * [flexx.pyscript](http://flexx.readthedocs.io/en/stable/pyscript/) - Python to JavaScript transpiler
 * [flexx.webruntime](http://flexx.readthedocs.io/en/stable/webruntime/) - to launch a runtime
 * [flexx.util](http://flexx.readthedocs.io/en/stable/util/) - utilities
-
-
-Status
-------
-
-Early 2017 we were close to a new release and moving to beta-status.
-However, we found that in some real (bigger) applications written in Flexx,
-we were hitting certain boundaries. We believe that these boundaries prevent
-Flexx from being usable at a large scale.
-
-We've since looked at what does boundaries are and how Flexx would need to
-change to be able to remove or move beyond these boundaries. This has culminated
-in a [plan](https://github.com/zoofIO/flexx/pull/367) to refactor Flexx, and the
-refactoring is currently [being done](https://github.com/zoofIO/flexx/pull/408).
-
-These changes are quite substantial. E.g. a central idea of the current
-Flexx is having objects that exist in both Python and JS and have
-properties that are settable from both ends. This will be no more.
-Instead, objects live/operate *either* in Python or JS, but objects in JS
-can still be referenced and influenced from Py.
 
 
 Example
