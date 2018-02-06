@@ -340,5 +340,6 @@ class Splines(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(Splines)
-    app.start()
+    a = app.App(Splines)
+    a.launch()
+    app.run()

@@ -3,8 +3,12 @@ Definition of the App class and app manager.
 """
 
 import os
+import io
 import time
+import shutil
 import weakref
+import zipfile
+import tempfile
 from base64 import encodestring as encodebytes
 
 from .. import event, webruntime
@@ -161,13 +165,14 @@ class App:
         return session.app
 
     def export(self, filename=None, link=0, write_shared=True):
-        """ Export the app to an HTML document.
+        """ Export this app to an HTML document.
 
         Arguments:
             filename (str, optional): Path to write the HTML document to.
                 If not given or None, will return the html as a string.
                 If the filename ends with .hta, a Windows HTML Application is
-                created.
+                created. If a directory is given, the app is exported to
+                index.html inside that directory.
             link (int): whether to link (JS and CSS) assets or embed them:
 
                 * 0: all assets are embedded (default).
@@ -189,7 +194,11 @@ class App:
             name = os.path.basename(filename).split('.')[0]
             name = name.replace('-', '_').replace(' ', '_')
             self.serve(name)
-
+        
+        # Allow a dir to be given
+        if os.path.isdir(filename):
+            filename = os.path.join(filename, 'index.html')
+        
         # Create session with id equal to the app name. This would not be strictly
         # necessary to make exports work, but it makes sure that exporting twice
         # generates the exact same thing (no randomly generated dir names).
@@ -237,7 +246,53 @@ class App:
 
         app_type = 'standalone app' if link in (0, 1) else 'app'
         logger.info('Exported %s to %r' % (app_type, filename))
-
+    
+    def publish(self, name, token, url=None):
+        """ Publish this app as static HTML on the web.
+        
+        This is an experimental feature! We will try to keep your app published,
+        but make no guarantees. We reserve the right to remove apps or shut down
+        the web server completely.
+        
+        Arguments:
+            name (str): The name by which to publish this app. Must be unique
+                within the scope of the published site.
+            token (str): a secret token. This is stored at the target website.
+                Subsequent publications of the same app name must have the same
+                token.
+            url (str): The url to POST the app to. If None (default),
+                the default Flexx live website url will be used.
+        """
+        # Export to disk
+        dirname = os.path.join(tempfile.gettempdir(), 'flexx_exports', name)
+        if os.path.isdir(dirname):
+            shutil.rmtree(dirname)
+        os.makedirs(dirname)
+        self.export(dirname, link=3, write_shared=True)
+        # Zip it up
+        f = io.BytesIO()
+        with zipfile.ZipFile(f, 'w') as zf:
+            for root, dirs, files in os.walk(dirname):
+                for fname in files:
+                    filename = os.path.join(root, fname)
+                    zf.write(filename, os.path.relpath(filename, dirname))
+        # Clear temp dir
+        shutil.rmtree(dirname)
+        # POST
+        try:
+            import requests
+        except ImportError:
+            raise ImportError('App.publish() needs requests lib: pip install requests')
+        url = url or 'http://52.29.42.242/submit/{name}/{token}'
+        real_url = url.format(name=name, token=token)
+        r = requests.post(real_url, data=f.getvalue())
+        if r.status_code != 200:
+            raise RuntimeError('Publish failed: ' + r.text)
+        else:
+            print('Publish succeeded, ' + r.text)
+            if url.startswith('http://52.29.42.242'):
+                print('You app is now available at '
+                      'http://52.29.42.242/open/%s/' % name)
 
 # todo: thread safety
 
