@@ -63,6 +63,7 @@ coverage.xml
 docs/_build/
 doc/_build/
 _website/
+_live/
 _gh-pages/
 
 
