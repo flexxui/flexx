@@ -64,15 +64,20 @@ to use.
 Installation
 ------------
 
-Flexx requires Python 2.7 or Python 3.2+ and also works on pypy. Further,
+Flexx requires Python 3.5+ (only PyScript can be used with 2.7+) and also works on pypy. Further,
 it needs the [tornado](http://www.tornadoweb.org) library (pure Python).
 For running desktop apps, it is recommended to have Firefox installed.
 
-To install use any of:
+The current release is really old, please use the latest master if you want to try it:
 
-* ``conda install flexx -c conda-forge``
+* ``pip install https://github.com/flexxui/flexx/archive/master.zip``, or
+* Clone the repo and add it to your PYTHONPATH.
+
+When version 0.5 is released:
+
+* ``conda install flexx -c conda-forge``, or
 * ``pip install flexx``
-* Clone the repo and add it to your PYTHONPATH, or ``python setup.py install``.
+
 
 
 License
