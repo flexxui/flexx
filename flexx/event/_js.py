@@ -29,7 +29,7 @@ from flexx.event._reaction import ReactionDescriptor, Reaction
 from flexx.event._attribute import Attribute
 from flexx.event._property import Property
 from flexx.event._emitter import EmitterDescriptor
-from flexx.event._component import Component, _mutate_array_js
+from flexx.event._component import Component, _mutate_array_js, _mutate_dict_js
 
 
 Object = console = setTimeout = loop = logger = arguments = None  # fool pyflake
@@ -574,7 +574,8 @@ def gen_prop_classes(mc):
 
 # Generate the code
 mc = MetaCollector()
-JS_FUNCS = mc.py2js(_mutate_array_js) + '\nvar mutate_array = _mutate_array_js;\n'
+JS_FUNCS = (mc.py2js(_mutate_array_js) + '\nvar mutate_array = _mutate_array_js;\n' +
+            mc.py2js(_mutate_dict_js))
 JS_LOOP = mc.update(_create_js_class(Loop, LoopJS)) + '\nvar loop = new Loop();\n'
 JS_COMPONENT = mc.update(_create_js_class(Component, ComponentJS))
 JS_PROP = gen_prop_classes(mc)

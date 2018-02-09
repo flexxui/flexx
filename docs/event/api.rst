@@ -9,6 +9,12 @@ Component
     :members:
     :private-members:
 
+
+.. autofunction:: flexx.event.mutate_array
+
+.. autofunction:: flexx.event.mutate_dict
+
+
 Attributes
 ----------
 
@@ -35,6 +41,8 @@ Properties
 .. autoclass:: flexx.event.TupleProp
 
 .. autoclass:: flexx.event.ListProp
+
+.. autoclass:: flexx.event.DictProp
 
 .. autoclass:: flexx.event.ComponentProp
 

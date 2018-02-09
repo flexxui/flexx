@@ -11,11 +11,21 @@ undefined = None
 
 class Property(BaseDescriptor):
     """ Base property class. Properties are (readonly) attributes associated
-    with Component classes. Properties can be mutated by actions.
+    with :class:`Component <flexx.event.Component>` classes, which can be
+    :func:`mutated <flexx.event.Component._mutate>` only by
+    :class:`actions <flexx.event.Action>`.
     The base ``Property`` class can have any value, the subclasses
     validate/convert the value when it is mutated.
     
-    Usage:
+    Arguments:
+        initial_value: The initial value for the property. If omitted,
+            a default value is used (specific for the type of property).
+        settable (bool): If True, a corresponding setter action is
+            automatically created that can be used to set the property.
+            Default False.
+        doc (str): The documentation string for this property (optional).
+    
+    Example usage:
     
     .. code-block:: python
         
@@ -24,12 +34,9 @@ class Property(BaseDescriptor):
             foo = event.AnyProp(7, doc="A property that can be anything")
             bar = event.StringProp(doc='A property that can only be string')
             spam = event.IntProp(8, settable=True)
-    
-    In the example above, one can see how the initial value can be specified.
-    If omitted, a sensible default value is used. The docstring for the
-    property can be provided using the ``doc`` keyword argument. The ``spam``
-    property is marked as ``settable``; a ``set_spam()`` action is
-    automatically generated.
+        
+        >> c = MyComponent()
+        >> c.set_spam(9)  # use auto-generated setter action
     
     One can also implement custom properties:
 
@@ -203,7 +210,11 @@ class TupleProp(Property):
 
 class ListProp(Property):
     """ A propery who's values are lists. Default empty list. The value is 
-    always copied upon setting, so one can safely provide an initial value.
+    always copied upon setting, so one can safely provide an initial list.
+    
+    Warning: updating the list in-place (e.g. use ``append()``) will not
+    trigger update events! In-place updates can be done via the
+    :func:`_mutate <flexx.event.Component._mutate>` method.
     """
     
     _default = []
@@ -212,6 +223,23 @@ class ListProp(Property):
         if not isinstance(value, (tuple, list)):
             raise TypeError('List property %r cannot accept %r.' % (name, value))
         return list(value)
+
+
+class DictProp(Property):
+    """ A property who's values are dicts. Default empty dict. The value is 
+    always copied upon setting, so one can safely provide an initial dict.
+    
+    Warning: updating the dict in-place (e.g. use ``update()``) will not
+    trigger update events! In-place updates can be done via the
+    :func:`_mutate <flexx.event.Component._mutate>` method.
+    """
+    
+    _default = {}
+    
+    def _validate(self, value, name, data):
+        if not isinstance(value, dict):
+            raise TypeError('Dict property %r cannot accept %r.' % (name, value))
+        return value.copy()
 
 
 class ComponentProp(Property):
@@ -261,7 +289,7 @@ class EnumProp(Property):
     """ A property that represents a choice between a fixed set of (string) values.
     
     Useage: ``foo = EnumProp(['optionA', 'optionB', ...], 'default', ...)``.
-    If no default value is provided, the first option is used.
+    If no initial value is provided, the first option is used.
     """
     
     _default = ''

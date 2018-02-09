@@ -13,7 +13,9 @@ def action(func):
     """ Decorator to turn a method of a Component into an
     :class:`Action <flexx.event.Action>`.
     
-    Actions change the state of the application by mutating properties.
+    Actions change the state of the application by
+    :func:`mutating <flexx.event.Component._mutate>`
+    :class:`properties <flexx.event.Property>`.
     In fact, properties can only be changed via actions.
     
     Actions are asynchronous and thread-safe. Invoking an action will not
@@ -29,7 +31,7 @@ def action(func):
     makes apps easier to understand and debug. This is the core idea behind
     frameworks such as Elm, React and Veux. And Flexx adopts it as well.
     
-    Usage:
+    Example usage:
     
     .. code-block:: py
         
