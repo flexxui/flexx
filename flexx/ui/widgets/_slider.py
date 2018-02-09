@@ -157,9 +157,12 @@ class Slider(Widget):
     
     @event.emitter
     def mouse_down(self, e):
-        if e.target.classList.contains("slider") and not self.disabled:
+        if not self.disabled:
             e.stopPropagation()
             x1 = e.clientX
+            if not e.target.classList.contains("slider"):
+                x1 = (self.node.getBoundingClientRect().x +
+                      self.node.children[0].children[1].offsetLeft)
             self._dragging = self.value, x1
             self.outernode.classList.add('flx-dragging')
         else:
@@ -167,7 +170,7 @@ class Slider(Widget):
     
     @event.emitter
     def mouse_up(self, e):
-        if self._dragging is not None:
+        if self._dragging is not None and len(self._dragging) == 3:
             self.outernode.blur()
         self._dragging = None
         self.outernode.classList.remove('flx-dragging')
@@ -177,7 +180,8 @@ class Slider(Widget):
     def mouse_move(self, e):
         if self._dragging is not None:
             e.stopPropagation()
-            ref_value, x1 = self._dragging
+            ref_value, x1 = self._dragging[0], self._dragging[1]
+            self._dragging = ref_value, x1, True  # mark as moved
             x2 = e.clientX
             mi, ma = self.min, self.max
             value_diff = (x2 - x1) / self.outernode.clientWidth * (ma - mi)
