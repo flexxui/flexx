@@ -42,6 +42,7 @@ class MyObject(event.Component):
     stringprop = event.StringProp(settable=True)
     tupleprop = event.TupleProp(settable=True)
     listprop = event.ListProp(settable=True)
+    dictprop = event.DictProp(settable=True)
     componentprop = event.ComponentProp(settable=True)  # can be None
     # nullprop = event.NullProp(None, settable=True)
     # eitherprop = event.EitherProp(event.IntProp, event.NoneProp)
@@ -211,6 +212,41 @@ def test_property_list_mutate():
 
 
 @run_in_both(MyObject) 
+def test_property_dict_mutate():
+    """
+    {}
+    {bar: 4, foo: 3}
+    {bar: 4, foo: 5}
+    {bar: 4}
+    fail IndexError
+    """
+    m = MyObject()
+    print(m.dictprop)
+    
+    loop._processing_action = True
+    
+    m._mutate_dictprop(dict(foo=3), 'insert')
+    m._mutate_dictprop(dict(bar=4), 'replace')  # == insert
+
+    print('{' + ', '.join(['%s: %i' % (key, val)
+                          for key, val in sorted(m.dictprop.items())]) + '}')
+    
+    m._mutate_dictprop(dict(foo=5), 'replace')
+    print('{' + ', '.join(['%s: %i' % (key, val)
+                          for key, val in sorted(m.dictprop.items())]) + '}')
+    
+    
+    m._mutate_dictprop(['foo'], 'remove')
+    print('{' + ', '.join(['%s: %i' % (key, val)
+                          for key, val in sorted(m.dictprop.items())]) + '}')
+    
+    try:
+       m._mutate_dictprop(dict(foo=3), 'insert', 0)
+    except IndexError:
+        print('fail IndexError')
+
+
+@run_in_both(MyObject) 
 def test_property_persistance1():  # anyprop just sets, listProm makes a copy
     """
     []
@@ -266,6 +302,7 @@ class MyDefaults(event.Component):
     stringprop2 = event.StringProp('heya')
     tupleprop2 = event.TupleProp((2, 'xx'))
     listprop2 = event.ListProp([3, 'yy'])
+    dictprop2 = event.DictProp({'foo':3, 'bar': 4})
     componentprop2 = event.ComponentProp(None)
 
 
@@ -284,6 +321,7 @@ def test_property_defaults2():
     heya
     [True, 2, 'xx']
     [3, 'yy']
+    {bar: 4, foo: 3}
     True
     """
     m = MyDefaults()
@@ -294,6 +332,8 @@ def test_property_defaults2():
     print(m.stringprop2)
     print([isinstance(m.tupleprop2, tuple)] + list(m.tupleprop2))  # grrr
     print(m.listprop2)
+    print('{' + ', '.join(['%s: %i' % (key, val)
+                          for key, val in sorted(m.dictprop2.items())]) + '}')
     print(m.componentprop2 is None)
 
 

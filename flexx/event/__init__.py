@@ -329,7 +329,7 @@ the events one by one:
                     assert False, 'we cover all mutations'
 
 For convenience, the mutation can also be "replicated" using the
-``flexx.event.mutate_array()`` function.
+``flexx.event.mutate_array()`` and ``flexx.event.mutate_dict()`` functions.
 
 
 Connection string syntax
@@ -531,4 +531,4 @@ from ._reaction import Reaction, reaction
 from ._emitter import emitter, Emitter
 from ._attribute import Attribute
 from ._property import *
-from ._component import Component, mutate_array
+from ._component import Component, mutate_array, mutate_dict

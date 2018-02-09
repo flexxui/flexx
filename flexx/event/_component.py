@@ -461,7 +461,8 @@ class Component(with_metaclass(ComponentMeta, object)):
                'insert', 'remove', or 'replace'. If other than 'set', index must
                be specified, and >= 0. If 'remove', then value must be an int
                specifying the number of items to remove.
-            index (int): the index at which to insert, remove or replace items.
+            index: the index at which to insert, remove or replace items. Must
+                be an int for list properties.
             
         The 'replace' mutation also supports multidensional (numpy) arrays.
         In this case ``value`` can be an ndarray to patch the data with, and
@@ -502,14 +503,20 @@ class Component(with_metaclass(ComponentMeta, object)):
                 return True
         else:
             # Array mutations - value is assumed to be a sequence, or int for 'remove'
-            if index < 0:
-                raise IndexError('For insert, remove, and replace mutations, '
-                                 'the index must be >= 0.')
             ev = Dict()
             ev.objects = value
             ev.mutation = mutation
             ev.index = index
-            mutate_array(old, ev)
+            if isinstance(old, dict):
+                if index != -1:
+                    raise IndexError('For in-place dict mutations, '
+                                     'the index is not used, and must be -1.')
+                mutate_dict(old, ev)
+            else:
+                if index < 0:
+                    raise IndexError('For insert, remove, and replace mutations, '
+                                     'the index must be >= 0.')
+                mutate_array(old, ev)
             self.emit(prop_name, ev)
             return True
     
@@ -579,9 +586,35 @@ class Component(with_metaclass(ComponentMeta, object)):
             return _react
 
 
+def mutate_dict(d, ev):
+    """ Function to mutate an dict property in-place.
+    Used by Component. The ``ev`` must be a dict with elements:
+    
+    * mutation: 'set', 'insert', 'remove' or 'replace'.
+    * objects: the dict to set/insert/replace, or a list if keys to remove.
+    * index: not used.
+    """
+    mutation = ev['mutation']
+    objects = ev['objects']
+
+    if mutation == 'set':
+        d.clear()
+    elif mutation in ('set', 'insert', 'replace'):
+        assert isinstance(objects, dict)
+        for key, val in objects.items():
+            d[key] = val
+    elif mutation == 'remove':
+        assert isinstance(objects, (tuple, list))
+        for key in objects:
+            d.pop(key)
+    else:
+        raise NotImplementedError(mutation)
+
+
 def _mutate_array_py(array, ev):
-    """ Logic to mutate an list-like or array-like property in-place, in Python.
-    ev must be a dict with elements:
+    """ Function to mutate a list- or array-like property in-place.
+    Used by Component. The ``ev`` must be a dict with elements:
+    
     * mutation: 'set', 'insert', 'remove' or 'replace'.
     * objects: the values to set/insert/replace, or the number of iterms to remove.
     * index: the (non-negative) index to insert/replace/remove at.
@@ -647,3 +680,4 @@ def _mutate_array_js(array, ev):  # pragma: no cover
 
 
 mutate_array = _mutate_array_py
+_mutate_dict_js = _mutate_dict_py = mutate_dict

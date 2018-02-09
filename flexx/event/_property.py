@@ -210,9 +210,9 @@ class TupleProp(Property):
 
 class ListProp(Property):
     """ A propery who's values are lists. Default empty list. The value is 
-    always copied upon setting, so one can safely provide an initial value.
+    always copied upon setting, so one can safely provide an initial list.
     
-    Warning: updating the value in-place (e.g. use ``append()``) will not
+    Warning: updating the list in-place (e.g. use ``append()``) will not
     trigger update events! In-place updates can be done via the
     :func:`_mutate <flexx.event.Component._mutate>` method.
     """
@@ -223,6 +223,23 @@ class ListProp(Property):
         if not isinstance(value, (tuple, list)):
             raise TypeError('List property %r cannot accept %r.' % (name, value))
         return list(value)
+
+
+class DictProp(Property):
+    """ A property who's values are dicts. Default empty dict. The value is 
+    always copied upon setting, so one can safely provide an initial dict.
+    
+    Warning: updating the dict in-place (e.g. use ``update()``) will not
+    trigger update events! In-place updates can be done via the
+    :func:`_mutate <flexx.event.Component._mutate>` method.
+    """
+    
+    _default = {}
+    
+    def _validate(self, value, name, data):
+        if not isinstance(value, dict):
+            raise TypeError('Dict property %r cannot accept %r.' % (name, value))
+        return value.copy()
 
 
 class ComponentProp(Property):
