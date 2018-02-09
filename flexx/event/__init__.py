@@ -140,12 +140,13 @@ Actions can mutate properties
             self._mutate_bar(self.bar + 1)
             # shorthand for self._mutate('bar', self.bar + 1)
 
-Actions can have any number of (positional) arguments. Note that actions are asynchronous,
-i.e. calling an action will not apply it immediately, unless it is
+Actions can have any number of (positional) arguments. Note that actions are
+asynchronous, i.e. calling an action will not apply it immediately, unless it is
 called from another action.
 
-Mutations are done via the ``_mutate()`` method, or by the auto-generated
-``_mutate_xx()`` methods. Mutations can only be done from an action. Trying
+Mutations are done via the :func:`_mutate <flexx.event.Component._mutate>` method,
+or by the auto-generated ``_mutate_xx()`` methods.
+Mutations can only be done from an action. Trying
 to do so otherwise will result in an error. This may seem limiting at first,
 but it greatly helps keeping it easy to reason about information flowing
 through your application, even as it scales.
@@ -154,8 +155,8 @@ through your application, even as it scales.
 Mutations to array-like properties
 ----------------------------------
 
-The above shows the simple and most common use of mutations. However,
-mutations can also be done in-place:
+The above shows the simple and most common use of mutations. For list
+properties, mutations can also be done in-place:
 
 .. code-block:: python
 

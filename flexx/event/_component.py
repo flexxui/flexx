@@ -445,16 +445,21 @@ class Component(with_metaclass(ComponentMeta, object)):
         return ev
     
     def _mutate(self, prop_name, value, mutation='set', index=-1):
-        """ Main mutator function. Each Component class will also have an
-        auto-generated mutator function for each property.
+        """ Mutate a :class:`property <flexx.event.Property>`.
+        Can only be called from an :class:`action <flexx.event.action>`.
+        
+        Each Component class will also have an auto-generated mutator function
+        for each property: e.g. property ``foo`` can be mutated with
+        ``c._mutate('foo', ..)`` or ``c._mutate_foo(..)``.
         
         Arguments:
             prop_name (str): the name of the property being mutated.
             value: the new value, or the partial value for partial mutations.
             mutation (str): the kind of mutation to apply. Default is 'set'.
-               Partial mutations can be applied by using 'insert', 'remove', or
-               'replace'. If other than 'set', index must be specified,
-               and >= 0. If 'remove', then value must be an int
+               Partial mutations to list-like
+               :class:`properties <flexx.event.Property>` can be applied by using
+               'insert', 'remove', or 'replace'. If other than 'set', index must
+               be specified, and >= 0. If 'remove', then value must be an int
                specifying the number of items to remove.
             index (int): the index at which to insert, remove or replace items.
             
