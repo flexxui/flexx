@@ -12,7 +12,7 @@ Flexx is written for Python 3, but can also be installed on legacy
 Python (Python 2.7). It also works on Pypy.
 Flexx actively supports Firefox, Chrome and (with minor limitations) IE/Edge.
 
-The ``event``, ``webruntime`` and ``pyscrip`` subpackages require no
+The ``event``, ``webruntime`` and ``pyscript`` subpackages require no
 dependencies. The ``app`` and ``ui`` subpackages require Tornado (a
 pure Python package) and a browser. To run apps that look like desktop
 apps, we recommend having Firefox installed.
