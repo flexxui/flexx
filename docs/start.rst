@@ -38,7 +38,7 @@ API may change without notice. Status of subpackages:
 * The ``flexx.webruntime`` module works well, but needs tests and should
   support more runtimes.
 * The ``flexx.app`` module is increasingly stable.
-* The ``flexx.ui`` module is stabalizing and most changes will be related
+* The ``flexx.ui`` module is stabilizing and most changes will be related
   to the *addition* of new widgets.
 
 
@@ -85,7 +85,7 @@ Flexx overview
 Flexx is designed to be modular, and this is reflected in the package
 layout. The most commonly used subpackage is ``flexx.ui``. However, the
 technologies on which it relies are defined in separate subpackages,
-which are independent from each-other, and can be used by themselves.
+which are independent from each other, and can be used by themselves.
 E.g. ``import flexx.webruntime`` only imports that subpackage, and not
 the whole ui toolkit and app framework (nor Tornado).
 
