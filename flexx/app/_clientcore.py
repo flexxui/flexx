@@ -72,15 +72,15 @@ class Flexx:
         for session in self.sessions.values():
             session.exit()
     
-    def spin(self, text='*'):
+    def spin(self, n=1):
         RawJS("""
         if (!window.document.body) {return;}
         var el = window.document.body.children[0];
         if (el && el.classList.contains("flx-spinner")) {
-            if (text === null) {
+            if (n === null) {
                 el.style.display = 'none';  // Stop the spinner
             } else {
-                el.children[0].innerHTML += text.replace(/\*/g, '&#9632');
+                el.children[0].innerHTML += '&#9632'.repeat(n);
             }
         }
         """)
@@ -254,7 +254,7 @@ class JsSession:
         # Check WebSocket support
         WebSocket = window.WebSocket
         if (WebSocket is undefined):
-            window.document.body.innerHTML = 'Browser does not support WebSockets'
+            window.document.body.textContent = 'Browser does not support WebSockets'
             raise "FAIL: need websocket"
         
         # Construct ws url
@@ -294,7 +294,7 @@ class JsSession:
                 msg += ': %s (%i)' % (evt.reason, evt.code)
             if not window.flexx.is_notebook:
                 # todo: show modal or cooky-like dialog instead of killing whole page
-                window.document.body.innerHTML = msg
+                window.document.body.textContent = msg
             else:
                 window.console.info(msg)
         def on_ws_error(self, evt):
