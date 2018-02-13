@@ -12,8 +12,8 @@ class Relay(event.Component):
     """
     
     @event.emitter
-    def create_message(self, msg):
-        return dict(message=msg)
+    def create_message(self, name, message):
+        return dict(name=name, message=message)
 
 # Create global relay
 relay = Relay()
@@ -30,9 +30,21 @@ class MessageBox(ui.Label):
     }
     """
     
+    def init(self):
+        super().init()
+        global window
+        self._se = window.document.createElement('div')
+    
+    def sanitize(self, text):
+        self._se.textContent = text
+        text = self._se.innerHTML
+        self._se.textContent = ''
+        return text
+    
     @event.action
-    def add_message(self, msg):
-        self.set_text(self.text + msg + '<br />')
+    def add_message(self, name, msg):
+        line = '<i>' + self.sanitize(name) + '</i>: ' + self.sanitize(msg)
+        self.set_html(self.html + line + '<br />')
 
 
 class ChatRoom(app.PyComponent):
@@ -59,14 +71,14 @@ class ChatRoom(app.PyComponent):
     def _send_message(self, *events):
         text = self.msg_edit.text
         if text:
-            name = self.name.text or 'anonymous'
-            relay.create_message('<i>%s</i>: %s' % (name, text))
+            name = self.name_edit.text or 'anonymous'
+            relay.create_message(name, text)
             self.msg_edit.set_text('')
     
     @relay.reaction('create_message')  # note that we connect to relay
     def _push_info(self, *events):
         for ev in events:
-            self.messages.add_message(ev.message)
+            self.messages.add_message(ev.name, ev.message)
     
     @app.manager.reaction('connections_changed')
     def _update_participants(self, *events):
@@ -77,7 +89,7 @@ class ChatRoom(app.PyComponent):
             del sessions
             text = '<br />%i persons in this chat:<br /><br />' % len(names)
             text += '<br />'.join([name or 'anonymous' for name in sorted(names)])
-            self.people_label.set_text(text)
+            self.people_label.set_html(text)
 
 
 if __name__ == '__main__':

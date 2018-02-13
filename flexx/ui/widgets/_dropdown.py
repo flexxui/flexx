@@ -122,11 +122,10 @@ class BaseDropdown(Widget):
         # <span class='flx-dd-button'></span>
         # <div class='flx-dd-strud'>&nbsp;</div>
         f2 = lambda e: self._submit_text() if e.which == 13 else None
-        
         return [create_element('span', 
                                {'className': 'flx-dd-label',
                                 'onclick': self._but_click},
-                               self.text + '&nbsp;'),
+                               self.text + '\u00A0'),
                 create_element('input',
                                {'className': 'flx-dd-edit',
                                 'onkeypress': f2,
@@ -135,7 +134,7 @@ class BaseDropdown(Widget):
                 create_element('span'),
                 create_element('span', {'className': 'flx-dd-button',
                                         'onclick': self._but_click}),
-                create_element('div', {'className': 'flx-dd-strud'}, '&nbsp;'),
+                create_element('div', {'className': 'flx-dd-strud'}, '\u00A0'),
                 ]
     
     def _but_click(self):
@@ -302,14 +301,16 @@ class ComboBox(BaseDropdown):
         # Create a virtual node for each option
         options = self.options
         option_nodes = []
-        strud = ''
+        strud = []
         for i in range(len(options)):
             key, text = options[i]
             clsname = 'highlighted-true' if self._highlighted == i else ''
             li = create_element('li',
                                 dict(index=i, className=clsname),
-                                text if len(text.strip()) else '&nbsp;')
-            strud += text + '&nbsp;&nbsp;<span class="flx-dd-space"></span><br />'
+                                text if len(text.strip()) else '\u00A0')
+            strud += [text + '\u00A0',
+                      create_element('span', {'class': "flx-dd-space"}),
+                      create_element('br')]
             option_nodes.append(li)
         
         # Update the list of nodes created by superclass

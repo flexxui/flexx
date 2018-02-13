@@ -21,7 +21,7 @@ class Boxes(ui.Widget):
             
             with ui.VBox(flex=1):
                 
-                ui.Label(text='<b>Box mode</b> (aware of natural size)')
+                ui.Label(html='<b>Box mode</b> (aware of natural size)')
                 ui.Label(text='flex: 1, sub-flexes: 0, 0, 0')
                 with ui.HBox(flex=1):
                     Panel(text='A', flex=0)
@@ -45,7 +45,7 @@ class Boxes(ui.Widget):
             
             with ui.VBox(flex=1):
                 
-                ui.Label(text='<b>Fix mode</b> (high level layout)')
+                ui.Label(html='<b>Fix mode</b> (high level layout)')
                 ui.Label(text='flex: 1, sub-flexes: 0, 0, 0')
                 with ui.HFix(flex=1):
                     Panel(text='A', flex=0)

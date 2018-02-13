@@ -57,7 +57,7 @@ class UsingPython(ui.Widget):
         lines.append('String with escaped html: ' + escape('html <tags>!'))
         lines.append('String with escaped html: ' + escape('Woezel & Pip'))
         
-        self.label = ui.Label(wrap=0, text='<br />'.join(lines))
+        self.label = ui.Label(wrap=0, html='<br />'.join(lines))
 
 
 if __name__ == '__main__':

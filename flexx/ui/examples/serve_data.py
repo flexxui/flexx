@@ -67,7 +67,7 @@ class View(ui.Label):
         html += '<p>This is session "%s"</p>' % self.session.id
         html += '<img src="%s" />' % link1
         html += '<img src="%s" />' % link2
-        self.set_text(html)
+        self.set_html(html)
 
 
 if __name__ == '__main__':

@@ -44,6 +44,7 @@ import os.path as op
 import os
 import sys
 import time
+import signal
 import atexit
 import shutil
 import threading
@@ -86,7 +87,13 @@ class BaseRuntime:
         self._leftover_kwargs = kwargs
         
         assert self.get_name()
+        
+        # Close the runtime when Python closes cleanly
         atexit.register(self.close)
+        
+        # Increase chance of closing runtime when Python is forced to stop
+        signal.signal(signal.SIGTERM, self.close)
+        signal.signal(signal.SIGINT, self.close)
         
         self._exe = None
         self._version = None

@@ -123,7 +123,7 @@ class TabLayout(StackLayout):
         for i in range(len(children)):
             widget = children[i]
             node = self._tabbar.children[i]
-            node.innerHTML = widget.title
+            node.textContent = widget.title
             if widget is current:
                 node.classList.add('flx-current')
             else:
