@@ -32,12 +32,13 @@ def sphinx_clean(build_dir):
     if op.isdir(build_dir):
         shutil.rmtree(build_dir)
     os.mkdir(build_dir)
+    os.mkdir(os.path.join(build_dir, 'html'))
     print('Cleared build directory.')
 
 
 def sphinx_build(src_dir, build_dir):
     import sphinx
-    ret = sphinx.build_main(['sphinx-build',  # Dummy
+    ret = sphinx.cmd.build.build_main([#'sphinx-build',  # Dummy
                              '-b', 'html',
                              '-d', op.join(build_dir, 'doctrees'),
                              src_dir,  # Source
