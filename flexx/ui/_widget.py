@@ -347,7 +347,7 @@ class Widget(app.JsComponent):
         if vnode and vnode.nodeName:  # is DOM node
             return vnode
         elif isinstance(vnode, str):
-            vnode = {'type':'span', 'props':{}, 'children': vnode}
+            vnode = {'type': 'span', 'props': {}, 'children': vnode}
             # return window.document.createTextNode(vnode)  #  not in node.children
         elif not isinstance(vnode, dict):
             raise TypeError('Widget._render_dom() needs virtual nodes '
