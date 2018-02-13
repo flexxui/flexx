@@ -79,7 +79,7 @@ class SendDataView(ui.Widget):
         # Show the data as text. We could also e.g. plot it.
         text = ['%i: %f<br />' % (i, data[i]) for i in range(len(data))]
         header = 'This data (%i elements) was send in binary form:<br />' % len(data)
-        self.label.set_text(header + ''.join(text))
+        self.label.set_html(header + ''.join(text))
 
 
 if __name__ == '__main__':

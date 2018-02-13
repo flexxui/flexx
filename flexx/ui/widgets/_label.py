@@ -33,8 +33,15 @@ class Label(Widget):
             -ms-user-select: text;
         }"""
     
-    text = event.StringProp('', settable=True, doc="""
-        The text/html on the label.
+    text = event.StringProp('', doc="""
+        The text shown in the label (HTML is shown verbatim).
+        """)
+    
+    html = event.StringProp('', doc="""
+        The html shown in the label.
+        
+        Warning: there is a risk of introducing openings for XSS attacks
+        when html is introduced that you do not control (e.g. from user input).
         """)
     
     wrap = event.IntProp(0, settable=True, doc="""
@@ -42,11 +49,28 @@ class Label(Widget):
         lines. Set to 0/False for no wrap (default), 1/True for word-wrap,
         2 for character wrap.
         """)
-
-    @event.reaction('text')
-    def _text_changed(self, *events):
-        self.node.innerHTML = self.text
-        self.check_real_size(True)
+    
+    def init(self):
+        if self.text:
+            self.set_text(self.text)
+        elif self.html:
+            self.set_html(self.html)
+    
+    @event.action
+    def set_text(self, text):
+        """ Setter for the text property.
+        """
+        self.node.textContent = text
+        self._mutate_text(self.node.textContent)
+        self._mutate_html(self.node.innerHTML)
+    
+    @event.action
+    def set_html(self, html):
+        """ Setter for the html property. Use with care.
+        """
+        self.node.innerHTML = html
+        self._mutate_text(self.node.textContent)
+        self._mutate_html(self.node.innerHTML)
     
     @event.reaction('wrap')
     def _wrap_changed(self, *events):

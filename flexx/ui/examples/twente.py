@@ -130,9 +130,9 @@ class Twente(ui.Widget):
                 ui.Widget(flex=3)
             with ui.VBox(flex=4):
                 self.plot = ui.PlotWidget(flex=1,
-                                            xdata=years, yrange=(-5, 20),
-                                            title='Average monthly temperature',
-                                            xlabel='year', ylabel=u'temperature (°C)')
+                                          xdata=years, yrange=(-5, 20),
+                                          title='Average monthly temperature',
+                                          xlabel='year', ylabel=u'temperature (°C)')
             ui.Widget(flex=1)
 
     @event.reaction

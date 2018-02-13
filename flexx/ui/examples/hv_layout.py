@@ -59,7 +59,7 @@ class MyWidget(ui.Label):
         text = self._base_text + '<br>\n'
         text += 'widget with flex (%s) ' % self.flex
         text += 'in %s %s layout.' % (self.parent.orientation, self.parent.mode)
-        self.set_text(text)
+        self.set_html(text)
 
 
 class MyLayout(ui.HVLayout):

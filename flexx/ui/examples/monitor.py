@@ -55,7 +55,7 @@ class Monitor(app.PyComponent):
     def init(self):
         
         with ui.VBox():
-            ui.Label(text='<h3>Server monitor</h3>')
+            ui.Label(html='<h3>Server monitor</h3>')
             if app.current_server().serving[0] == 'localhost':
                 # Don't do this for a public server
                 self.button = ui.Button(text='Do some work')
@@ -97,7 +97,7 @@ class MonitorView(ui.VBox):
         
         # Set connections
         n = info.sessions, info.total_sessions
-        self.status.set_text('There are %i connected clients.<br />' % n[0] +
+        self.status.set_html('There are %i connected clients.<br />' % n[0] +
                              'And in total we served %i connections.<br />' % n[1])
         
         # Prepare plots
