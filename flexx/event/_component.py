@@ -666,6 +666,8 @@ def _mutate_array_js(array, ev):  # pragma: no cover
         elif mutation == 'replace':
             raise NotImplementedError('Cannot replace items in nd array')
     else:
+        if not isinstance(objects, list):
+            raise TypeError('Inplace list/array mutating requires a list of objects.')
         if mutation == 'set':
             array.splice(0, len(array), *objects)
         elif mutation == 'insert':
