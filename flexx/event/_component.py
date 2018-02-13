@@ -666,12 +666,15 @@ def _mutate_array_js(array, ev):  # pragma: no cover
         elif mutation == 'replace':
             raise NotImplementedError('Cannot replace items in nd array')
     else:
+        if mutation == 'remove':
+            assert isinstance(objects, float)  # objects must be a count in this case
+        elif not isinstance(objects, list):
+            raise TypeError('Inplace list/array mutating requires a list of objects.')
         if mutation == 'set':
             array.splice(0, len(array), *objects)
         elif mutation == 'insert':
             array.splice(index, 0, *objects)
         elif mutation == 'remove':
-            assert isinstance(objects, float)  # objects must be a count in this case
             array.splice(index, objects)
         elif mutation == 'replace':
             array.splice(index, len(objects), *objects)

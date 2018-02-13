@@ -243,12 +243,12 @@ class AssetStore:
                                'amd-flexx')
         asset_event = Asset('flexx.event.js', HEADER + mod)
         # Create asset for bsdf - we replace the UMD loader code with flexx.define()
-        code = open(get_resoure_path('bsdf.js'), 'rb').read().decode()
+        code = open(get_resoure_path('bsdf.js'), 'rb').read().decode().replace('\r', '')
         code = code.split('"use strict";\n', 1)[1]  # put in the Flexx loader instead
         code = 'flexx.define("bsdf", [], (function () {\n"use strict";\n' + code
         asset_bsdf = Asset('bsdf.js', code)
         # Create asset for bb64 - we replace the UMD loader code with flexx.define()
-        code = open(get_resoure_path('bb64.js'), 'rb').read().decode()
+        code = open(get_resoure_path('bb64.js'), 'rb').read().decode().replace('\r', '')
         code = code.split('"use strict";\n', 1)[1]  # put in the Flexx loader instead
         code = 'flexx.define("bb64", [], (function () {\n"use strict";\n' + code
         asset_bb64 = Asset('bb64.js', code)
