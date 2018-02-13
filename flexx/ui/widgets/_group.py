@@ -57,4 +57,4 @@ class GroupWidget(Widget):
     
     @event.reaction('title')
     def _title_changed(self, *events):
-        self._legend.innerHTML = self.title
+        self._legend.textContent = self.title

@@ -77,7 +77,7 @@ class VideoWidget(Widget):
     def _create_dom(self):
         node = window.document.createElement('video')
         node.controls = 'controls'
-        node.innerHTML = 'Your browser does not support HTML5 video.'
+        node.textContent = 'Your browser does not support HTML5 video.'
         
         self.src_node = window.document.createElement('source')
         self.src_node.type = 'video/mp4'

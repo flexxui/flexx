@@ -23,15 +23,15 @@ def create_element(type, props=None, *children):
     a virtual DOM node. Intended for use inside ``Widget._render_dom()``.
     
     The content of the widget may be given as a series/list of child nodes
-    (virtual or real), or a single string, which will be used as the node's
-    inner HTML.
+    (virtual or real), and strings. Strings are converted to text nodes. To
+    insert raw HTML, use the ``innerHTML`` prop, but be careful not to
+    include user-defined text, as this may introduce openings for XSS attacks.
     
     The returned dictionary has three fields: type, props, children.
     """
     if len(children) == 0:
-        children = None  # means, don't touch children
-    elif len(children) == 1 and (isinstance(children[0], str) or
-                                 isinstance(children[0], list)):
+        children = None  # i.e. don't touch children
+    elif len(children) == 1 and isinstance(children[0], list):
         children = children[0]
     
     return dict(type=type,
@@ -290,29 +290,30 @@ class Widget(app.JsComponent):
     def _render_dom(self):
         """ Update the content of the DOM for this widget.
         
-        This method must return a DOM structure that can consist of (a mix of)
-        virtual nodes and real nodes. The widget will use this structure to
-        update the real DOM in a relatively efficient manner (new nodes are
-        only (re)created if needed). The root element must match the type of
-        this widget's outernode. This method may also return a list or string
-        to use as the root node's content.
+        This method must return a DOM structure consisting of (a mix of)
+        virtual nodes, real nodes and strings. The widget will use this
+        structure to update the real DOM in a relatively efficient
+        manner (new nodes are only (re)created if needed). The root
+        element must match the type of this widget's outernode. This
+        method may also return a list to apply as the root node's children.
         
         Note that this method is called from an implicit reaction: it will
         auto-connect to any properties that are accessed. Combined with the
         above, this allows for a very declarative way to write widgets.
         
         Virtual nodes are represented as dicts with fields "type", "props"
-        and "children". Children may also be string to use as innerHTML.
-        The ``create_element()`` function makes it easier to define nodes.
+        and "children". Children is a list consisting of real dom nodes,
+        virtual nodes, and strings. Strings are converted to TextNode (XSS safe).
+        The ``create_element()`` function makes it easy to create virtual nodes.
         
         The default ``_render_dom()`` method simply places the outer node of
         the child widgets as the content of this DOM node, while preserving
         nodes that do not represent a widget. Overload as needed.
         """
         nodes = []
-        for i in range(len(self.outernode.children)):
-            node = self.outernode.children[i]
-            if not node.classList.contains('flx-Widget'):
+        for i in range(len(self.outernode.childNodes)):
+            node = self.outernode.childNodes[i]
+            if not (node.classList and node.classList.contains('flx-Widget')):
                 nodes.append(node)
         for widget in self.children:
             nodes.append(widget.outernode)
@@ -325,7 +326,7 @@ class Widget(app.JsComponent):
         # Validate output, allow it to return content instead of a vnode
         if vnode is None or vnode is self.outernode:
             return
-        elif isinstance(vnode, str) or isinstance(vnode, list):
+        elif isinstance(vnode, list):
             vnode = dict(type=self.outernode.nodeName, props={}, children=vnode)
         elif isinstance(vnode, dict):
             if vnode.type.lower() != self.outernode.nodeName.lower():
@@ -333,7 +334,7 @@ class Widget(app.JsComponent):
                                  'same element type as outernode.')
         else:
             raise TypeError('Widget._render_dom() '
-                            'must return None, str, list or dict.')
+                            'must return None, list or dict.')
         # Resolve
         node = self.__render_resolve(vnode, self.outernode)
         assert node is self.outernode
@@ -347,8 +348,8 @@ class Widget(app.JsComponent):
         if vnode and vnode.nodeName:  # is DOM node
             return vnode
         elif isinstance(vnode, str):
-            vnode = {'type': 'span', 'props': {}, 'children': vnode}
-            # return window.document.createTextNode(vnode)  #  not in node.children
+            # vnode = {'type': 'span', 'props': {}, 'children': vnode}
+            return window.document.createTextNode(vnode)  #  not in node.children
         elif not isinstance(vnode, dict):
             raise TypeError('Widget._render_dom() needs virtual nodes '
                             'to be dicts, not ' + vnode)
@@ -376,20 +377,22 @@ class Widget(app.JsComponent):
         # Resolve content
         if vnode.children is None:
             pass  # dont touch it
-        elif isinstance(vnode.children, str):
-            node.innerHTML = vnode.children
         elif isinstance(vnode.children, list):
             # Truncate children
-            while len(node.children) > len(vnode.children):
-                node.removeChild(node.children[len(node.children)-1])
+            while len(node.childNodes) > len(vnode.children):
+                node.removeChild(node.childNodes[len(node.childNodes)-1])
             # Resolve children
             i1 = -1
             for i2 in range(len(vnode.children)):
                 i1 += 1
                 vsubnode = vnode.children[i2]
                 subnode = None
-                if i1 < len(node.children):
-                    subnode = node.children[i1]
+                if i1 < len(node.childNodes):
+                    subnode = node.childNodes[i1]
+                    if subnode.nodeName == "#text" and isinstance(vsubnode, str):
+                        if subnode.data != vsubnode:
+                            subnode.data = vsubnode
+                        continue  # early exit for text nodes
                 new_subnode = self.__render_resolve(vsubnode, subnode)
                 if subnode is None:
                     node.appendChild(new_subnode)
@@ -399,7 +402,7 @@ class Widget(app.JsComponent):
         else:
             window.flexx_vnode = vnode
             raise TypeError('Widget._render_dom() '
-                            'needs virtual node children to be str or list, not %s' %
+                            'needs virtual node children to be None or list, not %s' %
                             vnode.children)
         
         return node

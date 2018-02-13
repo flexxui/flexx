@@ -56,7 +56,7 @@ Example with interaction:
 """
 
 from ... import event
-from . import Widget
+from .._widget import Widget, create_element
 
 
 class BaseButton(Widget):
@@ -109,10 +109,9 @@ class Button(BaseButton):
         self._addEventListener(node, 'click', self.mouse_click, 0)
         return node
 
-    @event.reaction('text')
-    def __text_changed(self, *events):
-        self.node.innerHTML = events[-1].new_value
-
+    def _render_dom(self):
+        return [self.text]
+    
     @event.reaction('disabled')
     def __disabled_changed(self, *events):
         if events[-1].new_value:
@@ -138,10 +137,9 @@ class ToggleButton(BaseButton):
         self._addEventListener(node, 'click', self.mouse_click, 0)
         return node
     
-    @event.reaction('text')
-    def __text_changed(self, *events):
-        self.node.innerHTML = events[-1].new_value
-
+    def _render_dom(self):
+        return [self.text]
+    
     @event.reaction('mouse_click')
     def __toggle_checked(self, *events):
         self.set_checked(not self.checked)
@@ -165,18 +163,16 @@ class RadioButton(BaseButton):
         outernode = window.document.createElement('div')
         outernode.innerHTML = template.replace('ID', self.id)
         node = outernode.childNodes[0]
-        self.text_node = outernode.childNodes[1]
         self._addEventListener(node, 'click', self._check_radio_click, 0)
         return outernode, node
+    
+    def _render_dom(self):
+        return [self.node, create_element('label', {}, self.text)]
     
     @event.reaction('parent')
     def __update_group(self, *events):
         if self.parent:
             self.node.name = self.parent.id
-
-    @event.reaction('text')
-    def __text_changed(self, *events):
-        self.text_node.innerHTML = events[-1].new_value
 
     @event.reaction('checked')
     def __check_changed(self, *events):
@@ -209,16 +205,13 @@ class CheckBox(BaseButton):
         outernode = window.document.createElement('div')
         outernode.innerHTML = template.replace('ID', self.id)
         node = outernode.childNodes[0]
-        self.text_node = outernode.childNodes[1]
-
         self._addEventListener(node, 'click', self.mouse_click, 0)
         self._addEventListener(node, 'change', self._check_changed_from_dom, 0)
         return outernode, node
     
-    @event.reaction('text')
-    def __text_changed(self, *events):
-        self.text_node.innerHTML = events[-1].new_value
-
+    def _render_dom(self):
+        return [self.node, create_element('label', {}, self.text)]
+    
     @event.reaction('checked')
     def __check_changed(self, *events):
         self.node.checked = self.checked

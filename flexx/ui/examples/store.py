@@ -36,7 +36,7 @@ class MyPersonLabel(ui.Widget):
     """
     
     def _render_dom(self):
-        return self.root.first_name + ' ' + self.root.last_name
+        return [self.root.first_name + ' ' + self.root.last_name]
 
 
 class View(ui.Widget):

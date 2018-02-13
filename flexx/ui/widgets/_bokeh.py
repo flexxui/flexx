@@ -109,7 +109,7 @@ class BokehWidget(Widget):
         """ Set the plot using its script/html components.
         """
         # Embed div
-        self.node.innerHTML = d.div
+        self.node.innerHTML = d.div  # We put trust in d.div
         # "exec" code
         el = window.document.createElement('script')
         el.innerHTML = d.script 
