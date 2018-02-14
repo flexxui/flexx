@@ -4,6 +4,8 @@ Simple chat web app inabout 80 lines.
 This app might be running at the demo server: http://flexx1.zoof.io
 """
 
+import asyncio
+
 from flexx import app, event, ui
 
 
@@ -81,7 +83,7 @@ class ChatRoom(app.PyComponent):
             self.messages.add_message(ev.name, ev.message)
     
     @app.manager.reaction('connections_changed')
-    def _update_participants(self, *events):
+    def _update_participants(self, *event):
         if self.session.status:
             # Query the app manager to see who's in the room
             sessions = app.manager.get_connections(self.session.app_name)
@@ -90,6 +92,7 @@ class ChatRoom(app.PyComponent):
             text = '<br />%i persons in this chat:<br /><br />' % len(names)
             text += '<br />'.join([name or 'anonymous' for name in sorted(names)])
             self.people_label.set_html(text)
+            asyncio.get_event_loop().call_later(2, self._update_participants)
 
 
 if __name__ == '__main__':

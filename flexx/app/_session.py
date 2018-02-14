@@ -388,7 +388,7 @@ class Session:
         self._component_instances[component._id] = component
         # Register the class to that the client has the needed definitions
         self._register_component_class(cls)
-        # self.keep_alive(component)  # Only when instantiated from JS
+        self.keep_alive(component)
     
     def _unregister_component(self, component):
         self._dead_component_ids.add(component.id)
@@ -582,8 +582,7 @@ class Session:
             kwargs['flx_session'] = self
             kwargs['flx_id'] = id
             assert len(args) == 0
-            c = cls(**kwargs)
-            self.keep_alive(c)
+            c = cls(**kwargs)  # calls keep_alive via _register_component()
         elif cmd == 'DISPOSE':  # Gets send from local to proxy
             id = command[1]
             c = self.get_component_instance(id)
