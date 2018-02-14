@@ -98,5 +98,5 @@ class ChatRoom(app.PyComponent):
 if __name__ == '__main__':
     a = app.App(ChatRoom)
     a.serve()
-    # a.launch()  # for use during development
+    # m = a.launch('firefox')  # for use during development
     app.start()

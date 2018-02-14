@@ -140,11 +140,13 @@ class AppComponentMeta(ComponentMeta):
     
     def _init_hook2(cls, cls_name, bases, dct):
         
-        # Set __proxy_properties__
+        # Set __proxy_properties__ and __emitters__
         if issubclass(cls, LocalComponent):
             cls.__proxy_properties__ = cls.JS.__properties__
+            cls.JS.__emitters__ = cls.__emitters__
         else:
             cls.JS.__proxy_properties__ = cls.__properties__
+            cls.__emitters__ = cls.JS.__emitters__
         
         # Set JS on the JS class
         cls.JS.CODE = cls._get_js()
