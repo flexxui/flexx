@@ -79,11 +79,11 @@ class PlotWidget(CanvasWidget):
         from the data.
         """)
     
-    line_color = event.ColorProp('blue', settable=True, doc="""
+    line_color = event.ColorProp('#5af', settable=True, doc="""
         The color of the line. Set to the empty string to hide the line.
         """)
     
-    marker_color = event.ColorProp('blue', settable=True, doc="""
+    marker_color = event.ColorProp('#5af', settable=True, doc="""
         The color of the marker. Set to the empty string to hide the marker.
         """)
     

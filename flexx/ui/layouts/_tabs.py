@@ -43,8 +43,8 @@ class TabLayout(StackLayout):
     CSS = """
     
     .flx-TabLayout > .flx-Widget {
-        top: 25px;
-        border: 1px solid #777;
+        top: 30px;
+        border: 1px solid #ddd;
     }
     
     .flx-TabLayout > .flx-tabbar {
@@ -53,15 +53,15 @@ class TabLayout(StackLayout):
         left: 0;
         right: 0;
         top: 0;
-        height: 25px;
+        height: 30px;
         overflow: hidden;
     }
     
     .flx-tabbar > .flx-tab-item {
         display: inline-block;
-        height: calc(100% - 6px);  /* 3 margin + 2 borders + 2 padding -1 overlap */
+        height: 22px;  /* 100% - 8px: 3 margin + 2 borders + 2 padding -1 overlap */
         margin-top: 3px;
-        padding: 1px 6px;
+        padding: 3px 6px 1px 6px;
         
         overflow: hidden;
         min-width: 10px;
@@ -71,21 +71,21 @@ class TabLayout(StackLayout):
         -ms-user-select: none;
         user-select: none;
         
-        background: #ddd;
-        border: 1px solid #777;
-        border-radius: 4px 4px 0px 0px;
+        background: #ececec;
+        border: 1px solid #bbb;
+        border-radius: 3px 3px 0px 0px;
         margin-left: -1px;
+        transition: background 0.3s;
     }
     
     .flx-tabbar > .flx-tab-item.flx-current {
-        background: #fff;
-        border-bottom: 1px solid white;
-        border-top: 3px solid #777;
+        background: #eaecff;
+        border-top: 3px solid #7bf;
         margin-top: 0;
     }
     
     .flx-tabbar > .flx-tab-item:hover {
-        background: #eee;
+        background: #eaecff;
     }
     """
     

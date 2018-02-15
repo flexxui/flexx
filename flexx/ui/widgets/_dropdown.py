@@ -36,12 +36,19 @@ class BaseDropdown(Widget):
         .flx-BaseDropdown {
             display: inline-block;
             overflow: visible;
-            margin: 0;
+            margin: 2px;
+            border-radius: 3px;
             padding: 2px;
-            border: 1px solid black;
+            border: 1px solid #aaa;
             min-height: 1.7em;
             max-height: 1.7em;
             white-space: nowrap; /* keep label and but on-line */
+            background: #e8e8e8
+        }
+
+        .flx-BaseDropdown:focus {
+            outline: none;
+            box-shadow: 0px 0px 3px 1px rgba(0, 100, 200, 0.7);
         }
         
         .flx-BaseDropdown > .flx-dd-edit {
@@ -64,6 +71,9 @@ class BaseDropdown(Widget):
             -ms-user-select: none;
         }
         
+        .flx-BaseDropdown.editable-true {
+            background: #fff;
+        }
         .flx-BaseDropdown.editable-true > .flx-dd-label {
             display: none;
         }
@@ -101,7 +111,8 @@ class BaseDropdown(Widget):
     """
     
     def init(self):
-        self.set_tabindex(-1)
+        if self.tabindex == -2:
+            self.set_tabindex(-1)
     
     @event.action
     def expand(self):
@@ -206,7 +217,8 @@ class ComboBox(BaseDropdown):
         .flx-ComboBox > ul  {
             list-style-type: none;
             box-sizing: border-box;
-            border: 1px solid black;
+            border: 1px solid #333;
+            border-radius: 3px;
             margin: 0;
             padding: 2px;
             position: fixed;  /* because all our widgets are overflow:hidden */
@@ -219,7 +231,7 @@ class ComboBox(BaseDropdown):
         }
         
         .flx-ComboBox.expanded > ul > li:hover {
-            background: rgba(128, 128, 128, 0.3);
+            background: rgba(0, 128, 255, 0.2);
         }
         .flx-ComboBox.expanded > ul > li.highlighted-true {
             box-shadow: inset 0 0 3px 1px rgba(0, 0, 255, 0.4);

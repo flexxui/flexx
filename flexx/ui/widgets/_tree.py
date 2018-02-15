@@ -61,7 +61,7 @@ and custom styling:
                     text = id + ' was ' + ev.type 
                 else:
                     text = id + ' was ' + 'un-' + ev.type 
-                self.label.set_text(text + '<br />' +  self.label.text)
+                self.label.set_html(text + '<br />' +  self.label.html)
 """
 
 from ... import event

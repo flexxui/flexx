@@ -50,7 +50,7 @@ class BaseTableLayout(Layout):
     }
     
     td.flx-vflex, td.flx-hflex {
-        padding: 1px;
+        padding: 2px;
     }
     
     /* In flexed cells, occupy the full space */
