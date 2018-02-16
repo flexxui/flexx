@@ -59,6 +59,7 @@ class Monitor(app.PyComponent):
             if app.current_server().serving[0] == 'localhost':
                 # Don't do this for a public server
                 self.button = ui.Button(text='Do some work')
+                self.button.reaction(self._do_work, 'mouse_down')
             self.view = MonitorView(flex=1)
     
     @relay.reaction('system_info')  # note that we connect to relay
@@ -71,7 +72,6 @@ class Monitor(app.PyComponent):
                                        sessions=ev.sessions,
                                        total_sessions=ev.total_sessions))
     
-    @event.reaction('!button.mouse_down')
     def _do_work(self, *events):
         etime = time() + len(events)
         # print('doing work for %i s' % len(events))

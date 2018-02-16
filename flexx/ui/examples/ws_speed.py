@@ -67,7 +67,7 @@ class SpeedTestWidget(ui.Widget):
         self.progress.set_max(len(tests))
         self._start_time = perf_counter()
         for n in tests:
-            data = window.Uint8Array(n * 1024 * 1024)
+            data = window.Uint8Array(n * 1024 * 1024).buffer
             self.send_data(data)
     
     @event.action
@@ -80,7 +80,7 @@ class SpeedTestWidget(ui.Widget):
     def receive_data(self, data):
         global perf_counter
         t = perf_counter() - self._start_times.pop(0)
-        mib = len(data) / 1024 / 1024
+        mib = data.byteLength / 1024 / 1024
         text = 'Received %i MiB in %s seconds.' % (mib, str(t)[:5])
         self.status.set_html(self.status.html + '  ' + text)
         self.progress.set_value(self.progress.value + 1)
@@ -92,5 +92,5 @@ class SpeedTestWidget(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(SpeedTest, 'chrome-browser')
+    m = app.launch(SpeedTest, 'firefox-browser')
     app.run()
