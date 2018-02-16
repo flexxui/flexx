@@ -157,6 +157,6 @@ class Twente(ui.Widget):
 
 
 if __name__ == '__main__':
-    a = app.App(Twente, title='Temperature 1951 - 2014', style = 'background:#eee;')
+    a = app.App(Twente, title='Temperature 1951 - 2014', style = 'background:#eaeaea;')
     m = a.launch('app', size=(900, 400))
     app.run()

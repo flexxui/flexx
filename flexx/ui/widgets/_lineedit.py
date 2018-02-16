@@ -23,9 +23,16 @@ class LineEdit(Widget):
     """
     
     CSS = """
-    .flx-LineEdit > input {
-        max-width: none;
-        min-width: 2em;
+    .flx-LineEdit {
+        color: #333;
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
+        border: 1px solid #aaa;
+        margin: 2px;
+    }
+    .flx-LineEdit:focus  {
+        outline: none;
+        box-shadow: 0px 0px 3px 1px rgba(0, 100, 200, 0.7);
     }
     """
     

@@ -222,6 +222,10 @@ class HVLayout(Layout):
     
     /* === for box layout === */
     
+    .flx-HVLayout > .flx-Widget {
+        margin: 0; /* the layout handles the margin */
+     }
+     
     .flx-box {
         display: -webkit-flex;
         display: -ms-flexbox;  /* IE 10 */

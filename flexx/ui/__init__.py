@@ -113,9 +113,10 @@ html elements:
             # string, a list of virtual nodes, or a single virtual node
             # (which must match the type produced in _create_dom()).
             return [ui.create_element('span', {},
-                        'Hello <b>%s</b>,' % self.name),
+                        'Hello', ui.create_element('b', {}, self.name), '! '),
                     ui.create_element('span', {},
-                        'I happen to know that your age is %i.<br>' % self.age),
+                        'I happen to know that your age is %i.' % self.age),
+                    ui.create_element('br'),
                     ui.create_element('button', {'onclick': self.increase_age},
                         'Next year ...')
                     ]

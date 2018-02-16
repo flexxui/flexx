@@ -34,7 +34,10 @@ class GroupWidget(Widget):
     CSS = """
     
     .flx-GroupWidget {
+        margin: 0;
         padding: 5px;
+        border: 2px solid #ccc;
+        border-radius: 3px;
     }
     .flx-GroupWidget > .flx-Layout {
         width: calc(100% - 10px);
@@ -57,4 +60,4 @@ class GroupWidget(Widget):
     
     @event.reaction('title')
     def _title_changed(self, *events):
-        self._legend.textContent = self.title
+        self._legend.textContent = '\u00A0' + self.title + '\u00A0'

@@ -45,10 +45,11 @@ class ProgressBar(Widget):
     CSS = """
     
     .flx-ProgressBar {
-        min-height: 10px;
+        min-height: 16px;
         min-width: 40px;
-        border-radius: 10px;
-        background: rgba(0, 0, 0, 0.1);
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #eee;
     }
     
     .flx-ProgressBar > .progress-bar {
@@ -67,10 +68,12 @@ class ProgressBar(Widget):
         -moz-justify-content: center;
         justify-content: center;
         white-space: nowrap;
+        align-self: stretch;
         
-        background: #8af;
+        position: absolute; /* need this on Chrome when in a VBox */
+        background: #8be;
         text-align: center;
-        transition: width 0.2s ease;
+        /*transition: width 0.2s ease; behaves silly on Chrome */
         }
     
     """
@@ -113,6 +116,6 @@ class ProgressBar(Widget):
         label = label.replace('{percent}', Math.round(perc) + '%')
         attr = {'style__width': perc+'%',
                 'style__height': '100%',
-                'className': 'progress-bar'
+                'className': 'progress-bar',
                 }
         return [create_element('div', attr, label)]

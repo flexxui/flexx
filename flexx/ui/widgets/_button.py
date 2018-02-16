@@ -27,9 +27,9 @@ Example with interaction:
                 self.r3 = ui.RadioButton(text='pear')
                 self.radiolabel = ui.Label(text='...')
             with ui.VBox():
-                self.c1 = ui.CheckBox(text='apple')
-                self.c2 = ui.CheckBox(text='banana')
-                self.c3 = ui.CheckBox(text='pear')
+                self.c1 = ui.ToggleButton(text='apple')
+                self.c2 = ui.ToggleButton(text='banana')
+                self.c3 = ui.ToggleButton(text='pear')
                 self.checklabel = ui.Label(text='...')
     
     
@@ -56,7 +56,7 @@ Example with interaction:
 """
 
 from ... import event
-from .._widget import Widget, create_element
+from .._widget import Widget
 
 
 class BaseButton(Widget):
@@ -66,18 +66,55 @@ class BaseButton(Widget):
     CSS = """
 
     .flx-BaseButton {
+        min-height: 16px;
         white-space: nowrap;
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
+        color: #333;
+    }
+    .flx-BaseButton, .flx-BaseButton > input {
+        margin: 2px; /* room for outline */
+    }
+    .flx-BaseButton:focus, .flx-BaseButton > input:focus  {
+        outline: none;
+        box-shadow: 0px 0px 3px 1px rgba(0, 100, 200, 0.7);
+    }
+    
+    .flx-Button, .flx-ToggleButton{
+        background: #e8e8e8;
+        border: 1px solid #ccc;
+        transition: background 0.3s;
+    }
+    .flx-Button:hover, .flx-ToggleButton:hover {
+        background: #e8eaff;
+    }
+    
+    .flx-ToggleButton {
+        text-align: left;
+    }
+    .flx-ToggleButton.flx-checked {
+        background: #e8eaff;
+    }
+    .flx-ToggleButton::before {
+        content: '\\2610\\00a0 ';
+    }
+    .flx-ToggleButton.flx-checked::before {
+        content: '\\2611\\00a0 ';
+    }
+    
+    .flx-RadioButton > input, .flx-CheckBox > input{
+        margin-left: 0.3em;
+        margin-right: 0.3em;
+    }
+    
+    .flx-RadioButton > input, .flx-CheckBox > input {
+        color: #333;
+    }
+    .flx-RadioButton:hover > input, .flx-CheckBox:hover > input {
+        color: #036;
     }
 
-    .flx-RadioButton, .flx-CheckBox {
-        margin-left: 0.5em;
-        margin-right: 0.5em;
-    }
-
-    .flx-RadioButton label, .flx-CheckBox label {
-        margin-left: 0.2em;
-    }
-
+    
     """
 
     text = event.StringProp('', settable=True, doc="""
@@ -96,6 +133,7 @@ class BaseButton(Widget):
 
         See mouse_down() for a description of the event object.
         """
+        e.target.blur()
         return self._create_mouse_event(e)
 
 
@@ -106,6 +144,8 @@ class Button(BaseButton):
     def _create_dom(self):
         global window
         node = window.document.createElement('button')
+        # node = window.document.createElement('input')
+        # node.setAttribute('type', 'button')
         self._addEventListener(node, 'click', self.mouse_click, 0)
         return node
 
@@ -124,12 +164,6 @@ class ToggleButton(BaseButton):
     """ A button that can be toggled. It behaves like a checkbox, while
     looking more like a regular button.
     """
-    CSS = """
-        .flx-ToggleButton-checked {
-            color: #00B;
-            font-weight: bolder;
-        }
-    """
     
     def _create_dom(self):
         global window
@@ -147,27 +181,31 @@ class ToggleButton(BaseButton):
     @event.reaction('checked')
     def __check_changed(self, *events):
         if self.checked:
-            self.node.classList.add('flx-ToggleButton-checked')
+            self.node.classList.add('flx-checked')
         else:
-            self.node.classList.remove('flx-ToggleButton-checked')
+            self.node.classList.remove('flx-checked')
 
 
 class RadioButton(BaseButton):
     """ A radio button. Of any group of radio buttons that share the
     same parent, only one can be active.
     """
-
+    
     def _create_dom(self):
         global window
-        template = '<input type="radio" id="ID"><label for="ID">'
-        outernode = window.document.createElement('div')
-        outernode.innerHTML = template.replace('ID', self.id)
-        node = outernode.childNodes[0]
+        outernode = window.document.createElement('label')
+        node = window.document.createElement('input')
+        outernode.appendChild(node)
+        
+        node.setAttribute('type', 'radio')
+        node.setAttribute('id', self.id)
+        outernode.setAttribute('for', self.id)
         self._addEventListener(node, 'click', self._check_radio_click, 0)
+        
         return outernode, node
     
     def _render_dom(self):
-        return [self.node, create_element('label', {}, self.text)]
+        return [self.node, self.text]
     
     @event.reaction('parent')
     def __update_group(self, *events):
@@ -177,7 +215,7 @@ class RadioButton(BaseButton):
     @event.reaction('checked')
     def __check_changed(self, *events):
         self.node.checked = self.checked
-
+    
     def _check_radio_click(self, ev):
         """ This method is called on JS a click event. We *first* update
         the checked properties, and then emit the Flexx click event.
@@ -201,16 +239,19 @@ class CheckBox(BaseButton):
    
     def _create_dom(self):
         global window
-        template = '<input type="checkbox" id="ID"><label for="ID">'
-        outernode = window.document.createElement('div')
-        outernode.innerHTML = template.replace('ID', self.id)
-        node = outernode.childNodes[0]
-        self._addEventListener(node, 'click', self.mouse_click, 0)
-        self._addEventListener(node, 'change', self._check_changed_from_dom, 0)
+        outernode = window.document.createElement('label')
+        node = window.document.createElement('input')
+        outernode.appendChild(node)
+        
+        node.setAttribute('type', 'checkbox')
+        node.setAttribute('id', self.id)
+        outernode.setAttribute('for', self.id)
+        self._addEventListener(node, 'click', self._check_changed_from_dom, 0)
+        
         return outernode, node
     
     def _render_dom(self):
-        return [self.node, create_element('label', {}, self.text)]
+        return [self.node, self.text]
     
     @event.reaction('checked')
     def __check_changed(self, *events):

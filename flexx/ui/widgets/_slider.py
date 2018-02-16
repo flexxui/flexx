@@ -56,7 +56,7 @@ class Slider(Widget):
         top: calc(50% - 2px);
         height: 4px;
         width: calc(100% - 10px);
-        border-radius: 10px;
+        border-radius: 6px;
         background: rgba(0, 0, 0, 0.2);
         color: rgba(0,0,0,0);
         text-align: center;
@@ -72,8 +72,8 @@ class Slider(Widget):
         box-sizing: border-box;
         text-align: center;
         border-radius: 3px;
-        background: #48f;
-        border: 2px solid #48f;
+        background: #48c;
+        border: 2px solid #48c;
         transition: top 0.2s, height 0.2s, background 0.4s;
         position: absolute;
         top: calc(50% - 8px);
