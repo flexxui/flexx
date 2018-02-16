@@ -89,6 +89,9 @@ class BaseButton(Widget):
         background: #e8eaff;
     }
     
+    .flx-ToggleButton {
+        text-align: left;
+    }
     .flx-ToggleButton.flx-checked {
         background: #e8eaff;
     }
