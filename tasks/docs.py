@@ -38,12 +38,16 @@ def sphinx_clean(build_dir):
 
 def sphinx_build(src_dir, build_dir):
     import sphinx
-    ret = sphinx.cmd.build.build_main([#'sphinx-build',  # Dummy
-                             '-b', 'html',
-                             '-d', op.join(build_dir, 'doctrees'),
-                             src_dir,  # Source
-                             op.join(build_dir, 'html'),  # Dest
-                             ])
+    cmd = [ '-b', 'html',
+            '-d', op.join(build_dir, 'doctrees'),
+            src_dir,  # Source
+            op.join(build_dir, 'html'),  # Dest
+            ]
+    
+    if sphinx.version_info > (1, 7):
+        ret = sphinx.cmd.build.build_main(cmd)
+    else:
+        ret = sphinx.build_main(['sphinx-build'] + cmd)
     if ret != 0:
         raise RuntimeError('Sphinx error: %s' % ret)
     print("Build finished. The HTML pages are in %s/html." % build_dir)
