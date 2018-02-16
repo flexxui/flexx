@@ -56,7 +56,7 @@ Example with interaction:
 """
 
 from ... import event
-from .._widget import Widget, create_element
+from .._widget import Widget
 
 
 class BaseButton(Widget):

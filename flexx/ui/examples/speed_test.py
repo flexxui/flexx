@@ -79,14 +79,14 @@ class SpeedTestWidget(ui.Widget):
     @event.action
     def receive_data(self, data):
         global perf_counter
-        t = perf_counter() -  self._start_times.pop(0)
+        t = perf_counter() - self._start_times.pop(0)
         mib = len(data) / 1024 / 1024
         text = 'Received %i MiB in %s seconds.' % (mib, str(t)[:5])
         self.status.set_html(self.status.html + '  ' + text)
         self.progress.set_value(self.progress.value + 1)
         
         if len(self._start_times) == 0:
-            t = perf_counter() -  self._start_time
+            t = perf_counter() - self._start_time
             text = 'Total time %s.' % str(t)[:5]
             self.status.set_html(self.status.html + '  ' + text)
 
