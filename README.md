@@ -42,8 +42,8 @@ Click the image below for an interactive example:
 
 [![demo](https://dl.dropboxusercontent.com/s/x4s7wgv6tpyqsqo/flexx_demo_300.png)](http://flexx.readthedocs.io/en/latest/ui/examples/demo_src.html)
 
-There are two demo servers at http://flexx1.zoof.io (an instance in Amazon's cloud)
-and http://flexx2.zoof.io/ (a Raspberry pi). Either might not always be on.
+There are two demo servers at http://demo1.flexx.live/ (an instance on Digitalocean)
+and http://demo2.flexx.live/ (a Raspberry pi). Either might not always be on.
 
 
 Motivation
