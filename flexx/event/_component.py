@@ -469,7 +469,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         ``index`` a tuple of elements.
         """
         if not isinstance(prop_name, str):
-            raise TypeError("_set_prop's first arg must be str, not %s" %
+            raise TypeError("_mutate's first arg must be str, not %s" %
                              prop_name.__class__)
         if prop_name not in self.__properties__:
             cname = self.__class__.__name__

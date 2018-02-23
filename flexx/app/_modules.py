@@ -256,7 +256,10 @@ class JSModule:
             for i in range(len(nameparts)):
                 val = getattr(val, nameparts[i])
                 # Maybe we "know" (this kind of) value ...
-                if isinstance(val, type) and issubclass(val, JsComponent):
+                if isinstance(val, json_types):
+                    name = '.'.join(nameparts[:i+1])
+                    break
+                elif isinstance(val, type) and issubclass(val, JsComponent):
                     name = '.'.join(nameparts[:i+1])
                     break
                 elif val is loop and i == 0:
