@@ -248,9 +248,10 @@ FUNCTIONS['float'] = 'Number // nargs: 1'
 
 FUNCTIONS['str'] = 'String // nargs: 0 1'
 
+# Note use of "_IS_COMPONENT" to check for Flexx.app component classes.
 FUNCTIONS['repr'] = """function (x) { // nargs: 1
-    var res = JSON.stringify(x);
-    if (typeof res === 'undefined') { res = String(x); }
+    var res; try { res = JSON.stringify(x); } catch (e) { res = undefined; }
+    if (typeof res === 'undefined') { res = x._IS_COMPONENT ? x.id : String(x); }
     return res;
 }"""
 
