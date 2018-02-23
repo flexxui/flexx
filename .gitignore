@@ -2,6 +2,10 @@
 __pycache__/
 *.py[cod]
 
+# IDEs and such
+ .idea
+ .vscode
+ 
 # Specific to here
 exp/html_examples.txt
 flexx/resources/phosphor-all.*.js
@@ -43,6 +47,7 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+.pytest_cache
 
 # Translations
 *.mo
