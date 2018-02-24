@@ -112,21 +112,7 @@ class Flexx:
             evt = dict(message=str(msg), error=msg, preventDefault=lambda: None)
             on_error(evt)
         def on_error(evt):
-            msg = evt.message
-            if evt.error and evt.error.stack:  # evt.error can be None for syntax err
-                stack = evt.error.stack.splitlines()
-                if evt.message in stack[0]:
-                    stack.pop(0)
-                msg += '\n' + '\n'.join(stack)
-                session_needle = '?session_id=' + self.id
-                msg = msg.replace('@', ' @ ').replace(session_needle, '')  # Firefox
-            elif evt.message and evt.lineno:  # message, url, linenumber
-                msg += "\nIn %s:%i" % (evt.filename, evt.lineno)
-            # Handle error
-            evt.preventDefault()  # Don't do the standard error 
-            window.console.ori_error(msg)
-            for session in self.sessions.values():
-                session.send_command("ERROR", evt.message)
+            self._handle_error(evt)
         on_error = on_error.bind(self)
         # Set new versions
         window.console.log = log
@@ -144,7 +130,41 @@ class Flexx:
         self._session_count += 1
         self['s' + self._session_count] = s
         self.sessions[session_id] = s
-
+    
+    def _handle_error(self, evt):
+        msg = short = evt.message
+        if not window.evt:
+            window.evt = evt
+        if evt.error and evt.error.stack:  # evt.error can be None for syntax err
+            stack = evt.error.stack.splitlines()
+            # Some replacements
+            session_needle = '?session_id=' + self.id
+            for i in range(len(stack)):
+                stack[i] = stack[i].replace('@', ' @ ').replace(session_needle, '')
+            # Strip items from the start
+            for x in [evt.message, '_pyfunc_op_error']:
+                if x in stack[0]:
+                    stack.pop(0)
+            # Truncate the stack
+            for i in range(len(stack)):
+                for x in ['_process_actions', '_process_reactions', '_process_calls']:
+                    if ('Loop.' + x) in stack[i]:
+                        stack = stack[:i]
+                        break
+            # Pop items from in between
+            for i in reversed(range(len(stack))):
+                for x in ['flx_action ']:
+                    if stack[i] and stack[i].count(x):
+                        stack.pop(i)
+            # Combine and tweak the message some more
+            msg += '\n' + '\n'.join(stack)
+        elif evt.message and evt.lineno:  # message, url, linenumber
+            msg += "\nIn %s:%i" % (evt.filename, evt.lineno)
+        # Handle error
+        evt.preventDefault()  # Don't do the standard error 
+        window.console.ori_error(msg)
+        for session in self.sessions.values():
+            session.send_command("ERROR", short)
 
 class JsSession:
     
@@ -380,7 +400,7 @@ class JsSession:
             kind, name, code = command[1:]
             window.flexx.spin()
             address = window.location.protocol + '//' + self.ws_url.split('/')[2]
-            code += '\n/*# sourceURL=%s/flexx/assets/shared/%s*/\n' % (address, name)
+            code += '\n//# sourceURL=%s/flexx/assets/shared/%s\n' % (address, name)
             if kind == 'JS-EVAL':
                 eval(code)
             elif kind == 'JS':

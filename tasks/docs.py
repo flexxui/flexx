@@ -45,6 +45,7 @@ def sphinx_build(src_dir, build_dir):
             ]
     
     if sphinx.version_info > (1, 7):
+        import sphinx.cmd.build
         ret = sphinx.cmd.build.build_main(cmd)
     else:
         ret = sphinx.build_main(['sphinx-build'] + cmd)
