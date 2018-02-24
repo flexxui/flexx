@@ -541,7 +541,8 @@ class Session:
         elif cmd == 'WARN':
             logger.warn('JS: ' + command[1])
         elif cmd == 'ERROR':
-            logger.error('JS: ' + command[1] + ' (stack trace in browser console)')
+            logger.error('JS: ' + command[1] +
+                         ' - stack trace in browser console (hit F12).')
         elif cmd == 'INVOKE':
             id, name, args = command[1:]
             ob = self.get_component_instance(id)
