@@ -104,8 +104,8 @@ class Property(BaseDescriptor):
     
     def make_set_action(self):
         flx_name = self._name
-        def flx_setter(self, val):
-            self._mutate(flx_name, val)
+        def flx_setter(self, *val):
+            self._mutate(flx_name, val[0] if len(val) == 1 else val)
         return flx_setter
     
     def _validate_py(self, value):
