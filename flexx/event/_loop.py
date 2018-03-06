@@ -61,6 +61,13 @@ class Loop:
         self._pending_reactions = []
         self._pending_reaction_ids = {}
     
+    def has_pending(self):
+        """ Get whether there are any pending actions, reactions, or calls.
+        """
+        return (len(self._pending_reactions) > 0 or
+                len(self._pending_actions) > 0 or
+                len(self._pending_calls) > 0)
+    
     def __enter__(self):
         return self
     

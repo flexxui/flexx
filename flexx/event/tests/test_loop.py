@@ -67,21 +67,29 @@ def test_iter():
     """
     init
     -
+    true
     1
+    false
     init
     -
+    true
     2
+    false
     """
     foo = Foo()
     foo.emit('foo', {})
     print('-')
+    print(loop.has_pending())
     loop.iter()
+    print(loop.has_pending())
     
     foo = Foo()
     foo.emit('foo', {})
     foo.emit('foo', {})
     print('-')
+    print(loop.has_pending())
     loop.iter()
+    print(loop.has_pending())
 
 
 @run_in_both()
