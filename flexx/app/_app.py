@@ -11,7 +11,7 @@ import zipfile
 import tempfile
 from base64 import encodestring as encodebytes
 
-from .. import event, webruntime
+from .. import config, event, webruntime
 
 from ._component2 import PyComponent, JsComponent
 from ._server import current_server
@@ -161,6 +161,8 @@ class App:
             runtime_kwargs['icon'] = self.kwargs['icon']
         # Launch web runtime, the server will wait for the connection
         url = self.url + '?session_id=%s' % session.id
+        if not runtime or '!' in config.webruntime:
+            runtime = config.webruntime.strip('!')
         session._runtime = webruntime.launch(url, runtime=runtime, **runtime_kwargs)
         return session.app
 
