@@ -262,6 +262,48 @@ def test_component_init3():
     loop.iter()
 
 
+class CompWithInit4(event.Component):
+    
+    a_prop = event.IntProp(settable=True)
+    
+    def init(self, other, value):
+        self.set_a_prop(value)
+        other.set_a_prop(value)
+    
+    @event.action
+    def create(self, other, value):
+        self.set_a_prop(value)
+        CompWithInit4(other, value)
+
+@run_in_both(CompWithInit4, Foo)
+def test_component_init4():
+    """
+    0 8
+    8 8
+    0 9
+    9 9
+    """
+    # Verify that the behavior of an init() (can mutate self, but not other
+    # components) is consistent, also when instantiated from an action.
+    
+    c1 = Foo(a_prop=0)
+    c2 = Foo(a_prop=0)
+    c3 = CompWithInit4(c1, 8)
+    
+    print(c1.a_prop, c3.a_prop)
+    
+    loop.iter()
+    print(c1.a_prop, c3.a_prop)
+    
+    c3.create(c2, 9)
+    loop.iter()
+    
+    print(c2.a_prop, c3.a_prop)
+    
+    loop.iter()
+    print(c2.a_prop, c3.a_prop)
+
+
 @run_in_both(Foo)
 def test_component_instance_attributes1():
     """

@@ -78,12 +78,15 @@ class Loop:
         """ Whether mutations can be done to the given component,
         and whether invoked actions on the component are applied directly.
         """
-        if self._processing_action is not None:
-            return True
-        for i in range(len(self._local._active_components)):
-            if self._local._active_components[i] is component:
-                return True
-        return False
+        # When there is an active component, only that one can be mutated
+        # (so that behavior of an init() is the same regardless whether a
+        # component is instantiated from an action), it must the current one.
+        # Otherwise we must be in an action.
+        active = self.get_active_component()
+        if active is not None:
+            return active is component
+        else:
+            return self._processing_action is not None
     
     ## Active components
     
@@ -173,6 +176,10 @@ class Loop:
             self._thread_match(True)
             
             if reaction.is_explicit() is True:
+                # if not reaction.is_strict():
+                #     if reaction._id in self._pending_reaction_ids:
+                #         self._pending_reaction_ids[reaction._id][2].append(ev)
+                #         return
                 # For explicit reactions, we try to consolidate the events by
                 # appending the event to the existing item in the queue, but
                 # we don't want to break the order, i.e. we can only skip over
@@ -205,6 +212,7 @@ class Loop:
             # Add new item to queue
             if reaction.is_explicit() is True:
                 pending_reactions.append([reaction, ev, [ev]])
+                # self._pending_reaction_ids[reaction._id] = pending_reactions[-1]
             else:
                 pending_reactions.append([reaction, None, []])
                 self._pending_reaction_ids[reaction._id] = True
