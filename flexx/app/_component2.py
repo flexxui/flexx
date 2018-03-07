@@ -323,7 +323,8 @@ class BaseAppComponent(Component):
         if session is not None:
             self._session = session
         else:
-            active = loop.get_active_component()
+            active = loop.get_active_components()  # Note that self is active too
+            active = active[-2] if len(active) > 1 else None
             if active is not None:
                 self._session = active._session
             else:
@@ -360,7 +361,7 @@ class LocalComponent(BaseAppComponent):
         self._has_proxy = property_values.pop('flx_has_proxy', False)
         
         # Call original method
-        prop_events = super()._comp_init_property_values(property_values)
+        super()._comp_init_property_values(property_values)
         
         if this_is_js():
             # This is a local JsComponent in JavaScript
@@ -369,8 +370,6 @@ class LocalComponent(BaseAppComponent):
             # This is a local PyComponent in Python
             # A PyComponent always has a corresponding proxy in JS
             self._ensure_proxy_instance(False)
-        
-        return prop_events
     
     def _ensure_proxy_instance(self, include_props=True):
         """ Make the other end instantiate a proxy if necessary. This is e.g.
@@ -462,7 +461,7 @@ class ProxyComponent(BaseAppComponent):
         
         # Call original method, only set props if this is instantiated "by the local"
         props2set = {} if local_inst else property_values
-        prop_events = super()._comp_init_property_values(props2set)  # noqa - we return [] 
+        super()._comp_init_property_values(props2set)
         
         if this_is_js():
             # This is a proxy PyComponent in JavaScript
@@ -472,15 +471,18 @@ class ProxyComponent(BaseAppComponent):
             # Instantiate JavaScript version of this class
             if local_inst is True:  # i.e. only if Python "instantiated" it
                 property_values['flx_has_proxy'] = True
-                active_components = [c for c in loop.get_active_components()
+                active_components = [c for c in loop.get_active_components()[:-1]
                                      if isinstance(c, (PyComponent, JsComponent))]
                 self._session.send_command('INSTANTIATE', self.__jsmodule__,
                                            self.__class__.__name__, self._id,
                                            self._flx_init_args, property_values,
                                            active_components)
             del self._flx_init_args
-        
-        return []  # prop_events - Proxy class does not emit events by itself
+    
+    def _comp_apply_property_values(self, values):
+        # Apply props in silence
+        for name, value in values.items():
+            setattr(self, '_' + name + '_value', value)
     
     def _proxy_action(self, name, *args, **kwargs):
         """ To invoke actions on the real object.

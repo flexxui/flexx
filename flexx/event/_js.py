@@ -137,8 +137,9 @@ class ComponentJS:  # pragma: no cover
         
         # Init some internal variables
         self.__handlers = {}  # reactions connecting to this component
-        self.__pending_events = {}
+        self.__pending_events = []
         self.__anonymous_reactions = []
+        self.__initial_mutation = False
         
         # Create actions
         for i in range(len(self.__actions__)):
@@ -162,15 +163,13 @@ class ComponentJS:  # pragma: no cover
         # With self as the active component (and thus mutatable), init the
         # values of all properties, and apply user-defined initialization
         with self:
-            prop_events = self._comp_init_property_values(property_values)
+            self._comp_init_property_values(property_values)
             self.init(*init_args)
         
         # Connect reactions and fire initial events
         self._comp_init_reactions()
-        self._comp_init_events(prop_events)
     
     def _comp_init_property_values(self, property_values):
-        events = []
         values = {}
         # First collect default property values (they come first)
         for i in range(len(self.__properties__)):
@@ -191,20 +190,7 @@ class ComponentJS:  # pragma: no cover
                 continue
             values[name] = value
         # Then process all property values
-        for name, value in values.items():
-            # Set value, preferably via its setter
-            setter = getattr(self, ('_set' if name.startswith('_') else 'set_') + name, None)
-            if setter is not None:
-                setter(value)
-            else:
-                self._mutate(name, value)
-            # Clear the corresponding event queue
-            self.__pending_events[name] = []
-            # Create new event
-            value2 = self[name]  # The value after setter and validation
-            ev = dict(type=name, new_value=value2, old_value=value2, mutation='set')
-            events.append(ev)
-        return events
+        self._comp_apply_property_values(values)
     
     def _comp_make_implicit_setter(self, prop_name, func):
         setter_func = getattr(self, 'set_' + prop_name, None)
@@ -216,6 +202,10 @@ class ComponentJS:  # pragma: no cover
         self.__anonymous_reactions.append(reaction)
     
     def _comp_init_reactions(self):
+        if self.__pending_events is not None:
+            self.__pending_events.append(None)  # marker
+            loop.call_soon(self._comp_stop_capturing_events)
+        
         # Create (and connect) reactions.
         # Implicit reactions need to be invoked to initialize connections.
         for i in range(len(self.__reactions__)):

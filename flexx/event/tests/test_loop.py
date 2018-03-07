@@ -149,12 +149,14 @@ def test_loop_reset():
     foo.emit('foo', {})
     foo.emit('foo', {})
     
+    loop._process_calls()  # the callater to stop capturing events
     loop.reset()
     loop.iter()
     print('-')
     
     foo.emit('foo', {})
     foo.emit('foo', {})
+    loop._process_calls()  # the callater to stop capturing events
     loop.reset()
     foo.emit('foo', {})
     loop.iter()

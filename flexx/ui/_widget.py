@@ -236,7 +236,7 @@ class Widget(app.JsComponent):
         # does its init here, property values have been set at this point,
         # but init() has not yet been called.
         
-        prop_events = super()._comp_init_property_values(property_values)
+        super()._comp_init_property_values(property_values)
         
         # Create DOM nodes
         # outernode is the root node
@@ -264,8 +264,6 @@ class Widget(app.JsComponent):
         
         # Setup JS events to enter Flexx' event system (needs self.node)
         self._init_events()
-        
-        return prop_events
     
     def init(self):
         """ Overload this to initialize a custom widget. When called, this

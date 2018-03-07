@@ -88,12 +88,12 @@ def test_component_id2():
 @run_in_both(Foo)
 def test_component_pending_events():
     """
-    1
+    2
     None
     """
     
     f = Foo()
-    print(len(f._Component__pending_events.keys()))
+    print(len(f._Component__pending_events))  # The event for foo, plus None-mark
     
     loop.iter()
     
@@ -225,6 +225,41 @@ def test_component_init2():
     with m:
         m.set_foo2(99)
     print(m.foo2)
+
+
+class CompWithInit3(event.Component):
+    
+    sub = event.ComponentProp(settable=True)
+    
+    @event.reaction('sub.a_prop')
+    def _on_sub(self, *events):
+        for ev in events:
+            print('sub prop changed', ev.new_value)
+
+@run_in_both(CompWithInit3, Foo)
+def test_component_init3():
+    """
+    sub prop changed 7
+    sub prop changed 9
+    """
+    # Verify that reconnect events are handled ok when applying events in init
+    
+    f1 = Foo(a_prop=7)
+    f2 = Foo(a_prop=8)
+    
+    c = CompWithInit3(sub=f1)
+    
+    # Simulate that we're in a component's init
+    with c:
+        c.set_sub(f2)
+    
+    f2.set_a_prop(9)
+    
+    # In the iter, the pending events will be flushed. One of these events
+    # is the changed sub. We don't want to reconnect for properties that
+    # did not change (because that's a waste of CPU cycles), but we not miss
+    # any changes.
+    loop.iter()
 
 
 @run_in_both(Foo)

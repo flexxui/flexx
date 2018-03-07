@@ -292,8 +292,8 @@ class MyObject2(event.Component):
 @run_in_both(MyObject2)
 def test_reaction_using_react_func1():
     """
-    r foo:0->0, bar:7->7, foo:0->2, bar:7->2
-    r foo:0->0, bar:7->7, foo:0->3, bar:7->3
+    r bar:7->7, foo:0->0, foo:0->2, bar:7->2
+    r bar:7->7, foo:0->0, foo:0->3, bar:7->3
     """
     
     def foo(*events):
@@ -359,7 +359,7 @@ def test_reaction_using_react_func3():
 @run_in_both(MyObject2, js=False)  # not an issue in JS - no decorators there
 def test_reaction_using_react_func4():
     """
-    r foo:0->0, bar:7->7, foo:0->2, bar:7->2
+    r bar:7->7, foo:0->0, foo:0->2, bar:7->2
     """
     
     m = MyObject2()
