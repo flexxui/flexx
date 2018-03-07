@@ -74,11 +74,16 @@ class Loop:
     def __exit__(self, type, value, traceback):
         self.iter()
     
-    def is_processing_actions(self):
-        """ Whether the loop is processing actions right now, i.e.
-        whether mutations are allowed to be done now.
+    def can_mutate(self, component=None):
+        """ Whether mutations can be done to the given component,
+        and whether invoked actions on the component are applied directly.
         """
-        return self._processing_action is not None
+        if self._processing_action is not None:
+            return True
+        for i in range(len(self._local._active_components)):
+            if self._local._active_components[i] is component:
+                return True
+        return False
     
     ## Active components
     

@@ -171,13 +171,60 @@ class CompWithInit1(event.Component):
         print('i', a, b)
 
 @run_in_both(CompWithInit1)
-def test_component_init():
+def test_component_init1():
     """
     i 1 2
     i 1 3
     """
     CompWithInit1(1, 2)
     CompWithInit1(1)
+
+
+class CompWithInit2(event.Component):
+    
+    foo1 = event.IntProp(1)
+    foo2 = event.IntProp(2, settable=True)
+    foo3 = event.IntProp(3)
+    
+    def init(self, set_foos):
+        if set_foos:
+            self._mutate_foo1(11)
+            self.set_foo2(12)
+            self.set_foo3(13)
+    
+    def set_foo3(self, v):
+        self._mutate_foo3(v+100)
+
+
+@run_in_both(CompWithInit2)
+def test_component_init2():
+    """
+    1 2 103
+    11 12 113
+    6 7 108
+    11 12 113
+    12
+    99
+    """
+    m = CompWithInit2(False)
+    print(m.foo1, m.foo2, m.foo3)
+    
+    m = CompWithInit2(True)
+    print(m.foo1, m.foo2, m.foo3)
+    
+    m = CompWithInit2(False, foo1=6, foo2=7, foo3=8)
+    print(m.foo1, m.foo2, m.foo3)
+    
+    m = CompWithInit2(True, foo1=6, foo2=7, foo3=8)
+    print(m.foo1, m.foo2, m.foo3)
+    
+    # This works, because when a componentn is "active" it allows mutations
+    m.set_foo2(99)
+    print(m.foo2)
+    
+    with m:
+        m.set_foo2(99)
+    print(m.foo2)
 
 
 @run_in_both(Foo)

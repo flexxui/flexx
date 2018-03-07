@@ -274,10 +274,10 @@ def test_property_persistance2():  # now we use the egg prop value itself
     []
     []
     [3, 4]
-    [3, 4]
+    []
     """
     m = MyObject()
-    x = m.eggs  # <-- only difference
+    x = m.eggs  # <-- only difference (previously, updating x affected eggs. Not anymore.
     m.set_foo(x)
     m.set_eggs(x)
     loop.iter()

@@ -134,7 +134,7 @@ def test_context():
         foo.emit('foo', {})
         foo.emit('foo', {})
     
-    assert not loop.is_processing_actions()
+    assert not loop.can_mutate()
 
 
 @run_in_both(Foo)

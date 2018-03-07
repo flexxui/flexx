@@ -202,11 +202,10 @@ class Component(with_metaclass(ComponentMeta, object)):
         for name in self.__properties__:
             self.__handlers.setdefault(name, [])
         
-        # Init the values of all properties.
-        prop_events = self._comp_init_property_values(property_values)
-        
-        # Apply user-defined initialization
+        # With self as the active component (and thus mutatable), init the
+        # values of all properties, and apply user-defined initialization
         with self:
+            prop_events = self._comp_init_property_values(property_values)
             self.init(*init_args)
         
         # Connect reactions and fire initial events
@@ -218,15 +217,14 @@ class Component(with_metaclass(ComponentMeta, object)):
     
     def _comp_init_property_values(self, property_values):
         events = []
-        # First process default property values
+        values = {}
+        # First collect default property values (they come first)
         for name in self.__properties__:  # is sorted by name
             prop = getattr(self.__class__, name)
-            value = getattr(self, '_' + name + '_validate')(prop._default)
-            setattr(self, '_' + name + '_value', value)
+            setattr(self, '_' + name + '_value', prop._default)
             if name not in property_values:
-                ev = dict(type=name, new_value=value, old_value=value, mutation='set')
-                events.append(ev)
-        # Then process property values given at init time
+                values[name] = prop._default
+        # Then collect user-provided values
         for name, value in property_values.items():  # is sorted by occurance in py36
             if name not in self.__properties__:
                 if name in self.__attributes__:
@@ -238,9 +236,20 @@ class Component(with_metaclass(ComponentMeta, object)):
             if callable(value):
                 self._comp_make_implicit_setter(name, value)
                 continue
-            value = getattr(self, '_' + name + '_validate')(value)
-            setattr(self, '_' + name + '_value', value)
-            ev = dict(type=name, new_value=value, old_value=value, mutation='set')
+            values[name] = value
+        # Then process all property values
+        for name, value in values.items():
+            # Set value, preferably via its setter
+            setter = getattr(self, ('_set' if name.startswith('_') else 'set_') + name, None)
+            if setter is not None:
+                setter(value)
+            else:
+                self._mutate(name, value)
+            # Clear the corresponding event queue
+            self.__pending_events[name] = []
+            # Create new event
+            value2 = getattr(self, name)  # The value after setter and validation
+            ev = dict(type=name, new_value=value2, old_value=value2, mutation='set')
             events.append(ev)
         return events
     
@@ -475,8 +484,9 @@ class Component(with_metaclass(ComponentMeta, object)):
             cname = self.__class__.__name__
             raise AttributeError('%s object has no property %r' % (cname, prop_name))
         
-        if loop.is_processing_actions() is False:
-            raise AttributeError('Trying to mutate a property outside of an action.')
+        if loop.can_mutate(self) is False:
+            raise AttributeError('Trying to mutate property %s outside '
+                                 'of an action or context.' % prop_name)
         
         # Prepare
         private_name = '_' + prop_name + '_value'
@@ -488,6 +498,9 @@ class Component(with_metaclass(ComponentMeta, object)):
         
         if mutation == 'set':
             # Normal setting of a property
+            value2 = getattr(self, validator_name)(value)
+            setattr(self, private_name, value2)
+            # Emit?
             if this_is_js():  # pragma: no cover
                 is_equal = old == value2
             elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):  # pragma: no cover
@@ -496,8 +509,6 @@ class Component(with_metaclass(ComponentMeta, object)):
             else:
                 is_equal = type(old) == type(value2) and old == value2
             if not is_equal:
-                value2 = getattr(self, validator_name)(value)
-                setattr(self, private_name, value2)
                 self.emit(prop_name,
                           dict(new_value=value2, old_value=old, mutation=mutation))
                 return True

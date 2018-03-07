@@ -42,6 +42,17 @@ class MyObject2(MyObject):
         return super().bar(v + 10)
 
 
+class MyObject3(MyObject):
+    
+    @event.reaction('~', 'foo')
+    def on_foo(self, *events):
+        print('foo', ', '.join([str(ev.value) for ev in events]))
+    
+    @event.reaction('~', 'bar')
+    def on_bar(self, *events):
+        print('bar', ', '.join([str(ev.value) for ev in events]))
+
+
 @run_in_both(MyObject)
 def test_emitter_ok():
     """
@@ -89,6 +100,35 @@ def test_emitter_order():
     bar 6.9, 6.9
     """
     m = MyObject()
+    
+    # Even though we emit foo 4 times between two event loop iterations,
+    # they are only grouped as much as to preserve order. This was not
+    # the case before the 2017 Flexx refactoring.
+    with loop:
+        m.foo(3.1)
+        m.foo(3.2)
+        m.bar(5.3)
+        m.bar(5.4)
+        m.foo(3.5)
+        m.foo(3.6)
+        m.bar(5.7)
+        m.bar(5.8)
+    
+    # The last two occur after an event loop iter, so these cannot be grouped
+    # with the previous.
+    with loop:
+        m.bar(5.9)
+        m.bar(5.9)
+
+
+@run_in_both(MyObject3)
+def test_emitter_order_sloppy():
+    """
+    foo 3.1, 3.2, 3.5, 3.6
+    bar 6.3, 6.4, 6.7, 6.8
+    bar 6.9, 6.9
+    """
+    m = MyObject3()
     
     # Even though we emit foo 4 times between two event loop iterations,
     # they are only grouped as much as to preserve order. This was not

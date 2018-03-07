@@ -159,11 +159,10 @@ class ComponentJS:  # pragma: no cover
             name = self.__attributes__[i]
             self.__create_attribute(name)
         
-        # Init the values of all properties.
-        prop_events = self._comp_init_property_values(property_values)
-        
-        # Apply user-defined initialization
+        # With self as the active component (and thus mutatable), init the
+        # values of all properties, and apply user-defined initialization
         with self:
+            prop_events = self._comp_init_property_values(property_values)
             self.init(*init_args)
         
         # Connect reactions and fire initial events
@@ -172,17 +171,13 @@ class ComponentJS:  # pragma: no cover
     
     def _comp_init_property_values(self, property_values):
         events = []
-        # First process default property values
+        values = {}
+        # First collect default property values (they come first)
         for i in range(len(self.__properties__)):
             name = self.__properties__[i]
-            value_name = '_' + name + '_value'
-            value = self[value_name]
-            value = self['_' + name + '_validate'](value)
-            self[value_name] = value
             if name not in property_values:
-                ev = dict(type=name, new_value=value, old_value=value, mutation='set')
-                events.append(ev)
-        # Then process property values given at init time
+                values[name] = self['_' + name + '_value']
+        # Then collect user-provided values
         for name, value in property_values.items():  # is sorted by occurance in py36
             if name not in self.__properties__:
                 if name in self.__attributes__:
@@ -194,9 +189,20 @@ class ComponentJS:  # pragma: no cover
             if callable(value):
                 self._comp_make_implicit_setter(name, value)
                 continue
-            value = self['_' + name + '_validate'](value)
-            self['_' + name + '_value'] = value
-            ev = dict(type=name, new_value=value, old_value=value, mutation='set')
+            values[name] = value
+        # Then process all property values
+        for name, value in values.items():
+            # Set value, preferably via its setter
+            setter = getattr(self, ('_set' if name.startswith('_') else 'set_') + name, None)
+            if setter is not None:
+                setter(value)
+            else:
+                self._mutate(name, value)
+            # Clear the corresponding event queue
+            self.__pending_events[name] = []
+            # Create new event
+            value2 = self[name]  # The value after setter and validation
+            ev = dict(type=name, new_value=value2, old_value=value2, mutation='set')
             events.append(ev)
         return events
     
@@ -262,7 +268,7 @@ class ComponentJS:  # pragma: no cover
         # attribute with the same name will be overwritten with the property below.
         # Because the class attribute is the underlying function, super() works.
         def action():  # this func should return None, so super() works correct
-            if loop.is_processing_actions() is True:
+            if loop.can_mutate(self) is True:
                 res = action_func.apply(self, arguments)
                 if res is not None:
                     logger.warn('Action (%s) is not supposed to return a value' % name)
