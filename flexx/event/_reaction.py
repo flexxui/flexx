@@ -28,11 +28,11 @@ def looks_like_method(func):
         return False
 
 
-def reaction(*connection_strings):
+def reaction(*connection_strings, mode='normal'):
     """ Decorator to turn a method of a Component into a
     :class:`Reaction <flexx.event.Reaction>`.
 
-    A method can be connected to multiple event types. Each connection
+    A reaction can be connected to multiple event types. Each connection
     string represents an event type to connect to. Read more about
     dynamism and labels for further information on the possibilities
     of connection strings.
@@ -48,15 +48,21 @@ def reaction(*connection_strings):
             def greet(self, *events):
                 print('hello %s %s' % (self.first_name, self.last_name))
     
-    By not specifying any connection strings, you create an implicit
-    reaction: it is invoked automatically when any of the properties
-    used in the function changes. This is a convenient feature, but is
-    best avoided when a potentially large number of properties are
-    accessed, because the reconnection mechanism of implicit reactions
-    is less efficient than that of explicit reactions.
+    A reaction can operate in a few different modes. By not specifying any
+    connection strings, the mode is "auto": the reaction will automatically
+    trigger when any of the properties used in the function changes.
+    See :func:`get_mode() <flexx.event.Reaction.get_mode>` for details.
     """
     if (not connection_strings):
         raise TypeError('reaction() needs one or more arguments.')
+    
+    # Validate mode parameter
+    mode = mode or 'normal'  # i.e. allow None
+    if not isinstance(mode, str):
+        raise TypeError('Reaction mode must be a string.')
+    mode = mode.lower()
+    if mode not in ('normal', 'greedy', 'auto'):
+        raise TypeError('Reaction mode must "normal", "greedy" or "auto".')
     
     # Extract function if we can
     func = None
@@ -74,7 +80,7 @@ def reaction(*connection_strings):
         if not looks_like_method(func):
             raise TypeError('reaction() decorator requires a method '
                             '(first arg must be self).')
-        return ReactionDescriptor(func, connection_strings)
+        return ReactionDescriptor(func, mode, connection_strings)
 
     if func is not None:
         return _connect(func)
@@ -86,13 +92,16 @@ class ReactionDescriptor(BaseDescriptor):
     """ Class descriptor for reactions.
     """
     
-    def __init__(self, func, connection_strings, ob=None):
-        self._func = func
+    def __init__(self, func, mode, connection_strings, ob=None):
         self._name = func.__name__
-        self._ob = None if ob is None else weakref.ref(ob)
+        self._func = func
+        self._mode = mode
+        if len(connection_strings) == 0:
+            self._mode = 'auto'
         self._connection_strings = connection_strings
+        self._ob = None if ob is None else weakref.ref(ob)
         self.__doc__ = self._format_doc('reaction', self._name, func.__doc__)
-
+    
     def __get__(self, instance, owner):
         if instance is None:
             return self
@@ -103,6 +112,7 @@ class ReactionDescriptor(BaseDescriptor):
         except AttributeError:
             reaction = Reaction(instance if self._ob is None else self._ob(),
                                 (self._func, instance),
+                                self._mode,
                                 self._connection_strings)
             setattr(instance, private_name, reaction)
 
@@ -129,7 +139,7 @@ class Reaction:
 
     _count = 0
 
-    def __init__(self, ob, func, connection_strings):
+    def __init__(self, ob, func, mode, connection_strings):
         Reaction._count += 1
         self._id = 'r%i' % Reaction._count  # to ensure a consistent event order
 
@@ -152,8 +162,10 @@ class Reaction:
 
         # Store func, name, and docstring (e.g. for sphinx docs)
         assert callable(func)
+        assert mode in ('normal', 'greedy', 'auto')
         self._func = func
         self._func_once = func
+        self._mode = mode
         self._name = func.__name__
         self.__doc__ = BaseDescriptor._format_doc('reaction', self._name, func.__doc__)
 
@@ -221,17 +233,39 @@ class Reaction:
         # Connect
         for ic in range(len(self._connections)):
             self.reconnect(ic)
-
+    
     def __repr__(self):
         c = '+'.join([str(len(c.objects)) for c in self._connections])
         cname = self.__class__.__name__
-        return '<%s %r with %s connections at 0x%x>' % (cname, self._name, c, id(self))
+        t = '<%s %r (%s) with %s connections at 0x%x>'
+        return t % (cname, self._name, self._mode, c, id(self))
     
-    def is_explicit(self):
-        """ Get whether this reaction is explicit (has connection strings),
-        or implicit (auto-connects to used properties).
+    def get_mode(self):
+        """ Get the mode for this reaction:
+        
+        * 'normal': events are handled in the order that they were emitted.
+          Consequently, there can be multiple calls per event loop iteration
+          if other reactions were triggered as well.
+        * 'greedy': this reaction receives all its events (since the last event
+          loop iteration) in a single call (even if this breaks the order of
+          events with respect to other reactions). Use this when multiple related
+          events must be handled simultenously (e.g. when syncing properties).
+        * 'auto': this reaction tracks what properties it uses, and is
+          automatically triggered when any of these properties changes. Like
+          'greedy' there is at most one call per event loop iteration.
+          Reactions with zero connection strings always have mode 'auto'.
+        
+        The 'normal' mode generally offers the most consistent behaviour.
+        The 'greedy' mode allows the event system to make some optimizations.
+        Combined with the fact that there is at most one call per event loop
+        iteration, this can provide higher performance where it matters.
+        Reactions with mode 'auto' can be a convenient way to connect things
+        up. Although it allows the event system to make the same optimizations
+        as 'greedy', it also needs to reconnect the reaction after each time
+        it is called, which can degregade performance especially if many
+        properties are accessed by the reaction.
         """
-        return len(self._connections) > 0
+        return self._mode
     
     def get_name(self):
         """ Get the name of this reaction, usually corresponding to the name
@@ -290,7 +324,8 @@ class Reaction:
         self._connections = []
     
     def _update_implicit_connections(self, connections):
-        """ Update the list of implicit connections. Used by the loop.
+        """ Update the list of implicit (i.e. automatic) connections.
+        Used by the loop.
         """
         # Init - each connection is a (component, type) tuple
         old_conns = self._implicit_connections

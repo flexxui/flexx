@@ -261,7 +261,7 @@ class Component(with_metaclass(ComponentMeta, object)):
             t = '%s does not have a set_%s() action for property %s.'
             raise TypeError(t % (self._id, prop_name, prop_name)) 
         setter_reaction = lambda: setter_func(func())
-        reaction = Reaction(self, setter_reaction, [])
+        reaction = Reaction(self, setter_reaction, 'auto', [])
         self.__anonymous_reactions.append(reaction)
     
     def _comp_init_reactions(self):
@@ -272,15 +272,15 @@ class Component(with_metaclass(ComponentMeta, object)):
             loop.call_soon(self._comp_stop_capturing_events)
         
         # Instantiate reactions by referencing them, Connections are resolved now.
-        # Implicit reactions need to be invoked to initialize connections.
+        # Implicit (auto) reactions need to be invoked to initialize connections.
         for name in self.__reactions__:
             reaction = getattr(self, name)
-            if not reaction.is_explicit():
+            if reaction.get_mode() == 'auto':
                 ev = Dict(source=self, type='', label='')
                 loop.add_reaction_event(reaction, ev)
-        # Also invoke the anonymouse implicit reactions
+        # Also invoke the anonymouse auto-reactions
         for reaction in self.__anonymous_reactions:
-            if not reaction.is_explicit():
+            if reaction.get_mode() == 'auto':
                 ev = Dict(source=self, type='', label='')
                 loop.add_reaction_event(reaction, ev)
     
@@ -573,6 +573,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         :func:`reaction <flexx.event.reaction>` decorator, and the intro
         docs for more information.
         """
+        mode = 'normal'
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
             raise RuntimeError('Component.reaction() '
@@ -594,9 +595,9 @@ class Component(with_metaclass(ComponentMeta, object)):
             if not callable(func):  # pragma: no cover
                 raise TypeError('Component.reaction() decorator requires a callable.')
             if looks_like_method(func):
-                return ReactionDescriptor(func, connection_strings, self)
+                return ReactionDescriptor(func, mode, connection_strings, self)
             else:
-                return Reaction(self, func, connection_strings)
+                return Reaction(self, func, mode, connection_strings)
         
         if func is not None:
             return _react(func)

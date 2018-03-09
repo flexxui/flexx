@@ -44,11 +44,11 @@ class MyObject2(MyObject):
 
 class MyObject3(MyObject):
     
-    @event.reaction('~', 'foo')
+    @event.reaction('foo', mode='greedy')
     def on_foo(self, *events):
         print('foo', ', '.join([str(ev.value) for ev in events]))
     
-    @event.reaction('~', 'bar')
+    @event.reaction('bar', mode='greedy')
     def on_bar(self, *events):
         print('bar', ', '.join([str(ev.value) for ev in events]))
 
@@ -122,7 +122,7 @@ def test_emitter_order():
 
 
 @run_in_both(MyObject3)
-def test_emitter_order_sloppy():
+def test_emitter_order_greedy():
     """
     foo 3.1, 3.2, 3.5, 3.6
     bar 6.3, 6.4, 6.7, 6.8

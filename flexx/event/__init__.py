@@ -106,7 +106,7 @@ non-settable properties):
     c = MyComponent(foo=42)
 
 One can also set the initial value of a property to a function object.
-This creates an "implicit reaction" that sets the property, and makes it possible
+This creates an auto-reaction that sets the property, and makes it possible
 to hook things up in a very concise manner. In the example below, the label
 text will be automatically updated when the username property changes:
 
@@ -249,7 +249,7 @@ above) Flexx will display a warning. Use ``'!foo'`` as a connection string
 Another useful feature of the event system is that a reaction can connect to
 multiple events at once, as the ``greet`` reaction does.
 
-The following is less common, but it is possinle to create a reaction from a
+The following is less common, but it is possible to create a reaction from a
 normal function, by using the
 :func:`Component.reacion() <flexx.event.Component.reaction>` method:
 
@@ -269,14 +269,27 @@ normal function, by using the
     # this is fine too: c.reaction('foo', 'bar', handle_func2)
 
 
-Implicit reactions
-==================
+Greedy and automatic reactions
+==============================
 
-One can also create reactions without specifying connection strings. Flexx
-will then figure out what properties are being accessed and will call the
-reaction whenever one of these change. We refer to such reactions as "implicit
-reactions". This is a convenient feature, but
-should probably be avoided when a lot (say hundreds) of properties are accessed.
+Each reaction operates in a certain "mode". In mode "normal", the event system
+ensures that all events are handled in the order that they were emitted. This
+is often the most useful approach, but this implies that a reaction can be
+called multiple times during a single event loop iteration, with other
+reactions called in between to ensure the consisten event order.
+
+If it is preferred that all events targeted at a reaction are handled with
+a single call to that reaction, it can be set to mode "greedy". Cases where
+this makes sense is when all related events must be processed simultenously,
+or simply when performance matters a lot and order matters less.
+
+Reactions with mode "auto" are automatically triggered when any of the
+properties that the reaction uses is changed. Such reactions can be
+created by specifying the ``mode`` argument, or simply by creating a
+reaction with zero connections strings. We refer to such reactions as
+"auto reactions" or "implicit reactions". This is a convenient feature,
+but should probably be avoided when a lot (say hundreds) of properties
+are accessed.
 
 .. code-block:: python
 
