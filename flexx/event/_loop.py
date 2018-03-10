@@ -61,17 +61,32 @@ class Loop:
         self._pending_reactions = []
         self._pending_reaction_ids = {}
     
+    def has_pending(self):
+        """ Get whether there are any pending actions, reactions, or calls.
+        """
+        return (len(self._pending_reactions) > 0 or
+                len(self._pending_actions) > 0 or
+                len(self._pending_calls) > 0)
+    
     def __enter__(self):
         return self
     
     def __exit__(self, type, value, traceback):
         self.iter()
     
-    def is_processing_actions(self):
-        """ Whether the loop is processing actions right now, i.e.
-        whether mutations are allowed to be done now.
+    def can_mutate(self, component=None):
+        """ Whether mutations can be done to the given component,
+        and whether invoked actions on the component are applied directly.
         """
-        return self._processing_action is not None
+        # When there is an active component, only that one can be mutated
+        # (so that behavior of an init() is the same regardless whether a
+        # component is instantiated from an action), it must the current one.
+        # Otherwise we must be in an action.
+        active = self.get_active_component()
+        if active is not None:
+            return active is component
+        else:
+            return self._processing_action is not None
     
     ## Active components
     
@@ -157,11 +172,14 @@ class Loop:
         
         pending_reactions = self._pending_reactions
         
+        mode = reaction.get_mode()
+        
+        
         with self._lock:
             self._thread_match(True)
             
-            if reaction.is_explicit() is True:
-                # For explicit reactions, we try to consolidate the events by
+            if mode == 'normal':
+                # Normally, we try to consolidate the events by
                 # appending the event to the existing item in the queue, but
                 # we don't want to break the order, i.e. we can only skip over
                 # events that are the same as the current. Each queue item has
@@ -184,25 +202,30 @@ class Loop:
                         break
             
             else:
-                # For implicit reactions, we try to consolidate by not adding
-                # to the queue if the correspinding reaction is already
+                # For greedy and auto reactions, we consolidate by not adding
+                # to the queue if the corresponding reaction is already
                 # present. We use _pending_reaction_ids for this.
+                # We even omit the event objects themselves when we think they
+                # don't matter (when the number of connection strings is zero).
                 if reaction._id in self._pending_reaction_ids:
+                    if len(reaction._connections) > 0:
+                        self._pending_reaction_ids[reaction._id][2].append(ev)
                     return
             
             # Add new item to queue
-            if reaction.is_explicit() is True:
-                pending_reactions.append([reaction, ev, [ev]])
+            if len(reaction._connections) > 0:
+                new_item = [reaction, ev, [ev]]
             else:
-                pending_reactions.append([reaction, None, []])
-                self._pending_reaction_ids[reaction._id] = True
+                new_item = [reaction, None, []]
+            pending_reactions.append(new_item)
+            self._pending_reaction_ids[reaction._id] = new_item
             
             self._schedule_iter()
     
     def register_prop_access(self, component, prop_name):
-        """ Register access of a property, to keep track of implicit reactions.
+        """ Register access of a property, to keep track of automatic reactions.
         """
-        # Notes on implicit reactions. Like explicit reactions, these are
+        # Notes on auto-reactions. Like any reactions, these are
         # connected to events, such that add_reaction_event() will get called
         # for the reaction when a property that the reaction uses changes.
         # This wil always result in the invokation of the reaction.
@@ -212,11 +235,11 @@ class Loop:
         # connections can be updated as needed.
         
         # Note that we use a dict here, but for the event reconnecting to
-        # be efficient, the order of connections is imporant, so implicit
+        # be efficient, the order of connections is imporant, so auto
         # reactions have really poor performance on Python < 3.6
         # Make sure not to count access from other threads
         if self._processing_reaction is not None:
-            if self._processing_reaction.is_explicit() is False:
+            if self._processing_reaction.get_mode() == 'auto':
                 if self._thread_match(False):
                     if component._id not in self._prop_access:
                         d = {}
@@ -321,7 +344,7 @@ class Loop:
         for ir in range(len(pending_reactions)):
             reaction, _, events = pending_reactions[ir]
             # Call reaction
-            if len(events) > 0 or reaction.is_explicit() is False:
+            if len(events) > 0 or reaction.get_mode() == 'auto':
                 self._prop_access = {}
                 self._processing_reaction = reaction
                 try:
@@ -330,10 +353,10 @@ class Loop:
                     logger.exception(err)
                 finally:
                     self._processing_reaction = None
-            # Reconnect implicit reaction. The _update_implicit_connections()
+            # Reconnect auto reaction. The _update_implicit_connections()
             # method is pretty efficient if connections has not changed.
             try:
-                if reaction.is_explicit() is False:
+                if reaction.get_mode() == 'auto':
                     connections = []
                     for component_names in self._prop_access.values():
                         component = component_names[0]

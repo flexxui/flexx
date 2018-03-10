@@ -60,6 +60,9 @@ class Label(Widget):
     def set_text(self, text):
         """ Setter for the text property.
         """
+        if not self.node:
+            self._mutate_text(text)
+            return
         self.node.textContent = text
         self._mutate_text(self.node.textContent)
         self._mutate_html(self.node.innerHTML)
@@ -68,6 +71,9 @@ class Label(Widget):
     def set_html(self, html):
         """ Setter for the html property. Use with care.
         """
+        if not self.node:
+            self._mutate_html(html)
+            return
         self.node.innerHTML = html
         self._mutate_text(self.node.textContent)
         self._mutate_html(self.node.innerHTML)

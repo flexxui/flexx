@@ -191,10 +191,11 @@ class Component(with_metaclass(ComponentMeta, object)):
         # reaction names for this class, and __handlers a dict of reactions
         # registered to events of this object.
         # The __pending_events makes that reactions that connect to this
-        # component right after it initialization get the initial events.
+        # component right after it initializes get the initial events.
         self.__handlers = {}
-        self.__pending_events = {}
+        self.__pending_events = []
         self.__anonymous_reactions = []
+        self.__initial_mutation = False
         
         # Prepare handlers with event types that we know
         for name in self.__emitters__:
@@ -202,31 +203,30 @@ class Component(with_metaclass(ComponentMeta, object)):
         for name in self.__properties__:
             self.__handlers.setdefault(name, [])
         
-        # Init the values of all properties.
-        prop_events = self._comp_init_property_values(property_values)
-        
-        # Apply user-defined initialization
+        # With self as the active component (and thus mutatable), init the
+        # values of all properties, and apply user-defined initialization
         with self:
+            self._comp_init_property_values(property_values)
             self.init(*init_args)
         
         # Connect reactions and fire initial events
         self._comp_init_reactions()
-        self._comp_init_events(prop_events)
     
     def __repr__(self):
         return "<Component '%s' at 0x%x>" % (self._id, id(self))
     
     def _comp_init_property_values(self, property_values):
-        events = []
-        # First process default property values
+        """ Initialize property values, combining given kwargs (in order)
+        and default values.
+        """
+        values = {}
+        # First collect default property values (they come first)
         for name in self.__properties__:  # is sorted by name
             prop = getattr(self.__class__, name)
-            value = getattr(self, '_' + name + '_validate')(prop._default)
-            setattr(self, '_' + name + '_value', value)
+            setattr(self, '_' + name + '_value', prop._default)
             if name not in property_values:
-                ev = dict(type=name, new_value=value, old_value=value, mutation='set')
-                events.append(ev)
-        # Then process property values given at init time
+                values[name] = prop._default
+        # Then collect user-provided values
         for name, value in property_values.items():  # is sorted by occurance in py36
             if name not in self.__properties__:
                 if name in self.__attributes__:
@@ -238,11 +238,22 @@ class Component(with_metaclass(ComponentMeta, object)):
             if callable(value):
                 self._comp_make_implicit_setter(name, value)
                 continue
-            value = getattr(self, '_' + name + '_validate')(value)
-            setattr(self, '_' + name + '_value', value)
-            ev = dict(type=name, new_value=value, old_value=value, mutation='set')
-            events.append(ev)
-        return events
+            values[name] = value
+        # Then process all property values
+        self._comp_apply_property_values(values)
+    
+    def _comp_apply_property_values(self, values):
+        """ Apply given property values, prefer using a setter, mutate otherwise.
+        """
+        self.__initial_mutation = True
+        for name, value in values.items():
+            setter_name = ('_set' if name.startswith('_') else 'set_') + name
+            setter = getattr(self, setter_name, None)
+            if setter is not None:
+                setter(value)
+            else:
+                self._mutate(name, value)
+        self.__initial_mutation = False
     
     def _comp_make_implicit_setter(self, prop_name, func):
         setter_func = getattr(self, 'set_' + prop_name, None)
@@ -250,38 +261,46 @@ class Component(with_metaclass(ComponentMeta, object)):
             t = '%s does not have a set_%s() action for property %s.'
             raise TypeError(t % (self._id, prop_name, prop_name)) 
         setter_reaction = lambda: setter_func(func())
-        reaction = Reaction(self, setter_reaction, [])
+        reaction = Reaction(self, setter_reaction, 'auto', [])
         self.__anonymous_reactions.append(reaction)
     
     def _comp_init_reactions(self):
+        """ Create our own reactions. These will immediately connect.
+        """
+        if self.__pending_events is not None:
+            self.__pending_events.append(None)  # marker
+            loop.call_soon(self._comp_stop_capturing_events)
+        
         # Instantiate reactions by referencing them, Connections are resolved now.
-        # Implicit reactions need to be invoked to initialize connections.
+        # Implicit (auto) reactions need to be invoked to initialize connections.
         for name in self.__reactions__:
             reaction = getattr(self, name)
-            if not reaction.is_explicit():
+            if reaction.get_mode() == 'auto':
                 ev = Dict(source=self, type='', label='')
                 loop.add_reaction_event(reaction, ev)
-        # Also invoke the anonymouse implicit reactions
+        # Also invoke the anonymouse auto-reactions
         for reaction in self.__anonymous_reactions:
-            if not reaction.is_explicit():
+            if reaction.get_mode() == 'auto':
                 ev = Dict(source=self, type='', label='')
                 loop.add_reaction_event(reaction, ev)
     
-    def _comp_init_events(self, prop_events):
-        # Initialize handlers and properties. You should only do this once,
-        # and only when using the object is initialized with _init_reactions=False.
+    def _comp_stop_capturing_events(self):
+        """ Stop capturing events and flush the captured events.
+        This gets scheduled to be called asap after initialization. But 
+        components created in our init() go first.
+        """
+        events = self.__pending_events
+        self.__pending_events = None
         
-        if self.__pending_events is None:  # pragma: no cover
-            return
-        # Schedule a call to disable event capturing
-        def stop_capturing():
-            self.__pending_events = None
-        loop.call_soon(stop_capturing)
-        
-        # Emit initial events for props
-        for i in range(len(prop_events)):
-            ev = prop_events[i]
-            self.emit(ev['type'], ev)
+        # The allow_reconnect stuff is to avoid reconnecting for properties
+        # that we know did not change since the reaction connected.
+        allow_reconnect = False
+        for ev in events:
+            if ev is None:
+                allow_reconnect = True
+                continue
+            ev.allow_reconnect = allow_reconnect
+            self.emit(ev.type, ev)
     
     def __enter__(self):
         loop._activate_component(self)
@@ -379,13 +398,6 @@ class Component(with_metaclass(ComponentMeta, object)):
         
         # Call hook to keep (subclasses of) the component up to date
         self._registered_reactions_hook()
-        
-        # Emit any pending events
-        if self.__pending_events is not None:
-            if not label.startswith('reconnect_'):
-                events = self.__pending_events.get(type, [])
-                for i in range(len(events)):
-                    loop.add_reaction_event(reaction, events[i])
     
     def disconnect(self, type, reaction=None):
         """ Disconnect reactions. 
@@ -430,18 +442,20 @@ class Component(with_metaclass(ComponentMeta, object)):
         ev.source = self
         # Push the event to the reactions (reactions use labels for dynamism)
         if self.__pending_events is not None:
-            self.__pending_events.setdefault(ev.type, []).append(ev)
-        # Register pending reactions
-        # Reaction reconnections are applied directly; before a new event
-        # occurs that the reaction might be subscribed to after the reconnect.
-        reactions = self.__handlers.get(ev.type, ())
-        for i in range(len(reactions)):
-            label, reaction = reactions[i]
-            if label.startswith('reconnect_'):
-                index = int(label.split('_')[-1])
-                reaction.reconnect(index)
-            else:
-                loop.add_reaction_event(reaction, ev)
+            # Register pending reactions
+            self.__pending_events.append(ev)
+        else:
+            # Reaction reconnections are applied directly; before a new event
+            # occurs that the reaction might be subscribed to after the reconnect.
+            reactions = self.__handlers.get(ev.type, ())
+            for i in range(len(reactions)):
+                label, reaction = reactions[i]
+                if label.startswith('reconnect_'):
+                    if getattr(ev, 'allow_reconnect', True) is True:
+                        index = int(label.split('_')[-1])
+                        reaction.reconnect(index)
+                else:
+                    loop.add_reaction_event(reaction, ev)
         return ev
     
     def _mutate(self, prop_name, value, mutation='set', index=-1):
@@ -475,19 +489,22 @@ class Component(with_metaclass(ComponentMeta, object)):
             cname = self.__class__.__name__
             raise AttributeError('%s object has no property %r' % (cname, prop_name))
         
-        if loop.is_processing_actions() is False:
-            raise AttributeError('Trying to mutate a property outside of an action.')
+        if loop.can_mutate(self) is False:
+            raise AttributeError('Trying to mutate property %s outside '
+                                 'of an action or context.' % prop_name)
         
         # Prepare
         private_name = '_' + prop_name + '_value'
         validator_name = '_' + prop_name + '_validate'
         
         # Set / Emit
-        value2 = value
         old = getattr(self, private_name)
         
         if mutation == 'set':
             # Normal setting of a property
+            value2 = getattr(self, validator_name)(value)
+            setattr(self, private_name, value2)
+            # Emit?
             if this_is_js():  # pragma: no cover
                 is_equal = old == value2
             elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):  # pragma: no cover
@@ -495,9 +512,10 @@ class Component(with_metaclass(ComponentMeta, object)):
                 is_equal = np.array_equal(old, value2)
             else:
                 is_equal = type(old) == type(value2) and old == value2
+            if self.__initial_mutation is True:
+                old = value2
+                is_equal = False  # well, they are, but we want an event!
             if not is_equal:
-                value2 = getattr(self, validator_name)(value)
-                setattr(self, private_name, value2)
                 self.emit(prop_name,
                           dict(new_value=value2, old_value=old, mutation=mutation))
                 return True
@@ -555,6 +573,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         :func:`reaction <flexx.event.reaction>` decorator, and the intro
         docs for more information.
         """
+        mode = 'normal'
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
             raise RuntimeError('Component.reaction() '
@@ -576,9 +595,9 @@ class Component(with_metaclass(ComponentMeta, object)):
             if not callable(func):  # pragma: no cover
                 raise TypeError('Component.reaction() decorator requires a callable.')
             if looks_like_method(func):
-                return ReactionDescriptor(func, connection_strings, self)
+                return ReactionDescriptor(func, mode, connection_strings, self)
             else:
-                return Reaction(self, func, connection_strings)
+                return Reaction(self, func, mode, connection_strings)
         
         if func is not None:
             return _react(func)

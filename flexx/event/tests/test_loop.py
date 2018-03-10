@@ -67,21 +67,29 @@ def test_iter():
     """
     init
     -
+    true
     1
+    false
     init
     -
+    true
     2
+    false
     """
     foo = Foo()
     foo.emit('foo', {})
     print('-')
+    print(loop.has_pending())
     loop.iter()
+    print(loop.has_pending())
     
     foo = Foo()
     foo.emit('foo', {})
     foo.emit('foo', {})
     print('-')
+    print(loop.has_pending())
     loop.iter()
+    print(loop.has_pending())
 
 
 @run_in_both()
@@ -126,7 +134,7 @@ def test_context():
         foo.emit('foo', {})
         foo.emit('foo', {})
     
-    assert not loop.is_processing_actions()
+    assert not loop.can_mutate()
 
 
 @run_in_both(Foo)
@@ -141,12 +149,14 @@ def test_loop_reset():
     foo.emit('foo', {})
     foo.emit('foo', {})
     
+    loop._process_calls()  # the callater to stop capturing events
     loop.reset()
     loop.iter()
     print('-')
     
     foo.emit('foo', {})
     foo.emit('foo', {})
+    loop._process_calls()  # the callater to stop capturing events
     loop.reset()
     foo.emit('foo', {})
     loop.iter()

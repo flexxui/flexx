@@ -137,8 +137,9 @@ class ComponentJS:  # pragma: no cover
         
         # Init some internal variables
         self.__handlers = {}  # reactions connecting to this component
-        self.__pending_events = {}
+        self.__pending_events = []
         self.__anonymous_reactions = []
+        self.__initial_mutation = False
         
         # Create actions
         for i in range(len(self.__actions__)):
@@ -159,30 +160,23 @@ class ComponentJS:  # pragma: no cover
             name = self.__attributes__[i]
             self.__create_attribute(name)
         
-        # Init the values of all properties.
-        prop_events = self._comp_init_property_values(property_values)
-        
-        # Apply user-defined initialization
+        # With self as the active component (and thus mutatable), init the
+        # values of all properties, and apply user-defined initialization
         with self:
+            self._comp_init_property_values(property_values)
             self.init(*init_args)
         
         # Connect reactions and fire initial events
         self._comp_init_reactions()
-        self._comp_init_events(prop_events)
     
     def _comp_init_property_values(self, property_values):
-        events = []
-        # First process default property values
+        values = {}
+        # First collect default property values (they come first)
         for i in range(len(self.__properties__)):
             name = self.__properties__[i]
-            value_name = '_' + name + '_value'
-            value = self[value_name]
-            value = self['_' + name + '_validate'](value)
-            self[value_name] = value
             if name not in property_values:
-                ev = dict(type=name, new_value=value, old_value=value, mutation='set')
-                events.append(ev)
-        # Then process property values given at init time
+                values[name] = self['_' + name + '_value']
+        # Then collect user-provided values
         for name, value in property_values.items():  # is sorted by occurance in py36
             if name not in self.__properties__:
                 if name in self.__attributes__:
@@ -194,11 +188,9 @@ class ComponentJS:  # pragma: no cover
             if callable(value):
                 self._comp_make_implicit_setter(name, value)
                 continue
-            value = self['_' + name + '_validate'](value)
-            self['_' + name + '_value'] = value
-            ev = dict(type=name, new_value=value, old_value=value, mutation='set')
-            events.append(ev)
-        return events
+            values[name] = value
+        # Then process all property values
+        self._comp_apply_property_values(values)
     
     def _comp_make_implicit_setter(self, prop_name, func):
         setter_func = getattr(self, 'set_' + prop_name, None)
@@ -206,23 +198,29 @@ class ComponentJS:  # pragma: no cover
             t = '%s does not have a set_%s() action for property %s.'
             raise TypeError(t % (self._id, prop_name, prop_name)) 
         setter_reaction = lambda: setter_func(func())
-        reaction = self.__create_reaction(setter_reaction, 'auto-' + prop_name, [])
+        reaction = self.__create_reaction(setter_reaction,
+                                          'auto-' + prop_name, 'auto', [])
         self.__anonymous_reactions.append(reaction)
     
     def _comp_init_reactions(self):
+        if self.__pending_events is not None:
+            self.__pending_events.append(None)  # marker
+            loop.call_soon(self._comp_stop_capturing_events)
+        
         # Create (and connect) reactions.
         # Implicit reactions need to be invoked to initialize connections.
         for i in range(len(self.__reactions__)):
             name = self.__reactions__[i]
             func = self[name]
-            r = self.__create_reaction(func, name, func._connection_strings or ())
-            if r.is_explicit() is False:
+            r = self.__create_reaction(func, name, func._mode,
+                                       func._connection_strings or ())
+            if r.get_mode() == 'auto':
                 ev = dict(source=self, type='', label='')
                 loop.add_reaction_event(r, ev)
         # Also invoke the anonymouse implicit reactions
         for i in range(len(self.__anonymous_reactions)):
             r = self.__anonymous_reactions[i]
-            if r.is_explicit() is False:
+            if r.get_mode() == 'auto':
                 ev = dict(source=self, type='', label='')
                 loop.add_reaction_event(r, ev)
     
@@ -255,19 +253,21 @@ class ComponentJS:  # pragma: no cover
         nameparts = RawJS("name.split(' ')")
         nameparts = RawJS("nameparts[nameparts.length-1].split('flx_')")
         name = nameparts[-1]
-        return self.__create_reaction_ob(func, name, connection_strings)
+        mode = 'normal'
+        return self.__create_reaction_ob(func, name, mode, connection_strings)
     
     def __create_action(self, action_func, name):
         # Keep a ref to the action func, which is a class attribute. The object
         # attribute with the same name will be overwritten with the property below.
         # Because the class attribute is the underlying function, super() works.
         def action():  # this func should return None, so super() works correct
-            if loop.is_processing_actions() is True:
+            if loop.can_mutate(self) is True:
                 res = action_func.apply(self, arguments)
                 if res is not None:
                     logger.warn('Action (%s) is not supposed to return a value' % name)
             else:
                 loop.add_action_invokation(action, arguments)
+            return self
         def getter():
             return action
         def setter(x):
@@ -311,8 +311,8 @@ class ComponentJS:  # pragma: no cover
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
     
-    def __create_reaction(self, reaction_func, name, connection_strings):
-        reaction = self.__create_reaction_ob(reaction_func, name, connection_strings)
+    def __create_reaction(self, reaction_func, name, mode, c_strings):
+        reaction = self.__create_reaction_ob(reaction_func, name, mode, c_strings)
         def getter():
             return reaction
         def setter(x):
@@ -322,7 +322,7 @@ class ComponentJS:  # pragma: no cover
         Object.defineProperty(self, name, opts)
         return reaction
         
-    def __create_reaction_ob(self, reaction_func, name, connection_strings):
+    def __create_reaction_ob(self, reaction_func, name, mode, connection_strings):
         # Keep ref to the reaction function, see comment in create_action().
         
         # Create function that becomes our "reaction object"
@@ -337,6 +337,7 @@ class ComponentJS:  # pragma: no cover
         RawJS("Component.prototype._REACTION_COUNT += 1")
         reaction._id = RawJS("'r' + Component.prototype._REACTION_COUNT")
         reaction._name = name
+        reaction._mode = mode
         reaction._ob1 = lambda : that  # no weakref in JS
         reaction._init(connection_strings, self)
         
@@ -465,7 +466,9 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             funcs_code.append(code.rstrip())
             # Mark to not bind the func
             funcs_code.append(prototype_prefix + funcname + '.nobind = true;')
-            # Add connection strings, but not for implicit reactions
+            # Add mode and connection strings
+            funcs_code.append(prototype_prefix + funcname +
+                              '._mode = ' + reprs(val._mode))
             if val._connection_strings:
                 funcs_code.append(prototype_prefix + funcname +
                                   '._connection_strings = ' +

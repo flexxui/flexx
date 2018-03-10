@@ -145,10 +145,10 @@ class Action:
     def __call__(self, *args):
         """ Invoke the action.
         """
-        if loop.is_processing_actions():
+        ob = self._ob1()
+        if loop.can_mutate(ob):
             func = self._func_once
             self._func_once = self._func
-            ob = self._ob1()
             if ob is not None:
                 res = func(ob, *args)
                 if res is not None:
@@ -157,4 +157,4 @@ class Action:
         else:
             loop.add_action_invokation(self, args)
         
-        return None  # 'Actions are invoked asynchronously'
+        return ob  # 'Actions are invoked asynchronously'

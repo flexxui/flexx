@@ -62,6 +62,7 @@ class TornadoServer(AbstractServer):
         # Hook Tornado up with asyncio. Flexx' BaseServer makes sure
         # that the correct asyncio event loop is current (for this thread).
         # http://www.tornadoweb.org/en/stable/asyncio.html
+        # todo: Since Tornado v5.0 asyncio is autom used, deprecating AsyncIOMainLoop
         self._io_loop = AsyncIOMainLoop()
         # I am sorry for this hack, but Tornado wont work otherwise :(
         # I wonder how long it will take before this will bite me back. I guess
@@ -92,7 +93,9 @@ class TornadoServer(AbstractServer):
                                  (r"/(.*)", AppHandler), ], **app_kwargs)
         self._app._io_loop = self._io_loop
         # Create tornado server, bound to our own ioloop
-        self._server = HTTPServer(self._app, io_loop=self._io_loop, **kwargs)
+        if tornado.version_info < (5, ):
+            kwargs['io_loop'] = self._io_loop
+        self._server = HTTPServer(self._app, **kwargs)
         
         # Start server (find free port number if port not given)
         if port:

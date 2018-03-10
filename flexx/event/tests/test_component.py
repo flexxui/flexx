@@ -88,12 +88,12 @@ def test_component_id2():
 @run_in_both(Foo)
 def test_component_pending_events():
     """
-    1
+    2
     None
     """
     
     f = Foo()
-    print(len(f._Component__pending_events.keys()))
+    print(len(f._Component__pending_events))  # The event for foo, plus None-mark
     
     loop.iter()
     
@@ -171,13 +171,137 @@ class CompWithInit1(event.Component):
         print('i', a, b)
 
 @run_in_both(CompWithInit1)
-def test_component_init():
+def test_component_init1():
     """
     i 1 2
     i 1 3
     """
     CompWithInit1(1, 2)
     CompWithInit1(1)
+
+
+class CompWithInit2(event.Component):
+    
+    foo1 = event.IntProp(1)
+    foo2 = event.IntProp(2, settable=True)
+    foo3 = event.IntProp(3)
+    
+    def init(self, set_foos):
+        if set_foos:
+            self._mutate_foo1(11)
+            self.set_foo2(12)
+            self.set_foo3(13)
+    
+    def set_foo3(self, v):
+        self._mutate_foo3(v+100)
+
+
+@run_in_both(CompWithInit2)
+def test_component_init2():
+    """
+    1 2 103
+    11 12 113
+    6 7 108
+    11 12 113
+    12
+    99
+    """
+    m = CompWithInit2(False)
+    print(m.foo1, m.foo2, m.foo3)
+    
+    m = CompWithInit2(True)
+    print(m.foo1, m.foo2, m.foo3)
+    
+    m = CompWithInit2(False, foo1=6, foo2=7, foo3=8)
+    print(m.foo1, m.foo2, m.foo3)
+    
+    m = CompWithInit2(True, foo1=6, foo2=7, foo3=8)
+    print(m.foo1, m.foo2, m.foo3)
+    
+    # This works, because when a componentn is "active" it allows mutations
+    m.set_foo2(99)
+    print(m.foo2)
+    
+    with m:
+        m.set_foo2(99)
+    print(m.foo2)
+
+
+class CompWithInit3(event.Component):
+    
+    sub = event.ComponentProp(settable=True)
+    
+    @event.reaction('sub.a_prop')
+    def _on_sub(self, *events):
+        for ev in events:
+            print('sub prop changed', ev.new_value)
+
+@run_in_both(CompWithInit3, Foo)
+def test_component_init3():
+    """
+    sub prop changed 7
+    sub prop changed 9
+    """
+    # Verify that reconnect events are handled ok when applying events in init
+    
+    f1 = Foo(a_prop=7)
+    f2 = Foo(a_prop=8)
+    
+    c = CompWithInit3(sub=f1)
+    
+    # Simulate that we're in a component's init
+    with c:
+        c.set_sub(f2)
+    
+    f2.set_a_prop(9)
+    
+    # In the iter, the pending events will be flushed. One of these events
+    # is the changed sub. We don't want to reconnect for properties that
+    # did not change (because that's a waste of CPU cycles), but we not miss
+    # any changes.
+    loop.iter()
+
+
+class CompWithInit4(event.Component):
+    
+    a_prop = event.IntProp(settable=True)
+    
+    def init(self, other, value):
+        self.set_a_prop(value)
+        other.set_a_prop(value)
+    
+    @event.action
+    def create(self, other, value):
+        self.set_a_prop(value)
+        CompWithInit4(other, value)
+
+@run_in_both(CompWithInit4, Foo)
+def test_component_init4():
+    """
+    0 8
+    8 8
+    0 9
+    9 9
+    """
+    # Verify that the behavior of an init() (can mutate self, but not other
+    # components) is consistent, also when instantiated from an action.
+    
+    c1 = Foo(a_prop=0)
+    c2 = Foo(a_prop=0)
+    c3 = CompWithInit4(c1, 8)
+    
+    print(c1.a_prop, c3.a_prop)
+    
+    loop.iter()
+    print(c1.a_prop, c3.a_prop)
+    
+    c3.create(c2, 9)
+    loop.iter()
+    
+    print(c2.a_prop, c3.a_prop)
+    
+    loop.iter()
+    print(c2.a_prop, c3.a_prop)
 
 
 @run_in_both(Foo)
