@@ -97,6 +97,19 @@ async def test_pycomponent_action1():
 
 
 @run_live
+async def test_pycomponent_action_chained():
+    """
+    hi foo
+    hi bar
+    hi xx
+    ----------
+    """
+    c, s = launch(PyComponentA)
+    c.greet('foo').greet('bar').greet('xx')
+    await roundtrip(s)
+
+
+@run_live
 async def test_pycomponent_action2():
     """
     hi foo

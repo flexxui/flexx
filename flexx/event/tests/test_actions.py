@@ -69,6 +69,26 @@ def test_action_simple():
 
 
 @run_in_both(MyObject)
+def test_action_chained_calling():
+    """
+    0
+    2
+    8
+    """
+    m = MyObject()
+    loop.iter()
+    print(m.foo)
+    
+    m.increase_foo()
+    loop.iter()
+    print(m.foo)
+    
+    m.increase_foo().increase_foo().increase_foo()
+    loop.iter()
+    print(m.foo)
+
+
+@run_in_both(MyObject)
 def test_action_one_by_one():
     """
     0

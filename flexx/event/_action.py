@@ -157,4 +157,4 @@ class Action:
         else:
             loop.add_action_invokation(self, args)
         
-        return None  # 'Actions are invoked asynchronously'
+        return ob  # 'Actions are invoked asynchronously'

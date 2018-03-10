@@ -267,6 +267,7 @@ class ComponentJS:  # pragma: no cover
                     logger.warn('Action (%s) is not supposed to return a value' % name)
             else:
                 loop.add_action_invokation(action, arguments)
+            return self
         def getter():
             return action
         def setter(x):

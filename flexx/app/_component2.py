@@ -39,6 +39,7 @@ def make_proxy_action(action):
     flx_name = action._name
     def flx_proxy_action(self, *args):
         self._proxy_action(flx_name, *args)
+        return self
     flx_proxy_action.__doc__ = action.__doc__
     flx_proxy_action.__qualname__ = 'flx_proxy_action'
     return flx_proxy_action  # ActionDescriptor(flx_proxy_action, flx_name, '')

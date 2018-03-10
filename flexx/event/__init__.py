@@ -77,6 +77,23 @@ which inherits from ``flexx.event.Component``.
 
     class MyObject(event.Component):
         ...  # attributes/properties/actions/reactions/emitters go here
+        
+        def init(self):
+            super().init()
+            ...
+
+
+It is common to implement the ``init()`` method of the component class. It gets
+automatically called by the component, at a moment when all properties have
+been initialized, but no events have been emitted yet. This is a good time
+to further initialize the component, and/or to instantiate sub components.
+One rarely needs to implement the ``__init__()`` method.
+
+When the ``init()`` is called, the component is the currently "active"
+component, which can be used to e.g. descrive a hierarchy of objects, as is
+done with widgets. It also implies that mutations are allowed and that actions
+on the component itself have a direct effect (invoking actions of other
+components is still asynchronous though).
 
 
 Properties represent state
@@ -143,6 +160,10 @@ Actions can mutate properties
 Actions can have any number of (positional) arguments. Note that actions are
 asynchronous, i.e. calling an action will not apply it immediately, unless it is
 called from another action.
+
+Since actions are asynchronous, their inner function should not return a value.
+Invoking (i.e. calling) an action always returns the component itself, which
+allows chainging action invokations, e.g. ``t.scale(3).translate(3, 4)``
 
 Mutations are done via the :func:`_mutate <flexx.event.Component._mutate>` method,
 or by the auto-generated ``_mutate_xx()`` methods.
