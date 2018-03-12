@@ -192,6 +192,7 @@ class CompWithInit2(event.Component):
             self.set_foo2(12)
             self.set_foo3(13)
     
+    @event.action
     def set_foo3(self, v):
         self._mutate_foo3(v+100)
 
