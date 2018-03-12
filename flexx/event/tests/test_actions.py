@@ -334,6 +334,41 @@ def test_property_recursive():
     print(m.p1, m.p2)
 
 
+class MyProp(event.IntProp):
+    
+    def _validate(self, value, name, data):
+        super()._validate(value, name, data)
+        print('mutating', name)
+
+
+class MyObject9(event.Component):
+    
+    foo1 = MyProp(settable=True)
+    foo2 = MyProp(settable=True)
+    foo3 = MyProp(settable=False)
+    
+    
+    @event.action
+    def set_foo2(self, v):
+        print('setting foo2')
+        self._mutate_foo2(v)
+
+
+@run_in_both(MyObject9, MyProp)
+def test_property_setters_get_called():
+    """
+    mutating foo1
+    mutating foo2
+    mutating foo3
+    setting foo2
+    mutating foo2
+    """
+    # This validates that all properties are first set via their mutators,
+    # which cannot require other properties, and that then the properties
+    # that have a custom setter (but only those) have these setters called.
+    m = MyObject9()
+
+
 ## Meta-ish tests that are similar for property/emitter/action/reaction
 
 

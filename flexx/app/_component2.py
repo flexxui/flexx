@@ -482,7 +482,7 @@ class ProxyComponent(BaseAppComponent):
     
     def _comp_apply_property_values(self, values):
         # Apply props in silence
-        for name, value in values.items():
+        for name, value in values:
             setattr(self, '_' + name + '_value', value)
     
     def _proxy_action(self, name, *args, **kwargs):
