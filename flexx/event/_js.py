@@ -170,12 +170,12 @@ class ComponentJS:  # pragma: no cover
         self._comp_init_reactions()
     
     def _comp_init_property_values(self, property_values):
-        values = {}
+        values = []
         # First collect default property values (they come first)
         for i in range(len(self.__properties__)):
             name = self.__properties__[i]
             if name not in property_values:
-                values[name] = self['_' + name + '_value']
+                values.append((name, self['_' + name + '_value']))
         # Then collect user-provided values
         for name, value in property_values.items():  # is sorted by occurance in py36
             if name not in self.__properties__:
@@ -188,7 +188,7 @@ class ComponentJS:  # pragma: no cover
             if callable(value):
                 self._comp_make_implicit_setter(name, value)
                 continue
-            values[name] = value
+            values.append((name, value))
         # Then process all property values
         self._comp_apply_property_values(values)
     

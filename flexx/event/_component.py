@@ -219,13 +219,13 @@ class Component(with_metaclass(ComponentMeta, object)):
         """ Initialize property values, combining given kwargs (in order)
         and default values.
         """
-        values = {}
+        values = []
         # First collect default property values (they come first)
         for name in self.__properties__:  # is sorted by name
             prop = getattr(self.__class__, name)
             setattr(self, '_' + name + '_value', prop._default)
             if name not in property_values:
-                values[name] = prop._default
+                values.append((name, prop._default))
         # Then collect user-provided values
         for name, value in property_values.items():  # is sorted by occurance in py36
             if name not in self.__properties__:
@@ -238,7 +238,7 @@ class Component(with_metaclass(ComponentMeta, object)):
             if callable(value):
                 self._comp_make_implicit_setter(name, value)
                 continue
-            values[name] = value
+            values.append((name, value))
         # Then process all property values
         self._comp_apply_property_values(values)
     
@@ -248,11 +248,11 @@ class Component(with_metaclass(ComponentMeta, object)):
         self.__initial_mutation = True
         # First mutate all properties. Mutations validate input, but are always
         # independent.
-        for name, value in values.items():
+        for name, value in values:
             self._mutate(name, value)
         # Now that all properties have a good initial value, invoke the setters
         # of properties that have one (and that is not auto-generated)
-        for name, value in values.items():
+        for name, value in values:
             setter_name = ('_set' if name.startswith('_') else 'set_') + name
             setter = getattr(self, setter_name, None)
             if setter is not None:
