@@ -11,7 +11,9 @@ import zipfile
 import tempfile
 from base64 import encodestring as encodebytes
 
-from .. import config, event, webruntime
+import webruntime
+
+from .. import config, event
 
 from ._component2 import PyComponent, JsComponent
 from ._server import current_server

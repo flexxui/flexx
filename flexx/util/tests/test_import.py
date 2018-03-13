@@ -87,25 +87,19 @@ def test_import_flexx_event():
     modnames = loaded_modules('flexx.event', 2)
     assert modnames == set(MIN_MODULES + ['flexx.event'])
 
-def test_import_flexx_webruntime():
-    modnames = loaded_modules('flexx.webruntime', 2)
-    assert modnames == set(MIN_MODULES + ['flexx.util', 'flexx.dialite', 'flexx.webruntime'])
-
 def test_import_flexx_app():
     modnames = loaded_modules('flexx.app', 2)
-    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.dialite', 'flexx.webruntime',
-                                          'flexx.event'])
+    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.dialite', 'flexx.event'])
 
 def test_import_flexx_ui():
     modnames = loaded_modules('flexx.ui', 2)
-    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.dialite', 'flexx.webruntime',
+    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.dialite',
                                           'flexx.event', 'flexx.ui'])
 
 def test_import_deps():
     # These do not depend on tornado
     deps = set(['tornado'])
     assert deps.difference(loaded_modules('flexx.util', 2, True)) == deps
-    assert deps.difference(loaded_modules('flexx.webruntime', 2, True)) == deps
     assert deps.difference(loaded_modules('flexx.event', 2, True)) == deps
     
     # But app and ui do

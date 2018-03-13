@@ -5,7 +5,9 @@ Functional API for flexx.app
 import json
 import base64
 
-from .. import webruntime, config, set_log_level
+import webruntime
+
+from .. import config, set_log_level
 
 from ._app import App, manager
 from ._component2 import PyComponent, JsComponent
