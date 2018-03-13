@@ -89,12 +89,11 @@ def test_import_flexx_event():
 
 def test_import_flexx_app():
     modnames = loaded_modules('flexx.app', 2)
-    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.dialite', 'flexx.event'])
+    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.event'])
 
 def test_import_flexx_ui():
     modnames = loaded_modules('flexx.ui', 2)
-    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.dialite',
-                                          'flexx.event', 'flexx.ui'])
+    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.event', 'flexx.ui'])
 
 def test_import_deps():
     # These do not depend on tornado
