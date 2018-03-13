@@ -13,7 +13,5 @@ Flexx modules.
     
     config
     logging
-    png
-    icon
     minify
     

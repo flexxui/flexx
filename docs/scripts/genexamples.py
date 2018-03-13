@@ -93,7 +93,7 @@ def main():
     # created_files.append(filename)
     # open(filename, 'wt', encoding='utf-8').write(docs)
     
-    better_names = {'pyscript': 'PyScript'}
+    better_names = {'pscript': 'PScript'}
     
     # Create example pages per submodule
     for sub, _ in EXAMPLES_DIRS:

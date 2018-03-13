@@ -4,14 +4,14 @@
 import os
 import sys
 from types import ModuleType
-from flexx.pyscript import commonast
+from pscript import commonast
 
 # Hack
 sys.modules['commonast'] = commonast
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 DOC_DIR = os.path.abspath(os.path.join(THIS_DIR, '..'))
-OUTPUT_DIR = os.path.join(DOC_DIR, 'pyscript')
+OUTPUT_DIR = os.path.join(DOC_DIR, 'pscript')
 
 created_files = []
 
