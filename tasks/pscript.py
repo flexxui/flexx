@@ -6,5 +6,5 @@ from invoke import task
 def py2js(ctx, code):
     """transpile given Python code to JavaScript
     """
-    from flexx.pyscript import py2js
+    from pscript import py2js
     print(py2js(code))

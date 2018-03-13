@@ -69,21 +69,6 @@ def package_tree(pkgroot):
     return subdirs
 
 
-def copy_for_legacy_python(src_dir, dest_dir):
-    from translate_to_legacy import LegacyPythonTranslator
-    # Dirs and files to explicitly not translate
-    skip = ['pyscript/tests/python_sample.py', 
-            'pyscript/tests/python_sample2.py',
-            'pyscript/tests/python_sample3.py']
-    # Make a fresh copy of the flexx package
-    if os.path.isdir(dest_dir):
-        shutil.rmtree(dest_dir)
-    ignore = lambda src, names: [n for n in names if n == '__pycache__']
-    shutil.copytree(src_dir, dest_dir, ignore=ignore)
-    # Translate in-place
-    LegacyPythonTranslator.translate_dir(dest_dir, skip=skip)
-
-
 def get_all_resources():
     import logging  # noqa - prevent mixup with logging module inside flexx.util
     sys.path.insert(0, os.path.join(THIS_DIR, 'flexx', 'util'))
@@ -109,13 +94,6 @@ if os.path.isfile(os.path.join(THIS_DIR, 'README.md')):
 # Install resources (e.g. phosphor.js)
 get_all_resources()
 
-# Support for legacy Python: we install a second package with the
-# translated code. We generate that code when we can. We use
-# "name_legacy" below in "packages", "package_dir", and "package_data".
-name_legacy = name + '_legacy'
-if os.path.isfile(os.path.join(THIS_DIR, 'translate_to_legacy.py')):
-    copy_for_legacy_python(os.path.join(THIS_DIR, name),
-                           os.path.join(THIS_DIR, name_legacy))
 
 ## Setup
 
@@ -132,10 +110,10 @@ setup(
     long_description=doc,
     platforms='any',
     provides=[name],
-    install_requires=['tornado'],  # react, pyscript and webruntime require nothing
-    packages=package_tree(name) + package_tree(name_legacy),
-    package_dir={name: name, name_legacy: name_legacy},
-    package_data={name: ['resources/*'], name_legacy: ['resources/*']},
+    install_requires=['tornado', 'pscript', 'webruntime', 'dialite'],
+    packages=package_tree(name)
+    package_dir={name: name},
+    package_data={name: ['resources/*']},
     entry_points={'console_scripts': ['flexx = flexx.__main__:main'], },
     zip_safe=False,
     classifiers=[
@@ -148,8 +126,6 @@ setup(
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],

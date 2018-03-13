@@ -30,9 +30,6 @@ also be used by themselves:
 * [flexx.ui](http://flexx.readthedocs.io/en/stable/ui/) - the widgets
 * [flexx.app](http://flexx.readthedocs.io/en/stable/app/) - the event loop and server
 * [flexx.event](http://flexx.readthedocs.io/en/stable/event/) - properties and events
-* [flexx.pyscript](http://flexx.readthedocs.io/en/stable/pyscript/) - Python to JavaScript transpiler
-* [flexx.webruntime](http://flexx.readthedocs.io/en/stable/webruntime/) - to launch a runtime
-* [flexx.util](http://flexx.readthedocs.io/en/stable/util/) - utilities
 
 
 Example
@@ -64,8 +61,14 @@ to use.
 Installation
 ------------
 
-Flexx requires Python 3.5+ (only PyScript can be used with 2.7+) and also works on pypy. Further,
-it needs the [tornado](http://www.tornadoweb.org) library (pure Python).
+Flexx requires Python 3.5+ and also works on pypy. Further,
+it depends on:
+
+* the [tornado](http://www.tornadoweb.org) library (pure Python).
+* the [PScript](http://github.com/flexxui/webruntime) library (a flexxui project).
+* the [webruntime](http://github.com/flexxui/webruntime) library (a flexxui project).
+* the [dialite](http://github.com/flexxui/webruntime) library (a flexxui project).
+
 For running desktop apps, it is recommended to have Firefox installed.
 
 The current release is really old, please use the latest master if you want to try it:
