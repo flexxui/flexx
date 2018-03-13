@@ -25,13 +25,13 @@ files['__init__'] = """
 """
 
 files['foo'] = """
-    from flexx import app, pyscript
+    from flexx import app, pscript
     from flxtest.lib3 import tan, atan
     from flxtest.lib4 import magic_number, random
     
     import sys
     sas = None
-    console = pyscript.JSConstant('console')
+    console = pscript.JSConstant('console')
     
     def do_something():
         console.log('do something')
@@ -76,7 +76,7 @@ files['bar'] = """
         pass
     
     def cannot_transpile():
-        # functionality not supported by PyScript. Note that some may be at some point
+        # functionality not supported by PScript. Note that some may be at some point
         # f"format strings" - also not in Python < 3.6
         {'no', 'set', 'in', 'js'}
         a[1:2:3]  # no slicing with step
@@ -88,7 +88,7 @@ files['bar'] = """
 """
 
 files['lib1'] = """
-    __pyscript__ = True
+    __pscript__ = True
     
     sas = None
     
@@ -103,7 +103,7 @@ files['lib1'] = """
 
 files['lib2'] = """
     
-    from flexx.pyscript import RawJS
+    from pscript import RawJS
     
     import sys
     sas = None
@@ -198,7 +198,7 @@ def teardown_module():
         sys.path.remove(tempdirname)
     
     # Remove trace of these classes, since their source no longer exists,
-    # Pyscript wont be able to resolve them for JS
+    # PScript wont be able to resolve them for JS
     for cls in list(app._component2.AppComponentMeta.CLASSES):
         if cls.__jsmodule__.startswith(PKG_NAME + '.'):
             app._component2.AppComponentMeta.CLASSES.remove(cls)
@@ -237,9 +237,9 @@ def test_modules():
     
     # Function defs defined
     assert 'sin = function' in store['flxtest.lib1'].get_js()
-    assert 'asin = function' in store['flxtest.lib1'].get_js()  # __pyscript__
+    assert 'asin = function' in store['flxtest.lib1'].get_js()  # __pscript__
     assert 'cos = function' in store['flxtest.lib2'].get_js()
-    assert 'acos = function' not in store['flxtest.lib2'].get_js()  # not __pyscript__
+    assert 'acos = function' not in store['flxtest.lib2'].get_js()  # not __pscript__
     assert 'tan = function' in store['flxtest.lib3'].get_js()
     assert 'do_something = function' in store['flxtest.foo'].get_js()
     
@@ -253,7 +253,7 @@ def test_modules():
     assert 'sas' not in store['flxtest.foo'].get_js()
     assert 'sys' not in store['flxtest.lib2'].get_js()
     assert 'sas' not in store['flxtest.lib2'].get_js()
-    assert 'sas' in store['flxtest.lib1'].get_js()  # __pyscript__
+    assert 'sas' in store['flxtest.lib1'].get_js()  # __pscript__
     
     # Constants replicate, not import
     assert 'offset = 3' in store['flxtest.lib2'].get_js()
@@ -317,7 +317,7 @@ def test_add_variable():
     m.add_variable('Foo')
     assert 'Foo' in m.variables
     
-    # add_variable is ignored for pyscript mods
+    # add_variable is ignored for pscript mods
     assert not store['flxtest.lib1'].deps
     with capture_log('info') as log:
         store['flxtest.lib1'].add_variable('spam')  
@@ -334,7 +334,7 @@ def test_add_variable():
     
     m = JSModule('flxtest.bar', store)
     
-    # Can use stuff from module if its a __pyscript__ modules
+    # Can use stuff from module if its a __pscript__ modules
     m.add_variable('use_lib1')
     
     # The module code is smart enough that lib1 does not contain sinasappel

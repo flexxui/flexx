@@ -7,10 +7,11 @@ etc.) needed by the applications.
 import os
 import shutil
 
+from pscript import create_js_module, get_all_std_names, get_full_std_lib
+from pscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
+
 from ..event import _property
 from ..event._js import JS_EVENT
-from ..pyscript import create_js_module, get_all_std_names, get_full_std_lib
-from ..pyscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
 from ..util.getresource import get_resoure_path
 
 from ._component2 import AppComponentMeta
@@ -226,11 +227,11 @@ class AssetStore:
         asset_reset = Asset('reset.css', RESET)
         # Create asset to bootstrap Flexx
         asset_loader = Asset('flexx-loader.js', LOADER)
-        # Create asset for Pyscript std
+        # Create asset for PScript std
         func_names, method_names = get_all_std_names()
-        mod = create_js_module('pyscript-std.js', get_full_std_lib(),
+        mod = create_js_module('pscript-std.js', get_full_std_lib(),
                                [], func_names + method_names, 'amd-flexx')
-        asset_pyscript = Asset('pyscript-std.js', HEADER + mod)
+        asset_pscript = Asset('pscript-std.js', HEADER + mod)
         # Create asset for the even system
         pre1 = ', '.join(['%s%s = _py.%s%s' % (FUNCTION_PREFIX, n, FUNCTION_PREFIX, n)
                           for n in JS_EVENT.meta['std_functions']])
@@ -238,7 +239,7 @@ class AssetStore:
                           for n in JS_EVENT.meta['std_methods']])
         mod = create_js_module('flexx.event.js',
                                'var %s;\nvar %s;\n%s' % (pre1, pre2, JS_EVENT),
-                               ['pyscript-std.js as _py'],
+                               ['pscript-std.js as _py'],
                                ['Component', 'loop', 'logger'] + _property.__all__,
                                'amd-flexx')
         asset_event = Asset('flexx.event.js', HEADER + mod)
@@ -254,7 +255,7 @@ class AssetStore:
         asset_bb64 = Asset('bb64.js', code)
         
         # Add them
-        for a in [asset_reset, asset_loader, asset_pyscript]:
+        for a in [asset_reset, asset_loader, asset_pscript]:
             self.add_shared_asset(a)
         
         if getattr(self, '_test_mode', False):
@@ -266,7 +267,7 @@ class AssetStore:
         asset_core.add_asset(asset_loader)
         asset_core.add_asset(asset_bsdf)
         asset_core.add_asset(asset_bb64)
-        asset_core.add_asset(asset_pyscript)
+        asset_core.add_asset(asset_pscript)
         asset_core.add_asset(asset_event)
         asset_core.add_module(self.modules['flexx.app._clientcore'])
         asset_core.add_module(self.modules['flexx.app._component2'])

@@ -34,10 +34,9 @@ provide either a WebGL context or a 2d context as in the example below:
 """
 
 from ... import event
-from ...pyscript import window
 from .. import Widget
 
-perf_counter = None  # exists in PyScript, time.perf_counter only in Python 3.3+
+perf_counter = None  # exists in PScript, time.perf_counter only in Python 3.3+
 
 # todo: make it easy to enable high-res aa
 
@@ -74,6 +73,7 @@ class CanvasWidget(Widget):
         """)
     
     def _create_dom(self):
+        global window
         
         outernode = window.document.createElement('div')
         innernode = window.document.createElement('canvas')
@@ -115,6 +115,7 @@ class CanvasWidget(Widget):
     
     @event.emitter
     def mouse_wheel(self, e):
+        global window
         if self.capture_wheel <= 0:
             return super().mouse_wheel(e)  # normal behavior
         elif window.flexx._wheel_timestamp[0] == self.node.id:

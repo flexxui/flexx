@@ -11,9 +11,10 @@ The base ``Widget`` class.
 
 """
 
+from pscript import undefined, window
+
 from ..event import loop
 from .. import event, app
-from ..pyscript import undefined, window
 
 from . import logger  # noqa
 

@@ -20,7 +20,6 @@ Visually group a collection of input widgets. Example:
 """
 
 from ... import event
-from ...pyscript import window
 from . import Widget
 
 
@@ -47,6 +46,7 @@ class GroupWidget(Widget):
     """
     
     def _create_dom(self):
+        global window
         node = window.document.createElement('fieldset')
         self._legend = window.document.createElement('legend')
         node.appendChild(self._legend)

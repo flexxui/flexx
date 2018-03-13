@@ -1,12 +1,12 @@
 """
-The client's core Flexx engine, implemented in PyScript.
+The client's core Flexx engine, implemented in PScript.
 """
 
-from ..pyscript import this_is_js, RawJS
-from ..pyscript.stubs import window, undefined, time, console, JSON
+from pscript import this_is_js, RawJS
+from pscript.stubs import window, undefined, time, console, JSON
 
 # This module gets transpiled to JavaScript as a whole
-__pyscript__ = True
+__pscript__ = True
 
 
 class Flexx:

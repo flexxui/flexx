@@ -6,7 +6,7 @@ PyComponent and JsComponent classes (and their proxies).
 
 import sys
 
-from ..pyscript import window, JSString, this_is_js
+from pscript import window, JSString, this_is_js
 
 from .. import event
 
@@ -22,7 +22,7 @@ from ._asset import get_mod_name
 from . import logger
 
 
-# The clientcore module is a PyScript module that forms the core of the
+# The clientcore module is a PScript module that forms the core of the
 # client-side of Flexx. We import the serializer instance, and can use
 # that name in both Python and JS. Of course, in JS it's just the
 # corresponding instance from the module that's being used.

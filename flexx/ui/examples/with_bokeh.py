@@ -9,7 +9,7 @@ import numpy as np
 from bokeh.plotting import figure
 
 from flexx import app, event, ui
-from flexx.pyscript import window
+
 
 # Plot 1
 N = 1000
@@ -50,6 +50,7 @@ class Controls(ui.FormLayout):
         
     @event.reaction
     def _update_sine(self):
+        global window
         amp, freq, phase = self.amp.value, self.freq.value, self.phase.value
         # Get reference to data source
         ds = None
@@ -63,7 +64,6 @@ class Controls(ui.FormLayout):
         
         # Update
         if ds:
-            window.plot = plot
             ds.data.y = [amp*window.Math.sin(x*freq+phase) for x in ds.data.x]
             ds.change.emit()  # or trigger('change') in older versions
 

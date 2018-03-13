@@ -4,8 +4,9 @@ Example to demonstrate a jQuery widget.
 This demonstrates how Flexx can interact wih other JS frameworks.
 """
 
+from pscript import RawJS
+
 from flexx import app, ui
-from flexx.pyscript import RawJS
 
 
 # Associate assets needed by this app.

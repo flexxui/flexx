@@ -139,7 +139,7 @@ In the code above, Flexx will include the definition of ``func2`` and
 ``func1`` in the JS module ``foo``. If ``MyComponent`` would not
 use these functions, neither definition would be included in the JavaScript.
 
-A useful feature is that the ``RawJS`` class from PyScript can be used
+A useful feature is that the ``RawJS`` class from PScript can be used
 in modules to define objects in JS:
 
 .. code-block:: py
@@ -154,7 +154,7 @@ in modules to define objects in JS:
         def handler(self, *events):
             my_js_module.foo.bar()
 
-One can also assign ``__pyscript__ = True`` to a module to make Flexx
+One can also assign ``__pscript__ = True`` to a module to make Flexx
 transpile a module as a whole. A downside is that (at the moment) such
 modules cannot use import.
 

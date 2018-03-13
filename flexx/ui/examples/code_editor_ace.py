@@ -6,7 +6,6 @@ This example demonstrates a code editor widget based on Ace.
 # todo: Maybe this should be a widget in the library (flexx.ui.Ace) ?
 
 from flexx import app, event, ui
-from flexx.pyscript import window
 
 # Associate Ace's assets with this module so that Flexx will load
 # them when (things from) this module is used.
@@ -28,6 +27,7 @@ class CodeEditor(ui.Widget):
     """
 
     def init(self):
+        global window
         # https://ace.c9.io/#nav=api
         self.ace = window.ace.edit(self.node, "editor")
         self.ace.setValue("import os\n\ndirs = os.walk")

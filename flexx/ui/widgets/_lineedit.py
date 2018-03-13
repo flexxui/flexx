@@ -14,7 +14,6 @@
 """
 
 from ... import event
-from ...pyscript import window
 from . import Widget
 
 
@@ -66,6 +65,7 @@ class LineEdit(Widget):
     ## Methods, actions, emitters
     
     def _create_dom(self):
+        global window
         
         # Create node element
         node = window.document.createElement('input')
@@ -124,6 +124,7 @@ class LineEdit(Widget):
     # note: this works in the browser but not in e.g. firefox-app
     @event.reaction
     def __autocomp_changed(self):
+        global window
         autocomp = self.autocomp
         # Clear
         for op in self._autocomp:

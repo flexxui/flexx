@@ -4,7 +4,7 @@ Implements the reaction decorator, class and desciptor.
 
 # Note: there are some unusual constructs here, such as ``if xx is True``.
 # These are there to avoid inefficient JS code as this code is transpiled
-# using PyScript. This code is quite performance crirical.
+# using PScript. This code is quite performance crirical.
 
 import weakref
 import inspect
@@ -172,7 +172,7 @@ class Reaction:
         self._init(connection_strings)
     
     def _init(self, connection_strings):
-        """ Init of this reaction that is compatible with PyScript.
+        """ Init of this reaction that is compatible with PScript.
         """
         
         ichars = '0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -222,7 +222,7 @@ class Reaction:
                     raise ValueError('Connection string %r contains '
                                      'non-identifier part %r' % (s, part))
             # Init connection
-            d = Dict()  # don't do Dict(foo=x) bc PyScript only supports that for dict
+            d = Dict()  # don't do Dict(foo=x) bc PScript only supports that for dict
             self._connections.append(d)
             d.fullname = fullname  # original, used in logs, so is searchable
             d.parts = parts
@@ -399,7 +399,7 @@ class Reaction:
             ob._register_reaction(type, self, force)
 
     def _seek_event_object(self, index, path, ob):
-        """ Seek an event object based on the name (PyScript compatible).
+        """ Seek an event object based on the name (PScript compatible).
         The path is a list: the path to the event, the last element being the
         event type.
         """

@@ -8,13 +8,13 @@ during tests.
 
 import sys
 
+from pscript.functions import py2js, evaljs 
+from pscript.stdlib import get_std_info, get_partial_std_lib
+
 from ._loop import loop, this_is_js  # noqa - import from here by tests
 from ._component import Component
 from ._property import Property
 from ._js import create_js_component_class, JS_EVENT
-
-from ..pyscript.functions import py2js, evaljs 
-from ..pyscript.stdlib import get_std_info, get_partial_std_lib
 
 
 class StdoutMismatchError(Exception):
