@@ -110,6 +110,7 @@ setup(
     long_description=doc,
     platforms='any',
     provides=[name],
+    python_requires='>=3.5',
     install_requires=['tornado', 'pscript', 'webruntime', 'dialite'],
     packages=package_tree(name)
     package_dir={name: name},
