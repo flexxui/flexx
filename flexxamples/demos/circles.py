@@ -5,10 +5,10 @@ to use a canvas for this sort of thing.
 
 from time import time
 
-from flexx import app, ui
+from flexx import flx
 
 
-class Circle(ui.Label):
+class Circle(flx.Label):
     
     CSS = """
     .flx-Circle {
@@ -19,10 +19,10 @@ class Circle(ui.Label):
     }
     """
 
-class Circles(ui.Widget):
+class Circles(flx.Widget):
     
     def init(self):
-        with ui.PinboardLayout():
+        with flx.PinboardLayout():
             self._circles = [Circle() for i in range(32)]
         self.tick()
     
@@ -37,5 +37,5 @@ class Circles(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.App(Circles).launch('app')
-    app.run()
+    m = flx.App(Circles).launch('app')
+    flx.run()

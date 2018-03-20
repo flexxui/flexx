@@ -13,7 +13,7 @@ When exported, any links to local files wont work, but the remote links will.
 
 import os
 
-from flexx import app, event, ui
+from flexx import flx
 
 from tornado.web import StaticFileHandler
 
@@ -33,13 +33,13 @@ videos['ice-age.mp4 (online)'] = ('https://dl.dropboxusercontent.com/u/1463853/'
                                   'ice%20age%204%20trailer.mp4')
 
 # Make use of Tornado's static file handler
-tornado_app = app.create_server().app
+tornado_app = flx.create_server().app
 tornado_app.add_handlers(r".*", [
     (r"/videos/(.*)", StaticFileHandler, {"path": dirname}),
     ])
 
 
-class VideoViewer(ui.Widget):
+class VideoViewer(flx.Widget):
     """ A simple videoviewer that displays a list of videos found on the
     server's computer, plus a few online videos. Note that not all videos
     may be playable in HTML5.
@@ -47,14 +47,14 @@ class VideoViewer(ui.Widget):
     
     def init(self):
         
-        with ui.HSplit():
-            with ui.TreeWidget(max_selected=1, flex=1) as self.videolist:
+        with flx.HSplit():
+            with flx.TreeWidget(max_selected=1, flex=1) as self.videolist:
                 for name in sorted(videos):
-                    ui.TreeItem(text=name)
+                    flx.TreeItem(text=name)
             
-            self.player = ui.VideoWidget(flex=5)
+            self.player = flx.VideoWidget(flex=5)
 
-    @event.reaction('videolist.children*.selected')
+    @flx.reaction('videolist.children*.selected')
     def on_select(self, *events):
         for ev in events:
             if ev.source.selected:
@@ -63,5 +63,5 @@ class VideoViewer(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(VideoViewer)
-    app.run()
+    m = flx.launch(VideoViewer)
+    flx.run()

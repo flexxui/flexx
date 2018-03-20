@@ -5,10 +5,10 @@ This example demonstrates a simple drawing app.
 Also useful for testing canvas and its mouse events.
 """
 
-from flexx import app, event, ui
+from flexx import flx
 
 
-class Drawing(ui.CanvasWidget):
+class Drawing(flx.CanvasWidget):
     
     CSS = """
     .flx-Drawing {background: #fff; border: 5px solid #000;}
@@ -23,12 +23,12 @@ class Drawing(ui.CanvasWidget):
         self.set_capture_mouse(1)
         
         # Label to show current mouse position
-        self.wpos = ui.Label()
+        self.wpos = flx.Label()
     
     def show_pos(self, ev):
         self.wpos.set_text('pos: %s  buttons: %s' % (ev.pos, ev.buttons))
     
-    @event.reaction('mouse_move')
+    @flx.reaction('mouse_move')
     def on_move(self, *events):
         for ev in events:
             
@@ -47,7 +47,7 @@ class Drawing(ui.CanvasWidget):
             self._last_pos = ev.pos
             self.show_pos(ev)
     
-    @event.reaction('mouse_down')
+    @flx.reaction('mouse_down')
     def on_down(self, *events):
         print('down!')
         for ev in events:
@@ -58,7 +58,7 @@ class Drawing(ui.CanvasWidget):
             self._last_pos = ev.pos
             self.show_pos(ev)
     
-    @event.reaction('mouse_up')
+    @flx.reaction('mouse_up')
     def on_up(self, *events):
         print('up!')
         for ev in events:
@@ -69,7 +69,7 @@ class Drawing(ui.CanvasWidget):
             self.show_pos(ev)
 
 
-class Main(ui.Widget):
+class Main(flx.Widget):
     """ Embed in larger widget to test offset.
     """
     
@@ -79,15 +79,15 @@ class Main(ui.Widget):
     
     def init(self):
         
-        with ui.VFix():
-            ui.Widget(flex=1)
-            with ui.HFix(flex=2):
-                ui.Widget(flex=1)
+        with flx.VFix():
+            flx.Widget(flex=1)
+            with flx.HFix(flex=2):
+                flx.Widget(flex=1)
                 Drawing(flex=2)
-                ui.Widget(flex=1)
-            ui.Widget(flex=1)
+                flx.Widget(flex=1)
+            flx.Widget(flex=1)
 
 
 if __name__ == '__main__':
-    m = app.launch(Main, 'app')
-    app.start()
+    m = flx.launch(Main, 'app')
+    flx.start()

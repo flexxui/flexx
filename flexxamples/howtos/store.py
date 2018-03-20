@@ -15,23 +15,23 @@ application that react to the name properties.
 
 """
 
-from flexx import app, event, ui
+from flexx import flx
 
 
-class MyApp(app.JsComponent):
+class MyApp(flx.JsComponent):
     """ This the root of the app, accessible via self.root on any component.
     It functions as a central data-store. In this case it is a JsComponent,
     but it can also be a PyComponent if that makes more sense.
     """
     
-    first_name = event.StringProp(settable=True)
-    last_name = event.StringProp(settable=True)
+    first_name = flx.StringProp(settable=True)
+    last_name = flx.StringProp(settable=True)
     
     def init(self):
         View()
 
 
-class MyPersonLabel(ui.Widget):
+class MyPersonLabel(flx.Widget):
     """ A simple widget that renders the name.
     """
     
@@ -39,37 +39,37 @@ class MyPersonLabel(ui.Widget):
         return [self.root.first_name + ' ' + self.root.last_name]
 
 
-class View(ui.Widget):
+class View(flx.Widget):
     """ This displays the person's name, as well as the input fields to update it.
     """
     
     def init(self):
-        with ui.VBox():
+        with flx.VBox():
             
-            with ui.HBox():
-                self.first_edit = ui.LineEdit(placeholder_text='first name',
+            with flx.HBox():
+                self.first_edit = flx.LineEdit(placeholder_text='first name',
                                               text='Jane')
-                self.last_edit = ui.LineEdit(placeholder_text='last name',
+                self.last_edit = flx.LineEdit(placeholder_text='last name',
                                              text='Doe')
-                ui.Widget(flex=1)  # spacer
+                flx.Widget(flex=1)  # spacer
                 
-            with ui.HBox():
-                ui.Label(text=lambda: self.root.first_name,
+            with flx.HBox():
+                flx.Label(text=lambda: self.root.first_name,
                          style='border:1px solid red')
-                ui.Label(text=lambda: self.root.last_name,
+                flx.Label(text=lambda: self.root.last_name,
                          style='border:1px solid red')
-                ui.Widget(flex=1)  # spacer
+                flx.Widget(flex=1)  # spacer
             
             MyPersonLabel(style='border:1px solid blue')
             
-            ui.Widget(flex=1)  # spacer
+            flx.Widget(flex=1)  # spacer
     
-    @event.reaction
+    @flx.reaction
     def _update_name(self):
         self.root.set_first_name(self.first_edit.text)
         self.root.set_last_name(self.last_edit.text)
 
 
 if __name__ == '__main__':
-    m = app.launch(MyApp)
-    app.run()
+    m = flx.launch(MyApp)
+    flx.run()

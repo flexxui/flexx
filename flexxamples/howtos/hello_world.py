@@ -5,14 +5,14 @@ using a custom widget that is populated in its ``init()``.
 """
 
 
-from flexx import app, ui
+from flexx import flx
 
-class Main(ui.Widget):
+class Main(flx.Widget):
     
     def init(self):
-        self.b1 = ui.Button(text='Hello')
-        self.b2 = ui.Button(text='World')
+        self.b1 = flx.Button(text='Hello')
+        self.b2 = flx.Button(text='World')
 
 if __name__ == '__main__':
-    m = app.launch(Main)
-    app.run()
+    m = flx.launch(Main)
+    flx.run()

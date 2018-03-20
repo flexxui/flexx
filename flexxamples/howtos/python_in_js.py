@@ -12,7 +12,7 @@ Note that once running, there is no interaction with the Python side, so this
 example can be exported to standalone HTML.
 """
 
-from flexx import app, ui
+from flexx import flx
 
 # Define a value. If used in JS, this value will be included in the definition
 # of the JS module that corresponds to this Python module. Therefore, the value
@@ -42,7 +42,7 @@ def poly(x, *coefs):
 from html import escape
 
 
-class UsingPython(ui.Widget):
+class UsingPython(flx.Widget):
 
     def init(self):
         
@@ -57,9 +57,9 @@ class UsingPython(ui.Widget):
         lines.append('String with escaped html: ' + escape('html <tags>!'))
         lines.append('String with escaped html: ' + escape('Woezel & Pip'))
         
-        self.label = ui.Label(wrap=0, html='<br />'.join(lines))
+        self.label = flx.Label(wrap=0, html='<br />'.join(lines))
 
 
 if __name__ == '__main__':
-    m = app.launch(UsingPython, 'browser')
-    app.run()
+    m = flx.launch(UsingPython, 'browser')
+    flx.run()

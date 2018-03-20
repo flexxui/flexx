@@ -5,20 +5,20 @@ This example demonstrates a code editor widget based on CodeMirror.
 
 # todo: Maybe this should be a widget in the library (flexx.ui.CodeMirror) ?
 
-from flexx import app, event, ui
+from flexx import flx
 
 # Associate CodeMirror's assets with this module so that Flexx will load
 # them when (things from) this module is used.
 base_url = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/'
-app.assets.associate_asset(__name__, base_url + '5.21.0/codemirror.min.css')
-app.assets.associate_asset(__name__, base_url + '5.21.0/codemirror.min.js')
-app.assets.associate_asset(__name__, base_url + '5.21.0/mode/python/python.js')
-app.assets.associate_asset(__name__, base_url + '5.21.0/theme/solarized.css')
-app.assets.associate_asset(__name__, base_url + '5.21.0/addon/selection/active-line.js')
-app.assets.associate_asset(__name__, base_url + '5.21.0/addon/edit/matchbrackets.js')
+flx.assets.associate_asset(__name__, base_url + '5.21.0/codemirror.min.css')
+flx.assets.associate_asset(__name__, base_url + '5.21.0/codemirror.min.js')
+flx.assets.associate_asset(__name__, base_url + '5.21.0/mode/python/python.js')
+flx.assets.associate_asset(__name__, base_url + '5.21.0/theme/solarized.css')
+flx.assets.associate_asset(__name__, base_url + '5.21.0/addon/selection/active-line.js')
+flx.assets.associate_asset(__name__, base_url + '5.21.0/addon/edit/matchbrackets.js')
 
 
-class CodeEditor(ui.Widget):
+class CodeEditor(flx.Widget):
     """ A CodeEditor widget based on CodeMirror.
     """
     
@@ -47,11 +47,11 @@ class CodeEditor(ui.Widget):
                         )
         self.cm = window.CodeMirror(self.node, options)
     
-    @event.reaction('size')
+    @flx.reaction('size')
     def __on_size(self, *events):
         self.cm.refresh()
 
 
 if __name__ == '__main__':
-    app.launch(CodeEditor, 'app')
-    app.run()
+    flx.launch(CodeEditor, 'app')
+    flx.run()

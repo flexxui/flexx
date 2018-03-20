@@ -14,7 +14,7 @@ in the init(). Click "open in new tab" to see the effect.
 import os
 
 import flexx
-from flexx import app, ui
+from flexx import flx
 
 # todo: support icons in widgets like Button, TabWidget, etc.
 # todo: support fontawesome icons
@@ -25,18 +25,18 @@ black_png = ('data:image/png;base64,'
              'GD4TyEeTAacOHGCKDxqwKgBtDVgaGYmAD/v6XAYiQl7AAAAAElFTkSuQmCC')
     
 
-class Icons1(ui.Widget):
+class Icons1(flx.Widget):
     
     def init(self):
-        ui.Button(text='Not much to see here ...')
+        flx.Button(text='Not much to see here ...')
         
 
-class Icons2(ui.Widget):
+class Icons2(flx.Widget):
     
     def init(self):
         self.set_title('Icon demo')
         self.set_icon(black_png)
-        ui.Button(text='Not much to see here ...')
+        flx.Button(text='Not much to see here ...')
 
 
 if __name__ == '__main__':
@@ -50,9 +50,9 @@ if __name__ == '__main__':
     
     # icon = None  # use default
     # icon = 'https://assets-cdn.github.com/favicon.ico'
-    # icon = app.assets.add_shared_data('ico.icon', open(fname, 'rb').read())
+    # icon = flx.assets.add_shared_data('ico.icon', open(fname, 'rb').read())
     icon = black_png
     # icon = fname
     
-    m = app.App(Icons1, title='Icon demo', icon=icon).launch('app')
-    app.start()
+    m = flx.App(Icons1, title='Icon demo', icon=icon).launch('app')
+    flx.start()

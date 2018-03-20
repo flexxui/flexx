@@ -5,17 +5,17 @@ This example demonstrates a code editor widget based on Ace.
 
 # todo: Maybe this should be a widget in the library (flexx.ui.Ace) ?
 
-from flexx import app, event, ui
+from flexx import flx
 
 # Associate Ace's assets with this module so that Flexx will load
 # them when (things from) this module is used.
 base_url = 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.6/'
-app.assets.associate_asset(__name__, base_url + 'ace.js')
-app.assets.associate_asset(__name__, base_url + 'mode-python.js')
-app.assets.associate_asset(__name__, base_url + 'theme-solarized_dark.js')
+flx.assets.associate_asset(__name__, base_url + 'ace.js')
+flx.assets.associate_asset(__name__, base_url + 'mode-python.js')
+flx.assets.associate_asset(__name__, base_url + 'theme-solarized_dark.js')
 
 
-class CodeEditor(ui.Widget):
+class CodeEditor(flx.Widget):
     """ A CodeEditor widget based on Ace.
     """
     
@@ -35,11 +35,11 @@ class CodeEditor(ui.Widget):
         self.ace.setTheme("ace/theme/solarized_dark")
         self.ace.getSession().setMode("ace/mode/python")
         
-    @event.reaction('size')
+    @flx.reaction('size')
     def __on_size(self, *events):
         self.ace.resize()
 
 
 if __name__ == '__main__':
-    app.launch(CodeEditor, 'app')
-    app.run()
+    flx.launch(CodeEditor, 'app')
+    flx.run()

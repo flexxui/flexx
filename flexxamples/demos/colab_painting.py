@@ -9,7 +9,7 @@ This app might be running at the demo server: http://flexx1.zoof.io
 
 import random
 
-from flexx import app, event, ui
+from flexx import flx
 
 COLORS = ('#eee', '#999', '#555', '#111', 
           '#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff',
@@ -17,10 +17,10 @@ COLORS = ('#eee', '#999', '#555', '#111',
           )
 
 
-class Relay(event.Component):
+class Relay(flx.Component):
     """ Global object to relay paint events to all participants.
     """
-    @event.emitter
+    @flx.emitter
     def add_paint_for_all(self, pos, color):
         return dict(pos=pos, color=color)
 
@@ -29,20 +29,20 @@ class Relay(event.Component):
 relay = Relay()
 
 
-class ColabPainting(app.PyComponent):
+class ColabPainting(flx.PyComponent):
     """ The Python side of the app. There is one instance per connection.
     """
     
-    color = event.ColorProp(settable=True, doc="Paint color")
+    color = flx.ColorProp(settable=True, doc="Paint color")
     
-    status = event.StringProp('', settable=True, doc="Status text")
+    status = flx.StringProp('', settable=True, doc="Status text")
     
     def init(self):
         self.set_color(random.choice(COLORS))
         self.widget = ColabPaintingView(self)
         self._update_participants()
     
-    @event.action
+    @flx.action
     def add_paint(self, pos):
         """ Add paint at the specified position.
         """
@@ -55,16 +55,16 @@ class ColabPainting(app.PyComponent):
         for ev in events:
             self.widget.add_paint_to_canvas(ev.pos, ev.color)
     
-    @app.manager.reaction('connections_changed')
+    @flx.manager.reaction('connections_changed')
     def _update_participants(self, *events):
         if self.session.status:
-            sessions = app.manager.get_connections(self.session.app_name)
+            sessions = flx.manager.get_connections(self.session.app_name)
             n = len(sessions)
             del sessions
             self.set_status('%i persons are painting' % n)
 
 
-class ColabPaintingView(ui.Widget):
+class ColabPaintingView(flx.Widget):
     """ The part of the app that runs in the browser.
     """
     
@@ -83,28 +83,28 @@ class ColabPaintingView(ui.Widget):
         self.model = model
         
         # App layout
-        with ui.VBox():
-            ui.Label(flex=0, text=lambda: model.status)
-            ui.Widget(flex=1)
-            with ui.HBox(flex=2):
-                ui.Widget(flex=1)
-                self.canvas = ui.CanvasWidget(flex=0)
-                ui.Widget(flex=1)
-            ui.Widget(flex=1)
+        with flx.VBox():
+            flx.Label(flex=0, text=lambda: model.status)
+            flx.Widget(flex=1)
+            with flx.HBox(flex=2):
+                flx.Widget(flex=1)
+                self.canvas = flx.CanvasWidget(flex=0)
+                flx.Widget(flex=1)
+            flx.Widget(flex=1)
         
         # Init context to draw to
         self._ctx = self.canvas.node.getContext('2d')
 
-    @event.reaction
+    @flx.reaction
     def __update_color(self):
         self.canvas.apply_style('border: 10px solid ' + self.model.color.hex)
     
-    @event.reaction('canvas.mouse_down')
+    @flx.reaction('canvas.mouse_down')
     def __on_click(self, *events):
         for ev in events:
             self.model.add_paint(ev.pos)
     
-    @event.action
+    @flx.action
     def add_paint_to_canvas(self, pos, color):
         """ Actually draw a dot on the canvas.
         """
@@ -116,7 +116,7 @@ class ColabPaintingView(ui.Widget):
 
 
 if __name__ == '__main__':
-    a = app.App(ColabPainting)
+    a = flx.App(ColabPainting)
     a.serve()
     # m = a.launch('browser')  # for use during development
-    app.start()
+    flx.start()

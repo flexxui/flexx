@@ -12,7 +12,7 @@ This fallback illustrates how any kind of data can be send to JS by providing
 the serializer with an extension.
 """
 
-from flexx import app, event, ui
+from flexx import flx
 
 
 # Prepare data array, preferably using Numpy
@@ -32,7 +32,7 @@ except ImportError:
         data_array[i] = random.random()
     
     # Add extension that encodes a ctypes array to ndarray extension data
-    @app.serializer.add_extension
+    @flx.serializer.add_extension
     class CtypesArrayExtension(bsdf_lite.Extension):
     
         name = 'ndarray'
@@ -52,7 +52,7 @@ except ImportError:
                         data=bytes(v))
 
 
-class SendData(app.PyComponent):
+class SendData(flx.PyComponent):
     """ A simple example demonstrating sending binary data from Python to JS.
     """
     
@@ -61,15 +61,15 @@ class SendData(app.PyComponent):
         self.view.set_data(data_array)
 
 
-class SendDataView(ui.Widget):
+class SendDataView(flx.Widget):
     """ A widget that displays array data.
     """
     
     def init(self):
-        self.label = ui.Label()
+        self.label = flx.Label()
         self.apply_style('overflow-y: scroll;')  # enable scrolling
     
-    @event.action
+    @flx.action
     def set_data(self, data):
         # We receive the data as a typed array.
         # If we would send raw bytes, we would receive it as a DataView, which
@@ -83,5 +83,5 @@ class SendDataView(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(SendData, 'app')
-    app.run()
+    m = flx.launch(SendData, 'app')
+    flx.run()

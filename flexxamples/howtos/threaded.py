@@ -5,7 +5,7 @@ This is not a recommended use in general.
 Invoking actions is thread-safe. Actions and reactions are always
 executed in the thread that runs the event loop.
 
-The app.create_server() is used to (re)create the server object. It is
+The flx.create_server() is used to (re)create the server object. It is
 important that the used asyncio loop is local to the thread.
 """
 
@@ -13,14 +13,14 @@ import time
 import threading
 import asyncio
 
-from flexx import app, event
+from flexx import flx
 
 
-class MyComponent1(event.Component):
+class MyComponent1(flx.Component):
     
-    foo = event.Property(0, settable=True)
+    foo = flx.Property(0, settable=True)
     
-    @event.reaction('foo')
+    @flx.reaction('foo')
     def on_foo(self, *events):
         for ev in events:
             print('foo changed to', ev.new_value)
@@ -30,8 +30,8 @@ comp = MyComponent1()
 
 # Start server in its own thread
 def start_flexx():
-    app.create_server(loop=asyncio.new_event_loop())
-    app.start()
+    flx.create_server(loop=asyncio.new_event_loop())
+    flx.start()
 
 t = threading.Thread(target=start_flexx)
 t.start()
@@ -43,5 +43,5 @@ for i in range(5, 9):
     comp.set_foo(i)
 
 # Stop event loop (this is thread-safe) and wait for thread to end
-app.stop()
+flx.stop()
 t.join()

@@ -8,7 +8,7 @@ Application served through this server is loaded on the browser with 'https'
 protocol and its websocket is using 'wss'.
 """
 
-from flexx import app, ui, config
+from flexx import flx
 
 # generate self-signed certificate for this example
 import os
@@ -20,15 +20,15 @@ os.system('openssl req -x509 -nodes -days 1 -batch -newkey rsa:2048 '
           '-keyout %s -out %s' % (KEYFILE, CERTFILE))
 
 # use the self-signed certificate as if specified in normal config
-config.ssl_certfile = CERTFILE
-config.ssl_keyfile = KEYFILE
+flx.config.ssl_certfile = CERTFILE
+flx.config.ssl_keyfile = KEYFILE
 
 
 # Some very secret Model
-class Example(ui.Widget):
+class Example(flx.Widget):
     def init(self):
-        ui.Button(text='Secret Button')
+        flx.Button(text='Secret Button')
 
 # run application
-app.serve(Example, 'Example')
-app.start()
+flx.serve(Example, 'Example')
+flx.start()

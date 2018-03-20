@@ -9,33 +9,33 @@ from time import time
 import psutil
 import asyncio
 
-from flexx import app, event, ui
+from flexx import flx
 
 nsamples = 16
 
 
-class Relay(event.Component):
+class Relay(flx.Component):
     
-    number_of_connections = event.IntProp(settable=True)
+    number_of_connections = flx.IntProp(settable=True)
     
     def init(self):
         self.update_number_of_connections()
         self.refresh()
     
-    @app.manager.reaction('connections_changed')
+    @flx.manager.reaction('connections_changed')
     def update_number_of_connections(self, *events):
         n = 0
-        for name in app.manager.get_app_names():
-            sessions = app.manager.get_connections(name)
+        for name in flx.manager.get_app_names():
+            sessions = flx.manager.get_connections(name)
             n += len(sessions)
         self.set_number_of_connections(n)
     
-    @event.emitter
+    @flx.emitter
     def system_info(self):
         return dict(cpu=psutil.cpu_percent(),
                     mem=psutil.virtual_memory().percent,
                     sessions=self.number_of_connections,
-                    total_sessions=app.manager.total_sessions,
+                    total_sessions=flx.manager.total_sessions,
                     )
         
     def refresh(self):
@@ -47,18 +47,18 @@ class Relay(event.Component):
 relay = Relay()
 
 
-class Monitor(app.PyComponent):
+class Monitor(flx.PyComponent):
     
     cpu_count = psutil.cpu_count()
     nsamples = nsamples
     
     def init(self):
         
-        with ui.VBox():
-            ui.Label(html='<h3>Server monitor</h3>')
-            if app.current_server().serving[0] == 'localhost':
+        with flx.VBox():
+            flx.Label(html='<h3>Server monitor</h3>')
+            if flx.current_server().serving[0] == 'localhost':
                 # Don't do this for a public server
-                self.button = ui.Button(text='Do some work')
+                self.button = flx.Button(text='Do some work')
                 self.button.reaction(self._do_work, 'mouse_down')
             self.view = MonitorView(flex=1)
     
@@ -79,20 +79,20 @@ class Monitor(app.PyComponent):
             pass
 
 
-class MonitorView(ui.VBox):
+class MonitorView(flx.VBox):
     
     def init(self):
         self.start_time = time()
         
-        self.status = ui.Label(text='...')
-        self.cpu_plot = ui.PlotWidget(flex=1, style='width: 640px; height: 320px;',
-                                      xdata=[], yrange=(0, 100), 
-                                      ylabel='CPU usage (%)')
-        self.mem_plot = ui.PlotWidget(flex=1, style='width: 640px; height: 320px;',
-                                      xdata=[], yrange=(0, 100), 
-                                      ylabel='Mem usage (%)')
+        self.status = flx.Label(text='...')
+        self.cpu_plot = flx.PlotWidget(flex=1, style='width: 640px; height: 320px;',
+                                       xdata=[], yrange=(0, 100), 
+                                       ylabel='CPU usage (%)')
+        self.mem_plot = flx.PlotWidget(flex=1, style='width: 640px; height: 320px;',
+                                       xdata=[], yrange=(0, 100), 
+                                       ylabel='Mem usage (%)')
     
-    @event.action
+    @flx.action
     def update_info(self, info):
         
         # Set connections
@@ -119,7 +119,7 @@ class MonitorView(ui.VBox):
 
 
 if __name__ == '__main__':
-    a = app.App(Monitor)
+    a = flx.App(Monitor)
     a.serve()
     # m = a.launch('browser')  # for use during development
-    app.start()
+    flx.start()

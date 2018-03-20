@@ -5,10 +5,10 @@ from one process.
 
 from flexx import app
 
-from flexx.ui.examples.monitor import Monitor
-from flexx.ui.examples.chatroom import ChatRoom
-from flexx.ui.examples.demo import Demo
-from flexx.ui.examples.colab_painting import ColabPainting
+from flexxamples.demos.monitor import Monitor
+from flexxamples.demos.chatroom import ChatRoom
+from flexxamples.demos.demo import Demo
+from flexxamples.demos.colab_painting import ColabPainting
 
 
 if __name__ == '__main__':

@@ -14,15 +14,15 @@ Goto:
 
 """
 
-from flexx import app
-from flexx.ui.examples.drawing import Drawing
-from flexx.ui.examples.chatroom import ChatRoom
+from flexx import flx
+from flexxamples.demos.drawing import Drawing
+from flexxamples.demos.chatroom import ChatRoom
 
 import tornado.web
 
 # Serve some web apps, just for fun
-app.serve(Drawing)
-app.serve(ChatRoom)
+flx.serve(Drawing)
+flx.serve(ChatRoom)
 
 
 class MyAboutHandler(tornado.web.RequestHandler):
@@ -40,7 +40,7 @@ class MyAPIHandler(tornado.web.RequestHandler):
 
 
 # Get a ref to the tornado.web.Application object
-tornado_app = app.current_server().app
+tornado_app = flx.current_server().app
 
 # Add our handler
 tornado_app.add_handlers(r".*", [(r"/about", MyAboutHandler),
@@ -51,4 +51,4 @@ tornado_app.add_handlers(r".*", [(r"/about", MyAboutHandler),
 # specific handlers here even though Flexx' main handler is very
 # generic.
 
-app.start()
+flx.start()

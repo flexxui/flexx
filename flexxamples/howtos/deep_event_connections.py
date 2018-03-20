@@ -6,23 +6,23 @@ one can use a double-star to select also the children's children, and
 their children, etc.
 """
 
-from flexx import app, event, ui
+from flexx import flx
 
 
-class DeepEventConnections(ui.Widget):
+class DeepEventConnections(flx.Widget):
     
     def init(self):
         # Put a label and some sliders deep in the hierarchy
         
-        with ui.VBox():
-            self.label = ui.Label()
-            with ui.HFix(flex=1):
+        with flx.VBox():
+            self.label = flx.Label()
+            with flx.HFix(flex=1):
                 for j in range(2):
-                    with ui.VBox(flex=1):
+                    with flx.VBox(flex=1):
                         for i in range(5):
-                            ui.Slider(value=i/5)
+                            flx.Slider(value=i/5)
 
-    @event.reaction('!children**.value')
+    @flx.reaction('!children**.value')
     def on_slider_change(self, *events):
         for ev in events:
             self.label.set_text('Slider %s changed to %f' %
@@ -30,5 +30,5 @@ class DeepEventConnections(ui.Widget):
 
 
 if __name__ == '__main__':
-    m = app.launch(DeepEventConnections)
-    app.run()
+    m = flx.launch(DeepEventConnections)
+    flx.run()
