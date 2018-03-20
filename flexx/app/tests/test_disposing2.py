@@ -8,8 +8,9 @@ import sys
 import weakref
 import asyncio
 
-from flexx import app, event, webruntime
-from flexx.pyscript import this_is_js
+from pscript import this_is_js
+
+from flexx import app, event
 
 from flexx.util.testing import run_tests_if_main, raises, skipif, skip
 from flexx.app.live_tester import run_live, roundtrip, launch

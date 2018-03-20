@@ -15,8 +15,9 @@ Layout a series of (input) widgets in a form. Example:
                 ui.Widget(flex=1)  # Spacing
 """
 
+from pscript import window, undefined
+
 from ... import event
-from ...pyscript import window, undefined
 from . import Layout
 from .. import create_element
 

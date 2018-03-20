@@ -29,8 +29,9 @@ Example:
                 self.t.set_current(self.a)
 """
 
+from pscript import window
+
 from ... import event
-from ...pyscript import window
 from ._stack import StackLayout
 
 

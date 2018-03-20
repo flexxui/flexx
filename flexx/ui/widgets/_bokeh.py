@@ -28,7 +28,6 @@ Show Bokeh plots in Flexx. Example:
 import os
 
 from ... import event, app
-from ...pyscript.stubs import window
 from . import Widget
 
 
@@ -108,6 +107,7 @@ class BokehWidget(Widget):
     def set_plot_components(self, d):
         """ Set the plot using its script/html components.
         """
+        global window
         # Embed div
         self.node.innerHTML = d.div  # We put trust in d.div
         # "exec" code

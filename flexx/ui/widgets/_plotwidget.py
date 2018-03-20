@@ -43,7 +43,8 @@ Interactive example:
             self.plot.set_data(self.plot.xdata, ydata)
 """
 
-from ...pyscript import window
+from pscript import window
+
 from ... import event
 from ._canvas import CanvasWidget
 

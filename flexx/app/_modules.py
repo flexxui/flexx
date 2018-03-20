@@ -11,9 +11,10 @@ import time
 import types
 import logging
 
-from ..pyscript import (py2js, JSString, RawJS, JSConstant, create_js_module,
+from pscript import (py2js, JSString, RawJS, JSConstant, create_js_module,
                         get_all_std_names)
-from ..pyscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
+from pscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
+
 from ..event import Component, Property, loop
 from ..event._js import create_js_component_class
 
@@ -23,7 +24,7 @@ from ._asset import Asset, get_mod_name, module_is_package
 from . import logger
 
 
-pyscript_types = type, types.FunctionType  # class or function
+pscript_types = type, types.FunctionType  # class or function
 
 if sys.version_info > (3, ):
     json_types = None.__class__, bool, int, float, str, tuple, list, dict
@@ -32,7 +33,7 @@ else:  # pragma: no cover
 
 # In essense, the idea of modules is all about propagating dependencies:
 # 
-# * In PyScript we detect unresolved dependencies in JS code, and move these up
+# * In PScript we detect unresolved dependencies in JS code, and move these up
 #   the namespace stack.
 # * The create_js_component_class() function and AppComponentMeta class collect the
 #   dependencies from the different code pieces.
@@ -61,11 +62,16 @@ def mangle_dotted_vars(jscode, names_to_mangle):
     return jscode
 
 
+def is_pscript_module(m):
+    return (getattr(m, '__pscript__', False) or 
+            getattr(m, '__pyscript__', False))
+
+
 class JSModule:
     """
     A JSModule object represents the JavaScript (and CSS) corresponding
     to a Python module, which either defines one or more
-    PyComponent/JsCompontent classes, or PyScript transpilable functions or
+    PyComponent/JsCompontent classes, or PScript transpilable functions or
     classes. Intended for internal use only.
     
     Modules are collected in a "store" which is simply a dictionary. The
@@ -82,7 +88,7 @@ class JSModule:
       are defined in this module and marked as used.
     * Variables with json-compatible values that are used by JS in this module.
     * Imports of names from other modules.
-    * ... unless this module defines ``__pyscript__ = True``, in which case
+    * ... unless this module defines ``__pscript__ = True``, in which case
       the module is transpiled as a whole.
     
     A module can also have dependencies:
@@ -137,7 +143,7 @@ class JSModule:
         # Stuff defined in this module (in JS)
         # We use dicts so that we can "overwrite" them in interactive mode
         self._component_classes = {}
-        self._pyscript_code = {}
+        self._pscript_code = {}
         self._js_values = {}
         # Dependencies
         self._deps = {}  # mod_name -> [mod_as_name, *imports]
@@ -145,10 +151,10 @@ class JSModule:
         self._js_cache = None
         self._css_cache = None
         
-        if getattr(self._pymodule, '__pyscript__', False):
-            # PyScript module; transpile as a whole
+        if is_pscript_module(self._pymodule):
+            # PScript module; transpile as a whole
             js = py2js(self._pymodule, inline_stdlib=False, docstrings=False)
-            self._pyscript_code['__all__'] = js
+            self._pscript_code['__all__'] = js
             self._provided_names.update([n for n in js.meta['vars_defined']
                                          if not n.startswith('_')])
         else:
@@ -244,7 +250,7 @@ class JSModule:
             return  # stubs
         elif name in self._provided_names and self.name != '__main__':
             return  # in __main__ we allow redefinitions
-        if getattr(self._pymodule, '__pyscript__', False):
+        if is_pscript_module(self._pymodule):
             return  # everything is transpiled and exported already
         _dep_stack.append(name)
         
@@ -285,13 +291,13 @@ class JSModule:
         self._js_cache = self._css_cache = None
         
         if isinstance(val, types.ModuleType):
-            # Modules as a whole can be converted if its a PyScript module
-            if getattr(val, '__pyscript__', False):
+            # Modules as a whole can be converted if its a PScript module
+            if is_pscript_module(val):
                 self._import(val.__name__, None, None)
                 self._deps[val.__name__][0] = name  # set/overwrite as-name
             else:
                 t = 'JS in "%s" cannot use module %s directly unless it defines %s.'
-                raise ValueError(t % (self.filename, val.__name__, '"__pyscript__"'))
+                raise ValueError(t % (self.filename, val.__name__, '"__pscript__"'))
         
         elif isinstance(val, type) and issubclass(val, Component):
             if val is Component:
@@ -320,7 +326,7 @@ class JSModule:
                     # Define here
                     js = create_js_component_class(val, val.__name__)
                     self._provided_names.add(name)
-                    self._pyscript_code[name] = js
+                    self._pscript_code[name] = js
                     # Recurse
                     self._collect_dependencies_from_bases(val)
                     self._collect_dependencies(js, _dep_stack)
@@ -341,22 +347,22 @@ class JSModule:
             js += 'serializer.add_extension(%s);\n' % name
             js = JSString(js)
             js.meta = funccode.meta
-            self._pyscript_code[name] = js
+            self._pscript_code[name] = js
             self._deps.setdefault('flexx.app._clientcore',
                                  ['flexx.app._clientcore']).append('serializer')
         
-        elif isinstance(val, pyscript_types) and hasattr(val, '__module__'):
-            # Looks like something we can convert using PyScript
+        elif isinstance(val, pscript_types) and hasattr(val, '__module__'):
+            # Looks like something we can convert using PScript
             mod_name = get_mod_name(val)
             if mod_name == self.name:
                 # Define here
                 try:
                     js = py2js(val, inline_stdlib=False, docstrings=False)
                 except Exception as err:
-                    t = 'JS in "%s" uses %r but cannot transpile it with PyScript:\n%s'
+                    t = 'JS in "%s" uses %r but cannot transpile it with PScript:\n%s'
                     raise ValueError(t % (self.filename, name, str(err)))
                 self._provided_names.add(name)
-                self._pyscript_code[name] = js
+                self._pscript_code[name] = js
                 # Recurse
                 if isinstance(val, type):
                     self._collect_dependencies_from_bases(val)
@@ -387,9 +393,9 @@ class JSModule:
             self._js_values[name] = js
         
         elif (getattr(val, '__module__', None) and
-              getattr(sys.modules[val.__module__], '__pyscript__', False) and
+              is_pscript_module(sys.modules[val.__module__]) and
               val is getattr(sys.modules[val.__module__], name, 'unlikely-val')):
-            # An instance from a pyscript module!
+            # An instance from a pscript module!
             # We cannot know the "name" as its known in the module, but
             # we assume that its the same as as_name and test whether
             # it matches in the test above.
@@ -419,7 +425,7 @@ class JSModule:
         Collect dependencies based on the base classes of a class.
         """
         if len(cls.__bases__) != 1:  # pragma: no cover
-            raise TypeError('PyScript classes do not (yet) support '
+            raise TypeError('PScript classes do not (yet) support '
                             'multiple inheritance.')
         if cls is PyComponent or cls is JsComponent or cls is StubComponent:
             return self._add_dep_from_event_module('Component')
@@ -448,7 +454,7 @@ class JSModule:
         if self._js_cache is None:
             # Collect JS and sort by linenr
             js = [cls.JS.CODE for cls in self._component_classes.values()]
-            js += list(self._pyscript_code.values())
+            js += list(self._pscript_code.values())
             js.sort(key=lambda x: x.meta['linenr'])
             used_std_functions, used_std_methods = set(), set()
             for code in js:
@@ -465,7 +471,7 @@ class JSModule:
             js.insert(0, '\n'.join(value_lines))
             # Prepare imports and exports
             exports = tuple(sorted(self._provided_names))
-            imports = ['pyscript-std.js as _py']
+            imports = ['pscript-std.js as _py']
             # Handle dependency imports
             for dep_name in reversed(sorted(self._deps)):
                 names = self._deps[dep_name]

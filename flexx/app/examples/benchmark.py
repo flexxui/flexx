@@ -1,7 +1,7 @@
 """
-Benchmark PyScript, to compare with CPython, Pypy, Brython, etc.
+Benchmark PScript, to compare with CPython, Pypy, Brython, etc.
 
-It appears that PyScript is significantly faster than Brython, which
+It appears that PScript is significantly faster than Brython, which
 seems to be the fastest Python-in-the-brower so far. It is also faster
 than CPython and for some tests on par with Pypy.
 
@@ -17,9 +17,9 @@ RESULTS = [(124863, 'CPython 3.4', 'blue'),
            (137250, 'CPython 3.5', 'blue'),
            (3927770, 'Pypy4', 'blue'),
            (3739170, 'Pypy3', 'blue'),
-           (127957, 'PyScript on Firefox', 'orange'),
-           (79517, 'PyScript on Chrome', 'orange'),
-           (128325, 'PyScript on MS Edge', 'orange'),
+           (127957, 'PScript on Firefox', 'orange'),
+           (79517, 'PScript on Chrome', 'orange'),
+           (128325, 'PScript on MS Edge', 'orange'),
            (2982, 'Brython', 'magenta'),
            (2780, 'Skulpt', 'magenta'),
            (268817, 'PypyJS', 'magenta'),
@@ -35,7 +35,7 @@ from flexx import app, event
 
 # Mark the pystone module to be transpiled as a whole. It uses globals
 # a lot, which somehow causes inifinite loops if its transpiled in parts.
-# pystone.__pyscript__ = True
+# pystone.__pscript__ = True
 
 # Backend selection
 BACKEND = 'firefox-app or chrome-app'
@@ -173,7 +173,7 @@ class BenchmarkerJs(app.JsComponent):
     @event.action
     def benchmark(self):
         print()
-        print('==== PyScript on %s =====' % BACKEND)
+        print('==== PScript on %s =====' % BACKEND)
         print()
         # pystone_main()
         convolve()

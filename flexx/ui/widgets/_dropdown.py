@@ -19,7 +19,8 @@
             self.label.set_text(text)
 """
 
-from ...pyscript import window
+from pscript import window
+
 from ... import event, app
 from .._widget import Widget, create_element
 

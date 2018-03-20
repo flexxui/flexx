@@ -23,8 +23,6 @@ also be used by themselves:
 * flexx.ui - the widgets
 * flexx.app - the event loop and server
 * flexx.event - properties and events
-* flexx.pyscript - Python to JavaScript transpiler
-* flexx.webruntime - to launch a runtime
 * flexx.util - utilities
 
 For more information, see http://flexx.readthedocs.io.

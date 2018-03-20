@@ -23,7 +23,7 @@ sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, os.path.abspath('scripts'))
 
 import flexx
-from flexx import app, event, ui, util, webruntime
+from flexx import app, event, ui, util
 
 # Cut our relevant part of docstring of Flexx' main module (i.e. the summary)
 flexx.__doc__ = flexx.__doc__.split('----')[0]
@@ -55,7 +55,6 @@ sphinxver = sphinx.version_info
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon' if sphinxver >= (1, 3) else 'sphinxcontrib.napoleon',
-    'pyscriptexample',
     'uiexample',
     'flexxdocsgen',
 ]

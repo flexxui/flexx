@@ -37,7 +37,7 @@ def test_asset_store_collect():
     assert 'JsComponent.prototype =' in s.get_asset('flexx.app.js').to_string()
     assert 'JsComponent.prototype =' in s.get_asset('flexx.js').to_string()
     #assert 'JsComponent.prototype =' not in s.get_asset('flexx.ui.js').to_string()
-    assert 'JsComponent.prototype =' not in s.get_asset('pyscript-std.js').to_string()
+    assert 'JsComponent.prototype =' not in s.get_asset('pscript-std.js').to_string()
 
 
 def test_asset_store_collect2():

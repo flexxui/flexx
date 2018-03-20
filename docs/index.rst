@@ -31,9 +31,6 @@ Contents
    ui/index
    app/index
    event/index
-   pyscript/index
-   webruntime/index
-   dialite/index
    util/index
    
    cli_and_config

@@ -3,8 +3,9 @@
 An interactive spline demo.
 """
 
+from pscript import window
+
 from flexx import app, event, ui
-from flexx.pyscript import window
 
 
 SPLINES = ['linear', 'basis', 'cardinal', 'catmullrom', 'lagrange', 'lanczos']

@@ -20,7 +20,6 @@
 """
 
 from ... import event
-from ...pyscript import window
 from . import Widget
 
 
@@ -41,6 +40,7 @@ class ImageWidget(Widget):
         """)
     
     def _create_dom(self):
+        global window
         outer = window.document.createElement('div')
         inner = window.document.createElement('img')
         outer.appendChild(inner)
@@ -75,6 +75,7 @@ class VideoWidget(Widget):
         """)
     
     def _create_dom(self):
+        global window
         node = window.document.createElement('video')
         node.controls = 'controls'
         node.textContent = 'Your browser does not support HTML5 video.'
@@ -103,6 +104,7 @@ class YoutubeWidget(Widget):
         """)
 
     def _create_dom(self):
+        global window
         node = window.document.createElement('div')
         self.inode = window.document.createElement('iframe')
         node.appendChild(self.inode)

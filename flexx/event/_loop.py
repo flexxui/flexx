@@ -4,7 +4,7 @@ Implementation of Flexx' event loop based on asyncio.
 
 # Note: there are some unusual constructs here, such as ``if xx is True``.
 # These are there to avoid inefficient JS code as this code is transpiled
-# using PyScript. This code is quite performance crirical.
+# using PScript. This code is quite performance crirical.
 
 import asyncio
 import threading

@@ -67,7 +67,6 @@ and custom styling:
 from ... import event
 from .._widget import Widget, create_element
 
-window = None
 loop = event.loop
 
 
@@ -317,7 +316,7 @@ class TreeWidget(Widget):
                         if self._last_selected is not item:
                             mark_selected = False
                             for i in self.get_all_items():
-                                if mark_selected == True:  # noqa - PyScript perf
+                                if mark_selected == True:  # noqa - PScript perf
                                     if i is item or i is self._last_selected:
                                         break
                                     i.set_selected(True)
@@ -536,6 +535,7 @@ class TreeItem(Widget):
         super().set_parent(parent, pos)
     
     def _create_dom(self):
+        global window
         node = window.document.createElement('li')
         self._row = window.document.createElement('span')  # we need this node
         node.appendChild(self._row)

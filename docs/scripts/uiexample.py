@@ -36,7 +36,7 @@ class uiexample(nodes.raw): pass
 def create_ui_example(filename, to_root, height=300, source=None):
     """ Given a filename, export the containing app to HTML, return
     generated HTML. Needs to be done via filename, not direct code, so
-    that PyScript can obtain source.
+    that PScript can obtain source.
     """
     code = open(filename, 'rb').read().decode()
     fname = os.path.split(filename)[1]
