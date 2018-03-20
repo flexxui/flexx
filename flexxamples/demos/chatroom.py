@@ -6,14 +6,14 @@ This app might be running at the demo server: http://flexx1.zoof.io
 
 import asyncio
 
-from flexx import app, event, ui
+from flexx import flx
 
 
-class Relay(event.Component):
+class Relay(flx.Component):
     """ Global object to relay messages to all participants.
     """
     
-    @event.emitter
+    @flx.emitter
     def create_message(self, name, message):
         return dict(name=name, message=message)
 
@@ -21,7 +21,7 @@ class Relay(event.Component):
 relay = Relay()
 
 
-class MessageBox(ui.Label):
+class MessageBox(flx.Label):
     
     CSS = """
     .flx-MessageBox {
@@ -43,33 +43,33 @@ class MessageBox(ui.Label):
         self._se.textContent = ''
         return text
     
-    @event.action
+    @flx.action
     def add_message(self, name, msg):
         line = '<i>' + self.sanitize(name) + '</i>: ' + self.sanitize(msg)
         self.set_html(self.html + line + '<br />')
 
 
-class ChatRoom(app.PyComponent):
+class ChatRoom(flx.PyComponent):
     """ This represents one connection to the chat room.
     """
     
     def init(self):
-        with ui.HBox(title='Flexx chatroom demo'):
-            ui.Widget(flex=1)
-            with ui.VBox():
-                self.name_edit = ui.LineEdit(placeholder_text='your name')
-                self.people_label = ui.Label(flex=1, style='min-width: 250px')
-            with ui.VBox(style='min-width: 450px'):
+        with flx.HBox(title='Flexx chatroom demo'):
+            flx.Widget(flex=1)
+            with flx.VBox():
+                self.name_edit = flx.LineEdit(placeholder_text='your name')
+                self.people_label = flx.Label(flex=1, style='min-width: 250px')
+            with flx.VBox(style='min-width: 450px'):
                 self.messages = MessageBox(flex=1)
-                with ui.HBox():
-                    self.msg_edit = ui.LineEdit(flex=1,
-                                                placeholder_text='enter message')
-                    self.ok = ui.Button(text='Send')
-            ui.Widget(flex=1)
+                with flx.HBox():
+                    self.msg_edit = flx.LineEdit(flex=1,
+                                                 placeholder_text='enter message')
+                    self.ok = flx.Button(text='Send')
+            flx.Widget(flex=1)
         
         self._update_participants()
     
-    @event.reaction('ok.mouse_down', 'msg_edit.submit')
+    @flx.reaction('ok.mouse_down', 'msg_edit.submit')
     def _send_message(self, *events):
         text = self.msg_edit.text
         if text:
@@ -82,11 +82,11 @@ class ChatRoom(app.PyComponent):
         for ev in events:
             self.messages.add_message(ev.name, ev.message)
     
-    @app.manager.reaction('connections_changed')
+    @flx.manager.reaction('connections_changed')
     def _update_participants(self, *event):
         if self.session.status:
             # Query the app manager to see who's in the room
-            sessions = app.manager.get_connections(self.session.app_name)
+            sessions = flx.manager.get_connections(self.session.app_name)
             names = [s.app.name_edit.text for s in sessions]
             del sessions
             text = '<br />%i persons in this chat:<br /><br />' % len(names)
@@ -96,7 +96,7 @@ class ChatRoom(app.PyComponent):
 
 
 if __name__ == '__main__':
-    a = app.App(ChatRoom)
+    a = flx.App(ChatRoom)
     a.serve()
     # m = a.launch('firefox')  # for use during development
-    app.start()
+    flx.start()

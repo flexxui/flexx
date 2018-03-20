@@ -12,15 +12,15 @@ consuming keys. Further, an application may want to control the tree widget
 even when it does not have focus.
 """
 
-from flexx import app, event, ui
+from flexx import flx
 
 
-class TreeWithControls(ui.TreeWidget):
+class TreeWithControls(flx.TreeWidget):
     """ Adds a key press handler to allow controlling the TreeWidget with 
     the arrow keys, space, and enter.
     """
 
-    @event.emitter
+    @flx.emitter
     def key_down(self, e):
         """Overload key_down emitter to prevent browser scroll."""
         ev = self._create_key_event(e)
@@ -28,7 +28,7 @@ class TreeWithControls(ui.TreeWidget):
             e.preventDefault()
         return ev
     
-    @event.reaction('key_down')
+    @flx.reaction('key_down')
     def _handle_highlighting(self, *events):
         for ev in events:
             if ev.modifiers:
@@ -56,29 +56,29 @@ class TreeWithControls(ui.TreeWidget):
                 self.highlight_show(-1)
 
 
-class KeyboardControlsTester(ui.Widget):
+class KeyboardControlsTester(flx.Widget):
     
     def init(self):
         
         combo_options = ['Paris', 'New York', 'Enschede', 'Tokio']
         
-        with ui.HBox():
+        with flx.HBox():
             self.tree = TreeWithControls(flex=1, max_selected=1)
-            self.combo = ui.ComboBox(flex=1, options=combo_options, editable=True)
+            self.combo = flx.ComboBox(flex=1, options=combo_options, editable=True)
         
         with self.tree:
             for cat in ('foo', 'bar', 'spam'):
-                with ui.TreeItem(text=cat):
+                with flx.TreeItem(text=cat):
                     for name in ('Martin', 'Kees', 'Hans'):
-                        item = ui.TreeItem(title=name)
+                        item = flx.TreeItem(title=name)
                         item.set_checked(cat=='foo' or None)
     
-    @event.reaction('combo.text')
+    @flx.reaction('combo.text')
     def _combo_text_changed(self, *events):
         for ev in events:
             print('combo text is now', ev.new_value)
 
 
 if __name__ == '__main__':
-    m = app.launch(KeyboardControlsTester)
-    app.run()
+    m = flx.launch(KeyboardControlsTester)
+    flx.run()

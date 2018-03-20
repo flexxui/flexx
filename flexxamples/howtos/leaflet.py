@@ -10,8 +10,7 @@ import re
 import base64
 import mimetypes
 
-import flexx
-from flexx import app, event, ui
+from flexx import flx
 
 
 _leaflet_url = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/'
@@ -34,7 +33,7 @@ def _get_code(item):
     """ Get a text item from _base_url
     """
     url = '%s/%s' % (_base_url, item)
-    req = Request(url, headers={'User-Agent': 'flexx/%s' % flexx.__version__})
+    req = Request(url, headers={'User-Agent': 'flexx/%s' % flx.__version__})
     return urlopen(req).read().decode()
 
 
@@ -45,7 +44,7 @@ def _get_data(item_or_url):
         url = item_or_url
     else:
         url = '%s/%s' % (_base_url, item_or_url)
-    req = Request(url, headers={'User-Agent': 'flexx/%s' % flexx.__version__})
+    req = Request(url, headers={'User-Agent': 'flexx/%s' % flx.__version__})
     return urlopen(req).read()
 
 
@@ -63,53 +62,53 @@ def _embed_css_resources(css, types=('.png',)):
     return css
 
 
-app.assets.associate_asset(
+flx.assets.associate_asset(
     __name__,
     'leaflet.js',
     lambda: _get_code('leaflet.js'),
 )
-app.assets.associate_asset(
+flx.assets.associate_asset(
     __name__,
     'leaflet.css',
     lambda: _embed_css_resources(_get_code('leaflet.css')),
 )
 for icon in _leaflet_icons:
-    app.assets.add_shared_data(icon, _get_data('images/%s' % icon))
+    flx.assets.add_shared_data(icon, _get_data('images/%s' % icon))
 
 
-class LeafletWidget(ui.Widget):
+class LeafletWidget(flx.Widget):
     """ A widget that shows a slippy/tile-map using Leaflet.
     """
     
-    layers = event.ListProp([], doc="""
+    layers = flx.ListProp([], doc="""
         List of tilemap layer tuples: (url, 'Layer').
         """)
     
-    zoom = event.IntProp(8, settable=True, doc="""
+    zoom = flx.IntProp(8, settable=True, doc="""
         Zoom level for the map.
         """)
     
-    min_zoom = event.IntProp(0, settable=True, doc="""
+    min_zoom = flx.IntProp(0, settable=True, doc="""
         self zoom level for the map.
         """)
     
-    max_zoom = event.IntProp(18, settable=True, doc="""
+    max_zoom = flx.IntProp(18, settable=True, doc="""
         Maximum zoom level for the map.
         """)
     
-    center = event.FloatPairProp((5.2, 5.5), settable=True, doc="""
+    center = flx.FloatPairProp((5.2, 5.5), settable=True, doc="""
         The center of the map.
         """)
     
-    show_layers = event.BoolProp(False, settable=True, doc="""
+    show_layers = flx.BoolProp(False, settable=True, doc="""
         Whether to show layers-icon on the top-right of the map.
         """)
     
-    show_scale = event.BoolProp(False, settable=True, doc="""
+    show_scale = flx.BoolProp(False, settable=True, doc="""
         Whether to show scale at bottom-left of map.
         """)
     
-    @event.action
+    @flx.action
     def add_layer(self, url, name=None):
         """ Add a layer to the map.
         """
@@ -121,7 +120,7 @@ class LeafletWidget(ui.Widget):
         layers = self.layers + [(url, name or 'Layer')]
         self._mutate_layers(layers)
     
-    @event.action
+    @flx.action
     def remove_layer(self, url_or_name):
         """ Remove a layer from the map by url or name.
         """
@@ -172,41 +171,41 @@ class LeafletWidget(ui.Widget):
         xy = [e.layerPoint.x, e.layerPoint.y]
         self.mouse_event(e.type, latlng, xy)
 
-    @event.emitter
+    @flx.emitter
     def mouse_event(self, event, latlng, xy):
         return {'event': event, 'latlng': latlng, 'xy': xy}
 
-    @event.reaction
+    @flx.reaction
     def __handle_zoom(self):
         self.map.setZoom(self.zoom)
 
-    @event.reaction
+    @flx.reaction
     def __handle_min_zoom(self):
         self.map.setMinZoom(self.min_zoom)
 
-    @event.reaction
+    @flx.reaction
     def __handle_max_zoom(self):
         self.map.setMaxZoom(self.max_zoom)
 
-    @event.reaction
+    @flx.reaction
     def __handle_center(self):
         self.map.panTo(self.center)
 
-    @event.reaction
+    @flx.reaction
     def __handle_show_layers(self):
         if self.show_layers:
             self.map.addControl(self.layer_control)
         else:
             self.map.removeControl(self.layer_control)
 
-    @event.reaction
+    @flx.reaction
     def __handle_show_scale(self):
         if self.show_scale:
             self.map.addControl(self.scale)
         else:
             self.map.removeControl(self.scale)
 
-    @event.reaction
+    @flx.reaction
     def __size_changed(self):
         size = self.size
         if size[0] or size[1]:
@@ -215,7 +214,7 @@ class LeafletWidget(ui.Widget):
             # Notify the map that it's container's size changed
             self.map.invalidateSize()
 
-    @event.reaction
+    @flx.reaction
     def __layers_changed(self):
         global L
         for layer in self.layer_container:
@@ -233,10 +232,10 @@ class LeafletWidget(ui.Widget):
             self.layer_control.addOverlay(new_layer, layer_name)
 
 
-class LeafletExample(flexx.ui.Widget):
+class LeafletExample(flx.Widget):
 
     def init(self):
-        with flexx.ui.HBox():
+        with flx.HBox():
             self.leaflet = LeafletWidget(
                 flex=1,
                 center=(52, 4.1),
@@ -244,35 +243,35 @@ class LeafletExample(flexx.ui.Widget):
                 show_scale=lambda: self.cbs.checked,
                 show_layers=lambda: self.cbl.checked,
             )
-            with flexx.ui.VBox():
-                self.btna = flexx.ui.Button(text='Add SeaMap')
-                self.btnr = flexx.ui.Button(text='Remove SeaMap')
-                self.cbs = flexx.ui.CheckBox(text='Show scale')
-                self.cbl = flexx.ui.CheckBox(text='Show layers')
-                self.list = flexx.ui.VBox()
-                flexx.ui.Widget(flex=1)
+            with flx.VBox():
+                self.btna = flx.Button(text='Add SeaMap')
+                self.btnr = flx.Button(text='Remove SeaMap')
+                self.cbs = flx.CheckBox(text='Show scale')
+                self.cbl = flx.CheckBox(text='Show layers')
+                self.list = flx.VBox()
+                flx.Widget(flex=1)
         
         self.leaflet.add_layer('http://a.tile.openstreetmap.org/', 'OpenStreetMap')
     
-    @event.reaction('btna.mouse_click')
+    @flx.reaction('btna.mouse_click')
     def handle_seamap_add(self, *events):
         self.leaflet.add_layer('http://t1.openseamap.org/seamark/', 'OpenSeaMap')
 
-    @event.reaction('btnr.mouse_click')
+    @flx.reaction('btnr.mouse_click')
     def handle_seamap_remove(self, *events):
         self.leaflet.remove_layer('http://t1.openseamap.org/seamark/', 'OpenSeaMap')
 
-    # @event.reaction('cbs.checked', 'cbl.checked')
+    # @flx.reaction('cbs.checked', 'cbl.checked')
     # def handle_checkboxes(self, *events):
     #     self.leaflet.set_show_scale(self.cbs.checked
     #     self.leaflet.show_layers = self.cbl.checked
 
-    @event.reaction('leaflet.mouse_event')
+    @flx.reaction('leaflet.mouse_event')
     def handle_leaflet_mouse(self, *events):
         global L
         ev = events[-1]
         latlng = tuple(ev['latlng'])
-        flexx.ui.Label(text='%f, %f' % (int(100*latlng[0])/100, int(100*latlng[1])/100),
+        flx.Label(text='%f, %f' % (int(100*latlng[0])/100, int(100*latlng[1])/100),
                        parent=self.list)
         latlng = tuple(ev['latlng'])
         if ev['event'] == 'click':
@@ -282,5 +281,5 @@ class LeafletExample(flexx.ui.Widget):
 
 
 if __name__ == '__main__':
-    app.launch(LeafletExample, 'app')
-    app.run()
+    flx.launch(LeafletExample, 'firefox')
+    flx.run()

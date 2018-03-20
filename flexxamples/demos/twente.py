@@ -9,7 +9,7 @@ This app can be exported to a standalone HTML document.
 """
 
 
-from flexx import app, event, ui
+from flexx import flx
 
 # Raw data obtained from 
 # http://cdn.knmi.nl/knmi/map/page/klimatologie/gegevens/maandgegevens/mndgeg_290_tg.txt
@@ -115,27 +115,27 @@ def parse_data(raw_data):
 years, data = parse_data(raw_data)
 
 
-class Twente(ui.Widget):
+class Twente(flx.Widget):
     
     def init(self):
         
-        with ui.HFix():
-            ui.Widget(flex=1)
-            with ui.VBox(flex=0, style='min-width:200px'):
-                with ui.GroupWidget(title='Plot options'):
-                    ui.Label(text='Month')
-                    self.month = ui.ComboBox(options=months, selected_index=12, style='width: 100%')
-                    self.smoothing_label = ui.Label(text='Smoothing')
-                    self.smoothing = ui.Slider(max=20, step=2, text='{value} samples')
-                ui.Widget(flex=3)
-            with ui.VBox(flex=4):
-                self.plot = ui.PlotWidget(flex=1,
-                                          xdata=years, yrange=(-5, 20),
-                                          title='Average monthly temperature',
-                                          xlabel='year', ylabel=u'temperature (°C)')
-            ui.Widget(flex=1)
+        with flx.HFix():
+            flx.Widget(flex=1)
+            with flx.VBox(flex=0, style='min-width:200px'):
+                with flx.GroupWidget(title='Plot options'):
+                    flx.Label(text='Month')
+                    self.month = flx.ComboBox(options=months, selected_index=12, style='width: 100%')
+                    self.smoothing_label = flx.Label(text='Smoothing')
+                    self.smoothing = flx.Slider(max=20, step=2, text='{value} samples')
+                flx.Widget(flex=3)
+            with flx.VBox(flex=4):
+                self.plot = flx.PlotWidget(flex=1,
+                                           xdata=years, yrange=(-5, 20),
+                                           title='Average monthly temperature',
+                                           xlabel='year', ylabel=u'temperature (°C)')
+            flx.Widget(flex=1)
 
-    @event.reaction
+    @flx.reaction
     def _update_plot(self):
         smoothing = self.smoothing.value
         yy1 = data[self.month.selected_index]
@@ -157,6 +157,6 @@ class Twente(ui.Widget):
 
 
 if __name__ == '__main__':
-    a = app.App(Twente, title='Temperature 1951 - 2014', style = 'background:#eaeaea;')
+    a = flx.App(Twente, title='Temperature 1951 - 2014', style = 'background:#eaeaea;')
     m = a.launch('app', size=(900, 400))
-    app.run()
+    flx.run()

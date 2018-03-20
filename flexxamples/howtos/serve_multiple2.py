@@ -4,14 +4,14 @@ Import apps from other example modules, and host these as widgets in a
 single app.
 """
 
-from flexx import app, ui
+from flexx import flx
 
-from flexx.ui.examples.drawing import Drawing
-from flexx.ui.examples.split import Split
-from flexx.ui.examples.twente import Twente
+from flexxamples.demos.drawing import Drawing
+from flexxamples.howtos.splitters import Split
+from flexxamples.demos.twente import Twente
 
 
-class MultiApp(ui.TabLayout):
+class MultiApp(flx.TabLayout):
     def init(self):
         Drawing(title='Drawing')
         Split(title='Split')
@@ -20,5 +20,5 @@ class MultiApp(ui.TabLayout):
 
 if __name__ == '__main__':
     # This example is setup as a desktop app
-    app.launch(MultiApp)
-    app.run()
+    flx.launch(MultiApp)
+    flx.run()

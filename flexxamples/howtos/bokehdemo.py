@@ -8,7 +8,7 @@ import numpy as np
 
 from bokeh.plotting import figure
 
-from flexx import app, event, ui
+from flexx import flx
 
 
 # Plot 1
@@ -27,28 +27,28 @@ p3 = figure(tools=TOOLS, sizing_mode='scale_width')
 p3.line(t, np.cos(t))
 
 
-class BokehExample(app.PyComponent):
+class BokehExample(flx.PyComponent):
     
     def init(self):
         
-        with ui.HSplit(style='min-height:300px') as self.widget:
-            self.plot1 = ui.BokehWidget.from_plot(p1, title='Scatter')
-            with ui.VFix(title='Sine'):
+        with flx.HSplit(style='min-height:300px') as self.widget:
+            self.plot1 = flx.BokehWidget.from_plot(p1, title='Scatter')
+            with flx.VFix(title='Sine'):
                 Controls()
-                with ui.Widget(style='overflow-y:auto;', flex=1):
-                    self.plot2 = ui.BokehWidget.from_plot(p2)
-                    self.plot3 = ui.BokehWidget.from_plot(p3)
+                with flx.Widget(style='overflow-y:auto;', flex=1):
+                    self.plot2 = flx.BokehWidget.from_plot(p2)
+                    self.plot3 = flx.BokehWidget.from_plot(p3)
         
 
-class Controls(ui.FormLayout):
+class Controls(flx.FormLayout):
     
     def init(self):
-        self.amp = ui.Slider(title='Amplitude', max=2, value=1)
-        self.freq = ui.Slider(title='Frequency', max=10, value=5)
-        self.phase = ui.Slider(title='Phase', max=3, value=1)
+        self.amp = flx.Slider(title='Amplitude', max=2, value=1)
+        self.freq = flx.Slider(title='Frequency', max=10, value=5)
+        self.phase = flx.Slider(title='Phase', max=3, value=1)
         
         
-    @event.reaction
+    @flx.reaction
     def _update_sine(self):
         global window
         amp, freq, phase = self.amp.value, self.freq.value, self.phase.value
@@ -69,5 +69,5 @@ class Controls(ui.FormLayout):
 
 
 if __name__ == '__main__':
-    m = app.launch(BokehExample, 'app')
-    app.run()
+    m = flx.launch(BokehExample, 'app')
+    flx.run()

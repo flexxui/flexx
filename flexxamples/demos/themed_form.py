@@ -7,10 +7,10 @@ more compact.
 This example also demonstrates how CSS can be used to apply a greenish theme.
 """
 
-from flexx import app, ui
+from flexx import flx
 
 
-class Form(ui.Widget):
+class Form(flx.Widget):
     
     CSS = """
     .flx-Button {
@@ -23,20 +23,20 @@ class Form(ui.Widget):
     
     def init(self):
         
-        with ui.HFix():
-            with ui.FormLayout() as self.form:
-                self.b1 = ui.LineEdit(title='Name:', text='Hola')
-                self.b2 = ui.LineEdit(title='Age:', text='Hello world')
-                self.b3 = ui.LineEdit(title='Favorite color:', text='Foo bar')
-                ui.Button(text='Submit')
-            with ui.FormLayout() as self.form:
-                self.b4 = ui.LineEdit(title='Name:', text='Hola')
-                self.b5 = ui.LineEdit(title='Age:', text='Hello world')
-                self.b6 = ui.LineEdit(title='Favorite color:', text='Foo bar')
-                ui.Button(text='Submit')
-                ui.Widget(flex=1)  # Add a spacer
+        with flx.HFix():
+            with flx.FormLayout() as self.form:
+                self.b1 = flx.LineEdit(title='Name:', text='Hola')
+                self.b2 = flx.LineEdit(title='Age:', text='Hello world')
+                self.b3 = flx.LineEdit(title='Favorite color:', text='Foo bar')
+                flx.Button(text='Submit')
+            with flx.FormLayout() as self.form:
+                self.b4 = flx.LineEdit(title='Name:', text='Hola')
+                self.b5 = flx.LineEdit(title='Age:', text='Hello world')
+                self.b6 = flx.LineEdit(title='Favorite color:', text='Foo bar')
+                flx.Button(text='Submit')
+                flx.Widget(flex=1)  # Add a spacer
 
 
 if __name__ == '__main__':
-    m = app.launch(Form, 'app')
-    app.run()
+    m = flx.launch(Form, 'app')
+    flx.run()

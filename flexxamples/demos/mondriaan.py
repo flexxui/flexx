@@ -4,10 +4,10 @@ Piet Mondriaan was a Dutch painter who is famous for his style that looks
 a little like this. Best viewed in a square window.
 """
 
-from flexx import app, ui
+from flexx import flx
 
 
-class MyVBox(ui.VFix):
+class MyVBox(flx.VFix):
     
     def __init__(self, **kwargs):
         kwargs['spacing'] = kwargs.get('spacing', 15)
@@ -15,14 +15,14 @@ class MyVBox(ui.VFix):
         kwargs['orientation'] = 'vertical'
         super().__init__(**kwargs)
 
-class MyHBox(ui.HFix):
+class MyHBox(flx.HFix):
     def __init__(self, **kwargs):
         kwargs['spacing'] = kwargs.get('spacing', 15)
         kwargs['padding'] = 0
         super().__init__(**kwargs)
 
 
-class Mondriaan(ui.Widget):
+class Mondriaan(flx.Widget):
     
     CSS = """
     .flx-Mondriaan {background: #000;}
@@ -39,27 +39,27 @@ class Mondriaan(ui.Widget):
             with MyVBox(flex=2):
                 
                 with MyVBox(flex=4, spacing=30):
-                    ui.Widget(flex=1, css_class='white')
-                    ui.Widget(flex=1, css_class='white')
+                    flx.Widget(flex=1, css_class='white')
+                    flx.Widget(flex=1, css_class='white')
                 
                 with MyVBox(flex=2, css_class='blue'):
-                    ui.Widget(flex=1, css_class='edge')
-                    ui.Widget(flex=1, css_class='edge')
+                    flx.Widget(flex=1, css_class='edge')
+                    flx.Widget(flex=1, css_class='edge')
                 
             with MyVBox(flex=6):
                 
                 with MyVBox(flex=4, spacing=30, css_class='red'):
-                    ui.Widget(flex=1, css_class='edge')
-                    ui.Widget(flex=1, css_class='edge')
+                    flx.Widget(flex=1, css_class='edge')
+                    flx.Widget(flex=1, css_class='edge')
                 
                 with MyHBox(flex=2):
-                    ui.Widget(flex=6, css_class='white')
+                    flx.Widget(flex=6, css_class='white')
                     
                     with MyVBox(flex=1):
-                        ui.Widget(flex=1, css_class='white')
-                        ui.Widget(flex=1, css_class='yellow')
+                        flx.Widget(flex=1, css_class='white')
+                        flx.Widget(flex=1, css_class='yellow')
 
 
 if __name__ == '__main__':
-    m = app.launch(Mondriaan, 'app')
-    app.run()
+    m = flx.launch(Mondriaan, 'app')
+    flx.run()

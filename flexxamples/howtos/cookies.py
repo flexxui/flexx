@@ -3,24 +3,24 @@ Mmmm, cookies ...
 Small example for using cookies to (securely) store user data accross sessions.
 """
 
-from flexx import app, event, ui
+from flexx import flx
 
 
-class Cookies(app.PyComponent):
+class Cookies(flx.PyComponent):
     
     def init(self):
         
-        with ui.Widget():
-            ui.Label(text='Refreshing the page should '
-                          'maintain the value of the line edit.')
-            self.edit = ui.LineEdit(placeholder_text='username',
-                                    text=self.session.get_cookie('username', ''))
+        with flx.Widget():
+            flx.Label(text='Refreshing the page should '
+                           'maintain the value of the line edit.')
+            self.edit = flx.LineEdit(placeholder_text='username',
+                                     text=self.session.get_cookie('username', ''))
         
-    @event.reaction('edit.text')
+    @flx.reaction('edit.text')
     def _update_cookie(self, *events):
         self.session.set_cookie('username', self.edit.text)
 
 
 if __name__ == '__main__':
-    m = app.launch(Cookies, 'browser')
-    app.run()
+    m = flx.launch(Cookies, 'browser')
+    flx.run()

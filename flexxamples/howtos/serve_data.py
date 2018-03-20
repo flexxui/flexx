@@ -3,7 +3,7 @@
 This example demonstrates how data can be provided to the client with the
 Flexx asset management system.
 
-There are two ways to provide data: via the asset store (``app.assets``),
+There are two ways to provide data: via the asset store (``flx.assets``),
 and via the session (``some_model.session``). In the former, the data
 is shared between sessions. In the latter, the data is specific for the
 session (the link to the data includes the session id).
@@ -26,7 +26,7 @@ in memory.
 import random
 from urllib.request import urlopen
 
-from flexx import app, ui
+from flexx import flx
 
 
 # Define names of standard images
@@ -45,11 +45,11 @@ def get_img_blob(name):
 
 
 # Randomly select a shared image at server start
-link1 = app.assets.add_shared_data('image.png',
+link1 = flx.assets.add_shared_data('image.png',
                                    get_img_blob(random.choice(image_names)))
 
 
-class Example(app.PyComponent):
+class Example(flx.PyComponent):
 
     def init(self):
         # Randomly select image - different between sessions
@@ -60,7 +60,7 @@ class Example(app.PyComponent):
         View(link1, link2)
 
 
-class View(ui.Label):
+class View(flx.Label):
     def init(self, link1, link2):
         html = '<p>Hit F5 to reload the page (i.e. create a new session'
         html += ', unless this is an exported app)</p>'
@@ -72,7 +72,7 @@ class View(ui.Label):
 
 if __name__ == '__main__':
     # Launch the app twice to show how different sessions have different data
-    a = app.App(Example)
+    a = flx.App(Example)
     m1 = a.launch('browser')
     m2 = a.launch('browser')
-    app.run()
+    flx.run()
