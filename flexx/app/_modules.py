@@ -369,7 +369,7 @@ class JSModule:
                     self._collect_dependencies_from_bases(val)
                 self._collect_dependencies(js, _dep_stack)
             elif mod_name.endswith('.event._property'):
-                return self._add_dep_from_event_module(name)
+                return self._add_dep_from_event_module(name.split('.')[-1], name)
             else:
                 # Import from another module
                 self._import(mod_name, val.__name__, name)
