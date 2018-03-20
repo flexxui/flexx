@@ -511,10 +511,20 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             # needed, depending on what names exist in the component module.
             prop_class_name = prop_class.__name__
             if prop_class_name not in module_ns:
-                for ip in reversed(range(0, len(mod_name_parts))):
-                    if mod_name_parts[ip] in module_ns:
-                        prop_class_name = mod_name_parts[ip] + '.' + prop_class_name
-                        break
+                if 'flx' in module_ns and mod_name_parts[0] == 'flexx':
+                    prop_class_name = 'flx.' + prop_class_name
+                else:
+                    for ip in reversed(range(0, len(mod_name_parts))):
+                        if mod_name_parts[ip] in module_ns:
+                            m = sys.modules['.'.join(mod_name_parts[:ip+1])]
+                            if m is module_ns[mod_name_parts[ip]]:
+                                for ip2 in range(ip, len(mod_name_parts)):
+                                    m = sys.modules['.'.join(mod_name_parts[:ip2+1])]
+                                    if getattr(m, prop_class_name, None) is prop_class:
+                                        break
+                                prop_class_name = ('.'.join(mod_name_parts[ip:ip2+1]) +
+                                                   '.' + prop_class_name)
+                                break
             # Create function that calls the _validate function
             t = ' = function (value) { return %s(value, %s, %s); }\n'
             code = prototype_prefix + name + t % (
