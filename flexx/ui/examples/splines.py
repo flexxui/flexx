@@ -5,7 +5,7 @@ An interactive spline demo.
 
 from pscript import window
 
-from flexx import app, event, ui
+from flexx import flx
 
 
 SPLINES = ['linear', 'basis', 'cardinal', 'catmullrom', 'lagrange', 'lanczos']
@@ -51,21 +51,21 @@ related audio.
 """
 
 
-class SplineWidget(ui.CanvasWidget):
+class SplineWidget(flx.CanvasWidget):
     
-    spline_type = event.EnumProp(SPLINES, 'cardinal', settable=True, doc="""
+    spline_type = flx.EnumProp(SPLINES, 'cardinal', settable=True, doc="""
         "The type of spline
         """)
     
-    closed = event.BoolProp(False, settable=True, doc="""
+    closed = flx.BoolProp(False, settable=True, doc="""
         Whether the spline is closed
         """)
     
-    tension = event.FloatProp(0.5, settable=True, doc="""
+    tension = flx.FloatProp(0.5, settable=True, doc="""
         The tension parameter for the Cardinal spline.
         """)
     
-    _current_node = event.Property(None, settable=True)
+    _current_node = flx.Property(None, settable=True)
     
     def init(self):
         self.ctx = self.node.getContext('2d')
@@ -128,7 +128,7 @@ class SplineWidget(ui.CanvasWidget):
             f2 = 1
         return f0, f1, f2, f3
     
-    @event.reaction('mouse_down')
+    @flx.reaction('mouse_down')
     def _on_mouse_down(self, *events):
         for ev in events:
             w, h = self.size
@@ -189,11 +189,11 @@ class SplineWidget(ui.CanvasWidget):
                     self.yy.insert(i, ev.pos[1] / h)
                     self._set_current_node(i)
     
-    @event.reaction('mouse_up')
+    @flx.reaction('mouse_up')
     def _on_mouse_up(self, *events):
         self._set_current_node(None)
     
-    @event.reaction('mouse_move')
+    @flx.reaction('mouse_move')
     def _on_mouse_move(self, *events):
         ev = events[-1]
         if self._current_node is not None:
@@ -203,7 +203,7 @@ class SplineWidget(ui.CanvasWidget):
             self.yy[i] = ev.pos[1] / h
             self.update()
 
-    @event.reaction('size', 'spline_type', 'tension', 'closed', '_current_node')
+    @flx.reaction('size', 'spline_type', 'tension', 'closed', '_current_node')
     def update(self, *events):
         
         # Init
@@ -286,30 +286,30 @@ class SplineWidget(ui.CanvasWidget):
             ctx.stroke()
 
 
-class Splines(ui.Widget):
+class Splines(flx.Widget):
    
     def init(self):
         
-        with ui.HBox():
+        with flx.HBox():
             
-            with ui.VBox(flex=0, style='min-width:150px'):
-                self.b1 = ui.RadioButton(text='Linear')
-                self.b2 = ui.RadioButton(text='Basis')
-                self.b3 = ui.RadioButton(text='Cardinal', checked=True)
-                self.b4 = ui.RadioButton(text='Catmull Rom')
-                self.b5 = ui.RadioButton(text='Lagrange')
-                self.b6 = ui.RadioButton(text='Lanczos')
-                ui.Widget(style='min-height:10px')
-                closed = ui.CheckBox(text='Closed')
-                ui.Widget(style='min-height:10px')
-                self.tension = ui.Slider(min=-0.5, max=1, value=0.5,
-                                         text=lambda: 'Tension: {value}')
-                ui.Widget(flex=1)
+            with flx.VBox(flex=0, style='min-width:150px'):
+                self.b1 = flx.RadioButton(text='Linear')
+                self.b2 = flx.RadioButton(text='Basis')
+                self.b3 = flx.RadioButton(text='Cardinal', checked=True)
+                self.b4 = flx.RadioButton(text='Catmull Rom')
+                self.b5 = flx.RadioButton(text='Lagrange')
+                self.b6 = flx.RadioButton(text='Lanczos')
+                flx.Widget(style='min-height:10px')
+                closed = flx.CheckBox(text='Closed')
+                flx.Widget(style='min-height:10px')
+                self.tension = flx.Slider(min=-0.5, max=1, value=0.5,
+                                          text=lambda: 'Tension: {value}')
+                flx.Widget(flex=1)
             
-            with ui.VBox(flex=1):
-                ui.Label(text=GENERAL_TEXT, wrap=True, style='font-size: 12px;')
-                self.explanation = ui.Label(text=CARDINAL_TEXT, wrap=True,
-                                            style='font-size: 12px;')
+            with flx.VBox(flex=1):
+                flx.Label(text=GENERAL_TEXT, wrap=True, style='font-size: 12px;')
+                self.explanation = flx.Label(text=CARDINAL_TEXT, wrap=True,
+                                             style='font-size: 12px;')
                 
                 self.spline = SplineWidget(flex=1,
                                            closed=lambda: closed.checked,
@@ -322,7 +322,7 @@ class Splines(ui.Widget):
     LAGRANGE_TEXT = LAGRANGE_TEXT
     LANCZOS_TEXT = LANCZOS_TEXT
     
-    @event.reaction('b1.checked', 'b2.checked', 'b3.checked', 'b4.checked',
+    @flx.reaction('b1.checked', 'b2.checked', 'b3.checked', 'b4.checked',
                     'b5.checked', 'b6.checked')
     def _set_spline_type(self, *events):
         ev = events[-1]
@@ -332,7 +332,7 @@ class Splines(ui.Widget):
         self.spline.set_spline_type(type)
         self.explanation.set_text(self[type.upper() + '_TEXT'])
     
-    @event.reaction
+    @flx.reaction
     def __show_hide_tension_slider(self):
         if self.spline.spline_type == 'CARDINAL':
             self.tension.apply_style('visibility: visible')
@@ -341,6 +341,6 @@ class Splines(ui.Widget):
 
 
 if __name__ == '__main__':
-    a = app.App(Splines)
-    a.launch()
-    app.run()
+    a = flx.App(Splines)
+    a.launch('firefox-browser')
+    flx.run()

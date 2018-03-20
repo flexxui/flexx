@@ -15,6 +15,7 @@ from pscript import (py2js, JSString, RawJS, JSConstant, create_js_module,
                         get_all_std_names)
 from pscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
 
+from .. import event
 from ..event import Component, Property, loop
 from ..event._js import create_js_component_class
 
@@ -415,10 +416,18 @@ class JSModule:
         for name in reversed(sorted(vars_unknown)):
             if name.startswith('event.'):
                 self._deps.setdefault('flexx.event.js', ['event'])
+            elif self._name_ispropclass(name):
+                self._add_dep_from_event_module(name, name)
             else:
                 self.add_variable(name, _dep_stack=_dep_stack)
         for name in reversed(sorted(vars_global)):
             self.add_variable(name, True, _dep_stack=_dep_stack)
+    
+    def _name_ispropclass(self, name):
+        ob = getattr(event._property, name, None)
+        if ob is not None:
+            return isinstance(ob, type) and issubclass(ob, Property)
+        return False
     
     def _collect_dependencies_from_bases(self, cls):
         """
