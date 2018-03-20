@@ -112,7 +112,7 @@ setup(
     provides=[name],
     python_requires='>=3.5',
     install_requires=['tornado', 'pscript', 'webruntime', 'dialite'],
-    packages=package_tree(name)
+    packages=package_tree(name),
     package_dir={name: name},
     package_data={name: ['resources/*']},
     entry_points={'console_scripts': ['flexx = flexx.__main__:main'], },
@@ -129,5 +129,6 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
 )

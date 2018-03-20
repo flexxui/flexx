@@ -65,9 +65,9 @@ Flexx requires Python 3.5+ and also works on pypy. Further,
 it depends on:
 
 * the [tornado](http://www.tornadoweb.org) library (pure Python).
-* the [PScript](http://github.com/flexxui/webruntime) library (a flexxui project).
+* the [PScript](http://github.com/flexxui/pscript) library (a flexxui project).
 * the [webruntime](http://github.com/flexxui/webruntime) library (a flexxui project).
-* the [dialite](http://github.com/flexxui/webruntime) library (a flexxui project).
+* the [dialite](http://github.com/flexxui/dialite) library (a flexxui project).
 
 For running desktop apps, it is recommended to have Firefox installed.
 

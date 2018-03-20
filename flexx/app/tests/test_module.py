@@ -25,10 +25,10 @@ files['__init__'] = """
 """
 
 files['foo'] = """
-    from flexx import app, pscript
+    from flexx import app
     from flxtest.lib3 import tan, atan
     from flxtest.lib4 import magic_number, random
-    
+    import pscript
     import sys
     sas = None
     console = pscript.JSConstant('console')
