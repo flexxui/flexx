@@ -40,7 +40,7 @@ def create_ui_example(filename, to_root, height=300, source=None):
     """
     code = open(filename, 'rb').read().decode()
     fname = os.path.split(filename)[1]
-    filename_parts = 'ui', 'examples', fname[:-3] + '.html'
+    filename_parts = 'examples', fname[:-3] + '.html'
     filename_abs = os.path.join(HTML_DIR, *filename_parts)
     filename_rel = to_root + '/' + '/'.join(filename_parts)
     
@@ -136,7 +136,7 @@ def visit_uiexample_html(self, node):
     # Get id and filename
     this_id = hashlib.md5(code.encode('utf-8')).hexdigest()
     fname = 'example%s.html' % this_id
-    filename_py = os.path.join(HTML_DIR, 'ui', 'examples', 'example%s.py' % this_id)
+    filename_py = os.path.join(HTML_DIR, 'examples', 'example%s.py' % this_id)
     
     # Write Python file
     with open(filename_py, 'wb') as f:
@@ -179,21 +179,14 @@ def setup(Sphynx):
     
     Sphynx.add_node(uiexample, html=(visit_uiexample_html, depart_uiexample_html))
     Sphynx.add_directive('uiexample', UIExampleDirective)
-    
-    if not os.path.isdir(HTML_DIR + '/ui'):
-        os.mkdir(HTML_DIR + '/ui')
-    if not os.path.isdir(HTML_DIR + '/ui/examples'):
-        os.mkdir(HTML_DIR + '/ui/examples')
-    
     Sphynx.connect('build-finished', finish)
 
-    
+
 def finish(Sphynx, *args):
     
     # Export assets
     from flexx import app
-    HTML_DIR = os.path.abspath(os.path.join(THIS_DIR, '..', '_build', 'html'))
-    app.assets.export(os.path.join(HTML_DIR, 'ui', 'examples'))
+    app.assets.export(os.path.join(HTML_DIR, 'examples'))
 
     # Write overview page that contains *all* examples
     parts = []
@@ -203,5 +196,5 @@ def finish(Sphynx, *args):
     parts.insert(0, '<!DOCTYPE html><html><body>This page may take a while to load ... <br />')
     parts.append('</body></html>')
     code = '\n'.join(parts)
-    with open(os.path.join(HTML_DIR, 'ui', 'all_examples.html'), 'wb') as file:
+    with open(os.path.join(HTML_DIR, 'examples', 'all_examples.html'), 'wb') as file:
         file.write(code.encode())

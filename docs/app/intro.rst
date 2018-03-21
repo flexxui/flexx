@@ -1,4 +1,4 @@
-App introduction
-================
+Flexx apps
+==========
 
 .. automodule:: flexx.app

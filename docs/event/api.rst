@@ -1,5 +1,5 @@
-Event API
-=========
+Event reference
+===============
 
 
 Component

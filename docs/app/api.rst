@@ -1,5 +1,5 @@
-App API
-=======
+App reference
+=============
 
 Functions related to the event loop
 -----------------------------------

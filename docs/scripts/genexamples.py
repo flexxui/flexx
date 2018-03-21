@@ -13,17 +13,19 @@ from uiexample import create_ui_example
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 DOC_DIR = os.path.abspath(os.path.join(THIS_DIR, '..'))
-FLEXX_DIR = os.path.dirname(flexx.__file__)
+EXAMPLES_DIR = os.path.join(os.path.dirname(DOC_DIR), 'flexxamples')
 
 # Get list of (submodule, dirname) tuples
 EXAMPLES_DIRS = []
-for dname in os.listdir(FLEXX_DIR):
-    dirname = os.path.join(FLEXX_DIR, dname, 'examples')
-    if os.path.isdir(dirname):
+for dname in os.listdir(EXAMPLES_DIR):
+    dirname = os.path.join(EXAMPLES_DIR, dname)
+    if os.path.isfile(os.path.join(dirname, '__init__.py')):
         EXAMPLES_DIRS.append((dname, dirname))
 
 created_files = []
 
+
+# NOTE: not used anymore, but keep in case we want to automate again
 def get_notebook_list():
     url = 'https://api.github.com/repos/flexxui/flexx-notebooks/contents'
     print('downloading %s ... ' % url, end='')
@@ -36,17 +38,11 @@ def get_notebook_list():
         if file['name'].endswith('ipynb'):
             filenames.append(file['name'])
     return filenames
-    
-# Skip notebook building on CI; doing the API request fails half the time,
-# because Github limits the number of requests that you (in this case Travis)
-# can do. We can create an API token and use that, but we can also just skip ...
-if os.getenv('TRAVIS', '').lower() == 'true':
-    notebook_list = []
-else:
-    notebook_list = get_notebook_list()
 
 
 def main():
+    
+    output_dir = os.path.join(DOC_DIR, 'examples')
     
     # Collect examples
     examples = {}
@@ -60,9 +56,9 @@ def main():
                 text = ':orphan:\n\n'  # avoid toctree warning
                 text += '.. _%s:\n\n' % fname
                 text += '%s\n%s\n\n' % (fname, '=' * len(fname))
-                if sub == 'ui' and code.startswith('# doc-export:'):
+                if code.startswith('# doc-export:'):
                     code = code.split('\n', 1)[1].lstrip()
-                    html = create_ui_example(filename, '../..', source=filename)
+                    html = create_ui_example(filename, '..', source=filename)
                     text +=  '.. raw:: html\n\n    ' + html + '\n\n'
                 text += '.. code-block:: py\n    :linenos:\n\n'
                 text += '\n    ' + code.replace('\n', '\n    ').rstrip() + '\n'
@@ -71,50 +67,25 @@ def main():
         if not examples[sub]:
             del examples[sub]
     
-        # Write all examples
-        output_dir = os.path.join(DOC_DIR, sub, 'examples')
-        created_files.append(output_dir)
-        if not os.path.isdir(output_dir):
-            os.mkdir(output_dir)
+        # Write source for all examples
         for name in examples[sub]:
             filename = os.path.join(output_dir, name[:-3] + '_src.rst')
             created_files.append(filename)
             open(filename, 'wt', encoding='utf-8').write(examples[sub][name])
     
-    # # Create example index page
-    # docs = 'Examples'
-    # docs += '\n' + '=' * len(docs) + '\n\n'
-    # for sub in sorted(examples):
-    #     docs += '\n' + sub + ':\n\n'
-    #     for name in sorted(examples[sub]):
-    #         docs += '* :ref:`%s`\n' % name
-    # # Write
-    # filename = os.path.join(DOC_DIR, 'examples.rst')
-    # created_files.append(filename)
-    # open(filename, 'wt', encoding='utf-8').write(docs)
+    # Create example page
+    docs = 'Examples'
+    docs += '\n%s\n\n' % (len(docs) * '=')
     
-    better_names = {'pscript': 'PScript'}
-    
-    # Create example pages per submodule
     for sub, _ in EXAMPLES_DIRS:
-        dirname = os.path.join(DOC_DIR, sub)
-        if os.path.isdir(dirname):
-            docs = better_names.get(sub, sub.capitalize()) + ' examples'
-            docs += '\n%s\n\n' % (len(docs) * '=')
-            # Include notebooks?
-            for fname in notebook_list:
-                if fname.endswith('.ipynb') and ('_%s.' % sub) in fname:
-                    url = 'https://github.com/flexxui/flexx-notebooks/blob/master/' + fname
-                    docs += '* `%s <%s>`_ (external notebook)\n' % (fname, url)
-            # List examples
-            for name in sorted(examples[sub]):
-                docs += '* :ref:`%s`\n' % name
-            if sub == 'ui':
-                docs += '\nThere is also an `overview of all ui examples (heavy page) <all_examples.html>`_'
-            # Write
-            filename = os.path.join(DOC_DIR, sub, 'examples.rst')
-            created_files.append(filename)
-            open(filename, 'wt', encoding='utf-8').write(docs)
+        section = sub.capitalize()
+        docs += '\n%s\n%s\n\n' % (section, len(section) * '-')
+        for name in sorted(examples[sub]):
+            docs += '* :ref:`%s`\n' % name
+        
+    filename = os.path.join(DOC_DIR, 'examples', 'index.rst')
+    created_files.append(filename)
+    open(filename, 'wt', encoding='utf-8').write(docs)
     
     print('  generated %i examples' % sum([len(x) for x in examples.values()]))
 
