@@ -44,8 +44,13 @@ class MetaCollector:
         linenr = 1e9
         if cls is not None:
             filename = getattr(sys.modules[cls.__module__], '__file__', None)
-            linenr = (cls.__linenr__ if hasattr(cls, '__linenr__') else
-                      inspect.findsource(cls)[1])
+            if hasattr(cls, '__linenr__'):
+                linenr = cls.__linenr__
+            else:
+                try:
+                    linenr = inspect.findsource(cls)[1]
+                except Exception:  # e.g. in the notebook
+                    pass
         self.meta = {'vars_unknown': set(), 'vars_global': set(),
                      'std_functions': set(), 'std_methods': set(),
                      'filename': filename, 'linenr': linenr}

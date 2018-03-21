@@ -677,10 +677,8 @@ class Widget(app.JsComponent):
             else:
                 el = window.document.getElementById(id)
                 if el is None:  # Try again later
-                    print('conainer %s try again' % id)
                     window.setTimeout(self.__container_changed, 100)
                     return
-                print('conainer %s worked!' % id)
             el.appendChild(self.outernode)
     
     def _release_child(self, widget):

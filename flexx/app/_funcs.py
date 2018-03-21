@@ -98,7 +98,11 @@ class NoteBookHelper:
         if self._real_ws is not None:
             logger.warn('Notebookhelper already is in capture mode.')
         else:
-            assert self._session._ws is not None
+            if self._session._ws is None:
+                raise RuntimeError(
+                    'Session is missing a websocket connection. If you are '
+                    'running in JupyterLab, this could be due to '
+                    'https://github.com/jupyterlab/jupyterlab/issues/3118')
             self._real_ws = self._session._ws
             self._session._ws = self
     
@@ -129,6 +133,9 @@ def init_notebook():
     """ Initialize the Jupyter notebook by injecting the necessary CSS
     and JS into the browser. Note that any Flexx-based libraries that
     you plan to use should probably be imported *before* calling this.
+    
+    Does not currently work in JupyterLab because
+    https://github.com/jupyterlab/jupyterlab/issues/3118.
     """
     
     # Note: not using IPython Comm objects yet, since they seem rather
@@ -193,11 +200,6 @@ def init_notebook():
     # the widget show up in the notebook output area.
     
     # Note: asyncio will need to be enabled via %gui asyncio
-    
-    # We briefly start the server, it will start the web server, but exit
-    # the event loop right away.
-    server.stop()
-    server.start()
 
 
 # Keep serve and launch, they are still quite nice shorthands to quickly
