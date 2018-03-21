@@ -26,19 +26,19 @@ class Example(flx.HFix):
             self.checklabel = flx.Label(text='...')
 
 
-    @flx.reaction('b1.mouse_click', 'b2.mouse_click','b3.mouse_click',  )
+    @flx.reaction('b1.mouse_click', 'b2.mouse_click', 'b3.mouse_click')
     def _button_clicked(self, *events):
         ev = events[-1]
         self.buttonlabel.set_text('Clicked on the ' + ev.source.text)
 
-    @flx.reaction('r1.checked', 'r2.checked','r3.checked')
+    @flx.reaction('r1.checked', 'r2.checked', 'r3.checked')
     def _radio_changed(self, *events):
         # There will also be events for radio buttons being unchecked, but
         # Flexx ensures that the last event is for the one being checked
         ev = events[-1]
         self.radiolabel.set_text('Selected the ' + ev.source.text)
 
-    @flx.reaction('c1.checked', 'c2.checked','c3.checked',  )
+    @flx.reaction('c1.checked', 'c2.checked', 'c3.checked')
     def _check_changed(self, *events):
         selected = [c.text for c in (self.c1, self.c2, self.c3) if c.checked]
         if selected:
