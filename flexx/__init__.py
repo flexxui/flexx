@@ -37,21 +37,14 @@ For more information, see http://flexx.readthedocs.io.
 
 __version__ = '0.4.2-dev'
 
-
-# Assert compatibility and redirect to legacy version on Python 2.7
+# Assert compatibility
 import sys
-ok = True
-if sys.version_info[0] == 2:  # pragma: no cover
-    if sys.version_info < (2, 7):
-        raise RuntimeError('Flexx needs at least Python 2.7')
-    if type(b'') == type(''):  # noqa - will be str and unicode after conversion
-        sys.modules[__name__] = __import__(__name__ + '_legacy')
-        ok = False
+if sys.version_info < (3, 5):  # pragma: no cover
+    raise RuntimeError('Flexx needs at least Python 3.5')
 
 # Import config object
-if ok:
-    from ._config import config  # noqa
-    from .util.logging import set_log_level  # noqa
-    set_log_level(config.log_level)
-    
-del sys, ok
+from ._config import config  # noqa
+from .util.logging import set_log_level  # noqa
+set_log_level(config.log_level)
+
+del sys

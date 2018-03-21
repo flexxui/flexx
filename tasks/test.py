@@ -97,7 +97,10 @@ def test_style(rel_path='.'):
         sys.exit('Cannot do style test: ' + str(err))
     # Prepare
     os.chdir(ROOT_DIR)
-    sys.argv[1:] = ['flexx/' + rel_path]
+    if rel_path in ('', '.'):
+        sys.argv[1:] = ['flexx', 'flexxamples']
+    else:
+        sys.argv[1:] = ['flexx/' + rel_path]
     # Do test
     print('Running flake8 tests ...')
     app = Application()
