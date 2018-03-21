@@ -6,71 +6,6 @@ box mode is suited for aligning content where natural size matters. The
 fix mode and split mode are more suited for high-level layout. See
 the HVLayout class for details.
 
-Here is an example that uses the various modes:
-
-
-.. UIExample:: 250
-    
-    from flexx import app, ui
-    
-    class Example(ui.Widget):
-    
-        def init(self):
-            
-            with ui.VBox():
-                
-                ui.Label(style='background:#cfc;',
-                        text='Here is some content at the top for which we want to '
-                            'use minimal size. Thus the use of a VBox.<br>'
-                            'Below is a splitter, with a box layout on the left '
-                            'and a fix layout on the right.')
-                
-                with ui.HSplit(flex=1):
-                    with ui.VBox(style='border:1px solid #777;'):
-                            
-                        ui.Label(text='Flex 0 0 0')
-                        with ui.HBox(flex=0):
-                            self.b1 = ui.Button(text='Hi')
-                            self.b2 = ui.Button(text='Helloooo world!')
-                            self.b3 = ui.Button(text='Foo bar')
-                        
-                        ui.Label(text='Flex 1 1 1')
-                        with ui.HBox(flex=0):
-                            self.b1 = ui.Button(flex=1, text='Hi')
-                            self.b2 = ui.Button(flex=1, text='Helloooo world!')
-                            self.b3 = ui.Button(flex=1, text='Foo bar')
-                        
-                        ui.Label(text='Flex 1 0 3')
-                        with ui.HBox(flex=0):
-                            self.b1 = ui.Button(flex=1, text='Hi')
-                            self.b2 = ui.Button(flex=0, text='Helloooo world!')
-                            self.b3 = ui.Button(flex=3, text='Foo bar')
-                        
-                        # ui.Widget(flex=1)  # spacer widget
-                    
-                    with ui.VFix(style='border:1px solid #777;'):
-                        
-                        ui.Label(text='Flex 0 0 0 (space divided equally)', style='')
-                        with ui.HFix():
-                            self.b1 = ui.Button(text='Hi')
-                            self.b2 = ui.Button(text='Helloooo world!')
-                            self.b3 = ui.Button(text='Foo bar')
-                        
-                        ui.Label(text='Flex 1 1 1', style='')
-                        with ui.HFix():
-                            self.b1 = ui.Button(flex=1, text='Hi')
-                            self.b2 = ui.Button(flex=1, text='Helloooo world!')
-                            self.b3 = ui.Button(flex=1, text='Foo bar')
-                        
-                        ui.Label(text='Flex 1 0 3 (the widget with zero collapses')
-                        with ui.HFix():
-                            self.b1 = ui.Button(flex=1, text='Hi')
-                            self.b2 = ui.Button(flex=0, text='Helloooo world!')
-                            self.b3 = ui.Button(flex=3, text='Foo bar')
-                        
-                        # If we would put a spacer widget with flex 1 here, the
-                        # above widgets would collapse due to their zero flex value.
-
 
 Interactive Box layout example:
 
@@ -100,6 +35,9 @@ Interactive Box layout example:
         @event.reaction('b4.mouse_down')
         def _to_vertical_r(self, *events):
             self.set_orientation('vr')
+
+Also see examples: :ref:`app_layout.py`, :ref:`splitters.py`,
+:ref:`box_vs_fix_layout.py`, :ref:`mondriaan.py`.
 
 """
 

@@ -15,7 +15,6 @@
                     stretch = ui.CheckBox(text='Stretch')
                     ui.ImageWidget(flex=1, stretch=lambda:stretch.checked,
                                     source='http://github.com/fluidicon.png')
-    
 
 """
 

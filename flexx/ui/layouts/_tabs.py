@@ -6,7 +6,7 @@ Example:
 
 .. UIExample:: 100
     
-    from flexx import app, event, ui
+    from flexx import app, ui
     
     class Example(ui.Widget):
         def init(self):
@@ -14,19 +14,9 @@ Example:
                 self.a = ui.Widget(title='red', style='background:#a00;')
                 self.b = ui.Widget(title='green', style='background:#0a0;')
                 self.c = ui.Widget(title='blue', style='background:#00a;')
-                self.d = ui.Widget(title='unselectable', style='background:#0aa;')
-        
-        @event.reaction('t.current')
-        def cur_tab_changed(self, *events):
-            prev = events[0].old_value
-            if prev is not None:
-                prev.set_title(prev.title.strip(' *'))
-            next = events[-1].new_value
-            if next is not None:
-                next.set_title(next.title + '*')
-            # Don't like Cyan
-            if next is self.d:
-                self.t.set_current(self.a)
+
+Also see examples: :ref:`demo.py`.
+
 """
 
 from pscript import window

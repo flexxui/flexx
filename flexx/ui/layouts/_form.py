@@ -13,6 +13,9 @@ Layout a series of (input) widgets in a form. Example:
                 self.b2 = ui.LineEdit(title="Age:")
                 self.b3 = ui.LineEdit(title="Favorite color:")
                 ui.Widget(flex=1)  # Spacing
+
+Also see examples: :ref:`themed_form.py`.
+
 """
 
 from pscript import window, undefined

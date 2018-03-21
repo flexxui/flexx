@@ -4,7 +4,7 @@ The plot widget provides rudimentary plotting functionality, mostly to
 demonstrate how plots can be embedded in a Flexx GUI. It may be
 sufficient for simple cases, but don't expect it to ever support
 log-plotting, legends, and other fancy stuff. For real plotting, see
-e.g. ``BokehWidget``. There might be a Plotly widget at some point. 
+e.g. ``BokehWidget``. There might also be a Plotly widget at some point. 
 
 
 Simple example:
@@ -15,32 +15,8 @@ Simple example:
                       line_width=4, line_color='red', marker_color='',
                       style='min-height:200px;')
 
-Interactive example:
+Also see examples: :ref:`sine.py`, :ref:`twente.py`, :ref:`monitor.py`.
 
-.. UIExample:: 300
-    
-    from flexx import app, event, ui
-    
-    class Example(ui.Widget):
-        def init(self):
-            time = [i/100 for i in range(100)]
-            with ui.VBox():
-                with ui.HBox():
-                    ui.Label(text='Frequency:')
-                    self.slider1 = ui.Slider(min=1, max=10, value=5, flex=1)
-                    ui.Label(text='Phase:')
-                    self.slider2 = ui.Slider(min=0, max=6, value=0, flex=1)
-                self.plot = ui.PlotWidget(flex=1, xdata=time, xlabel='time',
-                                          ylabel='amplitude', title='a sinusoid')
-        
-        @event.reaction
-        def __update_amplitude(self, *events):
-            global Math
-            freq, phase = self.slider1.value, self.slider2.value
-            ydata = []
-            for x in self.plot.xdata:
-                ydata.append(Math.sin(freq*x*2*Math.PI+phase))
-            self.plot.set_data(self.plot.xdata, ydata)
 """
 
 from pscript import window
