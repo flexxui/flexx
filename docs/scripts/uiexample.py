@@ -68,7 +68,7 @@ def create_ui_example(filename, to_root, height=300, source=None):
     # Get class name
     line1 = code.splitlines()[0]
     class_name = None
-    if 'class App' in code:
+    if 'class App(' in code:
         class_name = 'App'
     elif 'class MyApp' in code:
         class_name = 'MyApp'
@@ -180,6 +180,10 @@ def setup(Sphynx):
     Sphynx.add_node(uiexample, html=(visit_uiexample_html, depart_uiexample_html))
     Sphynx.add_directive('uiexample', UIExampleDirective)
     Sphynx.connect('build-finished', finish)
+    
+    examples_dir = os.path.join(HTML_DIR, 'examples')
+    if not os.path.isdir(examples_dir):
+        os.makedirs(examples_dir)
 
 
 def finish(Sphynx, *args):

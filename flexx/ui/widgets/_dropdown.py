@@ -17,6 +17,9 @@
             if self.combo.selected_index is not None:
                 text += ' (index %i)' % self.combo.selected_index
             self.label.set_text(text)
+
+Also see examples: :ref:`control_with_keys.py`.
+
 """
 
 from pscript import window

@@ -1,6 +1,7 @@
+# doc-export: Circles
 """
-Example that shows animated circles. Note that it would be more efficient
-to use a canvas for this sort of thing.
+Example that shows animated circles. Note that it would probably be more
+efficient to use a canvas for this sort of thing.
 """
 
 from time import time

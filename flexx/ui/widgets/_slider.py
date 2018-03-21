@@ -7,22 +7,9 @@ Simple example:
     s = ui.Slider(min=10, max=20, value=12)
 
 
-Interactive example:
+Also see examples: :ref:`sine.py`, :ref:`twente.py`,
+:ref:`deep_event_connections.py`.
 
-.. UIExample:: 100
-
-    from flexx import app, event, ui
-    
-    class Example(ui.Widget):
-    
-        def init(self):
-            with ui.HFix():
-                self.slider = ui.Slider(flex=1, min=2, max=20, step=1)
-                self.label = ui.Label(flex=1)
-        
-        @event.reaction('slider.value')
-        def _change_label(self, *events):
-            self.label.set_text('x' * events[-1].new_value)
 """
 
 from ... import event

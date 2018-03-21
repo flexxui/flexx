@@ -22,6 +22,8 @@ Show Bokeh plots in Flexx. Example:
                 ui.BokehWidget.from_plot(p1)
                 ui.BokehWidget.from_plot(p2)
 
+Also see examples: :ref:`bokehdemo.py`.
+
 """
 
 

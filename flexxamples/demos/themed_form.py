@@ -1,4 +1,4 @@
-# doc-export: Form
+# doc-export: ThemedForm
 """
 Simple example that shows two forms, one which is stretched, and one
 in which we use a dummy Widget to fill up space so that the form is
@@ -10,7 +10,7 @@ This example also demonstrates how CSS can be used to apply a greenish theme.
 from flexx import flx
 
 
-class Form(flx.Widget):
+class ThemedForm(flx.Widget):
     
     CSS = """
     .flx-Button {
@@ -38,5 +38,5 @@ class Form(flx.Widget):
 
 
 if __name__ == '__main__':
-    m = flx.launch(Form, 'app')
+    m = flx.launch(ThemedForm, 'app')
     flx.run()

@@ -1,9 +1,7 @@
 """ TreeWidget
 
 A ``TreeWidget`` can contain ``TreeItems``, which in turn can contain
-``TreeItems`` to construct a tree. First an example flat list with items
-that are selectable and checkable:
-
+``TreeItems`` to construct a tree.
 
 .. UIExample:: 120
 
@@ -18,50 +16,8 @@ that are selectable and checkable:
                 for t in ['foo', 'bar', 'spam', 'eggs']:
                     ui.TreeItem(text=t, checked=True)
 
+Also see examples: :ref:`tree.py`, :ref:`control_with_keys.py`.
 
-Next, a tree example illustrating connecting to various item events,
-and custom styling:
-
-
-.. UIExample:: 250
-
-    from flexx import app, event, ui
-    
-    class Example(ui.Widget):
-        
-        CSS = '''
-        .flx-TreeWidget {
-            background: #000;
-            color: #afa;
-        }
-        '''
-        
-        def init(self):
-            
-            with ui.HSplit():
-                
-                self.label = ui.Label(flex=1, style='overflow-y: scroll;')
-                
-                with ui.TreeWidget(flex=1, max_selected=1) as self.tree:
-                    for t in ['foo', 'bar', 'spam', 'eggs']:
-                        with ui.TreeItem(text=t, checked=None):
-                            for i in range(4):
-                                item2 = ui.TreeItem(text=t + ' %i'%i, checked=False)
-                                if i == 2:
-                                    with item2:
-                                        ui.TreeItem(title='A', text='more info on A')
-                                        ui.TreeItem(title='B', text='more info on B')
-    
-        @event.reaction('tree.children**.checked', 'tree.children**.selected',
-                        'tree.children**.collapsed')
-        def on_event(self, *events):
-            for ev in events:
-                id = ev.source.title or ev.source.text
-                if ev.new_value:
-                    text = id + ' was ' + ev.type 
-                else:
-                    text = id + ' was ' + 'un-' + ev.type 
-                self.label.set_html(text + '<br />' +  self.label.html)
 """
 
 from ... import event

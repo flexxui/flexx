@@ -31,6 +31,8 @@ provide either a WebGL context or a 2d context as in the example below:
         def on_down(self, *events):
             self._last_pos = events[-1].pos
 
+Also see example: :ref:`drawing.py`, :ref:`splines.py`.
+
 """
 
 from ... import event

@@ -1,17 +1,6 @@
 """ ProgressBar
 
-Simple example:
-
-.. UIExample:: 50
-    
-    from flexx import app, ui
-    
-    class Example(ui.HFix):
-        def init(self):
-            ui.ProgressBar(value=0.7)
-
-
-Interactive example:
+Example:
 
 .. UIExample:: 100
 
