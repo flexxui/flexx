@@ -1,6 +1,8 @@
-===============
-Flexx utilities
-===============
+:orphan:
+
+==========
+flexx.util
+==========
 
 Flexx' ``util`` module contains utilities that are used internally,
 some of which can be useful outside of Flexx. Note that most modules
@@ -14,4 +16,3 @@ Flexx modules.
     config
     logging
     minify
-    

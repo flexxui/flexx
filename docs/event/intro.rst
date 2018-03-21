@@ -1,4 +1,4 @@
-Event system introduction
-=========================
+The event system
+================
 
 .. automodule:: flexx.event

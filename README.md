@@ -24,14 +24,6 @@ the code is on [Github](http://github.com/flexxui/flexx).
 Flexx is currently in alpha status; any part of the public API may
 change without notice. Feedback is welcome.
 
-Flexx has a modular design, consisting of a few subpackages, which can
-also be used by themselves:
-
-* [flexx.ui](http://flexx.readthedocs.io/en/stable/ui/) - the widgets
-* [flexx.app](http://flexx.readthedocs.io/en/stable/app/) - the event loop and server
-* [flexx.event](http://flexx.readthedocs.io/en/stable/event/) - properties and events
-
-
 Example
 -------
 
@@ -39,8 +31,7 @@ Click the image below for an interactive example:
 
 [![demo](https://dl.dropboxusercontent.com/s/x4s7wgv6tpyqsqo/flexx_demo_300.png)](http://flexx.readthedocs.io/en/latest/ui/examples/demo_src.html)
 
-There are two demo servers at http://demo1.flexx.live/ (an instance on Digitalocean)
-and http://demo2.flexx.live/ (a Raspberry pi). Either might not always be on.
+There is a demo server at http://demo.flexx.live .
 
 
 Motivation

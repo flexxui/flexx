@@ -1,6 +1,8 @@
------------------------
-Reference for flexx.app
------------------------
+:orphan:
+
+---------
+flexx.app
+---------
 
 The app module builds upont the ``event`` module to provide
 :class:`PyComponent <flexx.app.PyComponent>` and
@@ -12,4 +14,3 @@ between Python and a browser.
    
    intro
    api
-   examples

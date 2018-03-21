@@ -131,7 +131,7 @@ def main():
         open(filename, 'wt', encoding='utf-8').write(docs)
     
     # Create overview doc page
-    docs = 'Ui API'
+    docs = 'UI reference'
     docs += '\n' + '=' * len(docs) + '\n\n'
     docs += 'This is a list of all widget classes provided by ``flexx.ui``. '
     docs += 'The :class:`Widget <flexx.ui.Widget>` class is the base class of all widgets. '

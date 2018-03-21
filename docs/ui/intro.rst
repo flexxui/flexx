@@ -1,4 +1,4 @@
-Ui introduction
-===============
+UI and widgets
+==============
 
 .. automodule:: flexx.ui
