@@ -26,7 +26,7 @@ class Example(flx.Widget):
                 for t in ['foo', 'bar', 'spam', 'eggs']:
                     with flx.TreeItem(text=t, checked=None):
                         for i in range(4):
-                            item2 = flx.TreeItem(text=t + ' %i'%i, checked=False)
+                            item2 = flx.TreeItem(text=t + ' %i' % i, checked=False)
                             if i == 2:
                                 with item2:
                                     flx.TreeItem(title='A', text='more info on A')
@@ -41,7 +41,7 @@ class Example(flx.Widget):
                 text = id + ' was ' + ev.type 
             else:
                 text = id + ' was ' + 'un-' + ev.type 
-            self.label.set_html(text + '<br />' +  self.label.html)
+            self.label.set_html(text + '<br />' + self.label.html)
 
 
 if __name__ == '__main__':
