@@ -85,8 +85,8 @@ For an element to be a layout boundary it must:
 - Not be a descendant of a <table> element.
 
 Most Widgets inside a HVLayout in split or fix mode conform to this:
-they are typically not table elements, the layout itself uses CSS to
-set display and overflow, and sets height and weight.
+they are typically not table elements, the Widget sets overflow, the layout
+itself uses CSS to set display, and sets height and weight.
 
 More reading:
 
@@ -235,9 +235,9 @@ class HVLayout(Layout):
     .flx-split > .flx-Widget {
         /* Let child widgets position well, and help them become a layout
          * boundary. We cannot do "display: block;", as that would break stuff.
+        /* overflow is set in Widget.CSS, setting here breaks scrollable widgets
          */
         position: absolute;
-        overflow: hidden;
     }
     
     .flx-split.flx-dragging { /* Fix for odd drag behavior on Chrome */
