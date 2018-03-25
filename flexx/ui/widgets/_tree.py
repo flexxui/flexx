@@ -155,9 +155,11 @@ class TreeWidget(Widget):
     }
     
     .flx-TreeWidget .flx-TreeItem.collapsed-true > .collapsebut::after {
+        vertical-align: top;
         content: '\\25B8';  /* small right triangle */
     }
     .flx-TreeWidget .flx-TreeItem.collapsed-false > .collapsebut::after {
+        vertical-align: top;
         content: '\\25BE';  /* small down triangle */
     }
     
@@ -176,9 +178,11 @@ class TreeWidget(Widget):
        /* display: none;  /* could also be visibility: hidden */
     }
     .flx-TreeItem.checked-true > .checkbut::after {
+        vertical-align: top;
         content: '\\2611\\00a0';
     }
     .flx-TreeItem.checked-false > .checkbut::after {
+        vertical-align: top;
         content: '\\2610\\00a0';
     }
     
@@ -445,6 +449,10 @@ class TreeItem(Widget):
     selectable depending on the selection policy defined by
     ``TreeWidget.max_selected``.
     
+    If needed, the ``_render_title()`` and ``_render_text()`` methods can
+    be overloaded to display items in richer ways. See the documentation
+    of ``Widget._render_dom()`` for details.
+    
     """
     
     text = event.StringProp('', settable=True, doc="""
@@ -528,17 +536,30 @@ class TreeItem(Widget):
             cnames.append(name + '-' + str(val))
         cnames = ' '.join(cnames)
         
+        # Get title and text content
+        title, text = self._render_title(), self._render_text()
+        
         # Note that the outernode (the <li>) has not flx-Widget nor flx-TreeItem
         return create_element('li', {'className': cnames},
                     create_element('span', {'className': 'flx-TreeItem ' + cnames},
                         create_element('span', {'className': 'padder'}),
                         create_element('span', {'className': 'collapsebut'}),
                         create_element('span', {'className': 'checkbut'}),
-                        create_element('span', {'className': 'title'}, self.title),
-                        create_element('span', {'className': 'text'}, self.text),
+                        create_element('span', {'className': 'title'}, title),
+                        create_element('span', {'className': 'text'}, text),
                         ),
                     create_element('ul', {}, subnodes),
                     )
+    
+    def _render_title(self):
+        """ Return a node for title. Can be overloaded to e.g. format with html.
+        """
+        return self.title
+    
+    def _render_text(self):
+        """ Return a node for text. Can be overloaded to e.g. format these with html.
+        """
+        return self.text
     
     # todo: maybe move click and double click events to Widget class?
     # but note that we need the stopPropagation here.
