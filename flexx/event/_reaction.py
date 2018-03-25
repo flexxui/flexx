@@ -375,24 +375,31 @@ class Reaction:
         """ Update connections by disconnecting old and connecting new,
         but try to keep connections that do not change.
         """
-    
+        
+        # Keep track of what connections we skip, i.e. which we should not remove.
+        # Otherwise we may remove duplicate objects. See issue #460.
+        should_stay = {}
+        
         # Skip common objects from the start
         i1 = 0
         while (i1 < len(new_objects) and i1 < len(old_objects) and
                new_objects[i1][0] is old_objects[i1][0] and
                new_objects[i1][1] == old_objects[i1][1]):
+            should_stay[new_objects[i1][0].id + '-' + new_objects[i1][1]] = True
             i1 += 1
         # Skip common objects from the end
         i2, i3 = len(new_objects) - 1, len(old_objects) - 1
         while (i2 >= i1 and i3 >= i1 and
                new_objects[i2][0] is old_objects[i3][0] and
                new_objects[i2][1] == old_objects[i3][1]):
+            should_stay[new_objects[i2][0].id + '-' + new_objects[i2][1]] = True
             i2 -= 1
             i3 -= 1
         # Disconnect remaining old
         for i in range(i1, i3+1):
             ob, type = old_objects[i]
-            ob.disconnect(type, self)
+            if should_stay.get(ob.id + '-' + type, False) is False:
+                ob.disconnect(type, self)
         # Connect remaining new
         for i in range(i1, i2+1):
             ob, type = new_objects[i]
