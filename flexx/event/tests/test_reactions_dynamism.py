@@ -481,6 +481,103 @@ def test_deep2():
 
 
 
+class TestOb(event.Component):
+    
+    children = event.TupleProp(settable=True)
+    foo = event.StringProp(settable=True)
+
+
+class Tester(event.Component):
+    
+    children = event.TupleProp(settable=True)
+    
+    @event.reaction('children**.foo')
+    def track_deep(self, *events):
+        for ev in events:
+            if ev.new_value:
+                print(ev.new_value)
+
+    @event.action
+    def set_foos(self, prefix):
+        for i, child in enumerate(self.children):
+            child.set_foo(prefix + str(i))
+            for j, subchild in enumerate(child.children):
+                subchild.set_foo(prefix + str(i) + str(j))
+    
+    @event.action
+    def make_children1(self):
+        t1 = TestOb()
+        t2 = TestOb()
+        t1.set_children((TestOb(), ))
+        t2.set_children((TestOb(), ))
+        self.set_children(t1, t2)
+    
+    @event.action
+    def make_children2(self):
+        for i, child in enumerate(self.children):
+            child.set_children(child.children + (TestOb(), ))
+    
+    @event.action
+    def make_children3(self):
+        # See issue #460
+        t = TestOb()
+        my_children = self.children
+        self.set_children(my_children + (t, ))
+        for i, child in enumerate(my_children):
+            child.set_children(child.children + (t, ))
+        self.set_children(my_children)
+
+
+@run_in_both(TestOb, Tester)
+def test_issue_460_and_more():
+    """
+    A0
+    A00
+    A1
+    A10
+    -
+    B0
+    B00
+    B01
+    B1
+    B10
+    B11
+    -
+    C0
+    C00
+    C01
+    C02
+    C1
+    C10
+    C11
+    C12
+    """
+    tester = Tester()
+    loop.iter()
+    
+    tester.make_children1()
+    loop.iter()
+    
+    tester.set_foos('A')
+    loop.iter()
+    
+    print('-')
+    
+    tester.make_children2()
+    loop.iter()
+    
+    tester.set_foos('B')
+    loop.iter()
+    
+    print('-')
+    
+    tester.make_children3()
+    loop.iter()
+    
+    tester.set_foos('C')
+    loop.iter()
+
+
 ## Python only
 
 class MyComponent(event.Component):
