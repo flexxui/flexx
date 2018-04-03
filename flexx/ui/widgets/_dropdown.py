@@ -205,8 +205,10 @@ class ComboBox(BaseDropdown):
     with an editable text. It can be used to select among a set of
     options in a more compact manner than a TreeWidget would.
     Optionally, the text of the combobox can be edited.
-    React to the ``text`` and/or ``selected_index`` properties to keep
-    track of interactions.
+    
+    It is generally good practive to react to ``user_selected`` to detect user
+    interaction, and react to ``text``, ``selected_key`` or ``selected_index``
+    to keep track of all kinds of (incl. programatic) interaction .
     
     When the combobox is expanded, the arrow keys can be used to select
     an item, and it can be made current by pressing Enter or spacebar.
@@ -291,6 +293,19 @@ class ComboBox(BaseDropdown):
         # and this works too.
         self.set_options(self.options)
     
+    @event.emitter
+    def user_selected(self, index):
+        """ Event emitted when the user selects an item using the mouse or
+        keyboard. The event has attributes ``index``, ``key`` and ``text``.
+        """
+        options = self.options
+        if index >= 0 and index < len(options):
+            key, text = options[index]
+            self.set_selected_index(index)
+            self.set_selected_key(key)
+            self.set_text(text)
+            return dict(index=index, key=key, text=text)
+    
     @event.action
     def set_options(self, options):
         # If dict ...
@@ -369,11 +384,7 @@ class ComboBox(BaseDropdown):
         self._select_from_ul(e.target.index)
     
     def _select_from_ul(self, index):
-        if index >= 0:
-            key, text = self.options[index]
-            self.set_selected_index(index)
-            self.set_selected_key(key)
-            self.set_text(text)
+        self.user_selected(index)
         self._collapse()
     
     def _key_down(self, e):
