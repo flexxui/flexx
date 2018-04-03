@@ -279,23 +279,23 @@ class TreeWidget(Widget):
                                 if mark_selected == True:  # noqa - PScript perf
                                     if i is item or i is self._last_selected:
                                         break
-                                    i.set_selected(True)
+                                    i.user_selected(True)
                                 else:
                                     if i is item or i is self._last_selected:
                                         mark_selected = True
-                    item.set_selected(True)
+                    item.user_selected(True)
                     self._last_selected = item
                 elif 'Ctrl' in modifiers:
                     # Toggle
-                    item.set_selected(not item.selected)
+                    item.user_selected(not item.selected)
                     if item.selected:
                         self._last_selected = item
                 else:
                     # Similar as when max_selected is 1
                     for i in self.get_all_items():
                         if i.selected and i is not item:
-                            i.set_selected(False)
-                    item.set_selected(not item.selected)
+                            i.user_selected(False)
+                    item.user_selected(not item.selected)
                     if item.selected:
                         self._last_selected = item
         
@@ -306,20 +306,20 @@ class TreeWidget(Widget):
             if gets_selected:
                 for i in self.get_all_items():
                     if i.selected and i is not item:
-                        i.set_selected(False)
-            item.set_selected(gets_selected)  # set the item last
+                        i.user_selected(False)
+            item.user_selected(gets_selected)  # set the item last
         
         else:
             # Select to a certain max
             item = events[-1].source
             if item.selected:
-                item.set_selected(False)
+                item.user_selected(False)
             else:
                 count = 0
                 for i in self.get_all_items():
                     count += int(i.selected)
                 if count < self.max_selected:
-                    item.set_selected(True)
+                    item.user_selected(True)
     
     # NOTE: this highlight API is currently not documented, as it lives
     # in JS only. The big refactoring will change all that.
@@ -398,7 +398,7 @@ class TreeWidget(Widget):
         item = self.highlight_get()
         if item is not None:
             if item.checked is not None:  # is it checkable?
-                item.set_checked(not item.checked)
+                item.user_checked(not item.checked)
     
     def _de_highlight_and_get_highlighted_index(self, all_items):
         """ Unhighlight all items and get the index of the item that was
@@ -486,6 +486,35 @@ class TreeItem(Widget):
         The value can be None, True or False. None (the default)
         means that the item is not collapsable (unless it has sub items).
         """)
+    
+    @event.emitter
+    def user_selected(self, selected):
+        """ Event emitted when the user selects this item. Has ``old_value``
+        and ``new_value`` attributes. One can call this emitter directly to
+        emulate a user-selection, but note that this bypasses the max_selected
+        policy.
+        """
+        d = {'old_value': self.selected, 'new_value': selected}
+        self.set_selected(selected)
+        return d
+    
+    @event.emitter
+    def user_checked(self, checked):
+        """ Event emitted when the user checks this item. Has ``old_value``
+        and ``new_value`` attributes.
+        """
+        d = {'old_value': self.checked, 'new_value': checked}
+        self.set_checked(checked)
+        return d
+    
+    @event.emitter
+    def user_collapsed(self, collapsed):
+        """ Event emitted when the user collapses this item. Has ``old_value``
+        and ``new_value`` attributes.
+        """
+        d = {'old_value': self.collapsed, 'new_value': collapsed}
+        self.set_collapsed(collapsed)
+        return d
     
     @event.action
     def set_parent(self, parent, pos=None):
@@ -588,9 +617,9 @@ class TreeItem(Widget):
         # Handle JS mouse click event
         e.stopPropagation()  # don't click parent items
         if e.target.classList.contains('collapsebut'):
-            self.set_collapsed(not self.collapsed)
+            self.user_collapsed(not self.collapsed)
         elif e.target.classList.contains('checkbut'):
-            self.set_checked(not self.checked)
+            self.user_checked(not self.checked)
         else:
             self.mouse_click(e)
     
