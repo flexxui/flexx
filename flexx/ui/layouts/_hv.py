@@ -367,6 +367,24 @@ class HVLayout(Layout):
         
         self._mutate_splitter_positions(positions2)
     
+    @event.emitter
+    def user_splitter_positions(self, *positions):
+        """ Event emitted when the splitter is positioned by the user.
+        The event has a ``positions`` attribute.
+        """
+        if self.mode != 'SPLIT':
+            return None  # do not emit
+        
+        positions2 = []
+        for i in range(len(positions)):
+            pos = positions[i]
+            if pos is not None:
+                pos = max(0.0, min(1.0, float(pos)))
+            positions2.append(pos)
+            
+        self.set_splitter_positions(*positions)
+        return {'positions': positions}
+    
     ## General reactions and hooks
     
     @event.reaction('orientation', 'spacing', 'padding')
@@ -656,7 +674,7 @@ class HVLayout(Layout):
         
         # Set (relative) splitter positions. This may seem like a detour, but
         # this way the splits will scale nicely e.g. during resizing.
-        self.set_splitter_positions(*[pos/available_size for pos in abs_positions])
+        self.user_splitter_positions(*[pos/available_size for pos in abs_positions])
     
     def __apply_positions(self):
         """ Set sep.abs_pos and sep.rel_pos on each separator.
