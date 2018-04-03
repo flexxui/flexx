@@ -2,15 +2,31 @@
 
 
 .. UIExample:: 100
-
+    
     from flexx import app, event, ui
     
     class Example(ui.Widget):
     
         def init(self):
             with ui.VBox():
-                line = ui.LineEdit(flex=0, placeholder_text='type here')
-                ui.Label(flex=1, text=lambda: 'Copy: ' + line.text)
+                self.line = ui.LineEdit(placeholder_text='type here')
+                self.l1 = ui.Label(html='<i>when user changes text</i>')
+                self.l2 = ui.Label(html='<i>when unfocusing or hitting enter </i>')
+                self.l3 = ui.Label(html='<i>when submitting (hitting enter)</i>')
+                ui.Widget(flex=1)
+        
+        @event.reaction('line.user_text')
+        def when_user_changes_text(self, *events):
+            self.l1.set_text('user_text: ' + self.line.text)
+        
+        @event.reaction('line.user_done')
+        def when_user_is_done_changing_text(self, *events):
+            self.l2.set_text('user_done: ' + self.line.text)
+        
+        @event.reaction('line.submit')
+        def when_user_submits_text(self, *events):
+            self.l3.set_text('submit: ' + self.line.text)
+
 """
 
 from ... import event
@@ -40,10 +56,6 @@ class LineEdit(Widget):
     text = event.StringProp(settable=True, doc="""
         The current text of the line edit. Settable. If this is an empty
         string, the placeholder_text is displayed instead.
-        """)
-    
-    user_text = event.StringProp(settable=False, doc="""
-        The text set by the user (updates on each keystroke).
         """)
     
     password_mode = event.BoolProp(False, settable=True, doc="""
@@ -76,19 +88,42 @@ class LineEdit(Widget):
         self._autocomp.id = self.id
         node.appendChild(self._autocomp)
         
-        f1 = self._set_user_text
+        f1 = lambda: self.user_text(self.node.value)
         f2 = lambda ev: self.submit() if ev.which == 13 else None
         self._addEventListener(node, 'input', f1, False)
         self._addEventListener(node, 'keydown', f2, False)
+        self._addEventListener(node, 'blur', self.user_done, False)
         #if IE10:
         #    self._addEventListener(self.node, 'change', f1, False)
         return node
     
-    @event.action
-    def _set_user_text(self):
-        text = self.node.value
-        self._mutate_user_text(text)
-        self._mutate_text(text)
+    @event.emitter
+    def user_text(self, text):
+        """ Event emitted when the user edits the text. Has ``old_value``
+        and ``new_value`` attributes.
+        """
+        d = {'old_value': self.text, 'new_value': text}
+        self.set_text(text)
+        return d
+    
+    @event.emitter
+    def user_done(self):
+        """ Event emitted when the user is done editing the text, either by
+        moving the focus elsewhere, or by hitting enter.
+        Has ``old_value`` and ``new_value`` attributes (which are the same).
+        """
+        d = {'old_value': self.text, 'new_value': self.text}
+        return d
+    
+    @event.emitter
+    def submit(self):
+        """ Event emitted when the user strikes the enter or return key
+        (but not when losing focus). Has ``old_value`` and ``new_value``
+        attributes (which are the same).
+        """
+        self.user_done()
+        d = {'old_value': self.text, 'new_value': self.text}
+        return d
     
     @event.emitter
     def key_down(self, e):
@@ -101,11 +136,6 @@ class LineEdit(Widget):
             e.stopPropagation()
         return ev
     
-    @event.emitter
-    def submit(self):
-        """ Event emitted when the user strikes the enter or return key.
-        """
-        return {}
     
     ## Reactions
     
