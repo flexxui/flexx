@@ -489,7 +489,7 @@ class TreeItem(Widget):
     
     @event.emitter
     def user_selected(self, selected):
-        """ Event emitted when the user selects this item. Has ``old_value``
+        """ Event emitted when the user (un)selects this item. Has ``old_value``
         and ``new_value`` attributes. One can call this emitter directly to
         emulate a user-selection, but note that this bypasses the max_selected
         policy.
@@ -500,7 +500,7 @@ class TreeItem(Widget):
     
     @event.emitter
     def user_checked(self, checked):
-        """ Event emitted when the user checks this item. Has ``old_value``
+        """ Event emitted when the user (un)checks this item. Has ``old_value``
         and ``new_value`` attributes.
         """
         d = {'old_value': self.checked, 'new_value': checked}
@@ -509,7 +509,7 @@ class TreeItem(Widget):
     
     @event.emitter
     def user_collapsed(self, collapsed):
-        """ Event emitted when the user collapses this item. Has ``old_value``
+        """ Event emitted when the user (un)collapses this item. Has ``old_value``
         and ``new_value`` attributes.
         """
         d = {'old_value': self.collapsed, 'new_value': collapsed}
