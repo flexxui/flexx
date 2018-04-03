@@ -40,12 +40,21 @@ class ColorSelectWidget(Widget):
         self._addEventListener(node, 'input', self._color_changed_from_dom, 0)
         return node
     
+    @event.emitter
+    def user_color(self, color):
+        """ Event emitted when the user changes the color. Has ``old_value``
+        and ``new_value`` attributes.
+        """
+        d = {'old_value': self.color, 'new_value': color}
+        self.set_color(color)
+        return d
+    
     @event.reaction('color')
     def _color_changed(self, *events):
         self.node.value = self.color.hex  # hex is html-compatible, color.css is not
     
     def _color_changed_from_dom(self, e):
-        self.set_color(self.node.value)
+        self.user_color(self.node.value)
 
     @event.reaction('disabled')
     def __disabled_changed(self, *events):
