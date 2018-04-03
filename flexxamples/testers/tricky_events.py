@@ -53,6 +53,9 @@ class SyncedSlidersRight(SyncedSlidersBase):
     which avoids a ping-pong effect. Only having a single (normal) reaction
     reduced the chance of a ping-pong effect, but does not elliminate it.
     
+    Even better would be to react to ``user_value``  or ``user_done``
+    to avoid ping-ping altogether.
+    
     A nice addition would be to add an action that sets both slider
     values at the same time.
     """

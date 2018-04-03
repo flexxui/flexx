@@ -107,6 +107,23 @@ class Slider(Widget):
     def init(self):
         self._dragging = None
     
+    @event.emitter
+    def user_value(self, value):
+        """ Event emitted when the user manipulates the slider.
+        Has ``old_value`` and ``new_value`` attributes.
+        """
+        d = {'old_value': self.value, 'new_value': value}
+        self.set_value(value)
+        return d
+    
+    @event.emitter
+    def user_done(self):
+        """ Event emitted when the user stops manipulating the slider. Has
+        ``old_value`` and ``new_value`` attributes (which have the same value).
+        """
+        d = {'old_value': self.value, 'new_value': self.value}
+        return d
+    
     @event.action
     def set_value(self, value):
         global Math
@@ -161,6 +178,7 @@ class Slider(Widget):
             self.outernode.blur()
         self._dragging = None
         self.outernode.classList.remove('flx-dragging')
+        self.user_done()
         return super().mouse_down(e)
     
     @event.emitter
@@ -172,7 +190,7 @@ class Slider(Widget):
             x2 = e.clientX
             mi, ma = self.min, self.max
             value_diff = (x2 - x1) / self.outernode.clientWidth * (ma - mi)
-            self.set_value(ref_value + value_diff)
+            self.user_value(ref_value + value_diff)
         else:
             return super().mouse_move(e)
     
@@ -181,7 +199,8 @@ class Slider(Widget):
         for ev in events:
             if ev.key == 'Escape':
                 self.outernode.blur()
+                self.user_done()
             elif ev.key == 'ArrowRight':
-                self.set_value(self.value + self.step)
+                self.user_value(self.value + self.step)
             elif ev.key == 'ArrowLeft':
-                self.set_value(self.value - self.step)
+                self.user_value(self.value - self.step)
