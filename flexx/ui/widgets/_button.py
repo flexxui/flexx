@@ -76,9 +76,11 @@ class BaseButton(Widget):
     text = event.StringProp('', settable=True, doc="""
         The text on the button.
         """)
+    
     checked = event.BoolProp(False, settable=True, doc="""
         Whether the button is checked.
         """)
+    
     disabled = event.BoolProp(False, settable=True, doc="""
         Whether the button is disabled.
         """)
@@ -91,6 +93,15 @@ class BaseButton(Widget):
         """
         e.target.blur()
         return self._create_mouse_event(e)
+    
+    @event.emitter
+    def user_checked(self, checked):
+        """ Event emitted when the user (un)checks this button. Has
+        ``old_value`` and ``new_value`` attributes.
+        """
+        d = {'old_value': self.checked, 'new_value': checked}
+        self.set_checked(checked)
+        return d
 
 
 class Button(BaseButton):
@@ -132,7 +143,7 @@ class ToggleButton(BaseButton):
     
     @event.reaction('mouse_click')
     def __toggle_checked(self, *events):
-        self.set_checked(not self.checked)
+        self.user_checked(not self.checked)
 
     @event.reaction('checked')
     def __check_changed(self, *events):
@@ -184,7 +195,7 @@ class RadioButton(BaseButton):
                 if isinstance(child, RadioButton) and child is not self:
                     child.set_checked(child.node.checked)
         # Turn on this button (last)
-        self.set_checked(self.node.checked)
+        self.user_checked(self.node.checked)  # instead of set_checked
         # Process actual click event
         self.mouse_click(ev)
 
@@ -214,4 +225,4 @@ class CheckBox(BaseButton):
         self.node.checked = self.checked
 
     def _check_changed_from_dom(self, ev):
-        self.set_checked(self.node.checked)
+        self.user_checked(self.node.checked)
