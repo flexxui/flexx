@@ -131,7 +131,19 @@ class TabLayout(StackLayout):
         for i in range(len(nodes)):
             nodes[i].style.width = width + 'px'
     
+    @event.emitter
+    def user_current(self, current):
+        """ Event emitted when the user selects a tab. Can be used to distinguish
+        user-invoked from programatically-invoked tab changes.
+        Has ``old_value`` and ``new_value`` attributes.
+        """
+        if isinstance(current, (float, int)):
+            current = self.children[int(current)]
+        d = {'old_value': self.current, 'new_value': current}
+        self.set_current(current)
+        return d
+    
     def _tabbar_click(self, e):
         index = e.target.index
         if index >= 0:
-            self.set_current(index)
+            self.user_current(index)
