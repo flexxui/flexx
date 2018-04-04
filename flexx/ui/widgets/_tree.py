@@ -272,7 +272,7 @@ class TreeWidget(Widget):
                 modifiers = ev.modifiers if ev.modifiers else []
                 if 'Shift' in modifiers:  # Ctrl can also be in modifiers
                     # Select everything between last selected and current
-                    if self._last_selected and self._last_selected.selected:
+                    if self._last_selected is not None:
                         if self._last_selected is not item:
                             mark_selected = False
                             for i in self.get_all_items():
@@ -287,17 +287,17 @@ class TreeWidget(Widget):
                     self._last_selected = item
                 elif 'Ctrl' in modifiers:
                     # Toggle
-                    item.user_selected(not item.selected)
-                    if item.selected:
-                        self._last_selected = item
+                    select = not item.selected
+                    item.user_selected(select)
+                    self._last_selected = item if select else None
                 else:
                     # Similar as when max_selected is 1
                     for i in self.get_all_items():
                         if i.selected and i is not item:
                             i.user_selected(False)
-                    item.user_selected(not item.selected)
-                    if item.selected:
-                        self._last_selected = item
+                    select = not item.selected
+                    item.user_selected(select)
+                    self._last_selected = item if select else None
         
         elif self.max_selected == 1:
             # Selecting one, deselects others
