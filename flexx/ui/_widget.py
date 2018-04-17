@@ -706,6 +706,13 @@ class Widget(app.JsComponent):
         self._addEventListener(self.node, 'keyup', self.key_up, 0)
         self._addEventListener(self.node, 'keypress', self.key_press, 0)
         
+        self._addEventListener(self.node, 'touchstart', self.mouse_down, 0)
+        self._addEventListener(self.node, 'touchmove', self.mouse_move, 0)
+        self._addEventListener(self.node, 'touchend', self.mouse_up, 0)
+        # self._addEventListener(self.node, 'touchcancel', self.mouse_cancel, 0)
+        
+        # todo: cancel?
+        
         # Implement mouse capturing. When a mouse is pressed down on
         # a widget, it "captures" the mouse, and will continue to receive
         # move and up events, even if the mouse is not over the widget.
@@ -827,25 +834,41 @@ class Widget(app.JsComponent):
         return ev
 
     def _create_mouse_event(self, e):
+        if e.type.startswith('touch'):
+            # Touch event - select one touch to represent the main position
+            reftouch = e.changedTouches[0]
+            if len(e.targetTouches) > 0:
+                reftouch = e.targetTouches[0]
+            elif len(e.touches) > 0:
+                reftouch = e.touches[0]
+            pos = reftouch.clientX, reftouch.clientY
+            page_pos = reftouch.pageX, reftouch.pageY
+            button = 0
+            buttons = []
+            # todo: include basic support for multi-touch
+        else:
+            # Mouse event
+            pos = e.clientX, e.clientY
+            page_pos = e.pageX, e.pageY
+            # Fix buttons
+            if e.buttons:
+                buttons_mask = reversed([c for c in e.buttons.toString(2)]).join('')
+            else:
+                # libjavascriptcoregtk-3.0-0  version 2.4.11-1 does not define
+                # e.buttons
+                buttons_mask = [e.button.toString(2)]
+            buttons = [i+1 for i in range(5) if buttons_mask[i] == '1']
+            button = {0: 1, 1: 3, 2: 2, 3: 4, 4: 5}[e.button]
+        
         # note: our button has a value as in JS "which"
         modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
                         if e[n.lower()+'Key']]
         # Fix position
-        pos = e.clientX, e.clientY
         rect = self.node.getBoundingClientRect()
         offset = rect.left, rect.top
         pos = float(pos[0] - offset[0]), float(pos[1] - offset[1])
-        # Fix buttons
-        if e.buttons:
-            buttons_mask = reversed([c for c in e.buttons.toString(2)]).join('')
-        else:
-            # libjavascriptcoregtk-3.0-0  version 2.4.11-1 does not define
-            # e.buttons
-            buttons_mask = [e.button.toString(2)]
-        buttons = [i+1 for i in range(5) if buttons_mask[i] == '1']
-        button = {0: 1, 1: 3, 2: 2, 3: 4, 4: 5}[e.button]
         # Create event dict
-        return dict(pos=pos, page_pos=(e.pageX, e.pageY),
+        return dict(pos=pos, page_pos=page_pos,
                     button=button, buttons=buttons,
                     modifiers=modifiers,
                     )
