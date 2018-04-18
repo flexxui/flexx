@@ -134,6 +134,8 @@ class LineEdit(Widget):
             e.stopPropagation()
         if ev.key in ('Enter', 'Return'):
             self.submit()
+            # Nice to blur on mobile, since it hides keyboard, but less nice on desktop
+            # self.node.blur()
         elif ev.key == 'Escape':
             self.node.blur()
         return ev
