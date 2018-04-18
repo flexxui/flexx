@@ -768,7 +768,7 @@ class Widget(app.JsComponent):
         
         def losecapture(e):
             # We lost the capture. The losecapture event seems to be IE only.
-            # The pointercancel seems poort supported too. So mouse_cancel
+            # The mouse_cancel seems poort supported too. So mouse_cancel
             # only really works with touch events ...
             stopcapture()
             self.mouse_cancel(e)
@@ -782,9 +782,9 @@ class Widget(app.JsComponent):
 
     @event.emitter
     def mouse_down(self, e):
-        """ Event emitted when the mouse is pressed down.
+        """ Event emitted when a mouse button is pressed or a new touch is detected.
 
-        A mouse event has the following attributes:
+        All mouse events have the following attributes:
 
         * pos: the mouse position, in pixels, relative to this widget
         * page_pos: the mouse position relative to the page
@@ -794,13 +794,13 @@ class Widget(app.JsComponent):
         * modifiers: list of strings "Alt", "Shift", "Ctrl", "Meta" for
             modifier keys pressed down at the time of the event.
         * touches: a dictionary that maps touch_id's to (x, y, force) tuples.
-          Mouse events have this too, with a touch_id of -1 and a force of 1.
+            For non-touch events, touch_id is -1 and a force is 1.
         """
         return self._create_mouse_event(e)
 
     @event.emitter
     def mouse_up(self, e):
-        """ Event emitted when the mouse is pressed up.
+        """ Event emitted when a mouse button or touch is released.
 
         See mouse_down() for a description of the event object.
         """
@@ -809,9 +809,9 @@ class Widget(app.JsComponent):
     
     @event.emitter
     def mouse_cancel(self, e):
-        """ Event emitted when the mouse lost, e.g. the window became inactive
-        during a drag. This does not seem to work with mouse events in most
-        browsers, so is only really useful with touch events.
+        """ Event emitted when the mouse/touch is lost, e.g. the window becomes
+        inactive during a drag. This only seem to work well for touch events
+        in most browsers.
 
         See mouse_down() for a description of the event object.
         """
@@ -820,7 +820,8 @@ class Widget(app.JsComponent):
     
     @event.emitter
     def mouse_move(self, e):
-        """ Event fired when the mouse is moved inside the canvas.
+        """ Event fired when the mouse or a touch is moved.
+        
         See mouse_down for details.
         """
 
