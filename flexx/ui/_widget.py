@@ -790,9 +790,11 @@ class Widget(app.JsComponent):
         * page_pos: the mouse position relative to the page
         * button: what button the event is about, 1, 2, 3 are left, right,
             middle, respectively. 0 indicates no button.
-        * buttons: what buttons where pressed at the time of the event.
+        * buttons: what buttons were pressed at the time of the event.
         * modifiers: list of strings "Alt", "Shift", "Ctrl", "Meta" for
             modifier keys pressed down at the time of the event.
+        * touches: a dictionary that maps touch_id's to (x, y, force) tuples.
+          Mouse events have this too, with a touch_id of -1 and a force of 1.
         """
         return self._create_mouse_event(e)
 
@@ -846,21 +848,29 @@ class Widget(app.JsComponent):
         return ev
 
     def _create_mouse_event(self, e):
+        # Get offset to fix positions
+        rect = self.node.getBoundingClientRect()
+        offset = rect.left, rect.top
+        
         if e.type.startswith('touch'):
             # Touch event - select one touch to represent the main position
-            reftouch = e.changedTouches[0]
-            if len(e.targetTouches) > 0:
-                reftouch = e.targetTouches[0]
-            elif len(e.touches) > 0:
-                reftouch = e.touches[0]
-            pos = reftouch.clientX, reftouch.clientY
-            page_pos = reftouch.pageX, reftouch.pageY
+            t = e.changedTouches[0]
+            pos = float(t.clientX - offset[0]), float(t.clientY - offset[1])
+            page_pos = t.pageX, t.pageY
             button = 0
             buttons = []
-            # todo: include basic support for multi-touch
+            # Include basic support for multi-touch
+            touches = {}
+            for i in range(e.changedTouches.length):
+                t = e.changedTouches[i]
+                if t.target is not e.target:
+                    continue
+                touches[t.identifier] = (float(t.clientX - offset[0]),
+                                         float(t.clientY - offset[1]),
+                                         t.force)
         else:
             # Mouse event
-            pos = e.clientX, e.clientY
+            pos = float(e.clientX - offset[0]), float(e.clientY - offset[1])
             page_pos = e.pageX, e.pageY
             # Fix buttons
             if e.buttons:
@@ -871,16 +881,13 @@ class Widget(app.JsComponent):
                 buttons_mask = [e.button.toString(2)]
             buttons = [i+1 for i in range(5) if buttons_mask[i] == '1']
             button = {0: 1, 1: 3, 2: 2, 3: 4, 4: 5}[e.button]
+            touches = {-1: (pos[0], pos[1], 1)}  # key must not clash with real touches
         
         # note: our button has a value as in JS "which"
         modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
                         if e[n.lower()+'Key']]
-        # Fix position
-        rect = self.node.getBoundingClientRect()
-        offset = rect.left, rect.top
-        pos = float(pos[0] - offset[0]), float(pos[1] - offset[1])
         # Create event dict
-        return dict(pos=pos, page_pos=page_pos,
+        return dict(pos=pos, page_pos=page_pos, touches=touches,
                     button=button, buttons=buttons,
                     modifiers=modifiers,
                     )
