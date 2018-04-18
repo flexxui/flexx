@@ -132,7 +132,7 @@ class Flexx:
         self.sessions[session_id] = s
     
     def _handle_error(self, evt):
-        msg = short = evt.message
+        msg = short_msg = evt.message
         if not window.evt:
             window.evt = evt
         if evt.error and evt.error.stack:  # evt.error can be None for syntax err
@@ -164,7 +164,7 @@ class Flexx:
         evt.preventDefault()  # Don't do the standard error 
         window.console.ori_error(msg)
         for session in self.sessions.values():
-            session.send_command("ERROR", short)
+            session.send_command("ERROR", short_msg)
 
 class JsSession:
     
