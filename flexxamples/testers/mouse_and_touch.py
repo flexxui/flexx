@@ -2,6 +2,8 @@
 This example is intended to test mouse/touch events.
 """
 
+from time import time
+
 from flexx import flx
 
 
