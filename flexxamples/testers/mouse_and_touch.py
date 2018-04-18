@@ -37,7 +37,7 @@ class Test(flx.Widget):
         
         test_widget2.reaction(reaction,
                               'mouse_down', 'mouse_move', 'mouse_up', 'mouse_cancel',
-                              'mouse_click', 'mouse_double_click',
+                              '!mouse_click', '!mouse_double_click',
                               )
     
     @flx.action
