@@ -434,7 +434,7 @@ class ColorProp(Property):
         d.alpha = val[3]
         hex = [int(c * 255) for c in val[:3]]
         d.hex = '#' + ''.join([Mi[int(c / 16)] + Mi[c % 16] for c in hex])
-        d.css = 'rgba(%i,%i,%i,%f)' % (val[0]*255, val[1]*255, val[2]*255, val[3])
+        d.css = 'rgba({:.0f},{:.0f},{:.0f},{:g})'.format(val[0]*255, val[1]*255, val[2]*255, val[3])
         return d
 
 
