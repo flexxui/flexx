@@ -838,7 +838,8 @@ class HVLayout(Layout):
         if self.mode == 'SPLIT' and e.target.classList.contains("flx-split-sep"):
             e.stopPropagation()
             sep = e.target
-            x_or_y1 = e.clientX if 'h' in self.orientation else e.clientY
+            t = e.changedTouches[0] if e.changedTouches else e
+            x_or_y1 = t.clientX if 'h' in self.orientation else t.clientY
             self._dragging = self.orientation, sep.i, sep.abs_pos, x_or_y1
             self.outernode.classList.add('flx-dragging')
         else:
@@ -854,9 +855,11 @@ class HVLayout(Layout):
     def mouse_move(self, e):
         if self._dragging is not None:
             e.stopPropagation()
+            e.preventDefault()  # prevent drag-down-refresh on mobile devices
             ori, i, ref_pos, x_or_y1 = self._dragging
             if ori == self.orientation:
-                x_or_y2 = e.clientX if 'h' in self.orientation else e.clientY
+                t = e.changedTouches[0] if e.changedTouches else e
+                x_or_y2 = t.clientX if 'h' in self.orientation else t.clientY
                 diff = (x_or_y1 - x_or_y2) if 'r' in ori else (x_or_y2 - x_or_y1)
                 self.__apply_one_splitter_pos(i, max(0, ref_pos + diff))
         else:

@@ -20,5 +20,6 @@ class Demo(flx.Widget):
 
 
 if __name__ == '__main__':
-    m = flx.App(Demo, title='Flexx demo').launch()
+    a = flx.App(Demo, title='Flexx demo')
+    m = a.launch()
     flx.run()

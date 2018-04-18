@@ -163,7 +163,7 @@ class Slider(Widget):
     def mouse_down(self, e):
         if not self.disabled:
             e.stopPropagation()
-            x1 = e.clientX
+            x1 = e.changedTouches[0].clientX if e.changedTouches else e.clientX
             if not e.target.classList.contains("slider"):
                 x1 = (self.node.getBoundingClientRect().x +
                       self.node.children[0].children[1].offsetLeft)
@@ -187,7 +187,7 @@ class Slider(Widget):
             e.stopPropagation()
             ref_value, x1 = self._dragging[0], self._dragging[1]
             self._dragging = ref_value, x1, True  # mark as moved
-            x2 = e.clientX
+            x2 = e.changedTouches[0].clientX if e.changedTouches else e.clientX
             mi, ma = self.min, self.max
             value_diff = (x2 - x1) / self.outernode.clientWidth * (ma - mi)
             self.user_value(ref_value + value_diff)
