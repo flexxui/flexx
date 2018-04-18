@@ -105,15 +105,20 @@ def test_property_Color1():
     """
     #00ffff 1.0
     [0.0, 1.0, 1.0, 1.0]
-    ?rgba(0,255,255,1.0
+    rgba(0,255,255,1)
+    rgba(0,255,255,0.25)
     ----------
     #00ffff 1
     [0, 1, 1, 1]
     rgba(0,255,255,1)
+    rgba(0,255,255,0.25)
     """
     m = MyObject()
     print(m.color.hex, m.color.alpha)
     print(list(m.color.t))
+    print(m.color.css)
+    m.set_color((0, 1, 1, 0.25))
+    loop.iter()
     print(m.color.css)
 
 
