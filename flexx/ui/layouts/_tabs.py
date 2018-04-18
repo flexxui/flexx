@@ -84,7 +84,8 @@ class TabLayout(StackLayout):
         outernode = window.document.createElement('div')
         self._tabbar = window.document.createElement('div')
         self._tabbar.classList.add('flx-tabbar')
-        self._addEventListener(self._tabbar, 'mousedown', self._tabbar_click)
+        self._addEventListener(self._tabbar, 'mousedown',  # also works for touch
+                               self._tabbar_click)
         outernode.appendChild(self._tabbar)
         return outernode
     
