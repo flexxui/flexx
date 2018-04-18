@@ -186,7 +186,7 @@ class TreeWidget(Widget):
         content: '\\2610\\00a0';
     }
     
-    .flx-TreeWidget .flx-TreeItem > .text {
+    .flx-TreeWidget .flx-TreeItem > .text.hastitle {
         width: 50%;
     }
     /* ----- End Tree Widget ----- */
@@ -569,13 +569,14 @@ class TreeItem(Widget):
         title, text = self._render_title(), self._render_text()
         
         # Note that the outernode (the <li>) has not flx-Widget nor flx-TreeItem
+        extra_text_cls = ' hastitle' if len(title) > 0 else ''
         return create_element('li', {'className': cnames},
                     create_element('span', {'className': 'flx-TreeItem ' + cnames},
                         create_element('span', {'className': 'padder'}),
                         create_element('span', {'className': 'collapsebut'}),
                         create_element('span', {'className': 'checkbut'}),
                         create_element('span', {'className': 'title'}, title),
-                        create_element('span', {'className': 'text'}, text),
+                        create_element('span', {'className': 'text' + extra_text_cls}, text),
                         ),
                     create_element('ul', {}, subnodes),
                     )
