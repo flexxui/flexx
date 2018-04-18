@@ -700,18 +700,17 @@ class Widget(app.JsComponent):
     
     def _init_events(self):
         # Connect some standard events
-        self._addEventListener(self.node, 'mousedown', self.mouse_down, 0)
         self._addEventListener(self.node, 'wheel', self.mouse_wheel, 0)
         self._addEventListener(self.node, 'keydown', self.key_down, 0)
         self._addEventListener(self.node, 'keyup', self.key_up, 0)
         self._addEventListener(self.node, 'keypress', self.key_press, 0)
-        
+        # Mouse events, for move and up we implement some heuristics below
+        self._addEventListener(self.node, 'mousedown', self.mouse_down, 0)
+        # Touch events
         self._addEventListener(self.node, 'touchstart', self.mouse_down, 0)
         self._addEventListener(self.node, 'touchmove', self.mouse_move, 0)
         self._addEventListener(self.node, 'touchend', self.mouse_up, 0)
-        # self._addEventListener(self.node, 'touchcancel', self.mouse_cancel, 0)
-        
-        # todo: cancel?
+        self._addEventListener(self.node, 'touchcancel', self.mouse_cancel, 0)
         
         # Implement mouse capturing. When a mouse is pressed down on
         # a widget, it "captures" the mouse, and will continue to receive
@@ -768,9 +767,11 @@ class Widget(app.JsComponent):
                 window.document.removeEventListener("mouseup", mup_outside, True)
         
         def losecapture(e):
-            # We lost the capture, emit mouse up to "drop" the target
+            # We lost the capture. The losecapture event seems to be IE only.
+            # The pointercancel seems poort supported too. So mouse_cancel
+            # only really works with touch events ...
             stopcapture()
-            # self.mouse_up(e)  # mmm, better not
+            self.mouse_cancel(e)
         
         # Setup capturing and releasing
         self._addEventListener(self.node, 'mousedown', mdown, True)
@@ -803,7 +804,18 @@ class Widget(app.JsComponent):
         """
         ev = self._create_mouse_event(e)
         return ev
+    
+    @event.emitter
+    def mouse_cancel(self, e):
+        """ Event emitted when the mouse lost, e.g. the window became inactive
+        during a drag. This does not seem to work with mouse events in most
+        browsers, so is only really useful with touch events.
 
+        See mouse_down() for a description of the event object.
+        """
+        ev = self._create_mouse_event(e)
+        return ev
+    
     @event.emitter
     def mouse_move(self, e):
         """ Event fired when the mouse is moved inside the canvas.
