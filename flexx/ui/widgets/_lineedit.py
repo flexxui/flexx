@@ -89,9 +89,7 @@ class LineEdit(Widget):
         node.appendChild(self._autocomp)
         
         f1 = lambda: self.user_text(self.node.value)
-        f2 = lambda ev: self.submit() if ev.which == 13 else None
         self._addEventListener(node, 'input', f1, False)
-        self._addEventListener(node, 'keydown', f2, False)
         self._addEventListener(node, 'blur', self.user_done, False)
         #if IE10:
         #    self._addEventListener(self.node, 'change', f1, False)
@@ -134,8 +132,11 @@ class LineEdit(Widget):
             pass
         else:
             e.stopPropagation()
+        if ev.key in ('Enter', 'Return'):
+            self.submit()
+        elif ev.key == 'Escape':
+            self.node.blur()
         return ev
-    
     
     ## Reactions
     
