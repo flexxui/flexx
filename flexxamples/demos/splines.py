@@ -292,16 +292,16 @@ class Splines(flx.Widget):
         
         with flx.HBox():
             
-            with flx.VBox(flex=0, style='min-width:150px'):
+            with flx.VBox(flex=0, minsize=150):
                 self.b1 = flx.RadioButton(text='Linear')
                 self.b2 = flx.RadioButton(text='Basis')
                 self.b3 = flx.RadioButton(text='Cardinal', checked=True)
                 self.b4 = flx.RadioButton(text='Catmull Rom')
                 self.b5 = flx.RadioButton(text='Lagrange')
                 self.b6 = flx.RadioButton(text='Lanczos')
-                flx.Widget(style='min-height:10px')
+                flx.Widget(minsize=10)
                 closed = flx.CheckBox(text='Closed')
-                flx.Widget(style='min-height:10px')
+                flx.Widget(minsize=10)
                 self.tension = flx.Slider(min=-0.5, max=1, value=0.5,
                                           text=lambda: 'Tension: {value}')
                 flx.Widget(flex=1)

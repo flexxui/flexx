@@ -121,7 +121,7 @@ class Twente(flx.Widget):
         
         with flx.HFix():
             flx.Widget(flex=1)
-            with flx.VBox(flex=0, style='min-width:200px'):
+            with flx.VBox(flex=0, minsize=200):
                 with flx.GroupWidget(title='Plot options'):
                     flx.Label(text='Month')
                     self.month = flx.ComboBox(options=months, selected_index=12, style='width: 100%')

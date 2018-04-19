@@ -73,8 +73,6 @@ class ColabPaintingView(flx.Widget):
     .flx-ColabPaintingView .flx-CanvasWidget {
         background: #fff;
         border: 10px solid #000;
-        min-width: 400px; max-width: 400px;
-        min-height: 400px; max-height: 400px;
     }
     """
     
@@ -88,7 +86,7 @@ class ColabPaintingView(flx.Widget):
             flx.Widget(flex=1)
             with flx.HBox(flex=2):
                 flx.Widget(flex=1)
-                self.canvas = flx.CanvasWidget(flex=0)
+                self.canvas = flx.CanvasWidget(flex=0, minsize=400, maxsize=400)
                 flx.Widget(flex=1)
             flx.Widget(flex=1)
         

@@ -19,7 +19,7 @@ class BaseButton(Widget):
     """ Abstract button class.
     """
     
-    DEFAULT_MIN_SIZE = 10, 28
+    DEFAULT_MIN_SIZE = 10, 24
     
     CSS = """
 
@@ -101,6 +101,8 @@ class BaseButton(Widget):
 class Button(BaseButton):
     """ A push button.
     """
+    
+    DEFAULT_MIN_SIZE = 10, 28
 
     def _create_dom(self):
         global window
@@ -124,6 +126,8 @@ class ToggleButton(BaseButton):
     """ A button that can be toggled. It behaves like a checkbox, while
     looking more like a regular button.
     """
+    
+    DEFAULT_MIN_SIZE = 10, 28
     
     def _create_dom(self):
         global window
