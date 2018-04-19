@@ -14,7 +14,7 @@ Visually group a collection of input widgets. Example:
                                                text='Clicked {value} times')
                 self.but = ui.Button(text='click me')
         
-        @event.reaction('but.mouse_down')
+        @event.reaction('but.pointer_down')
         def _button_pressed(self, *events):
             self.progress.set_value(self.progress.value + 1)
 """

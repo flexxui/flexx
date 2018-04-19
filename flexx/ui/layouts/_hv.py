@@ -20,19 +20,19 @@ Interactive Box layout example:
             self.b3 = ui.Button(text='Horizontal reversed', flex=2)
             self.b4 = ui.Button(text='Vertical reversed', flex=3)
         
-        @event.reaction('b1.mouse_down')
+        @event.reaction('b1.pointer_down')
         def _to_horizontal(self, *events):
             self.set_orientation('h')
         
-        @event.reaction('b2.mouse_down')
+        @event.reaction('b2.pointer_down')
         def _to_vertical(self, *events):
             self.set_orientation('v')
         
-        @event.reaction('b3.mouse_down')
+        @event.reaction('b3.pointer_down')
         def _to_horizontal_rev(self, *events):
             self.set_orientation('hr')
         
-        @event.reaction('b4.mouse_down')
+        @event.reaction('b4.pointer_down')
         def _to_vertical_r(self, *events):
             self.set_orientation('vr')
 
@@ -834,7 +834,7 @@ class HVLayout(Layout):
             child.check_real_size()
     
     @event.emitter
-    def mouse_down(self, e):
+    def pointer_down(self, e):
         if self.mode == 'SPLIT' and e.target.classList.contains("flx-split-sep"):
             e.stopPropagation()
             sep = e.target
@@ -843,16 +843,16 @@ class HVLayout(Layout):
             self._dragging = self.orientation, sep.i, sep.abs_pos, x_or_y1
             self.outernode.classList.add('flx-dragging')
         else:
-            return super().mouse_down(e)
+            return super().pointer_down(e)
     
     @event.emitter
-    def mouse_up(self, e):
+    def pointer_up(self, e):
         self._dragging = None
         self.outernode.classList.remove('flx-dragging')
-        return super().mouse_down(e)
+        return super().pointer_down(e)
     
     @event.emitter
-    def mouse_move(self, e):
+    def pointer_move(self, e):
         if self._dragging is not None:
             e.stopPropagation()
             e.preventDefault()  # prevent drag-down-refresh on mobile devices
@@ -863,7 +863,7 @@ class HVLayout(Layout):
                 diff = (x_or_y1 - x_or_y2) if 'r' in ori else (x_or_y2 - x_or_y1)
                 self.__apply_one_splitter_pos(i, max(0, ref_pos + diff))
         else:
-            return super().mouse_move(e)
+            return super().pointer_move(e)
 
 
 ## Util funcs

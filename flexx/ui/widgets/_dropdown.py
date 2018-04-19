@@ -175,7 +175,7 @@ class BaseDropdown(Widget):
         return rect
     
     def _collapse_maybe(self, e):
-        # Collapse if the given mouse event is outside the combobox.
+        # Collapse if the given pointer event is outside the combobox.
         # Better version of blur event, sort of. Dont use mouseup, as then 
         # there's mouse capturing (the event will come from the main widget).
         t = e.target
@@ -464,7 +464,7 @@ class DropdownContainer(BaseDropdown):
     used to e.g. make a collapsable tree widget. Some styling may be required
     for the child widget to be sized appropriately.
     
-    *Note: This widget is currently broken, because mouse events do not work in the
+    *Note: This widget is currently broken, because pointer events do not work in the
     contained widget (at least on Firefox).*
     """
     

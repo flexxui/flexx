@@ -157,10 +157,10 @@ class Slider(Widget):
                     )
                 ]
     
-    # Use the Flexx mouse event system, so we can make use of capturing ...
+    # Use the Flexx pointer event system, so we can make use of capturing ...
     
     @event.emitter
-    def mouse_down(self, e):
+    def pointer_down(self, e):
         if not self.disabled:
             e.stopPropagation()
             x1 = e.changedTouches[0].clientX if e.changedTouches else e.clientX
@@ -170,19 +170,19 @@ class Slider(Widget):
             self._dragging = self.value, x1
             self.outernode.classList.add('flx-dragging')
         else:
-            return super().mouse_down(e)
+            return super().pointer_down(e)
     
     @event.emitter
-    def mouse_up(self, e):
+    def pointer_up(self, e):
         if self._dragging is not None and len(self._dragging) == 3:
             self.outernode.blur()
         self._dragging = None
         self.outernode.classList.remove('flx-dragging')
         self.user_done()
-        return super().mouse_down(e)
+        return super().pointer_down(e)
     
     @event.emitter
-    def mouse_move(self, e):
+    def pointer_move(self, e):
         if self._dragging is not None:
             e.stopPropagation()
             ref_value, x1 = self._dragging[0], self._dragging[1]
@@ -192,7 +192,7 @@ class Slider(Widget):
             value_diff = (x2 - x1) / self.outernode.clientWidth * (ma - mi)
             self.user_value(ref_value + value_diff)
         else:
-            return super().mouse_move(e)
+            return super().pointer_move(e)
     
     @event.reaction('key_down')
     def __on_key(self, *events):

@@ -59,7 +59,7 @@ class Monitor(flx.PyComponent):
             if flx.current_server().serving[0] == 'localhost':
                 # Don't do this for a public server
                 self.button = flx.Button(text='Do some work')
-                self.button.reaction(self._do_work, 'mouse_down')
+                self.button.reaction(self._do_work, 'pointer_down')
             self.view = MonitorView(flex=1)
     
     @relay.reaction('system_info')  # note that we connect to relay
