@@ -115,6 +115,12 @@ class CanvasWidget(Widget):
             if not (e.altKey is True and e.ctrlKey is True and e.shiftKey is True):
                 e.preventDefault()
     
+    def _create_mouse_event(self, e):
+        # In a canvas, prevent browser zooming and the like
+        if e.type.startswith('touch'):
+            e.preventDefault()
+        return super()._create_mouse_event(e)
+    
     @event.emitter
     def mouse_wheel(self, e):
         global window
