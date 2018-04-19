@@ -58,8 +58,8 @@ class ChatRoom(flx.PyComponent):
             flx.Widget(flex=1)
             with flx.VBox():
                 self.name_edit = flx.LineEdit(placeholder_text='your name')
-                self.people_label = flx.Label(flex=1, style='min-width: 250px')
-            with flx.VBox(style='min-width: 450px'):
+                self.people_label = flx.Label(flex=1, minsize=250)
+            with flx.VBox(minsize=450):
                 self.messages = MessageBox(flex=1)
                 with flx.HBox():
                     self.msg_edit = flx.LineEdit(flex=1,

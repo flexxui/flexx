@@ -31,7 +31,7 @@ class BokehExample(flx.PyComponent):
     
     def init(self):
         
-        with flx.HSplit(style='min-height:300px') as self.widget:
+        with flx.HSplit(minsize=300) as self.widget:
             self.plot1 = flx.BokehWidget.from_plot(p1, title='Scatter')
             with flx.VFix(title='Sine'):
                 Controls()
