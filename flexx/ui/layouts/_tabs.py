@@ -35,6 +35,8 @@ class TabLayout(StackLayout):
     
     .flx-TabLayout > .flx-Widget {
         top: 30px;
+        margin: 0;
+        height: calc(100% - 30px);
         border: 1px solid #ddd;
     }
     
@@ -67,6 +69,9 @@ class TabLayout(StackLayout):
         border-radius: 3px 3px 0px 0px;
         margin-left: -1px;
         transition: background 0.3s;
+    }
+    .flx-tabbar > .flx-tab-item:first-of-type {
+        margin-left: 0;
     }
     
     .flx-tabbar > .flx-tab-item.flx-current {
