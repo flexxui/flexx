@@ -10,7 +10,7 @@
                 self.but = ui.Button(text='Push me')
                 self.label = ui.Label(flex=1, wrap=True, text='This is a label. ')
     
-        @event.reaction('but.mouse_down')
+        @event.reaction('but.pointer_down')
         def _add_label_text(self, *events):
             self.label.set_text(self.label.text + 'Yes it is. ')
 

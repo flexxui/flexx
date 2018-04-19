@@ -69,7 +69,7 @@ class ChatRoom(flx.PyComponent):
         
         self._update_participants()
     
-    @flx.reaction('ok.mouse_down', 'msg_edit.submit')
+    @flx.reaction('ok.pointer_down', 'msg_edit.submit')
     def _send_message(self, *events):
         text = self.msg_edit.text
         if text:

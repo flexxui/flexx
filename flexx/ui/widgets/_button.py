@@ -86,13 +86,13 @@ class BaseButton(Widget):
         """)
     
     @event.emitter
-    def mouse_click(self, e):
+    def pointer_click(self, e):
         """ Event emitted when the mouse is clicked.
 
-        See mouse_down() for a description of the event object.
+        See pointer_down() for a description of the event object.
         """
         e.target.blur()
-        return self._create_mouse_event(e)
+        return self._create_pointer_event(e)
     
     @event.emitter
     def user_checked(self, checked):
@@ -113,7 +113,7 @@ class Button(BaseButton):
         node = window.document.createElement('button')
         # node = window.document.createElement('input')
         # node.setAttribute('type', 'button')
-        self._addEventListener(node, 'click', self.mouse_click, 0)
+        self._addEventListener(node, 'click', self.pointer_click, 0)
         return node
 
     def _render_dom(self):
@@ -135,13 +135,13 @@ class ToggleButton(BaseButton):
     def _create_dom(self):
         global window
         node = window.document.createElement('button')
-        self._addEventListener(node, 'click', self.mouse_click, 0)
+        self._addEventListener(node, 'click', self.pointer_click, 0)
         return node
     
     def _render_dom(self):
         return [self.text]
     
-    @event.reaction('mouse_click')
+    @event.reaction('pointer_click')
     def __toggle_checked(self, *events):
         self.user_checked(not self.checked)
 
@@ -197,7 +197,7 @@ class RadioButton(BaseButton):
         # Turn on this button (last)
         self.user_checked(self.node.checked)  # instead of set_checked
         # Process actual click event
-        self.mouse_click(ev)
+        self.pointer_click(ev)
 
 
 class CheckBox(BaseButton):

@@ -26,7 +26,7 @@ class Example(flx.HFix):
             self.checklabel = flx.Label(text='...')
 
 
-    @flx.reaction('b1.mouse_click', 'b2.mouse_click', 'b3.mouse_click')
+    @flx.reaction('b1.pointer_click', 'b2.pointer_click', 'b3.pointer_click')
     def _button_clicked(self, *events):
         ev = events[-1]
         self.buttonlabel.set_text('Clicked on the ' + ev.source.text)

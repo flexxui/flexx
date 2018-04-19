@@ -206,8 +206,8 @@ Similar to actions, they are created with a decorator.
     class MyObject(event.Component):
     
         @event.emitter
-        def mouse_down(self, js_event):
-            ''' Event emitted when the mouse is pressed down.
+        def pointer_down(self, js_event):
+            ''' Event emitted when the mouse/touchpad/screen is pressed.
             '''
             return dict(button=js_event.button)
 

@@ -255,7 +255,7 @@ class TreeWidget(Widget):
                 for i in self.children:
                     i.set_selected(False)
     
-    @event.reaction('!children**.mouse_click', '!children**.mouse_double_click')
+    @event.reaction('!children**.pointer_click', '!children**.pointer_double_click')
     def _handle_item_clicked(self, *events):
         self._last_highlighted_hint = events[-1].source.id
         if self._highlight_on:  # highhlight tracks clicks
@@ -594,7 +594,7 @@ class TreeItem(Widget):
     # but note that we need the stopPropagation here.
     
     @event.emitter
-    def mouse_click(self, e=None):
+    def pointer_click(self, e=None):
         """ Event emitted when the item is clicked on. Depending
         on the tree's max_selected, this can result in the item
         being selected/deselected.
@@ -602,16 +602,16 @@ class TreeItem(Widget):
         if e is None:
             return dict(button=1, buttons=[1], modifiers=[])
         else:
-            return self._create_mouse_event(e)
+            return self._create_pointer_event(e)
     
     @event.emitter
-    def mouse_double_click(self, e=None):
+    def pointer_double_click(self, e=None):
         """ Event emitted when the item is double-clicked.
         """
         if e is None:
             return dict(button=1, buttons=[1], modifiers=[])
         else:
-            return self._create_mouse_event(e)
+            return self._create_pointer_event(e)
     
     def _on_click(self, e):
         # Handle JS mouse click event
@@ -621,7 +621,7 @@ class TreeItem(Widget):
         elif e.target.classList.contains('checkbut'):
             self.user_checked(not self.checked)
         else:
-            self.mouse_click(e)
+            self.pointer_click(e)
     
     def _on_double_click(self, e):
         # Handle JS mouse double click event
@@ -629,4 +629,4 @@ class TreeItem(Widget):
         c1 = e.target.classList.contains('collapsebut')
         c2 = e.target.classList.contains('checkbut')
         if not (c1 or c2):
-            self.mouse_double_click(e)
+            self.pointer_double_click(e)

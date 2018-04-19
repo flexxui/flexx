@@ -128,8 +128,8 @@ class SplineWidget(flx.CanvasWidget):
             f2 = 1
         return f0, f1, f2, f3
     
-    @flx.reaction('mouse_down')
-    def _on_mouse_down(self, *events):
+    @flx.reaction('pointer_down')
+    def _on_pointer_down(self, *events):
         for ev in events:
             w, h = self.size
             # Get closest point
@@ -189,12 +189,12 @@ class SplineWidget(flx.CanvasWidget):
                     self.yy.insert(i, ev.pos[1] / h)
                     self._set_current_node(i)
     
-    @flx.reaction('mouse_up')
-    def _on_mouse_up(self, *events):
+    @flx.reaction('pointer_up')
+    def _on_pointer_up(self, *events):
         self._set_current_node(None)
     
-    @flx.reaction('mouse_move')
-    def _on_mouse_move(self, *events):
+    @flx.reaction('pointer_move')
+    def _on_pointer_move(self, *events):
         ev = events[-1]
         if self._current_node is not None:
             i = self._current_node

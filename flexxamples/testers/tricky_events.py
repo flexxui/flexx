@@ -85,7 +85,7 @@ class Tricky(ui.Widget):
             
             ui.Widget(flex=1)  # spacer
     
-    @event.reaction('reset.mouse_click')
+    @event.reaction('reset.pointer_click')
     def _reset(self):
         # You probably don't want to ever do this in a normal app.
         # Do via a timeout because reactions get handled by the event system,

@@ -700,17 +700,17 @@ class Widget(app.JsComponent):
     
     def _init_events(self):
         # Connect some standard events
-        self._addEventListener(self.node, 'wheel', self.mouse_wheel, 0)
+        self._addEventListener(self.node, 'wheel', self.pointer_wheel, 0)
         self._addEventListener(self.node, 'keydown', self.key_down, 0)
         self._addEventListener(self.node, 'keyup', self.key_up, 0)
         self._addEventListener(self.node, 'keypress', self.key_press, 0)
         # Mouse events, for move and up we implement some heuristics below
-        self._addEventListener(self.node, 'mousedown', self.mouse_down, 0)
+        self._addEventListener(self.node, 'mousedown', self.pointer_down, 0)
         # Touch events
-        self._addEventListener(self.node, 'touchstart', self.mouse_down, 0)
-        self._addEventListener(self.node, 'touchmove', self.mouse_move, 0)
-        self._addEventListener(self.node, 'touchend', self.mouse_up, 0)
-        self._addEventListener(self.node, 'touchcancel', self.mouse_cancel, 0)
+        self._addEventListener(self.node, 'touchstart', self.pointer_down, 0)
+        self._addEventListener(self.node, 'touchmove', self.pointer_move, 0)
+        self._addEventListener(self.node, 'touchend', self.pointer_up, 0)
+        self._addEventListener(self.node, 'touchcancel', self.pointer_cancel, 0)
         
         # Implement mouse capturing. When a mouse is pressed down on
         # a widget, it "captures" the mouse, and will continue to receive
@@ -737,27 +737,27 @@ class Widget(app.JsComponent):
             if self._capture_flag == -1:
                 self._capture_flag = 0
             elif self._capture_flag == 1:
-                self.mouse_move(e)
+                self.pointer_move(e)
             elif self._capture_flag == 0 and self.capture_mouse > 1:
-                self.mouse_move(e)
+                self.pointer_move(e)
         
         def mup_inside(e):
             if self._capture_flag == 1:
-                self.mouse_up(e)
+                self.pointer_up(e)
             self._capture_flag = 0
         
         def mmove_outside(e):
             # emit move event
             if self._capture_flag == 2:  # can hardly be anything else, but be safe
                 e = window.event if window.event else e
-                self.mouse_move(e)
+                self.pointer_move(e)
         
         def mup_outside(e):
             # emit mouse up event, and stop capturing
             if self._capture_flag == 2:
                 e = window.event if window.event else e
                 stopcapture()
-                self.mouse_up(e)
+                self.pointer_up(e)
         
         def stopcapture():
             # Stop capturing
@@ -768,10 +768,10 @@ class Widget(app.JsComponent):
         
         def losecapture(e):
             # We lost the capture. The losecapture event seems to be IE only.
-            # The mouse_cancel seems poort supported too. So mouse_cancel
+            # The pointer_cancel seems poort supported too. So pointer_cancel
             # only really works with touch events ...
             stopcapture()
-            self.mouse_cancel(e)
+            self.pointer_cancel(e)
         
         # Setup capturing and releasing
         self._addEventListener(self.node, 'mousedown', mdown, True)
@@ -781,59 +781,65 @@ class Widget(app.JsComponent):
         self._addEventListener(self.node, "mouseup", mup_inside, False)
 
     @event.emitter
-    def mouse_down(self, e):
+    def pointer_down(self, e):
         """ Event emitted when a mouse button is pressed or a new touch is detected.
 
-        All mouse events have the following attributes:
+        All pointer events have the following attributes:
 
-        * pos: the mouse position, in pixels, relative to this widget
-        * page_pos: the mouse position relative to the page
-        * button: what button the event is about, 1, 2, 3 are left, right,
+        * pos: the pointer position, in pixels, relative to this widget
+        * page_pos: the pointer position relative to the page
+        * button: what mouse button the event is about, 1, 2, 3 are left, right,
             middle, respectively. 0 indicates no button.
         * buttons: what buttons were pressed at the time of the event.
         * modifiers: list of strings "Alt", "Shift", "Ctrl", "Meta" for
             modifier keys pressed down at the time of the event.
         * touches: a dictionary that maps touch_id's to (x, y, force) tuples.
-            For non-touch events, touch_id is -1 and a force is 1.
+            For mouse events touch_id is -1 and force is 1.
+        
+        A note about the relation with JavaScript events: although the name
+        might suggest that this makes use of JS pointer events, this is not
+        the case; Flexx captures both mouse events and touch events and exposes
+        both as its own "pointer event". In effect, it works better on mobile
+        devices, and has multi-touch support.
         """
-        return self._create_mouse_event(e)
+        return self._create_pointer_event(e)
 
     @event.emitter
-    def mouse_up(self, e):
+    def pointer_up(self, e):
         """ Event emitted when a mouse button or touch is released.
 
-        See mouse_down() for a description of the event object.
+        See pointer_down() for a description of the event object.
         """
-        ev = self._create_mouse_event(e)
+        ev = self._create_pointer_event(e)
         return ev
     
     @event.emitter
-    def mouse_cancel(self, e):
+    def pointer_cancel(self, e):
         """ Event emitted when the mouse/touch is lost, e.g. the window becomes
         inactive during a drag. This only seem to work well for touch events
         in most browsers.
 
-        See mouse_down() for a description of the event object.
+        See pointer_down() for a description of the event object.
         """
-        ev = self._create_mouse_event(e)
+        ev = self._create_pointer_event(e)
         return ev
     
     @event.emitter
-    def mouse_move(self, e):
+    def pointer_move(self, e):
         """ Event fired when the mouse or a touch is moved.
         
-        See mouse_down for details.
+        See pointer_down for details.
         """
 
-        ev = self._create_mouse_event(e)
+        ev = self._create_pointer_event(e)
         ev.button = 0
         return ev
 
     @event.emitter
-    def mouse_wheel(self, e):
+    def pointer_wheel(self, e):
         """ Event emitted when the mouse wheel is used.
 
-        See mouse_down() for a description of the event object.
+        See pointer_down() for a description of the event object.
         Additional event attributes:
 
         * hscroll: amount of scrolling in horizontal direction
@@ -842,13 +848,13 @@ class Widget(app.JsComponent):
         # Note: wheel event gets generated also for parent widgets
         # I think this makes sense, but there might be cases
         # where we want to prevent propagation.
-        ev = self._create_mouse_event(e)
+        ev = self._create_pointer_event(e)
         ev.button = 0
         ev.hscroll = e.deltaX * [1, 16, 600][e.deltaMode]
         ev.vscroll = e.deltaY * [1, 16, 600][e.deltaMode]
         return ev
 
-    def _create_mouse_event(self, e):
+    def _create_pointer_event(self, e):
         # Get offset to fix positions
         rect = self.node.getBoundingClientRect()
         offset = rect.left, rect.top

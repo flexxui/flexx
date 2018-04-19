@@ -99,7 +99,7 @@ class ColabPaintingView(flx.Widget):
     def __update_color(self):
         self.canvas.apply_style('border: 10px solid ' + self.model.color.hex)
     
-    @flx.reaction('canvas.mouse_down')
+    @flx.reaction('canvas.pointer_down')
     def __on_click(self, *events):
         for ev in events:
             self.model.add_paint(ev.pos)

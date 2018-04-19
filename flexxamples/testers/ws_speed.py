@@ -50,7 +50,7 @@ class SpeedTestWidget(ui.Widget):
                                    wrap=1, flex=1, style='overflow-y:scroll;')
     
     
-    @event.reaction('buttons.children*.mouse_down')
+    @event.reaction('buttons.children*.pointer_down')
     def run_test(self, *events):
         global window, perf_counter
         self.status.set_text('Test results: ')

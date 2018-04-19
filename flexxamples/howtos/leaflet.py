@@ -169,10 +169,10 @@ class LeafletWidget(flx.Widget):
     def map_handle_mouse(self, e):
         latlng = [e.latlng.lat, e.latlng.lng]
         xy = [e.layerPoint.x, e.layerPoint.y]
-        self.mouse_event(e.type, latlng, xy)
+        self.pointer_event(e.type, latlng, xy)
 
     @flx.emitter
-    def mouse_event(self, event, latlng, xy):
+    def pointer_event(self, event, latlng, xy):
         return {'event': event, 'latlng': latlng, 'xy': xy}
 
     @flx.reaction
@@ -253,11 +253,11 @@ class LeafletExample(flx.Widget):
         
         self.leaflet.add_layer('http://a.tile.openstreetmap.org/', 'OpenStreetMap')
     
-    @flx.reaction('btna.mouse_click')
+    @flx.reaction('btna.pointer_click')
     def handle_seamap_add(self, *events):
         self.leaflet.add_layer('http://t1.openseamap.org/seamark/', 'OpenSeaMap')
 
-    @flx.reaction('btnr.mouse_click')
+    @flx.reaction('btnr.pointer_click')
     def handle_seamap_remove(self, *events):
         self.leaflet.remove_layer('http://t1.openseamap.org/seamark/', 'OpenSeaMap')
 
@@ -266,7 +266,7 @@ class LeafletExample(flx.Widget):
     #     self.leaflet.set_show_scale(self.cbs.checked
     #     self.leaflet.show_layers = self.cbl.checked
 
-    @flx.reaction('leaflet.mouse_event')
+    @flx.reaction('leaflet.pointer_event')
     def handle_leaflet_mouse(self, *events):
         global L
         ev = events[-1]

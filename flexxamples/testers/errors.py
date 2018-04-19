@@ -19,7 +19,7 @@ class ErrorsPy(app.PyComponent):
     def raise_error(self):
         raise RuntimeError('Deliberate error')
     
-    @event.reaction('!js.b4_mouse_click')
+    @event.reaction('!js.b4_pointer_click')
     def error_in_Py_reaction(self, *events):
         self.raise_error()
 
@@ -45,21 +45,21 @@ class ErrorsJS(ui.Widget):
 
     # Handlers for four buttons
     
-    @event.reaction('b1.mouse_click')
+    @event.reaction('b1.pointer_click')
     def error_in_JS_action(self, *events):
         self.do_something_stupid()
     
-    @event.reaction('b2.mouse_click')
+    @event.reaction('b2.pointer_click')
     def error_in_JS_reaction(self, *events):
         self.raise_error()
     
-    @event.reaction('b3.mouse_click')
+    @event.reaction('b3.pointer_click')
     def error_in_Py_action(self, *events):
         self.py.do_something_stupid()
     
-    @event.reaction('b4.mouse_click')
+    @event.reaction('b4.pointer_click')
     def error_in_Py_reaction(self, *events):
-        self.emit('b4_mouse_click')
+        self.emit('b4_pointer_click')
 
 
 if __name__ == '__main__':

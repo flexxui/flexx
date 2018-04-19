@@ -375,7 +375,7 @@ class Component(with_metaclass(ComponentMeta, object)):
     
     def _register_reaction(self, event_type, reaction, force=False):
         # Register a reaction for the given event type. The type
-        # can include a label, e.g. 'mouse_down:foo'.
+        # can include a label, e.g. 'pointer_down:foo'.
         # This is called from Reaction objects at initialization and when
         # they reconnect (dynamism).
         type, _, label = event_type.partition(':')
@@ -384,7 +384,12 @@ class Component(with_metaclass(ComponentMeta, object)):
         if reactions is None:  # i.e. type not in self.__handlers
             reactions = []
             self.__handlers[type] = reactions
-            if not force:  # ! means force
+            if force:
+                pass
+            elif type.startswith('mouse_'):
+                t = 'The event "{}" has been renamed to "pointer{}".'
+                logger.warn(t.format(type, type[5:]))
+            else:  # ! means force
                 msg = ('Event type "{type}" does not exist on component {id}. ' +
                        'Use "!{type}" or "!xx.yy.{type}" to suppress this warning.')
                 msg = msg.replace('{type}', type).replace('{id}', self._id)

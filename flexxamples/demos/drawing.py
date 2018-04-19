@@ -32,7 +32,7 @@ class Drawing(flx.CanvasWidget):
         else:  # Touch
             self.label.set_text('Touch ids: {}'.format(ev.touches.keys()))
     
-    @flx.reaction('mouse_move')
+    @flx.reaction('pointer_move')
     def on_move(self, *events):
         for ev in events:
             self.show_event(ev)
@@ -58,7 +58,7 @@ class Drawing(flx.CanvasWidget):
                 
                 self._last_pos[touch_id] = x, y
     
-    @flx.reaction('mouse_down')
+    @flx.reaction('pointer_down')
     def on_down(self, *events):
         for ev in events:
             self.show_event(ev)
@@ -73,7 +73,7 @@ class Drawing(flx.CanvasWidget):
                 
                 self._last_pos[touch_id] = x, y
         
-    @flx.reaction('mouse_up')
+    @flx.reaction('pointer_up')
     def on_up(self, *events):
         for ev in events:
             self.show_event(ev)

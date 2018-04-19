@@ -36,8 +36,9 @@ class Test(flx.Widget):
                 self.show_event2(ev.type)
         
         test_widget2.reaction(reaction,
-                              'mouse_down', 'mouse_move', 'mouse_up', 'mouse_cancel',
-                              '!mouse_click', '!mouse_double_click',
+                              'pointer_down', 'pointer_move', 'pointer_up',
+                              'pointer_cancel',
+                              '!pointer_click', '!pointer_double_click',
                               )
     
     @flx.action

@@ -15,7 +15,7 @@ provide either a WebGL context or a 2d context as in the example below:
             self.set_capture_mouse(1)
             self._last_pos = (0, 0)
         
-        @event.reaction('mouse_move')
+        @event.reaction('pointer_move')
         def on_move(self, *events):
             for ev in events:
                 self.ctx.beginPath()
@@ -27,7 +27,7 @@ provide either a WebGL context or a 2d context as in the example below:
                 self.ctx.stroke()
                 self._last_pos = ev.pos
         
-        @event.reaction('mouse_down')
+        @event.reaction('pointer_down')
         def on_down(self, *events):
             self._last_pos = events[-1].pos
 
@@ -115,20 +115,20 @@ class CanvasWidget(Widget):
             if not (e.altKey is True and e.ctrlKey is True and e.shiftKey is True):
                 e.preventDefault()
     
-    def _create_mouse_event(self, e):
+    def _create_pointer_event(self, e):
         # In a canvas, prevent browser zooming and the like
         if e.type.startswith('touch'):
             e.preventDefault()
-        return super()._create_mouse_event(e)
+        return super()._create_pointer_event(e)
     
     @event.emitter
-    def mouse_wheel(self, e):
+    def pointer_wheel(self, e):
         global window
         if self.capture_wheel <= 0:
-            return super().mouse_wheel(e)  # normal behavior
+            return super().pointer_wheel(e)  # normal behavior
         elif window.flexx._wheel_timestamp[0] == self.node.id:
             e.preventDefault()
-            return super().mouse_wheel(e)
+            return super().pointer_wheel(e)
     
     @event.reaction
     def _update_canvas_size(self, *events):

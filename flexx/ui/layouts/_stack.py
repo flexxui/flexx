@@ -20,7 +20,7 @@ Show only one child at any time. Example:
                     self.butb.w = ui.Widget(style='background:#0a0;')
                     self.butc.w = ui.Widget(style='background:#00a;')
     
-        @event.reaction('buta.mouse_down', 'butb.mouse_down', 'butc.mouse_down')
+        @event.reaction('buta.pointer_down', 'butb.pointer_down', 'butc.pointer_down')
         def _stacked_current(self, *events):
             button = events[-1].source
             self.stack.set_current(button.w)
