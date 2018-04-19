@@ -85,14 +85,9 @@ class BaseButton(Widget):
         Whether the button is disabled.
         """)
     
-    @event.emitter
-    def pointer_click(self, e):
-        """ Event emitted when the mouse is clicked.
-
-        See pointer_down() for a description of the event object.
-        """
-        e.target.blur()
-        return self._create_pointer_event(e)
+    @event.reaction('pointer_click')
+    def __on_pointer_click(self, e):
+        self.node.blur()
     
     @event.emitter
     def user_checked(self, checked):
@@ -113,7 +108,6 @@ class Button(BaseButton):
         node = window.document.createElement('button')
         # node = window.document.createElement('input')
         # node.setAttribute('type', 'button')
-        self._addEventListener(node, 'click', self.pointer_click, 0)
         return node
 
     def _render_dom(self):
@@ -135,7 +129,6 @@ class ToggleButton(BaseButton):
     def _create_dom(self):
         global window
         node = window.document.createElement('button')
-        self._addEventListener(node, 'click', self.pointer_click, 0)
         return node
     
     def _render_dom(self):
@@ -167,7 +160,6 @@ class RadioButton(BaseButton):
         node.setAttribute('type', 'radio')
         node.setAttribute('id', self.id)
         outernode.setAttribute('for', self.id)
-        self._addEventListener(node, 'click', self._check_radio_click, 0)
         
         return outernode, node
     
@@ -183,7 +175,8 @@ class RadioButton(BaseButton):
     def __check_changed(self, *events):
         self.node.checked = self.checked
     
-    def _check_radio_click(self, ev):
+    @event.emitter
+    def pointer_click(self, e):
         """ This method is called on JS a click event. We *first* update
         the checked properties, and then emit the Flexx click event.
         That way, one can connect to the click event and have an
@@ -197,7 +190,7 @@ class RadioButton(BaseButton):
         # Turn on this button (last)
         self.user_checked(self.node.checked)  # instead of set_checked
         # Process actual click event
-        self.pointer_click(ev)
+        super().pointer_click(e)
 
 
 class CheckBox(BaseButton):

@@ -590,29 +590,6 @@ class TreeItem(Widget):
         """
         return self.text
     
-    # todo: maybe move click and double click events to Widget class?
-    # but note that we need the stopPropagation here.
-    
-    @event.emitter
-    def pointer_click(self, e=None):
-        """ Event emitted when the item is clicked on. Depending
-        on the tree's max_selected, this can result in the item
-        being selected/deselected.
-        """
-        if e is None:
-            return dict(button=1, buttons=[1], modifiers=[])
-        else:
-            return self._create_pointer_event(e)
-    
-    @event.emitter
-    def pointer_double_click(self, e=None):
-        """ Event emitted when the item is double-clicked.
-        """
-        if e is None:
-            return dict(button=1, buttons=[1], modifiers=[])
-        else:
-            return self._create_pointer_event(e)
-    
     def _on_click(self, e):
         # Handle JS mouse click event
         e.stopPropagation()  # don't click parent items
