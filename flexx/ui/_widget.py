@@ -706,6 +706,8 @@ class Widget(app.JsComponent):
         self._addEventListener(self.node, 'keypress', self.key_press, 0)
         # Mouse events, for move and up we implement some heuristics below
         self._addEventListener(self.node, 'mousedown', self.pointer_down, 0)
+        self._addEventListener(self.node, 'click', self.pointer_click, 0)
+        self._addEventListener(self.node, 'dblclick', self.pointer_double_click, 0)
         # Touch events
         self._addEventListener(self.node, 'touchstart', self.pointer_down, 0)
         self._addEventListener(self.node, 'touchmove', self.pointer_move, 0)
@@ -782,7 +784,7 @@ class Widget(app.JsComponent):
 
     @event.emitter
     def pointer_down(self, e):
-        """ Event emitted when a mouse button is pressed or a new touch is detected.
+        """ Event emitted when mouse-button/touchpad/screen is pressed.
 
         All pointer events have the following attributes:
 
@@ -806,12 +808,11 @@ class Widget(app.JsComponent):
 
     @event.emitter
     def pointer_up(self, e):
-        """ Event emitted when a mouse button or touch is released.
+        """ Event emitted when mouse-button/touchpad/screen is released.
 
         See pointer_down() for a description of the event object.
         """
-        ev = self._create_pointer_event(e)
-        return ev
+        return self._create_pointer_event(e)
     
     @event.emitter
     def pointer_cancel(self, e):
@@ -821,8 +822,23 @@ class Widget(app.JsComponent):
 
         See pointer_down() for a description of the event object.
         """
-        ev = self._create_pointer_event(e)
-        return ev
+        return self._create_pointer_event(e)
+    
+    @event.emitter
+    def pointer_click(self, e):
+        """ Event emitted when mouse-button/touchpad/screen is clicked.
+
+        See pointer_down() for a description of the event object.
+        """
+        return self._create_pointer_event(e)
+    
+    @event.emitter
+    def pointer_double_click(self, e):
+        """ Event emitted when mouse-button/touchpad/screen is double-clicked.
+
+        See pointer_down() for a description of the event object.
+        """
+        return self._create_pointer_event(e)
     
     @event.emitter
     def pointer_move(self, e):
