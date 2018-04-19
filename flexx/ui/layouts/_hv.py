@@ -536,9 +536,12 @@ class HVLayout(Layout):
                 child.check_real_size()
         else:
             # Enfore a rerender by mutating splitter_positions
-            sp = self.splitter_positions
-            self._mutate_splitter_positions(())
-            self._mutate_splitter_positions(sp)
+            sp1 = ()
+            sp2 = self.splitter_positions
+            if len(sp2) == 0:
+                sp1 = (1, )
+            self._mutate_splitter_positions(sp1)
+            self._mutate_splitter_positions(sp2)
     
     ## Reactions for box mode
     
