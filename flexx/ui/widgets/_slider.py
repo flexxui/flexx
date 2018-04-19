@@ -21,12 +21,10 @@ class Slider(Widget):
     range input).
     """
     
+    DEFAULT_MIN_SIZE = 40, 20
+    
     CSS = """
     
-    .flx-Slider {
-        min-height: 20px;
-        min-width: 40px;
-    }
     .flx-Slider:focus {
         outline: none;
     }

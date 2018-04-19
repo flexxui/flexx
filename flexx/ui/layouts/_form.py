@@ -219,7 +219,7 @@ class FormLayout(BaseTableLayout):
         # Collect contributions of child widgets
         mima1 = [0, 1e9, 0, 0]
         for child in self.children:
-            mima2 = child.size_min_max
+            mima2 = child._size_limits
             mima1[0] = max(mima1[0], mima2[0])
             mima1[1] = min(mima1[1], mima2[1])
             mima1[2] += mima2[2]

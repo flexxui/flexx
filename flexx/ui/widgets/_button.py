@@ -18,11 +18,12 @@ from .._widget import Widget
 class BaseButton(Widget):
     """ Abstract button class.
     """
-
+    
+    DEFAULT_MIN_SIZE = 10, 28
+    
     CSS = """
 
     .flx-BaseButton {
-        min-height: 16px;
         white-space: nowrap;
         padding: 0.2em 0.4em;
         border-radius: 3px;
@@ -69,8 +70,6 @@ class BaseButton(Widget):
     .flx-RadioButton:hover > input, .flx-CheckBox:hover > input {
         color: #036;
     }
-
-    
     """
 
     text = event.StringProp('', settable=True, doc="""

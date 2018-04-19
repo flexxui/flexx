@@ -50,18 +50,15 @@ class Widget(app.JsComponent):
     the widget is the current widget.
     
     """
-
+    
+    DEFAULT_MIN_SIZE = 0, 0
+    
     CSS = """
 
     .flx-Widget {
         box-sizing: border-box;
         overflow: hidden;
         position: relative;  /* helps with absolute positioning of content */
-    }
-    
-    /* in a notebook or otherwise embedded in classic HTML */
-    .flx-container {
-        min-height: 20px;
     }
     
     /* Main widget to fill the whole page */
@@ -137,9 +134,25 @@ class Widget(app.JsComponent):
         text can change the size of sibling widgets.
         """)
     
-    size_min_max = event.TupleProp((0, 1e9, 0, 1e9), settable=False, doc="""
-        A 4-element tuple (min-width, max-width, min-height, max-height)
-        derived from the element's style, in pixels.
+    minsize = event.FloatPairProp((0, 0), settable=True, doc="""
+        The user-defined minimum size (width, height) of this widget in pixels.
+        The default value differs per widget (``Widget.DEFAULT_MIN_SIZE``).
+        Note that using "min-width" or "min-height" in ``apply_style()``.
+        (and in the ``style`` kwarg) also set this property. Minimum sizes set
+        in CSS are ignored.
+        """)
+    
+    maxsize = event.FloatPairProp((1e9, 1e9), settable=True, doc="""
+        The user-defined maximum size (width, height) of this widget in pixels.
+        Note that using "max-width" or "max-height" in ``apply_style()``.
+        (and in the ``style`` kwarg) also set this property. Maximum sizes set
+        in CSS are ignored.
+        """)
+    
+    _size_limits = event.TupleProp((0, 1e9, 0, 1e9), settable=True, doc="""
+        A 4-element tuple (minWidth, maxWidth, minHeight, maxHeight) in pixels,
+        based on ``minsize``, ``maxsize`` (and for some layouts the size limits
+        of the children). Private prop for internal use.
         """)
     
     tabindex = event.IntProp(-2, settable=True, doc="""
@@ -227,10 +240,13 @@ class Widget(app.JsComponent):
                 window.flexx.need_main_widget = False
                 self.set_container('body')
         
-        # Invoke some actions
+        # Apply widget-specific default minsize if minsize is not given
+        if kwargs.get('minsize', None) is None:
+            self.set_minsize(self.DEFAULT_MIN_SIZE)
+        
+        # Apply style if given (can override minsize)
         if style:
             self.apply_style(style)
-        self._check_min_max_size()
     
     def _comp_init_property_values(self, property_values):
         # This is a good time to do further initialization. The JsComponent
@@ -472,14 +488,25 @@ class Widget(app.JsComponent):
                     d[key] = val
 
         # Did we change style related to sizing?
-        size_limits_keys = 'min-width', 'min-height', 'max-width', 'max-height'
+        w1, h1 = self.minsize
+        w2, h2 = self.maxsize
+        mima = w1, w2, h1, h2
+        size_limits_keys = 'min-width', 'max-width', 'min-height', 'max-height'
         size_limits_changed = False
-        for key in size_limits_keys:
+        for i in range(4):
+            key = size_limits_keys[i]
             if key in d:
-                size_limits_changed = True
+                val = d[key]
+                if val == '0':
+                    mima[i] = 0
+                    size_limits_changed = True
+                elif val.endswith('px'):
+                    mima[i] = float(val[:-2])
+                    size_limits_changed = True
         
         if size_limits_changed:
-            self._check_min_max_size()
+            self.set_minsize((mima[0], mima[2]))
+            self.set_maxsize((mima[1], mima[3]))
     
     ## Reactions
     
@@ -552,6 +579,41 @@ class Widget(app.JsComponent):
     
     ## Sizing
     
+    @event.reaction
+    def _update_minmaxsize(self):
+        """ Update the internal _size_limits.
+        Note that this is an implicit reaction.
+        """
+        # Get new limits
+        w1, w2, h1, h2 = self._query_min_max_size()
+        # Update the property, so that our parent may react
+        self._set_size_limits((w1, w2, h1, h2))
+        # Update the style, so that flexbox works
+        s = self.outernode.style
+        s['min-width'] = w1 + 'px'
+        s['max-width'] = w2 + 'px'
+        s['min-height'] = h1 + 'px'
+        s['max-height'] = h2 + 'px'
+    
+    def _query_min_max_size(self):
+        """Can be overloaded in subclasses to include the minsize and maxsize of
+        children. Note that this is called from an implicit reaction.
+        """
+        w1, h1 = self.minsize
+        w2, h2 = self.maxsize
+        
+        # Widgets that are custom classes containing a single layout propagate
+        # that layout's limits
+        if self.outernode.classList.contains('flx-Layout') is False:
+            if len(self.children) == 1:
+                child = self.children[0]
+                if child.outernode.classList.contains('flx-Layout') is True:
+                    w3, w4, h3, h4 = child._query_min_max_size()
+                    w1, w2 = max(w1, w3), min(w2, w4)
+                    h1, h2 = max(h1, h3), min(h2, h4)
+        
+        return w1, w2, h1, h2
+    
     @event.action
     def check_real_size(self):
         """ Check whether the current size has changed. It should usually not
@@ -563,36 +625,6 @@ class Widget(app.JsComponent):
         cursize = self.size
         if cursize[0] != n.clientWidth or cursize[1] != n.clientHeight:
             self._mutate_size([n.clientWidth, n.clientHeight])
-    
-    @event.action
-    def _check_min_max_size(self):
-        """ Query the minimum and maxium size.
-        """
-        mima = self._query_min_max_size()
-        self._mutate_size_min_max(mima)
-    
-    def _query_min_max_size(self):
-        # Query
-        style = window.getComputedStyle(self.outernode)
-        mima = [style.minWidth, style.maxWidth, style.minHeight, style.maxHeight]
-        # Pixelize - we dont handle % or em or whatever
-        for i in range(4):
-            if mima[i] == '0':
-                mima[i] = 0
-            elif mima[i].endswith('px'):
-                mima[i] = float(mima[i][:-2])
-            else:
-                mima[i] = 0 if (i == 0 or i == 2) else 1e9
-        # Protect against min > max
-        if mima[0] > mima[1]:
-            mima[0] = mima[1] = 0.5 * (mima[0] + mima[1])
-        if mima[2] > mima[3]:
-            mima[2] = mima[3] = 0.5 * (mima[2] + mima[3])
-        return mima
-    
-    @event.reaction('children', 'children*.size_min_max')
-    def __min_max_size_may_have_changed(self, *events):
-        self._check_min_max_size()
     
     @event.reaction('container', 'parent.size', 'children')
     def __size_may_have_changed(self, *events):

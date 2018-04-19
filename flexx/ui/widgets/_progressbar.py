@@ -31,11 +31,11 @@ class ProgressBar(Widget):
     """ A widget to show progress.
     """
     
+    DEFAULT_MIN_SIZE = 40, 16
+    
     CSS = """
     
     .flx-ProgressBar {
-        min-height: 16px;
-        min-width: 40px;
         border: 1px solid #ddd;
         border-radius: 6px;
         background: #eee;

@@ -66,6 +66,8 @@ class TreeWidget(Widget):
     
     """
     
+    DEFAULT_MIN_SIZE = 100, 50
+    
     CSS = """
     
     /* ----- Tree Widget Mechanics ----- */
