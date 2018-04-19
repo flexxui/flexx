@@ -58,5 +58,5 @@ class Test(flx.Widget):
     
 
 a = flx.App(Test)
-m = a.launch('firefox-browser')
+m = a.launch()
 flx.run()

@@ -108,5 +108,5 @@ class Main(flx.Widget):
 
 if __name__ == '__main__':
     a = flx.App(Main)
-    m = a.launch('app')
+    m = a.launch('firefox-browser')
     flx.start()
