@@ -538,6 +538,7 @@ class HVLayout(Layout):
             # Enfore a rerender by mutating splitter_positions
             sp1 = ()
             sp2 = self.splitter_positions
+            sp2 = () if sp2 is None else sp2
             if len(sp2) == 0:
                 sp1 = (1, )
             self._mutate_splitter_positions(sp1)
