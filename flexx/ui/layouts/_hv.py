@@ -299,8 +299,9 @@ class HVLayout(Layout):
     
     # splitter_positions = event.TupleProp(doc="""  xx local property!
     splitter_positions = app.LocalProperty(doc="""
-        The preferred relative positions of the splitters. The actual positions
-        are subject to min-max constraints (and natural sizes for box-mode).
+        The preferred relative positions of the splitters. The actual
+        positions are subject to minsize and maxsize constraints
+        (and natural sizes for box-mode).
         """) 
     
     def __init__(self, *args, **kwargs):
@@ -387,10 +388,6 @@ class HVLayout(Layout):
     
     ## General reactions and hooks
     
-    @event.reaction('orientation', 'spacing', 'padding')
-    def __update_min_max(self, *events):
-        self._check_min_max_size()
-    
     def _query_min_max_size(self):
         """ Overload to also take child limits into account.
         """
@@ -406,7 +403,7 @@ class HVLayout(Layout):
         if hori is True:
             mima1 = [0, 0, 0, 1e9]
             for child in self.children:
-                mima2 = child.size_min_max
+                mima2 = child._size_limits
                 mima1[0] += mima2[0]
                 mima1[1] += mima2[1]
                 mima1[2] = max(mima1[2], mima2[2])
@@ -414,7 +411,7 @@ class HVLayout(Layout):
         else:
             mima1 = [0, 1e9, 0, 0]
             for child in self.children:
-                mima2 = child.size_min_max
+                mima2 = child._size_limits
                 mima1[0] = max(mima1[0], mima2[0])
                 mima1[1] = min(mima1[1], mima2[1])
                 mima1[2] += mima2[2]
@@ -441,12 +438,12 @@ class HVLayout(Layout):
                 max(mima1[2], mima3[2]),
                 min(mima1[3], mima3[3])]
     
-    @event.reaction('size', 'size_min_max')
+    @event.reaction('size', '_size_limits', mode='greedy')
     def __size_changed(self, *events):
         self._rerender()
     
-    @event.reaction('children*.size')
-    def __let_children_check_suize(self, *events):
+    @event.reaction('children*.size', mode='greedy')
+    def __let_children_check_size(self, *events):
         for child in self.children:
             child.check_real_size()
     
@@ -545,7 +542,7 @@ class HVLayout(Layout):
     
     ## Reactions for box mode
     
-    @event.reaction('orientation', 'children', 'children*.flex')
+    @event.reaction('orientation', 'children', 'children*.flex', mode='greedy')
     def _set_box_child_flexes(self, *events):
         if self.mode != 'BOX':
             return
@@ -557,7 +554,7 @@ class HVLayout(Layout):
         for widget in self.children:
             widget.check_real_size()
     
-    @event.reaction('spacing', 'orientation', 'children')
+    @event.reaction('spacing', 'orientation', 'children', mode='greedy')
     def _set_box_spacing(self, *events):
         if self.mode != 'BOX':
             return 
@@ -601,7 +598,7 @@ class HVLayout(Layout):
     def __spacing_changed(self, *events):
         self._rerender()
     
-    @event.reaction('children', 'children*.flex')
+    @event.reaction('children', 'children*.flex', mode='greedy')
     def _set_split_from_flexes(self, *events):
         self.set_from_flex_values()
     
@@ -768,7 +765,7 @@ class HVLayout(Layout):
         for i in range(0, len(self._seps)):
             self._seps[i].rel_pos = self._seps[i].abs_pos / available_size
     
-    @event.reaction('!_render')
+    @event.reaction('!_render', mode='greedy')
     def __render_positions(self):
         """ Use the absolute positions on the seps to apply positions to
         the child elements and separators.
@@ -874,7 +871,7 @@ def _applyBoxStyle(e, sty, value):
 
 
 def _get_min_max(widget, ori):
-    mima = widget.size_min_max
+    mima = widget._size_limits
     if 'h' in ori:
         return mima[0], mima[1]
     else:

@@ -35,6 +35,8 @@ class BaseDropdown(Widget):
     """ Base class for drop-down-like widgets.
     """
     
+    DEFAULT_MIN_SIZE = 50, 28
+    
     CSS = """
         
         .flx-BaseDropdown {
@@ -44,8 +46,7 @@ class BaseDropdown(Widget):
             border-radius: 3px;
             padding: 2px;
             border: 1px solid #aaa;
-            min-height: 1.7em;
-            max-height: 1.7em;
+            max-height: 28px; /* overridden by maxsize */
             white-space: nowrap; /* keep label and but on-line */
             background: #e8e8e8
         }

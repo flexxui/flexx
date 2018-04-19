@@ -51,10 +51,10 @@ class CanvasWidget(Widget):
     the ``init()`` method to get a contex to perform the actual drawing.
     """
     
+    DEFAULT_MIN_SIZE = 50, 50
+    
     CSS = """
     .flx-CanvasWidget {
-        min-width: 50px;
-        min-height: 50px;
         -webkit-user-select: none;
         -moz-user-select: none;
         -ms-user-select: none;

@@ -40,7 +40,7 @@ class GroupWidget(Widget):
     }
     .flx-GroupWidget > .flx-Layout {
         width: calc(100% - 10px);
-        height: calc(100% - 10px);
+        height: calc(100% - 25px);
     }
     
     """
@@ -57,6 +57,12 @@ class GroupWidget(Widget):
         for widget in self.children:
             nodes.append(widget.outernode)
         return nodes
+    
+    def _query_min_max_size(self):
+        w1, w2, h1, h2 = super()._query_min_max_size()
+        w1 += 10
+        h1 += 30
+        return w1, w2, h1, h2
     
     @event.reaction('title')
     def _title_changed(self, *events):

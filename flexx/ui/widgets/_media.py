@@ -26,6 +26,8 @@ class ImageWidget(Widget):
     """ Display an image from a url.
     """
     
+    DEFAULT_MIN_SIZE = 16, 16
+    
     _sequence = 0
     
     source = event.StringProp('', settable=True, doc="""
@@ -67,7 +69,9 @@ class ImageWidget(Widget):
 class VideoWidget(Widget):
     """ Display a video from a url.
     """
-
+    
+    DEFAULT_MIN_SIZE = 100, 100
+    
     source = event.StringProp('', settable=True, doc="""
         The source of the video. This must be a url of a resource
         on the web.
@@ -97,6 +101,8 @@ class VideoWidget(Widget):
 class YoutubeWidget(Widget):
     """ Display a Youtube video.
     """
+    
+    DEFAULT_MIN_SIZE = 100, 100
     
     source = event.StringProp('oHg5SJYRHA0', settable=True, doc="""
         The source of the video represented as the Youtube id.

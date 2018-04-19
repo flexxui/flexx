@@ -37,6 +37,8 @@ class LineEdit(Widget):
     """ An input widget to edit a line of text.
     """
     
+    DEFAULT_MIN_SIZE = 100, 28
+    
     CSS = """
     .flx-LineEdit {
         color: #333;

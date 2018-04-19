@@ -24,6 +24,8 @@ class Label(Widget):
     """ Widget to show text/html.
     """
     
+    DEFAULT_MIN_SIZE = 10, 24
+    
     CSS = """
         .flx-Label {
             border: 0px solid #454;

@@ -88,6 +88,8 @@ class BokehWidget(Widget):
     instantiate the widget from Python.
     """
     
+    DEFAULT_MIN_SIZE = 100, 100
+    
     CSS = """
     .flx-BokehWidget > .plotdiv {
         overflow: hidden;

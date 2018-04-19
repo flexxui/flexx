@@ -13,7 +13,7 @@ Simple example:
     
     p = ui.PlotWidget(xdata=range(5), ydata=[1,3,4,2,5], 
                       line_width=4, line_color='red', marker_color='',
-                      style='min-height:200px;')
+                      minsize=200)
 
 Also see examples: :ref:`sine.py`, :ref:`twente.py`, :ref:`monitor.py`.
 
@@ -30,7 +30,7 @@ class PlotWidget(CanvasWidget):
     plotting tasks.
     """
     
-    CSS = ".flx-PlotWidget {min-width: 300px; min-height: 200px;}"
+    DEFAULT_MIN_SIZE = 300, 200
     
     xdata = event.TupleProp((), doc="""
             A list of values for the x-axis. Set via the ``set_data()`` action.

@@ -20,6 +20,8 @@ class IFrame(Widget):
     a cross-source iframe.
     """
     
+    DEFAULT_MIN_SIZE = 10, 10
+    
     CSS = """
         .flx-IFrame {
             border: none;

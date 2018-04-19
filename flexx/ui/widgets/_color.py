@@ -25,6 +25,8 @@ class ColorSelectWidget(Widget):
     on Firefox and Chrome, but not on IE/Edge last time I checked.
     """
     
+    DEFAULT_MIN_SIZE = 28, 28
+    
     color = event.ColorProp('#000000', settable=True, doc="""
         The currently selected color.
         """)
