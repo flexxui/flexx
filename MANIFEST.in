@@ -1,0 +1,8 @@
+include LICENSE README.md
+recursive-include docs *
+prune docs/_build
+prune docs/ext/__pycache__
+
+global-exclude .git*
+global-exclude *.pyo
+global-exclude *.pyc
