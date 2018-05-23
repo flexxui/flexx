@@ -474,12 +474,16 @@ class JSModule:
                 js[i] = mangle_dotted_vars(js[i], self._imported_names)
             # Insert serialized values
             value_lines = []
-            for key in sorted(self._js_values):
-                value_lines.append('var %s = %s;' % (key, self._js_values[key]))
+            for name in sorted(self._js_values):
+                if '.' in name:
+                    for i in range(len(js)):
+                        js[i] = mangle_dotted_vars(js[i], [name])
+                value_lines.append('var %s = %s;' % (name.replace('.', '$'),
+                                                     self._js_values[name]))
             js.insert(0, '')
             js.insert(0, '\n'.join(value_lines))
             # Prepare imports and exports
-            exports = tuple(sorted(self._provided_names))
+            exports = tuple(sorted(n for n in self._provided_names if '.' not in n))
             imports = ['pscript-std.js as _py']
             # Handle dependency imports
             for dep_name in reversed(sorted(self._deps)):
