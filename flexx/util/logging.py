@@ -52,7 +52,7 @@ class _Formatter(logging.Formatter):
             del tb  # we don't want to hold too much references to this
             return base + cname + ': ' + str(value) + '\n' + out.rstrip()
         else:
-            out = base + str(record.msg)
+            out = base + str(record.msg % record.args)
             if self.prepend_caller:
                 part1, part2 = out.split(':', 1)
                 out = part1 + ' ' + record.funcName + '():' + part2
