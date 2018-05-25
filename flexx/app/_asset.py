@@ -5,7 +5,7 @@ class used as a container for one or more JSModule classes.
 
 import sys
 import types
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 
 from . import logger
 
@@ -199,7 +199,8 @@ class Asset:
     
     def _get_from_url(self, url):
         if url.startswith(url_starts):
-            return urlopen(url, timeout=5.0).read().decode()
+            req = Request(url, headers={'User-Agent': 'flexx'})
+            return urlopen(req, timeout=5.0).read().decode()
         else:  # pragma: no cover
             raise ValueError('_get_from_url() needs a URL string.')
 
