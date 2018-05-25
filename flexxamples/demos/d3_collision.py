@@ -88,12 +88,12 @@ class CollisionWidget(flx.Widget):
                 if quad.point and quad.point is not node:
                     x = node.x - quad.point.x
                     y = node.y - quad.point.y
-                    l = Math.sqrt(x * x + y * y)
+                    s = Math.sqrt(x * x + y * y)
                     r = node.radius + quad.point.radius
-                    if (l < r):
-                        l = (l - r) / l * .5
-                        x *= l
-                        y *= l
+                    if (s < r):
+                        s = (s - r) / s * .5
+                        x *= s
+                        y *= s
                         node.x -= x
                         node.y -= y
                         quad.point.x += x
