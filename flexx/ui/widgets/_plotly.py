@@ -19,6 +19,7 @@ Also see examples: :ref:`plotly_gdp.py`.
 from ... import app, event
 from . import Widget
 
+# About 800KB
 app.assets.associate_asset(__name__, 'https://cdn.plot.ly/plotly-latest.min.js')
 
 
@@ -40,7 +41,7 @@ class PlotlyWidget(Widget):
         """)
     
     @event.reaction
-    def __relayout(self):
+    def _relayout(self):
         global Plotly
         w, h = self.size
         if len(self.node.children) > 0:
