@@ -368,19 +368,23 @@ class JsSession:
         elif cmd == 'EXEC':
             eval(command[1])
         elif cmd == 'EVAL':
+            x = None
+            if len(command) == 2:
+                x = eval(command[1])
+            elif len(command) == 3:
+                x = eval('this.instances.' + command[1] + '.' + command[2])
+            console.log(str(x)) # print (and thus also sends back result)
+        elif cmd == 'EVALANDRETURN':
             try:
                 x = eval(command[1])
             except Exception as err:
                 x = err
             try:
                 sx = JSON.stringify(x)
-            except Exception:
-                sx = str(x)
-            if len(command) == 3:
-                eval_id = command[2]  # to identify the result in Python
-                self.send_command("EVALRESULT", sx, eval_id)
-            else:
-                console.log(sx)
+            except Exception as err:
+                sx = '"' + str(x) + '"'
+            eval_id = command[2]  # to identify the result in Python
+            self.send_command("EVALRESULT", sx, eval_id)
         elif cmd == 'INVOKE':
             id, name, args = command[1:]
             ob = self.instances.get(id, None)

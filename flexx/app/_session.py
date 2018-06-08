@@ -641,7 +641,7 @@ class Session:
         """
         id = self._eval_count
         self._eval_count += 1
-        self.send_command('EVAL', js, id)
+        self.send_command('EVALANDRETURN', js, id)
         while id not in self._eval_result:
             await asyncio.sleep(0.2)
         return self._eval_result.pop(id)
