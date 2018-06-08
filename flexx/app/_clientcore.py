@@ -373,7 +373,7 @@ class JsSession:
                 x = eval(command[1])
             elif len(command) == 3:
                 x = eval('this.instances.' + command[1] + '.' + command[2])
-            console.log(str(x)) # print (and thus also sends back result)
+            console.log(str(x))  # print (and thus also sends back result)
         elif cmd == 'EVALANDRETURN':
             try:
                 x = eval(command[1])
