@@ -105,6 +105,8 @@ class Session:
         # [ping_count, {objects}, *(callback, args)]
         self._ping_calls = []
         self._ping_counter = 0
+        self._eval_result = {}
+        self._eval_count = 0
         
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
@@ -534,7 +536,9 @@ class Session:
         """ Received a command from JS.
         """
         cmd = command[0]
-        if cmd == 'PRINT':
+        if cmd == 'EVALRESULT':
+            self._eval_result[command[2]] = command[1]
+        elif cmd == 'PRINT':
             print('JS:', command[1])
         elif cmd == 'INFO':
             logger.info('JS: ' + command[1])
@@ -618,6 +622,29 @@ class Session:
         ping_to_schedule_at = self._ping_counter + 1
         el = self._get_ping_call_list(ping_to_schedule_at)
         el.append((callback, args))
+    
+    async def co_roundtrip(self):
+        """ Coroutine to wait for one Py-JS-Py roundtrip.
+        """
+        count = 0
+        def up():
+            nonlocal count
+            count += 1
+        self.call_after_roundtrip(up)
+        while count < 1:
+            await asyncio.sleep(0.02)
+    
+    async def co_eval(self, js):
+        """ Coroutine to evaluate JS in the client, wait for the result,
+        and then return it. It is recomended to use this method only
+        for testing purposes.
+        """
+        id = self._eval_count
+        self._eval_count += 1
+        self.send_command('EVAL', js, id)
+        while id not in self._eval_result:
+            await asyncio.sleep(0.2)
+        return self._eval_result.pop(id)
     
     def _get_ping_call_list(self, ping_count):
         """ Get an element from _ping_call for the specified ping_count.
