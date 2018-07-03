@@ -10,7 +10,7 @@ document. It also works in the Jupyter notebook.
 
 The docs are on `Readthedocs <http://flexx.readthedocs.io>`_,
 the code is on `Github <http://github.com/flexxui/flexx>`_,
-and there is a `demo server <http://demo.flexx.live>`_.
+and there is a `demo server <http://demo.flexx.app>`_.
 Flexx is currently in alpha status; any part of the public API may
 change without notice. Feedback is welcome.
 

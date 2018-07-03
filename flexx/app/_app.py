@@ -287,16 +287,16 @@ class App:
             import requests
         except ImportError:
             raise ImportError('App.publish() needs requests lib: pip install requests')
-        url = url or 'http://flexx.live/submit/{name}/{token}'
+        url = url or 'http://flexx.app/submit/{name}/{token}'
         real_url = url.format(name=name, token=token)
         r = requests.post(real_url, data=f.getvalue())
         if r.status_code != 200:
             raise RuntimeError('Publish failed: ' + r.text)
         else:
             print('Publish succeeded, ' + r.text)
-            if url.startswith('http://flexx.live'):
+            if url.startswith('http://flexx.app'):
                 print('You app is now available at '
-                      'http://flexx.live/open/%s/' % name)
+                      'http://flexx.app/open/%s/' % name)
 
 # todo: thread safety
 
