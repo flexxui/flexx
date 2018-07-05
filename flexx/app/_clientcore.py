@@ -378,13 +378,9 @@ class JsSession:
             try:
                 x = eval(command[1])
             except Exception as err:
-                x = err
-            try:
-                sx = JSON.stringify(x)
-            except Exception as err:
-                sx = '"' + str(x) + '"'
+                x = str(err)
             eval_id = command[2]  # to identify the result in Python
-            self.send_command("EVALRESULT", sx, eval_id)
+            self.send_command("EVALRESULT", x, eval_id)
         elif cmd == 'INVOKE':
             id, name, args = command[1:]
             ob = self.instances.get(id, None)
