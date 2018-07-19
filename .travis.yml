@@ -24,7 +24,7 @@ matrix:
           env: TEST_UNIT=1 TEST_INSTALL=1
         - python: "3.6"
           env: TEST_UNIT=1
-        - python: "3.7-dev"
+        - python: "3.7"
           env: TEST_UNIT=1
 
 before_install:
