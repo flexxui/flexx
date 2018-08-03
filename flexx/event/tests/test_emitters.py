@@ -1,6 +1,7 @@
 """
 Test event emitters.
 """
+
 import sys
 
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
