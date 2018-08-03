@@ -40,12 +40,12 @@ def loaded_modules(import_module, depth=None, all_modules=False):
     res = subprocess.check_output([sys.executable, '-c', code], cwd=project_dir,
                                   stderr=subprocess.STDOUT).decode()
     loaded_modules = [name.strip() for name in res.split(',')]
-    
+
     # Tweaks for legacy Python
     loaded_modules = [name.replace('flexx_legacy', 'flexx') for name in loaded_modules]
     if 'flexx.sys' in loaded_modules:
         loaded_modules.remove('flexx.sys')
-    
+
     if all_modules:
         return loaded_modules
 
@@ -57,7 +57,7 @@ def loaded_modules(import_module, depth=None, all_modules=False):
                 parts = m.split('.')
                 m = '.'.join(parts[:depth])
             project_modules.add(m)
-    
+
     return project_modules
 
 
@@ -100,7 +100,7 @@ def test_import_deps():
     deps = set(['tornado'])
     assert deps.difference(loaded_modules('flexx.util', 2, True)) == deps
     assert deps.difference(loaded_modules('flexx.event', 2, True)) == deps
-    
+
     # But app and ui do
     assert deps.difference(loaded_modules('flexx.app', 2, True)) == set()
 

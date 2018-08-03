@@ -26,7 +26,7 @@ In short:
 The asynchronous nature of actions combined with the fact that the state does
 not change during processing reactions, makes it easy to reason about
 cause and effect. The information flows in one direction. This concept was
-gratefully taken from modern frameworks such as React/Flux and Veux. 
+gratefully taken from modern frameworks such as React/Flux and Veux.
 
 .. image:: https://docs.google.com/drawings/d/e/2PACX-1vSHp4iha6CTgjsQ52x77gn0hqQP4lZD-bcaVeCfRKhyMVtaLeuX5wpbgUGaIE0Sce_kBT9mqrfEgQxB/pub?w=503
 
@@ -77,7 +77,7 @@ which inherits from ``flexx.event.Component``.
 
     class MyObject(event.Component):
         ...  # attributes/properties/actions/reactions/emitters go here
-        
+
         def init(self):
             super().init()
             ...
@@ -105,7 +105,7 @@ the several property classes. For example:
 .. code-block:: python
 
     class MyObject(event.Component):
-       
+
         foo = event.AnyProp(8, settable=True, doc='can have any value')
         bar = event.IntProp()
 
@@ -148,10 +148,10 @@ Actions can mutate properties
 .. code-block:: python
 
     class MyObject(event.Component):
-       
+
         foo = event.AnyProp(8, settable=True, doc='can have any value')
         bar = event.IntProp()
-        
+
         @event.action
         def increase_bar(self):
             self._mutate_bar(self.bar + 1)
@@ -182,9 +182,9 @@ properties, mutations can also be done in-place:
 .. code-block:: python
 
     class MyObject(event.Component):
-       
+
         items = event.ListProp()
-        
+
         def add_item(self, item):
             self._mutate_items([item], 'insert', len(self.items))
 
@@ -204,7 +204,7 @@ Similar to actions, they are created with a decorator.
 .. code-block:: python
 
     class MyObject(event.Component):
-    
+
         @event.emitter
         def pointer_down(self, js_event):
             ''' Event emitted when the mouse/touchpad/screen is pressed.
@@ -216,7 +216,7 @@ which will get emitted as an event, with the event type matching the name
 of the emitter.
 
 Note that stricly speaking emitters are not necessary as ``Component.emit()``
-can be used to generate an event. However, they provide a mechanism to 
+can be used to generate an event. However, they provide a mechanism to
 generate an event based on certain input data, and also document the
 events that a component may emit.
 
@@ -231,14 +231,14 @@ changes in properties, using an underlying handler function:
 .. code-block:: python
 
     class MyObject(event.Component):
-       
+
         first_name = event.StringProp(settable=True)
         last_name = event.StringProp(settable=True)
-        
+
         @event.reaction('first_name', 'last_name')
         def greet(self, *events):
             print('hi', self.first_name, self.last_name)
-        
+
         @event.reaction('!foo')
         def handle_foo(self, *events):
             for ev in events:
@@ -262,7 +262,7 @@ just once, but with multiple events. If all events need to be processed
 individually, use ``for ev in events: ...``.
 
 In most cases, you will connect to events that are known beforehand,
-like those corresponding to properties and emitters. 
+like those corresponding to properties and emitters.
 If you connect to an event that is not known (like "foo" in the example
 above) Flexx will display a warning. Use ``'!foo'`` as a connection string
 (i.e. prepend an exclamation mark) to suppress such warnings.
@@ -277,12 +277,12 @@ normal function, by using the
 .. code-block:: python
 
     c = MyComponent()
-    
+
     # Using a decorator
     @c.reaction('foo', 'bar')
     def handle_func1(self, *events):
         print(events)
-    
+
     # Explicit notation
     def handle_func2(self, *events):
         print(events)
@@ -315,10 +315,10 @@ are accessed.
 .. code-block:: python
 
     class MyObject(event.Component):
-       
+
         first_name = event.StringProp(settable=True)
         last_name = event.StringProp(settable=True)
-        
+
         @event.reaction
         def greet(self):
             print('hi', self.first_name, self.last_name)
@@ -330,10 +330,10 @@ This can be convenient to easily connect different parts of an app.
 .. code-block:: python
 
     class MyObject(event.Component):
-       
+
         first_name = event.StringProp(settable=True)
         last_name = event.StringProp(settable=True)
-    
+
     person = MyObject()
     label = UiLabel(text=lambda: person.first_name)
 
@@ -345,9 +345,9 @@ In-place mutations to lists or arrays can be reacted to by processing
 the events one by one:
 
 .. code-block:: python
-    
+
     class MyComponent(event.Component):
-    
+
         @event.reaction('other.items')
         def track_array(self, *events):
             for ev in events:
@@ -375,7 +375,7 @@ The strings used to connect events follow a few simple syntax rules:
   If an element on the path is a property, the connection will automatically
   reset when that property changes (a.k.a. dynamism, more on this below).
 * Each part can end with one star ('*'), indicating that the part is a list
-  and that a connection should be made for each item in the list. 
+  and that a connection should be made for each item in the list.
 * With two stars, the connection is made *recursively*, e.g. "children**"
   connects to "children" and the children's children, etc.
 * Stripped of '*', each part must be a valid identifier (ASCII).
@@ -395,16 +395,16 @@ Labels
 
 Labels are a feature that makes it possible to infuence the order by
 which reactions are called, and provide a means to disconnect
-specific (groups of) handlers. 
+specific (groups of) handlers.
 
 .. code-block:: python
-    
+
     class MyObject(event.Component):
-    
+
         @event.reaction('foo')
         def given_foo_handler(*events):
                 ...
-        
+
         @event.reaction('foo:aa')
         def my_foo_handler(*events):
             # This one is called first: 'aa' < 'given_f...'
@@ -422,9 +422,9 @@ The label can also be used in the
     @h.reaction('foo:mylabel')
     def handle_foo(*events):
         ...
-    
+
     ...
-    
+
     h.disconnect('foo:mylabel')  # don't need reference to handle_foo
 
 
@@ -437,15 +437,15 @@ is a ``Component`` subclass that has properties ``parent`` and
 ``children``.
 
 .. code-block:: python
-    
+
     main = Node()
     main.parent = Node()
     main.children = Node(), Node()
-    
+
     @main.reaction('parent.foo')
     def parent_foo_handler(*events):
         ...
-    
+
     @main.reaction('children*.foo')
     def children_foo_handler(*events):
         ...
@@ -474,7 +474,7 @@ that property changes. It also connects to the ``visible`` event of
 all children, and to the ``foo`` event of all children that are visible.
 
 .. code-block:: python
-    
+
    @main.reaction
     def _implicit_reacion():
         for child in main.children:
@@ -541,7 +541,7 @@ Publish-subscribe pattern
 
 In pub-sub, publishers generate messages identified by a 'topic', and
 subscribers can subscribe to such topics. There can be zero or more publishers
-and zero or more subscribers to any topic. 
+and zero or more subscribers to any topic.
 
 In ``flexx.event`` a `Component` object can play the role of a broker.
 Publishers can simply emit events. The event type represents the message

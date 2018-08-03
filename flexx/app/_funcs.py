@@ -26,7 +26,7 @@ def start():
     Start the server and event loop. This function generally does not
     return until the application is stopped (although it may in
     interactive environments (e.g. Pyzo)).
-    
+
     In more detail, this calls ``run_forever()`` on the asyncio event loop
     associated with the current server.
     """
@@ -48,7 +48,7 @@ def run():
 def stop():
     """
     Stop the event loop. This function is thread safe (it can be used
-    even if ``app.start()`` was called from another thread). 
+    even if ``app.start()`` was called from another thread).
     The server can be restarted after it has been stopped. Note that
     calling ``stop()`` too often will cause a subsequent call to ``start()``
     to return almost immediately.
@@ -79,21 +79,21 @@ class NoteBookHelper:
     execution of a cell, and then applies these commands using a script
     node. This way, Flexx widgets keep working in the exported notebook.
     """
-    
+
     close_code = None
-    
+
     def __init__(self, session):
         self._session = session
         self._real_ws = None
         self._commands = []
         self.enable()
-    
+
     def enable(self):
         from IPython import get_ipython
         ip = get_ipython()
         ip.events.register('pre_execute', self.capture)
         ip.events.register('post_execute', self.release)
-    
+
     def capture(self):
         if self._real_ws is not None:
             logger.warn('Notebookhelper already is in capture mode.')
@@ -105,7 +105,7 @@ class NoteBookHelper:
                     'https://github.com/jupyterlab/jupyterlab/issues/3118')
             self._real_ws = self._session._ws
             self._session._ws = self
-    
+
     def release(self):
         if self._session._ws is self:
             self._session._ws = self._real_ws
@@ -123,7 +123,7 @@ class NoteBookHelper:
                 lines.append('cmd("' + command_str.replace('\n', '') + '");')
             self._commands = []
             display(Javascript('\n'.join(lines)))
-    
+
     def write_command(self, cmd):
         assert isinstance(cmd, tuple) and len(cmd) >= 1
         self._commands.append(cmd)
@@ -133,47 +133,47 @@ def init_notebook():
     """ Initialize the Jupyter notebook by injecting the necessary CSS
     and JS into the browser. Note that any Flexx-based libraries that
     you plan to use should probably be imported *before* calling this.
-    
+
     Does not currently work in JupyterLab because
     https://github.com/jupyterlab/jupyterlab/issues/3118.
     """
-    
+
     # Note: not using IPython Comm objects yet, since they seem rather
     # undocumented and I could not get them to work when I tried for a bit.
     # This means though, that flexx in the notebook only works on localhost.
-    
+
     from IPython.display import display, clear_output, HTML
     # from .. import ui  # noqa - make ui assets available
-    
+
     # Make default log level warning instead of "info" to avoid spamming
     # This preserves the log level set by the user
     config.load_from_string('log_level = warning', 'init_notebook')
     set_log_level(config.log_level)
-    
+
     # Get session or create new
     session = manager.get_default_session()
     if session is None:
         session = manager.create_default_session()
-    
+
     # Check if already loaded, if so, re-connect
     if not getattr(session, 'init_notebook_done', False):
         session.init_notebook_done = True
     else:
         display(HTML("<i>Flexx already loaded (the notebook cannot export now)</i>"))
         return  # Don't inject Flexx twice
-    
+
     # Open server - the notebook helper takes care of the JS resulting
     # from running a cell, but any interaction goes over the websocket.
     server = current_server()
     host, port = server.serving
-    
+
     # Install helper to make things work in exported notebooks
     NoteBookHelper(session)
-    
+
     proto = 'wss' if server.protocol == 'https' else 'ws'
-    
+
     url = '%s://%s:%i/flexx/ws/%s' % (proto, host, port, session.app_name)
-    
+
     # Determine JS snippets to run before and after init. The former is only
     # run in live notebooks.
     flexx_pre_init = "<script>window.flexx = {is_live_notebook: true};</script>"
@@ -191,14 +191,14 @@ def init_notebook():
     t = assets.get_asset('flexx-core.js').to_html('{}', 0)
     t += flexx_post_init
     t += "<i>Flexx is ready for use</i>\n"
-    
+
     display(HTML(flexx_pre_init))  # Create initial Flexx info dict
     clear_output()  # Make sure the info dict is gone in exported notebooks
     display(HTML(t))
-    
+
     # Note: the Widget._repr_html_() method is responsible for making
     # the widget show up in the notebook output area.
-    
+
     # Note: asyncio will need to be enabled via %gui asyncio
 
 

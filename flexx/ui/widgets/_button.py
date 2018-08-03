@@ -18,9 +18,9 @@ from .._widget import Widget
 class BaseButton(Widget):
     """ Abstract button class.
     """
-    
+
     DEFAULT_MIN_SIZE = 10, 24
-    
+
     CSS = """
 
     .flx-BaseButton {
@@ -36,7 +36,7 @@ class BaseButton(Widget):
         outline: none;
         box-shadow: 0px 0px 3px 1px rgba(0, 100, 200, 0.7);
     }
-    
+
     .flx-Button, .flx-ToggleButton{
         background: #e8e8e8;
         border: 1px solid #ccc;
@@ -45,7 +45,7 @@ class BaseButton(Widget):
     .flx-Button:hover, .flx-ToggleButton:hover {
         background: #e8eaff;
     }
-    
+
     .flx-ToggleButton {
         text-align: left;
     }
@@ -58,12 +58,12 @@ class BaseButton(Widget):
     .flx-ToggleButton.flx-checked::before {
         content: '\\2611\\00a0 ';
     }
-    
+
     .flx-RadioButton > input, .flx-CheckBox > input{
         margin-left: 0.3em;
         margin-right: 0.3em;
     }
-    
+
     .flx-RadioButton > input, .flx-CheckBox > input {
         color: #333;
     }
@@ -75,19 +75,19 @@ class BaseButton(Widget):
     text = event.StringProp('', settable=True, doc="""
         The text on the button.
         """)
-    
+
     checked = event.BoolProp(False, settable=True, doc="""
         Whether the button is checked.
         """)
-    
+
     disabled = event.BoolProp(False, settable=True, doc="""
         Whether the button is disabled.
         """)
-    
+
     @event.reaction('pointer_click')
     def __on_pointer_click(self, e):
         self.node.blur()
-    
+
     @event.emitter
     def user_checked(self, checked):
         """ Event emitted when the user (un)checks this button. Has
@@ -101,7 +101,7 @@ class BaseButton(Widget):
 class Button(BaseButton):
     """ A push button.
     """
-    
+
     DEFAULT_MIN_SIZE = 10, 28
 
     def _create_dom(self):
@@ -113,7 +113,7 @@ class Button(BaseButton):
 
     def _render_dom(self):
         return [self.text]
-    
+
     @event.reaction('disabled')
     def __disabled_changed(self, *events):
         if events[-1].new_value:
@@ -126,17 +126,17 @@ class ToggleButton(BaseButton):
     """ A button that can be toggled. It behaves like a checkbox, while
     looking more like a regular button.
     """
-    
+
     DEFAULT_MIN_SIZE = 10, 28
-    
+
     def _create_dom(self):
         global window
         node = window.document.createElement('button')
         return node
-    
+
     def _render_dom(self):
         return [self.text]
-    
+
     @event.reaction('pointer_click')
     def __toggle_checked(self, *events):
         self.user_checked(not self.checked)
@@ -153,22 +153,22 @@ class RadioButton(BaseButton):
     """ A radio button. Of any group of radio buttons that share the
     same parent, only one can be active.
     """
-    
+
     def _create_dom(self):
         global window
         outernode = window.document.createElement('label')
         node = window.document.createElement('input')
         outernode.appendChild(node)
-        
+
         node.setAttribute('type', 'radio')
         node.setAttribute('id', self.id)
         outernode.setAttribute('for', self.id)
-        
+
         return outernode, node
-    
+
     def _render_dom(self):
         return [self.node, self.text]
-    
+
     @event.reaction('parent')
     def __update_group(self, *events):
         if self.parent:
@@ -177,7 +177,7 @@ class RadioButton(BaseButton):
     @event.reaction('checked')
     def __check_changed(self, *events):
         self.node.checked = self.checked
-    
+
     @event.emitter
     def pointer_click(self, e):
         """ This method is called on JS a click event. We *first* update
@@ -199,23 +199,23 @@ class RadioButton(BaseButton):
 class CheckBox(BaseButton):
     """ A checkbox button.
     """
-   
+
     def _create_dom(self):
         global window
         outernode = window.document.createElement('label')
         node = window.document.createElement('input')
         outernode.appendChild(node)
-        
+
         node.setAttribute('type', 'checkbox')
         node.setAttribute('id', self.id)
         outernode.setAttribute('for', self.id)
         self._addEventListener(node, 'click', self._check_changed_from_dom, 0)
-        
+
         return outernode, node
-    
+
     def _render_dom(self):
         return [self.node, self.text]
-    
+
     @event.reaction('checked')
     def __check_changed(self, *events):
         self.node.checked = self.checked

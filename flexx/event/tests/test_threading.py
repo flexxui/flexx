@@ -11,15 +11,15 @@ def test_in_thread2():
     """ Test running a Component object in another thread.
     """
     res = []
-    
+
     class MyComp1(event.Component):
         foo = event.IntProp(0, settable=True)
-        
+
         @event.reaction('foo')
         def on_foo(self, *events):
             for ev in events:
                 res.append(ev.new_value)
-    
+
     def main():
         # Create fresh ioloop and make flexx use it
         # event.loop.reset()
@@ -37,7 +37,7 @@ def test_in_thread2():
     t.start()
     t.join()
     event.loop.integrate(reset=True)  # restore
-    
+
     assert res == [0, 3, 4]
 
 
@@ -45,15 +45,15 @@ def test_in_thread3():
     """ Test hotswapping the loop to another thread.
     """
     res = []
-    
+
     class MyComp1(event.Component):
         foo = event.IntProp(0, settable=True)
-        
+
         @event.reaction('foo')
         def on_foo(self, *events):
             for ev in events:
                 res.append(ev.new_value)
-    
+
     def main():
         # Create fresh ioloop and make flexx use it
         # event.loop.reset()
@@ -62,18 +62,18 @@ def test_in_thread3():
         # Run mainloop for one iterartion
         loop.call_later(0.2, loop.stop)
         loop.run_forever()
-    
+
     # Create component and manipulate prop
     event.loop.reset()
     component = MyComp1()
     component.set_foo(3)
     component.set_foo(4)
-    
+
     t = threading.Thread(target=main)
     t.start()
     t.join()
     event.loop.integrate(reset=True)  # restore
-    
+
     assert res == [0, 3, 4]
 
 
@@ -81,15 +81,15 @@ def test_in_thread4():
     """ Test invoking actions from another thread.
     """
     res = []
-    
+
     class MyComp1(event.Component):
         foo = event.IntProp(0, settable=True)
-        
+
         @event.reaction('foo')
         def on_foo(self, *events):
             for ev in events:
                 res.append(ev.new_value)
-    
+
     def main():
         # Create fresh ioloop and make flexx use it
         # event.loop.reset()
@@ -100,18 +100,18 @@ def test_in_thread4():
         # Run mainloop for one iterartion
         loop.call_later(0.4, loop.stop)
         loop.run_forever()
-    
+
     # Create component and manipulate prop
     event.loop.reset()
     component = MyComp1()
-   
+
     t = threading.Thread(target=main)
     t.start()
     time.sleep(0.2)
     component.set_foo(4)  # invoke from main thread
     t.join()
     event.loop.integrate(reset=True)  # restore
-    
+
     assert res == [0, 3, 4]
 
 

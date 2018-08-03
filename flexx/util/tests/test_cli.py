@@ -10,5 +10,5 @@ def test_cli():
     v = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode().strip()
     assert v == flexx.__version__
 
-    
+
 run_tests_if_main()

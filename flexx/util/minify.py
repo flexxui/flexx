@@ -5,7 +5,7 @@ JavaScript minification tools.
 def minify(code, remove_whitespace=False):
     """ Very basic minification of JavaScript code. Will likely support
     more advanced minifcation in the future.
-    
+
     Parameters:
         code (str) : the JavaScript code to minify.
         remove_whitespace (bool) : if True, removes all non-functional
@@ -26,7 +26,7 @@ def remove_comments(code):
     class non_local:
         pass
     non_local._i = -1
-    
+
     def read():
         non_local._i += 1
         if non_local._i < len(code):
@@ -81,7 +81,7 @@ def remove_all_whitespace(code):
     class non_local:
         pass
     non_local._i = -1
-    
+
     def read():
         non_local._i += 1
         if non_local._i < len(code):
@@ -99,7 +99,7 @@ def remove_all_whitespace(code):
             chars.append(c)
     chars.pop(0)
     return ''.join(chars)
-    
+
 def remove_empty_lines(code):
     return '\n'.join([line for line in code.splitlines() if line])
 

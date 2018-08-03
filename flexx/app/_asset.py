@@ -50,7 +50,7 @@ def solve_dependencies(things, warn_missing=False):
     assert isinstance(things, (tuple, list))
     names = [thing.name for thing in things]
     thingmap = dict([(n, t) for n, t in zip(names, things)])
-    
+
     for index in range(len(names)):
         seen_names = set()
         while True:
@@ -83,14 +83,14 @@ class Asset:
     Users will typically use ``app.assets.add_shared_asset()``, see the
     corresponding docs for details.
     """
-    
+
     _counter = 0
-    
+
     def __init__(self, name, source=None):
-        
+
         Asset._counter += 1  # so we can sort assets by their instantiation order
         self.i = Asset._counter
-        
+
         # Handle name
         if not isinstance(name, str):
             raise TypeError('Asset name must be str.')
@@ -102,7 +102,7 @@ class Asset:
         if not name.lower().endswith(('.js', '.css')):
             raise ValueError('Asset name must end in .js or .css.')
         self._name = name
-        
+
         # Handle source
         self._remote = False
         self._source_str = None
@@ -121,44 +121,44 @@ class Asset:
             pass
         else:
             raise TypeError('Asset source must be str or callable.')
-    
+
     def __repr__(self):
         return '<%s %r at 0x%0x>' % (self.__class__.__name__, self._name, id(self))
-    
+
     @property
     def name(self):
         """ The (file) name of this asset.
         """
         return self._name
-    
+
     @property
     def source(self):
         """ The source for this asset. Can be str, URL or callable.
         """
         return self._source
-    
+
     @property
     def remote(self):
         """ Whether the asset is remote (client will load it from elsewhere).
         If True, the source specifies the URL.
         """
         return self._remote
-    
+
     def to_html(self, path='{}', link=3):
         """ Get HTML element tag to include in the document.
-        
+
         Parameters:
             path (str): the path of this asset, in which '{}' can be used as
                 a placeholder for the asset name.
             link (int): whether to link to this asset:
-            
+
                 * 0: the asset is embedded.
                 * 1: normal assets are embedded, remote assets remain remote.
                 * 2: the asset is linked (and served by our server).
                 * 3: (default) normal assets are linked, remote assets remain remote.
         """
         path = path.replace('{}', self.name)
-        
+
         if self.name.lower().endswith('.js'):
             if self.remote and link in (1, 3):
                 return "<script src='%s' id='%s'></script>" % (self.source, self.name)
@@ -181,7 +181,7 @@ class Asset:
                 return t % (path, self.name)
         else:  # pragma: no cover
             raise NameError('Assets must be .js or .css')
-    
+
     def to_string(self):
         """ Get the string code for this asset. Even for remote assets.
         """
@@ -196,7 +196,7 @@ class Asset:
             else:  # pragma: no cover
                 assert False, 'This should not happen'
         return self._source_str
-    
+
     def _get_from_url(self, url):
         if url.startswith(url_starts):
             req = Request(url, headers={'User-Agent': 'flexx'})
@@ -212,7 +212,7 @@ class Bundle(Asset):
     the modules, and the bundle exposes an aggregate of the dependencies,
     so that bundles can themselves be sorted.
     """
-    
+
     def __init__(self, name):
         super().__init__(name, '')
         self._assets = []
@@ -220,12 +220,12 @@ class Bundle(Asset):
         self._modules = []
         self._deps = set()
         self._need_sort = False
-    
+
     def __repr__(self):
         t = '<%s %r with %i assets and %i modules at 0x%0x>'
         return t % (self.__class__.__name__, self._name,
                     len(self._assets), len(self._modules), id(self))
-    
+
     def add_asset(self, a):
         """ Add an asset to the bundle. Assets added this way occur before the
         code for the modules in this bundle.
@@ -236,24 +236,24 @@ class Bundle(Asset):
         if isinstance(a, Bundle):
             raise TypeError('Bundles can contain assets and modules, but not bundles.')
         self._assets.append(a)
-    
+
     def add_module(self, m):
         """ Add a module to the bundle. This will (lazily) invoke a
         sort of the list of modules, and define dependencies to other
         bundles, so that bundles themselves can be sorted.
         """
-        
+
         ext = '.' + self.name.rsplit('.')[-1].lower()
-        
+
         # Check if module belongs here
         if not m.name.startswith(self._module_name):
             raise ValueError('Module %s does not belong in bundle %s.' %
                              (m.name, self.name))
-        
+
         # Add module
         self._modules.append(m)
         self._need_sort = True
-        
+
         # Add deps for this module
         deps = set()
         for dep in m.deps:
@@ -261,19 +261,19 @@ class Bundle(Asset):
                 deps.add(dep)
                 dep = dep.rsplit('.', 1)[0]
             deps.add(dep)
-        
+
         # Clear deps that are represented by this bundle
         for dep in deps:
             if not (dep.startswith(self._module_name) or
                     self._module_name.startswith(dep + '.')):
                 self._deps.add(dep + ext)
-   
+
     @property
     def assets(self):
         """ The list of assets in this bundle (excluding modules).
         """
         return tuple(self._assets)
-    
+
     @property
     def modules(self):
         """ The list of modules, sorted by name and dependencies.
@@ -282,13 +282,13 @@ class Bundle(Asset):
             f = lambda m: m.name
             self._modules = solve_dependencies(sorted(self._modules, key=f))
         return tuple(self._modules)
-    
+
     @property
     def deps(self):
         """ The set of dependencies for this bundle, expressed in module names.
         """
         return self._deps
-    
+
     def to_string(self):
         # Concatenate code strings and add TOC. Module objects do/cache the work.
         isjs = self.name.lower().endswith('.js')

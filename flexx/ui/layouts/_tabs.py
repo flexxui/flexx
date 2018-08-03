@@ -5,9 +5,9 @@ A ``StackLayout`` subclass that uses tabs to let the user select a child widget.
 Example:
 
 .. UIExample:: 100
-    
+
     from flexx import app, ui
-    
+
     class Example(ui.Widget):
         def init(self):
             with ui.TabLayout() as self.t:
@@ -27,19 +27,19 @@ from ._stack import StackLayout
 
 class TabLayout(StackLayout):
     """ A StackLayout which provides a tabbar for selecting the current widget.
-    
+
     The title of each child widget is used for the tab label.
     """
-    
+
     CSS = """
-    
+
     .flx-TabLayout > .flx-Widget {
         top: 30px;
         margin: 0;
         height: calc(100% - 30px);
         border: 1px solid #ddd;
     }
-    
+
     .flx-TabLayout > .flx-tabbar {
         box-sizing: border-box;
         position: absolute;
@@ -49,13 +49,13 @@ class TabLayout(StackLayout):
         height: 30px;
         overflow: hidden;
     }
-    
+
     .flx-tabbar > .flx-tab-item {
         display: inline-block;
         height: 22px;  /* 100% - 8px: 3 margin + 2 borders + 2 padding -1 overlap */
         margin-top: 3px;
         padding: 3px 6px 1px 6px;
-        
+
         overflow: hidden;
         min-width: 10px;
 
@@ -63,7 +63,7 @@ class TabLayout(StackLayout):
         -moz-user-select: none;
         -ms-user-select: none;
         user-select: none;
-        
+
         background: #ececec;
         border: 1px solid #bbb;
         border-radius: 3px 3px 0px 0px;
@@ -73,18 +73,18 @@ class TabLayout(StackLayout):
     .flx-tabbar > .flx-tab-item:first-of-type {
         margin-left: 0;
     }
-    
+
     .flx-tabbar > .flx-tab-item.flx-current {
         background: #eaecff;
         border-top: 3px solid #7bf;
         margin-top: 0;
     }
-    
+
     .flx-tabbar > .flx-tab-item:hover {
         background: #eaecff;
     }
     """
-    
+
     def _create_dom(self):
         outernode = window.document.createElement('div')
         self._tabbar = window.document.createElement('div')
@@ -93,29 +93,29 @@ class TabLayout(StackLayout):
                                self._tabbar_click)
         outernode.appendChild(self._tabbar)
         return outernode
-    
+
     def _render_dom(self):
         nodes = [child.outernode for child in self.children]
         nodes.append(self._tabbar)
         return nodes
-    
+
     @event.reaction
     def __update_tabs(self):
         children = self.children
         current = self.current
-        
+
         # Add items to tabbar as needed
         while len(self._tabbar.children) < len(children):
             node = window.document.createElement('p')
             node.classList.add('flx-tab-item')
             node.index = len(self._tabbar.children)
             self._tabbar.appendChild(node)
-        
+
         # Remove items from tabbar as needed
         while len(self._tabbar.children) > len(children):
             c = self._tabbar.children[len(self._tabbar.children) - 1]
             self._tabbar.removeChild(c)
-        
+
         # Update titles
         for i in range(len(children)):
             widget = children[i]
@@ -125,10 +125,10 @@ class TabLayout(StackLayout):
                 node.classList.add('flx-current')
             else:
                 node.classList.remove('flx-current')
-        
+
         # Update sizes
         self.__checks_sizes()
-    
+
     @event.reaction('size')
     def __checks_sizes(self, *events):
         # Make the tabbar items occupy (nearly) the full width
@@ -136,7 +136,7 @@ class TabLayout(StackLayout):
         width = (self.size[0] - 10) / len(nodes) - 2 - 12  # - padding and border
         for i in range(len(nodes)):
             nodes[i].style.width = width + 'px'
-    
+
     @event.emitter
     def user_current(self, current):
         """ Event emitted when the user selects a tab. Can be used to distinguish
@@ -148,7 +148,7 @@ class TabLayout(StackLayout):
         d = {'old_value': self.current, 'new_value': current}
         self.set_current(current)
         return d
-    
+
     def _tabbar_click(self, e):
         index = e.target.index
         if index >= 0:

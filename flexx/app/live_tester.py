@@ -49,14 +49,14 @@ def filter_stdout(text):
 def run_live(func):
     """ Decorator to run a live test.
     """
-    
+
     def runner():
         # Run with a fresh server and loop
         loop.reset()
         #asyncio_loop = asyncio.get_event_loop()
         asyncio_loop = asyncio.new_event_loop()
         app.create_server(port=0, loop=asyncio_loop)
-        
+
         print('running', func.__name__, '...', end='')
         orig_stdout = sys.stdout
         orig_stderr = sys.stderr
@@ -72,7 +72,7 @@ def run_live(func):
         finally:
             sys.stdout = orig_stdout
             sys.stderr = orig_stderr
-        
+
         # Clean up / shut down
         print('done in %f seconds' % (time.time()-t0))
         for appname in app.manager.get_app_names():
@@ -83,16 +83,16 @@ def run_live(func):
                         session.app.dispose()
                         session.close()
         loop.reset()
-        
+
         # Get reference text
         pyresult, jsresult = filter_stdout(fake_stdout.getvalue())
         reference = '\n'.join(line[4:] for line in func.__doc__.splitlines())
         parts = reference.split('-'*10)
         pyref = parts[0].strip(' \n')
         jsref = parts[-1].strip(' \n-')
-        
+
         # Compare
         smart_compare(func, ('Python', pyresult, pyref),
                             ('JavaScript', jsresult, jsref))
-    
+
     return runner

@@ -41,23 +41,23 @@ An example:
 .. code-block:: py
 
     from flexx import app, event
-    
+
     class Person(app.JsComponent):  # Lives in Js
         name = event.StringProp(settable=True)
         age = event.IntProp(settable=True)
-        
+
         @event.action
         def increase_age(self):
             self._mutate_age(self.age + 1)
-    
+
     class PersonDatabase(app.PyComponent):  # Lives in Python
         persons = event.ListProp()
-        
+
         @event.action
         def add_person(self, name, age):
             p = Person(name=name, age=age)
             self._mutate_persons([p], 'insert', 99999)
-        
+
         @event.action
         def new_year(self):
             for p in self.persons:
@@ -89,9 +89,9 @@ database object into a JsComponent. For example:
         def init(self, db):
             self.db = db
             # now we can call self.db.add_person() from JavaScript!
-    
+
     ...
-    
+
     # To instantiate ...
     Person(database, name=name, age=age)
 
@@ -119,14 +119,14 @@ the module. You can even import functions/classes from other modules.
 .. code-block:: py
 
     from flexx import app
-    
+
     from foo import func1
-    
+
     def func2():
         ...
-    
+
     info = {'x': 1, 'y': 2}
-    
+
     class MyComponent(app.JsComponent):
 
         @event.reaction('some.event')
@@ -145,11 +145,11 @@ in modules to define objects in JS:
 .. code-block:: py
 
     from flexx import app
-    
+
     my_js_module = RawJS('require("myjsmodule.js")')
-    
+
     class MyComponent(app.JsComponent):
-    
+
         @event.reaction('some.event')
         def handler(self, *events):
             my_js_module.foo.bar()
@@ -178,15 +178,15 @@ or a ``JsComponent``. The app can be wrapped into an application like so
 (any additional arguments are passed to the component when it is instantiated):
 
 .. code-block:: py
-    
+
     a = app.App(PersonDatabase)
 
 For a web server approach use ``serve()``:
 
 .. code-block:: py
-    
+
     a.serve()
-    
+
 
 The serve method registers the application, so that clients can connect
 to the app based on its name (or using a custom name specified). One instance of this class is created
@@ -198,7 +198,7 @@ corresponding to the ``MyApp`` class, one should connect to
 An app can also be launched:
 
 .. code-block:: py
-    
+
     a.launch()  # argument can be e.g. "app" or "firefox-browser"
 
 This will serve the app and then invoke
@@ -236,13 +236,13 @@ can be loaded in the client by associating it with the module that needs it.
 Flexx will then automatically load it when code from that module is used in JS:
 
 .. code-block:: py
-    
+
     # Associate asset
     app.assets.associate_asset(__name__, 'mydep.js', js_code)
-    
+
     # Sometimes a more lightweight *remote* asset is prefered
     app.assets.associate_asset(__name__, 'http://some.cdn/lib.css')
-    
+
     # Create component (or Widget) that needs the asset at the client
     class MyComponent(app.JsComponent):
         ....
@@ -251,7 +251,7 @@ It is also possible to provide assets that are not automatically loaded
 on the main app page, e.g. for sub-pages or web workers:
 
 .. code-block:: py
-    
+
     # Register asset
     asset_url = app.assets.add_shared_asset('mydep.js', js_code)
 
@@ -262,10 +262,10 @@ Data management
 Data can be provided per session or shared between sessions:
 
 .. code-block:: py
-    
+
     # Add session-specific data
     link = my_component.session.add_data('some_name.png', binary_blob)
-    
+
     # Add shared data
     link = app.assets.add_shared_data('some_name.png', binary_blob)
 

@@ -6,7 +6,7 @@ Improved logging facilities:
 * ability to filter messages with a regexp.
 * provides a context manager to capture log messages in a list.
 
-This code can be put anywhere in your project, then import 
+This code can be put anywhere in your project, then import
 set_log_level()
 """
 
@@ -28,11 +28,11 @@ logging_types = dict(debug=logging.DEBUG, info=logging.INFO,
 
 class _Formatter(logging.Formatter):
     """Formatter that optionally prepends caller """
-    
+
     def __init__(self):
         super().__init__()  # '%(levelname)s %(name)s: %(message)s')
         self.prepend_caller = False
-    
+
     def format(self, record):
         base = '[{} {} {}] '.format(record.levelname[0],
                                     time.strftime('%H:%M:%S'),
@@ -62,7 +62,7 @@ class _Formatter(logging.Formatter):
 class _Handler(logging.StreamHandler):
     """ Stream handler that prints INFO and lower to stdout
     """
-    
+
     def emit(self, record):
         if record.levelno >= logging.WARNING:
             self.stream = sys.stderr
@@ -76,7 +76,7 @@ class _MatchFilter:
     """
     def __init__(self):
         self.match = None
-    
+
     def filter(self, record):
         match = self.match
         if not match:
@@ -96,7 +96,7 @@ class _CaptureFilter:
     """
     def __init__(self):
         self.records = []
-    
+
     def filter(self, record):
         self.records.append(_formatter.format(record))
         return False
@@ -114,7 +114,7 @@ def set_log_level(level, match=None):
             that contain ``match`` as a substring (and has the
             appropriate ``level``) will be displayed. Match can also be
             a compiled regexp.
-    
+
     Notes
     -----
     If level is DEBUG, the method emitting the log message will be
@@ -137,24 +137,24 @@ def set_log_level(level, match=None):
 class capture_log:
     """ Context manager to capture log messages. Useful for testing.
     Usage:
-    
+
     .. code-block:: python
-    
+
         with capture_log(level, match) as log:
             ...
         # log is a list strings (as they would have appeared in the console)
     """
-    
+
     def __init__(self, level, match=None):
         self._args = level, match
-    
+
     def __enter__(self):
         self._old_args = logger.level, _filter.match
         set_log_level(*self._args)
         self._filter = _CaptureFilter()
         _handler.addFilter(self._filter)
         return self._filter.records
-    
+
     def __exit__(self, type, value, traceback):
         _handler.removeFilter(self._filter)
         set_log_level(*self._old_args)

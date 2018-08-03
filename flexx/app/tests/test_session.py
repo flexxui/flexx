@@ -19,7 +19,7 @@ class Fooo1(app.PyComponent):
 
 
 def test_session_basics():
-    
+
     s = Session('xx')
     assert s.app_name == 'xx'
     assert 'xx' in repr(s)
@@ -27,15 +27,15 @@ def test_session_basics():
 
 def test_get_component_instance_by_id():
     # is really a test for the session, but historically, the test is done here
-    
+
     # This test needs a default session
     session = app.manager.get_default_session()
     if session is None:
         session = app.manager.create_default_session()
-    
+
     m1 = Fooo1()
     m2 = Fooo1()
-    
+
     assert m1 is not m2
     assert session.get_component_instance(m1.id) is m1
     assert session.get_component_instance(m2.id) is m2
@@ -43,34 +43,34 @@ def test_get_component_instance_by_id():
 
 
 def test_session_assets_data():
-    
+
     store = AssetStore()
     store.add_shared_data('ww', b'wwww')
     s = Session('', store)
     s._send_command = lambda x: None
     assert s.id
-    
+
     # Add data
     s.add_data('xx', b'xxxx')
     s.add_data('yy', b'yyyy')
     assert len(s.get_data_names()) == 2
     assert 'xx' in s.get_data_names()
     assert 'yy' in s.get_data_names()
-    
+
     # get_data()
     assert s.get_data('xx') == b'xxxx'
     assert s.get_data('zz') is None
     assert s.get_data('ww') is b'wwww'
-    
+
     # # Add url data
     # s.add_data('readme', 'https://github.com/flexxui/flexx/blob/master/README.md')
     # #assert 'Flexx is' in s.get_data('readme').decode()
     # assert s.get_data('readme').startswith('https://github')
-    
+
     # Add data with same name
     with raises(ValueError):
         s.add_data('xx', b'zzzz')
-    
+
     # Add BS data
     with raises(TypeError):
         s.add_data('dd')  # no data
@@ -83,7 +83,7 @@ def test_session_assets_data():
             s.add_data(b'dd', b'yes, bytes')  # name not str
     with raises(TypeError):
         s.add_data(4, b'zzzz')  # name not a str
-    
+
     # get_data()
     assert s.get_data('xx') is b'xxxx'
     assert s.get_data('ww') is store.get_data('ww')
@@ -96,15 +96,15 @@ def test_session_registering_component_classes():
         from flexx import ui
     except ImportError:
         skip('no flexx.ui')
-    
+
     store = AssetStore()
     store.update_modules()
-    
+
     s = Session('', store)
     commands = []
     s._send_command = lambda x: commands.append(x)
     assert not s.present_modules
-    
+
     s._register_component_class(ui.Button)
     assert len(s.present_modules) == 2
     assert 'flexx.ui._widget' in s.present_modules
@@ -116,7 +116,7 @@ def test_session_registering_component_classes():
     assert ui.ToggleButton in s._present_classes
     assert ui.BaseButton in s._present_classes
     assert ui.Widget in s._present_classes
-    
+
     with raises(TypeError):
          s._register_component_class(3)
 
@@ -172,7 +172,7 @@ class SessionTester(Session):
         super().__init__(*args, **kwargs)
         self.assets_js = []
         self.assets_css = []
-    
+
     def send_command(self, *command):
         if command[0] == 'DEFINE':
             if 'JS' in command[1]:
@@ -192,14 +192,14 @@ class FakeModule:
         self.deps = set()
         self.component_classes = set()
         store._modules[self.name] = self
-        
+
         b1 = app.Bundle(self.name + '.js')
         b2 = app.Bundle(self.name + '.css')
         b1.add_module(self)
         b2.add_module(self)
         store._assets[b1.name] = b1
         store._assets[b2.name] = b2
-    
+
     def make_component_class(self, name, base=app.JsComponent):
         cls = new_type(name, (base, ), Component_overload.copy())
         self.component_classes.add(cls)
@@ -207,13 +207,13 @@ class FakeModule:
         cls.__jsmodule__ = self.name
         self.deps.add(base.__jsmodule__)
         return cls
-    
+
     def add_variable(self, name):
         assert name in [m.__name__ for m in self.component_classes]
-    
+
     def get_js(self):
         return self.name + '-JS'
-    
+
     def get_css(self):
         return self.name + '-CSS'
 
@@ -223,21 +223,21 @@ class FakeModule:
 def test_module_loading1():
     """ Simple case. """
     clear_test_classes()
-    
+
     store = AssetStore()
     s = SessionTester('', store)
-    
+
     m1 = FakeModule(store, 'foo.m1')
     m2 = FakeModule(store, 'foo.m2')
-    
+
     Ma = m1.make_component_class('Maa')
     Mb = m1.make_component_class('Mbb')
     Mc = m2.make_component_class('Mcc')
-    
+
     s._register_component(Ma(flx_session=s))
     s._register_component(Mb(flx_session=s))
     s._register_component(Mc(flx_session=s))
-    
+
     assert s.assets_js == add_prefix(['foo.m1.js', 'foo.m2.js'])
     assert s.assets_css == add_prefix(['foo.m1.css', 'foo.m2.css'])
 
@@ -245,93 +245,93 @@ def test_module_loading1():
 def test_module_loading2():
     """ No deps """
     clear_test_classes()
-    
+
     store = AssetStore()
     s = SessionTester('', store)
-    
+
     m1 = FakeModule(store, 'foo.m1')
     m2 = FakeModule(store, 'foo.m2')
     m3 = FakeModule(store, 'foo.m3')
-    
+
     Ma = m2.make_component_class('Ma')
     # m2.deps = add_prefix(['foo.m3'])
     # m3.deps = add_prefix(['foo.m1'])
-    
+
     s._register_component(Ma(flx_session=s))
-    
+
     assert s.assets_js == add_prefix(['foo.m2.js'])
 
 
 def test_module_loading3():
     """ Dependencies get defined too (and before) """
     clear_test_classes()
-    
+
     store = AssetStore()
     s = SessionTester('', store)
-    
+
     m1 = FakeModule(store, 'foo.m1')
     m2 = FakeModule(store, 'foo.m2')
     m3 = FakeModule(store, 'foo.m3')
-    
+
     Ma = m2.make_component_class('Ma')
     m2.deps = add_prefix(['foo.m3'])
     m3.deps = add_prefix(['foo.m1'])
-    
+
     s._register_component(Ma(flx_session=s))
-    
+
     assert s.assets_js == add_prefix(['foo.m1.js', 'foo.m3.js', 'foo.m2.js'])
 
 
 def test_module_loading4():
     """ Dependencies by inheritance """
     # A bit silly; the JSModule (and our FakeModule) handles this dependency
-    
+
     clear_test_classes()
-    
+
     store = AssetStore()
     s = SessionTester('', store)
-    
+
     m1 = FakeModule(store, 'foo.m1')
     m2 = FakeModule(store, 'foo.m2')
     m3 = FakeModule(store, 'foo.m3')
-    
+
     Ma = m2.make_component_class('Ma')
     Mb = m3.make_component_class('Mb', Ma)
     Mc = m1.make_component_class('Mc', Mb)
-    
+
     s._register_component(Mc(flx_session=s))
-    
+
     assert s.assets_js == add_prefix(['foo.m2.js', 'foo.m3.js', 'foo.m1.js'])
 
 
 def test_module_loading5():
     """ Associated assets """
     # A bit silly; the JSModule (and our FakeModule) handles this dependency
-    
+
     clear_test_classes()
-    
+
     store = AssetStore()
     s = SessionTester('', store)
-    
+
     m1 = FakeModule(store, 'foo.m1')
     m2 = FakeModule(store, 'foo.m2')
     m3 = FakeModule(store, 'foo.m3')
-    
+
     store.add_shared_asset('spam.js', 'XX')
     store.associate_asset(add_prefix('foo.m1'), 'spam.js')
     store.associate_asset(add_prefix('foo.m2'), 'eggs.js', 'YY')
     store.associate_asset(add_prefix('foo.m2'), 'spam.js')
     store.associate_asset(add_prefix('foo.m2'), 'bla.css', 'ZZ')
     store.associate_asset(add_prefix('foo.m3'), 'bla.css')
-    
+
     Ma = m1.make_component_class('Ma')
     Mb = m2.make_component_class('Mb')
     Mc = m3.make_component_class('Mc')
-    
+
     s._register_component(Ma(flx_session=s))
     s._register_component(Mb(flx_session=s))
     s._register_component(Mc(flx_session=s))
-    
+
     assert s.assets_js == add_prefix(['spam.js', 'foo.m1.js', 'eggs.js', 'foo.m2.js', 'foo.m3.js'])
     assert s.assets_css == add_prefix(['foo.m1.css', 'bla.css', 'foo.m2.css', 'foo.m3.css'])
 
@@ -365,63 +365,63 @@ def pongit(session, n):
 
 
 def test_keep_alive():
-    
+
     # Avoid Pyzo hijack
     asyncio.set_event_loop(asyncio.new_event_loop())
-    
+
     session = app.manager.get_default_session()
     if session is None:
         session = app.manager.create_default_session()
-    
+
     class Foo:
         pass
-    
+
     foo1, foo2, foo3 = Foo(), Foo(), Foo()
     foo1_ref = weakref.ref(foo1)
     foo2_ref = weakref.ref(foo2)
     foo3_ref = weakref.ref(foo3)
-    
+
     session.keep_alive(foo1, 10)
     session.keep_alive(foo1, 5)  # should do nothing, longest time counts
     session.keep_alive(foo2, 5)
     session.keep_alive(foo2, 11)  # longest timeout counts
     session.keep_alive(foo3, 15)
-    
+
     # Delete objects, session keeps them alive
     del foo1, foo2, foo3
     gc.collect()
     assert foo1_ref() is not None
     assert foo2_ref() is not None
     assert foo3_ref() is not None
-    
+
     # Pong 4, too soon for the session to release the objects
     pongit(session, 4)
     gc.collect()
     assert foo1_ref() is not None
     assert foo2_ref() is not None
     assert foo3_ref() is not None
-    
+
     # Pong 7, still too soon
     pongit(session, 3)
     gc.collect()
     assert foo1_ref() is not None
     assert foo2_ref() is not None
     assert foo3_ref() is not None
-    
+
     # Pong 10, should remove foo1
     pongit(session, 4)
     gc.collect()
     assert foo1_ref() is None
     assert foo2_ref() is not None
     assert foo3_ref() is not None
-    
+
     # Pong 11, should remove foo2
     pongit(session, 1)
     gc.collect()
     assert foo1_ref() is None
     assert foo2_ref() is None
     assert foo3_ref() is not None
-    
+
     # Pong 20, should remove foo3
     pongit(session, 10)
     gc.collect()
@@ -431,26 +431,26 @@ def test_keep_alive():
 
 
 def test_keep_alive_noleak1():
-    
+
     class Foo:
         pass
-    
+
     # Create a session and an object that has a reference to it (like Component)
     session = app.Session('test')
     foo = Foo()
     foo.session = session
-    
+
     # Let the session keep the object alive, so it keeps its reference
     session.keep_alive(foo)
-    
+
     session_ref = weakref.ref(session)
     foo_ref = weakref.ref(foo)
-    
+
     # Removing object wont delete it
     del foo
     gc.collect()
     assert foo_ref() is not None
-    
+
     # But closing the session will; session clears up after itself
     session.close()
     gc.collect()
@@ -459,26 +459,26 @@ def test_keep_alive_noleak1():
 
 def test_keep_alive_noleak2():
     # Even if the above would not work ...
-    
+
     class Foo:
         pass
-    
+
     # Create a session and an object that has a reference to it (like Component)
     session = app.Session('test')
     foo = Foo()
     foo.session = session
-    
+
     # Let the session keep the object alive, so it keeps its reference
     session.keep_alive(foo)
-    
+
     session_ref = weakref.ref(session)
     foo_ref = weakref.ref(foo)
-    
+
     # Removing object alone wont delete it
     del foo
     gc.collect()
     assert foo_ref() is not None
-    
+
     # But removing both will; gc is able to clear circular ref
     del session
     gc.collect()

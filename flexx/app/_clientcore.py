@@ -13,40 +13,40 @@ class Flexx:
     """ JavaScript Flexx module. This provides the connection between
     the Python and JS (via a websocket).
     """
-    
+
     def __init__(self):
-        
+
         if window.flexx.init:
             raise RuntimeError('Should not create global Flexx object more than once.')
-        
+
         # Init (overloadable) variables. These can be set by creating
         # a window.flexx object *before* instantiating this class, or by
         # setting them on this object before the init() is called.
         self.is_notebook = False
         self.is_exported = False
-        
+
         # Copy attributes from temporary object (e.g. is_notebook, require, ...)
         for key in window.flexx.keys():
             self[key] = window.flexx[key]
-        
+
         # We need a global main widget (shared between sessions)
         self.need_main_widget = True  # Used/set in ui/_widget.py
-        
+
         # Keep track of sessions
         self._session_count = 0
         self.sessions = {}
-        
+
         # Note: flexx.init() is not auto-called when Flexx is embedded
         window.addEventListener('load', self.init, False)
         window.addEventListener('unload', self.exit, False)  # not beforeunload
-    
+
     def init(self):
         """ Called after document is loaded. """
         # Create div to put dynamic CSS assets in
         self.asset_node = window.document.createElement("div")
         self.asset_node.id = 'Flexx asset container'
         window.document.body.appendChild(self.asset_node)
-        
+
         if self.is_exported:
             if self.is_notebook:
                 print('Flexx: I am in an exported notebook!')
@@ -58,7 +58,7 @@ class Flexx:
             if not self.is_notebook:
                 self._remove_querystring()
             self.init_logging()
-    
+
     def _remove_querystring(self):
         # remove querystring ?session=x
         try:
@@ -66,12 +66,12 @@ class Flexx:
                                         window.location.pathname)
         except Exception:
             pass  # e.g. firefox-app/nw
-    
+
     def exit(self):
         """ Called when runtime is about to quit. """
         for session in self.sessions.values():
             session.exit()
-    
+
     def spin(self, n=1):
         RawJS("""
         if (!window.document.body) {return;}
@@ -84,7 +84,7 @@ class Flexx:
             }
         }
         """)
-    
+
     def init_logging(self):
         """ Setup logging so that messages are proxied to Python.
         """
@@ -95,7 +95,7 @@ class Flexx:
         window.console.ori_info = window.console.info or window.console.log
         window.console.ori_warn = window.console.warn or window.console.log
         window.console.ori_error = window.console.error or window.console.log
-        
+
         def log(msg):
             window.console.ori_log(msg)
             for session in self.sessions.values():
@@ -121,7 +121,7 @@ class Flexx:
         window.console.error = error
         # Create error handler, so that JS errors get into Python
         window.addEventListener('error', on_error, False)
-    
+
     def create_session(self, app_name, session_id, ws_url):
         # The call to this method is embedded by get_page(),
         # or injected by init_notebook().
@@ -130,7 +130,7 @@ class Flexx:
         self._session_count += 1
         self['s' + self._session_count] = s
         self.sessions[session_id] = s
-    
+
     def _handle_error(self, evt):
         msg = short_msg = evt.message
         if not window.evt:
@@ -161,13 +161,13 @@ class Flexx:
         elif evt.message and evt.lineno:  # message, url, linenumber
             msg += "\nIn %s:%i" % (evt.filename, evt.lineno)
         # Handle error
-        evt.preventDefault()  # Don't do the standard error 
+        evt.preventDefault()  # Don't do the standard error
         window.console.ori_error(msg)
         for session in self.sessions.values():
             session.send_command("ERROR", short_msg)
 
 class JsSession:
-    
+
     def __init__(self, app_name, id, ws_url=None):
         self.app = None  # the root component (can be a PyComponent)
         self.app_name = app_name
@@ -176,7 +176,7 @@ class JsSession:
         self.ws_url = ws_url
         self._component_counter = 0
         self._disposed_ob = {'_disposed': True}
-        
+
         # Maybe this is JLab
         if not self.id:
             jconfig = window.document.getElementById('jupyter-config-data')
@@ -187,7 +187,7 @@ class JsSession:
                     self.app_name = config.flexx_app_name
                 except Exception as err:
                     print(err)
-        
+
         # Init internal variables
         self._init_time = time()
         self._pending_commands = []  # to pend raw commands during init
@@ -197,14 +197,14 @@ class JsSession:
         # self.classes = {}
         self.instances = {}
         self.instances_to_check_size = {}
-        
+
         if not window.flexx.is_exported:
             self.init_socket()
-        
+
         # Initiate service to track resize
         window.addEventListener('resize', self._check_size_of_objects, False)
         window.setInterval(self._check_size_of_objects, 1000)
-    
+
     def exit(self):
         if self._ws:  # is not null or undefined
             self._ws.close()
@@ -212,7 +212,7 @@ class JsSession:
             self.status = 0
             # flexx.instances.sessions.pop(self) might be good,
             # but perhaps not that much need, and leaving is nice for debugging.
-    
+
     def send_command(self, *command):
         if self._ws is not None:
             try:
@@ -222,7 +222,7 @@ class JsSession:
                 print(command)
                 raise err
             self._ws.send(bb)
-    
+
     def instantiate_component(self, module, cname, id, args, kwargs, active_components):
         # Maybe we still have the instance?
         c = self.instances.get(id, None)
@@ -244,7 +244,7 @@ class JsSession:
             for ac in reversed(active_components):
                 ac.__exit__()
         return c
-    
+
     def _register_component(self, c, id=None):
         if self.app is None:
             self.app = c  # Set our root component; is the first to register
@@ -254,11 +254,11 @@ class JsSession:
         c._id = id
         c._uid = self.id + '_' + id
         self.instances[c._id] = c
-    
+
     def _unregister_component(self, c):
         self.instances_to_check_size.pop(c.id, None)
         pass  # c gets popped from self.instances by DISPOSE_ACK command
-    
+
     def get_component_instance(self, id):
         """ Get instance of a Component class, or None. Or the document body
         if "body" is given.
@@ -267,7 +267,7 @@ class JsSession:
             return window.document.body
         else:
             return self.instances.get(id, None)
-    
+
     def init_socket(self):
         """ Make the connection to Python.
         """
@@ -276,7 +276,7 @@ class JsSession:
         if (WebSocket is undefined):
             window.document.body.textContent = 'Browser does not support WebSockets'
             raise "FAIL: need websocket"
-        
+
         # Construct ws url
         if not self.ws_url:
             proto = 'ws'
@@ -292,7 +292,7 @@ class JsSession:
         self._ws = ws = WebSocket(self.ws_url)
         ws.binaryType = "arraybuffer"
         self.status = 2
-        
+
         def on_ws_open(evt):
             window.console.info('Socket opened with session id ' + self.id)
             self.send_command('HI_FLEXX', self.id)
@@ -321,13 +321,13 @@ class JsSession:
             self._ws = None
             self.status = 0
             window.console.error('Socket error')
-        
+
         # Connect
         ws.onopen = on_ws_open
         ws.onmessage = on_ws_message
         ws.onclose = on_ws_close
         ws.onerror = on_ws_error
-    
+
     def _process_commands(self):
         """ A less direct way to process commands, which gives the
         browser time to draw about every other JS asset. This is a
@@ -346,10 +346,10 @@ class JsSession:
                     if len(self._pending_commands):
                         window.setTimeout(self._process_commands, 0)
                     break
-    
+
     def _receive_raw_command(self, msg):
         return self._receive_command(serializer.decode(msg))
-    
+
     def _receive_command(self, command):
         """ Process a command send from the server.
         """
@@ -433,22 +433,22 @@ class JsSession:
         else:
             window.console.error('Invalid command: "' + cmd + '"')
         return command
-    
+
     def call_after_roundtrip(self, callback, *args):
         ping_to_schedule_at = self._ping_counter + 1
         if len(self._ping_calls) == 0 or self._ping_calls[-1][0] < ping_to_schedule_at:
             window.setTimeout(self._send_ping, 0)
         self._ping_calls.push((ping_to_schedule_at, callback, args))
-    
+
     def _send_ping(self):
         self._ping_counter += 1
         self.send_command('PING', self._ping_counter)
-    
+
     def _receive_pong(self, count):
         while len(self._ping_calls) > 0 and self._ping_calls[0][0] <= count:
             _, callback, args = self._ping_calls.pop(0)
             window.setTimeout(callback, 0, *args)
-    
+
     def keep_checking_size_of(self, ob, check=True):
         """ This is a service that the session provides.
         """
@@ -456,7 +456,7 @@ class JsSession:
             self.instances_to_check_size[ob.id] = ob
         else:
             self.instances_to_check_size.pop(ob.id, None)
-    
+
     def _check_size_of_objects(self):
         for ob in self.instances_to_check_size.values():
             if ob._disposed is False:

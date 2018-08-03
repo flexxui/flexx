@@ -1,7 +1,7 @@
 """
 Test the more fancy stuff like:
 
-* implicit reactions 
+* implicit reactions
 * computed properties
 * setting properties as callables to create implicit actions
 * more
@@ -26,14 +26,14 @@ logger = event.logger
 ## Greedy reactions
 
 class MyObject1(event.Component):
-    
+
     foo = event.IntProp(settable=True)
     bar = event.IntProp(settable=True)
-    
+
     @event.reaction('foo')
     def report1(self, *events):
         print('foo', self.foo)
-    
+
     @event.reaction('bar', mode='greedy')
     def report2(self, *events):
         print('bar', self.bar)
@@ -54,24 +54,24 @@ def test_reaction_greedy():
     bar 6
     foo 6
     """
-    
+
     m = MyObject1()
     print(m.report1.get_mode(), m.report2.get_mode())
     loop.iter()
     print('-')
-    
+
     # Invoke the reaction by modifying foo
     m.set_foo(3)
     m.set_foo(4)
     loop.iter()
     print('-')
-    
+
     # Or bar
     m.set_bar(3)
     m.set_bar(4)
     loop.iter()
     print('-')
-    
+
     # But now interleave
     m.set_foo(4)
     m.set_bar(4)
@@ -86,10 +86,10 @@ def test_reaction_greedy():
 
 
 class MyObject2(event.Component):
-    
+
     foo = event.IntProp(settable=True)
     bar = event.IntProp(7, settable=True)
-    
+
     @event.reaction
     def report(self, *events):
         assert len(events) == 0  # of course, you'd leave them out in practice
@@ -106,24 +106,24 @@ def test_reaction_auto1():
     4 4
     end
     """
-    
+
     print('init')
     m = MyObject2()
     print(m.report.get_mode())
     loop.iter()
-    
+
     # Invoke the reaction by modifying foo
     m.set_foo(3)
     m.set_foo(4)
     loop.iter()
-    
+
     # Or bar
     m.set_bar(3)
     m.set_bar(24)
     m.set_bar(4)
     m.set_bar(4)
     loop.iter()
-    
+
     # Modifying foo, but value does not change: no reaction
     m.set_foo(4)
     loop.iter()
@@ -131,10 +131,10 @@ def test_reaction_auto1():
 
 
 class MyObject3(event.Component):
-    
+
     foo = event.IntProp(settable=True)
     bar = event.IntProp(7, settable=True)
-    
+
     @event.reaction('!spam', mode='auto')
     def report(self, *events):
         assert len(events) > 0
@@ -152,27 +152,27 @@ def test_reaction_auto2():
     4 4
     end
     """
-    
+
     print('init')
     m = MyObject3()
     print(m.report.get_mode())
     loop.iter()
-    
+
     # Invoke the reaction by modifying foo
     m.set_foo(3)
     m.set_foo(4)
     loop.iter()
-    
+
     # Or bar
     m.set_bar(3)
     m.set_bar(24)
     m.set_bar(4)
     m.set_bar(4)
     loop.iter()
-    
+
     m.emit('spam')
     loop.iter()
-    
+
     # Modifying foo, but value does not change: no reaction
     m.set_foo(4)
     loop.iter()
@@ -182,7 +182,7 @@ def test_reaction_auto2():
 ## One liner
 
 class MyObject4(event.Component):
-    
+
     bar = event.IntProp(7, settable=True)
 
 
@@ -195,14 +195,14 @@ def test_reaction_oneliner():
     2
     3
     """
-    
+
     m1 = MyObject4(bar=2)
     m2 = MyObject4(bar=lambda: m1.bar)
     loop.iter()
     print(m2.bar)
     loop.iter()
     print(m2.bar)
-    
+
     print('xx')
     m1.set_bar(3)
     loop.iter()

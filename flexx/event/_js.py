@@ -38,7 +38,7 @@ reprs = json.dumps
 
 
 class MetaCollector:
-    
+
     def __init__(self, cls=None):
         filename = None
         linenr = 1e9
@@ -54,20 +54,20 @@ class MetaCollector:
         self.meta = {'vars_unknown': set(), 'vars_global': set(),
                      'std_functions': set(), 'std_methods': set(),
                      'filename': filename, 'linenr': linenr}
-    
+
     def py2js(self, *args, **kwargs):
         kwargs['inline_stdlib'] = False
         kwargs['docstrings'] = False
         code = py2js(*args, **kwargs)
         return self.update(code)
-    
+
     def update(self, code):
         for key in self.meta:
             if key in ('filename', 'linenr'):
                 continue
             self.meta[key].update(code.meta[key])
         return code
-    
+
     def attach_meta(self, s):
         s = JSString(s)
         s.meta = self.meta
@@ -105,7 +105,7 @@ var logger = new Logger();
 class LoopJS:  # pragma: no cover
     """ JS variant of the Loop class.
     """
-    
+
     # Hide a couple of methods
     integrate = undefined
     integrate_tornado = undefined
@@ -113,14 +113,14 @@ class LoopJS:  # pragma: no cover
     integrate_pyside = undefined
     _integrate_qt = undefined
     _thread_match = undefined
-    
+
     def __init__(self):
         self._active_components = []
         self.reset()
-    
+
     def _call_soon_func(self, func):
         setTimeout(func, 0)
-    
+
     def _iter_callback(self):
         self._scheduled_call_to_iter = False
         return self.iter()
@@ -129,23 +129,23 @@ class LoopJS:  # pragma: no cover
 class ComponentJS:  # pragma: no cover
     """ JS variant of the Component class.
     """
-    
+
     _IS_COMPONENT = True
     _COUNT = 0
     _REACTION_COUNT = 0
-    
+
     def __init__(self, *init_args, **property_values):
-        
+
         RawJS('Component.prototype._COUNT += 1')
         self._id = RawJS("this.__name__ + Component.prototype._COUNT")
         self._disposed = False
-        
+
         # Init some internal variables
         self.__handlers = {}  # reactions connecting to this component
         self.__pending_events = []
         self.__anonymous_reactions = []
         self.__initial_mutation = False
-        
+
         # Create actions
         for i in range(len(self.__actions__)):
             name = self.__actions__[i]
@@ -164,16 +164,16 @@ class ComponentJS:  # pragma: no cover
         for i in range(len(self.__attributes__)):
             name = self.__attributes__[i]
             self.__create_attribute(name)
-        
+
         # With self as the active component (and thus mutatable), init the
         # values of all properties, and apply user-defined initialization
         with self:
             self._comp_init_property_values(property_values)
             self.init(*init_args)
-        
+
         # Connect reactions and fire initial events
         self._comp_init_reactions()
-    
+
     def _comp_init_property_values(self, property_values):
         values = []
         # First collect default property values (they come first)
@@ -196,22 +196,22 @@ class ComponentJS:  # pragma: no cover
             values.append((name, value))
         # Then process all property values
         self._comp_apply_property_values(values)
-    
+
     def _comp_make_implicit_setter(self, prop_name, func):
         setter_func = getattr(self, 'set_' + prop_name, None)
         if setter_func is None:
             t = '%s does not have a set_%s() action for property %s.'
-            raise TypeError(t % (self._id, prop_name, prop_name)) 
+            raise TypeError(t % (self._id, prop_name, prop_name))
         setter_reaction = lambda: setter_func(func())
         reaction = self.__create_reaction(setter_reaction,
                                           'auto-' + prop_name, 'auto', [])
         self.__anonymous_reactions.append(reaction)
-    
+
     def _comp_init_reactions(self):
         if self.__pending_events is not None:
             self.__pending_events.append(None)  # marker
             loop.call_soon(self._comp_stop_capturing_events)
-        
+
         # Create (and connect) reactions.
         # Implicit reactions need to be invoked to initialize connections.
         for i in range(len(self.__reactions__)):
@@ -228,14 +228,14 @@ class ComponentJS:  # pragma: no cover
             if r.get_mode() == 'auto':
                 ev = dict(source=self, type='', label='')
                 loop.add_reaction_event(r, ev)
-    
+
     def reaction(self, *connection_strings):
         # The JS version (no decorator functionality)
-        
+
         if len(connection_strings) < 2:
             raise RuntimeError('Component.reaction() (js) needs a function and '
                                'one or more connection strings.')
-        
+
         # Get callable
         if callable(connection_strings[0]):
             func = connection_strings[0]
@@ -245,13 +245,13 @@ class ComponentJS:  # pragma: no cover
             connection_strings = connection_strings[:-1]
         else:
             raise TypeError('Component.reaction() requires a callable.')
-        
+
         # Verify connection strings
         for i in range(len(connection_strings)):
             s = connection_strings[i]
             if not (isinstance(s, str) and len(s)):
                 raise ValueError('Connection string must be nonempty strings.')
-        
+
         # Get function name (Flexx sets __name__ on methods)
         name = RawJS("func.__name__ || func.name || 'anonymous'")
         # name = name.split(' ')[-1].split('flx_')[-1]
@@ -260,7 +260,7 @@ class ComponentJS:  # pragma: no cover
         name = nameparts[-1]
         mode = 'normal'
         return self.__create_reaction_ob(func, name, mode, connection_strings)
-    
+
     def __create_action(self, action_func, name):
         # Keep a ref to the action func, which is a class attribute. The object
         # attribute with the same name will be overwritten with the property below.
@@ -281,7 +281,7 @@ class ComponentJS:  # pragma: no cover
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
-    
+
     def __create_attribute(self, name):
         def getter():
             return self['_' + name]
@@ -290,7 +290,7 @@ class ComponentJS:  # pragma: no cover
         opts = {'enumerable': False, 'configurable': False,
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
-    
+
     def __create_property(self, name):
         private_name = '_' + name + '_value'
         def getter():
@@ -302,7 +302,7 @@ class ComponentJS:  # pragma: no cover
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
-    
+
     def __create_emitter(self, emitter_func, name):
         # Keep a ref to the emitter func, see comment in __create_action()
         def func():  # this func should return None, so super() works correct
@@ -316,7 +316,7 @@ class ComponentJS:  # pragma: no cover
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
-    
+
     def __create_reaction(self, reaction_func, name, mode, c_strings):
         reaction = self.__create_reaction_ob(reaction_func, name, mode, c_strings)
         def getter():
@@ -327,17 +327,17 @@ class ComponentJS:  # pragma: no cover
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
         return reaction
-        
+
     def __create_reaction_ob(self, reaction_func, name, mode, connection_strings):
         # Keep ref to the reaction function, see comment in create_action().
-        
+
         # Create function that becomes our "reaction object"
         def reaction():
             return reaction_func.apply(self, arguments)  # arguments == events
-        
+
         # Attach methods to the function object (this gets replaced)
         REACTION_METHODS_HOOK  # noqa
-        
+
         # Init reaction
         that = self
         RawJS("Component.prototype._REACTION_COUNT += 1")
@@ -346,7 +346,7 @@ class ComponentJS:  # pragma: no cover
         reaction._mode = mode
         reaction._ob1 = lambda : that  # no weakref in JS
         reaction._init(connection_strings, self)
-        
+
         return reaction
 
 
@@ -413,38 +413,38 @@ def _create_js_class(PyClass, JSClass):
 
 def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     """ Create the JS equivalent of a subclass of the Component class.
-    
+
     Given a Python class with actions, properties, emitters and reactions,
     this creates the code for the JS version of the class. It also supports
     class constants that are int/float/str, or a tuple/list thereof.
     The given class does not have to be a subclass of Component.
-    
+
     This more or less does what ComponentMeta does, but for JS.
     """
-    
+
     assert cls_name != 'Component'  # we need this special class above instead
-      
+
     # Collect meta information of all code pieces that we collect
     mc = MetaCollector(cls)
     mc.meta['std_functions'].add('op_instantiate')  # b/c we use get_class_definition
-    
+
     total_code = []
     funcs_code = []  # functions and emitters go below class constants
     const_code = []
     err = ('Objects on JS Component classes can only be int, float, str, '
            'or a list/tuple thereof. Not %s -> %r.')
-    
+
     total_code.append('\n'.join(get_class_definition(cls_name, base_class)).rstrip())
     prefix = '' if cls_name.count('.') else 'var '
     total_code[0] = prefix + total_code[0]
     prototype_prefix = '$' + cls_name.split('.')[-1] + '.'
     total_code.append('var %s = %s.prototype;' % (prototype_prefix[:-1], cls_name))
-    
+
     # Process class items in original order or sorted by name if we cant
     class_items = cls.__dict__.items()
     if sys.version_info < (3, 6):  # pragma: no cover
         class_items = sorted(class_items)
-    
+
     for name, val in class_items:
         if isinstance(val, ActionDescriptor):
             # Set underlying function as class attribute. This is overwritten
@@ -555,7 +555,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
                 raise ValueError('Attributes on JS Component class must be '
                                  'JSON compatible.\n%s' % str(err))
             const_code.append(prototype_prefix + name + ' = ' + serialized)
-    
+
     if const_code:
         total_code.append('')
         total_code.extend(const_code)
@@ -563,7 +563,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
         total_code.append('')
         total_code.extend(funcs_code)
     total_code.append('')
-    
+
     # Return string with meta info (similar to what py2js returns)
     mc.meta['vars_unknown'].discard('flx_name')
     return mc.attach_meta('\n'.join(total_code))
@@ -588,7 +588,7 @@ def gen_prop_classes(mc):
     total_code.append('var event = {}; // convenience "module emulator"')
     for name in names:
         total_code.append('event.%s = %s;' % (name, name))
-    
+
     return '\n'.join(total_code)
 
 
@@ -606,32 +606,32 @@ assert JS_LOOP.count('._scheduled_call_to_iter') > 2  # prevent error after refa
 
 
 if __name__ == '__main__':
-    
+
     # Testing ...
     from flexx import event
-    
+
     class Foo(Component):
-        
+
         __x = 3
         foo = event.StringProp('asd', settable=True)
-        
+
         @event.action
         def do_bar(self, v=0):
             print(v)
-        
+
         @event.reaction
         def react2foo(self):
             print(self.foo)
-        
+
         def __xx(self):
             pass
-        
-    
+
+
     toprint = JS_EVENT  # or JS_LOOP JS_COMPONENT JS_EVENT
     print('-' * 80)
-    print(toprint)  
+    print(toprint)
     print('-' * 80)
     print(len(toprint), 'of', len(JS_EVENT), 'bytes in total')  # 29546 before refactor
     print('-' * 80)
-    
+
     print(create_js_component_class(Foo, 'Foo'))

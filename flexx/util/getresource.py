@@ -1,4 +1,4 @@
-""" 
+"""
 Functionality to ensure up-to-date versions of resources. This module
 must be able to run standalone, since it will be used from setup.py to
 pack resources in dist packages.
@@ -37,16 +37,16 @@ def get_resoure_path(filename):
     filename. Will use cached version if available. Otherwise will
     download and cache.
     """
-    
+
     # Get location of resource dir
     dest = os.path.abspath(os.path.join(__file__, '..', '..', 'resources'))
     if not os.path.isdir(dest):
         raise ValueError('Resource dest dir %r is not a directory.' % dest)
-    
+
     # Get full filename for downloaded file
     path = os.path.join(dest, filename)
     url = ''
-    
+
     if filename in RESOURCES:
         # Get url
         url, tag = RESOURCES[filename]
@@ -64,7 +64,7 @@ def get_resoure_path(filename):
         # Resource is supposed to just be in the dir
         if not os.path.isfile(path):
             raise ValueError('Unknown/unavailable resource %r' % filename)
-    
+
     return path
 
 

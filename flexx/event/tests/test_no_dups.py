@@ -8,7 +8,7 @@ def test_that_tests_dont_have_multiple_functions_with_same_name():
         print(fname)
         text = open(os.path.join(dir, fname), 'rb').read().decode()
         func_names = set()
-        
+
         for line in text.splitlines():
             line = line.split('(')[0].strip()
             if line.startswith('def '):

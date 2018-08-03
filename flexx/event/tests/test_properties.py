@@ -11,9 +11,9 @@ loop = event.loop
 
 
 class MyCustomProp(event.Property):
-    
+
     _default = 'a'
-    
+
     def _validate(self, value, name, data):
         if value not in 'abc':
             raise TypeError('MyCustomProp must have a value of "a", "b", or "c".')
@@ -21,13 +21,13 @@ class MyCustomProp(event.Property):
 
 
 class MyObject(event.Component):
-    
+
     att = event.Attribute()
-    
+
     # Props to test basic stuff
     foo = event.AnyProp(6, settable=True, doc='can be anything')
     bar = event.StringProp('xx')  # not settable
-    
+
     # Props to test array mutations
     eggs = event.ListProp([], settable=True)
     eggs2 = event.ListProp(settable=True)
@@ -64,16 +64,16 @@ def test_property_setting():
     fail ok
     xx
     """
-    
+
     m = MyObject()
     print(m.foo)
     print(m.bar)
-    
+
     m.set_foo(3.2)
     print(m.foo)
     loop.iter()
     print(m.foo)
-    
+
     try:
         m.set_bar('yy')
     except AttributeError:
@@ -90,10 +90,10 @@ def test_private_property():
     0
     3
     """
-    
+
     m = MyObject()
     print(m._privateprop)
-   
+
     m._set_privateprop(3)
     print(m._privateprop)
     loop.iter()
@@ -108,14 +108,14 @@ def test_property_mutating():
     9
     """
     m = MyObject()
-    
+
     try:
         m._mutate_foo(9)
     except AttributeError:
         print('cannot mutate')
-    
+
     print(m.foo)
-    
+
     # Hack
     loop._processing_action = True
     m._mutate_foo(9)
@@ -133,15 +133,15 @@ def test_property_defaults1():
     fail ok
     end
     """
-    
+
     m = MyObject(foo=9)
     print(m.foo)
     print(m.bar)
-    
+
     loop.iter()
     print(m.foo)
     print(m.bar)
-    
+
     # Even non-settable props can be initialized at instantiation
     # try:
     #     MyObject(bar='yy')
@@ -149,17 +149,17 @@ def test_property_defaults1():
     #     print('fail ok')  # py and js
     m = MyObject(bar='yy')
     print(m.bar)
-    
+
     # But need settable prop if setting to implicit reaction
     try:
         MyObject(bar=lambda:'yy')
     except TypeError:
         print('fail ok')  # py and js
-    
+
     print('end')
 
 
-@run_in_both(MyObject) 
+@run_in_both(MyObject)
 def test_property_list_init():
     """
     []
@@ -170,16 +170,16 @@ def test_property_list_init():
     m = MyObject()
     print(m.eggs)
     print(m.eggs3)
-    
+
     # Good auto-defaults
     print(m.eggs2)
-    
+
     m = MyObject(eggs=[7,8,9])
     loop.iter()
     print(m.eggs)
 
 
-@run_in_both(MyObject) 
+@run_in_both(MyObject)
 def test_property_list_mutate():
     """
     []
@@ -190,28 +190,28 @@ def test_property_list_mutate():
     """
     m = MyObject()
     print(m.eggs)
-    
+
     loop._processing_action = True
-    
+
     m._mutate_eggs([5, 6], 'insert', 0)
     m._mutate_eggs([1, 2], 'insert', 0)
     m._mutate_eggs([3, 4], 'insert', 2)
     m._mutate_eggs([7, 8], 'insert', 6)
     print(m.eggs)
-    
+
     m._mutate_eggs([44, 55, 66], 'replace', 3)
     print(m.eggs)
-    
+
     m._mutate_eggs(3, 'remove', 3)
     print(m.eggs)
-    
+
     try:
         m._mutate_eggs([7, 8], 'insert', -1)
     except IndexError:
         print('fail IndexError')
 
 
-@run_in_both(MyObject) 
+@run_in_both(MyObject)
 def test_property_dict_mutate():
     """
     {}
@@ -222,31 +222,31 @@ def test_property_dict_mutate():
     """
     m = MyObject()
     print(m.dictprop)
-    
+
     loop._processing_action = True
-    
+
     m._mutate_dictprop(dict(foo=3), 'insert')
     m._mutate_dictprop(dict(bar=4), 'replace')  # == insert
 
     print('{' + ', '.join(['%s: %i' % (key, val)
                           for key, val in sorted(m.dictprop.items())]) + '}')
-    
+
     m._mutate_dictprop(dict(foo=5), 'replace')
     print('{' + ', '.join(['%s: %i' % (key, val)
                           for key, val in sorted(m.dictprop.items())]) + '}')
-    
-    
+
+
     m._mutate_dictprop(['foo'], 'remove')
     print('{' + ', '.join(['%s: %i' % (key, val)
                           for key, val in sorted(m.dictprop.items())]) + '}')
-    
+
     try:
        m._mutate_dictprop(dict(foo=3), 'insert', 0)
     except IndexError:
         print('fail IndexError')
 
 
-@run_in_both(MyObject) 
+@run_in_both(MyObject)
 def test_property_persistance1():  # anyprop just sets, listProm makes a copy
     """
     []
@@ -259,16 +259,16 @@ def test_property_persistance1():  # anyprop just sets, listProm makes a copy
     m.set_foo(x)
     m.set_eggs(x)
     loop.iter()
-    
+
     print(m.foo)
     print(m.eggs)
-    
+
     x.extend([3, 4])
     print(m.foo)
     print(m.eggs)
-    
 
-@run_in_both(MyObject) 
+
+@run_in_both(MyObject)
 def test_property_persistance2():  # now we use the egg prop value itself
     """
     []
@@ -281,10 +281,10 @@ def test_property_persistance2():  # now we use the egg prop value itself
     m.set_foo(x)
     m.set_eggs(x)
     loop.iter()
-    
+
     print(m.foo)
     print(m.eggs)
-    
+
     x.extend([3, 4])
     print(m.foo)
     print(m.eggs)
@@ -375,11 +375,11 @@ def test_property_any():  # Can be anything
     """
     m = MyObject()
     print(m.anyprop is None)  # Because None becomes null in JS
-    
+
     m.set_anyprop(42)
     loop.iter()
     print(m.anyprop)
-    
+
     m.set_anyprop(loop)
     loop.iter()
     print(m.anyprop)
@@ -395,15 +395,15 @@ def test_property_bool():  # Converts to bool, no type checking
     """
     m = MyObject()
     print(m.boolprop)
-    
+
     m.set_boolprop(42)
     loop.iter()
     print(m.boolprop)
-    
+
     m.set_boolprop('')
     loop.iter()
     print(m.boolprop)
-    
+
     m.set_boolprop(loop)
     loop.iter()
     print(m.boolprop)
@@ -419,15 +419,15 @@ def test_property_tristate():  # Converts to bool, no type checking
     """
     m = MyObject()
     print(m.tristateprop)
-    
+
     m.set_tristateprop(42)
     loop.iter()
     print(m.tristateprop)
-    
+
     m.set_tristateprop('')
     loop.iter()
     print(m.tristateprop)
-    
+
     m.set_tristateprop(None)
     loop.iter()
     print(m.tristateprop)
@@ -444,11 +444,11 @@ def test_property_int():  # typechecking, but converts from float/str
     """
     m = MyObject()
     print(m.intprop)
-    
+
     m.set_intprop(42.9)
     loop.iter()
     print(m.intprop)
-    
+
     m.set_intprop('9')  # actually, '9.1' would fail on Python
     loop.iter()
     print(m.intprop)
@@ -469,11 +469,11 @@ def test_property_float():  # typechecking, but converts from int/str
     """
     m = MyObject()
     print(m.floatprop)
-    
+
     m.set_floatprop(42.9)
     loop.iter()
     print(m.floatprop)
-    
+
     m.set_floatprop('9.1')  # actually, '9.1' would fail on Python
     loop.iter()
     print(m.floatprop)
@@ -487,20 +487,20 @@ def test_property_float():  # typechecking, but converts from int/str
 def test_property_string():
     """
     .
-    
+
     hello
     ? TypeError
     hello
     """
     print('.')
-    
+
     m = MyObject()
     print(m.stringprop)
-    
+
     m.set_stringprop('hello')
     loop.iter()
     print(m.stringprop)
-    
+
     m.set_stringprop(3)
     loop.iter()
     print(m.stringprop)
@@ -521,30 +521,30 @@ def test_property_tuple():
     """
     # We convert to list when printing, because in JS we cripple the object
     # and on Node the repr then includes the crippled methods. This way, the
-    # output for Py and JS is also the same. At the bottom we validate that 
+    # output for Py and JS is also the same. At the bottom we validate that
     # the value is indeed ummutable.
     m = MyObject()
     print(list(m.tupleprop))
-    
+
     m.set_tupleprop((3, 4))
     loop.iter()
     print(list(m.tupleprop))
-    
+
     m.set_tupleprop((5, 6))
     loop.iter()
     print(list(m.tupleprop))
-    
+
     for value in [3, None, 'asd']:
         m.set_tupleprop(value)
         loop.iter()
     print(list(m.tupleprop))
-    
+
     # Cannot append to a tuple
     try:
         m.tupleprop.append(9)
     except Exception:
         print('append failed')
-    
+
     # Cannot reverse a tuple
     try:
         m.tupleprop.reverse()
@@ -568,20 +568,20 @@ def test_property_list():
     """
     m = MyObject()
     print(m.listprop)
-    
+
     m.set_listprop((3, 4))
     loop.iter()
     print(m.listprop)
-    
+
     m.set_listprop((5, 6))
     loop.iter()
     print(m.listprop)
-    
+
     for value in [3, None, 'asd']:
         m.set_listprop(value)
         loop.iter()
     print(m.listprop)
-    
+
     print('.')
     # copies are made on set
     x = [1, 2]
@@ -611,19 +611,19 @@ def test_property_component():  # Can be a Component or None
     m1 = MyObject()
     m2 = MyObject()
     print(m.componentprop is None)
-    
+
     m.set_componentprop(m1)
     loop.iter()
     print([m.componentprop is None, m.componentprop is m1, m.componentprop is m2])
-    
+
     m.set_componentprop(m2)
     loop.iter()
     print([m.componentprop is None, m.componentprop is m1, m.componentprop is m2])
-    
+
     m.set_componentprop(None)
     loop.iter()
     print([m.componentprop is None, m.componentprop is m1, m.componentprop is m2])
-    
+
     for value in [3, loop, 'asd']:
         m.set_componentprop(value)
         loop.iter()
@@ -642,11 +642,11 @@ def test_property_custom():
     """
     m = MyObjectWithCustom()
     print(m.myprop1)
-    
+
     m.set_myprop1('c')
     loop.iter()
     print(m.myprop1)
-    
+
     for value in [3, loop, 'd']:
         m.set_myprop1(value)
         loop.iter()
@@ -656,7 +656,7 @@ def test_property_custom():
 ## Meta-ish tests that are similar for property/emitter/action/reaction
 
 
-@run_in_both(MyObject) 
+@run_in_both(MyObject)
 def test_property_not_settable():
     """
     fail AtributeError
@@ -666,45 +666,45 @@ def test_property_not_settable():
         m.foo = 3
     except AttributeError:
         print('fail AtributeError')
-    
+
     # We cannot prevent deletion in JS, otherwise we cannot overload
 
 
 def test_property_python_only():
-    
+
     # Fail component needs property instance, not class
     with raises(TypeError):
         class MyObject2(event.Component):
             foo = event.AnyProp
-    
+
     # Fail multiple positional args
     with raises(TypeError):
         class MyObject2(event.Component):
             foo = event.AnyProp(3, 4)
-    
+
     # Fail on old syntax
     with raises(TypeError):
         class MyObject2(event.Component):
             @event.Property
             def foo(self, v):
                 pass
-    
+
     with raises(TypeError):
         event.AnyProp(doc=3)
-    
-    
+
+
     m = MyObject()
-    
+
     # Check type of the instance attribute
     # -> Ha! the attrubute it the prop value!
-    # assert isinstance(m.foo, event._action.Action) 
-    
+    # assert isinstance(m.foo, event._action.Action)
+
     # Cannot set or delete a property
     with raises(AttributeError):
         m.foo = 3
     with raises(AttributeError):
         del m.foo
-    
+
     # Repr and docs
     assert 'anything' in m.__class__.foo.__doc__
     assert 'anyprop' in repr(m.__class__.foo).lower()

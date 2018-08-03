@@ -58,7 +58,7 @@ class TornadoServer(AbstractServer):
     def _open(self, host, port, **kwargs):
         # Note: does not get called if host is False. That way we can
         # run Flexx in e.g. JLab's application.
-        
+
         # Hook Tornado up with asyncio. Flexx' BaseServer makes sure
         # that the correct asyncio event loop is current (for this thread).
         # http://www.tornadoweb.org/en/stable/asyncio.html
@@ -69,7 +69,7 @@ class TornadoServer(AbstractServer):
         # we will be alright as long as there is no other Tornado stuff going on.
         IOLoop._current.instance = None
         self._io_loop.make_current()
-        
+
         # handle ssl, wether from configuration or given args
         if config.ssl_certfile:
             if 'ssl_options' not in kwargs:
@@ -96,7 +96,7 @@ class TornadoServer(AbstractServer):
         if tornado.version_info < (5, ):
             kwargs['io_loop'] = self._io_loop
         self._server = HTTPServer(self._app, **kwargs)
-        
+
         # Start server (find free port number if port not given)
         if port:
             # Turn port into int, use hashed port number if a string was given
@@ -525,13 +525,13 @@ class WSHandler(WebSocketHandler):
         we should at some point define a real formalized protocol.
         """
         self._mps_counter.trigger()
-        
+
         try:
             command = serializer.decode(message)
         except Exception as err:
             err.skip_tb = 1
             logger.exception(err)
-        
+
         self._pongtime = time.time()
         if self._session is None:
             if command[0] == 'HI_FLEXX':
@@ -610,7 +610,7 @@ class WSHandler(WebSocketHandler):
             self.write_message(bb, binary=True)
         except WebSocketClosedError:
             self.close(1000, 'closed by client')
-    
+
     def close(self, *args):
         try:
             WebSocketHandler.close(self, *args)

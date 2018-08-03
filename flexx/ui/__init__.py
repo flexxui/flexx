@@ -1,17 +1,17 @@
 """
 
-Once you are familiar with :class:`JsComponent <flexx.app.JsComponent>` and 
+Once you are familiar with :class:`JsComponent <flexx.app.JsComponent>` and
 the :class:`Widget <flexx.ui.Widget>` class, understanding all other widgets
 should be relatively straightforward. The ``Widget`` class is the base class
 of all other ui classes. On itself it does not do or show much, though we can make it
 visible by changing the background color:
 
 .. UIExample:: 100
-    
+
     from flexx import app, ui
-    
+
     class Example(ui.HSplit):
-        
+
         def init(self):
             ui.Widget(style='background:red;')
             ui.Widget(style='background:blue;')
@@ -20,11 +20,11 @@ visible by changing the background color:
 Widgets can also used as a container for other widgets:
 
 .. UIExample:: 100
-    
+
     from flexx import app, ui
-    
+
     class Example(ui.Widget):
-        
+
         def init(self):
             ui.Button(text='hello')
             ui.Button(text='world')
@@ -44,11 +44,11 @@ default-parent-mechanism is thread-safe, since there is a default widget
 per thread.)
 
 .. UIExample:: 100
-    
+
     from flexx import app, ui
-    
+
     class Example(ui.Widget):
-        
+
         def init(self):
             with ui.HSplit():
                 ui.Button(text='foo')
@@ -62,14 +62,14 @@ To create an actual app from a widget, there are three possibilities:
 ``export()`` it as a standalone HTML document:
 
 .. code-block:: py
-    
+
     from flexx import app, ui
-    
+
     @app.serve
     class Example(ui.Widget):
         def init(self):
             ui.Label(text='hello world')
-    
+
     example = app.launch(Example)
     app.export(Example, 'example.html')
 
@@ -87,27 +87,27 @@ Using widgets the web way
 -------------------------
 
 An approach that might be more familiar for web developers, and which is
-inspired by frameworks such as React is to build custom widgets using 
+inspired by frameworks such as React is to build custom widgets using
 html elements:
 
 .. UIExample:: 150
-    
+
     from flexx import app, event, ui
-    
+
     class Example(ui.Widget):
-        
+
         name = event.StringProp('John Doe', settable=True)
         age =  event.IntProp(22, settable=True)
-        
+
         @event.action
         def increase_age(self):
             self._mutate_age(self.age + 1)
-        
+
         def _create_dom(self):
             # Use this method to create a root element for this widget.
             # If you just want a <div> you don't have to implement this.
-            return ui.create_element('div')  # the default is <div> 
-        
+            return ui.create_element('div')  # the default is <div>
+
         def _render_dom(self):
             # Use this to determine the content. This method may return a
             # string, a list of virtual nodes, or a single virtual node

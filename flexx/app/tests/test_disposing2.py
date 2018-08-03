@@ -25,14 +25,14 @@ def setup_module():
 
 
 class MyPyComponent(PyComponent):
-    
+
     def _dispose(self):
         print('disposing', self.id)
         super()._dispose()
 
 
 class MyJsComponent(JsComponent):
-    
+
     def _dispose(self):
         print('disposing', self.id)
         super()._dispose()
@@ -65,7 +65,7 @@ async def test_dispose_PyComponent1():
     done
     """
     # Explicit call to dispose()
-    
+
     # Init
     c, s = launch(PyComponent)
     with c:
@@ -73,19 +73,19 @@ async def test_dispose_PyComponent1():
         c2 = MyPyComponent()
     await roundtrip(s)
     c1_id, c2_id = c1.id, c2.id
-    
+
     check_alive(s, c1_id, c2_id)
     await roundtrip(s)
-    
+
     # Dispose
     c1.dispose()
     c2.dispose()
     await roundtrip(s)
     await roundtrip(s)
-    
+
     check_alive(s, c1_id, c2_id)
     await roundtrip(s)
-    
+
     # End
     print('done')
     s.send_command('EVAL', '"done"')
@@ -110,7 +110,7 @@ async def test_dispose_PyComponent2():
     done
     """
     # Dispose by losing the reference
-    
+
     # Init
     c, s = launch(PyComponent)
     with c:
@@ -118,18 +118,18 @@ async def test_dispose_PyComponent2():
         c2 = MyPyComponent()
     c1_id, c2_id = c1.id, c2.id
     await roundtrip(s)
-    
+
     check_alive(s, c1_id, c2_id)
     await roundtrip(s)
-    
+
     # Dispose via Python gc
     del c1, c2
     gc.collect()  # will schedule call to _dispose
     await roundtrip(s)  # which we will handle here
-    
+
     check_alive(s, c1_id, c2_id)
     await roundtrip(s)
-    
+
     # End
     print('done')
     s.send_command('EVAL', '"done"')
@@ -149,7 +149,7 @@ async def test_dispose_PyComponent3():
     done
     """
     # Cannot dispose from JS
-    
+
     # Init
     c, s = launch(PyComponent)
     with c:
@@ -157,12 +157,12 @@ async def test_dispose_PyComponent3():
         c2 = MyPyComponent()
     c1_id, c2_id = c1.id, c2.id
     await roundtrip(s)
-    
+
     # Try to dispose
     s.send_command('INVOKE', c1.id, 'dispose', [])
     s.send_command('INVOKE', c2.id, 'dispose', [])
     await roundtrip(s)
-    
+
     # End
     print('done')
     s.send_command('EVAL', '"done"')
@@ -190,7 +190,7 @@ async def test_dispose_JsComponent1():
     done
     """
     # Explicit call to dispose() in Python
-    
+
     # Init
     c, s = launch(PyComponent)
     with c:
@@ -198,18 +198,18 @@ async def test_dispose_JsComponent1():
         c2 = MyJsComponent()
     c1_id, c2_id = c1.id, c2.id
     await roundtrip(s)
-    
+
     check_alive(s, c1_id, c2_id)
     await roundtrip(s)
-    
+
     # Dispose from Python - also disposes in JS
     c1.dispose()
     c2.dispose()
     await roundtrip(s)
-    
+
     check_alive(s, c1_id, c2_id)
     await roundtrip(s)
-    
+
     # End
     print('done')
     s.send_command('EVAL', '"done"')
@@ -232,7 +232,7 @@ async def test_dispose_JsComponent2():
     done
     """
     # Dispose by losing the reference
-    
+
     # Init
     c, s = launch(PyComponent)
     with c:
@@ -240,18 +240,18 @@ async def test_dispose_JsComponent2():
         c2 = MyJsComponent()
     c1_id, c2_id = c1.id, c2.id
     await roundtrip(s)
-    
+
     check_alive(s, c1_id, c2_id)
     await roundtrip(s)
-    
+
     # Lose reference in Python, keeps the JS local component alive
     del c1, c2
     gc.collect()  # will schedule call to _dispose
     await roundtrip(s)  # which we will handle here
-    
+
     check_alive(s, c1_id, c2_id)
     await roundtrip(s)
-    
+
     # End
     print('done')
     s.send_command('EVAL', '"done"')
@@ -276,7 +276,7 @@ async def test_dispose_JsComponent3():
     done
     """
     # Dispose from JS
-    
+
     # Init
     c, s = launch(PyComponent)
     with c:
@@ -284,10 +284,10 @@ async def test_dispose_JsComponent3():
         c2 = MyJsComponent()
     c1_id, c2_id = c1.id, c2.id
     await roundtrip(s)
-    
+
     check_alive(s, c1_id, c2_id)
     await roundtrip(s)
-    
+
     # Dispose from JS
     s.send_command('INVOKE', c1.id, 'dispose', [])
     s.send_command('INVOKE', c2.id, 'dispose', [])
@@ -295,11 +295,11 @@ async def test_dispose_JsComponent3():
 
     check_alive(s, c1_id, c2_id)
     await roundtrip(s)
-    
+
     # End
     print('done')
     s.send_command('EVAL', '"done"')
     await roundtrip(s)
-    
+
 
 run_tests_if_main()

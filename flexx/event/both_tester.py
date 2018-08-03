@@ -8,7 +8,7 @@ during tests.
 
 import sys
 
-from pscript.functions import py2js, evaljs 
+from pscript.functions import py2js, evaljs
 from pscript.stdlib import get_std_info, get_partial_std_lib
 
 from ._loop import loop, this_is_js  # noqa - import from here by tests
@@ -26,10 +26,10 @@ class StdoutMismatchError(Exception):
 class FakeStream:
     """ To capture Pythons stdout and stderr during the both-tests.
     """
-    
+
     def __init__(self):
         self._parts = []
-    
+
     def write(self, msg):
         # Keep single messages together, so that errors are compared as one "line"
         msg2 = msg.replace('\n', '\r')
@@ -37,10 +37,10 @@ class FakeStream:
             self._parts.append(msg2[:-1] + '\n')
         else:
             self._parts.append(msg2)
-    
+
     def flush(self):
         pass
-    
+
     def getvalue(self):
         return ''.join(self._parts)
 
@@ -99,7 +99,7 @@ def smart_compare(func, *comparations):
             err_msgs.append(err_msg)
         else:
             err_msgs.append(' ' * 8 + comp[0] + ' matches the reference\n')
-    
+
     if has_errors:
         j = '_' * 79 + '\n'
         err_msgs = [''] + err_msgs + ['']
@@ -113,22 +113,22 @@ def validate_text(name, text, reference):
     """ Compare text with a reference. Returns None if they match, and otherwise
     an error message that outlines where they differ.
     """
-    
+
     lines1 = text.split('\n')
     lines2 = reference.split('\n')
     n = max(len(lines1), len(lines2))
-    
+
     for i in range(len(lines1)):
         if lines1[i].startswith(('[E ', '[W ', '[I ')):
             lines1[i] = lines1[i].split(']', 1)[-1].lstrip()  # remove log prefix
-    
+
     while len(lines1) < n:
         lines1.append('')
     while len(lines2) < n:  # pragma: no cover
         lines2.append('')
-    
+
     nchars = 35  # 2*35 + 8 for prefix and 1 spacing = 79
-    
+
     for i in range(n):
         line1, line2 = lines1[i], lines2[i]
         line1 = line1.lower()
@@ -168,7 +168,7 @@ def _wrap(line, nchars, maxlines):
     else:
         lines = lines[:maxlines]
         lines[-1] = lines[-1][:-1] + '…'
-        
+
     return lines
 
 def _zip(lines1, lines2, offset):
@@ -190,22 +190,22 @@ def _zip(lines1, lines2, offset):
 
 def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
     """ Decorator to run a test in both Python and JS.
-    
+
     The decorator should be provided with any Component classes that
     you want to use in the test.
-    
+
     The function docstring should match the stdout + stderr of the test (case
     insensitive). To provide separate reference outputs for Python and
     JavaScript, use a delimiter of at least 10 '-' characters. Use "? xx"
     to test that "xx" is present on a line (useful for logged exceptions).
     """
-    
+
     def wrapper(func):
         reference = '\n'.join(line[4:] for line in func.__doc__.splitlines())
         parts = reference.split('-'*10)
         pyref = parts[0].strip(' \n')
         jsref = parts[-1].strip(' \n-')
-        
+
         def runner1():
             # One level of indirection to make cleaner error reporting by pytest
             err = None
@@ -219,7 +219,7 @@ def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
                 raise RuntimeError(err)
             else:
                 raise err
-        
+
         def runner2():
             # Run in Python
             if py:

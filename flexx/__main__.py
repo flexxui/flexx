@@ -1,7 +1,7 @@
 """
 Flexx has a command line interface to perform some simple tasks.
 Invoke it via ``python -m flexx``. Additional command line arguments
-can be provided to configure Flexx, see 
+can be provided to configure Flexx, see
 :func:`configuring flexx <flexx.config>`.
 
 .. code-block:: none
@@ -17,25 +17,25 @@ ALIASES = {'-h': 'help', '--help': 'help',
 class CLI:
     """ Command line interface class. Commands are simply defined as methods.
     """
-    
+
     def __init__(self, args=None):
         if args is None:
             return
-        
+
         command = args[0] if args else 'help'
         command = ALIASES.get(command, command)
-        
+
         if command not in self.get_command_names():
             raise RuntimeError('Invalid command %r' % command)
-        
+
         func = getattr(self, 'cmd_' + command)
         func(*args[1:])
-    
+
     def get_command_names(self):
         commands = [d[4:] for d in dir(self) if d.startswith('cmd_')]
         commands.sort()
         return commands
-    
+
     def get_global_help(self):
         lines = []
         lines.append('Flexx command line interface')
@@ -47,11 +47,11 @@ class CLI:
                 summary = doc.strip().splitlines()[0]
                 lines.append('%s %s' % (command.ljust(15), summary))
         return '\n'.join(lines)
-    
+
     def cmd_help(self, command=None):
         """ show information on how to use this command.
         """
-        
+
         if command:
             if command not in self.get_command_names():
                 raise RuntimeError('Invalid command %r' % command)
@@ -64,7 +64,7 @@ class CLI:
                 print('%s - no docs' % command)
         else:
             print(self.get_global_help())
-    
+
     def cmd_version(self):
         """ print the version number
         """
@@ -75,7 +75,7 @@ class CLI:
             sys.path.insert(0, '.')
             import flexx
         print(flexx.__version__)
-    
+
     def cmd_info(self, port=None):
         """ show info on flexx server process corresponding to given port,
         e.g. flexx info 8080
@@ -88,7 +88,7 @@ class CLI:
             print(http_fetch('http://localhost:%i/flexx/cmd/info' % port))
         except FetchError:
             print('There appears to be no local server at port %i' % port)
-    
+
     def cmd_stop(self, port=None):
         """ stop the flexx server process corresponding to the given port.
         """
@@ -100,7 +100,7 @@ class CLI:
             print('stopped server at %i' % port)
         except FetchError:
             print('There appears to be no local server at port %i' % port)
-    
+
     def cmd_log(self, port=None, level='info'):
         """ Start listening to log messages from a server process - STUB
         flexx log port level

@@ -19,12 +19,12 @@ def create_server(host=None, port=None, loop=None, backend='tornado',
     Create a new server object. This is automatically called; users generally
     don't need this, unless they want to explicitly specify host/port,
     create a fresh server in testing scenarios, or run Flexx in a thread.
-    
+
     Flexx uses the notion of a single current server object. This function
     (re)creates that object. If there already was a server object, it is
     replaced. It is an error to call this function if the current server
     is still running.
-    
+
     Arguments:
         host (str): The hostname to serve on. By default
             ``flexx.config.hostname`` is used. If ``False``, do not listen
@@ -35,14 +35,14 @@ def create_server(host=None, port=None, loop=None, backend='tornado',
         loop: A fresh (asyncio) event loop, default None (use current).
         backend (str): Stub argument; only Tornado is currently supported.
         **server_kwargs: keyword arguments passed to the server constructor.
-    
+
     Returns:
         AbstractServer: The server object, see ``current_server()``.
     """
     # Lazy load tornado, so that we can use anything we want there without
     # preventing other parts of flexx.app from using *this* module.
     from ._tornadoserver import TornadoServer  # noqa - circular dependency
-    
+
     global _current_server
     if backend.lower() != 'tornado':
         raise RuntimeError('Flexx server can only run on Tornado (for now).')
@@ -65,13 +65,13 @@ def current_server(create=True):
     Get the current server object. Creates a server if there is none
     and the ``create`` arg is True. Currently, this is always a
     TornadoServer object, which has properties:
-    
+
     * serving: a tuple ``(hostname, port)`` specifying the location
       being served (or ``None`` if the server is closed).
     * protocol: the protocol (e.g. "http") being used.
     * app: the ``tornado.web.Application`` instance
     * server: the ``tornado.httpserver.HttpServer`` instance
-    
+
     """
     if create and not _current_server:
         create_server()
@@ -84,16 +84,16 @@ def current_server(create=True):
 class AbstractServer:
     """ This is an attempt to generalize the server, so that in the
     future we may have e.g. a Flask or Pyramid server.
-    
+
     A server must implement this, and use the manager to instantiate,
     connect and disconnect sessions. The assets object must be used to
     server assets to the client.
-    
+
     Arguments:
         host (str): the hostname to serve at
         port (int): the port to serve at. None or 0 mean to autoselect a port.
     """
-    
+
     def __init__(self, host, port, loop=None, **kwargs):
         # First off, create new event loop and integrate event.loop
         if loop is None:
@@ -103,16 +103,16 @@ class AbstractServer:
             self._loop = loop
         asyncio.set_event_loop(self._loop)
         _loop.loop.integrate(self._loop, reset=False)
-        
+
         self._serving = None
         if host is not False:
             self._open(host, port, **kwargs)
             assert self._serving  # Check that subclass set private variable
-    
+
     @property
     def _running(self):
         return self._loop.is_running()
-    
+
     def start(self):
         """ Start the event loop. """
         if not self._serving:
@@ -125,12 +125,12 @@ class AbstractServer:
         # if the ioloop is "hijacked" (e.g. in Pyzo).
         if not getattr(self._loop, '_in_event_loop', False):
             self._loop.run_forever()
-    
+
     def stop(self):
         """ Stop the event loop. This does not close the connection; the server
         can be restarted. Thread safe. """
         self._loop.call_soon_threadsafe(self._loop.stop)
-    
+
     def close(self):
         """ Close the connection. A closed server cannot be used again. """
         if self._running:
@@ -138,13 +138,13 @@ class AbstractServer:
         self._serving = None
         self._close()
         # self._loop.close()
-    
+
     def _open(self, host, port, **kwargs):
         raise NotImplementedError()
-    
+
     def _close(self):
         raise NotImplementedError()
-    
+
     @property
     def serving(self):
         """ Get a tuple (hostname, port) that is being served.

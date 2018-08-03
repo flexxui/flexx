@@ -3,11 +3,11 @@
 Show only one child at any time. Example:
 
 .. UIExample:: 200
-    
+
     from flexx import app, event, ui
 
     class Example(ui.Widget):
-        
+
         def init(self):
             with ui.HBox():
                 with ui.VBox():
@@ -19,7 +19,7 @@ Show only one child at any time. Example:
                     self.buta.w = ui.Widget(style='background:#a00;')
                     self.butb.w = ui.Widget(style='background:#0a0;')
                     self.butc.w = ui.Widget(style='background:#00a;')
-    
+
         @event.reaction('buta.pointer_down', 'butb.pointer_down', 'butc.pointer_down')
         def _stacked_current(self, *events):
             button = events[-1].source
@@ -33,7 +33,7 @@ from . import Layout
 class StackLayout(Layout):
     """ A layout widget which shows only one of its children at a time.
     """
-    
+
     CSS = """
         .flx-StackLayout > .flx-Widget {
             position: absolute;
@@ -48,11 +48,11 @@ class StackLayout(Layout):
             display: none;
         }
     """
-    
+
     current = event.ComponentProp(doc="""
             The currently shown widget (or None).
             """)
-    
+
     @event.action
     def set_current(self, current):
         """ Setter for current widget. Can also set using an integer index.
@@ -60,12 +60,12 @@ class StackLayout(Layout):
         if isinstance(current, (float, int)):
             current = self.children[int(current)]
         self._mutate_current(current)
-    
+
     @event.reaction
     def __set_current_widget(self):
         current = self.current
         children = self.children
-        
+
         if len(children) == 0:
             if current is not None:
                 self.set_current(None)
@@ -73,7 +73,7 @@ class StackLayout(Layout):
             if current is None:
                 current = children[0]
                 self.set_current(current)
-        
+
             for widget in self.children:
                 if widget is current:
                     widget.outernode.classList.add('flx-current')

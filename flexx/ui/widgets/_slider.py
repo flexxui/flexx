@@ -20,22 +20,22 @@ class Slider(Widget):
     """ An input widget to select a value in a certain range (aka HTML
     range input).
     """
-    
+
     DEFAULT_MIN_SIZE = 40, 20
-    
+
     CSS = """
-    
+
     .flx-Slider:focus {
         outline: none;
     }
-    
+
     .flx-Slider > .gutter {
         box-sizing: border-box;
         -webkit-user-select: none;
         -moz-user-select: none;
         -ms-user-select: none;
         user-select: none;
-        
+
         margin: 0 5px; /* half width of slider */
         position: absolute;
         top: calc(50% - 2px);
@@ -52,7 +52,7 @@ class Slider(Widget):
         height: 20px;
         color: rgba(0,0,0,1);
     }
-    
+
     .flx-Slider .slider {
         box-sizing: border-box;
         text-align: center;
@@ -75,36 +75,36 @@ class Slider(Widget):
         border: none;
     }
     """
-    
+
     step = event.FloatProp(0.01, settable=True, doc="""
         The step size for the slider.
         """)
-    
+
     min = event.FloatProp(0, settable=True, doc="""
         The minimal slider value.
         """)
-    
+
     max = event.FloatProp(1, settable=True, doc="""
         The maximum slider value.
         """)
-    
+
     value = event.FloatProp(0, settable=True, doc="""
         The current slider value.
         """)
-    
+
     text = event.StringProp('{value}', settable=True, doc="""
         The label to display on the slider during dragging. Occurances of
         "{percent}" are replaced with the current percentage, and
         "{value}" with the current value. Default "{value}".
         """)
-    
+
     disabled = event.BoolProp(False, settable=True, doc="""
         Whether the slider is disabled.
         """)
-    
+
     def init(self):
         self._dragging = None
-    
+
     @event.emitter
     def user_value(self, value):
         """ Event emitted when the user manipulates the slider.
@@ -113,7 +113,7 @@ class Slider(Widget):
         d = {'old_value': self.value, 'new_value': value}
         self.set_value(value)
         return d
-    
+
     @event.emitter
     def user_done(self):
         """ Event emitted when the user stops manipulating the slider. Has
@@ -121,7 +121,7 @@ class Slider(Widget):
         """
         d = {'old_value': self.value, 'new_value': self.value}
         return d
-    
+
     @event.action
     def set_value(self, value):
         global Math
@@ -129,11 +129,11 @@ class Slider(Widget):
         value = min(self.max, value)
         value = Math.round(value / self.step) * self.step
         self._mutate_value(value)
-    
+
     @event.reaction('min', 'max', 'step')
     def __keep_value_constrained(self, *events):
         self.set_value(self.value)
-    
+
     def _render_dom(self):
         global Math
         value = self.value
@@ -145,7 +145,7 @@ class Slider(Widget):
         label = self.text
         label = label.replace('{value}', valuestr)
         label = label.replace('{percent}', Math.round(perc) + '%')
-        
+
         attr = {'className': 'slider disabled' if self.disabled else 'slider',
                 'style__left': 'calc(' + perc + '% - 5px)'
                 }
@@ -154,9 +154,9 @@ class Slider(Widget):
                     create_element('div', attr),
                     )
                 ]
-    
+
     # Use the Flexx pointer event system, so we can make use of capturing ...
-    
+
     @event.emitter
     def pointer_down(self, e):
         if not self.disabled:
@@ -169,7 +169,7 @@ class Slider(Widget):
             self.outernode.classList.add('flx-dragging')
         else:
             return super().pointer_down(e)
-    
+
     @event.emitter
     def pointer_up(self, e):
         if self._dragging is not None and len(self._dragging) == 3:
@@ -178,7 +178,7 @@ class Slider(Widget):
         self.outernode.classList.remove('flx-dragging')
         self.user_done()
         return super().pointer_down(e)
-    
+
     @event.emitter
     def pointer_move(self, e):
         if self._dragging is not None:
@@ -191,7 +191,7 @@ class Slider(Widget):
             self.user_value(ref_value + value_diff)
         else:
             return super().pointer_move(e)
-    
+
     @event.reaction('key_down')
     def __on_key(self, *events):
         for ev in events:

@@ -14,22 +14,22 @@ def isidentifier(s):
     # http://stackoverflow.com/questions/2544972/
     if not isinstance(s, str):
         return False
-    return re.match(r'^\w+$', s, re.UNICODE) and re.match(r'^[0-9]', s) is None 
+    return re.match(r'^\w+$', s, re.UNICODE) and re.match(r'^[0-9]', s) is None
 
 
 class Dict(_dict):
     """ A dict in which the items can be get/set as attributes.
-    
+
     This provides a lean way to represent structured data, and works
     well in combination with autocompletion. Keys can be anything that
     are otherwise valid keys, but keys that are not valid identifiers
     or that are methods of the dict class (e.g. 'items' or 'copy')
     can only be get/set in the classic way.
-    
+
     Example:
-    
+
     .. code-block:: python
-    
+
         >> d = Dict(foo=3)
         >> d.foo
         3
@@ -39,14 +39,14 @@ class Dict(_dict):
         >> d.bar = 5
         >> d.bar
         5
-        
+
     """
-    
+
     __reserved_names__ = dir(_dict())  # Also from OrderedDict
     __pure_names__ = dir(dict())
-    
+
     __slots__ = []
-    
+
     def __repr__(self):
         identifier_items = []
         nonidentifier_items = []
@@ -60,7 +60,7 @@ class Dict(_dict):
                                        ', '.join(identifier_items))
         else:
             return 'Dict(%s)' % (', '.join(identifier_items))
-    
+
     def __getattribute__(self, key):
         try:
             return object.__getattribute__(self, key)
@@ -69,7 +69,7 @@ class Dict(_dict):
                 return self[key]
             else:
                 raise
-    
+
     def __setattr__(self, key, val):
         if key in Dict.__reserved_names__:
             # Either let OrderedDict do its work, or disallow
@@ -81,7 +81,7 @@ class Dict(_dict):
         else:
             # if isinstance(val, dict): val = Dict(val) -> no, makes a copy!
             self[key] = val
-    
+
     def __dir__(self):
         names = [k for k in self.keys() if isidentifier(k)]
         return Dict.__reserved_names__ + names

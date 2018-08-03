@@ -33,7 +33,7 @@ else:  # pragma: no cover
     json_types = None.__class__, bool, int, float, basestring, tuple, list, dict  # noqa, bah
 
 # In essense, the idea of modules is all about propagating dependencies:
-# 
+#
 # * In PScript we detect unresolved dependencies in JS code, and move these up
 #   the namespace stack.
 # * The create_js_component_class() function and AppComponentMeta class collect the
@@ -64,7 +64,7 @@ def mangle_dotted_vars(jscode, names_to_mangle):
 
 
 def is_pscript_module(m):
-    return (getattr(m, '__pscript__', False) or 
+    return (getattr(m, '__pscript__', False) or
             getattr(m, '__pyscript__', False))
 
 
@@ -74,16 +74,16 @@ class JSModule:
     to a Python module, which either defines one or more
     PyComponent/JsCompontent classes, or PScript transpilable functions or
     classes. Intended for internal use only.
-    
+
     Modules are collected in a "store" which is simply a dictionary. The
     flexx asset system has this dict in ``app.assets.modules``.
-    
+
     The module contains the JS corresponding to the variables that are
     marked as used (by calling the ``add_variable()`` method), and the
     variables that are used by the included JavaScript.
-    
-    The JS code includes: 
-    
+
+    The JS code includes:
+
     * The JS code corresponding to all used Component classes defined in the module.
     * The transpiled JS from (PySript compatible) functions and classes that
       are defined in this module and marked as used.
@@ -91,39 +91,39 @@ class JSModule:
     * Imports of names from other modules.
     * ... unless this module defines ``__pscript__ = True``, in which case
       the module is transpiled as a whole.
-    
+
     A module can also have dependencies:
-    
+
     * The modules that define the base classes of the classes defined
       in this module.
     * The modules that define functions/classes that are used by this module.
     * Assets that are present in the module.
-    
+
     Notes on how the Flexx asset system uses modules:
-    
+
     The asset system will generate JSModule objects for all Python modules
     that define PyComponent or JsComponent subclasses. The session is aware of
     the Component classes that it uses (and their base classes), and can
     therefore determine what modules (and assets) need to be loaded.
     """
-    
+
     def __init__(self, name, store):
         if not isinstance(name, str):
             raise TypeError('JSModule needs a str name.')
         if not isinstance(store, dict):
             raise TypeError('JSModule needs a dict store.')
-        
+
         # Resolve name of Python module
         py_name = name
         if name.endswith('.__init__'):
             py_name = name.rsplit('.', 1)[0]
         if py_name not in sys.modules:
             raise ValueError("Cannot find Python module coresponding to %s." % name)
-        
+
         # Store module and name
         self._pymodule = sys.modules[py_name]
         self._name = get_mod_name(self._pymodule)
-        
+
         # Check if name matches the kind of module
         is_package = module_is_package(self._pymodule)
         if is_package and not name.endswith('.__init__'):
@@ -131,13 +131,13 @@ class JSModule:
                              'should end with ".__init__".')
         elif not is_package and name.endswith('.__init__'):
             raise ValueError('Plain modules should not end with ".__init__".')
-        
+
         # Self-register
         self._store = store
         if self.name in self._store:
             raise RuntimeError('Module %s already exists!' % self.name)
         self._store[self.name] = self
-        
+
         # Bookkeeping content of the module
         self._provided_names = set()
         self._imported_names = set()
@@ -151,7 +151,7 @@ class JSModule:
         # Caches
         self._js_cache = None
         self._css_cache = None
-        
+
         if is_pscript_module(self._pymodule):
             # PScript module; transpile as a whole
             js = py2js(self._pymodule, inline_stdlib=False, docstrings=False)
@@ -160,25 +160,25 @@ class JSModule:
                                          if not n.startswith('_')])
         else:
             self._init_default_objects()
-    
+
     def __repr__(self):
         return '<%s %s with %i definitions>' % (self.__class__.__name__,
                                                 self.name,
                                                 len(self._provided_names))
-    
+
     def _init_default_objects(self):
         # Component classes
         # Add property classes ...
         for name, val in self._pymodule.__dict__.items():
             if isinstance(val, type) and issubclass(val, Property):
                 self.add_variable(name)
-    
+
     @property
     def name(self):
         """ The (qualified) name of this module.
         """
         return self._name
-    
+
     @property
     def filename(self):
         """ The filename of the Python file that defines
@@ -186,20 +186,20 @@ class JSModule:
         """
         # E.g. __main__ does not have __file__
         return getattr(self._pymodule, '__file__', self.name)
-    
+
     @property
     def deps(self):
         """ The (unsorted) set of dependencies (names of other modules) for
         this module.
         """
         return set(self._deps.keys())
-    
+
     @property
     def component_classes(self):
         """ The PyComponent and JsComponent classes defined in this module.
         """
         return set(self._component_classes.values())
-    
+
     def _import(self, mod_name, name, as_name):
         """ Import a name from another module. This also ensures that the
         other module exists.
@@ -220,7 +220,7 @@ class JSModule:
             if line not in imports:
                 imports.append(line)
         return m
-    
+
     @property
     def variables(self):
         """ The names of variables provided by this module.
@@ -228,16 +228,16 @@ class JSModule:
         if its imported into this module rather than defined here.
         """
         return self._provided_names
-    
+
     def add_variable(self, name, is_global=False, _dep_stack=None):
         """ Mark the variable with the given name as used by JavaScript.
         The corresponding object must be a module, Component, class or function,
         or a json serializable value.
-        
+
         If the object is defined here (or a json value) it will add JS to
-        this module. Otherwise this module will import the name from 
+        this module. Otherwise this module will import the name from
         another module.
-        
+
         If ``is_global``, the name is considered global; it may be declared in
         this module, but it may also be a JS global. So we try to resolve the
         name, but do not care if it fails.
@@ -254,7 +254,7 @@ class JSModule:
         if is_pscript_module(self._pymodule):
             return  # everything is transpiled and exported already
         _dep_stack.append(name)
-        
+
         # Try getting value. We warn if there is no variable to match, but
         # if we do find a value we're either including it or raising an error
         try:
@@ -286,11 +286,11 @@ class JSModule:
             else:
                 raise RuntimeError(msg)  # E.g. typo in ui.Buttom
             return
-        
+
         # Mark dirty
         self._changed_time = time.time()
         self._js_cache = self._css_cache = None
-        
+
         if isinstance(val, types.ModuleType):
             # Modules as a whole can be converted if its a PScript module
             if is_pscript_module(val):
@@ -299,7 +299,7 @@ class JSModule:
             else:
                 t = 'JS in "%s" cannot use module %s directly unless it defines %s.'
                 raise ValueError(t % (self.filename, val.__name__, '"__pscript__"'))
-        
+
         elif isinstance(val, type) and issubclass(val, Component):
             if val is Component:
                 return self._add_dep_from_event_module('Component')
@@ -334,7 +334,7 @@ class JSModule:
                 else:
                     # Import from another module
                     self._import(mod_name, val.__name__, name)
-        
+
         elif isinstance(val, type) and issubclass(val, bsdf.Extension):
             # A bit hacky mechanism to define BSDF extensions that also work in JS.
             # todo: can we make this better? See also app/_component2.py (issue #429)
@@ -351,7 +351,7 @@ class JSModule:
             self._pscript_code[name] = js
             self._deps.setdefault('flexx.app._clientcore',
                                  ['flexx.app._clientcore']).append('serializer')
-        
+
         elif isinstance(val, pscript_types) and hasattr(val, '__module__'):
             # Looks like something we can convert using PScript
             mod_name = get_mod_name(val)
@@ -373,7 +373,7 @@ class JSModule:
             else:
                 # Import from another module
                 self._import(mod_name, val.__name__, name)
-        
+
         elif isinstance(val, RawJS):
             # Verbatim JS
             if val.__module__ == self.name:
@@ -381,7 +381,7 @@ class JSModule:
                 self._js_values[name] = val.get_code()
             else:
                 self._import(val.__module__, val.get_defined_name(name), name)
-        
+
         elif isinstance(val, json_types):
             # Looks like something we can serialize
             # Unlike with RawJS, we have no way to determine where it is defined
@@ -392,7 +392,7 @@ class JSModule:
                 raise ValueError(t % (self.filename, name, str(err)))
             self._provided_names.add(name)
             self._js_values[name] = js
-        
+
         elif (getattr(val, '__module__', None) and
               is_pscript_module(sys.modules[val.__module__]) and
               val is getattr(sys.modules[val.__module__], name, 'unlikely-val')):
@@ -401,12 +401,12 @@ class JSModule:
             # we assume that its the same as as_name and test whether
             # it matches in the test above.
             self._import(val.__module__, name, name)
-        
+
         else:
             # Cannot convert to JS
             t = 'JS in "%s" uses %r but cannot convert %s to JS.'
             raise ValueError(t % (self.filename, name, val.__class__))
-    
+
     def _collect_dependencies(self, js, _dep_stack):
         """
         Collect dependencies corresponding to names used in the JS.
@@ -422,13 +422,13 @@ class JSModule:
                 self.add_variable(name, _dep_stack=_dep_stack)
         for name in reversed(sorted(vars_global)):
             self.add_variable(name, True, _dep_stack=_dep_stack)
-    
+
     def _name_ispropclass(self, name):
         ob = getattr(event._property, name, None)
         if ob is not None:
             return isinstance(ob, type) and issubclass(ob, Property)
         return False
-    
+
     def _collect_dependencies_from_bases(self, cls):
         """
         Collect dependencies based on the base classes of a class.
@@ -448,7 +448,7 @@ class JSModule:
             m = self._import(get_mod_name(base_cls),
                              base_cls.__name__, base_cls.__name__)
             m.add_variable(base_cls.__name__)  # note: m can be self, which is ok
-    
+
     def _add_dep_from_event_module(self, name, asname=None):
         asname = asname or name
         entry = '%s as %s' % (name, asname)
@@ -456,7 +456,7 @@ class JSModule:
         self._imported_names.add(asname)
         if entry not in imports:
             imports.append(entry)
-    
+
     def get_js(self):
         """ Get the JS code for this module.
         """
@@ -514,7 +514,7 @@ class JSModule:
                                               imports, exports, 'amd-flexx')
             self._js_cache = self._js_cache
         return self._js_cache
-    
+
     def get_css(self):
         """ Get the CSS code for this module.
         """

@@ -43,11 +43,11 @@ def reaction(*connection_strings, mode='normal'):
     .. code-block:: py
 
         class MyObject(event.Component):
-        
+
             @event.reaction('first_name', 'last_name')
             def greet(self, *events):
                 print('hello %s %s' % (self.first_name, self.last_name))
-    
+
     A reaction can operate in a few different modes. By not specifying any
     connection strings, the mode is "auto": the reaction will automatically
     trigger when any of the properties used in the function changes.
@@ -55,7 +55,7 @@ def reaction(*connection_strings, mode='normal'):
     """
     if (not connection_strings):
         raise TypeError('reaction() needs one or more arguments.')
-    
+
     # Validate mode parameter
     mode = mode or 'normal'  # i.e. allow None
     if not isinstance(mode, str):
@@ -63,13 +63,13 @@ def reaction(*connection_strings, mode='normal'):
     mode = mode.lower()
     if mode not in ('normal', 'greedy', 'auto'):
         raise TypeError('Reaction mode must "normal", "greedy" or "auto".')
-    
+
     # Extract function if we can
     func = None
     if len(connection_strings) == 1 and callable(connection_strings[0]):
         func = connection_strings[0]
         connection_strings = []
-    
+
     for s in connection_strings:
         if not (isinstance(s, str) and len(s) > 0):
             raise TypeError('Connection string must be nonempty strings.')
@@ -91,7 +91,7 @@ def reaction(*connection_strings, mode='normal'):
 class ReactionDescriptor(BaseDescriptor):
     """ Class descriptor for reactions.
     """
-    
+
     def __init__(self, func, mode, connection_strings, ob=None):
         self._name = func.__name__
         self._func = func
@@ -101,7 +101,7 @@ class ReactionDescriptor(BaseDescriptor):
         self._connection_strings = connection_strings
         self._ob = None if ob is None else weakref.ref(ob)
         self.__doc__ = self._format_doc('reaction', self._name, func.__doc__)
-    
+
     def __get__(self, instance, owner):
         if instance is None:
             return self
@@ -170,18 +170,18 @@ class Reaction:
         self.__doc__ = BaseDescriptor._format_doc('reaction', self._name, func.__doc__)
 
         self._init(connection_strings)
-    
+
     def _init(self, connection_strings):
         """ Init of this reaction that is compatible with PScript.
         """
-        
+
         ichars = '0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        
+
         # Init explicit connections: (connection-object, type) tuples
         self._connections = []
         # Init implicit connections: (component, type) tuples
         self._implicit_connections = []
-        
+
         # Notes on connection strings:
         # * The string can have a "!" at the start to suppress warnings for
         #   connections to unknown event types.
@@ -229,20 +229,20 @@ class Reaction:
             d.type = parts[-1].rstrip('*') + ':' + (label or self._name)
             d.force = force
             d.objects = []
-        
+
         # Connect
         for ic in range(len(self._connections)):
             self.reconnect(ic)
-    
+
     def __repr__(self):
         c = '+'.join([str(len(c.objects)) for c in self._connections])
         cname = self.__class__.__name__
         t = '<%s %r (%s) with %s connections at 0x%x>'
         return t % (cname, self._name, self._mode, c, id(self))
-    
+
     def get_mode(self):
         """ Get the mode for this reaction:
-        
+
         * 'normal': events are handled in the order that they were emitted.
           Consequently, there can be multiple calls per event loop iteration
           if other reactions were triggered as well.
@@ -254,7 +254,7 @@ class Reaction:
           automatically triggered when any of these properties changes. Like
           'greedy' there is at most one call per event loop iteration.
           Reactions with zero connection strings always have mode 'auto'.
-        
+
         The 'normal' mode generally offers the most consistent behaviour.
         The 'greedy' mode allows the event system to make some optimizations.
         Combined with the fact that there is at most one call per event loop
@@ -266,7 +266,7 @@ class Reaction:
         properties are accessed by the reaction.
         """
         return self._mode
-    
+
     def get_name(self):
         """ Get the name of this reaction, usually corresponding to the name
         of the function that this reaction wraps.
@@ -322,7 +322,7 @@ class Reaction:
                 ob, type = connection.objects.pop(0)
                 ob.disconnect(type, self)
         self._connections = []
-    
+
     def _update_implicit_connections(self, connections):
         """ Update the list of implicit (i.e. automatic) connections.
         Used by the loop.
@@ -331,10 +331,10 @@ class Reaction:
         old_conns = self._implicit_connections
         new_conns = connections
         self._implicit_connections = new_conns
-        
+
         # Reconnect in a smart way
         self._connect_and_disconnect(old_conns, new_conns)
-    
+
     def _clear_component_refs(self, ob):
         """ Clear all references to the given Component instance. This is
         called from a Component' dispose() method. This reaction remains
@@ -357,29 +357,29 @@ class Reaction:
         # Prepare disconnecting
         old_objects = connection.objects  # (ob, type) tuples
         connection.objects = []
-        
+
         # Obtain root object and setup connections
         ob = self._ob1()
         if ob is not None:
             self._seek_event_object(index, connection.parts, ob)
         new_objects = connection.objects
-        
+
         # Verify
         if len(new_objects) == 0:
             raise RuntimeError('Could not connect to %r' % connection.fullname)
-        
+
         # Reconnect in a smart way
         self._connect_and_disconnect(old_objects, new_objects, connection.force)
-    
-    def _connect_and_disconnect(self, old_objects, new_objects, force=False):    
+
+    def _connect_and_disconnect(self, old_objects, new_objects, force=False):
         """ Update connections by disconnecting old and connecting new,
         but try to keep connections that do not change.
         """
-        
+
         # Keep track of what connections we skip, i.e. which we should not remove.
         # Otherwise we may remove duplicate objects. See issue #460.
         should_stay = {}
-        
+
         # Skip common objects from the start
         i1 = 0
         while (i1 < len(new_objects) and i1 < len(old_objects) and
@@ -423,7 +423,7 @@ class Reaction:
             # Reached end or continue?
             if not path[0].endswith('**'):
                 return
-        
+
         # Resolve name
         obname_full, path = path[0], path[1:]
         obname = obname_full.rstrip('*')

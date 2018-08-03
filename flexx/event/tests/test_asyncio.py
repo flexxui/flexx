@@ -22,25 +22,25 @@ def append_current_loop(container, make_new_loop=False):
 def test_asyncio_thread1():
     # Tests that asyncio.get_event_loop() returns a different loop instance
     # for each thread.
-    
+
     r = []
     r.append(asyncio.get_event_loop())
-    
+
     t = threading.Thread(target=append_current_loop, args=(r, False))
     t.start()
     t.join()
-    
+
     t = threading.Thread(target=append_current_loop, args=(r, True))
     t.start()
     t.join()
-    
+
     r.append(asyncio.get_event_loop())
-    
+
     assert len(r) == 4
     assert isinstance(r[1], str) and 'no current event loop in thread' in r[1]
     assert r[0] is not r[2]
     assert r[0] is r[3]
-    
+
     return r
 
 
@@ -57,10 +57,10 @@ def make_new_loop_and_run():
 
 def test_asyncio_thread2():
     # Run multiple loops in multiple threads at the same time.
-    
+
     loop = asyncio.get_event_loop()
     assert not loop.is_running()
-    
+
     tt = []
     for i in range(5):
         t = threading.Thread(target=make_new_loop_and_run)
@@ -74,4 +74,3 @@ def test_asyncio_thread2():
 
 if __name__ == '__main__':
     r = test_asyncio_thread1()
-    

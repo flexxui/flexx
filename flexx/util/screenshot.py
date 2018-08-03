@@ -5,31 +5,31 @@ We need this to do visual tests.
 import sys
 
 if sys.platform.startswith('win'):
-    
+
     import ctypes
     from ctypes import windll
     from ctypes.wintypes import (BOOL, DOUBLE, DWORD, HBITMAP, HDC, HGDIOBJ,  # noqa
                                  HWND, INT, LPARAM, LONG, UINT, WORD)  # noqa
-    
+
     SRCCOPY = 13369376
     DIB_RGB_COLORS = BI_RGB = 0
-    
+
     class RECT(ctypes.Structure):
         _fields_ = [('left', ctypes.c_long),
                     ('top', ctypes.c_long),
                     ('right', ctypes.c_long),
                     ('bottom', ctypes.c_long)]
-    
+
     class BITMAPINFOHEADER(ctypes.Structure):
             _fields_ = [('biSize', DWORD), ('biWidth', LONG), ('biHeight', LONG),
                         ('biPlanes', WORD), ('biBitCount', WORD),
                         ('biCompression', DWORD), ('biSizeImage', DWORD),
                         ('biXPelsPerMeter', LONG), ('biYPelsPerMeter', LONG),
                         ('biClrUsed', DWORD), ('biClrImportant', DWORD)]
-    
+
     class BITMAPINFO(ctypes.Structure):
         _fields_ = [('bmiHeader', BITMAPINFOHEADER), ('bmiColors', DWORD * 3)]
-    
+
     # Function shorthands
     GetClientRect = windll.user32.GetClientRect
     GetWindowRect = windll.user32.GetWindowRect
@@ -40,7 +40,7 @@ if sys.platform.startswith('win'):
     EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool,
                                          ctypes.POINTER(ctypes.c_int),
                                          ctypes.POINTER(ctypes.c_int))
-    
+
     GetWindowDC = windll.user32.GetWindowDC
     CreateCompatibleDC = windll.gdi32.CreateCompatibleDC
     CreateCompatibleBitmap = windll.gdi32.CreateCompatibleBitmap
@@ -48,7 +48,7 @@ if sys.platform.startswith('win'):
     BitBlt = windll.gdi32.BitBlt
     DeleteObject = windll.gdi32.DeleteObject
     GetDIBits = windll.gdi32.GetDIBits
-    
+
     # Arg types
     windll.user32.GetWindowDC.argtypes = [HWND]
     windll.gdi32.CreateCompatibleDC.argtypes = [HDC]
@@ -66,14 +66,14 @@ if sys.platform.startswith('win'):
     windll.gdi32.BitBlt.restypes = BOOL
     windll.gdi32.GetDIBits.restypes = INT
     windll.gdi32.DeleteObject.restypes = BOOL
-    
-    
+
+
     def win_for_pid(pid):
         """ Get the windows-handle for the first visible window of the
         process with the given id.
         """
         handles = []
-        
+
         def called_for_each_win(hwnd, lParam):
             if not IsWindowVisible(hwnd):
                 return True
@@ -84,18 +84,18 @@ if sys.platform.startswith('win'):
                 handles.append(hwnd)
                 return False
             return True
-        
+
         EnumWindows(EnumWindowsProc(called_for_each_win), 0)
         if handles:
             return handles[0]
         else:
             return None
-    
-    
+
+
     def screenshot(pid, client=True):
         """ Grab a screenshot of the first visible window of the process
         with the given id. If client is True, no Window decoration is shown.
-        
+
         This code is derived from https://github.com/BoboTiG/python-mss
         """
         # Get handle
@@ -108,7 +108,7 @@ if sys.platform.startswith('win'):
             GetWindowRect(hwnd, ctypes.byref(rect))
         left, right, top, bottom = rect.left, rect.right, rect.top, rect.bottom
         w, h = right - left, bottom - top
-        
+
         hwndDC = saveDC = bmp = None
         try:
             # Get device contexts
@@ -141,9 +141,9 @@ if sys.platform.startswith('win'):
             image2[0::3] = image[2::4]
             image2[1::3] = image[1::4]
             image2[2::3] = image[0::4]
-            
+
             return bytes(image2), (w, h, 3)
-        
+
         finally:
             # Clean up
             if hwndDC:
@@ -156,7 +156,7 @@ if sys.platform.startswith('win'):
 
 if __name__ == '__main__':
     im, shape = screenshot(5144, True)
-    
+
     from flexx.util import icon
     png = icon.write_png(im, shape)
     open('C:\\Users\\Almar\\test.png', 'wb').write(png)

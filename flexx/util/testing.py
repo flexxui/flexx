@@ -50,7 +50,7 @@ skip = pytest.skip
 
 def run_tests_if_main(show_coverage=False):
     """ Run tests in a given file if it is run as a script
-    
+
     Coverage is reported for running this single test. Set show_coverage to
     launch the report in the web browser.
     """

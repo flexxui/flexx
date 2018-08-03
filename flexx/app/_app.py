@@ -31,7 +31,7 @@ class ExporterWebSocketDummy:
 
     def __init__(self):
         self.commands = []
-    
+
     def write_command(self, cmd):
         self.commands.append(cmd)
 
@@ -150,7 +150,7 @@ class App:
         """
         # creates server (and event loop) if it did not yet exist
         current_server()
-        
+
         # Create session
         if not self._is_served:
             self.serve()
@@ -198,11 +198,11 @@ class App:
             name = os.path.basename(filename).split('.')[0]
             name = name.replace('-', '_').replace(' ', '_')
             self.serve(name)
-        
+
         # Allow a dir to be given
         if os.path.isdir(filename):
             filename = os.path.join(filename, 'index.html')
-        
+
         # Create session with id equal to the app name. This would not be strictly
         # necessary to make exports work, but it makes sure that exporting twice
         # generates the exact same thing (no randomly generated dir names).
@@ -214,19 +214,19 @@ class App:
 
         # Clean up again - NO keep in memory to ensure two sessions dont get same id
         # manager.disconnect_client(session)
-        
+
         assert link in (0, 1, 2, 3), "Expecting link to be in (0, 1, 2, 3)."
-        
+
         # Warn if this app has data and is meant to be run standalone
         if link in (0, 1) and session.get_data_names():
             logger.warn('Exporting app with embedded assets, '
                         'but it has registered data.')
-        
+
         # Warn for PyComponents
         if issubclass(self.cls, PyComponent):
             logger.warn('Exporting a PyComponent - any Python interactivity will '
                         'not work in exported apps.')
-        
+
         # Get HTML - this may be good enough
         html = get_page_for_export(session, exporter.commands, link)
         if filename is None:
@@ -250,14 +250,14 @@ class App:
 
         app_type = 'standalone app' if link in (0, 1) else 'app'
         logger.info('Exported %s to %r' % (app_type, filename))
-    
+
     def publish(self, name, token, url=None):
         """ Publish this app as static HTML on the web.
-        
+
         This is an experimental feature! We will try to keep your app published,
         but make no guarantees. We reserve the right to remove apps or shut down
         the web server completely.
-        
+
         Arguments:
             name (str): The name by which to publish this app. Must be unique
                 within the scope of the published site.
@@ -316,7 +316,7 @@ class AppManager(event.Component):
     Create a reaction using ``@app.manager.reaction('connections_changed')``
     to track when the number of connected session changes.
     """
-    
+
     total_sessions = 0  # Keep track how many sessesions we've served in total
 
     def __init__(self):
@@ -368,7 +368,7 @@ class AppManager(event.Component):
         app(flx_session=session, flx_is_app=True)
 
         return session
-    
+
     def remove_default_session(self):
         """ Remove default session if there is one, closing the session.
         """
@@ -376,7 +376,7 @@ class AppManager(event.Component):
         if s is not None:
             s.close()
         self._appinfo.pop('__default__', None)
-    
+
     def get_default_session(self):
         """ Get the default session that is used for interactive use.
         Returns None unless create_default_session() was called earlier.

@@ -18,7 +18,7 @@ def this_is_js():
 
 
 class Person(event.Component):
-   
+
     first_name = event.StringProp('John', settable=True)
     last_name = event.StringProp('Doe', settable=True)
 
@@ -43,7 +43,7 @@ def func_ok1():
 
 def test_ok1():
     assert func_ok1()
-    
+
 ##
 
 @run_in_both()
@@ -156,7 +156,7 @@ def test_fail_exception():
 
 
 if __name__ == '__main__':
-    # Run this as a script to 
+    # Run this as a script to
     test_ok1()
     test_ok234()
     test_ok_exception()

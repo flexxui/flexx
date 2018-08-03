@@ -53,7 +53,7 @@ def get_random_string(length=24, allowed_chars=None):
 
 class Session:
     """ A connection between Python and the client runtime (JavaScript).
-    
+
     The session is what holds together the app widget, the web runtime,
     and the websocket instance that connects to it.
 
@@ -63,7 +63,7 @@ class Session:
     * Keep track of PyComponent instances used by the session.
     * Keep track of JsComponent instances associated with the session.
     * Ensure that the client has all the module definitions it needs.
-    
+
     """
 
     STATUS = new_type('Enum', (), {'PENDING': 1, 'CONNECTED': 2, 'CLOSED': 0})
@@ -74,7 +74,7 @@ class Session:
         assert isinstance(self._store, AssetStore)
 
         self._creation_time = time.time()  # used by app manager
-        
+
         # Id and name of the app
         self._id = get_random_string()
         self._app_name = app_name
@@ -87,27 +87,27 @@ class Session:
 
         # Data for this session (in addition to the data provided by the store)
         self._data = {}
-        
+
         # More vars
         self._runtime = None  # init web runtime, will be set when used
         self._ws = None  # init websocket, will be set when a connection is made
         self._closing = False  # Flag to help with shutdown
-        
+
         # PyComponent or JsComponent instance, can be None if app_name is __default__
         self._component = None
-        
+
         # The session assigns component id's and keeps track of component objects
         self._component_counter = 0
         self._component_instances = weakref.WeakValueDictionary()
         self._dead_component_ids = set()
-        
+
         # Keep track of roundtrips. The _ping_calls elements are:
         # [ping_count, {objects}, *(callback, args)]
         self._ping_calls = []
         self._ping_counter = 0
         self._eval_result = {}
         self._eval_count = 0
-        
+
         # While the client is not connected, we keep a queue of
         # commands, which are send to the client as soon as it connects
         self._pending_commands = []
@@ -312,7 +312,7 @@ class Session:
                    morsel.OutputString().replace('"', '\\"'))
 
     ## Data
-    
+
     def add_data(self, name, data):
         """ Add data to serve to the client (e.g. images), specific to this
         session. Returns the link at which the data can be retrieved.
@@ -391,21 +391,21 @@ class Session:
         # Register the class to that the client has the needed definitions
         self._register_component_class(cls)
         self.keep_alive(component)
-    
+
     def _unregister_component(self, component):
         self._dead_component_ids.add(component.id)
         # self.keep_alive(component)  # does not work on pypy; deletion in final
         # Because we use weak refs, and we want to be able to keep (the id of)
         # the object so that INVOKE on it can be silently ignored (because it
         # is disposed). The object id gets removed by the DISPOSE_ACK command.
-    
+
     def get_component_instance(self, id):
         """ Get PyComponent or JsComponent instance that is associated with
         this session and has the corresponding id. The returned value can be
         None if it does not exist, and a returned component can be disposed.
         """
         return self._component_instances.get(id, None)
-    
+
     ## JIT asset definitions
 
     def _register_component_class(self, cls):
@@ -449,14 +449,14 @@ class Session:
         dependencies. If the module was already defined, it is
         re-defined.
         """
-        
+
         if (mod_name.startswith(('flexx.app', 'flexx.event')) and
                                                 '.examples' not in mod_name):
             return  # these are part of flexx core assets
-        
+
         modules = set()
         assets = []
-        
+
         def collect_module_and_deps(mod):
             if mod.name.startswith(('flexx.app', 'flexx.event')):
                 return  # these are part of flexx core assets
@@ -600,7 +600,7 @@ class Session:
             self._dead_component_ids.discard(command[1])
         else:
             logger.error('Unknown command received from JS:\n%s' % command)
-    
+
     def keep_alive(self, ob, iters=1):
         """ Keep an object alive for a certain amount of time, expressed
         in Python-JS ping roundtrips. This is intended for making JsComponent
@@ -611,7 +611,7 @@ class Session:
         ping_to_schedule_at = self._ping_counter + iters
         el = self._get_ping_call_list(ping_to_schedule_at)
         el[1][id(ob)] = ob  # add to dict of objects to keep alive
-    
+
     def call_after_roundtrip(self, callback, *args):
         """ A variant of ``call_soon()`` that calls a callback after
         a py-js roundrip. This can be convenient to delay an action until
@@ -622,7 +622,7 @@ class Session:
         ping_to_schedule_at = self._ping_counter + 1
         el = self._get_ping_call_list(ping_to_schedule_at)
         el.append((callback, args))
-    
+
     async def co_roundtrip(self):
         """ Coroutine to wait for one Py-JS-Py roundtrip.
         """
@@ -633,7 +633,7 @@ class Session:
         self.call_after_roundtrip(up)
         while count < 1:
             await asyncio.sleep(0.02)
-    
+
     async def co_eval(self, js):
         """ Coroutine to evaluate JS in the client, wait for the result,
         and then return it. It is recomended to use this method only
@@ -645,7 +645,7 @@ class Session:
         while id not in self._eval_result:
             await asyncio.sleep(0.2)
         return self._eval_result.pop(id)
-    
+
     def _get_ping_call_list(self, ping_count):
         """ Get an element from _ping_call for the specified ping_count.
         The element is a list [ping_count, {objects}, *(callback, args)]
@@ -658,7 +658,7 @@ class Session:
             el = [ping_count, {}]
             self._ping_calls.append(el)
             return el
-        
+
         # Try to find existing element, or insert it
         for i in reversed(range(len(self._ping_calls))):
             el = self._ping_calls[i]
@@ -672,7 +672,7 @@ class Session:
             el = [ping_count, {}]
             self._ping_calls.insert(0, el)
             return el
-    
+
     def _receive_pong(self, count):
         # Process ping calls
         while len(self._ping_calls) > 0 and self._ping_calls[0][0] <= count:
@@ -765,7 +765,7 @@ def _get_page(session, js_assets, css_assets, link, export):
     pre_path = '_assets' if export else '/flexx/assets'
 
     codes = []
-    
+
     for assets in [css_assets, js_assets]:
         for asset in assets:
             if link in (0, 1):
@@ -779,7 +779,7 @@ def _get_page(session, js_assets, css_assets, link, export):
             if export and assets is js_assets:
                 codes.append('<script>window.flexx.spin();</script>')
         codes.append('')  # whitespace between css and js assets
-    
+
     codes.append('<script>flexx.create_session("%s", "%s");</script>\n' %
                  (session.app_name, session.id))
 

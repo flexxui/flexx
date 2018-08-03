@@ -149,7 +149,7 @@ class BsdfLiteSerializer(object):
             self._extensions_by_cls[cls] = name, extension.encode
         self._extensions[name] = extension
         return extension_class
-    
+
     def remove_extension(self, name):
         """ Remove a converted by its unique name.
         """

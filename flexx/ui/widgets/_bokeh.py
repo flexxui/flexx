@@ -3,19 +3,19 @@
 Show Bokeh plots in Flexx. Example:
 
 .. UIExample:: 300
-    
+
     import numpy as np
-    from bokeh.plotting import figure 
+    from bokeh.plotting import figure
     from flexx import app, event, ui
-    
+
     x = np.linspace(0, 6, 50)
-    
+
     p1 = figure()
     p1.line(x, np.sin(x))
-    
+
     p2 = figure()
     p2.line(x, np.cos(x))
-    
+
     class Example(app.PyComponent):
         def init(self):
             with ui.HSplit():
@@ -76,37 +76,37 @@ def make_bokeh_widget(plot, **kwargs):
 
 class BokehWidget(Widget):
     """ A widget that shows a Bokeh plot object.
-    
+
     For Bokeh 0.12 and up. The plot's ``sizing_mode`` property is set to
     ``stretch_both`` unless it was set to something other than ``fixed``. Other
     responsive modes are 'scale_width', 'scale_height' and 'scale_both`, which
     all keep aspect ratio while being responsive in a certain direction.
-    
+
     This widget is, like all widgets, a JsComponent; it lives in the browser,
     while the Bokeh plot is a Python object. Therefore we cannot simply use
     a property to set the plot. Use ``ui.BokehWidget.from_plot(plot)`` to
     instantiate the widget from Python.
     """
-    
+
     DEFAULT_MIN_SIZE = 100, 100
-    
+
     CSS = """
     .flx-BokehWidget > .plotdiv {
         overflow: hidden;
     }
     """
-    
+
     @classmethod
     def from_plot(cls, plot, **kwargs):
         """ Create a BokehWidget using a Bokeh plot.
         """
         return make_bokeh_widget(plot, **kwargs)
-    
+
     plot = event.Attribute(doc="""The JS-side of the Bokeh plot object.""")
-    
+
     def _render_dom(self):
         return None
-    
+
     @event.action
     def set_plot_components(self, d):
         """ Set the plot using its script/html components.
@@ -116,14 +116,14 @@ class BokehWidget(Widget):
         self.node.innerHTML = d.div  # We put trust in d.div
         # "exec" code
         el = window.document.createElement('script')
-        el.innerHTML = d.script 
+        el.innerHTML = d.script
         self.node.appendChild(el)
         # Get plot from id in next event-loop iter
         def getplot():
             self._plot = window.Bokeh.index[d.id]
             self.__resize_plot()
         window.setTimeout(getplot, 10)
-    
+
     @event.reaction('size')
     def __resize_plot(self, *events):
         if self.plot and self.parent:
