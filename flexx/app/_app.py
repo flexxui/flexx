@@ -167,41 +167,49 @@ class App:
             runtime = config.webruntime.strip('!')
         session._runtime = webruntime.launch(url, runtime=runtime, **runtime_kwargs)
         return session.app
-
-    def export(self, filename=None, link=0, write_shared=True):
-        """ Export this app to an HTML document.
-
+    
+    def dump(self, fname=None, link=0):
+        """ Get a dictionary of web assets that statically represents the app.
+        
+        The dictionary contains at least one "html file". Any session-specific
+        or shared data is also included. If link is 2 or 3, all shared assets
+        are included too (because the main document links to them). An app that
+        contains no data, can thus be dumped to a single html document by
+        setting link to 0 or 1.
+        
         Arguments:
-            filename (str, optional): Path to write the HTML document to.
-                If not given or None, will return the html as a string.
-                If the filename ends with .hta, a Windows HTML Application is
-                created. If a directory is given, the app is exported to
-                index.html inside that directory.
+            fname (str, optional): the name of the main html asset.
+                If not given or None, the name of the component class
+                is used. Must end in .html/.htm/.hta.
             link (int): whether to link (JS and CSS) assets or embed them:
-
+                A values of 0/1 is recommended for single (and standalone) apps,
+                while multiple apps can share common assets by using 2/3.
                 * 0: all assets are embedded (default).
                 * 1: normal assets are embedded, remote assets remain remote.
                 * 2: all assets are linked (as separate files).
                 * 3: normal assets are linked, remote assets remain remote.
-            write_shared (bool): if True (default) will also write shared assets
-                when linking to assets. This can be set to False when
-                exporting multiple apps to the same location. The shared assets can
-                then be exported once using ``app.assets.export(dirname)``.
-
+        
         Returns:
-            str: The resulting html. If a filename was specified this returns None.
-
+            dict: A collection of assets.
         """
-
-        # Prepare name, based on exported file name (instead of cls.__name__)
+        
+        # Get asset name
+        if fname is None:
+            if self.name in ('__main__', ''):
+                fname = 'index.html'
+            else:
+                fname = self.name.lower() + '.html'
+        
+        # Validate fname
+        if os.path.basename(fname) != fname:
+            raise ValueError('App.dump() fname must not contain directory names.')
+        elif not fname.lower().endswith(('.html', 'htm', '.hta')):
+            raise ValueError('Invalid extension for dumping %r'.format(fname))
+        
+        # We need to serve the app, i.e. notify the mananger about this app
         if not self._is_served:
-            name = os.path.basename(filename).split('.')[0]
-            name = name.replace('-', '_').replace(' ', '_')
+            name = fname.split('.')[0].replace('-', '_').replace(' ', '_')
             self.serve(name)
-
-        # Allow a dir to be given
-        if os.path.isdir(filename):
-            filename = os.path.join(filename, 'index.html')
 
         # Create session with id equal to the app name. This would not be strictly
         # necessary to make exports work, but it makes sure that exporting twice
@@ -217,38 +225,81 @@ class App:
 
         assert link in (0, 1, 2, 3), "Expecting link to be in (0, 1, 2, 3)."
 
-        # Warn if this app has data and is meant to be run standalone
-        if link in (0, 1) and session.get_data_names():
-            logger.warn('Exporting app with embedded assets, '
-                        'but it has registered data.')
-
         # Warn for PyComponents
         if issubclass(self.cls, PyComponent):
             logger.warn('Exporting a PyComponent - any Python interactivity will '
                         'not work in exported apps.')
 
-        # Get HTML - this may be good enough
+        d = {}
+        
+        # Get main HTML page
         html = get_page_for_export(session, exporter.commands, link)
-        if filename is None:
-            return html
-        elif filename.lower().endswith('.hta'):
+        if fname.lower().endswith('.hta'):
             hta_tag = '<meta http-equiv="x-ua-compatible" content="ie=edge" />'
             html = html.replace('<head>', '<head>\n    ' + hta_tag, 1)
-        elif not filename.lower().endswith(('.html', 'htm')):
-            raise ValueError('Invalid extension for exporting to %r' %
-                            os.path.basename(filename))
+        d[fname] = html.encode()
+        
+        # Add shares assets if we link to it from the main page
+        if link in (2, 3):
+            d.update(assets._dump_assets())
+        
+        # Add session specific, and shared data
+        d.update(session._dump_data())
+        d.update(assets._dump_data())
+        
+        return d
+    
+    def export(self, filename, link=0):
+        """ Export this app to a static website.
 
-        # Save to file. If standalone, all assets will be included in the main html
-        # file, if not, we need to export shared assets and session assets too.
+        Arguments:
+            filename (str): Path to write the HTML document to.
+                If the filename ends with .hta, a Windows HTML Application is
+                created. If a directory is given, the app is exported to
+                index.html inside that directory.
+            link (int): whether to link (JS and CSS) assets or embed them:
+                * 0: all assets are embedded (default).
+                * 1: normal assets are embedded, remote assets remain remote.
+                * 2: all assets are linked (as separate files).
+                * 3: normal assets are linked, remote assets remain remote.
+            write_shared (bool): if True (default) will also write shared assets
+                when linking to assets. This can be set to False when
+                exporting multiple apps to the same location. The shared assets can
+                then be exported once using ``app.assets.export(dirname)``.
+
+        Returns:
+            str: The resulting html. If a filename was specified this returns None.
+
+        """
+        
+        # Derive dirname and app name
+        if not isinstance(filename, str):
+            raise ValueError('str filename required, use dump() for in-memory export.')
         filename = os.path.abspath(os.path.expanduser(filename))
-        if link >= 2:
-            if write_shared:
-                assets.export(os.path.dirname(filename))
-            session._export_data(os.path.dirname(filename))
-        with open(filename, 'wb') as f:
-            f.write(html.encode())
-
-        app_type = 'standalone app' if link in (0, 1) else 'app'
+        if os.path.isdir(filename) or filename.endswith(('/', '\\')):
+            dirname = filename
+            fname = None
+        else:
+            dirname, fname = os.path.split(filename)
+        
+        # Collect asset dict
+        d = self.dump(fname, link)
+        
+        # # Warn if this app has data and is meant to be run standalone
+        # if link in (0, 1) and session.get_data_names():
+        #     logger.warn('Exporting app with embedded assets, '
+        #                 'but it has registered data.')
+        
+        # Write all assets to file
+        for fname, blob in d.items():
+            filename = os.path.join(dirname, fname)
+            dname = os.path.dirname(filename)
+            if not os.path.isdir(dname):
+                os.makedirs(dname)
+            with open(filename, 'wb') as f:
+                f.write(blob)
+        
+        app_type = 'standalone app' if len(d) == 1 else 'app'
         logger.info('Exported %s to %r' % (app_type, filename))
 
     def publish(self, name, token, url=None):

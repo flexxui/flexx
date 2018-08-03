@@ -172,37 +172,37 @@ td,th{padding:0}
 """.lstrip()
 
 
-def export_assets_and_data(assets, data, dirname, app_id, clear=False):
-    """ Export the given assets (list of Asset objects) and data (list of
-    (name, value) tuples to a file system structure.
-    """
-    # Normalize and check - we create the dir if its inside an existing dir
-    dirname = os.path.abspath(os.path.expanduser(dirname))
-    if clear and os.path.isdir(dirname):
-        shutil.rmtree(dirname)
-    if not os.path.isdir(dirname):
-        if os.path.isdir(os.path.dirname(dirname)):
-            os.mkdir(dirname)
-        else:
-            raise ValueError('dirname %r for export is not a directory.' % dirname)
-
-    # Export all assets
-    for asset in assets:
-        filename = os.path.join(dirname, '_assets', app_id, asset.name)
-        dname = os.path.dirname(filename)
-        if not os.path.isdir(dname):
-            os.makedirs(dname)
-        with open(filename, 'wb') as f:
-            f.write(asset.to_string().encode())
-
-    # Export all data
-    for fname, d in data:
-        filename = os.path.join(dirname, '_data', app_id, fname)
-        dname = os.path.dirname(filename)
-        if not os.path.isdir(dname):
-            os.makedirs(dname)
-        with open(filename, 'wb') as f:
-            f.write(d)
+# def export_assets_and_data(assets, data, dirname, app_id, clear=False):
+#     """ Export the given assets (list of Asset objects) and data (list of
+#     (name, value) tuples to a file system structure.
+#     """
+#     # Normalize and check - we create the dir if its inside an existing dir
+#     dirname = os.path.abspath(os.path.expanduser(dirname))
+#     if clear and os.path.isdir(dirname):
+#         shutil.rmtree(dirname)
+#     if not os.path.isdir(dirname):
+#         if os.path.isdir(os.path.dirname(dirname)):
+#             os.mkdir(dirname)
+#         else:
+#             raise ValueError('dirname %r for export is not a directory.' % dirname)
+# 
+#     # Export all assets
+#     for asset in assets:
+#         filename = os.path.join(dirname, '_assets', app_id, asset.name)
+#         dname = os.path.dirname(filename)
+#         if not os.path.isdir(dname):
+#             os.makedirs(dname)
+#         with open(filename, 'wb') as f:
+#             f.write(asset.to_string().encode())
+# 
+#     # Export all data
+#     for fname, d in data:
+#         filename = os.path.join(dirname, '_data', app_id, fname)
+#         dname = os.path.dirname(filename)
+#         if not os.path.isdir(dname):
+#             os.makedirs(dname)
+#         with open(filename, 'wb') as f:
+#             f.write(d)
 
 
 class AssetStore:
@@ -472,20 +472,43 @@ class AssetStore:
             raise TypeError('add_shared_data() data must be bytes.')
         self._data[name] = data
         return '_data/shared/%s' % name  # relative path so it works /w export
-
-    def export(self, dirname, clear=False):
-        """ Write all shared data and used assets to the given directory.
-
-        Parameters:
-            dirname (str): the directory to export to. The toplevel
-                directory is created if necessary.
-            clear (bool): if given and True, the directory is first cleared.
+    
+    def _dump_data(self):
+        """ Get a dictionary that contains all shared data. The keys
+        represent relative paths, the values are all bytes.
+        Used by App.dump().
         """
-        assets = [self._assets[name] for name in self.get_asset_names()]
-        assets = [self._assets[name] for name in self._used_assets]
-        data = [(name, self.get_data(name)) for name in self.get_data_names()]
-        export_assets_and_data(assets, data, dirname, 'shared', clear)
-        logger.info('Exported shared assets and data to %r.' % dirname)
+        d = {}
+        for fname in self.get_data_names():
+            d['_data/shared/' + fname] = self.get_data(fname)
+        return d
+    
+    def _dump_assets(self):
+        """ Get a dictionary that contains assets used by any session.
+        The keys represent relative paths, the values are all bytes.
+        Used by App.dump().
+        """
+        d = {}
+        for name in self._used_assets:
+            asset = self._assets[name]
+            d['_assets/shared/' + asset.name] = asset.to_string().encode()
+        return d
+    
+    # def export(self, dirname, clear=False):
+    #     """ Write all shared data and used assets to the given directory.
+
+   ##       Parameters:
+    #         dirname (str): the directory to export to. The toplevel
+    #             directory is created if necessary.
+    #         clear (bool): if given and True, the directory is first cleared.
+    #     """
+    #     # todo: use dump
+    #     
+    #     assets = [self._assets[name] for name in self.get_asset_names()]
+    #     assets = [self._assets[name] for name in self._used_assets]
+    #     data = [(name, self.get_data(name)) for name in self.get_data_names()]
+    #     export_assets_and_data(assets, data, dirname, 'shared', clear)
+    #     logger.info('Exported shared assets and data to %r.' % dirname)
 
 
 # Our singleton asset store
