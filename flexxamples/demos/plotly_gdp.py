@@ -89,7 +89,7 @@ layout = {
 
 
 class PlotlyGeoDemo(flx.HBox):
-    
+
     def init(self):
         flx.PlotlyWidget(data=data, layout=layout)
 

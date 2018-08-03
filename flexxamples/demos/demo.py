@@ -10,7 +10,7 @@ from flexxamples.demos.twente import Twente
 from flexxamples.demos.drawing import Drawing
 
 class Demo(flx.Widget):
-    
+
     def init(self):
         with flx.TabLayout():
             Splines(title='Spline demo')

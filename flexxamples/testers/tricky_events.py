@@ -8,16 +8,16 @@ from flexx import app, event, ui
 ## Synced sliders
 
 class SyncedSlidersBase(ui.Widget):
-    
+
     def init(self):
-        
+
         with ui.VBox():
             ui.Label(text=self.TITLE)
             self.slider1 = ui.Slider()
             self.slider2 = ui.Slider()
-            
+
             ui.Widget(flex=1)
-    
+
     @event.reaction('slider1.value', 'slider2.value')
     def sleep_when_slider_changes(self, *events):
         global time  # time() is a PScript builtin
@@ -34,13 +34,13 @@ class SyncedSlidersWrong(SyncedSlidersBase):
     two queued actions: one to set slider 1 to value A and another to set
     slider 2 to value B. And these will keep interchanging.
     """
-    
+
     TITLE = 'Synced sliders, done wrong'
-    
+
     @event.reaction('slider1.value')
     def __slider1(self, *events):
         self.slider2.set_value(events[-1].new_value)
-    
+
     @event.reaction('slider2.value')
     def __slider2(self, *events):
         self.slider1.set_value(events[-1].new_value)
@@ -52,16 +52,16 @@ class SyncedSlidersRight(SyncedSlidersBase):
     to either of the sliders get handled in a single call to the reaction,
     which avoids a ping-pong effect. Only having a single (normal) reaction
     reduced the chance of a ping-pong effect, but does not elliminate it.
-    
+
     Even better would be to react to ``user_value``  or ``user_done``
     to avoid ping-ping altogether.
-    
+
     A nice addition would be to add an action that sets both slider
     values at the same time.
     """
-    
+
     TITLE = 'Synced sliders, done right'
-    
+
     @event.reaction('slider1.value', 'slider2.value', mode='greedy')
     def __slider1(self, *events):
         value = events[-1].new_value
@@ -74,17 +74,17 @@ class SyncedSlidersRight(SyncedSlidersBase):
 class Tricky(ui.Widget):
     """ A collection of tricky cases.
     """
-    
+
     def init(self):
         with ui.VBox():
-            
+
             self.reset = ui.Button(text='Reset event system')
             with ui.HFix(flex=1):
                 SyncedSlidersWrong(flex=1)
                 SyncedSlidersRight(flex=1)
-            
+
             ui.Widget(flex=1)  # spacer
-    
+
     @event.reaction('reset.pointer_click')
     def _reset(self):
         # You probably don't want to ever do this in a normal app.

@@ -11,7 +11,7 @@ import random
 
 from flexx import flx
 
-COLORS = ('#eee', '#999', '#555', '#111', 
+COLORS = ('#eee', '#999', '#555', '#111',
           '#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff',
           '#a44', '#4a4', '#44a', '#aa4', '#afa', '#4aa',
           )
@@ -32,29 +32,29 @@ relay = Relay()
 class ColabPainting(flx.PyComponent):
     """ The Python side of the app. There is one instance per connection.
     """
-    
+
     color = flx.ColorProp(settable=True, doc="Paint color")
-    
+
     status = flx.StringProp('', settable=True, doc="Status text")
-    
+
     def init(self):
         self.set_color(random.choice(COLORS))
         self.widget = ColabPaintingView(self)
         self._update_participants()
-    
+
     @flx.action
     def add_paint(self, pos):
         """ Add paint at the specified position.
         """
         relay.add_paint_for_all(pos, self.color.hex)
-    
+
     @relay.reaction('add_paint_for_all')  # note that we connect to relay here
     def _any_user_adds_paint(self, *events):
         """ Receive global paint event from the relay, invoke action on view.
         """
         for ev in events:
             self.widget.add_paint_to_canvas(ev.pos, ev.color)
-    
+
     @flx.manager.reaction('connections_changed')
     def _update_participants(self, *events):
         if self.session.status:
@@ -67,7 +67,7 @@ class ColabPainting(flx.PyComponent):
 class ColabPaintingView(flx.Widget):
     """ The part of the app that runs in the browser.
     """
-    
+
     CSS = """
     .flx-ColabPaintingView { background: #ddd; }
     .flx-ColabPaintingView .flx-CanvasWidget {
@@ -75,11 +75,11 @@ class ColabPaintingView(flx.Widget):
         border: 10px solid #000;
     }
     """
-    
+
     def init(self, model):
         super().init()
         self.model = model
-        
+
         # App layout
         with flx.VBox():
             flx.Label(flex=0, text=lambda: model.status)
@@ -89,19 +89,19 @@ class ColabPaintingView(flx.Widget):
                 self.canvas = flx.CanvasWidget(flex=0, minsize=400, maxsize=400)
                 flx.Widget(flex=1)
             flx.Widget(flex=1)
-        
+
         # Init context to draw to
         self._ctx = self.canvas.node.getContext('2d')
 
     @flx.reaction
     def __update_color(self):
         self.canvas.apply_style('border: 10px solid ' + self.model.color.hex)
-    
+
     @flx.reaction('canvas.pointer_down')
     def __on_click(self, *events):
         for ev in events:
             self.model.add_paint(ev.pos)
-    
+
     @flx.action
     def add_paint_to_canvas(self, pos, color):
         """ Actually draw a dot on the canvas.

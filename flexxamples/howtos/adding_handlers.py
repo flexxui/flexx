@@ -26,13 +26,13 @@ flx.serve(ChatRoom)
 
 
 class MyAboutHandler(tornado.web.RequestHandler):
-    
+
     def get(self):
         self.write('<html>This is just an <i>example</i>.</html>')
 
 
 class MyAPIHandler(tornado.web.RequestHandler):
-    
+
     def get(self, path):
         # self.request.path -> full path
         # path -> the regexp group specified in add_handlers

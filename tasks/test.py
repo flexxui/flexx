@@ -20,7 +20,7 @@ def lint(ctx):
 def test(ctx, unit='', style='', cover=False):
     """ run tests (unit, style)
     """
-    
+
     if not (unit or style or cover):
         sys.exit('Test task needs --unit, --style or --cover')
     if unit:
@@ -69,12 +69,12 @@ def show_coverage_term():
                    source=[NAME])  # should match testing/_coverage.py
     cov.load()
     cov.report()
-    
-    
+
+
 def show_coverage_html():
     import webbrowser
     from coverage import coverage
-    
+
     print('Generating HTML...')
     os.chdir(ROOT_DIR)
     cov = coverage(auto_data=False, branch=True, data_suffix=None,

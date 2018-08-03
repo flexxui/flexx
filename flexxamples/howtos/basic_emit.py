@@ -9,11 +9,11 @@ property or emitter).
 from flexx import event
 
 class Basic(event.Component):
-    
+
     @event.reaction('!foo')
     def on_foo(self, *events):
         print('foo reaction called with %i events' % len(events))
-    
+
     @event.reaction('!bar')
     def on_bar(self, *events):
         print('bar reaction called with %i events' % len(events))

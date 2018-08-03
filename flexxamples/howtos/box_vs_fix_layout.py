@@ -14,13 +14,13 @@ class Panel(flx.Label):
 
 
 class Boxes(flx.Widget):
-    
+
     def init(self):
-        
+
         with flx.HSplit():
-            
+
             with flx.VBox(flex=1):
-                
+
                 flx.Label(html='<b>Box mode</b> (aware of natural size)')
                 flx.Label(text='flex: 1, sub-flexes: 0, 0, 0')
                 with flx.HBox(flex=1):
@@ -42,9 +42,9 @@ class Boxes(flx.Widget):
                     Panel(text='A', flex=1)
                     Panel(text='B', flex=2)
                     Panel(text='C is a bit longer', flex=3)
-            
+
             with flx.VBox(flex=1):
-                
+
                 flx.Label(html='<b>Fix mode</b> (high level layout)')
                 flx.Label(text='flex: 1, sub-flexes: 0, 0, 0')
                 with flx.HFix(flex=1):

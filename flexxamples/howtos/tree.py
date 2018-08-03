@@ -8,20 +8,20 @@ from flexx import flx
 
 
 class Example(flx.Widget):
-    
+
     CSS = '''
     .flx-TreeWidget {
         background: #000;
         color: #afa;
     }
     '''
-    
+
     def init(self):
-        
+
         with flx.HSplit():
-            
+
             self.label = flx.Label(flex=1, style='overflow-y: scroll;')
-            
+
             with flx.TreeWidget(flex=1, max_selected=1) as self.tree:
                 for t in ['foo', 'bar', 'spam', 'eggs']:
                     with flx.TreeItem(text=t, checked=None):
@@ -38,9 +38,9 @@ class Example(flx.Widget):
         for ev in events:
             id = ev.source.title or ev.source.text
             if ev.new_value:
-                text = id + ' was ' + ev.type 
+                text = id + ' was ' + ev.type
             else:
-                text = id + ' was ' + 'un-' + ev.type 
+                text = id + ' was ' + 'un-' + ev.type
             self.label.set_html(text + '<br />' + self.label.html)
 
 

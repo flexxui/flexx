@@ -17,9 +17,9 @@ from flexx import flx
 
 
 class MyComponent1(flx.Component):
-    
+
     foo = flx.Property(0, settable=True)
-    
+
     @flx.reaction('foo')
     def on_foo(self, *events):
         for ev in events:

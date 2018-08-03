@@ -12,7 +12,7 @@ from flexx import flx
 class Relay(flx.Component):
     """ Global object to relay messages to all participants.
     """
-    
+
     @flx.emitter
     def create_message(self, name, message):
         return dict(name=name, message=message)
@@ -22,7 +22,7 @@ relay = Relay()
 
 
 class MessageBox(flx.Label):
-    
+
     CSS = """
     .flx-MessageBox {
         overflow-y:scroll;
@@ -31,18 +31,18 @@ class MessageBox(flx.Label):
         margin: 3px;
     }
     """
-    
+
     def init(self):
         super().init()
         global window
         self._se = window.document.createElement('div')
-    
+
     def sanitize(self, text):
         self._se.textContent = text
         text = self._se.innerHTML
         self._se.textContent = ''
         return text
-    
+
     @flx.action
     def add_message(self, name, msg):
         line = '<i>' + self.sanitize(name) + '</i>: ' + self.sanitize(msg)
@@ -52,7 +52,7 @@ class MessageBox(flx.Label):
 class ChatRoom(flx.PyComponent):
     """ This represents one connection to the chat room.
     """
-    
+
     def init(self):
         with flx.HBox(title='Flexx chatroom demo'):
             flx.Widget(flex=1)
@@ -66,9 +66,9 @@ class ChatRoom(flx.PyComponent):
                                                  placeholder_text='enter message')
                     self.ok = flx.Button(text='Send')
             flx.Widget(flex=1)
-        
+
         self._update_participants()
-    
+
     @flx.reaction('ok.pointer_down', 'msg_edit.submit')
     def _send_message(self, *events):
         text = self.msg_edit.text
@@ -76,12 +76,12 @@ class ChatRoom(flx.PyComponent):
             name = self.name_edit.text or 'anonymous'
             relay.create_message(name, text)
             self.msg_edit.set_text('')
-    
+
     @relay.reaction('create_message')  # note that we connect to relay
     def _push_info(self, *events):
         for ev in events:
             self.messages.add_message(ev.name, ev.message)
-    
+
     @flx.manager.reaction('connections_changed')
     def _update_participants(self, *event):
         if self.session.status:

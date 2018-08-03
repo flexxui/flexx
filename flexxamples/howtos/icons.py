@@ -23,16 +23,16 @@ fname = os.path.join(os.path.dirname(flexx.__file__), 'resources', 'flexx.ico')
 black_png = ('data:image/png;base64,'
              'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAIUlEQVR42mNgY'
              'GD4TyEeTAacOHGCKDxqwKgBtDVgaGYmAD/v6XAYiQl7AAAAAElFTkSuQmCC')
-    
+
 
 class Icons1(flx.Widget):
-    
+
     def init(self):
         flx.Button(text='Not much to see here ...')
-        
+
 
 class Icons2(flx.Widget):
-    
+
     def init(self):
         self.set_title('Icon demo')
         self.set_icon(black_png)
@@ -40,19 +40,19 @@ class Icons2(flx.Widget):
 
 
 if __name__ == '__main__':
-    
+
     # Select application icon. Can be a url, a relative url to a shared asset,
     # a base64 encoded image, or a local filename. Note that the local filename
     # works for setting the aplication icon in a desktop-like app, but not for
     # a web app. File types can be ico or png.
-    
+
     # << Uncomment any of the lines below >>
-    
+
     # icon = None  # use default
     # icon = 'https://assets-cdn.github.com/favicon.ico'
     # icon = flx.assets.add_shared_data('ico.icon', open(fname, 'rb').read())
     icon = black_png
     # icon = fname
-    
+
     m = flx.App(Icons1, title='Icon demo', icon=icon).launch('app')
     flx.start()

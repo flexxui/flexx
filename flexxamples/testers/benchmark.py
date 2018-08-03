@@ -46,7 +46,7 @@ if sys.argv[1:]:
 def plot_results():
     import matplotlib.pyplot as plt
     plt.ion()
-    
+
     data = list(reversed(RESULTS))
     plt.figure(1)
     plt.clf()
@@ -60,7 +60,7 @@ def plot_results():
 
 class window:
     # Trick to be able to use the same code in JS and Python
-    
+
     @classmethod
     def Float32Array(cls, n):
         """ Factory function. """
@@ -77,78 +77,78 @@ def convolve():
             data[i] += data[i+j] * (1/support*2)
     t1 = time()
     print('convolution took %f s' % (t1-t0))
-    
+
 
 def bench_str():
     """ From http://brythonista.wordpress.com/2015/03/28
     """
     print('String benchmarks:')
-    
+
     t0 = time()
     for i in range(1000000):
         a = 1
     print("  assignment.py", time()-t0)
-    
+
     t0 = time()
     a = 0
     for i in range(1000000):
         a += 1
     print("  augm_assign.py", time()-t0)
-    
+
     t0 = time()
     for i in range(1000000):
         a = 1.0
     print("  assignment_float.py", time()-t0)
-    
+
     t0 = time()
     for i in range(1000000):
         a = {0: 0}
     print("  build_dict.py", time()-t0)
-    
+
     t0 = time()
     a = {0: 0}
-    
+
     for i in range(1000000):
         a[0] = i
-    
+
     assert a[0]==999999
     print("  set_dict_item.py", time()-t0)
-    
+
     t0 = time()
     for i in range(1000000):
         a = [1, 2, 3]
     print("  build_list.py", time()-t0)
-    
+
     t0 = time()
     a = [0]
-    
+
     for i in range(1000000):
         a[0] = i
     print("  set_list_item.py", time()-t0)
-    
+
     t0 = time()
     a, b, c = 1, 2, 3
     for i in range(1000000):
         a + b + c
     print("  add_integers.py", time()-t0)
-    
+
     t0 = time()
     a, b, c = 'a', 'b', 'c'
     for i in range(1000000):
         a + b + c
     print("  add_strings.py", time()-t0)
-    
+
     t0 = time()
     for _i in range(100000):
         str(_i)
     print("  str_of_int.py", time()-t0)
-    
+
     t0 = time()
     for i in range(1000000):
         def f():
             pass
     print("  create_function.py", time()-t0)
-    
+
     t0 = time()
     def g(x):
         return x
@@ -158,10 +158,10 @@ def bench_str():
 
 
 class BenchmarkerPy(app.PyComponent):
-    
+
     @event.action
     def benchmark(self):
-        print('\n==== Python %s %s =====\n' % (platform.python_implementation(), 
+        print('\n==== Python %s %s =====\n' % (platform.python_implementation(),
                                                platform.python_version()))
         # pystone_main()
         convolve()
@@ -169,7 +169,7 @@ class BenchmarkerPy(app.PyComponent):
 
 
 class BenchmarkerJs(app.JsComponent):
-    
+
     @event.action
     def benchmark(self):
         print()

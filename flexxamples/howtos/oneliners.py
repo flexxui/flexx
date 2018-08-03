@@ -13,15 +13,15 @@ from flexx import event
 
 
 class Person(event.Component):
-    
+
     first_name = event.StringProp('Jane', settable=True)
     last_name = event.StringProp('Doe', settable=True)
 
 
 class Greeter(event.Component):
-    
+
     message = event.StringProp('', settable=True)
-    
+
     @event.reaction
     def show_message(self):
         print('Message:', self.message)

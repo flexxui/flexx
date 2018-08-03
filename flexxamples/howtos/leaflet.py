@@ -79,35 +79,35 @@ for icon in _leaflet_icons:
 class LeafletWidget(flx.Widget):
     """ A widget that shows a slippy/tile-map using Leaflet.
     """
-    
+
     layers = flx.ListProp([], doc="""
         List of tilemap layer tuples: (url, 'Layer').
         """)
-    
+
     zoom = flx.IntProp(8, settable=True, doc="""
         Zoom level for the map.
         """)
-    
+
     min_zoom = flx.IntProp(0, settable=True, doc="""
         self zoom level for the map.
         """)
-    
+
     max_zoom = flx.IntProp(18, settable=True, doc="""
         Maximum zoom level for the map.
         """)
-    
+
     center = flx.FloatPairProp((5.2, 5.5), settable=True, doc="""
         The center of the map.
         """)
-    
+
     show_layers = flx.BoolProp(False, settable=True, doc="""
         Whether to show layers-icon on the top-right of the map.
         """)
-    
+
     show_scale = flx.BoolProp(False, settable=True, doc="""
         Whether to show scale at bottom-left of map.
         """)
-    
+
     @flx.action
     def add_layer(self, url, name=None):
         """ Add a layer to the map.
@@ -119,7 +119,7 @@ class LeafletWidget(flx.Widget):
         # Add layer
         layers = self.layers + [(url, name or 'Layer')]
         self._mutate_layers(layers)
-    
+
     @flx.action
     def remove_layer(self, url_or_name):
         """ Remove a layer from the map by url or name.
@@ -250,9 +250,9 @@ class LeafletExample(flx.Widget):
                 self.cbl = flx.CheckBox(text='Show layers')
                 self.list = flx.VBox()
                 flx.Widget(flex=1)
-        
+
         self.leaflet.add_layer('http://a.tile.openstreetmap.org/', 'OpenStreetMap')
-    
+
     @flx.reaction('btna.pointer_click')
     def handle_seamap_add(self, *events):
         self.leaflet.add_layer('http://t1.openseamap.org/seamark/', 'OpenSeaMap')

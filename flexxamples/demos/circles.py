@@ -10,7 +10,7 @@ from flexx import flx
 
 
 class Circle(flx.Label):
-    
+
     CSS = """
     .flx-Circle {
         background: #f00;
@@ -21,12 +21,12 @@ class Circle(flx.Label):
     """
 
 class Circles(flx.Widget):
-    
+
     def init(self):
         with flx.PinboardLayout():
             self._circles = [Circle() for i in range(32)]
         self.tick()
-    
+
     def tick(self):
         global Math, window
         t = time()

@@ -10,10 +10,10 @@ from flexx import flx
 
 
 class DeepEventConnections(flx.Widget):
-    
+
     def init(self):
         # Put a label and some sliders deep in the hierarchy
-        
+
         with flx.VBox():
             self.label = flx.Label()
             with flx.HFix(flex=1):

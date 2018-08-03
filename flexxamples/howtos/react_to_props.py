@@ -10,19 +10,19 @@ from flexx import event
 
 
 class Test(event.Component):
-    
+
     foo = event.IntProp(0, settable=True)
-    
+
     @event.reaction
     def react_to_foo_a(self):
         print('A: foo changed to %i' % self.foo)
-    
+
     @event.reaction('foo')
     def react_to_foo_b(self, *events):
-        # This function 
-        print('B: foo changed from %i to %i' % (events[0].old_value, 
+        # This function
+        print('B: foo changed from %i to %i' % (events[0].old_value,
                                                 events[-1].new_value))
-    
+
     @event.reaction('foo')
     def react_to_foo_c(self, *events):
         print('C: foo changed:')

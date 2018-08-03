@@ -45,7 +45,7 @@ from html import escape
 class UsingPython(flx.Widget):
 
     def init(self):
-        
+
         # A rather boring way to present the info. The point is that
         # we're using all sorts of Python stuff here, that is automatically
         # converted for us.
@@ -56,7 +56,7 @@ class UsingPython(flx.Widget):
         lines.append('... and with x=12: ' + poly(12, 4, 5, 6))
         lines.append('String with escaped html: ' + escape('html <tags>!'))
         lines.append('String with escaped html: ' + escape('Woezel & Pip'))
-        
+
         self.label = flx.Label(wrap=0, html='<br />'.join(lines))
 
 

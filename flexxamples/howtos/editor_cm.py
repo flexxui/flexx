@@ -21,7 +21,7 @@ flx.assets.associate_asset(__name__, base_url + '5.21.0/addon/edit/matchbrackets
 class CodeEditor(flx.Widget):
     """ A CodeEditor widget based on CodeMirror.
     """
-    
+
     CSS = """
     .flx-CodeEditor > .CodeMirror {
         width: 100%;
@@ -46,7 +46,7 @@ class CodeEditor(flx.Widget):
                         readOnly=False,
                         )
         self.cm = window.CodeMirror(self.node, options)
-    
+
     @flx.reaction('size')
     def __on_size(self, *events):
         self.cm.refresh()

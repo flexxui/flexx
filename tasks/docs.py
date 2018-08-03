@@ -14,16 +14,16 @@ def docs(ctx, clean=False, build=False, show=False, **kwargs):
     """ make API documentation
     """
     # Prepare
-    
+
     if not (clean or build or show):
         sys.exit('Task "docs" must be called with --clean, --build or --show')
-    
+
     if clean:
         sphinx_clean(DOC_BUILD_DIR)
-    
+
     if build:
         sphinx_build(DOC_DIR, DOC_BUILD_DIR)
-    
+
     if show:
         sphinx_show(os.path.join(DOC_BUILD_DIR, 'html'))
 
@@ -43,7 +43,7 @@ def sphinx_build(src_dir, build_dir):
             src_dir,  # Source
             op.join(build_dir, 'html'),  # Dest
             ]
-    
+
     if sphinx.version_info > (1, 7):
         import sphinx.cmd.build
         ret = sphinx.cmd.build.build_main(cmd)

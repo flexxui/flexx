@@ -12,13 +12,13 @@ class Red(ui.Widget):
 
 
 class Deep2(ui.Widget):
-    
+
     def init(self):
-        
+
         with ui.VBox():
-            
+
             ui.Label(text='Widgets in BoxPanels in a widget in a vbox')
-        
+
             with ui.Widget(flex=1):
                 with ui.VFix():
                     with ui.HFix():

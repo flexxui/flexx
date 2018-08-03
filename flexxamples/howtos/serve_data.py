@@ -55,7 +55,7 @@ class Example(flx.PyComponent):
         # Randomly select image - different between sessions
         link2 = self.session.add_data('image.png',
                                       get_img_blob(random.choice(image_names)))
-        
+
         # Create widget to show images
         View(link1, link2)
 

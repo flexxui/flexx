@@ -17,7 +17,7 @@ flx.assets.associate_asset(__name__,
 
 
 class DatePicker(flx.Widget):
-    
+
     def _create_dom(self):
         global window
         node = window.document.createElement('input')
@@ -26,9 +26,9 @@ class DatePicker(flx.Widget):
 
 
 class Example(flx.Widget):
-    
+
     def init(self):
-        
+
         with flx.FormLayout():
             self.start = DatePicker(title='Start date')
             self.end = DatePicker(title='End date')

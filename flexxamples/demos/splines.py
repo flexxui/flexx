@@ -33,7 +33,7 @@ C1 continous. Its tension parameter makes it very versatile.
 """
 
 CATMULLROM_TEXT = """
-The Catmull–Rom spline is a Cardinal spline with a tension of 0. It is 
+The Catmull–Rom spline is a Cardinal spline with a tension of 0. It is
 commonly used in computer graphics to interpolate motion between key frames.
 """
 
@@ -52,36 +52,36 @@ related audio.
 
 
 class SplineWidget(flx.CanvasWidget):
-    
+
     spline_type = flx.EnumProp(SPLINES, 'cardinal', settable=True, doc="""
         "The type of spline
         """)
-    
+
     closed = flx.BoolProp(False, settable=True, doc="""
         Whether the spline is closed
         """)
-    
+
     tension = flx.FloatProp(0.5, settable=True, doc="""
         The tension parameter for the Cardinal spline.
         """)
-    
+
     _current_node = flx.Property(None, settable=True)
-    
+
     def init(self):
         self.ctx = self.node.getContext('2d')
         self.xx = [0.90, 0.80, 0.70, 0.60, 0.50, 0.40, 0.10, 0.23, 0.61, 0.88]
         self.yy = [0.90, 0.60, 0.90, 0.60, 0.90, 0.70, 0.55, 0.19, 0.11, 0.38]
-    
+
     def factors_linear(self, t):
         return [0, t, (1-t), 0]
-    
+
     def factors_basis(self, t):
         f0 = (1 - t)**3 / 6.0
         f1 = (3 * t**3 - 6 * t**2 + 4) / 6.0
         f2 = (-3 * t**3 + 3 * t**2 + 3 * t + 1) / 6.0
         f3 = t**3 / 6.0
         return f0, f1, f2, f3
-    
+
     def factors_cardinal(self, t):
         tension = self.tension
         tau = 0.5 * (1 - tension)
@@ -90,44 +90,44 @@ class SplineWidget(flx.CanvasWidget):
         f1 = 2 * t**3 - 3 * t**2 + 1 - f3
         f2 = - 2 * t**3 + 3 * t**2 - f0
         return f0, f1, f2, f3
-    
+
     def factors_catmullrom(self, t):
         f0 = - 0.5 * t**3 + 1.0 * t**2 - 0.5 * t
         f1 = + 1.5 * t**3 - 2.5 * t**2 + 1
         f2 = - 1.5 * t**3 + 2.0 * t**2 + 0.5 * t
         f3 = + 0.5 * t**3 - 0.5 * t**2
         return f0, f1, f2, f3
-    
+
     def factors_lagrange(self, t):
-        k = -1.0  
+        k = -1.0
         f0 = t / k * (t-1) / (k-1) * (t-2) / (k-2)
-        k = 0  
+        k = 0
         f1 = (t+1) / (k+1) * (t-1) / (k-1) * (t-2) / (k-2)
-        k= 1  
+        k= 1
         f2 = (t+1) / (k+1) * t / k * (t-2) / (k-2)
-        k = 2  
+        k = 2
         f3 = (t + 1) / (k+1) * t / k * (t-1) / (k-1)
         return f0, f1, f2, f3
-    
+
     def factors_lanczos(self, t):
         sin = window.Math.sin
         pi = window.Math.PI
         tt = (1+t)
         f0 = 2*sin(pi*tt)*sin(pi*tt/2) / (pi*pi*tt*tt)
-        tt = (2-t)  
+        tt = (2-t)
         f3 = 2*sin(pi*tt)*sin(pi*tt/2) / (pi*pi*tt*tt)
         if t != 0:
             tt = t
             f1 = 2*sin(pi*tt)*sin(pi*tt/2) / (pi*pi*tt*tt)
-        else:  
+        else:
             f1 =1
         if t != 1:
-            tt = (1-t)  
-            f2 = 2*sin(pi*tt)*sin(pi*tt/2) / (pi*pi*tt*tt)  
+            tt = (1-t)
+            f2 = 2*sin(pi*tt)*sin(pi*tt/2) / (pi*pi*tt*tt)
         else:
             f2 = 1
         return f0, f1, f2, f3
-    
+
     @flx.reaction('pointer_down')
     def _on_pointer_down(self, *events):
         for ev in events:
@@ -188,11 +188,11 @@ class SplineWidget(flx.CanvasWidget):
                     self.xx.insert(i, ev.pos[0] / w)
                     self.yy.insert(i, ev.pos[1] / h)
                     self._set_current_node(i)
-    
+
     @flx.reaction('pointer_up')
     def _on_pointer_up(self, *events):
         self._set_current_node(None)
-    
+
     @flx.reaction('pointer_move')
     def _on_pointer_move(self, *events):
         ev = events[-1]
@@ -205,12 +205,12 @@ class SplineWidget(flx.CanvasWidget):
 
     @flx.reaction('size', 'spline_type', 'tension', 'closed', '_current_node')
     def update(self, *events):
-        
+
         # Init
         ctx = self.ctx
         w, h = self.size
         ctx.clearRect(0, 0, w, h)
-        
+
         # Get coordinates
         xx = [x * w for x in self.xx]
         yy = [y * h for y in self.yy]
@@ -221,7 +221,7 @@ class SplineWidget(flx.CanvasWidget):
         else:
             xx = [xx[0] - (xx[1] - xx[0])] + xx + [xx[-1] - (xx[-2] - xx[-1])]
             yy = [yy[0] - (yy[1] - yy[0])] + yy + [yy[-1] - (yy[-2] - yy[-1])]
-        
+
         # Draw grid
         ctx.strokeStyle = '#eee'
         ctx.lineWidth = 1
@@ -235,7 +235,7 @@ class SplineWidget(flx.CanvasWidget):
             ctx.moveTo(x, 0)
             ctx.lineTo(x, h)
             ctx.stroke()
-        
+
         # Draw nodes
         ctx.fillStyle = '#acf'
         ctx.strokeStyle = '#000'
@@ -245,16 +245,16 @@ class SplineWidget(flx.CanvasWidget):
             ctx.arc(xx[i], yy[i], 9, 0, 6.2831)
             ctx.fill()
             ctx.stroke()
-        
+
         # Select interpolation function
         fun = self['factors_' + self.spline_type.lower()]
         if not fun:
             fun = lambda : (0, 1, 0, 0)
-        
+
         # Draw lines
-        
+
         for i in range(1, len(xx)-2):
-            
+
             ctx.lineCap = "round"
             ctx.lineWidth = 3
             ctx.strokeStyle = '#008'
@@ -263,13 +263,13 @@ class SplineWidget(flx.CanvasWidget):
                 if i - (support + 1) < self._current_node < i + support:
                     ctx.strokeStyle = '#08F'
                     ctx.lineWidth = 5
-            
+
             # Get coordinates of the four points
             x0, y0 = xx[i-1], yy[i-1]
             x1, y1 = xx[i+0], yy[i+0]
             x2, y2 = xx[i+1], yy[i+1]
             x3, y3 = xx[i+2], yy[i+2]
-            
+
             # Interpolate
             ctx.beginPath()
             # lineto = ctx.moveTo.bind(ctx)
@@ -279,19 +279,19 @@ class SplineWidget(flx.CanvasWidget):
                 f0, f1, f2, f3 = fun(t)
                 x = x0 * f0 + x1 * f1 + x2 * f2 + x3 * f3
                 y = y0 * f0 + y1 * f1 + y2 * f2 + y3 * f3
-                
+
                 lineto(x, y)
                 lineto = ctx.lineTo.bind(ctx)
-            
+
             ctx.stroke()
 
 
 class Splines(flx.Widget):
-   
+
     def init(self):
-        
+
         with flx.HBox():
-            
+
             with flx.VBox(flex=0, minsize=150):
                 self.b1 = flx.RadioButton(text='Linear')
                 self.b2 = flx.RadioButton(text='Basis')
@@ -305,23 +305,23 @@ class Splines(flx.Widget):
                 self.tension = flx.Slider(min=-0.5, max=1, value=0.5,
                                           text=lambda: 'Tension: {value}')
                 flx.Widget(flex=1)
-            
+
             with flx.VBox(flex=1):
                 flx.Label(text=GENERAL_TEXT, wrap=True, style='font-size: 12px;')
                 self.explanation = flx.Label(text=CARDINAL_TEXT, wrap=True,
                                              style='font-size: 12px;')
-                
+
                 self.spline = SplineWidget(flex=1,
                                            closed=lambda: closed.checked,
                                            tension=lambda: self.tension.value)
-        
+
     LINEAR_TEXT = LINEAR_TEXT
     BASIS_TEXT = BASIS_TEXT
     CARDINAL_TEXT = CARDINAL_TEXT
     CATMULLROM_TEXT = CATMULLROM_TEXT
     LAGRANGE_TEXT = LAGRANGE_TEXT
     LANCZOS_TEXT = LANCZOS_TEXT
-    
+
     @flx.reaction('b1.checked', 'b2.checked', 'b3.checked', 'b4.checked',
                     'b5.checked', 'b6.checked')
     def _set_spline_type(self, *events):
@@ -331,7 +331,7 @@ class Splines(flx.Widget):
         type = ev.source.text.replace(' ', '')
         self.spline.set_spline_type(type)
         self.explanation.set_text(self[type.upper() + '_TEXT'])
-    
+
     @flx.reaction
     def __show_hide_tension_slider(self):
         if self.spline.spline_type == 'CARDINAL':

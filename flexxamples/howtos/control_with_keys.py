@@ -7,7 +7,7 @@ a "current item". This example demonstrates how this can be used to control
 a tree widget with keyboard controls.
 
 The keyboard functionality is not added to the TreeWidget by default, because
-its usually not the desired behavior, and its not trivial how to deal with 
+its usually not the desired behavior, and its not trivial how to deal with
 consuming keys. Further, an application may want to control the tree widget
 even when it does not have focus.
 """
@@ -16,7 +16,7 @@ from flexx import flx
 
 
 class TreeWithControls(flx.TreeWidget):
-    """ Adds a key press handler to allow controlling the TreeWidget with 
+    """ Adds a key press handler to allow controlling the TreeWidget with
     the arrow keys, space, and enter.
     """
 
@@ -27,7 +27,7 @@ class TreeWithControls(flx.TreeWidget):
         if ev.key.startswith('Arrow'):
             e.preventDefault()
         return ev
-    
+
     @flx.reaction('key_down')
     def _handle_highlighting(self, *events):
         for ev in events:
@@ -57,22 +57,22 @@ class TreeWithControls(flx.TreeWidget):
 
 
 class KeyboardControlsTester(flx.Widget):
-    
+
     def init(self):
-        
+
         combo_options = ['Paris', 'New York', 'Enschede', 'Tokio']
-        
+
         with flx.HBox():
             self.tree = TreeWithControls(flex=1, max_selected=1)
             self.combo = flx.ComboBox(flex=1, options=combo_options, editable=True)
-        
+
         with self.tree:
             for cat in ('foo', 'bar', 'spam'):
                 with flx.TreeItem(text=cat):
                     for name in ('Martin', 'Kees', 'Hans'):
                         item = flx.TreeItem(title=name)
                         item.set_checked(cat=='foo' or None)
-    
+
     @flx.reaction('combo.text')
     def _combo_text_changed(self, *events):
         for ev in events:

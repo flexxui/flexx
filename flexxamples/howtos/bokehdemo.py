@@ -1,5 +1,5 @@
 # doc-export: BokehExample
-""" 
+"""
 Example demonstrating a Bokeh plot in Flexx. Includes client-side
 interaction with sliders.
 """
@@ -28,9 +28,9 @@ p3.line(t, np.cos(t))
 
 
 class BokehExample(flx.PyComponent):
-    
+
     def init(self):
-        
+
         with flx.HSplit(minsize=300) as self.widget:
             self.plot1 = flx.BokehWidget.from_plot(p1, title='Scatter')
             with flx.VFix(title='Sine'):
@@ -38,16 +38,16 @@ class BokehExample(flx.PyComponent):
                 with flx.Widget(style='overflow-y:auto;', flex=1):
                     self.plot2 = flx.BokehWidget.from_plot(p2)
                     self.plot3 = flx.BokehWidget.from_plot(p3)
-        
+
 
 class Controls(flx.FormLayout):
-    
+
     def init(self):
         self.amp = flx.Slider(title='Amplitude', max=2, value=1)
         self.freq = flx.Slider(title='Frequency', max=10, value=5)
         self.phase = flx.Slider(title='Phase', max=3, value=1)
-        
-        
+
+
     @flx.reaction
     def _update_sine(self):
         global window
@@ -61,7 +61,7 @@ class Controls(flx.FormLayout):
                 if ren.data_source:
                     ds = ren.data_source
                     break
-        
+
         # Update
         if ds:
             ds.data.y = [amp*window.Math.sin(x*freq+phase) for x in ds.data.x]

@@ -11,7 +11,7 @@ from flexx import app, event, ui
 class MyWidget(ui.Label):
     """ A Widget that reacts to key presses.
     """
-    
+
     CSS = """
     .flx-MyWidget {
         min-width: 10px;
@@ -21,17 +21,17 @@ class MyWidget(ui.Label):
         border-radius: 5px;
     }
     """
-    
+
     def init(self):
         index = self.__class__._count or 1
         self.__class__._count = index + 1
-        
+
         self._base_text = str(index) + ' ' + self.text
         color = '#77f', '7f7', 'f77', 'ff5', 'f5f', '5ff', '800', '080', '008'
         self.apply_style('background:#' + color[index-1])
         self.set_wrap(1)
         self.set_flex(1)
-    
+
     @event.reaction('key_down')
     def _on_key(self, *events):
         for ev in events:
@@ -53,7 +53,7 @@ class MyWidget(ui.Label):
                     MyWidget()
             elif ev.key == '[':
                 self.dispose()
-    
+
     @event.reaction('parent.mode', 'flex')
     def _update_text(self, *events):
         text = self._base_text + '<br>\n'
@@ -65,12 +65,12 @@ class MyWidget(ui.Label):
 class MyLayout(ui.HVLayout):
     """ A layout with some good initial values.
     """
-    
+
     def init(self, ori):
         self.set_flex(1)
         self.set_orientation(ori)
         self.set_padding(8)  # so we can better see the structure
-    
+
     @event.reaction
     def _track_orientation(self):
         if 'h' in self.orientation:
@@ -88,12 +88,12 @@ the layout:<br>
 """
 
 class TestApp(ui.Widget):
-    
+
     def init(self):
-        
+
         with MyLayout('v') as self.s:
             self.w1 = MyWidget(text=text)
-            
+
             with MyLayout('h') as self.s:
                 self.w2 = MyWidget(text='hello world!')
                 with MyLayout('v'):
@@ -106,7 +106,7 @@ class TestApp(ui.Widget):
                                        style='min-width:100px; min-height:100px')
                     self.w7 = MyWidget(text='min-size: 150',
                                        style='min-width:150px; min-height:150px')
-        
+
             with ui.Widget(flex=1):
                 with MyLayout('h'):
                     self.w8 = MyWidget()

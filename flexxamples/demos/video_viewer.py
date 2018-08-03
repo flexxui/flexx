@@ -44,14 +44,14 @@ class VideoViewer(flx.Widget):
     server's computer, plus a few online videos. Note that not all videos
     may be playable in HTML5.
     """
-    
+
     def init(self):
-        
+
         with flx.HSplit():
             with flx.TreeWidget(max_selected=1, flex=1) as self.videolist:
                 for name in sorted(videos):
                     flx.TreeItem(text=name)
-            
+
             self.player = flx.VideoWidget(flex=5)
 
     @flx.reaction('videolist.children*.selected')

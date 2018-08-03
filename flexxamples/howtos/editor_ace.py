@@ -18,7 +18,7 @@ flx.assets.associate_asset(__name__, base_url + 'theme-solarized_dark.js')
 class CodeEditor(flx.Widget):
     """ A CodeEditor widget based on Ace.
     """
-    
+
     CSS = """
     .flx-CodeEditor > .ace {
         width: 100%;
@@ -34,7 +34,7 @@ class CodeEditor(flx.Widget):
         self.ace.navigateFileEnd()  # otherwise all lines highlighted
         self.ace.setTheme("ace/theme/solarized_dark")
         self.ace.getSession().setMode("ace/mode/python")
-        
+
     @flx.reaction('size')
     def __on_size(self, *events):
         self.ace.resize()

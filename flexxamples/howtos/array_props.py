@@ -9,22 +9,22 @@ from flexx import event
 
 
 class Test1(event.Component):
-    
+
     data = event.ListProp([], doc='An array property')
-    
+
     @event.action
     def add(self, i):
         self._mutate_data([i], 'insert', len(self.data))
 
 
 class Test2(event.Component):
-    
+
     other = event.ComponentProp(None, settable=True)
-    
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.data = []  # just a local variable, not a property
-    
+
     @event.reaction('other.data')
     def track_data(self, *events):
         for ev in events:
@@ -38,10 +38,10 @@ class Test2(event.Component):
                 self.data[ev.index:ev.index+len(ev.objects)] = ev.objects
             else:
                 raise NotImplementedError(ev.mutation)
-            
+
             # The above shows all the cases that one should handle to cover
             # all possible array mutations. If you just want to keep an
-            # array in sync, you can just use: 
+            # array in sync, you can just use:
             #     event.mutate_array(self.data, ev)
             # which would work in JS and Python, on normal lists and ndarrays.
 

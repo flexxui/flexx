@@ -21,22 +21,22 @@ from flexx import app, event, ui
 
 
 class SpeedTest(app.PyComponent):
-    
+
     def init(self):
         self.widget = SpeedTestWidget(self)
-    
+
     @event.action
     def echo(self, data):
         self.widget.receive_data(data)
 
 
 class SpeedTestWidget(ui.Widget):
-        
+
     def init(self, pycomp):
         self.pycomp = pycomp
         self._start_time = 0
         self._start_times = []
-        
+
         with ui.VBox():
             with ui.HBox() as self.buttons:
                 ui.Button(text='1 x 1 MiB roundtrip')
@@ -48,14 +48,14 @@ class SpeedTestWidget(ui.Widget):
             self.progress = ui.ProgressBar()
             self.status = ui.Label(text='Status: waiting for button press ...',
                                    wrap=1, flex=1, style='overflow-y:scroll;')
-    
-    
+
+
     @event.reaction('buttons.children*.pointer_down')
     def run_test(self, *events):
         global window, perf_counter
         self.status.set_text('Test results: ')
         self.progress.set_value(0)
-        
+
         tests = []
         for ev in events:
             if isinstance(ev.source, ui.Button):
@@ -63,19 +63,19 @@ class SpeedTestWidget(ui.Widget):
                 n = int(ev.source.text.split(' ')[0])
                 for i in range(n):
                     tests.append(sze)
-        
+
         self.progress.set_max(len(tests))
         self._start_time = perf_counter()
         for n in tests:
             data = window.Uint8Array(n * 1024 * 1024).buffer
             self.send_data(data)
-    
+
     @event.action
     def send_data(self, data):
         global perf_counter
         self._start_times.append(perf_counter())
         self.pycomp.echo(data)
-    
+
     @event.action
     def receive_data(self, data):
         global perf_counter
@@ -84,7 +84,7 @@ class SpeedTestWidget(ui.Widget):
         text = 'Received %i MiB in %s seconds.' % (mib, str(t)[:5])
         self.status.set_html(self.status.html + '  ' + text)
         self.progress.set_value(self.progress.value + 1)
-        
+
         if len(self._start_times) == 0:
             t = perf_counter() - self._start_time
             text = 'Total time %s.' % str(t)[:5]

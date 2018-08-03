@@ -11,7 +11,7 @@ This app can be exported to a standalone HTML document.
 
 from flexx import flx
 
-# Raw data obtained from 
+# Raw data obtained from
 # http://cdn.knmi.nl/knmi/map/page/klimatologie/gegevens/maandgegevens/mndgeg_290_tg.txt
 
 raw_data = """
@@ -99,7 +99,7 @@ STN,YYYY,   JAN,   FEB,   MAR,   APR,   MAY,   JUN,   JUL,   AUG,   SEP,   OCT, 
 290,2017,     2,    44,    85,    79,   149,   179,   180,   172,   135,   126,    63,    42,   105
 """
 
-months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 
+months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul',
             'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'total']
 
 def parse_data(raw_data):
@@ -116,9 +116,9 @@ years, data = parse_data(raw_data)
 
 
 class Twente(flx.Widget):
-    
+
     def init(self):
-        
+
         with flx.HFix():
             flx.Widget(flex=1)
             with flx.VBox(flex=0, minsize=200):
@@ -140,7 +140,7 @@ class Twente(flx.Widget):
         smoothing = self.smoothing.value
         yy1 = data[self.month.selected_index]
         yy2 = []
-        
+
         sm2 = int(smoothing / 2)
         for i in range(len(yy1)):
             val = 0
@@ -152,7 +152,7 @@ class Twente(flx.Widget):
                 yy2.append(yy1[i])
             else:
                 yy2.append(val / n)
-        
+
         self.plot.set_data(self.plot.xdata, yy2)
 
 

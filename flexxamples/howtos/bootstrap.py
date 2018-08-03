@@ -1,6 +1,6 @@
 # doc-export: Example
 """
-Example demonstrating the use of Bootstrap to style element and do layout. 
+Example demonstrating the use of Bootstrap to style element and do layout.
 """
 
 from flexx import flx
@@ -15,7 +15,7 @@ class Example(flx.Widget):
     persons = flx.TupleProp((), doc=""" People to show cards for""")
     first_name = flx.StringProp('', settable=True)
     last_name = flx.StringProp('', settable=True)
-    
+
     @flx.action
     def add_person(self, name, info):
         """ Add a person to our stack.
@@ -31,7 +31,7 @@ class Example(flx.Widget):
         """ This function gets automatically called when needed; Flexx is aware
         of what properties are used here.
         """
-        
+
         # Create form elements
         form_nodes = [
             flx.create_element('div',
@@ -61,7 +61,7 @@ class Example(flx.Widget):
                 'Submit'
                 ),
             ]
-        
+
         # Create virtual DOM nodes for all persons. We use bootstrap cards
         card_nodes = []
         for name, info in self.persons:
@@ -72,7 +72,7 @@ class Example(flx.Widget):
                     )
                 )
             card_nodes.append(person_node)
-        
+
         # Compose finaly DOM tree
         return flx.create_element('div', {},
                     flx.create_element('div',

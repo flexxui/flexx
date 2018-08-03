@@ -11,7 +11,7 @@ from flexx import flx
 
 
 class ThemedForm(flx.Widget):
-    
+
     CSS = """
     .flx-Button {
         background: #9d9;
@@ -20,9 +20,9 @@ class ThemedForm(flx.Widget):
         border: 2px solid #9d9;
     }
     """
-    
+
     def init(self):
-        
+
         with flx.HFix():
             with flx.FormLayout() as self.form:
                 self.b1 = flx.LineEdit(title='Name:', text='Hola')
