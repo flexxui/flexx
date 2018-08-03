@@ -2,6 +2,8 @@
 Test actions.
 """
 
+import sys
+
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
 from flexx.event.both_tester import run_in_both, this_is_js
 
@@ -395,8 +397,11 @@ def test_action_python_only():
     # Action decorator needs proper callable
     with raises(TypeError):
         event.action(3)
-    with raises((TypeError, ValueError)):  # CPython, Pypy
-        event.action(isinstance)
+    if '__pypy__' in sys.builtin_module_names:
+        pass  # skip
+    else:
+        with raises(TypeError):
+            event.action(isinstance)
 
     # Check type of the instance attribute
     assert isinstance(m.set_foo, event._action.Action)

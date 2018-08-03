@@ -2,6 +2,8 @@
 Test event emitters.
 """
 
+import sys
+
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
 from flexx.event.both_tester import run_in_both, this_is_js
 
@@ -202,8 +204,11 @@ def test_emitter_python_only():
     # Emitter decorator needs proper callable
     with raises(TypeError):
         event.emitter(3)
-    with raises((TypeError, ValueError)):  # CPython, Pypy
-        event.emitter(isinstance)
+    if '__pypy__' in sys.builtin_module_names:
+        pass  # skip
+    else:
+        with raises(TypeError):
+            event.emitter(isinstance)
 
     # Check type of the instance attribute
     assert isinstance(m.foo, event._emitter.Emitter)
