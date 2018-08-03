@@ -23,7 +23,7 @@ matrix:
         - python: "3.6"
           env: TEST_UNIT=0 TEST_DOCS=1
         #
-        - python: "pypy3"
+        - python: "pypy3.5 "
           env: TEST_UNIT=1
         - python: "3.5"
           env: TEST_UNIT=1 TEST_INSTALL=1
@@ -67,7 +67,7 @@ install:
     - pip install invoke
     - if [ "${TEST_UNIT}" == "1" ]; then
         pip install pytest-cov;
-        pip install tornado pscript webruntime dialite;
+        pip install tornado pscript>=0.5.6 webruntime dialite;
         pip install selenium;
       fi;
     - if [ "${TEST_INSTALL}" == "1" ]; then
@@ -75,7 +75,7 @@ install:
       fi;
     - if [ "${TEST_DOCS}" == "1" ]; then
         pip install sphinx;
-        pip install tornado pscript webruntime dialite;
+        pip install tornado pscript>=0.5.6 webruntime dialite;
       fi;
     - if [ "${TEST_STYLE}" == "1" ]; then
         pip install pycodestyle;
