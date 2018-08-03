@@ -7,6 +7,8 @@ Flexx
 
 <i>Notice: Flexx has recently been [refactored](https://github.com/zoofIO/flexx/pull/408), improving Flexx on many fronts (e.g. make it scale better). Note that the API has changed in several ways though! We're now moving towards a release that brings us to beta status.</i>
 
+Want to stay up-to-date about Flexx? Subscribe to the [NEWS issue](https://github.com/flexxui/flexx/issues/477).
+
 Introduction
 ------------
 
