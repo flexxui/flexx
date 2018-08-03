@@ -22,11 +22,11 @@ class MyObject1(event.Component):
 
     @event.reaction('!a')
     def r1(self, *events):
-        print('r1 ' + ' '.join([ev.type for ev in events]))
+        print('r1:' + ' '.join([ev.type for ev in events]))
 
     @event.reaction('!a', '!b')
     def r2(self, *events):
-        print('r2 ' + ' '.join([ev.type for ev in events]))
+        print('r2:' + ' '.join([ev.type for ev in events]))
 
     @event.reaction('!c')
     def r3(self, *events):
@@ -36,10 +36,10 @@ class MyObject1(event.Component):
 @run_in_both(MyObject1)
 def test_reaction_order1():
     """
-    r1 a a
-    r2 a a
-    r1 a a
-    r2 a a
+    r1:a a
+    r2:a a
+    r1:a a
+    r2:a a
     """
     m = MyObject1()
 
@@ -56,11 +56,11 @@ def test_reaction_order1():
 @run_in_both(MyObject1)
 def test_reaction_order2():
     """
-    r1 a a
-    r2 a a b b a a
-    r1 a a
-    r1 a
-    r2 a
+    r1:a a
+    r2:a a b b a a
+    r1:a a
+    r1:a
+    r2:a
     """
     m = MyObject1()
 
@@ -79,8 +79,8 @@ def test_reaction_order2():
 @run_in_both(MyObject1)
 def test_reaction_order3():
     """
-    r2 b a a
-    r1 a a
+    r2:b a a
+    r1:a a
     """
     m = MyObject1()
 
@@ -95,8 +95,8 @@ def test_reaction_order3():
 @run_in_both(MyObject1)
 def test_reaction_order4():
     """
-    r2 b a a
-    r1 a a
+    r2:b a a
+    r1:a a
     """
     m = MyObject1()
 
@@ -263,10 +263,10 @@ class MyObjectSub(MyObject1):
 @run_in_both(MyObjectSub)
 def test_reaction_overloading1():
     """
-    r1 a a
-    r2 a a
+    r1:a a
+    r2:a a
     -- r2 sub
-    r2 b b
+    r2:b b
     -- r2 sub
     """
 
@@ -414,8 +414,8 @@ def test_reaction_as_decorator_of_other_cls():
 @run_in_both(MyObject1)
 def test_reaction_calling():
     """
-    r1
-    r2
+    r1:
+    r2:
     end
     """
     m = MyObject1()
