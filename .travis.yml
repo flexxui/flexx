@@ -23,7 +23,7 @@ matrix:
         - python: "3.6"
           env: TEST_UNIT=0 TEST_DOCS=1
         #
-        - python: "pypy3.5 "
+        - python: "pypy3.5"
           env: TEST_UNIT=1
         - python: "3.5"
           env: TEST_UNIT=1 TEST_INSTALL=1
