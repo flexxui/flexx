@@ -358,16 +358,27 @@ class Session:
         if data is None:
             data = self._store.get_data(name)
         return data
-
-    def _export_data(self, dirname, clear=False):
-        """ Export all assets and data specific to this session.
-        Private method, used by app.export().
+    
+    def _dump_data(self):
+        """ Get a dictionary that contains all data specific to this session.
+        The keys represent relative paths, the values are all bytes.
+        Private method, used by App.dump().
         """
-        # Note that self.id will have been set to the app name.
-        assets = []
-        data = [(name, self.get_data(name)) for name in self.get_data_names()]
-        export_assets_and_data(assets, data, dirname, self.id, clear)
-        logger.info('Exported data for %r to %r.' % (self.id, dirname))
+        d = {}
+        for fname in self.get_data_names():
+            d['_data/{}/{}'.format(self.id, fname)] = self.get_data(fname)
+        return d
+
+    # def _export_data(self, dirname, clear=False):
+    #     """ Export all data specific to this session.
+    #     Private method, used by App.export().
+    #     """
+    #     # todo: use the above
+    #     # Note that self.id will have been set to the app name.
+    #     assets = []
+    #     data = [(name, self.get_data(name)) for name in self.get_data_names()]
+    #     export_assets_and_data(assets, data, dirname, self.id, clear)
+    #     logger.info('Exported data for %r to %r.' % (self.id, dirname))
 
     ## Keeping track of component objects
 
@@ -698,10 +709,11 @@ def send_ping_later(session):
 
 
 ## Functions to get page
-# These could be methods, but theses are only for internal use
+# These could be methods, but are only for internal use
 
 def get_page(session):
     """ Get the string for the HTML page to render this session's app.
+    Not a lot; all other JS and CSS assets are pushed over the websocket.
     """
     css_assets = [assetstore.get_asset('reset.css')]
     js_assets = [assetstore.get_asset('flexx-core.js')]
@@ -710,10 +722,17 @@ def get_page(session):
 
 def get_page_for_export(session, commands, link=0):
     """ Get the string for an exported HTML page (to run without a server).
+    In this case, there is no websocket to push JS/CSS assets over; these
+    need to be included inside or alongside the main html page.
     """
+    # This function basically collects all assets that the session needs,
+    # creates a special -export.js asset that executes the given commands,
+    # and puts it al together using _get_page().
+    
     # We start as a normal page ...
     css_assets = [assetstore.get_asset('reset.css')]
     js_assets = [assetstore.get_asset('flexx-core.js')]
+    
     # Get all the used modules
     modules = [assetstore.modules[name] for name in session.present_modules]
     f = lambda m: (m.name.startswith('__main__'), m.name)
@@ -735,6 +754,7 @@ def get_page_for_export(session, commands, link=0):
             css_assets.append(assetstore.get_asset(mod.name + '.css'))
     for mod in modules:
         js_assets.append(assetstore.get_asset(mod.name + '.js'))
+    
     # Create asset for launching the app (commands that normally get send
     # over the websocket)
     lines = []
@@ -755,12 +775,14 @@ def get_page_for_export(session, commands, link=0):
     # Create a session asset for it, "-export.js" is always embedded
     export_asset = Asset('flexx-export.js', '\n'.join(lines))
     js_assets.append(export_asset)
-
+    
+    # Combine it all
     return _get_page(session, js_assets, css_assets, link, True)
 
 
 def _get_page(session, js_assets, css_assets, link, export):
-    """ Compose index page.
+    """ Compose index page. Depending on the value of link and the types
+    of assets, the assets are either embedded or linked.
     """
     pre_path = '_assets' if export else '/flexx/assets'
 
@@ -772,11 +794,12 @@ def _get_page(session, js_assets, css_assets, link, export):
                 html = asset.to_html('{}', link)
             else:
                 if asset.name.endswith(('-info.js', '-export.js')):
+                    # Special case, is always embedded, see get_page_for_export()
                     html = asset.to_html('', 0)
                 else:
                     html = asset.to_html(pre_path + '/shared/{}', link)
             codes.append(html)
-            if export and assets is js_assets:
+            if export and assets is js_assets:  # todo: spin ok?
                 codes.append('<script>window.flexx.spin();</script>')
         codes.append('')  # whitespace between css and js assets
 
