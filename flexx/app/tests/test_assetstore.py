@@ -1,7 +1,5 @@
 """
 Tests for Asset AssetStore and Session.
-
-Note that our docs is very much a test for our export mechanism.
 """
 
 import os
@@ -162,44 +160,6 @@ def test_not_allowing_local_files():
     if sys.version_info > (3, ):
         with raises(TypeError):
             s.add_shared_data('testfile4', filename)
-
-
-def test_asset_store_export():
-
-    dir = os.path.join(tempfile.gettempdir(), 'flexx_export')
-    if os.path.isdir(dir):
-        shutil.rmtree(dir)
-
-    # os.mkdir(dir) -> No, export can create this dir!
-
-    store = AssetStore()
-    store.update_modules()
-
-    # Getting an asset marks them as used
-    # store.get_asset('flexx.ui.js')
-    store.get_asset('flexx.app.js')
-    store.get_asset('flexx.js')
-    store.get_asset('reset.css')
-
-    store.add_shared_data('foo.png', b'x')
-
-    s = Session('', store)
-    s.add_data('bar.png', b'x')
-
-    store.export(dir)
-    s._export_data(dir)
-    assert len(os.listdir(dir)) == 2
-    assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'reset.css'))
-    # assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.ui.js'))
-    assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.app.js'))
-    assert os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.js'))
-    # assert not os.path.isfile(os.path.join(dir, '_assets', 'shared', 'flexx.ui._widget.js'))
-    assert os.path.isfile(os.path.join(dir, '_data', 'shared', 'foo.png'))
-    assert os.path.isfile(os.path.join(dir, '_data', s.id, 'bar.png'))
-
-    # Will only create a dir that is one level deep
-    with raises(ValueError):
-        store.export(os.path.join(dir, 'not', 'exist'))
 
 
 run_tests_if_main()

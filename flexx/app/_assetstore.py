@@ -4,9 +4,6 @@ is to provide the assets (JavaScript and CSS files) and data (images,
 etc.) needed by the applications.
 """
 
-import os
-import shutil
-
 from pscript import create_js_module, get_all_std_names, get_full_std_lib
 from pscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
 
@@ -172,39 +169,6 @@ td,th{padding:0}
 """.lstrip()
 
 
-# def export_assets_and_data(assets, data, dirname, app_id, clear=False):
-#     """ Export the given assets (list of Asset objects) and data (list of
-#     (name, value) tuples to a file system structure.
-#     """
-#     # Normalize and check - we create the dir if its inside an existing dir
-#     dirname = os.path.abspath(os.path.expanduser(dirname))
-#     if clear and os.path.isdir(dirname):
-#         shutil.rmtree(dirname)
-#     if not os.path.isdir(dirname):
-#         if os.path.isdir(os.path.dirname(dirname)):
-#             os.mkdir(dirname)
-#         else:
-#             raise ValueError('dirname %r for export is not a directory.' % dirname)
-# 
-#     # Export all assets
-#     for asset in assets:
-#         filename = os.path.join(dirname, '_assets', app_id, asset.name)
-#         dname = os.path.dirname(filename)
-#         if not os.path.isdir(dname):
-#             os.makedirs(dname)
-#         with open(filename, 'wb') as f:
-#             f.write(asset.to_string().encode())
-# 
-#     # Export all data
-#     for fname, d in data:
-#         filename = os.path.join(dirname, '_data', app_id, fname)
-#         dname = os.path.dirname(filename)
-#         if not os.path.isdir(dname):
-#             os.makedirs(dname)
-#         with open(filename, 'wb') as f:
-#             f.write(d)
-
-
 class AssetStore:
     """
     Provider of shared assets (CSS, JavaScript) and data (images, etc.).
@@ -224,7 +188,7 @@ class AssetStore:
         self._assets = {}
         self._associated_assets = {}
         self._data = {}
-        self._used_assets = set()  # between all sessions (for export)
+        self._used_assets = set()  # between all sessions (for dump)
 
         # Create asset to reset CSS
         asset_reset = Asset('reset.css', RESET)
@@ -385,7 +349,7 @@ class AssetStore:
 
                 * The source code.
                 * A URL (str starting with 'http://' or 'https://'),
-                  making this a "remote asset". Note that ``app.export()``
+                  making this a "remote asset". Note that ``App.export()``
                   provides control over how (remote) assets are handled.
                 * A funcion that should return the source code, and which is
                   called only when the asset is used. This allows defining
@@ -404,8 +368,7 @@ class AssetStore:
             raise ValueError('Asset %r already registered.' % asset.name)
         self._assets[asset.name] = asset
         # Returned url is relative so that it also works in exported apps.
-        # The server will redirect this to /flexx/assets/shared/...
-        return '_assets/shared/' + asset.name
+        return 'flexx/assets/shared/' + asset.name
 
     def associate_asset(self, mod_name, asset_name, source=None):
         """ Associate an asset with the given module.
@@ -441,7 +404,7 @@ class AssetStore:
         if asset.name not in [a.name for a in assets]:
             assets.append(asset)
             assets.sort(key=lambda x: x.i)  # sort by instantiation time
-        return '_assets/shared/' + asset.name
+        return 'flexx/assets/shared/' + asset.name
 
     def get_associated_assets(self, mod_name):
         """ Get the names of the assets associated with the given module name.
@@ -471,8 +434,8 @@ class AssetStore:
         if not isinstance(data, bytes):
             raise TypeError('add_shared_data() data must be bytes.')
         self._data[name] = data
-        return '_data/shared/%s' % name  # relative path so it works /w export
-    
+        return 'flexx/data/shared/%s' % name  # relative path so it works /w export
+
     def _dump_data(self):
         """ Get a dictionary that contains all shared data. The keys
         represent relative paths, the values are all bytes.
@@ -480,10 +443,10 @@ class AssetStore:
         """
         d = {}
         for fname in self.get_data_names():
-            d['_data/shared/' + fname] = self.get_data(fname)
+            d['flexx/data/shared/' + fname] = self.get_data(fname)
         return d
-    
-    def _dump_assets(self):
+
+    def _dump_assets(self, also_remote=True):
         """ Get a dictionary that contains assets used by any session.
         The keys represent relative paths, the values are all bytes.
         Used by App.dump().
@@ -491,24 +454,10 @@ class AssetStore:
         d = {}
         for name in self._used_assets:
             asset = self._assets[name]
-            d['_assets/shared/' + asset.name] = asset.to_string().encode()
+            if asset.remote and not also_remote:
+                continue
+            d['flexx/assets/shared/' + asset.name] = asset.to_string().encode()
         return d
-    
-    # def export(self, dirname, clear=False):
-    #     """ Write all shared data and used assets to the given directory.
-
-   ##       Parameters:
-    #         dirname (str): the directory to export to. The toplevel
-    #             directory is created if necessary.
-    #         clear (bool): if given and True, the directory is first cleared.
-    #     """
-    #     # todo: use dump
-    #     
-    #     assets = [self._assets[name] for name in self.get_asset_names()]
-    #     assets = [self._assets[name] for name in self._used_assets]
-    #     data = [(name, self.get_data(name)) for name in self.get_data_names()]
-    #     export_assets_and_data(assets, data, dirname, 'shared', clear)
-    #     logger.info('Exported shared assets and data to %r.' % dirname)
 
 
 # Our singleton asset store

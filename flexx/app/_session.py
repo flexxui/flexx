@@ -18,7 +18,7 @@ from ..event._component import new_type
 
 from ._component2 import PyComponent, JsComponent, AppComponentMeta
 from ._asset import Asset, Bundle, solve_dependencies
-from ._assetstore import AssetStore, export_assets_and_data, INDEX
+from ._assetstore import AssetStore, INDEX
 from ._assetstore import assets as assetstore
 from ._clientcore import serializer
 from . import logger
@@ -334,7 +334,7 @@ class Session:
         if not isinstance(data, bytes):
             raise TypeError('Session.add_data() data must be bytes.')
         self._data[name] = data
-        return '_data/%s/%s' % (self.id, name)  # relative path so it works /w export
+        return 'flexx/data/%s/%s' % (self.id, name)  # relative path for  export
 
     def remove_data(self, name):
         """ Remove the data associated with the given name. If you need this,
@@ -358,7 +358,7 @@ class Session:
         if data is None:
             data = self._store.get_data(name)
         return data
-    
+
     def _dump_data(self):
         """ Get a dictionary that contains all data specific to this session.
         The keys represent relative paths, the values are all bytes.
@@ -366,19 +366,8 @@ class Session:
         """
         d = {}
         for fname in self.get_data_names():
-            d['_data/{}/{}'.format(self.id, fname)] = self.get_data(fname)
+            d['flexx/data/{}/{}'.format(self.id, fname)] = self.get_data(fname)
         return d
-
-    # def _export_data(self, dirname, clear=False):
-    #     """ Export all data specific to this session.
-    #     Private method, used by App.export().
-    #     """
-    #     # todo: use the above
-    #     # Note that self.id will have been set to the app name.
-    #     assets = []
-    #     data = [(name, self.get_data(name)) for name in self.get_data_names()]
-    #     export_assets_and_data(assets, data, dirname, self.id, clear)
-    #     logger.info('Exported data for %r to %r.' % (self.id, dirname))
 
     ## Keeping track of component objects
 
@@ -728,11 +717,11 @@ def get_page_for_export(session, commands, link=0):
     # This function basically collects all assets that the session needs,
     # creates a special -export.js asset that executes the given commands,
     # and puts it al together using _get_page().
-    
+
     # We start as a normal page ...
     css_assets = [assetstore.get_asset('reset.css')]
     js_assets = [assetstore.get_asset('flexx-core.js')]
-    
+
     # Get all the used modules
     modules = [assetstore.modules[name] for name in session.present_modules]
     f = lambda m: (m.name.startswith('__main__'), m.name)
@@ -754,7 +743,7 @@ def get_page_for_export(session, commands, link=0):
             css_assets.append(assetstore.get_asset(mod.name + '.css'))
     for mod in modules:
         js_assets.append(assetstore.get_asset(mod.name + '.js'))
-    
+
     # Create asset for launching the app (commands that normally get send
     # over the websocket)
     lines = []
@@ -775,7 +764,7 @@ def get_page_for_export(session, commands, link=0):
     # Create a session asset for it, "-export.js" is always embedded
     export_asset = Asset('flexx-export.js', '\n'.join(lines))
     js_assets.append(export_asset)
-    
+
     # Combine it all
     return _get_page(session, js_assets, css_assets, link, True)
 
@@ -784,7 +773,7 @@ def _get_page(session, js_assets, css_assets, link, export):
     """ Compose index page. Depending on the value of link and the types
     of assets, the assets are either embedded or linked.
     """
-    pre_path = '_assets' if export else '/flexx/assets'
+    pre_path = 'flexx/assets' if export else '/flexx/assets'  # relative / abs
 
     codes = []
 
