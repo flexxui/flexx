@@ -3,6 +3,7 @@
 
 import os
 import json
+import shutil
 from types import ModuleType
 import flexx
 from flexx import ui, app
@@ -42,7 +43,13 @@ def get_notebook_list():
 
 def main():
     
+    # Get output dir and ensure that it is empty
+    # Upon App.export() we do not overwrite, because all examples share
+    # several common assets. This safes a lot of time.
     output_dir = os.path.join(DOC_DIR, 'examples')
+    if os.path.isdir(output_dir):
+        shutil.rmtree(output_dir)
+    os.mkdir(output_dir)
     
     # Collect examples
     examples = {}

@@ -259,8 +259,8 @@ class AppHandler(FlexxHandler):
     def _get_app(self, app_name, path):
         # Allow serving data/assets relative to app so that data can use
         # relative paths just like exported apps.
-        if path.startswith(('_data/', '_assets/')):
-            return self.redirect('/flexx/' + path[1:])
+        if path.startswith(('flexx/data/', 'flexx/assets/')):
+            return self.redirect('/' + path)
 
         # Get case-corrected app name if the app is known
         correct_app_name = manager.has_app_name(app_name)

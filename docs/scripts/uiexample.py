@@ -87,7 +87,7 @@ def create_ui_example(filename, to_root, height=300, source=None):
     
     # Export
     try:
-        app.export(m.__dict__[class_name], filename_abs, link=2, write_shared=False)
+        app.export(m.__dict__[class_name], filename_abs, link=2, overwrite=False)
     except Exception as err:
         err_text = str(err)
         msg = 'Example not generated. <pre>%s</pre>' % err_text
@@ -160,7 +160,7 @@ class UIExampleDirective(Directive):
             except Exception:
                 height = 300
             else:
-                 code = code.split('\n', 1)[1].strip()
+                code = code.split('\n', 1)[1].strip()
             
             # Code block
             literal = nodes.literal_block(code, code)
@@ -188,10 +188,6 @@ def setup(Sphynx):
 
 def finish(Sphynx, *args):
     
-    # Export assets
-    from flexx import app
-    app.assets.export(os.path.join(HTML_DIR, 'examples'))
-
     # Write overview page that contains *all* examples
     parts = []
     for class_name, mod_name, fname in all_examples:

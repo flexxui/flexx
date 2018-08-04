@@ -167,16 +167,14 @@ class App:
             runtime = config.webruntime.strip('!')
         session._runtime = webruntime.launch(url, runtime=runtime, **runtime_kwargs)
         return session.app
-    
+
     def dump(self, fname=None, link=0):
         """ Get a dictionary of web assets that statically represents the app.
-        
-        The dictionary contains at least one "html file". Any session-specific
+
+        The returned dict contains at least one "html file". Any session-specific
         or shared data is also included. If link is 2 or 3, all shared assets
-        are included too (because the main document links to them). An app that
-        contains no data, can thus be dumped to a single html document by
-        setting link to 0 or 1.
-        
+        are included too (because the main document links to them).
+
         Arguments:
             fname (str, optional): the name of the main html asset.
                 If not given or None, the name of the component class
@@ -188,24 +186,24 @@ class App:
                 * 1: normal assets are embedded, remote assets remain remote.
                 * 2: all assets are linked (as separate files).
                 * 3: normal assets are linked, remote assets remain remote.
-        
+
         Returns:
             dict: A collection of assets.
         """
-        
+
         # Get asset name
         if fname is None:
             if self.name in ('__main__', ''):
                 fname = 'index.html'
             else:
                 fname = self.name.lower() + '.html'
-        
+
         # Validate fname
         if os.path.basename(fname) != fname:
             raise ValueError('App.dump() fname must not contain directory names.')
         elif not fname.lower().endswith(('.html', 'htm', '.hta')):
-            raise ValueError('Invalid extension for dumping %r'.format(fname))
-        
+            raise ValueError('Invalid extension for dumping {}'.format(fname))
+
         # We need to serve the app, i.e. notify the mananger about this app
         if not self._is_served:
             name = fname.split('.')[0].replace('-', '_').replace(' ', '_')
@@ -231,74 +229,74 @@ class App:
                         'not work in exported apps.')
 
         d = {}
-        
+
         # Get main HTML page
         html = get_page_for_export(session, exporter.commands, link)
         if fname.lower().endswith('.hta'):
             hta_tag = '<meta http-equiv="x-ua-compatible" content="ie=edge" />'
             html = html.replace('<head>', '<head>\n    ' + hta_tag, 1)
         d[fname] = html.encode()
-        
+
         # Add shares assets if we link to it from the main page
         if link in (2, 3):
-            d.update(assets._dump_assets())
-        
+            d.update(assets._dump_assets(link==2))  # also_remote if link==2
+
         # Add session specific, and shared data
         d.update(session._dump_data())
         d.update(assets._dump_data())
-        
+
         return d
-    
-    def export(self, filename, link=0):
+
+    def export(self, filename, link=0, overwrite=True):
         """ Export this app to a static website.
+
+        Also see dump(). An app that contains no data, can be exported to a
+        single html document by setting link to 0 or 1.
 
         Arguments:
             filename (str): Path to write the HTML document to.
                 If the filename ends with .hta, a Windows HTML Application is
                 created. If a directory is given, the app is exported to
-                index.html inside that directory.
+                appname.html in that directory.
             link (int): whether to link (JS and CSS) assets or embed them:
                 * 0: all assets are embedded (default).
                 * 1: normal assets are embedded, remote assets remain remote.
                 * 2: all assets are linked (as separate files).
                 * 3: normal assets are linked, remote assets remain remote.
-            write_shared (bool): if True (default) will also write shared assets
-                when linking to assets. This can be set to False when
-                exporting multiple apps to the same location. The shared assets can
-                then be exported once using ``app.assets.export(dirname)``.
-
-        Returns:
-            str: The resulting html. If a filename was specified this returns None.
-
+            overwrite (bool, optional): if True (default) will overwrite files
+                that already exist. Otherwise existing files are skipped.
+                The latter makes it possible to efficiently export a series of
+                apps to the same directory and have them share common assets.
         """
-        
+
         # Derive dirname and app name
         if not isinstance(filename, str):
             raise ValueError('str filename required, use dump() for in-memory export.')
         filename = os.path.abspath(os.path.expanduser(filename))
-        if os.path.isdir(filename) or filename.endswith(('/', '\\')):
+        if (
+                os.path.isdir(filename) or
+                filename.endswith(('/', '\\')) or
+                '.' not in os.path.basename(filename)
+                ):
             dirname = filename
             fname = None
         else:
             dirname, fname = os.path.split(filename)
-        
+
         # Collect asset dict
         d = self.dump(fname, link)
-        
-        # # Warn if this app has data and is meant to be run standalone
-        # if link in (0, 1) and session.get_data_names():
-        #     logger.warn('Exporting app with embedded assets, '
-        #                 'but it has registered data.')
-        
+
         # Write all assets to file
         for fname, blob in d.items():
             filename = os.path.join(dirname, fname)
+            if not overwrite and os.path.isfile(filename):
+                continue
             dname = os.path.dirname(filename)
             if not os.path.isdir(dname):
                 os.makedirs(dname)
             with open(filename, 'wb') as f:
                 f.write(blob)
-        
+
         app_type = 'standalone app' if len(d) == 1 else 'app'
         logger.info('Exported %s to %r' % (app_type, filename))
 
@@ -318,6 +316,7 @@ class App:
             url (str): The url to POST the app to. If None (default),
                 the default Flexx live website url will be used.
         """
+        # todo: also use dump
         # Export to disk
         dirname = os.path.join(tempfile.gettempdir(), 'flexx_exports', name)
         if os.path.isdir(dirname):
