@@ -4,6 +4,7 @@ Small sphinx extension to show a UI example + result
 
 import os
 import sys
+import shutil
 import hashlib
 import warnings
 import subprocess
@@ -182,8 +183,9 @@ def setup(Sphynx):
     Sphynx.connect('build-finished', finish)
     
     examples_dir = os.path.join(HTML_DIR, 'examples')
-    if not os.path.isdir(examples_dir):
-        os.makedirs(examples_dir)
+    if os.path.isdir(examples_dir):
+        shutil.rmtree(examples_dir)  # because we export with overwrite==False
+    os.makedirs(examples_dir)
 
 
 def finish(Sphynx, *args):
