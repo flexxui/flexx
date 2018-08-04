@@ -788,7 +788,7 @@ def _get_page(session, js_assets, css_assets, link, export):
                 else:
                     html = asset.to_html(pre_path + '/shared/{}', link)
             codes.append(html)
-            if export and assets is js_assets:  # todo: spin ok?
+            if export and assets is js_assets:
                 codes.append('<script>window.flexx.spin();</script>')
         codes.append('')  # whitespace between css and js assets
 

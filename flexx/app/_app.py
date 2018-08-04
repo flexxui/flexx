@@ -5,10 +5,8 @@ Definition of the App class and app manager.
 import os
 import io
 import time
-import shutil
 import weakref
 import zipfile
-import tempfile
 from base64 import encodestring as encodebytes
 
 import webruntime
@@ -316,22 +314,13 @@ class App:
             url (str): The url to POST the app to. If None (default),
                 the default Flexx live website url will be used.
         """
-        # todo: also use dump
-        # Export to disk
-        dirname = os.path.join(tempfile.gettempdir(), 'flexx_exports', name)
-        if os.path.isdir(dirname):
-            shutil.rmtree(dirname)
-        os.makedirs(dirname)
-        self.export(dirname, link=3, write_shared=True)
+        # Dump assets into dict
+        d = self.dump('index.html', 2)
         # Zip it up
         f = io.BytesIO()
         with zipfile.ZipFile(f, 'w') as zf:
-            for root, dirs, files in os.walk(dirname):
-                for fname in files:
-                    filename = os.path.join(root, fname)
-                    zf.write(filename, os.path.relpath(filename, dirname))
-        # Clear temp dir
-        shutil.rmtree(dirname)
+            for fname in d.keys():
+                zf.writestr(fname, d[fname])
         # POST
         try:
             import requests
