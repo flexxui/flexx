@@ -14,9 +14,19 @@ from flexx import flx
 from flexx.util.testing import run_tests_if_main, raises, skip
 
 
-flx.assets.associate_asset(__name__, 'foo.js', 'xx')
-flx.assets.associate_asset(__name__,
-    'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.21.0/codemirror.min.js')
+
+def setup_module():
+    flx.manager._clear_old_pending_sessions(1)
+    flx.assets.__init__()
+    
+    flx.assets.associate_asset(__name__, 'foo.js', 'xx')
+    flx.assets.associate_asset(__name__,
+        'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.21.0/codemirror.min.js')
+
+
+def teardown_module():
+    flx.manager._clear_old_pending_sessions(1)
+    flx.assets.__init__()
 
 
 class MyExportTestApp(flx.JsComponent):
