@@ -166,12 +166,15 @@ class App:
         session._runtime = webruntime.launch(url, runtime=runtime, **runtime_kwargs)
         return session.app
 
-    def dump(self, fname=None, link=0):
+    def dump(self, fname=None, link=2):
         """ Get a dictionary of web assets that statically represents the app.
 
-        The returned dict contains at least one "html file". Any session-specific
-        or shared data is also included. If link is 2 or 3, all shared assets
-        are included too (because the main document links to them).
+        The returned dict contains at least one html file. Any
+        session-specific or shared data is also included. If link is
+        2/3, all shared assets are included too (and the main document
+        links to them). A link value of 0/1 may be prefered for
+        performance or ease of distribution, but with link 2/3 debugging
+        is easier and multiple apps can share common assets.
 
         Arguments:
             fname (str, optional): the name of the main html asset.
@@ -180,9 +183,10 @@ class App:
             link (int): whether to link (JS and CSS) assets or embed them:
                 A values of 0/1 is recommended for single (and standalone) apps,
                 while multiple apps can share common assets by using 2/3.
-                * 0: all assets are embedded (default).
+
+                * 0: all assets are embedded into the main html document.
                 * 1: normal assets are embedded, remote assets remain remote.
-                * 2: all assets are linked (as separate files).
+                * 2: all assets are linked (as separate files). Default.
                 * 3: normal assets are linked, remote assets remain remote.
 
         Returns:
@@ -245,11 +249,11 @@ class App:
 
         return d
 
-    def export(self, filename, link=0, overwrite=True):
+    def export(self, filename, link=2, overwrite=True):
         """ Export this app to a static website.
 
         Also see dump(). An app that contains no data, can be exported to a
-        single html document by setting link to 0 or 1.
+        single html document by setting link to 0.
 
         Arguments:
             filename (str): Path to write the HTML document to.
@@ -257,9 +261,10 @@ class App:
                 created. If a directory is given, the app is exported to
                 appname.html in that directory.
             link (int): whether to link (JS and CSS) assets or embed them:
-                * 0: all assets are embedded (default).
+
+                * 0: all assets are embedded into the main html document.
                 * 1: normal assets are embedded, remote assets remain remote.
-                * 2: all assets are linked (as separate files).
+                * 2: all assets are linked (as separate files). Default.
                 * 3: normal assets are linked, remote assets remain remote.
             overwrite (bool, optional): if True (default) will overwrite files
                 that already exist. Otherwise existing files are skipped.
