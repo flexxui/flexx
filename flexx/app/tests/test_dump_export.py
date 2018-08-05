@@ -45,13 +45,15 @@ def test_dump():
     # Multiple files
 
     d = app.dump('index.html', 2)
-    assert len(d) == 6 and 'index.html' in d.keys()
+    fnames = list(d.keys())
+    assert len(fnames) == 6 and 'index.html' in fnames
     assert 'flexx/assets/shared/foo.js' in d
     assert 'flexx/assets/shared/flexx-core.js' in d
     assert 'flexx/assets/shared/codemirror.min.js' in d
 
     d = app.dump('index.html', 3)
-    assert len(d) == 5 and 'index.html' in d.keys()
+    fnames = list(d.keys())
+    assert len(fnames) == 5 and 'index.html' in fnames
     assert 'flexx/assets/shared/foo.js' in d
     assert 'flexx/assets/shared/flexx-core.js' in d
     assert 'flexx/assets/shared/codemirror.min.js' not in d
