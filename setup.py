@@ -111,7 +111,7 @@ setup(
     platforms='any',
     provides=[name],
     python_requires='>=3.5',
-    install_requires=['tornado', 'pscript>=0.6.1', 'webruntime', 'dialite'],
+    install_requires=['tornado', 'pscript>=0.6.1', 'webruntime', 'dialite'], 
     packages=package_tree('flexx') + package_tree('flexxamples'),
     package_dir={'flexx': 'flexx', 'flexxamples': 'flexxamples'},
     package_data={name: ['resources/*']},
