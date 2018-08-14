@@ -4,8 +4,6 @@ Simple chat web app inabout 80 lines.
 This app might be running at the demo server: http://flexx1.zoof.io
 """
 
-import asyncio
-
 from flexx import flx
 
 
@@ -16,6 +14,10 @@ class Relay(flx.Component):
     @flx.emitter
     def create_message(self, name, message):
         return dict(name=name, message=message)
+
+    @flx.emitter
+    def new_name(self):
+        return {}
 
 # Create global relay
 relay = Relay()
@@ -82,6 +84,14 @@ class ChatRoom(flx.PyComponent):
         for ev in events:
             self.messages.add_message(ev.name, ev.message)
 
+    @flx.reaction('name_edit.user_done')  # tell everyone we changed our name
+    def _push_name(self, *events):
+        relay.new_name()
+
+    @relay.reaction('new_name')  # check for updated names
+    def _new_name(self, *events):
+        self._update_participants(self, [])
+
     @flx.manager.reaction('connections_changed')
     def _update_participants(self, *event):
         if self.session.status:
@@ -92,8 +102,6 @@ class ChatRoom(flx.PyComponent):
             text = '<br />%i persons in this chat:<br /><br />' % len(names)
             text += '<br />'.join([name or 'anonymous' for name in sorted(names)])
             self.people_label.set_html(text)
-            asyncio.get_event_loop().call_later(2, self._update_participants)
-
 
 if __name__ == '__main__':
     a = flx.App(ChatRoom)
