@@ -58,9 +58,9 @@ Flexx requires Python 3.5+ and also works on pypy. Further,
 it depends on:
 
 * the [tornado](http://www.tornadoweb.org) library (pure Python).
-* the [PScript](http://github.com/flexxui/pscript) library (a flexxui project).
-* the [webruntime](http://github.com/flexxui/webruntime) library (a flexxui project).
-* the [dialite](http://github.com/flexxui/dialite) library (a flexxui project).
+* the [PScript](http://github.com/flexxui/pscript) library (a (pure Python) flexxui project).
+* the [webruntime](http://github.com/flexxui/webruntime) library (a (pure Python) flexxui project).
+* the [dialite](http://github.com/flexxui/dialite) library (a (pure Python) flexxui project).
 
 For running desktop apps, it is recommended to have Firefox installed.
 
@@ -74,6 +74,12 @@ When version 0.5 is released:
 * ``conda install flexx -c conda-forge``, or
 * ``pip install flexx``
 
+
+Supported browsers
+------------------
+
+Flexx aims to support all modern browsers, including Firefox, Chrome and Edge.
+Internet Explorer version 10 and up should work, but some things may be flaky.
 
 
 License
