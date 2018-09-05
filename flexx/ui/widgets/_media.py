@@ -10,7 +10,7 @@
             with ui.HSplit():
                 url = 'http://www.w3schools.com/tags/mov_bbb.mp4'
                 ui.VideoWidget(source=url)
-                ui.YoutubeWidget(source='dhRUe-gz690')
+                ui.YoutubeWidget(source='RG1P8MQS1cU')
                 with ui.VBox():
                     stretch = ui.CheckBox(text='Stretch')
                     ui.ImageWidget(flex=1, stretch=lambda:stretch.checked,

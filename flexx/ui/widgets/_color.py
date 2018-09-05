@@ -22,7 +22,7 @@ class ColorSelectWidget(Widget):
     """ A widget used to select a color.
 
     This uses the HTML5 color input element, which is supported at least
-    on Firefox and Chrome, but not on IE/Edge last time I checked.
+    on Firefox and Chrome, but not on IE last time I checked.
     """
 
     DEFAULT_MIN_SIZE = 28, 28
@@ -38,7 +38,11 @@ class ColorSelectWidget(Widget):
     def _create_dom(self):
         global window
         node = window.document.createElement('input')
-        node.type = 'color'
+        try:
+            node.type = 'color'
+        except Exception:  # This widget simply does not work on IE
+            node = window.document.createElement('div')
+            node.innerHTML = 'Not supported'
         self._addEventListener(node, 'input', self._color_changed_from_dom, 0)
         return node
 

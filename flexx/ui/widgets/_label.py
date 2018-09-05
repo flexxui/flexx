@@ -85,6 +85,6 @@ class Label(Widget):
         wrap = self.wrap
         if wrap < 0 or wrap > 2:
             wrap = 0
-        self.node.style['word-wrap'] = ['initial', 'normal', 'break-word'][wrap]
+        self.node.style['word-wrap'] = ['normal', 'normal', 'break-word'][wrap]
         self.node.style['white-space'] = ['nowrap', 'normal', 'normal'][wrap]
         self.check_real_size(True)

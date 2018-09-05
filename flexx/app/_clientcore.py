@@ -74,13 +74,16 @@ class Flexx:
 
     def spin(self, n=1):
         RawJS("""
-        if (!window.document.body) {return;}
-        var el = window.document.body.children[0];
-        if (el && el.classList.contains("flx-spinner")) {
-            if (n === null) {
-                el.style.display = 'none';  // Stop the spinner
+        var el = window.document.getElementById('flexx-spinner');
+        if (el) {
+            if (n === null) {  // Hide the spinner overlay, now or in a bit
+                if (el.children[0].innerHTML.indexOf('limited') > 0) {
+                    setTimeout(function() { el.style.display = 'none'; }, 2000);
+                } else {
+                    el.style.display = 'none';
+                }
             } else {
-                el.children[0].innerHTML += '&#9632'.repeat(n);
+                for (var i=0; i<n; i++) { el.children[1].innerHTML += '&#9632'; }
             }
         }
         """)
@@ -126,11 +129,39 @@ class Flexx:
         # The call to this method is embedded by get_page(),
         # or injected by init_notebook().
         # Can be called before init() is called.
-        s = JsSession(app_name, session_id, ws_url)
-        self._session_count += 1
-        self['s' + self._session_count] = s
-        self.sessions[session_id] = s
-
+        
+        if self._validate_browser_capabilities():
+            s = JsSession(app_name, session_id, ws_url)
+            self._session_count += 1
+            self['s' + self._session_count] = s
+            self.sessions[session_id] = s
+    
+    def _validate_browser_capabilities(self):
+        # We test a handful of features here, and assume that if these work,
+        # all of Flexx works. It is not a hard guarantee, of course, because
+        # the user can use modern features in an application.
+        RawJS("""
+        var el = window.document.getElementById('flexx-spinner');
+        if (    window.WebSocket === undefined || // IE10+
+                Object.keys === undefined || // IE9+
+                false
+           ) {
+            var msg = ('Flexx does not support this browser.<br>' +
+                       'Try Firefox, Chrome, ' +
+                       'or a more recent version of the current browser.');
+            if (el) { el.children[0].innerHTML = msg; }
+            else { window.alert(msg); }
+            return false;
+        } else if (''.startsWith === undefined) { // probably IE
+            var msg = ('Flexx support for this browser is limited.<br>' +
+                       'Consider using Firefox, Chrome, or maybe Edge.');
+            if (el) { el.children[0].innerHTML = msg; }
+            return true;
+        } else {
+            return true;
+        }
+        """)
+    
     def _handle_error(self, evt):
         msg = short_msg = evt.message
         if not window.evt:

@@ -761,10 +761,9 @@ class Widget(app.JsComponent):
                 self._capture_flag = 2
                 window.document.addEventListener("mousemove", mmove_outside, True)
                 window.document.addEventListener("mouseup", mup_outside, True)
-                # On FF, capture so we get events when outside browser viewport.
-                # This seems not neccessary, but maybe it was on earlier versions?
-                if self.node.setCapture:
-                    self.node.setCapture()
+                # Explicit caputuring is not necessary, and even causes problems on IE
+                #if self.node.setCapture:
+                #    self.node.setCapture()
 
         def mmove_inside(e):
             # maybe emit move event
