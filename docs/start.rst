@@ -30,6 +30,13 @@ Developers that want to run the tests need:
 * Firefox
 
 
+Supported browsers
+------------------
+
+Flexx aims to support all modern browsers, including Firefox, Chrome and Edge.
+Internet Explorer version 10 and up should work, but some things may be flaky.
+
+
 Current status
 --------------
 
