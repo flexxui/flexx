@@ -163,7 +163,7 @@ class Slider(Widget):
             e.stopPropagation()
             x1 = e.changedTouches[0].clientX if e.changedTouches else e.clientX
             if not e.target.classList.contains("slider"):
-                x1 = (self.node.getBoundingClientRect().x +
+                x1 = (self.node.getBoundingClientRect().left +
                       self.node.children[0].children[1].offsetLeft)
             self._dragging = self.value, x1
             self.outernode.classList.add('flx-dragging')

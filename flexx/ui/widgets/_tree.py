@@ -76,6 +76,7 @@ class TreeWidget(Widget):
         height: 100%;
         overflow-y: scroll;
         overflow-x: hidden;
+        cursor: default;
     }
 
     .flx-TreeWidget > ul {
@@ -101,7 +102,7 @@ class TreeWidget(Widget):
         right: 0;
     }
     .flx-TreeWidget .flx-TreeItem > .title:empty + .text {
-        position: initial;  /* .text width is not used*/
+        position: static;  /* .text width is not used*/
     }
 
     .flx-TreeWidget ul {

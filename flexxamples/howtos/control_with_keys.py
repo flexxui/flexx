@@ -64,7 +64,9 @@ class KeyboardControlsTester(flx.Widget):
 
         with flx.HBox():
             self.tree = TreeWithControls(flex=1, max_selected=1)
-            self.combo = flx.ComboBox(flex=1, options=combo_options, editable=True)
+            with flx.VBox(flex=1):
+                self.combo = flx.ComboBox(options=combo_options, editable=True)
+                flx.Widget(flex=1)  # combobox needs space below it to show dropdown
 
         with self.tree:
             for cat in ('foo', 'bar', 'spam'):

@@ -31,10 +31,12 @@ INDEX = """
 
 <body id='body'>
 
-<div class='flx-spinner' style='position:absolute; top:25%; bottom:25%;
-left:25%; right:25%; background:#fff; color:#555; text-align:center;
-word-break: break-all; border-radius:0.5em; padding:0.5em;'>
-Starting Flexx app <div style='font-size:50%; color:#66A;'></div>
+<noscript> This Flexx application needs JavaScript to be turned on. </noscript>
+
+<div id='flexx-spinner' class='flx-spinner' style='position:fixed; top:0; bottom:0;
+left:0; right:0; background:#fff; color:#555; text-align:center; z-index:9999;
+word-break: break-all; padding:0.5em;'>
+<div>Starting Flexx app</div> <div style='font-size:50%; color:#66A;'></div>
 </div>
 
 ASSET-HOOK
@@ -97,10 +99,10 @@ define.amd = true;
 define.flexx = true;
 
 function require (name) {
-    if (name.startsWith('phosphor/')) {
+    if (name.slice(0, 9) == 'phosphor/') {
         if (window.jupyter && window.jupyter.lab && window.jupyter.lab.loader) {
             var path = 'phosphor@*/' + name.slice(9);
-            if (!path.endsWith('.js')) { path = path + '.js'; }
+            if (!path.slice(-3) == '.js') { path = path + '.js'; }
             return window.jupyter.lab.loader.require(path);
         } else {
             return window.require_phosphor(name);  // provided by our Phosphor-all

@@ -299,7 +299,7 @@ BsdfSerializer.prototype.encode_object = function (f, value, extension_id) {
     else if (value === false) { encode_type_id(f, 'n', extension_id); }
     else if (value === true) { encode_type_id(f, 'y', extension_id); }
     else if (typeof value == 'number') {
-        if (Number.isInteger(value)) {
+        if ((value ^ 0) == value) { // no Number.isInteger on IE
             if (value >= -32768 && value <= 32767) {
                 encode_type_id(f, 'h', extension_id);
                 f.push_int16(value);
@@ -615,7 +615,7 @@ var complex_extension = {
 var ndarray_extension = {
     name: 'ndarray',
     match: function(s, v) {
-        return v.BYTES_PER_ELEMENT !== undefined && v.constructor.name.endsWith('Array');
+        return v.BYTES_PER_ELEMENT !== undefined && v.constructor.name.slice(-5) == 'Array';
     },
     encode: function(s, v) {
         return {shape: v.shape || [v.length],

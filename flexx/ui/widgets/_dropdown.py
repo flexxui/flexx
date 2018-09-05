@@ -234,7 +234,7 @@ class ComboBox(BaseDropdown):
             display: none;
         }
         .flx-ComboBox.expanded > ul {
-            display: initial;
+            display: block;
         }
 
         .flx-ComboBox.expanded > ul > li:hover {
