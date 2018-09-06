@@ -40,8 +40,8 @@ Internet Explorer version 10 and up should work, but some things may be flaky.
 Current status
 --------------
 
-Flexx is in development and is in alpha status. Any part of the public
-API may change without notice.
+Since Flexx version 0.5, it is in beta status; some parts of the API
+may change, but we do care about backwards compatibility.
 
 
 Installation

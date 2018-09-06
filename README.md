@@ -5,9 +5,7 @@ Flexx
 [![Build Status](https://travis-ci.org/flexxui/flexx.svg)](https://travis-ci.org/flexxui/flexx)
 [![Documentation Status](https://readthedocs.org/projects/flexx/badge/?version=latest)](https://flexx.readthedocs.org)
 
-<i>Notice: Flexx has recently been [refactored](https://github.com/zoofIO/flexx/pull/408), improving Flexx on many fronts (e.g. make it scale better). Note that the API has changed in several ways though! We're now moving towards a release that brings us to beta status.</i>
-
-Want to stay up-to-date about Flexx? Subscribe to the [NEWS issue](https://github.com/flexxui/flexx/issues/477).
+Want to stay up-to-date about (changes to) Flexx? Subscribe to the [NEWS issue](https://github.com/flexxui/flexx/issues/477).
 
 Introduction
 ------------
@@ -18,8 +16,8 @@ purely in Python; Flexx' transpiler generates the necessary JavaScript
 on the fly.
 
 You can use Flexx to create (cross platform) desktop applications, web
-applications, and (if designed well) export an app to a standalone HTML
-document. It also works in the Jupyter notebook.
+applications, and (if designed in the right way) export an app to a
+standalone HTML document. It also works in the Jupyter notebook.
 
 The docs are on [Readthedocs](http://flexx.readthedocs.io).
 the code is on [Github](http://github.com/flexxui/flexx).
