@@ -46,9 +46,21 @@ class Widget(app.JsComponent):
 
     When *subclassing* a Widget to create a compound widget (a widget
     that acts as a container for other widgets), use the ``init()``
-    method to initialize the child widgets. This method is called while
+    method to initialize the child widgets. That method is called while
     the widget is the current widget.
-
+    
+    Alternatively, one can implement ``_create_dom()`` and ``_render_dom()``
+    for a more "react-like" (but less Pythonic) approach.
+    
+    All widgets have a ``node`` and ``outernode`` attribute (only accessible
+    in JavaScript), representing the DOM element(s) that represent the widget.
+    For most types of widgets, ``node`` is equal to ``outernode``. For the
+    ``Widget`` class, this is simply a ``<div>`` element.
+    
+    Widgets can be styled by implementing a string class attribute named ``CSS``.
+    A widget's node has a CSS-class-name corresponding to its Python class
+    (and its base classes), following the scheme ``flx-WidgetClassName``.
+    
     """
 
     DEFAULT_MIN_SIZE = 0, 0
