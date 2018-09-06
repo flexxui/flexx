@@ -97,7 +97,7 @@ def test_import_flexx_ui():
 
 def test_import_deps():
     # These do not depend on tornado
-    deps = set(['tornado'])
+    deps = set()  # no, not set(['tornado']) :)
     assert deps.difference(loaded_modules('flexx.util', 2, True)) == deps
     assert deps.difference(loaded_modules('flexx.event', 2, True)) == deps
 
