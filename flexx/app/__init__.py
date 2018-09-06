@@ -331,6 +331,6 @@ from ._assetstore import assets
 from ._clientcore import serializer
 
 # Resolve cyclic dependencies, and explicit exports to help cx_Freeze
-from . import _tornadoserver
+# from . import _tornadoserver -- no, we don't want Tornado unless really needed
 from . import _component2
 _component2.manager = manager

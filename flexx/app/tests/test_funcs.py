@@ -294,7 +294,7 @@ def test_flexx_in_thread5():
 
     server = app.create_server(loop=asyncio.new_event_loop())
     assert server.serving
-    # note: mmmm, I don;t particularly like this, but need it to get Tornado working
+    # note: mmmm, I don't particularly like this, but need it to get Tornado working
     assert server._loop is asyncio.get_event_loop()
 
     def main():
