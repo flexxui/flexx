@@ -1,13 +1,15 @@
 """
 Test dumping apps to static assets, and exporting. The exporting
 mechanism uses the dump() method, so testing either, tests the other
-too to some extend. Also note that our docs is very much a test for our
+to to some extend. Also note that our docs is very much a test for our
 export mechanism.
 """
 
 import os
+import sys
 import shutil
 import tempfile
+import subprocess
 
 from flexx import flx
 
@@ -99,6 +101,19 @@ def test_export():
     assert os.path.isfile(os.path.join(dir, 'foo.html'))
 
 
+def test_dump_consistency():
+    
+    # This is why we have ``sesstion._id = name`` in _app.py
+    
+    app1 = flx.App(MyExportTestApp)
+    d1 = app1.dump()
+    
+    app2 = flx.App(MyExportTestApp)
+    d2 = app2.dump()
+    
+    assert d1 == d2
+
+
 def test_assetstore_data():
 
     store = flx.assets.__class__()  # new AssetStore
@@ -106,6 +121,33 @@ def test_assetstore_data():
 
     d = store._dump_data()
     assert len(d) == 1 and 'flexx/data/shared/foo.png' in d.keys()
+
+
+CODE = """
+import sys
+from flexx import flx
+
+class Foo(flx.Widget):
+    pass
+
+app = flx.App(Foo)
+d = app.dump()
+for fname in ['foo.html', 'flexx/assets/shared/flexx.ui._widget.js']:
+    assert fname in d
+
+assert not flx.manager.get_app_names(), 'manager.get_app_names not empty'
+assert not flx.manager._appinfo, 'manager._appinfo not empty'
+assert 'tornado' not in sys.modules, 'tornado unexpectedly imported'
+"""
+
+
+def test_dump_side_effects():
+    # In subprocess to get a real clean sheet
+    p = subprocess.Popen([sys.executable, '-c', CODE], env=os.environ,
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    out = p.communicate()[0]
+    if p.returncode:
+        raise RuntimeError(out.decode())
 
 
 run_tests_if_main()

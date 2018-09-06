@@ -209,7 +209,7 @@ class App:
         # Do stripped version of manager.create_session()
         name = fname.split('.')[0].replace('-', '_').replace(' ', '_')
         session = Session(name)
-        session._id = name  # Force id that is the same on each dump
+        session._id = name  # Force id to be the same on each dump
         # Instantiate the component
         self(flx_session=session, flx_is_app=True)
 
