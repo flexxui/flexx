@@ -206,22 +206,16 @@ class App:
         elif not fname.lower().endswith(('.html', 'htm', '.hta')):
             raise ValueError('Invalid extension for dumping {}'.format(fname))
 
-        # We need to serve the app, i.e. notify the mananger about this app
-        if not self._is_served:
-            name = fname.split('.')[0].replace('-', '_').replace(' ', '_')
-            self.serve(name)
+        # Do stripped version of manager.create_session()
+        name = fname.split('.')[0].replace('-', '_').replace(' ', '_')
+        session = Session(name)
+        session._id = name  # Force id that is the same on each dump
+        # Instantiate the component
+        self(flx_session=session, flx_is_app=True)
 
-        # Create session with id equal to the app name. This would not be strictly
-        # necessary to make exports work, but it makes sure that exporting twice
-        # generates the exact same thing (no randomly generated dir names).
-        session = manager.create_session(self.name, self.name)
-
-        # Make fake connection using exporter object
+        # Do stripped version of manager.connect_client()
         exporter = ExporterWebSocketDummy()
-        manager.connect_client(exporter, session.app_name, session.id)
-
-        # Clean up again - NO keep in memory to ensure two sessions dont get same id
-        # manager.disconnect_client(session)
+        session._set_ws(exporter)
 
         assert link in (0, 1, 2, 3), "Expecting link to be in (0, 1, 2, 3)."
 
@@ -481,7 +475,7 @@ class AppManager(event.Component):
         # Create the session
         session = Session(name, request=request)
         if id is not None:
-            session._id = id  # used by app.export
+            session._id = id  # use custom id (export() used to use this)
         self._session_map[session.id] = session
         # Instantiate the component
         # This represents the "instance" of the App object (Component class + args)
