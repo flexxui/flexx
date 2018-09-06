@@ -1,18 +1,16 @@
 """
 Flexx is a pure Python toolkit for creating graphical user interfaces
 (GUI's), that uses web technology for its rendering. Apps are written
-purely in Python; Flexx' transpiler generates the necessary JavaScript
-on the fly.
+purely in Python; Flexx' transpiler (PScript) generates the necessary
+JavaScript on the fly.
 
 You can use Flexx to create (cross platform) desktop applications, web
-applications, and (if designed well) export an app to a standalone HTML
-document. It also works in the Jupyter notebook.
+applications, and (if designed in the right way) export an app to a
+standalone HTML document. It also works in the Jupyter notebook.
 
 The docs are on `Readthedocs <http://flexx.readthedocs.io>`_,
 the code is on `Github <http://github.com/flexxui/flexx>`_,
 and there is a `demo server <http://demo.flexx.app>`_.
-Flexx is currently in alpha status; any part of the public API may
-change without notice. Feedback is welcome.
 
 ----
 
