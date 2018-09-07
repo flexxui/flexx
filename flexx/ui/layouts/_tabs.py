@@ -27,8 +27,12 @@ from ._stack import StackLayout
 
 class TabLayout(StackLayout):
     """ A StackLayout which provides a tabbar for selecting the current widget.
-
     The title of each child widget is used for the tab label.
+    
+    The ``node`` of this widget is a
+    `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_.
+    The visible child widget fills the entire area of this element,
+    except for a small area at the top where the tab-bar is shown.
     """
 
     CSS = """

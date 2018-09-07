@@ -150,6 +150,11 @@ class HVLayout(Layout):
     exception is if all child widgets have a flex value of zero, in which
     case the available space is divided equally.
 
+    The ``node`` of this widget is a
+    `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_. The
+    outer nodes of the child widgets are layed-out using JavaScript of CSS,
+    depending on the mode.
+    
     Also see the convenience classes: HFix, VFix, HBox, VBox, HSplit, VSplit.
     """
 

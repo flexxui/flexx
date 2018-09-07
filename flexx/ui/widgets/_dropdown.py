@@ -214,6 +214,10 @@ class ComboBox(BaseDropdown):
     When the combobox is expanded, the arrow keys can be used to select
     an item, and it can be made current by pressing Enter or spacebar.
     Escape can be used to collapse the combobox.
+    
+    The ``node`` of this widget is a
+    `<span> <https://developer.mozilla.org/docs/Web/HTML/Element/span>`_
+    with some child elements and quite a bit of CSS for rendering.
     """
 
     CSS = """

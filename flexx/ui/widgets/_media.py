@@ -24,6 +24,11 @@ from . import Widget
 
 class ImageWidget(Widget):
     """ Display an image from a url.
+    
+    The ``node`` of this widget is an
+    `<img> <https://developer.mozilla.org/docs/Web/HTML/Element/img>`_
+    wrapped in a `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_
+    (the ``outernode``) to handle sizing.
     """
 
     DEFAULT_MIN_SIZE = 16, 16
@@ -68,6 +73,9 @@ class ImageWidget(Widget):
 
 class VideoWidget(Widget):
     """ Display a video from a url.
+    
+    The ``node`` of this widget is a
+    `<video> <https://developer.mozilla.org/docs/Web/HTML/Element/video>`_.
     """
 
     DEFAULT_MIN_SIZE = 100, 100
@@ -100,6 +108,12 @@ class VideoWidget(Widget):
 
 class YoutubeWidget(Widget):
     """ Display a Youtube video.
+    
+    The ``node`` of this widget is a
+    `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_
+    containing an
+    `<iframe> <https://developer.mozilla.org/docs/Web/HTML/Element/iframe>`_
+    that loads the youtube page.
     """
 
     DEFAULT_MIN_SIZE = 100, 100

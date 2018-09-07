@@ -25,9 +25,11 @@ from . import Widget
 
 class GroupWidget(Widget):
     """ Widget to collect widgets in a named group.
-
     It does not provide a layout. This is similar to a QGroupBox or an
     HTML fieldset.
+    
+    The ``node`` of this widget is a
+    `<fieldset> <https://developer.mozilla.org/docs/Web/HTML/Element/fieldset>`_. 
     """
 
     CSS = """

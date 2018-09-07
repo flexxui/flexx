@@ -73,7 +73,7 @@ def main():
             
             members = {}
             include = '_create_dom', '_render_dom'
-            exclude = 'CODE',
+            exclude = 'CODE', 'CSS', 'DEFAULT_MIN_SIZE'
             
             # Collect all stuff that's on the class.
             for n in list(cls.JS.__dict__):

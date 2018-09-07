@@ -17,8 +17,13 @@ from .._widget import Widget, create_element
 
 
 class Slider(Widget):
-    """ An input widget to select a value in a certain range (aka HTML
-    range input).
+    """ An input widget to select a value in a certain range.
+    
+    The ``node`` of this widget is a
+    `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_
+    containing a few HTML elements for rendering. It does not use
+    a ``<input type='range'>`` because of its different appearance and
+    behaviour accross browsers.
     """
 
     DEFAULT_MIN_SIZE = 40, 20

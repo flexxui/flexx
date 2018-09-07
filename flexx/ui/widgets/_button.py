@@ -100,6 +100,9 @@ class BaseButton(Widget):
 
 class Button(BaseButton):
     """ A push button.
+    
+    The ``node`` of this widget is a
+    `<button> <https://developer.mozilla.org/docs/Web/HTML/Element/button>`_.
     """
 
     DEFAULT_MIN_SIZE = 10, 28
@@ -125,6 +128,9 @@ class Button(BaseButton):
 class ToggleButton(BaseButton):
     """ A button that can be toggled. It behaves like a checkbox, while
     looking more like a regular button.
+    
+    The ``node`` of this widget is a
+    `<button> <https://developer.mozilla.org/docs/Web/HTML/Element/button>`_.
     """
 
     DEFAULT_MIN_SIZE = 10, 28
@@ -152,6 +158,11 @@ class ToggleButton(BaseButton):
 class RadioButton(BaseButton):
     """ A radio button. Of any group of radio buttons that share the
     same parent, only one can be active.
+    
+    The ``outernode`` of this widget is a
+    `<label> <https://developer.mozilla.org/docs/Web/HTML/Element/label>`_,
+    and the ``node`` a radio
+    `<input> <https://developer.mozilla.org/docs/Web/HTML/Element/input>`_.
     """
 
     def _create_dom(self):
@@ -198,6 +209,11 @@ class RadioButton(BaseButton):
 
 class CheckBox(BaseButton):
     """ A checkbox button.
+    
+    The ``outernode`` of this widget is a
+    `<label> <https://developer.mozilla.org/docs/Web/HTML/Element/label>`_,
+    and the ``node`` a checkbox
+    `<input> <https://developer.mozilla.org/docs/Web/HTML/Element/input>`_.
     """
 
     def _create_dom(self):

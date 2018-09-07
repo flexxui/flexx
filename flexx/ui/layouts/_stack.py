@@ -32,6 +32,9 @@ from . import Layout
 
 class StackLayout(Layout):
     """ A layout widget which shows only one of its children at a time.
+    
+    The ``node`` of this widget is a
+    `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_.
     """
 
     CSS = """
