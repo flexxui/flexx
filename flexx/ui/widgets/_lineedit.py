@@ -35,6 +35,9 @@ from . import Widget
 
 class LineEdit(Widget):
     """ An input widget to edit a line of text.
+    
+    The ``node`` of this widget is a text
+    `<input> <https://developer.mozilla.org/docs/Web/HTML/Element/input>`_.
     """
 
     DEFAULT_MIN_SIZE = 100, 28

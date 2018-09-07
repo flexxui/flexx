@@ -22,6 +22,10 @@ from . import Widget
 
 class Label(Widget):
     """ Widget to show text/html.
+    
+    The ``node`` of this widget is a
+    `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_ with
+    CSS ``word-wrap`` and ``white-space`` set appropriately.
     """
 
     DEFAULT_MIN_SIZE = 10, 24

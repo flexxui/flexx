@@ -29,6 +29,10 @@ from .._widget import Widget, create_element
 
 class ProgressBar(Widget):
     """ A widget to show progress.
+    
+    The ``node`` of this widget is a
+    `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_
+    containing a few HTML elements for rendering.
     """
 
     DEFAULT_MIN_SIZE = 40, 16

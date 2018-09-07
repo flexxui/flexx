@@ -21,8 +21,10 @@ from . import Widget
 class ColorSelectWidget(Widget):
     """ A widget used to select a color.
 
-    This uses the HTML5 color input element, which is supported at least
-    on Firefox and Chrome, but not on IE last time I checked.
+    The ``node`` of this widget is an
+    `<input> <https://developer.mozilla.org/docs/Web/HTML/Element/input>`_
+    element of type ``color``. This is supported at least
+    on Firefox and Chrome, but not on IE.
     """
 
     DEFAULT_MIN_SIZE = 28, 28

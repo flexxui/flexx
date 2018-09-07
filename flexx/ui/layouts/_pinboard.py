@@ -29,6 +29,9 @@ class PinboardLayout(Layout):
     This simply places child widgets using CSS "position: absolute". Use
     CSS "left" and "top" to position the widget (using a "px" or "%" suffix).
     Optionally "width", "height", "right" and "bottom" can also be used.
+    
+    The ``node`` of this widget is a
+    `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_.
     """
 
     CSS = """

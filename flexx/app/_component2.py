@@ -284,7 +284,9 @@ class AppComponentMeta(ComponentMeta):
 
 
 class BaseAppComponent(Component):
-    """ Abstract class for Component classes that can be "shared" between
+    """ Inherits from :class:`Component <flexx.event.Component>`
+    
+    Abstract class for Component classes that can be "shared" between
     Python and JavaScript. The concrete implementations are:
 
     * The ``PyComponent`` class, which operates in Python, but has a proxy
@@ -594,7 +596,9 @@ StubComponent.__jsmodule__ = __name__
 
 
 class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
-    """ Base component class that operates in JavaScript, but is accessible
+    """ Inherits from :class:`BaseAppComponent <flexx.app.BaseAppComponent>`
+    
+    Base component class that operates in JavaScript, but is accessible
     in Python, where its properties and events can be observed,
     and actions can be invoked.
 
@@ -637,7 +641,9 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
 # and the JS for the base component classes is attached to JSComponent.
 
 class PyComponent(with_metaclass(AppComponentMeta, LocalComponent)):
-    """ Base component class that operates in Python, but is accessible
+    """ Inherits from :class:`BaseAppComponent <flexx.app.BaseAppComponent>`
+    
+    Base component class that operates in Python, but is accessible
     in JavaScript, where its properties and events can be observed,
     and actions can be invoked.
 

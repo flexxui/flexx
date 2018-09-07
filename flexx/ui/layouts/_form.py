@@ -165,10 +165,11 @@ class BaseTableLayout(Layout):
 
 class FormLayout(BaseTableLayout):
     """ A layout widget that vertically alligns its child widgets in a form.
-
     A label is placed to the left of each widget (based on the widget's title).
-    At the moment, this layout is based on ``<table>``, we may change this to
-    use CSS instead.
+    
+    The ``node`` of this widget is a
+    `<table> <https://developer.mozilla.org/docs/Web/HTML/Element/table>`_.
+    (This may be changed to use a CSS layout instead.)
     """
 
     CSS = """

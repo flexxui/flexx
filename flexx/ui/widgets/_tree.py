@@ -40,7 +40,11 @@ class TreeWidget(Widget):
 
     When the items in the tree have no sub-items themselves, the TreeWidget is
     in "list mode". Otherwise, items can be collapsed/expanded etc.
-
+    
+    The ``node`` of this widget is a
+    `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_
+    with some child elements and quite a bit of CSS for rendering.
+    
     **Style**
 
     This widget can be fully styled using CSS, using the following CSS classes:
@@ -63,7 +67,7 @@ class TreeWidget(Widget):
       state, with the ``null`` variant indicating not-checkable.
     * ``collapsed-true``, ``collapsed-false`` and ``collapsed-null`` indicate
       collapse state, with the ``null`` variant indicating not-collapsable.
-
+    
     """
 
     DEFAULT_MIN_SIZE = 100, 50

@@ -15,9 +15,11 @@ from . import Widget
 
 class IFrame(Widget):
     """ An iframe element, i.e. a container to show web-content.
-
     Note that some websites do not allow themselves to be rendered in
     a cross-source iframe.
+    
+    The ``node`` of this widget is a
+    `<iframe> <https://developer.mozilla.org/docs/Web/HTML/Element/iframe>`_. 
     """
 
     DEFAULT_MIN_SIZE = 10, 10

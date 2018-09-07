@@ -1,13 +1,69 @@
 """
-The base ``Widget`` class.
+Provides the base ``Widget`` class.
+
+When subclassing a Widget to create a compound widget (i.e. a widget
+that contains other widgets), initialize the child widgets inside the
+``init()`` method. That method is called while the widget is the
+*current widget*; any widgets instantiated inside it will automatically
+become children.
 
 .. UIExample:: 100
 
-    from flexx import app, ui
+    from flexx import flx
 
-    class Example(ui.Widget):
-        ''' A red widget '''
-        CSS = ".flx-Example {background:#f00;}"
+    class Example(flx.Widget):
+        def init(self):
+            super().init()
+            
+            flx.Button(text='foo')
+            flx.Button(text='bar')
+
+
+One can also use a widget as a context manager (i.e. using the ``with``
+statement) to create child widgets. This is particularly useful for
+layout widgets (like ``HBox``).
+
+.. UIExample:: 100
+
+    from flexx import flx
+
+    class Example(flx.Widget):
+        def init(self):
+            super().init()
+            
+            with flx.HBox():
+                flx.Button(flex=1, text='foo')
+                flx.Button(flex=2, text='bar')
+
+
+It is possible to create custom low-level widgets by implementing
+``_render_dom()``, resulting in a declarative "react-like" (but less
+Pythonic) approach. It returns a virtual DOM that is used to update/replace
+the real browser DOM.
+
+.. UIExample:: 100
+
+    from flexx import flx
+    
+    class Example(flx.Widget):
+        
+        count = flx.IntProp()
+        
+        def _render_dom(self):
+            # This method automatically gets called when any of the used
+            # properties (only count, in this case) changes.
+            return flx.create_element('div', {}, 
+                flx.create_element('button',
+                                   {'onclick': self.increase_count},
+                                   '+'),
+                flx.create_element('span',
+                                   {'style.background': '#afa'},
+                                   str(self.count)),
+                )
+        
+        @flx.action
+        def increase_count(self):
+            self._mutate_count(self.count + 1)
 
 """
 
@@ -42,24 +98,29 @@ def create_element(type, props=None, *children):
 
 
 class Widget(app.JsComponent):
-    """ Base widget class.
-
-    When *subclassing* a Widget to create a compound widget (a widget
-    that acts as a container for other widgets), use the ``init()``
-    method to initialize the child widgets. That method is called while
-    the widget is the current widget.
+    """ Base widget class (a :class:`Component <flexx.event.Component>` in JS wrapping
+    an `HTML element <https://developer.mozilla.org/docs/Web/HTML/Element>`_).
     
-    Alternatively, one can implement ``_create_dom()`` and ``_render_dom()``
-    for a more "react-like" (but less Pythonic) approach.
+    When subclassing a Widget, it is recommended to not implement the
+    ``__init__()`` method, but instead implement ``init()`` for compound
+    (higher-level) widgets, and ``_create_dom()`` for low-level widgets.
     
-    All widgets have a ``node`` and ``outernode`` attribute (only accessible
-    in JavaScript), representing the DOM element(s) that represent the widget.
-    For most types of widgets, ``node`` is equal to ``outernode``. For the
-    ``Widget`` class, this is simply a ``<div>`` element.
-    
-    Widgets can be styled by implementing a string class attribute named ``CSS``.
+    Widgets can be styled using `CSS <https://developer.mozilla.org/docs/Web/CSS>`_
+    by implementing a string class attribute named ``CSS``.
     A widget's node has a CSS-class-name corresponding to its Python class
     (and its base classes), following the scheme ``flx-WidgetClassName``.
+    
+    All widgets have a ``node`` and ``outernode`` attribute (only accessible
+    in JavaScript), representing the 
+    `DOM element(s) <https://developer.mozilla.org/docs/Web/HTML/Element>`_
+    that represent the widget. For most types of widgets, ``node`` is
+    equal to ``outernode``. For the ``Widget`` class, this is simply a
+    `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_
+    element. If you don't understand what this is about, don't worry;
+    you won't need it unless you are creating your own low-level widgets :)
+    
+    When implementing your own widget class, the class attribute
+    ``DEFAULT_MIN_SIZE`` can be set to specify a sensible minimum size.
     
     """
 
@@ -295,8 +356,12 @@ class Widget(app.JsComponent):
         self._init_events()
 
     def init(self):
-        """ Overload this to initialize a custom widget. When called, this
-        widget is the current parent.
+        """ Overload this to initialize a custom widget. It's preferred
+        to use this instead of ``__init__()``, because it gets called
+        at a better moment in the instantiation of the widget.
+        
+        This method receives any positional arguments that were passed
+        to the constructor.  When called, this widget is the current parent.
         """
         # The Component class already implement a stub, but we may like a more
         # specific docstring here.

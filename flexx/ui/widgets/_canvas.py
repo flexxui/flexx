@@ -45,10 +45,14 @@ perf_counter = None  # exists in PScript, time.perf_counter only in Python 3.3+
 
 class CanvasWidget(Widget):
     """ A widget that provides an HTML5 canvas. The canvas is scaled with
-    the available space.
-
-    Use ``self.node.getContext('2d')`` or ``self.node.getContext('webgl')`` in
-    the ``init()`` method to get a contex to perform the actual drawing.
+    the available space. Use ``self.node.getContext('2d')`` or
+    ``self.node.getContext('webgl')`` in the ``init()`` method to get
+    a contex to perform the actual drawing.
+    
+    The ``node`` of this widget is a
+    `<canvas> <https://developer.mozilla.org/docs/Web/HTML/Element/canvas>`_
+    wrapped in a `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_
+    (the ``outernode``) to handle sizing.
     """
 
     DEFAULT_MIN_SIZE = 50, 50
