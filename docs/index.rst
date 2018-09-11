@@ -16,12 +16,10 @@ Contents
    :maxdepth: 2
    
    start
-   guide
+   guide/index
    reference
    examples/index
-   
-   cli_and_config
-   releasenotes
+   about
 
 
 Indices and tables

@@ -10,5 +10,4 @@ classes based on :class:`JsComponent <flexx.app.JsComponent>`.
 .. toctree::
     :maxdepth: 1
     
-    intro
     api

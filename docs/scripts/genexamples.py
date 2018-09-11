@@ -77,6 +77,11 @@ def main():
     docs = 'Examples'
     docs += '\n%s\n\n' % (len(docs) * '=')
     
+    docs += "This page provides a list of examples. Some demonstate a specific application, "
+    docs += "while others show a tool/technique that is generically useful. In the latter case "
+    docs += "you can import the widget using e.g. ``from flexxamples.howtos.editor_cm import CodeEditor``."
+    docs += "\n\n"
+    
     for sub, _ in EXAMPLES_DIRS:
         section = sub.capitalize()
         docs += '\n%s\n%s\n\n' % (section, len(section) * '-')

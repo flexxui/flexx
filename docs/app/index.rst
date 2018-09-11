@@ -12,5 +12,4 @@ between Python and a browser.
 .. toctree::
    :maxdepth: 2
    
-   intro
    api
