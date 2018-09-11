@@ -5,8 +5,9 @@ Reference
 .. toctree::
    :maxdepth: 2
    
-   event/api
-   app/api
    ui/api
-   
+   app/api
+   event/api
    util/index
+   cli
+   configuration

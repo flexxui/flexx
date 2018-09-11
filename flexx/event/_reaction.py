@@ -33,9 +33,7 @@ def reaction(*connection_strings, mode='normal'):
     :class:`Reaction <flexx.event.Reaction>`.
 
     A reaction can be connected to multiple event types. Each connection
-    string represents an event type to connect to. Read more about
-    dynamism and labels for further information on the possibilities
-    of connection strings.
+    string represents an event type to connect to.
 
     Also see the
     :func:`Component.reaction() <flexx.event.Component.reaction>` method.
@@ -52,6 +50,28 @@ def reaction(*connection_strings, mode='normal'):
     connection strings, the mode is "auto": the reaction will automatically
     trigger when any of the properties used in the function changes.
     See :func:`get_mode() <flexx.event.Reaction.get_mode>` for details.
+    
+    Connection string follow the following syntax rules:
+    
+    * Connection strings consist of parts separated by dots, thus forming a path.
+      If an element on the path is a property, the connection will automatically
+      reset when that property changes (a.k.a. dynamism, more on this below).
+    * Each part can end with one star ('*'), indicating that the part is a list
+      and that a connection should be made for each item in the list.
+    * With two stars, the connection is made *recursively*, e.g. "children**"
+      connects to "children" and the children's children, etc.
+    * Stripped of '*', each part must be a valid identifier (ASCII).
+    * The total string optionally has a label suffix separated by a colon. The
+      label itself may consist of any characters.
+    * The string can have a "!" at the very start to suppress warnings for
+      connections to event types that Flexx is not aware of at initialization
+      time (i.e. not corresponding to a property or emitter).
+    
+    An extreme example could be ``"!foo.children**.text:mylabel"``, which connects
+    to the "text" event of the children (and their children, and their children's
+    children etc.) of the ``foo`` attribute. The "!" is common in cases like
+    this to suppress warnings if not all children have a ``text`` event/property.
+    
     """
     if (not connection_strings):
         raise TypeError('reaction() needs one or more arguments.')
