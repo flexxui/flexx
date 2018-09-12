@@ -8,7 +8,7 @@ The *event* module provides a powerful property and event system that
 makes it easy to connect different parts of your application. Central to
 the event system is the ``Component`` class.
 The *app* module runs the server to which the web runtime connects (via a
-websocket). Further, it extends the ``event.Component`` class into the
+websocket). Further, it extends the ``Component`` class into the
 ``PyComponent`` and ``JsComponent`` classes. Objects of these classes 
 live in Python and JavaScript respectively, but (can) have a representation
 on the other side, from which properties can be accessed, and actions be invoked.

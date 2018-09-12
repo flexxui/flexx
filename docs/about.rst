@@ -6,7 +6,7 @@ About
    :maxdepth: 2
    
    releasenotes
-   motivation
-   overview
    contributing
-   eventsystempatterns
+   overview
+   motivation
+   eventsystembackground

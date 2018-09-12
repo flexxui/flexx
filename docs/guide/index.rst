@@ -10,5 +10,5 @@ Guide
     reactions
     pscript_modules_scope
     assets_data
-    running_desktop
-    notebooks
+    patterns
+    running

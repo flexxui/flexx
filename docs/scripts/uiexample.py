@@ -19,7 +19,7 @@ THIS_DIR = os.path.abspath(os.path.dirname(__file__))
 ROOT_DIR = os.path.dirname(os.path.dirname(THIS_DIR))
 HTML_DIR = os.path.abspath(os.path.join(THIS_DIR, '..', '_build', 'html'))
 
-SIMPLE_CODE_T = """
+SIMPLE_CODE_T1 = """
 from flexx import app, ui
 
 class App(ui.Widget):
@@ -27,6 +27,13 @@ class App(ui.Widget):
     def init(self):
         """  # mind the indentation
 
+SIMPLE_CODE_T2 = """
+from flexx import flx
+
+class App(flx.Widget):
+
+    def init(self):
+        """  # mind the indentation
 
 all_examples = []
 
@@ -132,7 +139,10 @@ def visit_uiexample_html(self, node):
     
     # Is this a simple example?
     if 'import' not in code:
-        code = SIMPLE_CODE_T + '\n        '.join([line for line in code.splitlines()])
+        if 'flx.' in code:
+            code = SIMPLE_CODE_T2 + '\n        '.join([line for line in code.splitlines()])
+        else:
+            code = SIMPLE_CODE_T1 + '\n        '.join([line for line in code.splitlines()])
     
     # Get id and filename
     this_id = hashlib.md5(code.encode('utf-8')).hexdigest()

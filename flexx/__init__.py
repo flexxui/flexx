@@ -13,7 +13,7 @@ The docs are on `Readthedocs <http://flexx.readthedocs.io>`_,
 the code is on `Github <http://github.com/flexxui/flexx>`_,
 and there is a `demo server <http://demo.flexx.app>`_.
 Once you've got started, the most important page is probably the
-`Widget reference <https://flexx.readthedocs.io/en/latest/ui/api.html>`_.
+:doc:`Widget reference <ui/api>`.
 
 ----
 

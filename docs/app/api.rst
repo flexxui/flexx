@@ -49,6 +49,10 @@ The Component classes
 .. autofunction:: flexx.app.get_component_classes
 
 
+.. autoclass:: flexx.app.LocalProperty
+    :members:
+
+
 Session and Assets
 ------------------
 
