@@ -103,7 +103,7 @@ server starts up.
     ... serve assets with flask/aiohttp/tornado/vibora/django/... 
 
 
-End
----
+Next
+----
 
-This concluses the Flexx guide. Have fun!
+Next up: :doc:`Debugging <debugging>`.
