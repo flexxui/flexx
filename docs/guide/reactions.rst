@@ -1,35 +1,43 @@
 ---------
-React
+Reactions
 ---------
 
 :func:`Reactions <flexx.event.reaction>` are used to react to events and
 changes in properties, using an underlying handler function:
 
 
-.. code-block:: python
+.. UIExample:: 100
 
-    class MyObject(event.Component):
-
-        first_name = event.StringProp(settable=True)
-        last_name = event.StringProp(settable=True)
-
-        @event.reaction('first_name', 'last_name')
+    from flexx import flx
+    
+    class Example(flx.Widget):
+        
+        def init(self):
+            super().init()
+            with flx.VBox():
+                with flx.HBox():
+                    self.firstname = flx.LineEdit(placeholder_text='First name')
+                    self.lastname = flx.LineEdit(placeholder_text='Last name')
+                with flx.HBox():
+                    self.but = flx.Button(text='Reset')
+                    self.label = flx.Label(flex=1)
+            
+        @flx.reaction('firstname.text', 'lastname.text')
         def greet(self, *events):
-            print('hi', self.first_name, self.last_name)
-
-        @event.reaction('!foo')
-        def handle_foo(self, *events):
-            for ev in events:
-                print(ev)
+            self.label.set_text('hi ' + self.firstname.text + ' ' + self.lastname.text)
+        
+        @flx.reaction('but.pointer_click')
+        def reset(self, *events):
+            self.label.set_text('')
 
 
 This example demonstrates multiple concepts. Firstly, the reactions are
-connected via *connection-strings* that specify the types of the
-event; in this case the ``greeter`` reaction is connected to "first_name" and
-"last_name", and ``handle_foo`` is connected to the event-type "foo" of the
-object. This connection-string can also be a path, e.g.
-"sub.subsub.event_type". This allows for some powerful mechanics, as
-discussed in the section on dynamism.
+connected via *connection-strings* that specify the types of the event;
+in this case the ``greet()`` reaction is connected to "firstname.text"
+and "lastname.text", and ``reset()`` is connected to the event-type
+"pointer_click" event of the button. One can see how the
+connection-string is a path, e.g. "sub.subsub.event_type". This allows
+for some powerful mechanics, as discussed in the section on dynamism.
 
 One can also see that the reaction-function accepts ``*events`` argument.
 This is because reactions can be passed zero or more events. If a reaction
@@ -37,96 +45,104 @@ is called manually (e.g. ``ob.handle_foo()``) it will have zero events.
 When called by the event system, it will have at least 1 event. When
 e.g. a property is set twice, the function will be called
 just once, but with multiple events. If all events need to be processed
-individually, use ``for ev in events: ...``.
+individually, use:
+    
+.. code-block:: python
+    
+    @flx.reaction('foo')
+    def handler(self, *events):
+        for ev in events:
+            ...
 
 In most cases, you will connect to events that are known beforehand,
 like those corresponding to properties and emitters.
-If you connect to an event that is not known (like "foo" in the example
-above) Flexx will display a warning. Use ``'!foo'`` as a connection string
-(i.e. prepend an exclamation mark) to suppress such warnings.
-
-Another useful feature of the event system is that a reaction can connect to
-multiple events at once, as the ``greet`` reaction does.
-
-The following is less common, but it is possible to create a reaction from a
-normal function, by using the
-:func:`Component.reacion() <flexx.event.Component.reaction>` method:
-
-.. code-block:: python
-
-    c = MyComponent()
-
-    # Using a decorator
-    @c.reaction('foo', 'bar')
-    def handle_func1(self, *events):
-        print(events)
-
-    # Explicit notation
-    def handle_func2(self, *events):
-        print(events)
-    c.reaction(handle_func2, 'foo', 'bar')
-    # this is fine too: c.reaction('foo', 'bar', handle_func2)
+If you connect to an event that is not known Flexx will display a warning.
+Prepend an exclamation mark (e.g. ``'!foo'``) to suppress such warnings.
 
 
 Greedy and automatic reactions
-==============================
+------------------------------
 
-Each reaction operates in a certain "mode". In mode "normal", the event system
-ensures that all events are handled in the order that they were emitted. This
-is often the most useful approach, but this implies that a reaction can be
-called multiple times during a single event loop iteration, with other
-reactions called in between to ensure the consisten event order.
+Each reaction operates in a certain "mode". In mode "normal" (the
+default), the event system ensures that all events are handled in the
+order that they were emitted. This is often the most sensible approach,
+but this implies that a reaction can be called multiple times during a
+single event loop iteration, with other reactions called in between to
+ensure the consisten event order.
 
 If it is preferred that all events targeted at a reaction are handled with
 a single call to that reaction, it can be set to mode "greedy". Cases where
 this makes sense is when all related events must be processed simultenously,
 or simply when performance matters a lot and order matters less.
 
+.. code-block:: python
+    
+    @flx.reaction('foo', mode='greedy')
+    def handler(self, *events):
+        ...
+
 Reactions with mode "auto" are automatically triggered when any of the
 properties that the reaction uses is changed. Such reactions can be
 created by specifying the ``mode`` argument, or simply by creating a
 reaction with zero connections strings. We refer to such reactions as
-"auto reactions" or "implicit reactions". This is a convenient feature,
-but should probably be avoided when a lot (say hundreds) of properties
-are accessed.
+"auto reactions" or "implicit reactions". 
 
-.. code-block:: python
+This is a very convenient feature, but it has more overhead than a
+normal reaction, and should therefore probably be avoided when a lot
+of properties are accessed, or when the used properties change very
+often. It's hard to tell exactly when it starts to significantly hurt
+performance, but "often" is probably around hundreds and "often around
+100 times per second. Just keep this in mind and do your own benchmarks
+when needed.
 
-    class MyObject(event.Component):
+.. UIExample:: 100
 
-        first_name = event.StringProp(settable=True)
-        last_name = event.StringProp(settable=True)
-
-        @event.reaction
-        def greet(self):
-            print('hi', self.first_name, self.last_name)
+    from flexx import flx
+    
+    class Example(flx.Widget):
+        
+        def init(self):
+            super().init()
+            with flx.VBox():
+                with flx.HBox():
+                    self.slider1 = flx.Slider(flex=1)
+                    self.slider2 = flx.Slider(flex=1)
+                self.label = flx.Label(flex=1)
+        
+        @flx.reaction
+        def slders_combined(self):
+            self.label.set_text('{:.2f}'.format(self.slider1.value + self.slider2.value))
 
 A similar useful feature is to assign a property (at initialization) using a
 function. In such a case, the function is turned into an implicit reaction.
 This can be convenient to easily connect different parts of an app.
 
-.. code-block:: python
+.. UIExample:: 100
 
-    class MyObject(event.Component):
-
-        first_name = event.StringProp(settable=True)
-        last_name = event.StringProp(settable=True)
-
-    person = MyObject()
-    label = UiLabel(text=lambda: person.first_name)
+    from flexx import flx
+    
+    class Example(flx.Widget):
+        
+        def init(self):
+            super().init()
+            with flx.VBox():
+                with flx.HBox():
+                    self.slider1 = flx.Slider(flex=1)
+                    self.slider2 = flx.Slider(flex=1)
+                self.label = flx.Label(flex=1, text=lambda:'{:.2f}'.format(self.slider1.value * self.slider2.value))
 
 
 Reacting to in-place mutations
-==============================
+------------------------------
 
 In-place mutations to lists or arrays can be reacted to by processing
 the events one by one:
 
 .. code-block:: python
 
-    class MyComponent(event.Component):
+    class MyComponent(flx.Component):
 
-        @event.reaction('other.items')
+        @flx.reaction('other.items')
         def track_array(self, *events):
             for ev in events:
                 if ev.mutation == 'set':
@@ -141,25 +157,25 @@ the events one by one:
                     assert False, 'we cover all mutations'
 
 For convenience, the mutation can also be "replicated" using the
-``flexx.event.mutate_array()`` and ``flexx.event.mutate_dict()`` functions.
+``flx.mutate_array()`` and ``flx.mutate_dict()`` functions.
 
 
 Labels
-======
+------
 
 Labels are a feature that makes it possible to infuence the order by
 which reactions are called, and provide a means to disconnect
-specific (groups of) handlers.
+specific (groups of) handlers at once.
 
 .. code-block:: python
 
-    class MyObject(event.Component):
+    class MyObject(flx.Component):
 
-        @event.reaction('foo')
+        @flx.reaction('foo')
         def given_foo_handler(*events):
                 ...
 
-        @event.reaction('foo:aa')
+        @flx.reaction('foo:aa')
         def my_foo_handler(*events):
             # This one is called first: 'aa' < 'given_f...'
             ...
@@ -183,61 +199,89 @@ The label can also be used in the
 
 
 Dynamism
-========
+--------
 
 Dynamism is a concept that allows one to connect to events for which
-the source can change. For the following example, assume that ``Node``
-is a ``Component`` subclass that has properties ``parent`` and
-``children``.
+the source can change. In the example below, we connect to the click event
+of a list of buttons, which keeps working even as that list changes.
 
-.. code-block:: python
+.. UIExample:: 150
 
-    main = Node()
-    main.parent = Node()
-    main.children = Node(), Node()
+    from flexx import flx
+    
+    class Example(flx.Widget):
+        
+        def init(self):
+            super().init()
+            with flx.VBox():
+                with flx.HBox():
+                    self.but = flx.Button(text='add')
+                    self.label = flx.Label(flex=1)
+                with flx.HBox() as self.box:
+                    flx.Button(text='x')
+        
+        @flx.reaction('but.pointer_click')
+        def add_widget(self, *events):
+            flx.Button(parent=self.box, text='x')
+        
+        @flx.reaction('box.children*.pointer_click')
+        def a_button_was_pressed(self, *events):
+            ev = events[-1]  # only care about last event
+            self.label.set_text(ev.source.id + ' was pressed')
 
-    @main.reaction('parent.foo')
-    def parent_foo_handler(*events):
-        ...
+The ``a_button_was_pressed`` gets invoked when any of the buttons inside
+``box`` is clicked. When the box's children changes, the reaction is
+automatically reconnected. Note that in some cases you might also want
+to connect to changes of the ``box.children`` property itself.
 
-    @main.reaction('children*.foo')
-    def children_foo_handler(*events):
-        ...
-
-The ``parent_foo_handler`` gets invoked when the "foo" event gets
-emitted on the parent of main. Similarly, the ``children_foo_handler``
-gets invoked when any of the children emits its "foo" event. Note that
-in some cases you might also want to connect to changes of the ``parent``
-or ``children`` property itself.
-
-The event system automatically reconnects reactions when necessary. This
-concept makes it very easy to connect to the right events without the
-need for a lot of boilerplate code.
-
-Note that the above example would also work if ``parent`` would be a
-regular attribute instead of a property, but the reaction would not be
-automatically reconnected when it changed.
+The above works because ``box.children`` is a property. The reaction
+would still work if it would connect to widgets in a regular list, but
+it would not be dynamic.
 
 
 Implicit dynamism
-=================
+-----------------
 
 Implicit reactions are also dynamic, maybe even more so! In the example below,
 the reaction accesses the ``children`` property, thus it will be called whenever
 that property changes. It also connects to the ``visible`` event of
 all children, and to the ``foo`` event of all children that are visible.
 
-.. code-block:: python
+.. UIExample:: 150
 
-   @main.reaction
-    def _implicit_reacion():
-        for child in main.children:
-            if child.visible:
-                do_something_with(child.foo)
+    from flexx import flx
+    
+    class Example(flx.Widget):
+        
+        def init(self):
+            super().init()
+            with flx.VBox():
+                with flx.HBox():
+                    self.but = flx.Button(text='add')
+                    self.label = flx.Label(flex=1)
+                with flx.HBox() as self.box:
+                    flx.CheckBox()
+        
+        @flx.reaction('but.pointer_click')
+        def add_widget(self, *events):
+            flx.CheckBox(parent=self.box)
+        
+        @flx.reaction
+        def a_button_was_pressed(self):
+            ids = []
+            for checkbox in self.box.children:
+                if checkbox.checked:
+                    ids.append(checkbox.id)
+            self.label.set_text('checked: ' + ', '.join(ids))
 
 This mechanism is powerful, but one can see how it can potentially
 access (and thus connect to) many properties, especially if the reaction
-calls other functions that access more properties. Also keep in mind that
-implicit reactions have more overhead (because they fully reconnect
-every time after they are called). One should probably avoid them for
-properties that change 100 times per second.
+calls other functions that access more properties. As mentioned before,
+keep in mind that implicit reactions have more overhead, which scales with the
+number of properties that are accessed. 
+
+
+Next
+----
+
+Next up: :doc:`PScript, modules and scope <pscript_modules_scope>`.

@@ -135,6 +135,7 @@ class App:
 
     def launch(self, runtime=None, **runtime_kwargs):
         """ Launch this app as a desktop app in the given runtime.
+        See https://webruntime.readthedocs.io for details.
 
         Arguments:
             runtime (str): the runtime to launch the application in.

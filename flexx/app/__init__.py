@@ -1,5 +1,10 @@
 """
 The Flexx application system.
+
+The app module implements the connection between Python and JavaScript.
+It runs a web server and websocket server based on Tornado, provides
+an asset (and data) management system, and provides the PyComponent and
+JsComponent classes, which form the basis for e.g. Widgets.
 """
 
 _DEV_NOTES = """

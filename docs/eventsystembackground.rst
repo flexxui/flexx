@@ -1,10 +1,33 @@
-Flexx event system patterns
----------------------------
+-----------------------------------------
+Some background on the Flexx event system
+-----------------------------------------
 
 Flexx' event system is quite flexible and designed to cover the needs
-of a variety of event/messaging mechanisms. This section discusses
-how this system relates to some common patterns, and how these can be
-implemented.
+of a variety of event/messaging mechanisms. But we did not get there
+in one go.
+
+
+History
+-------
+
+In the early days of Flexx, the event system was based on the ideas of
+reactive programming, where information supposedly flows through your
+application. Although this style does have benefits, we found it very
+unnatural for GUI applications. Therefore we made a major refactoring
+to build an event system using a more classic property based approach.
+We build in a bit of asynchronicity to deal with some of the common
+problems with MVC, and were quite happy. However, as we started building
+larger applications, the system started showing its limitations. Several
+months of discussion and design, followed by another several months of
+coding, resulted in the current event system. 
+
+
+
+Patterns
+--------
+
+This section discusses how the event system relates to some common patterns,
+and how these can be implemented.
 
 Observer pattern
 ================

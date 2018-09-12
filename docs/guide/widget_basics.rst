@@ -1,84 +1,107 @@
----------------------------
-The basics of Flexx Widgets
----------------------------
+--------------
+Widgets basics
+--------------
 
-Once you are familiar with :class:`JsComponent <flexx.app.JsComponent>` and
-the :class:`Widget <flexx.ui.Widget>` class, understanding all other widgets
-should be relatively straightforward. The ``Widget`` class is the base class
-of all other ui classes. On itself it does not do or show much, though we can make it
-visible by changing the background color:
+If you're interested in Flexx, the first thing that you probably want to do is
+create a UI. So let's see how that works, and talk about
+:doc:`components <widgets_components>`, :doc:`events <event_system>`
+and :doc:`reactions <reactions>` later.
+
+Your first widget
+-----------------
+
+The :class:`Widget <flexx.ui.Widget>` class is the base class of all
+other ui classes. On itself it does not do or show much. What you'll
+typically do, is subclass it to create a new widget that contains ui
+elements:
+
 
 .. UIExample:: 100
-
-    from flexx import app, ui
-
-    class Example(ui.HSplit):
-
-        def init(self):
-            ui.Widget(style='background:red;')
-            ui.Widget(style='background:blue;')
-
-
-Widgets can also used as a container for other widgets:
-
-.. UIExample:: 100
-
-    from flexx import app, ui
-
-    class Example(ui.Widget):
+    from flexx import flx
+    
+    class Example(flx.Widget):
 
         def init(self):
-            ui.Button(text='hello')
-            ui.Button(text='world')
+            flx.Button(text='hello')
+            flx.Button(text='world')
 
 The above is usually not the layout that you want. Therefore there are layout widgets
 which distribute the space among its children in a more sensible manner. Like the
-``HSplit`` in the first example.
+:class:`HBox <flexx.ui.HBox>`:
+    
+
+.. UIExample:: 100
+    
+    from flexx import flx
+    
+    class Example(flx.Widget):
+
+        def init(self):
+            with flx.HBox():
+                flx.Button(text='hello', flex=1)
+                flx.Button(text='world', flex=2)
+
+The ``HBox`` and ``Button`` are all widgets too. The example widgets that we
+created above are also refered to as "compound widgets"; widgets that contain
+other widgets. This is the most used way to create new UI elements.
+
+Structuring widgets
+-------------------
 
 Compound widgets can be used anywhere in your app. They are
 constructed by implementing the ``init()`` method. Inside this method
 the widget is the *default parent*.
 
 Any widget class can also be used as a *context manager*. Within the context,
-the widget is the default parent; any widget that is created in that context
-and that does not specify a parent will have the widget as a parent. (The
-default-parent-mechanism is thread-safe, since there is a default widget
-per thread.)
+that widget is the default parent; any widget that is created in that context
+and that does not specify a parent will have that widget as a parent. (This
+mechanism is thread-safe.) This allows for a style of writing that
+clearly shows the structure of your app:
 
 .. UIExample:: 100
-
-    from flexx import app, ui
-
-    class Example(ui.Widget):
+    
+    from flexx import flx
+    
+    class Example(flx.Widget):
 
         def init(self):
-            with ui.HSplit():
-                ui.Button(text='foo')
-                with ui.VBox():
-                    ui.Button(flex=1, text='bar')
-                    ui.Button(flex=1, text='spam')
+            with flx.HSplit():
+                flx.Button(text='foo')
+                with flx.VBox():
+                    flx.Widget(style='background:red;', flex=1)
+                    flx.Widget(style='background:blue;', flex=1)
 
 
-To create an actual app from a widget, there are three possibilities:
-``serve()`` it as a web app, ``launch()`` it as a desktop app or
-``export()`` it as a standalone HTML document:
+Turning a widget into an app
+----------------------------
+
+To create an actual app from a widget, simply wrap it into an :class:`App <flexx.app.App>`.
+You can then ``launch()`` it as a desktop app, ``serve()`` it as a web app, 
+``dump()`` the assets, ``export()`` it as a standalone HTML document, or
+even ``publish()`` it online (experimental).
+
+.. code-block:: py
+    
+    from flexx import flx
+    
+    class Example(flx.Widget):
+        def init(self):
+            flx.Label(text='hello world')
+
+    app = flx.App(Example)
+    app.export('example.html', link=0)  # Export to single file
+
+To actually show the app, use launch:
 
 .. code-block:: py
 
-    from flexx import app, ui
-
-    @app.serve
-    class Example(ui.Widget):
-        def init(self):
-            ui.Label(text='hello world')
-
-    example = app.launch(Example)
-    app.export(Example, 'example.html')
+    app.launch('browser')  # show it now in a browser
+    flx.run()  # enter the mainloop
 
 
 
-Using widgets the classic way
------------------------------
+Using widgets the Python way
+----------------------------
 
 In the above examples, we've used the "classic" way to build applications
 from basic components. Flexx provides a variety of layout widgets as well
@@ -90,36 +113,37 @@ Using widgets the web way
 
 An approach that might be more familiar for web developers, and which is
 inspired by frameworks such as React is to build custom widgets using
-html elements:
+html elements. If you're used to Python and the below looks odd to you, don't
+worry, you don't need it:
 
 .. UIExample:: 150
 
-    from flexx import app, event, ui
+    from flexx import flx
 
-    class Example(ui.Widget):
+    class Example(flx.Widget):
 
-        name = event.StringProp('John Doe', settable=True)
-        age =  event.IntProp(22, settable=True)
+        name = flx.StringProp('John Doe', settable=True)
+        age =  flx.IntProp(22, settable=True)
 
-        @event.action
+        @flx.action
         def increase_age(self):
             self._mutate_age(self.age + 1)
 
         def _create_dom(self):
             # Use this method to create a root element for this widget.
             # If you just want a <div> you don't have to implement this.
-            return ui.create_element('div')  # the default is <div>
+            return flx.create_element('div')  # the default is <div>
 
         def _render_dom(self):
             # Use this to determine the content. This method may return a
             # string, a list of virtual nodes, or a single virtual node
             # (which must match the type produced in _create_dom()).
-            return [ui.create_element('span', {},
-                        'Hello', ui.create_element('b', {}, self.name), '! '),
-                    ui.create_element('span', {},
+            return [flx.create_element('span', {},
+                        'Hello', flx.create_element('b', {}, self.name), '! '),
+                    flx.create_element('span', {},
                         'I happen to know that your age is %i.' % self.age),
-                    ui.create_element('br'),
-                    ui.create_element('button', {'onclick': self.increase_age},
+                    flx.create_element('br'),
+                    flx.create_element('button', {'onclick': self.increase_age},
                         'Next year ...')
                     ]
 
@@ -130,3 +154,9 @@ way to define the appearance of a widget using HTML elements.
 
 Above, the third argument in ``create_element()`` is a string, but this may
 also be a list of dicts (``create_element()`` returns a dict).
+
+
+Next
+----
+
+Next up: :doc:`Widgets are components <widgets_components>`.
