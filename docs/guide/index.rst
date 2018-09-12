@@ -12,3 +12,4 @@ Guide
     assets_data
     patterns
     running
+    debugging
