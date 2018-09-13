@@ -7,29 +7,30 @@ Flexx
 
 Want to stay up-to-date about (changes to) Flexx? Subscribe to the [NEWS issue](https://github.com/flexxui/flexx/issues/477).
 
+
 Introduction
 ------------
 
-Flexx is a pure Python toolkit for creating graphical user interfaces
-(GUI's), that uses web technology for its rendering. Apps are written
-purely in Python; Flexx' transpiler generates the necessary JavaScript
-on the fly.
+[Flexx](https://flexx.readthedocs.io) is a pure Python toolkit for
+creating graphical user interfaces (GUI's), that uses web technology
+for its rendering. Apps are written purely in Python; The
+[PScript](https://pscript.readthedocs.io) transpiler generates the
+necessary JavaScript on the fly.
 
 You can use Flexx to create (cross platform) desktop applications, web
-applications, and (if designed in the right way) export an app to a
-standalone HTML document. It also works in the Jupyter notebook.
+applications, and export an app to a standalone HTML document. It also
+works in the Jupyter notebook.
 
 The docs are on [Readthedocs](http://flexx.readthedocs.io).
 the code is on [Github](http://github.com/flexxui/flexx).
-Flexx is currently in alpha status; any part of the public API may
-change without notice. Feedback is welcome.
+
 
 Example
 -------
 
 Click the image below for an interactive example:
 
-[![demo](https://dl.dropboxusercontent.com/s/x4s7wgv6tpyqsqo/flexx_demo_300.png)](http://flexx.readthedocs.io/en/latest/ui/examples/demo_src.html)
+[![demo](https://dl.dropboxusercontent.com/s/x4s7wgv6tpyqsqo/flexx_demo_300.png)](http://flexx.readthedocs.io/en/latest/examples/demo_src.html)
 
 There is a demo server at http://demo.flexx.app .
 
@@ -55,22 +56,19 @@ Installation
 Flexx requires Python 3.5+ and also works on pypy. Further,
 it depends on:
 
-* the [tornado](http://www.tornadoweb.org) library (pure Python).
-* the [PScript](http://github.com/flexxui/pscript) library (a (pure Python) flexxui project).
-* the [webruntime](http://github.com/flexxui/webruntime) library (a (pure Python) flexxui project).
-* the [dialite](http://github.com/flexxui/dialite) library (a (pure Python) flexxui project).
+* the [Tornado](http://www.tornadoweb.org) library (pure Python).
+* the [PScript](http://github.com/flexxui/pscript) library (a pure Python flexxui project).
+* the [Webruntime](http://github.com/flexxui/webruntime) library (a pure Python flexxui project).
+* the [Dialite](http://github.com/flexxui/dialite) library (a pure Python flexxui project).
 
-For running desktop apps, it is recommended to have Firefox installed.
-
-The current release is really old, please use the latest master if you want to try it:
-
-* ``pip install https://github.com/flexxui/flexx/archive/master.zip``, or
-* Clone the repo and add it to your PYTHONPATH.
-
-When version 0.5 is released:
-
-* ``conda install flexx -c conda-forge``, or
+To install the latest release (and dependencies), use either of these commands:
+    
 * ``pip install flexx``
+* ``conda install flexx -c conda-forge``
+
+Or get the bleeding edge with:
+
+* ``pip install https://github.com/flexxui/flexx/archive/master.zip``
 
 
 Supported browsers
@@ -78,6 +76,8 @@ Supported browsers
 
 Flexx aims to support all modern browsers, including Firefox, Chrome and Edge.
 Internet Explorer version 10 and up should work, but some things may be flaky.
+
+For running desktop apps, it is needed to have Firefox or NW.js installed.
 
 
 License

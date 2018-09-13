@@ -6,8 +6,8 @@ for its rendering. Apps are written purely in Python; The
 necessary JavaScript on the fly.
 
 You can use Flexx to create (cross platform) desktop applications, web
-applications, and (if designed in the right way) export an app to a
-standalone HTML document. It also works in the Jupyter notebook.
+applications, and export an app to a standalone HTML document. It also
+works in the Jupyter notebook.
 
 The docs are on `Readthedocs <http://flexx.readthedocs.io>`_,
 the code is on `Github <http://github.com/flexxui/flexx>`_,

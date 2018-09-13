@@ -160,10 +160,10 @@ For convenience, the mutation can also be "replicated" using the
 ``flx.mutate_array()`` and ``flx.mutate_dict()`` functions.
 
 
-Labels
-------
+Connection string labels
+------------------------
 
-Labels are a feature that makes it possible to infuence the order by
+Connection strings can have labels to infuence the order by
 which reactions are called, and provide a means to disconnect
 specific (groups of) handlers at once.
 

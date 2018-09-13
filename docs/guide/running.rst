@@ -100,7 +100,7 @@ server starts up.
     app = flx.App(MainComponent)
     assets = app.dump('index.html')
     
-    ... serve assets with flask/aiohttp/tornado/vibora/django/... 
+    ...  # serve assets with flask/aiohttp/tornado/vibora/django/... 
 
 
 Next

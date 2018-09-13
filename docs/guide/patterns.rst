@@ -2,9 +2,9 @@
 Sensible usage patterns
 -----------------------
 
-This chapter discusses some patterns can be adopted to structure your
+This chapter discusses some patterns that can be adopted to structure your
 applications. Which kind of pattern(s) make sense depends on the use-case
-and personal preference. Also, don't be dogmatic, these are only mentioned
+and personal preference. Also, don't be dogmatic, these are only intended
 to give a sensible direction.
 
 
@@ -21,7 +21,7 @@ it changes.
 
 This is a pattern worth following in almost all sceneario's. Flexx reaction
 system was designed to make this as natural as possible. This idea is also
-at the core of some of the next patterns.
+at the core of the next pattern.
 
 
 Use of a central data store

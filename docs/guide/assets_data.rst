@@ -53,3 +53,4 @@ The latter also works for numpy arrays.
 Next
 ----
 
+Next up: :doc:`Sensible usage patterns <patterns>`.
