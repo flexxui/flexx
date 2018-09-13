@@ -3,7 +3,7 @@ Release notes
 -------------
 
 
-**v0.5.0** (September 2018)
+**v0.5.0** (13-09-2018)
 
 This release marks the end of the alpha stage of Flexx. Until now, we took the liberty
 to redesign various parts of Flexx and break the API several times. From now on,
