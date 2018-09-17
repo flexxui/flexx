@@ -291,26 +291,6 @@ class ComboBox(BaseDropdown):
         The index of the currently highlighted item.
         """)
 
-    def init(self):
-        super().init()
-        # Use action to do validation. We could use a custom property to
-        # do the validation/normalization, but this case is quite specific,
-        # and this works too.
-        self.set_options(self.options)
-
-    @event.emitter
-    def user_selected(self, index):
-        """ Event emitted when the user selects an item using the mouse or
-        keyboard. The event has attributes ``index``, ``key`` and ``text``.
-        """
-        options = self.options
-        if index >= 0 and index < len(options):
-            key, text = options[index]
-            self.set_selected_index(index)
-            self.set_selected_key(key)
-            self.set_text(text)
-            return dict(index=index, key=key, text=text)
-
     @event.action
     def set_options(self, options):
         # If dict ...
@@ -327,6 +307,66 @@ class ComboBox(BaseDropdown):
                 opt = str(opt), str(opt)
             options2.append(opt)
         self._mutate_options(tuple(options2))
+
+        # Be smart about maintaining item selection
+        keys = [key_text[0] for key_text in self.options]
+        if self.selected_key and self.selected_key in keys:
+            key = self.selected_key
+            self.set_selected_key('')
+            self.set_selected_key(key)  # also changes text
+        elif 0 <= self.selected_index < len(self.options):
+            index = self.selected_index
+            self.set_selected_index(-1)
+            self.set_selected_index(index)  # also changes text
+        elif self.selected_key:
+            self.selected_key('')  # also changes text
+        else:
+            pass  # no selection, leave text alone
+    
+    @event.action
+    def set_selected_index(self, index):
+        if index == self.selected_index:
+            return
+        elif 0 <= index < len(self.options):
+            key, text = self.options[index]
+            self._mutate('selected_index', index)
+            self._mutate('selected_key', key)
+            self.set_text(text)
+        else:
+            self._mutate('selected_index', -1)
+            self._mutate('selected_key', '')
+            self.set_text('')
+    
+    @event.action
+    def set_selected_key(self, key):
+        if key == self.selected_key:
+            return
+        elif key:
+            if key == self.selected_key:
+                return  # eraly exit
+            for index, option in enumerate(self.options):
+                if option[0] == key:
+                    self._mutate('selected_index', index)
+                    self._mutate('selected_key', key)
+                    self.set_text(option[1])
+                    return
+        # else
+        self._mutate('selected_index', -1)
+        self._mutate('selected_key', '')
+        self.set_text('')
+    
+    @event.emitter
+    def user_selected(self, index):
+        """ Event emitted when the user selects an item using the mouse or
+        keyboard. The event has attributes ``index``, ``key`` and ``text``.
+        """
+        options = self.options
+        if index >= 0 and index < len(options):
+            key, text = options[index]
+            self.set_selected_index(index)
+            self.set_selected_key(key)
+            self.set_text(text)
+            return dict(index=index, key=key, text=text)
 
     def _create_dom(self):
         node = super()._create_dom()
@@ -366,24 +406,6 @@ class ComboBox(BaseDropdown):
         else:
             self.node.classList.add('editable-false')
             self.node.classList.remove('editable-true')
-
-    @event.reaction('options')
-    def __on_options(self, *events):
-        # Be smart about maintaining item selection
-        keys = [key_text[0] for key_text in self.options]
-        if self.selected_key and self.selected_key in keys:
-            key = self.selected_key
-            self.set_selected_index(-1)
-            self.set_selected_key('')
-            self.set_selected_key(key)
-        elif self.selected_index < len(self.options):
-            index = self.selected_index
-            self.set_selected_key('')
-            self.set_selected_index(-1)
-            self.set_selected_index(index)
-        else:
-            self.set_selected_index(-1)
-            self.set_selected_key('')
 
     def _ul_click(self, e):
         self._select_from_ul(e.target.index)
@@ -442,25 +464,6 @@ class ComboBox(BaseDropdown):
         # todo: should this select option if text happens to match it?
         self.set_selected_index(-1)
         self.set_selected_key('')
-
-    @event.reaction('selected_index')
-    def __on_selected_index(self, *events):
-        if self.selected_index >= 0:
-            if self.selected_index < len(self.options):
-                key, text = self.options[self.selected_index]
-                self.set_text(text)
-                self.set_selected_key(key)
-
-    @event.reaction('selected_key')
-    def __on_selected_key(self, *events):
-        if self.selected_key != '':
-            key = self.selected_key
-            if self.options[self.selected_index]:
-                if self.options[self.selected_index][0] == key:
-                    return
-            for index, option in enumerate(self.options):
-                if option[0] == key:
-                    self.set_selected_index(index)
 
 
 class DropdownContainer(BaseDropdown):
