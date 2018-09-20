@@ -1058,9 +1058,12 @@ class Widget(app.JsComponent):
 
     @event.emitter
     def key_press(self, e):
-        """ Event emitted when a key is pressed down. This event does not
-        fire for the pressing of a modifier keys. See key_down for details.
+        """ Event emitted when a key is released after pressing down, in theory.
+        In contast to key_down, this event does not fire for the
+        pressing of modifier keys, and some browsers will also not fire
+        for the arrow keys, backspace, etc. See key_down for details.
         """
+        # Is there actually a reason for ever using this instead of key_down?
         return self._create_key_event(e)
 
     def _create_key_event(self, e):
