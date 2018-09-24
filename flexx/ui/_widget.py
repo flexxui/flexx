@@ -274,7 +274,13 @@ class Widget(app.JsComponent):
     def __init__(self, *init_args, **kwargs):
 
         # Handle parent
-        parent = kwargs.pop('parent', None)
+        try:
+            given_parent = parent = kwargs.pop('parent')
+            parent_given = True
+        except KeyError:
+            given_parent = parent = None
+            parent_given = False
+        
         if parent is None:
             active_components = loop.get_active_components()
             for active_component in reversed(active_components):
@@ -302,8 +308,9 @@ class Widget(app.JsComponent):
         # Note that the _comp_init_property_values() will get called first.
 
         # Attach this widget in the widget hierarchy, if we can
-        if parent is not None:
-            # Just attach to the parent
+        if parent_given:
+            self.set_parent(given_parent)
+        elif parent is not None:
             self.set_parent(parent)
         elif self.container == '':
             # Determine whether this should be the main widget. If the browser
