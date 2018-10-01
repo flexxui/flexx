@@ -52,7 +52,7 @@
 "use strict";
 
 var VERSION;
-VERSION = [2, 1, 0];
+VERSION = [2, 2, 0];
 
 // http://github.com/msgpack/msgpack-javascript/blob/master/msgpack.js#L181-L192
 function utf8encode(mix) {
@@ -107,7 +107,7 @@ function BsdfSerializer(extensions) {
      */
     this.extensions = [];
     if (extensions === undefined) { extensions = standard_extensions; }
-    if (!Array.isArray(extensions)) { throw "Extensions must be an array."; }
+    if (!Array.isArray(extensions)) { throw new TypeError("Extensions must be an array."); }
     for (var i=0; i<extensions.length; i++) {
         this.add_extension(extensions[i]);
     }
@@ -149,13 +149,13 @@ BsdfSerializer.prototype.decode = function (buf, extensions) {
     var f = BytesReader(buf);
     var head = f.get_char() + f.get_char() + f.get_char() + f.get_char();
     if (head != 'BSDF') {
-        throw "This does not look like BSDF encoded data: " + head;
+        throw new Error("This does not look like BSDF encoded data: " + head);
     }
     // Read and check version
     var major_version = f.get_uint8();
     var minor_version = f.get_uint8();
     if (major_version != VERSION[0]) {
-        throw ('Reading file with different major version ' + major_version + ' from the implementation ' + VERSION[0]);
+        throw new Error('Reading file with different major version ' + major_version + ' from the implementation ' + VERSION[0]);
     } else if (minor_version > VERSION[1]){
         console.warn('BSDF warning: reading file with higher minor version ' + minor_version + ' than the implementation ' + VERSION[1]);
     }
@@ -293,9 +293,11 @@ function encode_type_id(f, c, extension_id) {
 
 BsdfSerializer.prototype.encode_object = function (f, value, extension_id) {
     var iext, ext;
-
-    if (value === null) { encode_type_id(f, 'v', extension_id); }
-    //else if (typeof value == 'undefined') { encode_type_id(f, 'v', extension_id); }
+    
+    // We prefer to fail on undefined, instead of silently converting to null like JSON
+    // if (typeof value == 'undefined') { encode_type_id(f, 'v', extension_id); }
+    if (typeof value == 'undefined') { throw new TypeError("BSDF cannot encode undefined, use null instead."); }
+    else if (value === null) { encode_type_id(f, 'v', extension_id); }
     else if (value === false) { encode_type_id(f, 'n', extension_id); }
     else if (value === true) { encode_type_id(f, 'y', extension_id); }
     else if (typeof value == 'number') {
@@ -374,13 +376,13 @@ BsdfSerializer.prototype.encode_object = function (f, value, extension_id) {
             }
             var cls = Object.getPrototypeOf(value);
             var cname = cls.__name__ || cls.constructor.name;  // __name__ is a PyScript thing
-            throw "cannot encode object of type " + cname;
+            throw new TypeError("cannot encode object of type " + cname);
         }
     } else {
         if (typeof extension_id != 'undefined') {
-            throw ('Extension ' + extension_id + ' wronfully encodes object to another ' +
-                   'extension object (though it may encode to a list/dict ' +
-                   'that contains other extension objects).');
+            throw new Error('Extension ' + extension_id + ' wronfully encodes object to another ' +
+                        'extension object (though it may encode to a list/dict ' +
+                        'that contains other extension objects).');
         }
         // Try extensions (for other types)
         for (iext=0; iext<this.extensions.length; iext++) {
@@ -390,7 +392,7 @@ BsdfSerializer.prototype.encode_object = function (f, value, extension_id) {
                 return;
             }
         }
-        throw "cannot encode type " + typeof(value);
+        throw new Error("cannot encode type " + typeof(value));
     }
 };
 
@@ -402,7 +404,7 @@ function BytesReader(buf) {
     var bufdv;
 
     if (typeof buf.byteLength == 'undefined') {
-        throw "BSDF decorer needs something that looks like bytes";
+        throw new Error("BSDF decorer needs something that looks like bytes");
     }
     if (typeof buf.byteOffset == 'undefined') {
         bufdv = new DataView(buf);  // buf was probably an ArrayBuffer
@@ -440,7 +442,7 @@ function BytesReader(buf) {
             } else if (s == 255) {  // unclosed stream
                 s = -1;
             } else {
-                throw "Invalid size";
+                throw new Error("Invalid size");
             }
             pos += 8;
         }
@@ -570,10 +572,10 @@ BsdfSerializer.prototype.decode_object = function (f) {
         if (compression == 0) {
             value = new DataView(compressed.buffer, compressed.byteOffset, compressed.byteLength);
         } else {
-            throw "JS implementation of BSDF does not support compression (" + compression + ')';
+            throw new Error("JS implementation of BSDF does not support compression (" + compression + ')');
         }
     } else {
-        throw "Invalid value specifier at pos " + f.tell() + ": " + JSON.stringify(char);
+        throw new Error("Invalid value specifier at pos " + f.tell() + ": " + JSON.stringify(char));
     }
 
     // Convert using an extension?
@@ -596,7 +598,8 @@ function Complex(real, imag) {
 }
 
 function EOFError(msg) {
-    this.msg = msg;
+    this.name = 'EOF';
+    this.message = msg;
 }
 
 
