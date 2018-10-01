@@ -328,8 +328,10 @@ class JsSession:
             window.console.info('Socket opened with session id ' + self.id)
             self.send_command('HI_FLEXX', self.id)
         def on_ws_message(evt):
-            msg = evt.data or evt  # bsdf-encoded command
-            if self._pending_commands is None:
+            msg = evt.data  # bsdf-encoded command
+            if not msg:
+                pass  # ? drop glitchy message :/
+            elif self._pending_commands is None:
                 # Direct mode
                 self._receive_raw_command(msg)
             else:
