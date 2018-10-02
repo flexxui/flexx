@@ -2,6 +2,18 @@
 Release notes
 -------------
 
+**v0.6.0** (02-10-2018)
+
+Most notable changes:
+
+* Add ``Widget.minsize_from_children`` property (#497).
+* Update BSDF (data serialization).
+* Widgets van be orphaned upon initialization by setting parent to None (#493)
+* Some internal improvements on the dropdown widget.
+
+Also see the
+`overview of 0.6 issues and pull request <https://github.com/flexxui/flexx/milestone/7?closed=1>`_
+
 
 **v0.5.0** (13-09-2018)
 
