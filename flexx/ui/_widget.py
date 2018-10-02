@@ -670,6 +670,8 @@ class Widget(app.JsComponent):
         """
         # Get new limits
         w1, w2, h1, h2 = self._query_min_max_size()
+        w1 = max(0, w1)
+        h1 = max(0, h1)
         # Update the property, so that our parent may react
         self._set_size_limits((w1, w2, h1, h2))
         # Update the style, so that flexbox works
