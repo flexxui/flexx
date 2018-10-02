@@ -202,9 +202,9 @@ class Widget(app.JsComponent):
         """)
 
     size = event.FloatPairProp((0, 0), settable=False, doc="""
-        The actual size of the widget. Flexx tries to keep this value
-        up-to-date, but in e.g. a box layout, a change in a Button's
-        text can change the size of sibling widgets.
+        The actual size of the widget (readonly). Flexx tries to keep
+        this value up-to-date, but in e.g. a box layout, a change in a
+        Button's text can change the size of sibling widgets.
         """)
 
     minsize = event.FloatPairProp((0, 0), settable=True, doc="""
@@ -213,6 +213,19 @@ class Widget(app.JsComponent):
         Note that using "min-width" or "min-height" in ``apply_style()``.
         (and in the ``style`` kwarg) also set this property. Minimum sizes set
         in CSS are ignored.
+        """)
+
+    minsize_from_children = event.BoolProp(True, settable=True, doc="""
+        Whether the children are taken into account to calculate this
+        widget's size constraints. Default True: both the ``minsize``
+        of this widget and the size constraints of its children (plus
+        spacing and padding for layout widgets) are used to calculate
+        the size constraints for this widget.
+
+        Set to False to prevent the content in this widget to affect
+        the parent's layout, e.g. to allow fully collapsing this widget
+        when the parent is a splitter. If this widget has a lot of
+        content, you may want to combine with ``style='overflow-y: auto'``.
         """)
 
     maxsize = event.FloatPairProp((1e9, 1e9), settable=True, doc="""
@@ -691,7 +704,7 @@ class Widget(app.JsComponent):
         # Widgets that are custom classes containing a single layout propagate
         # that layout's limits
         if self.outernode.classList.contains('flx-Layout') is False:
-            if len(self.children) == 1:
+            if self.minsize_from_children is True and len(self.children) == 1:
                 child = self.children[0]
                 if child.outernode.classList.contains('flx-Layout') is True:
                     w3, w4, h3, h4 = child._query_min_max_size()
