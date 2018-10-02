@@ -294,20 +294,6 @@ class HVLayout(Layout):
         (insensitive to case and use of dashes).
         """)
     
-    minsize_from_children = event.BoolProp(True, settable=True, doc="""
-        Whether the children are taken into account to calculate this
-        widget's size constraints. Default True: both the ``minsize``
-        of this widget and the size constraints of its children (plus
-        spacing and padding) are used to calculate the size constraints
-        for this widget.
-        
-        Set to False to prevent the content in this layout widget to
-        affect the parent's layout, e.g. to allow fully collapsing
-        *this* widget when the parent is a splitter. If this widget has
-        a lot of content, you may want to combine with
-        ``style='overflow-y: auto'``.
-        """)
-    
     spacing = event.FloatProp(4, settable=True, doc="""
         The space between two child elements (in pixels).
         """)
