@@ -2,9 +2,10 @@
 Release notes
 -------------
 
-**v0.6.1** (04-10-2018)
+**v0.6.2** (04-10-2018)
 
 - Bugfix in combobox.
+- BSDF check dtype in JS.
 
 
 **v0.6.0** (02-10-2018)
