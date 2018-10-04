@@ -52,7 +52,7 @@
 "use strict";
 
 var VERSION;
-VERSION = [2, 2, 0];
+VERSION = [2, 2, 1];
 
 // http://github.com/msgpack/msgpack-javascript/blob/master/msgpack.js#L181-L192
 function utf8encode(mix) {
@@ -627,6 +627,9 @@ var ndarray_extension = {
     },
     decode: function(s, v) {
         var cls = rootns[v.dtype[0].toUpperCase() + v.dtype.slice(1) + 'Array'];
+        if (typeof cls == 'undefined') {
+            throw new TypeError("Cannot create typed array with dtype: " + v.dtype);
+        }
         var value = new cls(v.data.buffer, v.data.byteOffset, v.data.byteLength / cls.BYTES_PER_ELEMENT);
         value.shape = v.shape;
         return value;
