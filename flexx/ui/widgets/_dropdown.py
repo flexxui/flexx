@@ -239,6 +239,8 @@ class ComboBox(BaseDropdown):
         }
         .flx-ComboBox.expanded > ul {
             display: block;
+            max-height: 220px;
+            overflow-y: auto;
         }
 
         .flx-ComboBox.expanded > ul > li:hover {
@@ -408,7 +410,8 @@ class ComboBox(BaseDropdown):
             self.node.classList.remove('editable-true')
 
     def _ul_click(self, e):
-        self._select_from_ul(e.target.index)
+        if hasattr(e.target, 'index'):  # not when scrollbar is clicked
+            self._select_from_ul(e.target.index)
 
     def _select_from_ul(self, index):
         self.user_selected(index)
