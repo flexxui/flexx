@@ -2,6 +2,11 @@
 Release notes
 -------------
 
+**v0.6.1** (04-10-2018)
+
+- Bugfix in combobox.
+
+
 **v0.6.0** (02-10-2018)
 
 Most notable changes:
