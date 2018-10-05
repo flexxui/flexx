@@ -25,7 +25,7 @@ from io import BytesIO
 logger = logging.getLogger(__name__)
 
 
-VERSION = 2, 2, 0
+VERSION = 2, 2, 1
 __version__ = '.'.join(str(i) for i in VERSION)
 
 
@@ -241,6 +241,22 @@ class BsdfLiteSerializer(object):
             # The actual data and extra space
             f.write(compressed)
             f.write(b'\x00' * (allocated_size - used_size))
+        elif getattr(value, "shape", None) == () and str(
+            getattr(value, "dtype", "")
+        ).startswith(("uint", "int", "float")):
+            # Implicit conversion of numpy scalars
+            if 'int' in str(value.dtype):
+                value = int(value)
+                if -32768 <= value <= 32767:
+                    f.write(x(b'h', ext_id) + spack('h', value))
+                else:
+                    f.write(x(b'i', ext_id) + spack('<q', value))
+            else:
+                value = float(value)
+                if self._float64:
+                    f.write(x(b'd', ext_id) + spack('<d', value))
+                else:
+                    f.write(x(b'f', ext_id) + spack('<f', value))
         else:
             if ext_id is not None:
                 raise ValueError(
