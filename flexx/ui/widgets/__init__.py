@@ -15,7 +15,7 @@ from ._color import ColorSelectWidget
 from ._media import ImageWidget, VideoWidget, YoutubeWidget
 
 from ._progressbar import ProgressBar
-from ._slider import Slider
+from ._slider import Slider, RangeSlider
 from ._tree import TreeWidget, TreeItem
 from ._dropdown import ComboBox, DropdownContainer
 
