@@ -459,8 +459,14 @@ class ComboBox(BaseDropdown):
         rect = super()._expand()
         ul = self.outernode.children[len(self.outernode.children) - 1]
         ul.style.left = rect.left + 'px'
-        ul.style.top = (rect.bottom - 1) + 'px'
         ul.style.width = rect.width + 'px'
+        ul.style.top = (rect.bottom - 1) + 'px'
+        # Correct position (above, below) as needed
+        space_below = window.innerHeight - rect.bottom
+        if space_below < ul.clientHeight:
+            space_above = rect.top
+            if space_above > space_below:
+                ul.style.top = (rect.top - 1 - ul.clientHeight) + 'px'
 
     def _submit_text(self):
         super()._submit_text()
