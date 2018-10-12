@@ -114,7 +114,10 @@ class TreeWidget(Widget):
         padding: 0;
         margin: 0;
     }
-
+    
+    .flx-TreeWidget li {
+        outline-offset: -1px;
+    }
     .flx-TreeWidget li.visible-false {
         display: none;
     }
