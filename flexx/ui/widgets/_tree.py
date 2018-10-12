@@ -231,7 +231,7 @@ class TreeWidget(Widget):
         return items
 
     def _render_dom(self):
-        nodes = [i.node for i in self.children if isinstance(i, TreeItem)]
+        nodes = [i.outernode for i in self.children if isinstance(i, TreeItem)]
         return [create_element('ul', {}, nodes)]
 
     @event.reaction('children', 'children*.children')
@@ -459,7 +459,13 @@ class TreeItem(Widget):
     If needed, the ``_render_title()`` and ``_render_text()`` methods can
     be overloaded to display items in richer ways. See the documentation
     of ``Widget._render_dom()`` for details.
-
+    
+    The ``outernode`` of this widget is a
+    `<li> <https://developer.mozilla.org/docs/Web/HTML/Element/li>`_
+    (a list-item in the tree or parent item's ``<ul>``.
+    The ``node`` of this widget is a
+    `<span> <https://developer.mozilla.org/docs/Web/HTML/Element/span>`_
+    that represents the row for this item (but not its children).
     """
 
     text = event.StringProp('', settable=True, doc="""
@@ -541,7 +547,7 @@ class TreeItem(Widget):
         node.appendChild(self._row)
         self._addEventListener(node, 'click', self._on_click)
         self._addEventListener(node, 'dblclick', self._on_double_click)
-        return node
+        return node, self._row
 
     def _render_dom(self):
         # We render more or less this:
@@ -594,7 +600,7 @@ class TreeItem(Widget):
         return self.title
 
     def _render_text(self):
-        """ Return a node for text. Can be overloaded to e.g. format these with html.
+        """ Return a node for text. Can be overloaded.
         """
         return self.text
 
