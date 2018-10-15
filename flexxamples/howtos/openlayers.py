@@ -1,7 +1,23 @@
+# doc-export: OpenlayersExample
+"""
+Example demonstrating how to create a simple map app with Openlayers and flexx.
+
+Features:
+
+* Load geojson data to map.
+* Draw points on map.
+* Load local assets (css, js).
+* Working with Openlayers events.
+
+"""
+
 from flexx import flx
 import os
 
 BASE_DIR = os.getcwd()
+
+with open(BASE_DIR + '/static/js/data.json') as f:
+    geojson = f.read()
 
 with open(BASE_DIR + '/static/js/ol-v4.6.4/ol.css') as f:
     ol_css = f.read()
@@ -12,10 +28,10 @@ with open(BASE_DIR + '/static/js/ol-v4.6.4/ol.js') as f:
 flx.assets.associate_asset(__name__, 'ol.css', ol_css)
 flx.assets.associate_asset(__name__, 'ol.js', ol_js)
 
-geojson = '{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-82.08160400390625,23.0548095703125]}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-81.31256103515625,22.510986328125]}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-80.47210693359375,22.6483154296875]}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-80.16448974609375,22.3187255859375]}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-81.00494384765625,22.2857666015625]}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-81.54876708984375,22.3406982421875]}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-82.56500244140625,23.0767822265625]}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-82.40570068359375,22.9449462890625]}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-82.33428955078125,23.1756591796875]}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-82.30682373046875,23.082275390625]}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-82.21343994140625,22.9669189453125]}},{"type":"Feature","geometry":{"type":"Point","coordinates":[-82.10357666015625,23.192138671875]}}]}'
-
 
 class Ol(flx.Widget):
+    initialised = False
+
     @flx.action
     def remove_layers(self):
         self.map.removeLayer(self.vectorLayer)
@@ -36,61 +52,63 @@ class Ol(flx.Widget):
     @flx.action
     def map_init(self):
         global ol
-        self.olview = ol.View({
-            "zoom": 8,
-            "center": [-80.901813, 22.968599],
-            "projection": "EPSG:4326",
-            "minZoom": 3,
-            "maxZoom": 100
-        })
+        if not self.initialised:
+            self.olview = ol.View({
+                "zoom": 8,
+                "center": [-80.901813, 22.968599],
+                "projection": "EPSG:4326",
+                "minZoom": 3,
+                "maxZoom": 100
+            })
 
-        self.baseLayer = ol.layer.Tile({
-            "source": ol.source.OSM(),
-        })
+            self.baseLayer = ol.layer.Tile({
+                "source": ol.source.OSM(),
+            })
 
-        self.vectorLayer = ol.layer.Vector({
-            "source": ol.source.Vector({
-                "format": ol.format.GeoJSON()
-            }),
-            "name": "Vector",
-            "style": ol.style.Style({
-                "image": ol.style.Circle({
-                    "radius": 7,
-                    "fill": ol.style.Fill({
-                        "color": 'rgba(255, 0, 0, 0.5)'
+            self.vectorLayer = ol.layer.Vector({
+                "source": ol.source.Vector({
+                    "format": ol.format.GeoJSON()
+                }),
+                "name": "Vector",
+                "style": ol.style.Style({
+                    "image": ol.style.Circle({
+                        "radius": 7,
+                        "fill": ol.style.Fill({
+                            "color": 'rgba(255, 0, 0, 0.5)'
+                        })
                     })
-                })
-            }),
-        })
+                }),
+            })
 
-        self.drawVectorLayer = ol.layer.Vector({
-            "source": ol.source.Vector({
-                "format": ol.format.GeoJSON()
-            }),
-            "name": "Draw Vector",
-            "style": ol.style.Style({
-                "image": ol.style.Circle({
-                    "radius": 7,
-                    "fill": ol.style.Fill({
-                        "color": 'rgba(0, 255, 0, 0.5)'
+            self.drawVectorLayer = ol.layer.Vector({
+                "source": ol.source.Vector({
+                    "format": ol.format.GeoJSON()
+                }),
+                "name": "Draw Vector",
+                "style": ol.style.Style({
+                    "image": ol.style.Circle({
+                        "radius": 7,
+                        "fill": ol.style.Fill({
+                            "color": 'rgba(0, 255, 0, 0.5)'
+                        })
                     })
-                })
-            }),
-        })
+                }),
+            })
 
-        self.drawPoint = ol.interaction.Draw({
-            "type": 'Point',
-            "source": self.drawVectorLayer.getSource()
-        })
+            self.drawPoint = ol.interaction.Draw({
+                "type": 'Point',
+                "source": self.drawVectorLayer.getSource()
+            })
 
-        self.map_config = {
-            "target": self.mapnode,
-            'view': self.olview,
-            "controls": [ol.control.Zoom(), ol.control.MousePosition()],
-            "layers": []
-        }
-        self.map = ol.Map(self.map_config)
-        self.map.on('click', self.pointer_event)
+            self.map_config = {
+                "target": self.mapnode,
+                'view': self.olview,
+                "controls": [ol.control.Zoom(), ol.control.MousePosition()],
+                "layers": []
+            }
+            self.map = ol.Map(self.map_config)
+            self.map.on('click', self.pointer_event)
+            self.initialised = True
 
     @flx.emitter
     def pointer_event(self, event):
@@ -109,9 +127,6 @@ class Ol(flx.Widget):
         self.map.addLayer(self.baseLayer)
 
     def _create_dom(self):
-        """ This function gets automatically called when needed; Flexx is aware
-        of what properties are used here.
-        """
         global document
         node = document.createElement('div')
         self.mapnode = document.createElement('div')
