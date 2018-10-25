@@ -552,6 +552,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             try:
                 serialized = json.dumps(val)
             except Exception as err:  # pragma: no cover
+                err  # flake8 stfu
                 raise ValueError('Attributes on JS Component class must be '
                                  'JSON compatible.\n%s' % str(err))
             const_code.append(prototype_prefix + name + ' = ' + serialized)
