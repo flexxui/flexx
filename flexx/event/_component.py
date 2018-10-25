@@ -463,7 +463,7 @@ class Component(with_metaclass(ComponentMeta, object)):
                 label, reaction = reactions[i]
                 if label.startswith('reconnect_'):
                     if getattr(ev, 'allow_reconnect', True) is True:
-                        index = int(label.split('_')[-1])
+                        index = int(label.split('_')[1])
                         reaction.reconnect(index)
                 else:
                     loop.add_reaction_event(reaction, ev)
