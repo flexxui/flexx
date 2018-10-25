@@ -46,7 +46,7 @@ class FakeStream:
 
 
 def call_func_in_py(func):
-    """ Call a function and capture ints stdout.
+    """ Call a function and capture it's stdout.
     """
     loop.integrate(reset=True)
     orig_stdout = sys.stdout
@@ -55,8 +55,6 @@ def call_func_in_py(func):
     sys.stdout = sys.stderr = fake_stdout
     try:
         func()
-    except Exception as err:
-        raise  # fall through
     finally:
         sys.stdout = orig_stdout
         sys.stderr = orig_stderr

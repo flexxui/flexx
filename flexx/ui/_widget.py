@@ -67,7 +67,7 @@ the real browser DOM.
 
 """
 
-from pscript import undefined, window
+from pscript import undefined, window, RawJS
 
 from ..event import loop
 from .. import event, app
@@ -321,7 +321,7 @@ class Widget(app.JsComponent):
         # Note that the _comp_init_property_values() will get called first.
 
         # Attach this widget in the widget hierarchy, if we can
-        if parent_given:
+        if parent_given is True:
             self.set_parent(given_parent)
         elif parent is not None:
             self.set_parent(parent)
@@ -426,9 +426,9 @@ class Widget(app.JsComponent):
         for i in range(len(self.outernode.childNodes)):
             node = self.outernode.childNodes[i]
             if not (node.classList and node.classList.contains('flx-Widget')):
-                nodes.append(node)
+                nodes.push(node)  # push is JS' append
         for widget in self.children:
-            nodes.append(widget.outernode)
+            nodes.push(widget.outernode)
         return nodes
 
     @event.reaction
@@ -441,7 +441,7 @@ class Widget(app.JsComponent):
         elif isinstance(vnode, list):
             vnode = dict(type=self.outernode.nodeName, props={}, children=vnode)
         elif isinstance(vnode, dict):
-            if vnode.type.lower() != self.outernode.nodeName.lower():
+            if vnode.type.toLowerCase() != self.outernode.nodeName.toLowerCase():
                 raise ValueError('Widget._render_dom() must return root node with '
                                  'same element type as outernode.')
         else:
@@ -472,7 +472,7 @@ class Widget(app.JsComponent):
                             'props as dict, not ' + vnode.props)
 
         # Resolve the node itself
-        if node is None or node.nodeName.lower() != vnode.type.lower():
+        if node is None or node.nodeName.toLowerCase() != vnode.type.toLowerCase():
             node = window.document.createElement(vnode.type)
 
         # Resolve props (i.e. attributes)
@@ -766,20 +766,24 @@ class Widget(app.JsComponent):
 
         # Remove ourselves
         if old_parent is not None:
-            children = list(old_parent.children)
-            while self in children:
-                children.remove(self)
+            children = []
+            for i in range(len(old_parent.children)):
+                child = old_parent.children[i]
+                if child is not self:
+                    children.push(child)
             if old_parent is not new_parent:
                 old_parent._mutate_children(children)
 
         # Insert ourselves
         if new_parent is not None:
             if old_parent is not new_parent:
-                children = list(new_parent.children)
-            while self in children:
-                children.remove(self)
+                children = []
+                for i in range(len(new_parent.children)):
+                    child = new_parent.children[i]
+                    if child is not self:
+                        children.push(child)
             if pos is None:
-                children.append(self)
+                children.push(self)
             elif pos >= 0:
                 children.insert(pos, self)
             elif pos < 0:
@@ -787,7 +791,7 @@ class Widget(app.JsComponent):
                 children.insert(pos, self)
                 children.pop(-1)
             else:  # maybe pos is nan for some reason
-                children.append(None)
+                children.push(self)
             new_parent._mutate_children(children)
 
     @event.reaction('container')
@@ -830,6 +834,8 @@ class Widget(app.JsComponent):
         return event_types
 
     def _init_events(self):
+        # TODO: we listen to a lot of events which is unncessary in a lot of cases.
+        # Maybe make it possible (with a class attribute?) to configure this
         # Connect some standard events
         self._addEventListener(self.node, 'wheel', self.pointer_wheel, 0)
         self._addEventListener(self.node, 'keydown', self.key_down, 0)
@@ -1027,7 +1033,9 @@ class Widget(app.JsComponent):
             page_pos = e.pageX, e.pageY
             # Fix buttons
             if e.buttons:
-                buttons_mask = reversed([c for c in e.buttons.toString(2)]).join('')
+                buttons_mask = RawJS(
+                    "e.buttons.toString(2).split('').reverse().join('')"
+                )
             else:
                 # libjavascriptcoregtk-3.0-0  version 2.4.11-1 does not define
                 # e.buttons
@@ -1038,7 +1046,7 @@ class Widget(app.JsComponent):
 
         # note: our button has a value as in JS "which"
         modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
-                        if e[n.lower()+'Key']]
+                        if e[n.toLowerCase() + 'Key']]
         # Create event dict
         return dict(pos=pos, page_pos=page_pos, touches=touches,
                     button=button, buttons=buttons,
@@ -1093,14 +1101,14 @@ class Widget(app.JsComponent):
         # key: chrome 51, ff 23, ie 9
         # code: chrome ok, ff 32, ie no
         modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
-                        if e[n.lower()+'Key']]
+                        if e[n.toLowerCase() + 'Key']]
         key = e.key
         if not key and e.code:  # Chrome < v51
             key = e.code
             if key.startswith('Key'):
                 key = key[3:]
                 if 'Shift' not in modifiers:
-                    key = key.lower()
+                    key = key.toLowerCase()
             elif key.startswith('Digit'):
                 key = key[5:]
         # todo: handle Safari and older browsers via keyCode

@@ -411,12 +411,12 @@ class LocalComponent(BaseAppComponent):
     def emit(self, type, info=None):
         # Overload emit() to send events to the proxy object at the other end
         ev = super().emit(type, info)
-        isprop = type in self.__proxy_properties__
         if self._has_proxy is True and self._session.status > 0:
             # implicit: and self._disposed is False:
-            if isprop or type in self.__event_types_at_proxy:
-                self._session.send_command('INVOKE', self._id,
-                                           '_emit_at_proxy', [ev])
+            if type in self.__proxy_properties__:
+                self._session.send_command('INVOKE', self._id, '_emit_at_proxy', [ev])
+            elif type in self.__event_types_at_proxy:
+                self._session.send_command('INVOKE', self._id, '_emit_at_proxy', [ev])
 
     def _dispose(self):
         # Let proxy side know that we no longer exist, and that it should
@@ -625,7 +625,7 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
         when this object is disposed.
         """
         node.addEventListener(type, callback, capture)
-        self._event_listeners.append((node, type, callback, capture))
+        self._event_listeners.push((node, type, callback, capture))
 
     def _dispose(self):
         super()._dispose()
