@@ -6,7 +6,6 @@ Features:
 
 * Load geojson data to map.
 * Draw points on map.
-* Load local assets (css, js).
 * Working with Openlayers events.
 
 """
@@ -19,14 +18,8 @@ BASE_DIR = os.getcwd()
 with open(BASE_DIR + '/static/js/data.json') as f:
     geojson = f.read()
 
-with open(BASE_DIR + '/static/js/ol-v4.6.4/ol.css') as f:
-    ol_css = f.read()
-
-with open(BASE_DIR + '/static/js/ol-v4.6.4/ol.js') as f:
-    ol_js = f.read()
-
-flx.assets.associate_asset(__name__, 'ol.css', ol_css)
-flx.assets.associate_asset(__name__, 'ol.js', ol_js)
+flx.assets.associate_asset(__name__, 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.css')
+flx.assets.associate_asset(__name__, 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.js')
 
 
 class Ol(flx.Widget):
