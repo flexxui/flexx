@@ -1,5 +1,8 @@
 include LICENSE README.md
 recursive-include docs *
+recursive-include demo *
+recursive-include flexx README.md
+
 prune docs/_build
 prune docs/ext/__pycache__
 
