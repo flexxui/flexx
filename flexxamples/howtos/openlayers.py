@@ -10,16 +10,17 @@ Features:
 
 """
 
-from flexx import flx
 import os
+from flexx import flx
 
 BASE_DIR = os.getcwd()
 
 with open(BASE_DIR + '/static/js/data.json') as f:
     geojson = f.read()
 
-flx.assets.associate_asset(__name__, 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.css')
-flx.assets.associate_asset(__name__, 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/ol.js')
+ol_cdn = 'https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.6.5/'
+flx.assets.associate_asset(__name__, ol_cdn + 'ol.css')
+flx.assets.associate_asset(__name__, ol_cdn + 'ol.js')
 
 
 class Ol(flx.Widget):
@@ -177,7 +178,7 @@ class MainWidget(flx.Widget):
     def map_click(self, *events):
         ev = events[-1]
         coord = ev['event']['coordinate']
-        self.coords.set_text("Clicking on coordinate "+ str(coord))
+        self.coords.set_text("Clicking on coordinate " + str(coord))
 
 
 if __name__ == '__main__':
