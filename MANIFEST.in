@@ -6,6 +6,11 @@ recursive-include flexx README.md
 prune docs/_build
 prune docs/ext/__pycache__
 
+recursive-include tasks *
+recursive-include flexx/app/tests *
+recursive-include flexx/event/tests *
+recursive-include flexx/util/tests *
+
 global-exclude .git*
 global-exclude *.pyo
 global-exclude *.pyc
