@@ -227,8 +227,8 @@ class App:
 
         # Warn for PyComponents
         if issubclass(self.cls, PyComponent):
-            logger.warn('Exporting a PyComponent - any Python interactivity will '
-                        'not work in exported apps.')
+            logger.warning('Exporting a PyComponent - any Python interactivity will '
+                           'not work in exported apps.')
 
         d = {}
 
@@ -383,7 +383,7 @@ class AppManager(event.Component):
         if name in self._appinfo:
             old_app, pending, connected = self._appinfo[name]
             if app.cls is not old_app.cls:  # if app is not old_app:
-                logger.warn('Re-defining app class %r' % name)
+                logger.warning('Re-defining app class %r' % name)
         self._appinfo[name] = app, pending, connected
 
     def create_default_session(self, cls=None):
@@ -452,7 +452,7 @@ class AppManager(event.Component):
                     pending.remove(s)
                 count += len(to_remove)
             if count:
-                logger.warn('Cleared %i old pending sessions' % count)
+                logger.warning('Cleared %i old pending sessions' % count)
 
         except Exception as err:
             logger.error('Error when clearing old pending sessions: %s' % str(err))

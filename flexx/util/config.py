@@ -300,8 +300,8 @@ class Config(object):
             try:
                 text = open(filename, 'rb').read().decode()
             except Exception as err:
-                logging.warn('Could not read config from %r:\n%s' %
-                             (filename, str(err)))
+                logging.warning('Could not read config from %r:\n%s' %
+                                (filename, str(err)))
                 return
             self.load_from_string(text, filename)
 
@@ -313,7 +313,7 @@ class Config(object):
         try:
             self._load_from_string(text, filename)
         except Exception as err:
-            logging.warn(str(err))
+            logging.warning(str(err))
 
     def _load_from_string(self, s, filename):
         # Create default section, so that users can work with sectionless

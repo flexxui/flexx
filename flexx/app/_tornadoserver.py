@@ -591,7 +591,7 @@ class WSHandler(WebSocketHandler):
             elif time.time() - self._pongtime > dt:
                 # Delay is so big that connection probably dropped.
                 # Note that a browser sends a pong even if JS is busy
-                logger.warn('Closing connection due to lack of pong')
+                logger.warning('Closing connection due to lack of pong')
                 self.close(1000, 'Conection timed out (no pong).')
                 return
 
@@ -645,5 +645,5 @@ class WSHandler(WebSocketHandler):
         elif connecting_host in config.host_whitelist:
             return True
         else:
-            logger.warn('Connection refused from %s' % origin)
+            logger.warning('Connection refused from %s' % origin)
             return False

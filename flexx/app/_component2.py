@@ -689,7 +689,7 @@ class BsdfComponentExtension(bsdf.Extension):
         else:
             c = session.get_component_instance(d['id'])
             if c is None:  # This should probably not happen
-                logger.warn('Using stub component for %s.' % d['id'])
+                logger.warning('Using stub component for %s.' % d['id'])
                 c = StubComponent(session, d['id'])
             else:
                 # Keep it alive for a bit
@@ -715,7 +715,7 @@ class BsdfComponentExtension(bsdf.Extension):
         else:
             c = session.get_component_instance(d['id'])
             if c is None:
-                logger.warn('Using stub component for %s.' % d['id'])
+                logger.warning('Using stub component for %s.' % d['id'])
                 c = StubComponent(session, d['id'])
         return c
 

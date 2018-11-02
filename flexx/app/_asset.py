@@ -63,7 +63,7 @@ def solve_dependencies(things, warn_missing=False):
             for dep in thingmap[name].deps:
                 if dep not in names:
                     if warn_missing:
-                        logger.warn('%r has missing dependency %r' % (name, dep))
+                        logger.warning('%r has missing dependency %r' % (name, dep))
                 else:
                     j = names.index(dep)
                     if j > index:
