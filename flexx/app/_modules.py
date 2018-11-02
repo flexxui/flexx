@@ -282,7 +282,7 @@ class JSModule:
                 pass  # it may be a JS-global
             elif val is self._pymodule:
                 # Did not resolve first part of the name, so cannot be a JS global
-                logger.warn(msg)
+                logger.warning(msg)
             else:
                 raise RuntimeError(msg)  # E.g. typo in ui.Buttom
             return

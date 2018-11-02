@@ -31,7 +31,7 @@ def test_set_log_level():
 def test_capture():
 
     with capture_log('info') as log:
-        logger.warn('AA')
+        logger.warning('AA')
         logger.info('BB')
 
     msg1 = log[0]

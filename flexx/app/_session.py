@@ -44,7 +44,7 @@ def get_random_string(length=24, allowed_chars=None):
         srandom = random.SystemRandom()
     except NotImplementedError:  # pragma: no cover
         srandom = random
-        logger.warn('Falling back to less secure Mersenne Twister random string.')
+        logger.warning('Falling back to less secure Mersenne Twister random string.')
         bogus = "%s%s%s" % (random.getstate(), time.time(), 'sdkhfbsdkfbsdbhf')
         random.seed(hashlib.sha256(bogus.encode()).digest())
 
@@ -530,7 +530,7 @@ class Session:
             self._pending_commands.append(command)
         else:
             #raise RuntimeError('Cannot send commands; app is closed')
-            logger.warn('Cannot send commands; app is closed')
+            logger.warning('Cannot send commands; app is closed')
 
     def _receive_command(self, command):
         """ Received a command from JS.
@@ -543,7 +543,7 @@ class Session:
         elif cmd == 'INFO':
             logger.info('JS: ' + command[1])
         elif cmd == 'WARN':
-            logger.warn('JS: ' + command[1])
+            logger.warning('JS: ' + command[1])
         elif cmd == 'ERROR':
             logger.error('JS: ' + command[1] +
                          ' - stack trace in browser console (hit F12).')
@@ -553,7 +553,7 @@ class Session:
             if ob is None:
                 if id not in self._dead_component_ids:
                     t = 'Cannot invoke %s.%s; session does not know it (anymore).'
-                    logger.warn(t % (id, name))
+                    logger.warning(t % (id, name))
             elif ob._disposed:
                 pass  # JS probably send something before knowing the object was dead
             else:

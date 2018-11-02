@@ -96,7 +96,7 @@ class NoteBookHelper:
 
     def capture(self):
         if self._real_ws is not None:
-            logger.warn('Notebookhelper already is in capture mode.')
+            logger.warning('Notebookhelper already is in capture mode.')
         else:
             if self._session._ws is None:
                 raise RuntimeError(

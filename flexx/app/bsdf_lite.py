@@ -129,8 +129,8 @@ class BsdfLiteSerializer(object):
             raise NameError('Extension names must be nonempty and shorter '
                             'than 251 chars.')
         if name in self._extensions:
-            logger.warn('BSDF warning: overwriting extension "%s", '
-                        'consider removing first' % name)
+            logger.warning('BSDF warning: overwriting extension "%s", '
+                           'consider removing first' % name)
 
         # Get classes
         cls = extension.cls
@@ -386,7 +386,7 @@ class BsdfLiteSerializer(object):
             if extension is not None:
                 value = extension.decode(self, value)
             else:
-                logger.warn('BSDF warning: no extension found for %r' % ext_id)
+                logger.warning('BSDF warning: no extension found for %r' % ext_id)
 
         return value
 
@@ -429,7 +429,7 @@ class BsdfLiteSerializer(object):
         if minor_version > VERSION[1]:  # minor should be < ours
             t = ('BSDF warning: reading file with higher minor version (%s) '
                  'than the implementation (%s).')
-            logger.warn(t % (file_version, __version__))
+            logger.warning(t % (file_version, __version__))
 
         return self._decode(f)
 
