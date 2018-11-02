@@ -2,6 +2,20 @@
 Release notes
 -------------
 
+
+**v0.7.0** (02-11-2018)
+
+* New examples for Openlayers and including local assets (by @ocobacho).
+* Tests, demos and readme are included in the sdist, helping packaging on Linux (by @toddrme2178).
+* Some performance tweaks which should help in larger applications.
+* Add ``outernode`` attribute in `TreeItem`` widget, enabling more powerful subclasses.
+* The ``Combobox`` is smarter about the placement of the "dropdown".
+* A new ``RangeSlider`` widget.
+
+Also see the
+`overview of 0.7 issues and pull request <https://github.com/flexxui/flexx/milestone/9?closed=1>`_
+
+
 **v0.6.2** (04-10-2018)
 
 - Bugfix in combobox.
