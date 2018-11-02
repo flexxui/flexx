@@ -44,7 +44,7 @@ def test_action_simple():
     43
     43
     12
-    ? not supposed to return a value
+    ? should not return a value
     """
 
     m = MyObject()
