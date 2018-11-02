@@ -23,7 +23,7 @@ def looks_like_method(func):
     if hasattr(func, '__func__'):
         return False  # this is a bound method
     try:
-        return inspect.getargspec(func)[0][0] in ('self', 'this')
+        return list(inspect.signature(func).parameters)[0] in ('self', 'this')
     except (TypeError, IndexError):
         return False
 
