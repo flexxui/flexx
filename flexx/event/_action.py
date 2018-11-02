@@ -153,7 +153,7 @@ class Action:
             if ob is not None:
                 res = func(ob, *args)
                 if res is not None:
-                    logger.warning('Action (%s) is not supposed to return a value' %
+                    logger.warning('Action (%s) should not return a value' %
                                    self._name)
         else:
             loop.add_action_invokation(self, args)

@@ -24,7 +24,7 @@ def looks_like_method(func):
         return False  # this is a bound method
     try:
         return list(inspect.signature(func).parameters)[0] in ('self', 'this')
-    except (TypeError, IndexError):
+    except (TypeError, IndexError, ValueError):
         return False
 
 
