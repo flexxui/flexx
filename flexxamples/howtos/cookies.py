@@ -23,4 +23,4 @@ class Cookies(flx.PyComponent):
 
 if __name__ == '__main__':
     m = flx.launch(Cookies, 'browser')
-    flx.run()
+    flx.start()
