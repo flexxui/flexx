@@ -134,8 +134,9 @@ class AbstractServer:
         # Make use of the semi-standard defined by IPython to determine
         # if the ioloop is "hijacked" (e.g. in Pyzo).
         if not getattr(self._loop, '_in_event_loop', False):
+            poller = self._loop.create_task(keep_awake())
             try:
-                self._loop.run_until_complete(keep_awake())
+                self._loop.run_forever()
             except KeyboardInterrupt:
                 logger.info('Flexx event loop interrupted.')
             except TypeError as err:
@@ -145,6 +146,7 @@ class AbstractServer:
                     logger.info('Interrupted Flexx event loop.')
                 else:
                     raise
+            poller.cancel()
 
     def stop(self):
         """ Stop the event loop. This does not close the connection; the server
