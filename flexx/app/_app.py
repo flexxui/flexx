@@ -291,13 +291,13 @@ class App:
 
         # Write all assets to file
         for fname, blob in d.items():
-            filename = os.path.join(dirname, fname)
-            if not overwrite and os.path.isfile(filename):
+            filename2 = os.path.join(dirname, fname)
+            if not overwrite and os.path.isfile(filename2):
                 continue
-            dname = os.path.dirname(filename)
+            dname = os.path.dirname(filename2)
             if not os.path.isdir(dname):
                 os.makedirs(dname)
-            with open(filename, 'wb') as f:
+            with open(filename2, 'wb') as f:
                 f.write(blob)
 
         app_type = 'standalone app' if len(d) == 1 else 'app'
