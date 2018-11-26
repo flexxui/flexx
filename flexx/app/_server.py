@@ -7,6 +7,7 @@ import asyncio
 
 from ..event import _loop
 from .. import config
+from . import logger
 
 
 # There is always a single current server (except initially there is None)
@@ -81,6 +82,14 @@ def current_server(create=True):
 ## Server class
 
 
+async def keep_awake():
+    # This is to wake Python up from time to time to allow interruption
+    # See #529, and e.g. Hypercorn's run() implementation.
+    # Stricly speaking only required on Windows.
+    while True:
+        await asyncio.sleep(0.2)
+
+
 class AbstractServer:
     """ This is an attempt to generalize the server, so that in the
     future we may have e.g. a Flask or Pyramid server.
@@ -121,14 +130,26 @@ class AbstractServer:
             raise RuntimeError('Cannot start a running server.')
         if asyncio.get_event_loop() is not self._loop:
             raise RuntimeError('Can only start server in same thread that created it.')
+        logger.info('Starting Flexx event loop.')
         # Make use of the semi-standard defined by IPython to determine
         # if the ioloop is "hijacked" (e.g. in Pyzo).
         if not getattr(self._loop, '_in_event_loop', False):
-            self._loop.run_forever()
+            try:
+                self._loop.run_until_complete(keep_awake())
+            except KeyboardInterrupt:
+                logger.info('Flexx event loop interrupted.')
+            except TypeError as err:
+                if "close() takes 1 positional argument but 3 were given" in str(err):
+                    # This is weird - I looked into this but this does not seem to
+                    # originate from Flexx, could this be a bug in CPython?
+                    logger.info('Interrupted Flexx event loop.')
+                else:
+                    raise
 
     def stop(self):
         """ Stop the event loop. This does not close the connection; the server
         can be restarted. Thread safe. """
+        logger.info('Stopping Flexx event loop.')
         self._loop.call_soon_threadsafe(self._loop.stop)
 
     def close(self):
