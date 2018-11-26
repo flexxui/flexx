@@ -31,7 +31,6 @@ def start():
     associated with the current server.
     """
     server = current_server()
-    logger.info('Starting Flexx event loop.')
     server.start()
 
 
@@ -67,7 +66,6 @@ def _auto_closer(*events):
         if proxies:
             return
     else:
-        logger.info('Stopping Flexx event loop.')
         server.stop()
 
 
