@@ -130,7 +130,11 @@ class Flexx:
         # or injected by init_notebook().
         # Can be called before init() is called.
         
-        if self._validate_browser_capabilities():
+        if window.performance and window.performance.navigation.type == 2:
+            # Force reload when we got here with back-button, otherwise
+            # an old session-id is used, see issue #530
+            window.location.reload()
+        elif self._validate_browser_capabilities():
             s = JsSession(app_name, session_id, ws_url)
             self._session_count += 1
             self['s' + self._session_count] = s
