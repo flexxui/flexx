@@ -10,7 +10,6 @@ from bokeh.plotting import figure
 
 from flexx import flx
 
-
 # Plot 1
 N = 1000
 x = np.random.normal(0, np.pi, N)
@@ -28,7 +27,6 @@ p3.line(t, np.cos(t))
 
 
 class BokehExample(flx.PyComponent):
-
     def init(self):
 
         with flx.HSplit(minsize=300) as self.widget:
@@ -41,12 +39,10 @@ class BokehExample(flx.PyComponent):
 
 
 class Controls(flx.FormLayout):
-
     def init(self):
         self.amp = flx.Slider(title='Amplitude', max=2, value=1)
         self.freq = flx.Slider(title='Frequency', max=10, value=5)
         self.phase = flx.Slider(title='Phase', max=3, value=1)
-
 
     @flx.reaction
     def _update_sine(self):
@@ -64,7 +60,7 @@ class Controls(flx.FormLayout):
 
         # Update
         if ds:
-            ds.data.y = [amp*window.Math.sin(x*freq+phase) for x in ds.data.x]
+            ds.data.y = [amp * window.Math.sin(x * freq + phase) for x in ds.data.x]
             ds.change.emit()  # or trigger('change') in older versions
 
 

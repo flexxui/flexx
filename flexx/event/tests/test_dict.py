@@ -1,4 +1,3 @@
-
 from flexx.util.testing import run_tests_if_main, skipif, skip, raises
 
 from flexx import event
@@ -7,18 +6,51 @@ from flexx.event._dict import isidentifier
 
 def test_isidentifier():
 
-    for name in ['foo', 'bar', 'asdasdaskjdbf', 'Bar', 'FOO',  # simple
-                 'fóó', 'é', 'élé',  # unicode
-                 '_', '_1', '_foo', 'f_', 'k_k',  # with underscore
-                 'f1', 'x0ff',  # with numbers
-                 ]:
+    for name in [
+            'foo',
+            'bar',
+            'asdasdaskjdbf',
+            'Bar',
+            'FOO',  # simple
+            'fóó',
+            'é',
+            'élé',  # unicode
+            '_',
+            '_1',
+            '_foo',
+            'f_',
+            'k_k',  # with underscore
+            'f1',
+            'x0ff',  # with numbers
+    ]:
         assert isidentifier(name)
 
-    for name in ['', '*', '(', '^',  'foo,', 'b&b',  # empty string and strange chars
-                 ' ', ' 12', '', 'k k', ' foo', 'foo ', '\tf', 'f\t', ' _', # with whitespace
-                 '2', '42', '2foo', '2_', '123', '0xff',  # numbers
-                 3, None, [],  # not a string
-                 ]:
+    for name in [
+            '',
+            '*',
+            '(',
+            '^',
+            'foo,',
+            'b&b',  # empty string and strange chars
+            ' ',
+            ' 12',
+            '',
+            'k k',
+            ' foo',
+            'foo ',
+            '\tf',
+            'f\t',
+            ' _',  # with whitespace
+            '2',
+            '42',
+            '2foo',
+            '2_',
+            '123',
+            '0xff',  # numbers
+            3,
+            None,
+        [],  # not a string
+    ]:
         assert not isidentifier(name)
 
 

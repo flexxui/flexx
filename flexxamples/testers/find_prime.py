@@ -17,7 +17,7 @@ def find_prime(n):
             return False
         elif x == 2:
             return True
-        for i in range(2, x//2+1):
+        for i in range(2, x // 2 + 1):
             if x % i == 0:
                 return False
         return True
@@ -29,11 +29,10 @@ def find_prime(n):
         if isprime(i):
             primes.append(i)
     t1 = perf_counter()
-    print(i, 'found in ', t1-t0, 'seconds')
+    print(i, 'found in ', t1 - t0, 'seconds')
 
 
 class PrimeFinder(app.PyComponent):
-
     def init(self):
         self.js = PrimeFinderJs()
 
@@ -47,7 +46,6 @@ class PrimeFinder(app.PyComponent):
 
 
 class PrimeFinderJs(app.JsComponent):
-
     @event.action
     def find_prime_js(self, n):
         find_prime(n)

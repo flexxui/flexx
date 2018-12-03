@@ -14,7 +14,6 @@ class Panel(flx.Label):
 
 
 class Boxes(flx.Widget):
-
     def init(self):
 
         with flx.HSplit():

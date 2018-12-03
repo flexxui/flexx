@@ -22,7 +22,6 @@ except ImportError:
     except ImportError:
         raise RuntimeError('Could not import urlopen.')
 
-
 # Definition of remote resources, optionally versioned ('{}' in url becomes tag)
 phosphor_url = 'https://raw.githubusercontent.com/flexxui/phosphor-all/{}/dist/'
 RESOURCES = {

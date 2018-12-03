@@ -26,7 +26,7 @@ def clean(ctx):
             count2 += 1
     print('removed %i .pyc files' % count2)
 
-    for dir in ['dist', 'build', NAME+'.egg-info', 'htmlcov']:
+    for dir in ['dist', 'build', NAME + '.egg-info', 'htmlcov']:
         dirname = os.path.join(ROOT_DIR, dir)
         if os.path.isdir(dirname):
             shutil.rmtree(dirname)

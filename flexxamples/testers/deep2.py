@@ -12,7 +12,6 @@ class Red(ui.Widget):
 
 
 class Deep2(ui.Widget):
-
     def init(self):
 
         with ui.VBox():

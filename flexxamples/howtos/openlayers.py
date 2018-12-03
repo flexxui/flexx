@@ -60,14 +60,20 @@ class Ol(flx.Widget):
             })
 
             self.vectorLayer = ol.layer.Vector({
-                "source": ol.source.Vector({
+                "source":
+                ol.source.Vector({
                     "format": ol.format.GeoJSON()
                 }),
-                "name": "Vector",
-                "style": ol.style.Style({
-                    "image": ol.style.Circle({
-                        "radius": 7,
-                        "fill": ol.style.Fill({
+                "name":
+                "Vector",
+                "style":
+                ol.style.Style({
+                    "image":
+                    ol.style.Circle({
+                        "radius":
+                        7,
+                        "fill":
+                        ol.style.Fill({
                             "color": 'rgba(255, 0, 0, 0.5)'
                         })
                     })
@@ -75,14 +81,20 @@ class Ol(flx.Widget):
             })
 
             self.drawVectorLayer = ol.layer.Vector({
-                "source": ol.source.Vector({
+                "source":
+                ol.source.Vector({
                     "format": ol.format.GeoJSON()
                 }),
-                "name": "Draw Vector",
-                "style": ol.style.Style({
-                    "image": ol.style.Circle({
-                        "radius": 7,
-                        "fill": ol.style.Fill({
+                "name":
+                "Draw Vector",
+                "style":
+                ol.style.Style({
+                    "image":
+                    ol.style.Circle({
+                        "radius":
+                        7,
+                        "fill":
+                        ol.style.Fill({
                             "color": 'rgba(0, 255, 0, 0.5)'
                         })
                     })
@@ -90,14 +102,17 @@ class Ol(flx.Widget):
             })
 
             self.drawPoint = ol.interaction.Draw({
-                "type": 'Point',
-                "source": self.drawVectorLayer.getSource()
+                "type":
+                'Point',
+                "source":
+                self.drawVectorLayer.getSource()
             })
 
             self.map_config = {
                 "target": self.mapnode,
                 'view': self.olview,
-                "controls": [ol.control.Zoom(), ol.control.MousePosition()],
+                "controls": [ol.control.Zoom(),
+                             ol.control.MousePosition()],
                 "layers": []
             }
             self.map = ol.Map(self.map_config)

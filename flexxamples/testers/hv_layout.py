@@ -28,7 +28,7 @@ class MyWidget(ui.Label):
 
         self._base_text = str(index) + ' ' + self.text
         color = '#77f', '7f7', 'f77', 'ff5', 'f5f', '5ff', '800', '080', '008'
-        self.apply_style('background:#' + color[index-1])
+        self.apply_style('background:#' + color[index - 1])
         self.set_wrap(1)
         self.set_flex(1)
 
@@ -87,8 +87,8 @@ the layout:<br>
 * b, f, s: set the layout to box, fix, or split mode<br>
 """
 
-class TestApp(ui.Widget):
 
+class TestApp(ui.Widget):
     def init(self):
 
         with MyLayout('v') as self.s:

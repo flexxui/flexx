@@ -12,7 +12,7 @@ import types
 import logging
 
 from pscript import (py2js, JSString, RawJS, JSConstant, create_js_module,
-                        get_all_std_names)
+                     get_all_std_names)
 from pscript.stdlib import FUNCTION_PREFIX, METHOD_PREFIX
 
 from .. import event
@@ -23,7 +23,6 @@ from ._clientcore import bsdf
 from ._component2 import BaseAppComponent, PyComponent, JsComponent, StubComponent
 from ._asset import Asset, get_mod_name, module_is_package
 from . import logger
-
 
 pscript_types = type, types.FunctionType  # class or function
 
@@ -64,8 +63,7 @@ def mangle_dotted_vars(jscode, names_to_mangle):
 
 
 def is_pscript_module(m):
-    return (getattr(m, '__pscript__', False) or
-            getattr(m, '__pyscript__', False))
+    return (getattr(m, '__pscript__', False) or getattr(m, '__pyscript__', False))
 
 
 class JSModule:
@@ -156,14 +154,13 @@ class JSModule:
             # PScript module; transpile as a whole
             js = py2js(self._pymodule, inline_stdlib=False, docstrings=False)
             self._pscript_code['__all__'] = js
-            self._provided_names.update([n for n in js.meta['vars_defined']
-                                         if not n.startswith('_')])
+            self._provided_names.update(
+                [n for n in js.meta['vars_defined'] if not n.startswith('_')])
         else:
             self._init_default_objects()
 
     def __repr__(self):
-        return '<%s %s with %i definitions>' % (self.__class__.__name__,
-                                                self.name,
+        return '<%s %s with %i definitions>' % (self.__class__.__name__, self.name,
                                                 len(self._provided_names))
 
     def _init_default_objects(self):
@@ -264,10 +261,10 @@ class JSModule:
                 val = getattr(val, nameparts[i])
                 # Maybe we "know" (this kind of) value ...
                 if isinstance(val, json_types):
-                    name = '.'.join(nameparts[:i+1])
+                    name = '.'.join(nameparts[:i + 1])
                     break
                 elif isinstance(val, type) and issubclass(val, JsComponent):
-                    name = '.'.join(nameparts[:i+1])
+                    name = '.'.join(nameparts[:i + 1])
                     break
                 elif val is loop and i == 0:
                     return self._add_dep_from_event_module('loop', nameparts[0])
@@ -350,7 +347,7 @@ class JSModule:
             js.meta = funccode.meta
             self._pscript_code[name] = js
             self._deps.setdefault('flexx.app._clientcore',
-                                 ['flexx.app._clientcore']).append('serializer')
+                                  ['flexx.app._clientcore']).append('serializer')
 
         elif isinstance(val, pscript_types) and hasattr(val, '__module__'):
             # Looks like something we can convert using PScript
@@ -445,8 +442,8 @@ class JSModule:
                 return self._add_dep_from_event_module('Component')
             elif base_cls.__module__.endswith('.event._property'):  # base properties
                 return self._add_dep_from_event_module(cls.__name__)
-            m = self._import(get_mod_name(base_cls),
-                             base_cls.__name__, base_cls.__name__)
+            m = self._import(
+                get_mod_name(base_cls), base_cls.__name__, base_cls.__name__)
             m.add_variable(base_cls.__name__)  # note: m can be self, which is ok
 
     def _add_dep_from_event_module(self, name, asname=None):
@@ -478,8 +475,8 @@ class JSModule:
                 if '.' in name:
                     for i in range(len(js)):
                         js[i] = mangle_dotted_vars(js[i], [name])
-                value_lines.append('var %s = %s;' % (name.replace('.', '$'),
-                                                     self._js_values[name]))
+                value_lines.append(
+                    'var %s = %s;' % (name.replace('.', '$'), self._js_values[name]))
             js.insert(0, '')
             js.insert(0, '\n'.join(value_lines))
             # Prepare imports and exports
@@ -499,19 +496,21 @@ class JSModule:
                     js.insert(0, 'var ' + (', '.join(pieces)) + ';')
             # Import stdlib
             func_names, method_names = get_all_std_names()
-            pre1 = ', '.join(['%s%s = _py.%s%s' %
-                              (FUNCTION_PREFIX, n, FUNCTION_PREFIX, n)
-                              for n in sorted(used_std_functions)])
-            pre2 = ', '.join(['%s%s = _py.%s%s' %
-                              (METHOD_PREFIX, n, METHOD_PREFIX, n)
-                              for n in sorted(used_std_methods)])
+            pre1 = ', '.join([
+                '%s%s = _py.%s%s' % (FUNCTION_PREFIX, n, FUNCTION_PREFIX, n)
+                for n in sorted(used_std_functions)
+            ])
+            pre2 = ', '.join([
+                '%s%s = _py.%s%s' % (METHOD_PREFIX, n, METHOD_PREFIX, n)
+                for n in sorted(used_std_methods)
+            ])
             if pre2:
                 js.insert(0, 'var %s;' % pre2)
             if pre1:
                 js.insert(0, 'var %s;' % pre1)
             # Create module
-            self._js_cache = create_js_module(self.name, '\n\n'.join(js),
-                                              imports, exports, 'amd-flexx')
+            self._js_cache = create_js_module(self.name, '\n\n'.join(js), imports,
+                                              exports, 'amd-flexx')
             self._js_cache = self._js_cache
         return self._js_cache
 

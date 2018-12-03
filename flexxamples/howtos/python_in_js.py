@@ -25,6 +25,7 @@ info = dict(name='John', age=42)
 # and use a value in different modules, in JS these are different instances.
 from sys import version
 
+
 # Define a function (or a class). Provided that its compatible with PScript,
 # you can just use this in the JS. Note that if this function used a value
 # or a function, that would be converted too.
@@ -32,9 +33,10 @@ def poly(x, *coefs):
     degree = len(coefs) - 1
     y = 0
     for coef in coefs:
-        y += coef * x ** degree
+        y += coef * x**degree
         degree -= 1
     return y
+
 
 # Import a (PScript-compatible) function from another module. In this case
 # Flexx can tell where it was defined and put it in its own module. See
@@ -43,7 +45,6 @@ from html import escape
 
 
 class UsingPython(flx.Widget):
-
     def init(self):
 
         # A rather boring way to present the info. The point is that

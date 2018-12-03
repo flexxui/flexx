@@ -21,7 +21,6 @@ from ..event._js import create_js_component_class
 from ._asset import get_mod_name
 from . import logger
 
-
 # The clientcore module is a PScript module that forms the core of the
 # client-side of Flexx. We import the serializer instance, and can use
 # that name in both Python and JS. Of course, in JS it's just the
@@ -37,9 +36,11 @@ def make_proxy_action(action):
     # Note: the flx_prefixes are picked up by the code in flexx.event that
     # compiles component classes, so it can fix /insert the name for JS.
     flx_name = action._name
+
     def flx_proxy_action(self, *args):
         self._proxy_action(flx_name, *args)
         return self
+
     flx_proxy_action.__doc__ = action.__doc__
     flx_proxy_action.__qualname__ = 'flx_proxy_action'
     return flx_proxy_action  # ActionDescriptor(flx_proxy_action, flx_name, '')
@@ -49,8 +50,10 @@ def make_proxy_emitter(emitter):
     # Note: the flx_prefixes are picked up by the code in flexx.event that
     # compiles component classes, so it can fix /insert the name for JS.
     flx_name = emitter._name
+
     def flx_proxy_emitter(self, *args):
         self._proxy_emitter(flx_name, *args)
+
     flx_proxy_emitter.__doc__ = emitter.__doc__
     flx_proxy_emitter.__qualname__ = 'flx_proxy_emitter'
     return flx_proxy_emitter  # EmitterDescriptor(flx_proxy_emitter, flx_name, '')
@@ -211,8 +214,8 @@ class AppComponentMeta(ComponentMeta):
                 if name not in ('__init__', '__linenr__'):
                     continue
             # Move over to JS
-            if (isinstance(val, Property) or (callable(val) and
-                  name.endswith('_validate'))):
+            if (isinstance(val, Property) or
+                (callable(val) and name.endswith('_validate'))):
                 jsdict[name] = val  # properties are the same
                 if isinstance(val, LocalProperty):
                     delattr(cls, name)
@@ -404,8 +407,7 @@ class LocalComponent(BaseAppComponent):
                     for name in self.__proxy_properties__:
                         props[name] = getattr(self, name)
                 self._session.send_command('INSTANTIATE', self.__jsmodule__,
-                                           self.__class__.__name__,
-                                           self._id, [], props)
+                                           self.__class__.__name__, self._id, [], props)
                 self._has_proxy = True
 
     def emit(self, type, info=None):
@@ -474,12 +476,14 @@ class ProxyComponent(BaseAppComponent):
             # Instantiate JavaScript version of this class
             if local_inst is True:  # i.e. only if Python "instantiated" it
                 property_values['flx_has_proxy'] = True
-                active_components = [c for c in loop.get_active_components()[:-1]
-                                     if isinstance(c, (PyComponent, JsComponent))]
-                self._session.send_command('INSTANTIATE', self.__jsmodule__,
-                                           self.__class__.__name__, self._id,
-                                           self._flx_init_args, property_values,
-                                           active_components)
+                active_components = [
+                    c for c in loop.get_active_components()[:-1]
+                    if isinstance(c,
+                                  (PyComponent, JsComponent))
+                ]
+                self._session.send_command(
+                    'INSTANTIATE', self.__jsmodule__, self.__class__.__name__, self._id,
+                    self._flx_init_args, property_values, active_components)
             del self._flx_init_args
 
     def _comp_apply_property_values(self, values):
@@ -565,8 +569,8 @@ class ProxyComponent(BaseAppComponent):
             self._session._unregister_component(self)
             if self._session.status > 0:
                 # Let other side know that we no longer exist.
-                self._session.send_command('INVOKE', self._id,
-                                           '_flx_set_has_proxy', [False])
+                self._session.send_command('INVOKE', self._id, '_flx_set_has_proxy',
+                                           [False])
 
 
 class StubComponent(BaseAppComponent):
@@ -639,6 +643,7 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
 
 # Note: positioned below JSComponent, because linenr is used to sort JS defs,
 # and the JS for the base component classes is attached to JSComponent.
+
 
 class PyComponent(with_metaclass(AppComponentMeta, LocalComponent)):
     """ Inherits from :class:`BaseAppComponent <flexx.app.BaseAppComponent>`

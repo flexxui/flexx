@@ -4,11 +4,10 @@ Tricky cases for an event system.
 
 from flexx import app, event, ui
 
-
 ## Synced sliders
 
-class SyncedSlidersBase(ui.Widget):
 
+class SyncedSlidersBase(ui.Widget):
     def init(self):
 
         with ui.VBox():
@@ -70,6 +69,7 @@ class SyncedSlidersRight(SyncedSlidersBase):
 
 
 ## Main
+
 
 class Tricky(ui.Widget):
     """ A collection of tricky cases.

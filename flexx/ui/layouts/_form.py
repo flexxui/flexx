@@ -66,7 +66,6 @@ class BaseTableLayout(Layout):
     }
     """
 
-
     def _apply_table_layout(self):
         table = self.node
         AUTOFLEX = 729  # magic number unlikely to occur in practice
@@ -114,8 +113,8 @@ class BaseTableLayout(Layout):
                 col = row.children[j]
                 if (col is undefined) or (col.children.length is 0):
                     continue
-                self._apply_cell_layout(row, col, vflexes[i], hflexes[j],
-                                        cum_vflex, cum_hflex)
+                self._apply_cell_layout(row, col, vflexes[i], hflexes[j], cum_vflex,
+                                        cum_hflex)
 
     @event.reaction('size')
     def _adapt_to_size_change(self, *events):
@@ -155,12 +154,11 @@ class BaseTableLayout(Layout):
             for i in range(len(table.children)):
                 row = table.children[i]
                 if row.vflex > 0:
-                    row.style.height = round(row.vflex /cum_vflex *
-                                                remainingPercentage) + 1 + '%'
+                    row.style.height = round(
+                        row.vflex / cum_vflex * remainingPercentage) + 1 + '%'
 
     def _apply_cell_layout(self, row, col, vflex, hflex, cum_vflex, cum_hflex):
         raise NotImplementedError()
-
 
 
 class FormLayout(BaseTableLayout):
@@ -185,10 +183,13 @@ class FormLayout(BaseTableLayout):
     def _render_dom(self):
         rows = []
         for widget in self.children:
-            row = create_element('tr', {},
-                    create_element('td', {'class': 'flx-title'}, widget.title),
-                    create_element('td', {}, [widget.outernode]),
-                    )
+            row = create_element(
+                'tr',
+                {},
+                create_element('td', {'class': 'flx-title'}, widget.title),
+                create_element('td', {},
+                               [widget.outernode]),
+            )
             widget.outernode.hflex = 1
             widget.outernode.vflex = widget.flex[1]
             rows.append(row)
@@ -238,7 +239,9 @@ class FormLayout(BaseTableLayout):
         mima3 = super()._query_min_max_size()
 
         # Combine own limits with limits of children
-        return [max(mima1[0], mima3[0]),
-                min(mima1[1], mima3[1]),
-                max(mima1[2], mima3[2]),
-                min(mima1[3], mima3[3])]
+        return [
+            max(mima1[0], mima3[0]),
+            min(mima1[1], mima3[1]),
+            max(mima1[2], mima3[2]),
+            min(mima1[3], mima3[3])
+        ]

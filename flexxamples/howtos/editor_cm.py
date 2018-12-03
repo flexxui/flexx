@@ -32,19 +32,20 @@ class CodeEditor(flx.Widget):
     def init(self):
         global window
         # https://codemirror.net/doc/manual.html
-        options = dict(value='import os\n\ndirs = os.walk',
-                        mode='python',
-                        theme='solarized dark',
-                        autofocus=True,
-                        styleActiveLine=True,
-                        matchBrackets=True,
-                        indentUnit=4,
-                        smartIndent=True,
-                        lineWrapping=True,
-                        lineNumbers=True,
-                        firstLineNumber=1,
-                        readOnly=False,
-                        )
+        options = dict(
+            value='import os\n\ndirs = os.walk',
+            mode='python',
+            theme='solarized dark',
+            autofocus=True,
+            styleActiveLine=True,
+            matchBrackets=True,
+            indentUnit=4,
+            smartIndent=True,
+            lineWrapping=True,
+            lineNumbers=True,
+            firstLineNumber=1,
+            readOnly=False,
+        )
         self.cm = window.CodeMirror(self.node, options)
 
     @flx.reaction('size')

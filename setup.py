@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 Flexx setup script.
 """
@@ -15,8 +14,8 @@ except ImportError:
 
 from distutils.core import setup
 
-
 ## Function we need
+
 
 def get_version_and_doc(filename):
     NS = dict(__version__='', __doc__='')
@@ -44,28 +43,29 @@ def get_readme_as_rst(filename):
         # Convert links, images, and images with links
         i1, i2 = line.find('['), line.find(']')
         i3, i4 = line.find('(', i2), line.find(')', i2)
-        i5, i6 = line.find('(', i4), line.find(')', i4+1)
+        i5, i6 = line.find('(', i4), line.find(')', i4 + 1)
         if '[Documentation Status' in line:
             line.find('x')
-        if i1 >=0 and i2 > i1 and i3 == i2 + 1 and i4 > i3:
-            text, link = line[i1+1:i2], line[i3+1:i4]
+        if i1 >= 0 and i2 > i1 and i3 == i2 + 1 and i4 > i3:
+            text, link = line[i1 + 1:i2], line[i3 + 1:i4]
             if i1 == 1 and line[0] == '!':
                 # Image
                 lines[-1] = '\n.. image:: %s\n' % link
             elif i1 == 0 and line.startswith('[![') and i5 == i4 + 2 and i6 > i5:
                 # Image with link
-                link2 = line[i5+1:i6]
+                link2 = line[i5 + 1:i6]
                 lines[-1] = '\n.. image:: %s\n    :target: %s\n' % (link, link2)
             else:
                 # RST link: `link text </the/link>`_
-                lines[-1] = '%s`%s <%s>`_%s' % (line[:i1], text, link, line[i4+1:])
+                lines[-1] = '%s`%s <%s>`_%s' % (line[:i1], text, link, line[i4 + 1:])
     return '\n'.join(lines)
 
 
 def package_tree(pkgroot):
-    subdirs = [os.path.relpath(i[0], THIS_DIR).replace(os.path.sep, '.')
-               for i in os.walk(os.path.join(THIS_DIR, pkgroot))
-               if '__init__.py' in i[2]]
+    subdirs = [
+        os.path.relpath(i[0], THIS_DIR).replace(os.path.sep, '.')
+        for i in os.walk(os.path.join(THIS_DIR, pkgroot)) if '__init__.py' in i[2]
+    ]
     return subdirs
 
 
@@ -94,7 +94,6 @@ if os.path.isfile(os.path.join(THIS_DIR, 'README.md')):
 # Install resources (e.g. phosphor.js)
 get_all_resources()
 
-
 ## Setup
 
 setup(
@@ -111,11 +110,18 @@ setup(
     platforms='any',
     provides=[name],
     python_requires='>=3.5',
-    install_requires=['tornado', 'pscript>=0.6.3', 'webruntime>=0.5.5', 'dialite>=0.5.2'],
+    install_requires=[
+        'tornado', 'pscript>=0.6.3', 'webruntime>=0.5.5', 'dialite>=0.5.2'
+    ],
     packages=package_tree('flexx') + package_tree('flexxamples'),
-    package_dir={'flexx': 'flexx', 'flexxamples': 'flexxamples'},
+    package_dir={
+        'flexx': 'flexx',
+        'flexxamples': 'flexxamples'
+    },
     package_data={name: ['resources/*']},
-    entry_points={'console_scripts': ['flexx = flexx.__main__:main'], },
+    entry_points={
+        'console_scripts': ['flexx = flexx.__main__:main'],
+    },
     zip_safe=False,
     classifiers=[
         'Development Status :: 4 - Beta',

@@ -5,10 +5,10 @@ A sine, with sliders to manipulate phase and amplitude.
 
 from flexx import flx
 
-class SineExample(flx.Widget):
 
+class SineExample(flx.Widget):
     def init(self):
-        time = [i/100 for i in range(100)]
+        time = [i / 100 for i in range(100)]
         with flx.VBox():
             with flx.HBox():
                 flx.Label(text='Frequency:')
@@ -24,7 +24,7 @@ class SineExample(flx.Widget):
         freq, phase = self.slider1.value, self.slider2.value
         ydata = []
         for x in self.plot.xdata:
-            ydata.append(Math.sin(freq*x*2*Math.PI+phase))
+            ydata.append(Math.sin(freq * x * 2 * Math.PI + phase))
         self.plot.set_data(self.plot.xdata, ydata)
 
 

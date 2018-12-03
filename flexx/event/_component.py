@@ -15,7 +15,6 @@ from ._emitter import EmitterDescriptor
 from ._loop import loop, this_is_js
 from . import logger
 
-
 setTimeout = console = None
 
 
@@ -27,9 +26,11 @@ def with_metaclass(meta, *bases):
     # the actual metaclass.
     # On Python 2.7, the name cannot be unicode :/
     tmp_name = b'tmp_class' if sys.version_info[0] == 2 else 'tmp_class'
+
     class metaclass(meta):
         def __new__(cls, name, this_bases, d):
             return meta(name, bases, d)
+
     return type.__new__(metaclass, tmp_name, (), {})
 
 
@@ -230,11 +231,11 @@ class Component(with_metaclass(ComponentMeta, object)):
         for name, value in property_values.items():  # is sorted by occurance in py36
             if name not in self.__properties__:
                 if name in self.__attributes__:
-                    raise AttributeError('%s.%s is an attribute, not a property' %
-                                         (self._id, name))
+                    raise AttributeError(
+                        '%s.%s is an attribute, not a property' % (self._id, name))
                 else:
-                    raise AttributeError('%s does not have property %s.' %
-                                         (self._id, name))
+                    raise AttributeError(
+                        '%s does not have property %s.' % (self._id, name))
             if callable(value):
                 self._comp_make_implicit_setter(name, value)
                 continue
@@ -424,7 +425,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         # they reconnect (dynamism).
         type, _, label = type.partition(':')
         reactions = self.__handlers.get(type, ())
-        for i in range(len(reactions)-1, -1, -1):
+        for i in range(len(reactions) - 1, -1, -1):
             entry = reactions[i]
             if not ((label and label != entry[0]) or
                     (reaction and reaction is not entry[1])):
@@ -446,8 +447,8 @@ class Component(with_metaclass(ComponentMeta, object)):
             raise ValueError('The type given to emit() should not include a label.')
         # Prepare event
         if not isinstance(info, dict):
-            raise TypeError('Info object (for %r) must be a dict, not %r' %
-                            (type, info))
+            raise TypeError(
+                'Info object (for %r) must be a dict, not %r' % (type, info))
         ev = Dict(info)  # make copy and turn into nicer Dict on py
         ev.type = type
         ev.source = self
@@ -494,8 +495,8 @@ class Component(with_metaclass(ComponentMeta, object)):
         ``index`` a tuple of elements.
         """
         if not isinstance(prop_name, str):
-            raise TypeError("_mutate's first arg must be str, not %s" %
-                             prop_name.__class__)
+            raise TypeError(
+                "_mutate's first arg must be str, not %s" % prop_name.__class__)
         if prop_name not in self.__properties__:
             cname = self.__class__.__name__
             raise AttributeError('%s object has no property %r' % (cname, prop_name))
@@ -588,7 +589,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
             raise RuntimeError('Component.reaction() '
-                                'needs one or more connection strings.')
+                               'needs one or more connection strings.')
 
         func = None
         if callable(connection_strings[0]):
@@ -661,11 +662,12 @@ def _mutate_array_py(array, ev):
             raise NotImplementedError('Cannot resize numpy arrays')
         elif mutation == 'replace':
             if isinstance(index, tuple):  # nd-replacement
-                slices = tuple(slice(index[i], index[i] + objects.shape[i], 1)
-                               for i in range(len(index)))
+                slices = tuple(
+                    slice(index[i], index[i] + objects.shape[i], 1)
+                    for i in range(len(index)))
                 array[slices] = objects
             else:
-                array[index:index+len(objects)] = objects
+                array[index:index + len(objects)] = objects
     else:
         if mutation == 'set':
             array[:] = objects
@@ -673,9 +675,9 @@ def _mutate_array_py(array, ev):
             array[index:index] = objects
         elif mutation == 'remove':
             assert isinstance(objects, int)  # objects must be a count in this case
-            array[index:index+objects] = []
+            array[index:index + objects] = []
         elif mutation == 'replace':
-            array[index:index+len(objects)] = objects
+            array[index:index + len(objects)] = objects
         else:
             raise NotImplementedError(mutation)
 

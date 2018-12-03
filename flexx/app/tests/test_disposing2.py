@@ -25,14 +25,12 @@ def setup_module():
 
 
 class MyPyComponent(PyComponent):
-
     def _dispose(self):
         print('disposing', self.id)
         super()._dispose()
 
 
 class MyJsComponent(JsComponent):
-
     def _dispose(self):
         print('disposing', self.id)
         super()._dispose()
@@ -41,11 +39,16 @@ class MyJsComponent(JsComponent):
 def check_alive(s, id1, id2):
     print(getattr(s.get_component_instance(id1), 'id', None))
     print(getattr(s.get_component_instance(id2), 'id', None))
-    s.send_command('EVAL', 'flexx.s1.instances.%s && flexx.s1.instances.%s.id || null' % (id1, id1))
-    s.send_command('EVAL', 'flexx.s1.instances.%s && flexx.s1.instances.%s.id || null' % (id2, id2))
+    s.send_command(
+        'EVAL',
+        'flexx.s1.instances.%s && flexx.s1.instances.%s.id || null' % (id1, id1))
+    s.send_command(
+        'EVAL',
+        'flexx.s1.instances.%s && flexx.s1.instances.%s.id || null' % (id2, id2))
 
 
 ## PyComponent
+
 
 @run_live
 async def test_dispose_PyComponent1():

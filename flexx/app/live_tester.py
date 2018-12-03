@@ -17,8 +17,10 @@ async def roundtrip(*sessions):
     """ Coroutine to await a roundtrip to all given sessions.
     """
     ok = []
+
     def up():
         ok.append(1)
+
     for session in sessions:
         session.call_after_roundtrip(up)
     # timeout = time.time() + 5.0
@@ -74,7 +76,7 @@ def run_live(func):
             sys.stderr = orig_stderr
 
         # Clean up / shut down
-        print('done in %f seconds' % (time.time()-t0))
+        print('done in %f seconds' % (time.time() - t0))
         for appname in app.manager.get_app_names():
             if 'default' not in appname:
                 sessions = app.manager.get_connections(appname)
@@ -87,12 +89,13 @@ def run_live(func):
         # Get reference text
         pyresult, jsresult = filter_stdout(fake_stdout.getvalue())
         reference = '\n'.join(line[4:] for line in func.__doc__.splitlines())
-        parts = reference.split('-'*10)
+        parts = reference.split('-' * 10)
         pyref = parts[0].strip(' \n')
         jsref = parts[-1].strip(' \n-')
 
         # Compare
-        smart_compare(func, ('Python', pyresult, pyref),
-                            ('JavaScript', jsresult, jsref))
+        smart_compare(func,
+                      ('Python', pyresult, pyref),
+                      ('JavaScript', jsresult, jsref))
 
     return runner

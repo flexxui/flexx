@@ -88,9 +88,11 @@ class TornadoServer(AbstractServer):
         else:
             app_kwargs = dict()
         # Create tornado application
-        self._app = Application([(r"/flexx/ws/(.*)", WSHandler),
-                                 (r"/flexx/(.*)", MainHandler),
-                                 (r"/(.*)", AppHandler), ], **app_kwargs)
+        self._app = Application([
+            (r"/flexx/ws/(.*)", WSHandler),
+            (r"/flexx/(.*)", MainHandler),
+            (r"/(.*)", AppHandler),
+        ], **app_kwargs)
         self._app._io_loop = self._io_loop
         # Create tornado server, bound to our own ioloop
         if tornado.version_info < (5, ):
@@ -148,6 +150,7 @@ class TornadoServer(AbstractServer):
             return 'https'
 
         return 'http'
+
 
 def port_hash(name):
     """ Given a string, returns a port number between 49152 and 65535
@@ -251,8 +254,10 @@ class AppHandler(FlexxHandler):
     def _get_index(self, app_name, path):
         if path:
             return self.redirect('/flexx/__index__')
-        all_apps = ['<li><a href="%s/">%s</a></li>' % (name, name) for name in
-                    manager.get_app_names()]
+        all_apps = [
+            '<li><a href="%s/">%s</a></li>' % (name, name)
+            for name in manager.get_app_names()
+        ]
         the_list = '<ul>%s</ul>' % ''.join(all_apps) if all_apps else 'no apps'
         self.write('Index of available apps: ' + the_list)
 
@@ -345,8 +350,9 @@ class MainHandler(RequestHandler):
             # If colon: request for a view of an asset at a certain line
             if '.js:' in filename or '.css:' in filename or filename[0] == ':':
                 fname, where = filename.split(':')[:2]
-                return self.redirect('/flexx/assetview/%s/%s#L%s' %
-                    (session_id or 'shared', fname.replace('/:', ':'), where))
+                return self.redirect(
+                    '/flexx/assetview/%s/%s#L%s' % (session_id or 'shared',
+                                                    fname.replace('/:', ':'), where))
 
             # Retrieve asset
             try:
@@ -369,14 +375,15 @@ class MainHandler(RequestHandler):
 
             # Build HTML page
             style = ('pre {display:block; width: 100%; padding:0; margin:0;} '
-                    'a {text-decoration: none; color: #000; background: #ddd;} '
-                    ':target {background:#ada;} ')
+                     'a {text-decoration: none; color: #000; background: #ddd;} '
+                     ':target {background:#ada;} ')
             lines = ['<html><head><style>%s</style></head><body>' % style]
             for i, line in enumerate(res.splitlines()):
                 table = {ord('&'): '&amp;', ord('<'): '&lt;', ord('>'): '&gt;'}
                 line = line.translate(table).replace('\t', '    ')
-                lines.append('<pre id="L%i"><a href="#L%i">%s</a>  %s</pre>' %
-                             (i+1, i+1, str(i+1).rjust(4).replace(' ', '&nbsp'), line))
+                lines.append(
+                    '<pre id="L%i"><a href="#L%i">%s</a>  %s</pre>' %
+                    (i + 1, i + 1, str(i + 1).rjust(4).replace(' ', '&nbsp'), line))
             lines.append('</body></html>')
             return self.write('\n'.join(lines))
 
@@ -400,8 +407,8 @@ class MainHandler(RequestHandler):
         """
         runtime = time.time() - IMPORT_TIME
         napps = len(manager.get_app_names())
-        nsessions = sum([len(manager.get_connections(x))
-                         for x in manager.get_app_names()])
+        nsessions = sum(
+            [len(manager.get_connections(x)) for x in manager.get_app_names()])
 
         info = []
         info.append('Runtime: %1.1f s' % runtime)
@@ -421,11 +428,12 @@ class MainHandler(RequestHandler):
         if not path:
             self.write('No command given')
         elif path == 'info':
-            info = dict(address=self.application._flexx_serving,
-                        app_names=manager.get_app_names(),
-                        nsessions=sum([len(manager.get_connections(x))
-                                        for x in manager.get_app_names()]),
-                        )
+            info = dict(
+                address=self.application._flexx_serving,
+                app_names=manager.get_app_names(),
+                nsessions=sum(
+                    [len(manager.get_connections(x)) for x in manager.get_app_names()]),
+            )
             self.write(json.dumps(info))
         elif path == 'stop':
             asyncio.get_event_loop().stop()
@@ -485,11 +493,12 @@ class WSHandler(WebSocketHandler):
     """
 
     # https://tools.ietf.org/html/rfc6455#section-7.4.1
-    known_reasons = {1000: 'client done',
-                     1001: 'client closed',
-                     1002: 'protocol error',
-                     1003: 'could not accept data',
-                     }
+    known_reasons = {
+        1000: 'client done',
+        1001: 'client closed',
+        1002: 'protocol error',
+        1003: 'could not accept data',
+    }
 
     # --- callbacks
 
@@ -537,9 +546,8 @@ class WSHandler(WebSocketHandler):
             if command[0] == 'HI_FLEXX':
                 session_id = command[1]
                 try:
-                    self._session = manager.connect_client(self, self.app_name,
-                                                           session_id,
-                                                           cookies=self.cookies)
+                    self._session = manager.connect_client(
+                        self, self.app_name, session_id, cookies=self.cookies)
                 except Exception as err:
                     self.close(1003, "Could not launch app: %r" % err)
                     raise

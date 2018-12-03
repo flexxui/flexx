@@ -48,16 +48,15 @@ class View(flx.Widget):
 
             with flx.HBox():
                 self.first_edit = flx.LineEdit(placeholder_text='first name',
-                                              text='Jane')
-                self.last_edit = flx.LineEdit(placeholder_text='last name',
-                                             text='Doe')
+                                               text='Jane')
+                self.last_edit = flx.LineEdit(placeholder_text='last name', text='Doe')
                 flx.Widget(flex=1)  # spacer
 
             with flx.HBox():
                 flx.Label(text=lambda: self.root.first_name,
-                         style='border:1px solid red')
+                          style='border:1px solid red')
                 flx.Label(text=lambda: self.root.last_name,
-                         style='border:1px solid red')
+                          style='border:1px solid red')
                 flx.Widget(flex=1)  # spacer
 
             MyPersonLabel(style='border:1px solid blue')

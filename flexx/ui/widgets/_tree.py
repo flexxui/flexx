@@ -25,7 +25,6 @@ from .._widget import Widget, create_element
 
 loop = event.loop
 
-
 # todo: icons
 # todo: tooltips
 # todo: a variant that can load data dynamically from Python, for biggish data
@@ -203,7 +202,8 @@ class TreeWidget(Widget):
 
     """
 
-    max_selected = event.IntProp(0, settable=True, doc="""
+    max_selected = event.IntProp(
+        0, settable=True, doc="""
         The maximum number of selected items:
 
         * If 0 (default) there is no selection.
@@ -223,6 +223,7 @@ class TreeWidget(Widget):
         they are shown in the tree.
         """
         items = []
+
         def collect(x):
             items.append(x)
             for i in x.children:
@@ -436,6 +437,7 @@ class TreeWidget(Widget):
         including visibility information due to collapsed parents.
         """
         items = []
+
         def collect(x, parent_collapsed):
             visible = x.visible and not parent_collapsed
             items.append((visible, x))
@@ -471,33 +473,39 @@ class TreeItem(Widget):
     that represents the row for this item (but not its children).
     """
 
-    text = event.StringProp('', settable=True, doc="""
+    text = event.StringProp(
+        '', settable=True, doc="""
         The text for this item. Can be used in combination with
         ``title`` to obtain two columns.
         """)
 
-    title = event.StringProp('', settable=True, doc="""
+    title = event.StringProp(
+        '', settable=True, doc="""
         The title for this item that appears before the text. Intended
         for display of key-value pairs. If a title is given, the text is
         positioned in a second (virtual) column of the tree widget.
         """)
 
-    visible = event.BoolProp(True, settable=True, doc="""
+    visible = event.BoolProp(
+        True, settable=True, doc="""
         Whether this item (and its sub items) is visible.
         """)
 
-    selected = event.BoolProp(False, settable=True, doc="""
+    selected = event.BoolProp(
+        False, settable=True, doc="""
         Whether this item is selected. Depending on the TreeWidget's
         policy (max_selected), this can be set/unset on clicking the item.
         """)
 
-    checked = event.TriStateProp(settable=True, doc="""
+    checked = event.TriStateProp(
+        settable=True, doc="""
         Whether this item is checked (i.e. has its checkbox set).
         The value can be None, True or False. None (the default)
         means that the item is not checkable.
         """)
 
-    collapsed = event.TriStateProp(settable=True, doc="""
+    collapsed = event.TriStateProp(
+        settable=True, doc="""
         Whether this item is expanded (i.e. shows its children).
         The value can be None, True or False. None (the default)
         means that the item is not collapsable (unless it has sub items).
@@ -536,8 +544,7 @@ class TreeItem(Widget):
     def set_parent(self, parent, pos=None):
         # Verify that this class is used correctly
         # Note that this action is already called from the init by Widget.
-        if not (parent is None or
-                isinstance(parent, TreeItem) or
+        if not (parent is None or isinstance(parent, TreeItem) or
                 isinstance(parent, TreeWidget)):
             raise RuntimeError('TreeItems can only be created in the context '
                                'of a TreeWidget or TreeItem.')
@@ -573,11 +580,12 @@ class TreeItem(Widget):
         # selected and checked for the span.
         cnames = []
         collapsed = bool(self.collapsed) if len(self.children) > 0 else self.collapsed
-        for name, val in [('visible', self.visible),
-                          ('collapsed', collapsed),
-                          ('selected', self.selected),
-                          ('checked', self.checked),
-                          ]:
+        for name, val in [
+            ('visible', self.visible),
+            ('collapsed', collapsed),
+            ('selected', self.selected),
+            ('checked', self.checked),
+        ]:
             cnames.append(name + '-' + str(val))
         cnames = ' '.join(cnames)
 
@@ -586,16 +594,21 @@ class TreeItem(Widget):
 
         # Note that the outernode (the <li>) has not flx-Widget nor flx-TreeItem
         text_class = 'text hastitle' if len(title) > 0 else 'text'
-        return create_element('li', {'className': cnames},
-                    create_element('span', {'className': 'flx-TreeItem ' + cnames},
-                        create_element('span', {'className': 'padder'}),
-                        create_element('span', {'className': 'collapsebut'}),
-                        create_element('span', {'className': 'checkbut'}),
-                        create_element('span', {'className': 'title'}, title),
-                        create_element('span', {'className': text_class}, text),
-                        ),
-                    create_element('ul', {}, subnodes),
-                    )
+        return create_element(
+            'li',
+            {'className': cnames},
+            create_element(
+                'span',
+                {'className': 'flx-TreeItem ' + cnames},
+                create_element('span', {'className': 'padder'}),
+                create_element('span', {'className': 'collapsebut'}),
+                create_element('span', {'className': 'checkbut'}),
+                create_element('span', {'className': 'title'}, title),
+                create_element('span',
+                               {'className': text_class}, text),
+            ),
+            create_element('ul', {}, subnodes),
+        )
 
     def _render_title(self):
         """ Return a node for title. Can be overloaded to e.g. format with html.

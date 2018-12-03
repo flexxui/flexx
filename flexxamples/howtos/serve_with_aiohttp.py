@@ -28,6 +28,7 @@ from flexxamples.howtos.editor_cm import CodeEditor
 
 # Define an app
 
+
 class MyApp(flx.Widget):
     def init(self):
         with flx.HBox():
@@ -43,6 +44,7 @@ app = flx.App(MyApp)
 assets = app.dump('index.html', link=2)
 
 # Define a request handler for aiohttp
+
 
 def handler(request):
     # Get what path is requested

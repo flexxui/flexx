@@ -7,13 +7,12 @@ from flexx import flx
 
 
 class Example(flx.HFix):
-
     def init(self):
         with flx.VBox():
             self.b1 = flx.Button(text='apple')
             self.b2 = flx.Button(text='banana')
             self.b3 = flx.Button(text='pear')
-            self.buttonlabel= flx.Label(text='...')
+            self.buttonlabel = flx.Label(text='...')
         with flx.VBox():
             self.r1 = flx.RadioButton(text='apple')
             self.r2 = flx.RadioButton(text='banana')
@@ -24,7 +23,6 @@ class Example(flx.HFix):
             self.c2 = flx.ToggleButton(text='banana')
             self.c3 = flx.ToggleButton(text='pear')
             self.checklabel = flx.Label(text='...')
-
 
     @flx.reaction('b1.pointer_click', 'b2.pointer_click', 'b3.pointer_click')
     def _button_clicked(self, *events):

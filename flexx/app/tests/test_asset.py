@@ -15,7 +15,6 @@ from flexx.app._asset import solve_dependencies, get_mod_name, module_is_package
 from flexx.util.logging import capture_log
 from flexx import app
 
-
 N_STANDARD_ASSETS = 3
 
 test_filename = os.path.join(tempfile.gettempdir(), 'flexx_asset_cache.test')
@@ -150,9 +149,9 @@ def test_remote_asset():
     with raises(TypeError):  # JS from file - not allowed
         app.Asset('file://' + test_filename + '.js')
     with raises(TypeError):
-         app.Asset(jquery_url, 'foo=3')  # no sources for remote asset
+        app.Asset(jquery_url, 'foo=3')  # no sources for remote asset
     with raises(TypeError):
-         app.Asset(jquery_url, ['foo=3'])  # no sources for remote asset
+        app.Asset(jquery_url, ['foo=3'])  # no sources for remote asset
 
 
 def test_lazy_asset():
@@ -358,22 +357,26 @@ def test_dependency_resolution_5():
     # First the chain 1
     aa = a1, b1, c1, a2, b2, c2
     aa = solve_dependencies(aa)
-    assert [a.name for a in aa] == ['c1.js', 'b1.js', 'a1.js', 'c2.js', 'b2.js', 'a2.js']
+    assert [a.name
+            for a in aa] == ['c1.js', 'b1.js', 'a1.js', 'c2.js', 'b2.js', 'a2.js']
 
     # First the chain 2
     aa = a2, b2, c2, a1, b1, c1
     aa = solve_dependencies(aa)
-    assert [a.name for a in aa] == [ 'c2.js', 'b2.js', 'a2.js', 'c1.js', 'b1.js', 'a1.js']
+    assert [a.name
+            for a in aa] == ['c2.js', 'b2.js', 'a2.js', 'c1.js', 'b1.js', 'a1.js']
 
     # Mix, put el from chain 1 first
     aa = a1, a2, b1, b2, c1, c2
     aa = solve_dependencies(aa)
-    assert [a.name for a in aa] == ['c1.js', 'b1.js', 'a1.js', 'c2.js', 'b2.js', 'a2.js']
+    assert [a.name
+            for a in aa] == ['c1.js', 'b1.js', 'a1.js', 'c2.js', 'b2.js', 'a2.js']
 
     # Mix, put el from chain 2 first
     aa = a2, a1, b1, b2, c1, c2
     aa = solve_dependencies(aa)
-    assert [a.name for a in aa] == [ 'c2.js', 'b2.js', 'a2.js', 'c1.js', 'b1.js', 'a1.js']
+    assert [a.name
+            for a in aa] == ['c2.js', 'b2.js', 'a2.js', 'c1.js', 'b1.js', 'a1.js']
 
 
 def test_dependency_resolution_6():
@@ -388,7 +391,8 @@ def test_dependency_resolution_6():
 
     aa = a1, b1, b2, c1, c2, c3
     aa = solve_dependencies(aa)
-    assert [a.name for a in aa] == [ 'c1.js', 'c2.js', 'b1.js', 'c3.js', 'b2.js', 'a1.js']
+    assert [a.name
+            for a in aa] == ['c1.js', 'c2.js', 'b1.js', 'c3.js', 'b2.js', 'a1.js']
 
 
 def test_dependency_resolution_7():
@@ -419,19 +423,22 @@ def test_dependency_resolution_8():
     #    \/
     aa = a0, a1, b1, b2, c1, d1
     aa = solve_dependencies(aa)
-    assert [a.name for a in aa] == ['a0.js', 'd1.js', 'c1.js', 'b1.js', 'b2.js', 'a1.js']
+    assert [a.name
+            for a in aa] == ['a0.js', 'd1.js', 'c1.js', 'b1.js', 'b2.js', 'a1.js']
 
     # Get send to back - after a1, and a1 gets send to back due to its deps
     #        \/
     aa = a1, a0, b1, b2, c1, d1
     aa = solve_dependencies(aa)
-    assert [a.name for a in aa] == ['d1.js', 'c1.js', 'b1.js', 'b2.js', 'a1.js', 'a0.js']
+    assert [a.name
+            for a in aa] == ['d1.js', 'c1.js', 'b1.js', 'b2.js', 'a1.js', 'a0.js']
 
     # Stay behind b1
     #        \/
     aa = b1, a0, a1, b2, c1, d1
     aa = solve_dependencies(aa)
-    assert [a.name for a in aa] == ['d1.js', 'c1.js', 'b1.js', 'a0.js', 'b2.js', 'a1.js']
+    assert [a.name
+            for a in aa] == ['d1.js', 'c1.js', 'b1.js', 'a0.js', 'b2.js', 'a1.js']
 
 
 run_tests_if_main()

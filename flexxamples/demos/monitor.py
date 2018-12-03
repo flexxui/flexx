@@ -32,11 +32,12 @@ class Relay(flx.Component):
 
     @flx.emitter
     def system_info(self):
-        return dict(cpu=psutil.cpu_percent(),
-                    mem=psutil.virtual_memory().percent,
-                    sessions=self.number_of_connections,
-                    total_sessions=flx.manager.total_sessions,
-                    )
+        return dict(
+            cpu=psutil.cpu_percent(),
+            mem=psutil.virtual_memory().percent,
+            sessions=self.number_of_connections,
+            total_sessions=flx.manager.total_sessions,
+        )
 
     def refresh(self):
         self.system_info()
@@ -67,10 +68,9 @@ class Monitor(flx.PyComponent):
         if not self.session.status:
             return relay.disconnect('system_info:' + self.id)
         for ev in events:
-            self.view.update_info(dict(cpu=ev.cpu,
-                                       mem=ev.mem,
-                                       sessions=ev.sessions,
-                                       total_sessions=ev.total_sessions))
+            self.view.update_info(
+                dict(cpu=ev.cpu, mem=ev.mem, sessions=ev.sessions,
+                     total_sessions=ev.total_sessions))
 
     def _do_work(self, *events):
         etime = time() + len(events)
@@ -80,17 +80,16 @@ class Monitor(flx.PyComponent):
 
 
 class MonitorView(flx.VBox):
-
     def init(self):
         self.start_time = time()
 
         self.status = flx.Label(text='...')
         self.cpu_plot = flx.PlotWidget(flex=1, style='width: 640px; height: 320px;',
-                                       xdata=[], yrange=(0, 100),
-                                       ylabel='CPU usage (%)')
+                                       xdata=[], yrange=(0,
+                                                         100), ylabel='CPU usage (%)')
         self.mem_plot = flx.PlotWidget(flex=1, style='width: 640px; height: 320px;',
-                                       xdata=[], yrange=(0, 100),
-                                       ylabel='Mem usage (%)')
+                                       xdata=[], yrange=(0,
+                                                         100), ylabel='Mem usage (%)')
 
     @flx.action
     def update_info(self, info):

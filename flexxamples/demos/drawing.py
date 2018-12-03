@@ -1,5 +1,4 @@
 # doc-export: Drawing
-
 """
 This example demonstrates a simple drawing app.
 Also useful for testing canvas and its mouse / touch events.

@@ -73,6 +73,7 @@ def solve_dependencies(things, warn_missing=False):
                 break  # no changes, move to next index
     return [thingmap[name] for name in names]
 
+
 # todo: We could do (basic) minification of the JS
 # but it will make the code less readable, so better do this after we've
 # source maps.
@@ -223,16 +224,16 @@ class Bundle(Asset):
 
     def __repr__(self):
         t = '<%s %r with %i assets and %i modules at 0x%0x>'
-        return t % (self.__class__.__name__, self._name,
-                    len(self._assets), len(self._modules), id(self))
+        return t % (self.__class__.__name__, self._name, len(self._assets),
+                    len(self._modules), id(self))
 
     def add_asset(self, a):
         """ Add an asset to the bundle. Assets added this way occur before the
         code for the modules in this bundle.
         """
         if not isinstance(a, Asset):
-            raise TypeError('Bundles.add_asset() needs an Asset, not %s.' %
-                            a.__class__.__name__)
+            raise TypeError(
+                'Bundles.add_asset() needs an Asset, not %s.' % a.__class__.__name__)
         if isinstance(a, Bundle):
             raise TypeError('Bundles can contain assets and modules, but not bundles.')
         self._assets.append(a)
@@ -247,8 +248,8 @@ class Bundle(Asset):
 
         # Check if module belongs here
         if not m.name.startswith(self._module_name):
-            raise ValueError('Module %s does not belong in bundle %s.' %
-                             (m.name, self.name))
+            raise ValueError(
+                'Module %s does not belong in bundle %s.' % (m.name, self.name))
 
         # Add module
         self._modules.append(m)

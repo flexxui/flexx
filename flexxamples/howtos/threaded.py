@@ -25,13 +25,16 @@ class MyComponent1(flx.Component):
         for ev in events:
             print('foo changed to', ev.new_value)
 
+
 # Create component in main thread
 comp = MyComponent1()
+
 
 # Start server in its own thread
 def start_flexx():
     flx.create_server(loop=asyncio.new_event_loop())
     flx.start()
+
 
 t = threading.Thread(target=start_flexx)
 t.start()

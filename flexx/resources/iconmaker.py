@@ -10,7 +10,6 @@ import numpy as np
 import flexx
 from flexx.util.icon import Icon
 
-
 # colors:
 # (70, 140, 210) - Python blue
 # (240, 80, 80) - a strong red
@@ -25,7 +24,6 @@ def create_icon(N=16, COLOR=(240, 80, 80)):
     col_index2 = [0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0]
     col_index3 = [0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0]
     col_index = None, col_index1, col_index2, col_index3
-
 
     # Create template image
     for y in range(N):
@@ -49,8 +47,8 @@ def create_icon(N=16, COLOR=(240, 80, 80)):
             if im[y, x]:
                 rgba[y, x, :3] = COLOR
                 rgba[y, x, 3] = 255
-            elif im[max(0, y-1):y+2, max(0, x-1):x+2].any():
-                factor = im[max(0, y-1):y+2, max(0, x-1):x+2].sum()
+            elif im[max(0, y - 1):y + 2, max(0, x - 1):x + 2].any():
+                factor = im[max(0, y - 1):y + 2, max(0, x - 1):x + 2].sum()
                 rgba[y, x, :3] = COLOR
                 rgba[y, x, :3] //= 2
                 rgba[y, x, 3] = 64 * (0.66 if factor == 1 else 1)

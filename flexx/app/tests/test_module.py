@@ -169,8 +169,8 @@ files['globals2'] = """
         print(console.xx)
 """
 
-
 PKG_NAME = 'flxtest'
+
 
 def setup_module():
     packdirname = os.path.join(tempdirname, PKG_NAME)
@@ -345,16 +345,20 @@ def test_add_variable():
     m.add_variable('use_lib2')
 
     # Has changed flag
-    our_time = time.time(); time.sleep(0.01)
+    our_time = time.time()
+    time.sleep(0.01)
     m = JSModule('flxtest.bar', {})
-    time.sleep(0.01); our_time = time.time();
+    time.sleep(0.01)
+    our_time = time.time()
     m.get_js()
     #
-    our_time = time.time(); time.sleep(0.01)
+    our_time = time.time()
+    time.sleep(0.01)
     m.add_variable('use_lib1')
     m.add_variable('AA')
     #
-    our_time = time.time(); time.sleep(0.01)
+    our_time = time.time()
+    time.sleep(0.01)
     m.add_variable('use_lib1')  # no effect because already known
     #
     m.add_variable('AA')  # no effect bacause is imported name

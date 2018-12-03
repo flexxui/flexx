@@ -29,6 +29,7 @@ class Example(flx.Widget):
     def init(self):
         flx.Button(text='Secret Button')
 
+
 # run application
 flx.serve(Example, 'Example')
 flx.start()

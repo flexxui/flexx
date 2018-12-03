@@ -14,17 +14,16 @@ from flexx import flx
 
 
 class Redirect(flx.Widget):
-    
     def init(self):
         self.but1 = flx.Button(text='Redirect')
         self.but2 = flx.Button(text='Open new page')
-    
+
     @flx.reaction('but1.pointer_click')
     def on_redirect(self, *events):
         global window
         window.location.href = 'http://python.org'  # allow going back
         # window.location.replace('http://python.org')  # hard redirect
-    
+
     @flx.reaction('but2.pointer_click')
     def on_opennew(self, *events):
         global window

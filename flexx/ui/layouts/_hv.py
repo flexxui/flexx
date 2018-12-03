@@ -40,8 +40,6 @@ Also see examples: :ref:`app_layout.py`, :ref:`splitters.py`,
 :ref:`box_vs_fix_layout.py`, :ref:`mondriaan.py`.
 
 """
-
-
 """
 ## Notes on performance and layout boundaries.
 
@@ -110,9 +108,16 @@ class OrientationProp(Property):
     def _validate(self, v, name, data):
         if isinstance(v, str):
             v = v.lower().replace('-', '')
-        v = {'horizontal': 'h', 0: 'h', 'lefttoright': 'h',
-             'vertical': 'v', 1: 'v', 'toptobottom': 'v',
-             'righttoleft': 'hr', 'bottomtotop': 'vr'}.get(v, v)
+        v = {
+            'horizontal': 'h',
+            0: 'h',
+            'lefttoright': 'h',
+            'vertical': 'v',
+            1: 'v',
+            'toptobottom': 'v',
+            'righttoleft': 'hr',
+            'bottomtotop': 'vr'
+        }.get(v, v)
         if v not in ('h', 'v', 'hr', 'vr'):
             raise ValueError('%s.orientation got unknown value %r' % (self.id, v))
         return v
@@ -286,19 +291,22 @@ class HVLayout(Layout):
           flex values, and can be modified by the user by dragging the splitters.
         """)
 
-    orientation = OrientationProp(settable=True, doc="""
+    orientation = OrientationProp(
+        settable=True, doc="""
         The orientation of the child widgets. 'h' or 'v' for horizontal and
         vertical, or their reversed variants 'hr' and 'vr'. Settable with
         values: 0, 1, 'h', 'v', 'hr', 'vr', 'horizontal', 'vertical',
         'left-to-right', 'right-to-left', 'top-to-bottom', 'bottom-to-top'
         (insensitive to case and use of dashes).
         """)
-    
-    spacing = event.FloatProp(4, settable=True, doc="""
+
+    spacing = event.FloatProp(
+        4, settable=True, doc="""
         The space between two child elements (in pixels).
         """)
 
-    padding = event.FloatProp(1, settable=True, doc="""
+    padding = event.FloatProp(
+        1, settable=True, doc="""
         The empty space around the layout (in pixels).
         """)
 
@@ -341,9 +349,9 @@ class HVLayout(Layout):
         size_sum = 0 if len(sizes) == 0 else sum(sizes)
         if size_sum == 0:
             # Convenience: all zeros probably means to divide equally
-            sizes = [1/len(sizes) for i in sizes]
+            sizes = [1 / len(sizes) for i in sizes]
         else:
-            sizes = [i/size_sum for i in sizes]
+            sizes = [i / size_sum for i in sizes]
 
         # Turn sizes into positions
         positions = []
@@ -402,18 +410,18 @@ class HVLayout(Layout):
         # look for min/max sizes of their children. We could set min-width and
         # friends at the layout to help flexbox a bit, but that would possibly
         # overwrite a user-set value. Hopefully flexbox will get fixed soon.
-        
+
         hori = 'h' in self.orientation
-        
+
         # Own limits
         mima0 = super()._query_min_max_size()
-        
+
         # Init limits for children
         if hori is True:
             mima1 = [0, 0, 0, 1e9]
         else:
             mima1 = [0, 1e9, 0, 0]
-        
+
         # Collect contributions of child widgets?
         if self.minsize_from_children:
             for child in self.children:
@@ -428,13 +436,13 @@ class HVLayout(Layout):
                     mima1[1] = min(mima1[1], mima2[1])
                     mima1[2] += mima2[2]
                     mima1[3] += mima2[3]
-        
+
         # Set unset max sizes
         if mima1[1] == 0:
             mima1[1] = 1e9
         if mima1[3] == 0:
             mima1[3] = 1e9
-        
+
         # Add padding and spacing
         if self.minsize_from_children:
             extra_padding = self.padding * 2
@@ -447,12 +455,14 @@ class HVLayout(Layout):
             else:
                 mima1[2] += extra_spacing
                 mima1[3] += extra_spacing
-        
+
         # Combine own limits with limits of children
-        return [max(mima1[0], mima0[0]),
-                min(mima1[1], mima0[1]),
-                max(mima1[2], mima0[2]),
-                min(mima1[3], mima0[3])]
+        return [
+            max(mima1[0], mima0[0]),
+            min(mima1[1], mima0[1]),
+            max(mima1[2], mima0[2]),
+            min(mima1[3], mima0[3])
+        ]
 
     @event.reaction('size', '_size_limits', mode='greedy')
     def __size_changed(self, *events):
@@ -665,12 +675,12 @@ class HVLayout(Layout):
         ref_pos = pos
         for i in reversed(range(0, index)):
             cur = abs_positions[i]
-            mi, ma = _get_min_max(children[i+1], ori)
+            mi, ma = _get_min_max(children[i + 1], ori)
             abs_positions[i] = ref_pos = max(ref_pos - ma, min(ref_pos - mi, cur))
 
         # Move seps on the right, as needed
         ref_pos = pos
-        for i in range(index+1, len(abs_positions)):
+        for i in range(index + 1, len(abs_positions)):
             cur = abs_positions[i]
             mi, ma = _get_min_max(children[i], ori)
             abs_positions[i] = ref_pos = max(ref_pos + mi, min(ref_pos + ma, cur))
@@ -679,7 +689,7 @@ class HVLayout(Layout):
         ref_pos = available_size
         for i in reversed(range(0, len(abs_positions))):
             cur = abs_positions[i]
-            mi, ma = _get_min_max(children[i+1], ori)
+            mi, ma = _get_min_max(children[i + 1], ori)
             abs_positions[i] = ref_pos = max(ref_pos - ma, min(ref_pos - mi, cur))
 
         # Correct seps from the left edge
@@ -691,7 +701,7 @@ class HVLayout(Layout):
 
         # Set (relative) splitter positions. This may seem like a detour, but
         # this way the splits will scale nicely e.g. during resizing.
-        self.user_splitter_positions(*[pos/available_size for pos in abs_positions])
+        self.user_splitter_positions(*[pos / available_size for pos in abs_positions])
 
     def __apply_positions(self):
         """ Set sep.abs_pos and sep.rel_pos on each separator.
@@ -821,10 +831,10 @@ class HVLayout(Layout):
                     widget.outernode.style.left = pos + 'px'
                     widget.outernode.style.width = size + 'px'
                     widget.outernode.style.top = pad_size + 'px'
-                    widget.outernode.style.height = 'calc(100% - ' + 2*pad_size + 'px)'
+                    widget.outernode.style.height = 'calc(100% - ' + 2 * pad_size + 'px)'
                 else:
                     widget.outernode.style.left = pad_size + 'px'
-                    widget.outernode.style.width = 'calc(100% - ' + 2*pad_size + 'px)'
+                    widget.outernode.style.width = 'calc(100% - ' + 2 * pad_size + 'px)'
                     widget.outernode.style.top = pos + 'px'
                     widget.outernode.style.height = size + 'px'
             if i < len(self._seps):
@@ -885,6 +895,7 @@ class HVLayout(Layout):
 
 ## Util funcs
 
+
 def _applyBoxStyle(e, sty, value):
     for prefix in ['-webkit-', '-ms-', '-moz-', '']:
         e.style[prefix + sty] = value
@@ -899,6 +910,7 @@ def _get_min_max(widget, ori):
 
 
 ## Convenience subclasses
+
 
 class HBox(HVLayout):
     """ Horizontal layout that tries to give each widget its natural size and

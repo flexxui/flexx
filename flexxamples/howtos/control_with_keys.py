@@ -57,7 +57,6 @@ class TreeWithControls(flx.TreeWidget):
 
 
 class KeyboardControlsTester(flx.Widget):
-
     def init(self):
 
         combo_options = ['Paris', 'New York', 'Enschede', 'Tokio']
@@ -73,7 +72,7 @@ class KeyboardControlsTester(flx.Widget):
                 with flx.TreeItem(text=cat):
                     for name in ('Martin', 'Kees', 'Hans'):
                         item = flx.TreeItem(title=name)
-                        item.set_checked(cat=='foo' or None)
+                        item.set_checked(cat == 'foo' or None)
 
     @flx.reaction('combo.text')
     def _combo_text_changed(self, *events):

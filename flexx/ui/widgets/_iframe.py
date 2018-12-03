@@ -30,7 +30,8 @@ class IFrame(Widget):
         }
     """
 
-    url = event.StringProp('', settable=True, doc="""
+    url = event.StringProp(
+        '', settable=True, doc="""
         The url to show. 'http://' is automatically prepended if the url
         does not have '://' in it.
         """)

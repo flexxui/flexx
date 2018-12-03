@@ -8,16 +8,14 @@ from pscript import RawJS
 
 from flexx import flx
 
-
 # Associate assets needed by this app.
 flx.assets.associate_asset(__name__, "http://code.jquery.com/jquery-1.10.2.js")
 flx.assets.associate_asset(__name__, "http://code.jquery.com/ui/1.11.4/jquery-ui.js")
-flx.assets.associate_asset(__name__,
-    "http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css")
+flx.assets.associate_asset(
+    __name__, "http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css")
 
 
 class DatePicker(flx.Widget):
-
     def _create_dom(self):
         global window
         node = window.document.createElement('input')
@@ -26,7 +24,6 @@ class DatePicker(flx.Widget):
 
 
 class Example(flx.Widget):
-
     def init(self):
 
         with flx.FormLayout():

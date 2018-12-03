@@ -71,7 +71,8 @@ class CanvasWidget(Widget):
     }
     """
 
-    capture_wheel = event.BoolProp(False, settable=True, doc="""
+    capture_wheel = event.BoolProp(
+        False, settable=True, doc="""
         Whether the wheel event is "captured", i.e. not propagated to result
         into scrolling of the parent widget (or page). If True, if no scrolling
         must have been performed outside of the widget for about half a second
@@ -105,6 +106,7 @@ class CanvasWidget(Widget):
                 window.flexx._wheel_timestamp = id, t1  # keep scrolling
             else:
                 window.flexx._wheel_timestamp = e.target.id, t1  # new scroll
+
         if not window.flexx._wheel_timestamp:
             window.flexx._wheel_timestamp = 0, ''
             self._addEventListener(window.document, 'wheel', wheel_behavior, 0)

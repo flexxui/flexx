@@ -12,8 +12,8 @@ from flexx import event
 
 loop = event.loop
 
-
 ## General behaviour
+
 
 class MyComponent1(event.Component):
 
@@ -217,13 +217,12 @@ def run_in_js(*classes):
 
 
 class MemCounter(event.Component):
-
     def reset(self):
         self.ref = process.memoryUsage().heapUsed
 
     def diff_in_mb(self):
         diff = process.memoryUsage().heapUsed - self.ref
-        diff = int(diff/1048576 + 0.499)
+        diff = int(diff / 1048576 + 0.499)
         if diff == 0:
             return '0'
         elif diff < 0:
@@ -242,7 +241,7 @@ def test_disposing_js0():
     mc = MemCounter()
     mc.reset()
 
-    a = Array(512*1024)  # about 4 MiB
+    a = Array(512 * 1024)  # about 4 MiB
     print(mc.diff_in_mb())
 
     a = None
@@ -263,7 +262,7 @@ def test_disposing_js1():  # The whole component + handler graph can be cleaned
     mc = MemCounter()
     mc.reset()
 
-    m.on_foo.blob = Array(512*1024)  # about 4 MiB
+    m.on_foo.blob = Array(512 * 1024)  # about 4 MiB
     print(mc.diff_in_mb())
 
     m = None
@@ -291,8 +290,8 @@ def test_disposing_js2():  # Disconnected handlers can be cleaned
     mc = MemCounter()
     mc.reset()
 
-    handler1.blob = Array(512*1024)  # about 4 MiB
-    handler2.blob = Array(512*1024)  # about 4 MiB
+    handler1.blob = Array(512 * 1024)  # about 4 MiB
+    handler2.blob = Array(512 * 1024)  # about 4 MiB
     print(mc.diff_in_mb())
 
     handler1 = None  # no effect, was not disposed
@@ -310,6 +309,7 @@ def test_disposing_js2():  # Disconnected handlers can be cleaned
 
 
 ## In Python ... we can use weakrefs and gc
+
 
 def test_reaction_dispose1():
 
@@ -456,10 +456,13 @@ def test_disposing_handler2():
     def _():
         class Foo(event.Component):
             pass
+
         foo = Foo()
+
         @foo.reaction('xx')
         def handle_xx(*events):
             pass
+
         return foo
 
     foo = _()
@@ -478,11 +481,13 @@ def test_disposing_handler3():
 
     class Foo(event.Component):
         pass
+
     foo = Foo()
 
     @foo.reaction('xx')
     def handle_xx(*events):
         pass
+
     foo_ref = weakref.ref(foo)
     assert foo.get_event_handlers('xx')
 
@@ -502,11 +507,13 @@ def test_disposing_handler4():
 
     class Foo(event.Component):
         pass
+
     foo = Foo()
 
     @foo.reaction('xx')
     def handle_xx(*events):
         pass
+
     foo_ref = weakref.ref(foo)
     assert foo.get_event_handlers('xx')
 
@@ -525,7 +532,6 @@ def test_disposing_handler4():
     loop.iter()
     gc.collect()
     assert foo_ref() is None
-
 
 
 def test_disposing_handler5():
@@ -559,7 +565,6 @@ def test_disposing_handler6():
         foo = event.IntProp()
 
     class TestComponent2(event.Component):
-
         def __init__(self, other):
             self.other = other
             super().__init__()

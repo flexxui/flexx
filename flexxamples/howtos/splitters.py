@@ -7,7 +7,6 @@ from flexx import flx
 
 
 class Split(flx.Widget):
-
     def init(self):
 
         with flx.HSplit():

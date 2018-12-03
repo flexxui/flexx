@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2016, Almar Klein
 # Distributed under the (new) BSD License.
-
 """
 Functionality used for testing, based on pytest. This module is designed
 to just work, without modification, in most projects.
@@ -16,7 +15,6 @@ Then you can run the test file as a script, which will run all tests
 and report coverage. Magic!
 """
 
-
 from __future__ import absolute_import, print_function, division
 
 import os
@@ -24,7 +22,6 @@ import sys
 import inspect
 
 import pytest
-
 
 PACKAGE_NAME = __name__.split('.')[0]
 
@@ -40,7 +37,6 @@ else:
     print('testing.py could not find project root dir, '
           'using testing.py directory instead.')
     ROOT_DIR = THIS_DIR
-
 
 # Inject some function names so they can be obtained with one import
 raises = pytest.raises
@@ -62,8 +58,10 @@ def run_tests_if_main(show_coverage=False):
     fname = str(local_vars['__file__'])
     _clear_our_modules()
     _enable_faulthandler()
-    pytest.main(['-v', '-x', '--color=yes', '--cov', PACKAGE_NAME,
-                 '--cov-config', '.coveragerc', '--cov-report', 'html', fname])
+    pytest.main([
+        '-v', '-x', '--color=yes', '--cov', PACKAGE_NAME, '--cov-config', '.coveragerc',
+        '--cov-report', 'html', fname
+    ])
     if show_coverage:
         import webbrowser
         fname = os.path.join(ROOT_DIR, 'htmlcov', 'index.html')

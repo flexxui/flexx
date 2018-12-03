@@ -80,7 +80,8 @@ class BaseButton(Widget):
         Whether the button is checked.
         """)
 
-    disabled = event.BoolProp(False, settable=True, doc="""
+    disabled = event.BoolProp(
+        False, settable=True, doc="""
         Whether the button is disabled.
         """)
 

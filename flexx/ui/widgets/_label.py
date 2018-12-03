@@ -39,18 +39,21 @@ class Label(Widget):
             -ms-user-select: text;
         }"""
 
-    text = event.StringProp('', doc="""
+    text = event.StringProp(
+        '', doc="""
         The text shown in the label (HTML is shown verbatim).
         """)
 
-    html = event.StringProp('', doc="""
+    html = event.StringProp(
+        '', doc="""
         The html shown in the label.
 
         Warning: there is a risk of introducing openings for XSS attacks
         when html is introduced that you do not control (e.g. from user input).
         """)
 
-    wrap = event.IntProp(0, settable=True, doc="""
+    wrap = event.IntProp(
+        0, settable=True, doc="""
         Whether the content is allowed to be wrapped on multiple
         lines. Set to 0/False for no wrap (default), 1/True for word-wrap,
         2 for character wrap.

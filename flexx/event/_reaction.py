@@ -14,7 +14,6 @@ from ._action import BaseDescriptor
 from ._dict import Dict
 from . import logger
 
-
 window = None
 console = logger
 
@@ -131,8 +130,7 @@ class ReactionDescriptor(BaseDescriptor):
             reaction = getattr(instance, private_name)
         except AttributeError:
             reaction = Reaction(instance if self._ob is None else self._ob(),
-                                (self._func, instance),
-                                self._mode,
+                                (self._func, instance), self._mode,
                                 self._connection_strings)
             setattr(instance, private_name, reaction)
 
@@ -298,8 +296,7 @@ class Reaction:
         connection_names is a list of type names (including label) for
         the made connections.
         """
-        return [(c.fullname, [u[1] for u in c.objects])
-                for c in self._connections]
+        return [(c.fullname, [u[1] for u in c.objects]) for c in self._connections]
 
     ## Calling / handling
 
@@ -360,12 +357,12 @@ class Reaction:
         called from a Component' dispose() method. This reaction remains
         working, but wont receive events from that object anymore.
         """
-        for i in range(len(self._implicit_connections)-1, -1, -1):
+        for i in range(len(self._implicit_connections) - 1, -1, -1):
             if self._implicit_connections[i][0] is ob:
                 self._implicit_connections.pop(i)
         for ic in range(len(self._connections)):
             connection = self._connections[ic]
-            for i in range(len(connection.objects)-1, -1, -1):
+            for i in range(len(connection.objects) - 1, -1, -1):
                 if connection.objects[i][0] is ob:
                     connection.objects.pop(i)
 
@@ -409,19 +406,18 @@ class Reaction:
             i1 += 1
         # Skip common objects from the end
         i2, i3 = len(new_objects) - 1, len(old_objects) - 1
-        while (i2 >= i1 and i3 >= i1 and
-               new_objects[i2][0] is old_objects[i3][0] and
+        while (i2 >= i1 and i3 >= i1 and new_objects[i2][0] is old_objects[i3][0] and
                new_objects[i2][1] == old_objects[i3][1]):
             should_stay[new_objects[i2][0].id + '-' + new_objects[i2][1]] = True
             i2 -= 1
             i3 -= 1
         # Disconnect remaining old
-        for i in range(i1, i3+1):
+        for i in range(i1, i3 + 1):
             ob, type = old_objects[i]
             if should_stay.get(ob.id + '-' + type, False) is False:
                 ob.disconnect(type, self)
         # Connect remaining new
-        for i in range(i1, i2+1):
+        for i in range(i1, i2 + 1):
             ob, type = new_objects[i]
             ob._register_reaction(type, self, force)
 
@@ -468,7 +464,7 @@ class Reaction:
             return
         elif selector == '*':  # "**" is recursive, so allow more
             t = "Invalid connection {name_full} because {name} is not a tuple/list."
-            raise RuntimeError(t.replace("{name_full}", obname_full)
-                .replace("{name}", obname))
+            raise RuntimeError(
+                t.replace("{name_full}", obname_full).replace("{name}", obname))
         else:
             return self._seek_event_object(index, path, new_ob)

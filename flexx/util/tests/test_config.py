@@ -6,7 +6,6 @@ import tempfile
 
 from flexx.util.config import Config
 
-
 SAMPLE1 = """
 
 foo = yes
@@ -66,14 +65,15 @@ def test_config_name():
 
 def test_defaults():
 
-    c = Config('testconfig',
-               x01=(3, int, 'an int'),
-               x02=(3, float, 'a float'),
-               x03=('yes', bool, 'a bool'),
-               x04=((1,2,3), str, 'A list of ints, as a string'),
-               x05=((1,2,3), (int, ), 'A list of ints, as a tuple'),
-               x06=((1,2,3), (str, ), 'A list of strings, as a tuple'),
-               )
+    c = Config(
+        'testconfig',
+        x01=(3, int, 'an int'),
+        x02=(3, float, 'a float'),
+        x03=('yes', bool, 'a bool'),
+        x04=((1, 2, 3), str, 'A list of ints, as a string'),
+        x05=((1, 2, 3), (int, ), 'A list of ints, as a tuple'),
+        x06=((1, 2, 3), (str, ), 'A list of strings, as a tuple'),
+    )
 
     # Test iteration
     assert len(c) == 6
@@ -112,15 +112,18 @@ def test_option_spec_fail():
     with raises(ValueError):
         Config('aa', _foo=(3, int, ''))
 
-    for spec in [(),  # too short
-                  (3, int),  # still too short
-                  (3, int, 'docs', None),  # too long
-                  (3, None, 'docs'),  # type is not a type
-                  ('', set, 'docs'),  # type is not supported
-                  ('3,3', [], 'docs'),  # tuple type needs one element
-                  ('3,3', [int, int], 'docs'),  # not two
-                  ('3,3', [set], 'docs'),  # and must be supported
-                 ]:
+    for spec in [
+        (),  # too short
+        (3, int),  # still too short
+        (3, int, 'docs', None),  # too long
+        (3, None, 'docs'),  # type is not a type
+        ('', set, 'docs'),  # type is not supported
+        ('3,3', [], 'docs'),  # tuple type needs one element
+        ('3,3',
+         [int, int], 'docs'),  # not two
+        ('3,3',
+         [set], 'docs'),  # and must be supported
+    ]:
         with raises(ValueError):
             Config('aa', foo=spec)
 
@@ -142,67 +145,60 @@ def test_read_file():
         f.write(b'\x00\xff')
 
     # Config without sources
-    c = Config('testconfig',
-               foo=(False, bool, ''), bar=(1, int, ''),
+    c = Config('testconfig', foo=(False, bool, ''), bar=(1, int, ''),
                spam=(0.0, float, ''), eggs=('', str, ''))
     assert c.foo == False
     assert c.bar == 1
 
     # Config with filename, implicit section
-    c = Config('testconfig', filename1,
-               foo=(False, bool, ''), bar=(1, int, ''),
+    c = Config('testconfig', filename1, foo=(False, bool, ''), bar=(1, int, ''),
                spam=(0.0, float, ''), eggs=('', str, ''))
     assert c.foo == True
     assert c.bar == 3
     assert c.eggs == 'bla bla'
 
     # Config with filename, explicit section
-    c = Config('testconfig', filename2,
-               foo=(False, bool, ''), bar=(1, int, ''),
+    c = Config('testconfig', filename2, foo=(False, bool, ''), bar=(1, int, ''),
                spam=(0.0, float, ''), eggs=('', str, ''))
     assert c.foo == True
     assert c.bar == 4
     assert c.eggs == 'bla bla bla'
 
     # Config with string, implicit section
-    c = Config('testconfig', SAMPLE1,
-               foo=(False, bool, ''), bar=(1, int, ''),
+    c = Config('testconfig', SAMPLE1, foo=(False, bool, ''), bar=(1, int, ''),
                spam=(0.0, float, ''), eggs=('', str, ''))
     assert c.foo == True
     assert c.bar == 3
     assert c.eggs == 'bla bla'
 
     # Config with string, explicit section
-    c = Config('testconfig', SAMPLE2,
-               foo=(False, bool, ''), bar=(1, int, ''),
+    c = Config('testconfig', SAMPLE2, foo=(False, bool, ''), bar=(1, int, ''),
                spam=(0.0, float, ''), eggs=('', str, ''))
     assert c.foo == True
     assert c.bar == 4
     assert c.eggs == 'bla bla bla'
 
     # Config with string, implicit section, different name
-    c = Config('aaaa', SAMPLE1,
-               foo=(False, bool, ''), bar=(1, int, ''),
+    c = Config('aaaa', SAMPLE1, foo=(False, bool, ''), bar=(1, int, ''),
                spam=(0.0, float, ''), eggs=('', str, ''))
     assert c.foo == True
     assert c.bar == 3
 
     # Config with string, explicit section, different name (no section match)
-    c = Config('aaaa', SAMPLE2,
-               foo=(False, bool, ''), bar=(1, int, ''),
+    c = Config('aaaa', SAMPLE2, foo=(False, bool, ''), bar=(1, int, ''),
                spam=(0.0, float, ''), eggs=('', str, ''))
     assert c.foo == False
     assert c.bar == 1
 
     # Config with both, and filenames can be nonexistent
-    c = Config('testconfig', SAMPLE1, filename2, filename1+'.cfg',
-               foo=(False, bool, ''), bar=(1, int, ''),
-               spam=(0.0, float, ''), eggs=('', str, ''))
+    c = Config('testconfig', SAMPLE1, filename2, filename1 + '.cfg',
+               foo=(False, bool, ''), bar=(1, int, ''), spam=(0.0, float,
+                                                              ''), eggs=('', str, ''))
     assert c.bar == 4
     #
-    c = Config('testconfig', filename2, filename1+'.cfg', SAMPLE1,
-               foo=(False, bool, ''), bar=(1, int, ''),
-               spam=(0.0, float, ''), eggs=('', str, ''))
+    c = Config('testconfig', filename2, filename1 + '.cfg', SAMPLE1,
+               foo=(False, bool, ''), bar=(1, int, ''), spam=(0.0, float,
+                                                              ''), eggs=('', str, ''))
     assert c.bar == 3
 
     # Config from invalid string is ignored (logged)
@@ -234,8 +230,7 @@ def test_read_file_later():
         f.write(SAMPLE2.encode())
 
     os.environ['TESTCONFIG_SPAM'] = '100'
-    c = Config('testconfig', filename1,
-               foo=(False, bool, ''), bar=(1, int, ''),
+    c = Config('testconfig', filename1, foo=(False, bool, ''), bar=(1, int, ''),
                spam=(0.0, float, ''), eggs=('', str, ''))
     del os.environ['TESTCONFIG_SPAM']
 
@@ -406,8 +401,7 @@ def test_order():
     sys.argv = '', '--testconfig-bar=6'
 
     try:
-        c = Config('testconfig', filename1, filename2,
-                   bar=(2, int, ''))
+        c = Config('testconfig', filename1, filename2, bar=(2, int, ''))
     finally:
         del os.environ['TESTCONFIG_BAR']
         sys.argv = old_argv
@@ -415,8 +409,8 @@ def test_order():
     c.bar = 7
 
     s = str(c)
-    indices1 = [s.index(' %i '%i) for i in [2, 3, 4, 5, 6, 7]]
-    indices2 = [s.rindex(' %i '%i) for i in [2, 3, 4, 5, 6, 7]]
+    indices1 = [s.index(' %i ' % i) for i in [2, 3, 4, 5, 6, 7]]
+    indices2 = [s.rindex(' %i ' % i) for i in [2, 3, 4, 5, 6, 7]]
     indices3 = list(sorted(indices1))
     assert indices1 == indices3
     assert indices2 == indices3
@@ -492,7 +486,7 @@ def test_float():
 
 
 def test_str():
-    c = Config('testconfig', foo=(1, str, ''), bar=((1,2,3), str, ''))
+    c = Config('testconfig', foo=(1, str, ''), bar=((1, 2, 3), str, ''))
     assert c.foo == '1'
     assert c.bar == '(1, 2, 3)'
 
@@ -511,7 +505,7 @@ def test_str():
 
 
 def test_tuple():
-    c = Config('testconfig', foo=('1,2', [int], ''), bar=((1,2,3), [str], ''))
+    c = Config('testconfig', foo=('1,2', [int], ''), bar=((1, 2, 3), [str], ''))
     assert c.foo == (1, 2)
     assert c.bar == ('1', '2', '3')
 
@@ -523,7 +517,6 @@ def test_tuple():
     assert c.foo == (1, 2, -3, 4)
     c.foo = [1, '2']
     assert c.foo == (1, 2)
-
 
     for val in ([[]], [None], ['a'], ['0a'], ['1.2'], 3):
         with raises(ValueError):

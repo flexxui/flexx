@@ -10,7 +10,6 @@ from flexxamples.demos.chatroom import ChatRoom
 from flexxamples.demos.demo import Demo
 from flexxamples.demos.colab_painting import ColabPainting
 
-
 if __name__ == '__main__':
     # This example is setup as a server app
     app.serve(Monitor)

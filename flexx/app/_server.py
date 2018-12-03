@@ -9,13 +9,11 @@ from ..event import _loop
 from .. import config
 from . import logger
 
-
 # There is always a single current server (except initially there is None)
 _current_server = None
 
 
-def create_server(host=None, port=None, loop=None, backend='tornado',
-                  **server_kwargs):
+def create_server(host=None, port=None, loop=None, backend='tornado', **server_kwargs):
     """
     Create a new server object. This is automatically called; users generally
     don't need this, unless they want to explicitly specify host/port,

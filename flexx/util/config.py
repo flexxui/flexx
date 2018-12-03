@@ -25,6 +25,7 @@ def as_bool(value):
     else:
         raise ValueError('Cannot make a bool of %r' % value)
 
+
 def get_tuple_validator(subvalidator):
     def validator(value):
         if isinstance(value, (tuple, list)):
@@ -34,15 +35,25 @@ def get_tuple_validator(subvalidator):
         else:
             raise ValueError('Cannot make a tuple of %r' % value)
         return tuple([subvalidator(x) for x in value2])
+
     return validator
+
 
 def stack_sorter(key):
     # Implement ordering, files and strings go at spot 1
     return dict(default=0, environ=2, argv=3, set=4).get(key[0], 1)
 
 
-BOOLEAN_STATES = {'1': True, 'yes': True, 'true': True, 'on': True,
-                  '0': False, 'no': False, 'false': False, 'off': False}
+BOOLEAN_STATES = {
+    '1': True,
+    'yes': True,
+    'true': True,
+    'on': True,
+    '0': False,
+    'no': False,
+    'false': False,
+    'off': False
+}
 
 TYPEMAP = {float: float, int: int, bool: as_bool}
 if sys.version_info[0] == 2:  # pragma: no cover
@@ -167,7 +178,7 @@ class Config(object):
             # Parse
             typename = typ.__name__ + ('-tuple' if istuple else '')
             args = name, typename, doc, default
-            option_docs.append(' '*8 + '%s (%s): %s (default %r)' % args)
+            option_docs.append(' ' * 8 + '%s (%s): %s (default %r)' % args)
             self._options.append(name)
             self._opt_typenames[lname] = typename
             self._opt_validators[lname] = (get_tuple_validator(TYPEMAP[typ])
@@ -176,8 +187,7 @@ class Config(object):
             self._opt_values[lname] = []
 
         # Overwrite docstring
-        self.__doc__ = INSTANCE_DOCS.format(name=self._name,
-                                            NAME=self._name.upper())
+        self.__doc__ = INSTANCE_DOCS.format(name=self._name, NAME=self._name.upper())
         self.__doc__ += '\n'.join(option_docs)
 
         # --- init values
@@ -219,13 +229,11 @@ class Config(object):
         # Return a string representing a summary of the options and
         # how they were set from different sources.
         lines = []
-        lines.append('Config %r with %i options.' %
-                     (self._name, len(self._options)))
+        lines.append('Config %r with %i options.' % (self._name, len(self._options)))
         for name in self._options:
             lname = name.lower()
-            lines.append('\nOption %s (%s) - %s' % (name,
-                                                  self._opt_typenames[lname],
-                                                  self._opt_docs[lname]))
+            lines.append('\nOption %s (%s) - %s' % (name, self._opt_typenames[lname],
+                                                    self._opt_docs[lname]))
             for source, val in self._opt_values[lname]:
                 lines.append('    %r from %s' % (val, source))
             lines[-1] = ' -> ' + lines[-1][4:]  # Mark current value
@@ -300,8 +308,8 @@ class Config(object):
             try:
                 text = open(filename, 'rb').read().decode()
             except Exception as err:
-                logging.warning('Could not read config from %r:\n%s' %
-                                (filename, str(err)))
+                logging.warning(
+                    'Could not read config from %r:\n%s' % (filename, str(err)))
                 return
             self.load_from_string(text, filename)
 
@@ -358,9 +366,8 @@ def appdata_dir(appname=None, roaming=False):
         path = os.path.join(userDir, 'Library', 'Application Support')
     # On Linux and as fallback
     if not (path and os.path.isdir(path)):  # pragma: no cover
-        path = os.environ.get(
-            "XDG_CONFIG_HOME",
-            os.path.expanduser(os.path.join("~", ".config")))
+        path = os.environ.get("XDG_CONFIG_HOME",
+                              os.path.expanduser(os.path.join("~", ".config")))
     # Maybe we should store things local to the executable (in case of a
     # portable distro or a frozen application that wants to be portable)
     prefix = sys.prefix
@@ -391,6 +398,4 @@ def appdata_dir(appname=None, roaming=False):
 if __name__ == '__main__':
 
     sys.argv.append('--test-foo=8')
-    c = Config('test',
-               foo=(3, int, 'foo yeah'),
-               spam=(2.1, float, 'a float!'))
+    c = Config('test', foo=(3, int, 'foo yeah'), spam=(2.1, float, 'a float!'))

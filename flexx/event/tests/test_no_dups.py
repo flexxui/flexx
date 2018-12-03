@@ -1,5 +1,6 @@
 import os
 
+
 def test_that_tests_dont_have_multiple_functions_with_same_name():
     dir = os.path.dirname(__file__)
     for fname in os.listdir(dir):

@@ -27,7 +27,6 @@ from pscript import window
 from ... import event, app
 from .._widget import Widget, create_element
 
-
 # todo: some form of autocompletetion?
 
 
@@ -138,20 +137,28 @@ class BaseDropdown(Widget):
         # <span class='flx-dd-button'></span>
         # <div class='flx-dd-strud'>&nbsp;</div>
         f2 = lambda e: self._submit_text() if e.which == 13 else None
-        return [create_element('span',
-                               {'className': 'flx-dd-label',
-                                'onclick': self._but_click},
-                               self.text + '\u00A0'),
-                create_element('input',
-                               {'className': 'flx-dd-edit',
-                                'onkeypress': f2,
-                                'onblur': self._submit_text,
-                                'value': self.text}),
-                create_element('span'),
-                create_element('span', {'className': 'flx-dd-button',
-                                        'onclick': self._but_click}),
-                create_element('div', {'className': 'flx-dd-strud'}, '\u00A0'),
-                ]
+        return [
+            create_element('span',
+                           {
+                               'className': 'flx-dd-label',
+                               'onclick': self._but_click
+                           }, self.text + '\u00A0'),
+            create_element(
+                'input',
+                {
+                    'className': 'flx-dd-edit',
+                    'onkeypress': f2,
+                    'onblur': self._submit_text,
+                    'value': self.text
+                }),
+            create_element('span'),
+            create_element('span',
+                           {
+                               'className': 'flx-dd-button',
+                               'onclick': self._but_click
+                           }),
+            create_element('div', {'className': 'flx-dd-strud'}, '\u00A0'),
+        ]
 
     def _but_click(self):
         if self.node.classList.contains('expanded'):
@@ -254,7 +261,8 @@ class ComboBox(BaseDropdown):
     # Note: we don't define text on the base class, because it would be
     # the only common prop, plus we want a different docstring.
 
-    text = event.StringProp('', settable=True, doc="""
+    text = event.StringProp(
+        '', settable=True, doc="""
         The text displayed on the widget. This property is set
         when an item is selected from the dropdown menu. When editable,
         the ``text`` is also set when the text is edited by the user.
@@ -262,23 +270,27 @@ class ComboBox(BaseDropdown):
         value of ``editable``.
         """)
 
-    selected_index = event.IntProp(-1, settable=True, doc="""
+    selected_index = event.IntProp(
+        -1, settable=True, doc="""
         The currently selected item index. Can be -1 if no item has
         been selected or when the text was changed manually (if editable).
         Can also be programatically set.
         """)
 
-    selected_key = event.StringProp('', settable=True, doc="""
+    selected_key = event.StringProp(
+        '', settable=True, doc="""
         The currently selected item key. Can be '' if no item has
         been selected or when the text was changed manually (if editable).
         Can also be programatically set.
         """)
 
-    placeholder_text = event.StringProp('', settable=True, doc="""
+    placeholder_text = event.StringProp(
+        '', settable=True, doc="""
         The placeholder text to display in editable mode.
         """)
 
-    editable = event.BoolProp(False, settable=True, doc="""
+    editable = event.BoolProp(
+        False, settable=True, doc="""
         Whether the combobox's text is editable.
         """)
 
@@ -289,7 +301,8 @@ class ComboBox(BaseDropdown):
         If a dict is given, it is transformed to key-text pairs.
         """)
 
-    _highlighted = app.LocalProperty(-1, settable=True, doc="""
+    _highlighted = app.LocalProperty(
+        -1, settable=True, doc="""
         The index of the currently highlighted item.
         """)
 
@@ -324,7 +337,7 @@ class ComboBox(BaseDropdown):
             self.selected_key('')  # also changes text
         else:
             pass  # no selection, leave text alone
-    
+
     @event.action
     def set_selected_index(self, index):
         if index == self.selected_index:
@@ -338,7 +351,7 @@ class ComboBox(BaseDropdown):
             self._mutate('selected_index', -1)
             self._mutate('selected_key', '')
             self.set_text('')
-    
+
     @event.action
     def set_selected_key(self, key):
         if key == self.selected_key:
@@ -356,7 +369,7 @@ class ComboBox(BaseDropdown):
         self._mutate('selected_index', -1)
         self._mutate('selected_key', '')
         self.set_text('')
-    
+
     @event.emitter
     def user_selected(self, index):
         """ Event emitted when the user selects an item using the mouse or
@@ -372,7 +385,7 @@ class ComboBox(BaseDropdown):
 
     def _create_dom(self):
         node = super()._create_dom()
-        node.onkeydown=self._key_down
+        node.onkeydown = self._key_down
         return node
 
     def _render_dom(self):
@@ -383,21 +396,21 @@ class ComboBox(BaseDropdown):
         for i in range(len(options)):
             key, text = options[i]
             clsname = 'highlighted-true' if self._highlighted == i else ''
-            li = create_element('li',
-                                dict(index=i, className=clsname),
+            li = create_element('li', dict(index=i, className=clsname),
                                 text if len(text.strip()) else '\u00A0')
-            strud += [text + '\u00A0',
-                      create_element('span', {'class': "flx-dd-space"}),
-                      create_element('br')]
+            strud += [
+                text + '\u00A0',
+                create_element('span', {'class': "flx-dd-space"}),
+                create_element('br')
+            ]
             option_nodes.append(li)
 
         # Update the list of nodes created by superclass
         nodes = super()._render_dom()
         nodes[1].props.placeholder = self.placeholder_text  # the line edit
         nodes[-1].children = strud  # set strud
-        nodes.append(create_element('ul',
-                                    dict(onmousedown=self._ul_click),
-                                    option_nodes))
+        nodes.append(
+            create_element('ul', dict(onmousedown=self._ul_click), option_nodes))
         return nodes
 
     @event.reaction
@@ -449,7 +462,7 @@ class ComboBox(BaseDropdown):
                 hl = self._highlighted + 1
             else:
                 hl = self._highlighted - 1
-            self._set_highlighted(min(max(hl, 0), len(self.options)-1))
+            self._set_highlighted(min(max(hl, 0), len(self.options) - 1))
 
         elif key == 'Enter' or key == ' ':
             if self._highlighted >= 0 and self._highlighted < len(self.options):
@@ -503,7 +516,8 @@ class DropdownContainer(BaseDropdown):
         }
     """
 
-    text = event.StringProp('', settable=True, doc="""
+    text = event.StringProp(
+        '', settable=True, doc="""
         The text displayed on the dropdown widget.
         """)
 

@@ -11,15 +11,30 @@ import random
 
 from flexx import flx
 
-COLORS = ('#eee', '#999', '#555', '#111',
-          '#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff',
-          '#a44', '#4a4', '#44a', '#aa4', '#afa', '#4aa',
-          )
+COLORS = (
+    '#eee',
+    '#999',
+    '#555',
+    '#111',
+    '#f00',
+    '#0f0',
+    '#00f',
+    '#ff0',
+    '#f0f',
+    '#0ff',
+    '#a44',
+    '#4a4',
+    '#44a',
+    '#aa4',
+    '#afa',
+    '#4aa',
+)
 
 
 class Relay(flx.Component):
     """ Global object to relay paint events to all participants.
     """
+
     @flx.emitter
     def add_paint_for_all(self, pos, color):
         return dict(pos=pos, color=color)

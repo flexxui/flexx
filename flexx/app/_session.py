@@ -27,10 +27,10 @@ from .. import config
 
 reprs = json.dumps
 
-
 # Use the system PRNG for session id generation (if possible)
 # NOTE: secure random string generation implementation is adapted
 #       from the Django project.
+
 
 def get_random_string(length=24, allowed_chars=None):
     """ Produce a securely generated random string.
@@ -38,8 +38,8 @@ def get_random_string(length=24, allowed_chars=None):
     With a length of 12 with the a-z, A-Z, 0-9 character set returns
     a 71-bit value. log_2((26+26+10)^12) =~ 71 bits
     """
-    allowed_chars = allowed_chars or ('abcdefghijklmnopqrstuvwxyz' +
-                                      'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+    allowed_chars = allowed_chars or (
+        'abcdefghijklmnopqrstuvwxyz' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
     try:
         srandom = random.SystemRandom()
     except NotImplementedError:  # pragma: no cover
@@ -247,15 +247,15 @@ class Session:
         from tornado.web import decode_signed_value
         if name in self._cookies:
             value = self._cookies[name].value
-            value = decode_signed_value(config.cookie_secret,
-                                       name, value, max_age_days=max_age_days,
-                                       min_version=min_version)
+            value = decode_signed_value(config.cookie_secret, name, value,
+                                        max_age_days=max_age_days,
+                                        min_version=min_version)
             return value.decode()
         else:
             return default
 
-    def set_cookie(self, name, value, expires_days=30, version=None,
-                   domain=None, expires=None, path="/", **kwargs):
+    def set_cookie(self, name, value, expires_days=30, version=None, domain=None,
+                   expires=None, path="/", **kwargs):
         """ Sets the given cookie name/value with the given options. Set value
         to None to clear. The cookie value is secured using
         `flexx.config.cookie_secret`; don't forget to set that config
@@ -293,8 +293,7 @@ class Session:
         if domain:
             morsel["domain"] = domain
         if expires_days is not None and not expires:
-            expires = datetime.datetime.utcnow() + datetime.timedelta(
-                days=expires_days)
+            expires = datetime.datetime.utcnow() + datetime.timedelta(days=expires_days)
         if expires:
             morsel["expires"] = format_timestamp(expires)
         if path:
@@ -308,8 +307,9 @@ class Session:
                 continue
             morsel[k] = v
 
-        self.send_command('EXEC', 'document.cookie = "%s";' %
-                   morsel.OutputString().replace('"', '\\"'))
+        self.send_command(
+            'EXEC',
+            'document.cookie = "%s";' % morsel.OutputString().replace('"', '\\"'))
 
     ## Data
 
@@ -434,10 +434,10 @@ class Session:
             same_name.append(cls)
             is_dynamic_cls = all([c.__module__ == '__main__' for c in same_name])
             if not (is_interactive and is_dynamic_cls):
-                raise RuntimeError('Cannot have multiple Component classes with '
-                                   'the same name unless using interactive session '
-                                   'and the classes are dynamically defined: %r'
-                                   % same_name)
+                raise RuntimeError(
+                    'Cannot have multiple Component classes with '
+                    'the same name unless using interactive session '
+                    'and the classes are dynamically defined: %r' % same_name)
 
         # Mark the class and the module as used
         logger.debug('Registering Component class %r' % cls.__name__)
@@ -451,7 +451,7 @@ class Session:
         """
 
         if (mod_name.startswith(('flexx.app', 'flexx.event')) and
-                                                '.examples' not in mod_name):
+                '.examples' not in mod_name):
             return  # these are part of flexx core assets
 
         modules = set()
@@ -581,8 +581,8 @@ class Session:
                 elif cls not in AppComponentMeta.CLASSES:
                     cls, e = None, 3
             if cls is None:
-                raise RuntimeError('Cannot INSTANTIATE %s.%s (%i)' %
-                                   (modulename, cname, e))
+                raise RuntimeError(
+                    'Cannot INSTANTIATE %s.%s (%i)' % (modulename, cname, e))
             # Instantiate
             kwargs['flx_session'] = self
             kwargs['flx_id'] = id
@@ -627,9 +627,11 @@ class Session:
         """ Coroutine to wait for one Py-JS-Py roundtrip.
         """
         count = 0
+
         def up():
             nonlocal count
             count += 1
+
         self.call_after_roundtrip(up)
         while count < 1:
             await asyncio.sleep(0.02)
@@ -685,6 +687,7 @@ class Session:
         if len(self._ping_calls) > 0:
             send_ping_later(self)
 
+
 def send_ping_later(session):
     # This is to prevent the prevention of the session from being discarded due
     # to a ref lingering in an asyncio loop.
@@ -693,12 +696,14 @@ def send_ping_later(session):
         if s is not None and s.status > 0:
             s._ping_counter += 1
             s.send_command('PING', s._ping_counter)
+
     # asyncio.get_event_loop().call_soon(x, weakref.ref(session))
     asyncio.get_event_loop().call_later(0.01, x, weakref.ref(session))
 
 
 ## Functions to get page
 # These could be methods, but are only for internal use
+
 
 def get_page(session):
     """ Get the string for the HTML page to render this session's app.
@@ -758,7 +763,7 @@ def get_page_for_export(session, commands, link=0):
     lines.append('    bb64 =  flexx.require("bb64");')
     lines.append('    for (var i=0; i<commands_b64.length; i++) {')
     lines.append('        var command = flexx.serializer.decode('
-                                            'bb64.decode(commands_b64[i]));')
+                 'bb64.decode(commands_b64[i]));')
     lines.append('        flexx.s1._receive_command(command);')
     lines.append('    }\n};\n')
     # Create a session asset for it, "-export.js" is always embedded

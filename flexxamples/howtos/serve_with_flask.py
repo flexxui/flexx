@@ -10,6 +10,7 @@ from flexxamples.howtos.editor_cm import CodeEditor
 
 # Define an app
 
+
 class MyApp(flx.Widget):
     def init(self):
         with flx.HBox():
@@ -23,10 +24,10 @@ class MyApp(flx.Widget):
 app = flx.App(MyApp)
 assets = app.dump('index.html', link=0)
 
-
 # Do the flask thing
 
 app = Flask(__name__)
+
 
 @app.route('/')
 def handler():

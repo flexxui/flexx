@@ -33,7 +33,8 @@ class ColorSelectWidget(Widget):
         The currently selected color.
         """)
 
-    disabled = event.BoolProp(False, settable=True, doc="""
+    disabled = event.BoolProp(
+        False, settable=True, doc="""
         Whether the color select is disabled.
         """)
 

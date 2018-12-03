@@ -91,10 +91,11 @@ def create_element(type, props=None, *children):
     elif len(children) == 1 and isinstance(children[0], list):
         children = children[0]
 
-    return dict(type=type,
-                props=props or {},
-                children=children,
-                )
+    return dict(
+        type=type,
+        props=props or {},
+        children=children,
+    )
 
 
 class Widget(app.JsComponent):
@@ -158,12 +159,14 @@ class Widget(app.JsComponent):
 
     ## Properties
 
-    container = event.StringProp('', settable=True, doc="""
+    container = event.StringProp(
+        '', settable=True, doc="""
         The id of the DOM element that contains this widget if
         parent is None. Use 'body' to make this widget the root.
         """)
 
-    parent = event.ComponentProp(None, doc="""
+    parent = event.ComponentProp(
+        None, doc="""
         The parent widget, or None if it has no parent. Setting
         this property will update the "children" property of the
         old and new parent.
@@ -174,19 +177,22 @@ class Widget(app.JsComponent):
         only present in JavaScript.
         """)
 
-    title = event.StringProp('', settable=True, doc="""
+    title = event.StringProp(
+        '', settable=True, doc="""
         The string title of this widget. This is used to mark
         the widget in e.g. a tab layout or form layout, and is used
         as the app's title if this is the main widget.
         """)
 
-    icon = app.LocalProperty('', settable=False, doc="""
+    icon = app.LocalProperty(
+        '', settable=False, doc="""
         The icon for this widget. This is used is some widgets classes,
         and is used as the app's icon if this is the main widget.
         It is settable from Python, but only present in JavaScript.
         """)
 
-    css_class = event.StringProp('', settable=True, doc="""
+    css_class = event.StringProp(
+        '', settable=True, doc="""
         The extra CSS class name to asign to the DOM element.
         Spaces can be used to delimit multiple names. Note that the
         DOM element already has a css class-name corresponding to
@@ -215,7 +221,8 @@ class Widget(app.JsComponent):
         in CSS are ignored.
         """)
 
-    minsize_from_children = event.BoolProp(True, settable=True, doc="""
+    minsize_from_children = event.BoolProp(
+        True, settable=True, doc="""
         Whether the children are taken into account to calculate this
         widget's size constraints. Default True: both the ``minsize``
         of this widget and the size constraints of its children (plus
@@ -241,7 +248,8 @@ class Widget(app.JsComponent):
         of the children). Private prop for internal use.
         """)
 
-    tabindex = event.IntProp(-2, settable=True, doc="""
+    tabindex = event.IntProp(
+        -2, settable=True, doc="""
         The index used to determine widget order when the user
         iterates through the widgets using tab. This also determines
         whether a widget is able to receive key events. Flexx automatically
@@ -257,7 +265,8 @@ class Widget(app.JsComponent):
             by the value of tabindex.
         """)
 
-    capture_mouse = event.IntProp(1, settable=True, doc="""
+    capture_mouse = event.IntProp(
+        1, settable=True, doc="""
         To what extend the mouse is "captured".
 
         * If 0, the mouse is not captured, and move events are only emitted
@@ -293,7 +302,7 @@ class Widget(app.JsComponent):
         except KeyError:
             given_parent = parent = None
             parent_given = False
-        
+
         if parent is None:
             active_components = loop.get_active_components()
             for active_component in reversed(active_components):
@@ -445,8 +454,7 @@ class Widget(app.JsComponent):
                 raise ValueError('Widget._render_dom() must return root node with '
                                  'same element type as outernode.')
         else:
-            raise TypeError('Widget._render_dom() '
-                            'must return None, list or dict.')
+            raise TypeError('Widget._render_dom() ' 'must return None, list or dict.')
         # Resolve
         node = self.__render_resolve(vnode, self.outernode)
         assert node is self.outernode
@@ -480,9 +488,9 @@ class Widget(app.JsComponent):
         for key, val in vnode.props.items():
             ob = node
             parts = key.replace('__', '.').split('.')
-            for i in range(len(parts)-1):
+            for i in range(len(parts) - 1):
                 ob = ob[parts[i]]
-            key = parts[len(parts)-1]
+            key = parts[len(parts) - 1]
             ob[map.get(key, key)] = val
 
         # Resolve content
@@ -491,7 +499,7 @@ class Widget(app.JsComponent):
         elif isinstance(vnode.children, list):
             # Truncate children
             while len(node.childNodes) > len(vnode.children):
-                node.removeChild(node.childNodes[len(node.childNodes)-1])
+                node.removeChild(node.childNodes[len(node.childNodes) - 1])
             # Resolve children
             i1 = -1
             for i2 in range(len(vnode.children)):
@@ -548,7 +556,6 @@ class Widget(app.JsComponent):
         self._children_value = ()
 
     ## Actions
-
 
     @event.action
     def apply_style(self, style):
@@ -856,6 +863,7 @@ class Widget(app.JsComponent):
         # move and up events, even if the mouse is not over the widget.
 
         self._capture_flag = 0
+
         # 0: mouse not down, 1: mouse down (no capture), 2: captured, -1: capture end
 
         def mdown(e):
@@ -1025,8 +1033,7 @@ class Widget(app.JsComponent):
                 if t.target is not e.target:
                     continue
                 touches[t.identifier] = (float(t.clientX - offset[0]),
-                                         float(t.clientY - offset[1]),
-                                         t.force)
+                                         float(t.clientY - offset[1]), t.force)
         else:
             # Mouse event
             pos = float(e.clientX - offset[0]), float(e.clientY - offset[1])
@@ -1034,24 +1041,28 @@ class Widget(app.JsComponent):
             # Fix buttons
             if e.buttons:
                 buttons_mask = RawJS(
-                    "e.buttons.toString(2).split('').reverse().join('')"
-                )
+                    "e.buttons.toString(2).split('').reverse().join('')")
             else:
                 # libjavascriptcoregtk-3.0-0  version 2.4.11-1 does not define
                 # e.buttons
                 buttons_mask = [e.button.toString(2)]
-            buttons = [i+1 for i in range(5) if buttons_mask[i] == '1']
+            buttons = [i + 1 for i in range(5) if buttons_mask[i] == '1']
             button = {0: 1, 1: 3, 2: 2, 3: 4, 4: 5}[e.button]
             touches = {-1: (pos[0], pos[1], 1)}  # key must not clash with real touches
 
         # note: our button has a value as in JS "which"
-        modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
-                        if e[n.toLowerCase() + 'Key']]
+        modifiers = [
+            n for n in ('Alt', 'Shift', 'Ctrl', 'Meta') if e[n.toLowerCase() + 'Key']
+        ]
         # Create event dict
-        return dict(pos=pos, page_pos=page_pos, touches=touches,
-                    button=button, buttons=buttons,
-                    modifiers=modifiers,
-                    )
+        return dict(
+            pos=pos,
+            page_pos=page_pos,
+            touches=touches,
+            button=button,
+            buttons=buttons,
+            modifiers=modifiers,
+        )
 
     @event.emitter
     def key_down(self, e):
@@ -1100,8 +1111,9 @@ class Widget(app.JsComponent):
         # https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent
         # key: chrome 51, ff 23, ie 9
         # code: chrome ok, ff 32, ie no
-        modifiers = [n for n in ('Alt', 'Shift', 'Ctrl', 'Meta')
-                        if e[n.toLowerCase() + 'Key']]
+        modifiers = [
+            n for n in ('Alt', 'Shift', 'Ctrl', 'Meta') if e[n.toLowerCase() + 'Key']
+        ]
         key = e.key
         if not key and e.code:  # Chrome < v51
             key = e.code

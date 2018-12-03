@@ -80,7 +80,6 @@ def test_match():
 
 
 def test_debug_does_more():
-
     def caller_func_bla():
         logger.debug('AA foo')
         logger.info('BB bar')

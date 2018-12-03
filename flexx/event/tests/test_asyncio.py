@@ -6,8 +6,8 @@ mostly documented, but still good to see in action.
 import asyncio
 import threading
 
-
 ##
+
 
 def append_current_loop(container, make_new_loop=False):
     if make_new_loop:

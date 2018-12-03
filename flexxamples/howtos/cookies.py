@@ -7,12 +7,11 @@ from flexx import flx
 
 
 class Cookies(flx.PyComponent):
-
     def init(self):
 
         with flx.Widget():
             flx.Label(text='Refreshing the page should '
-                           'maintain the value of the line edit.')
+                      'maintain the value of the line edit.')
             self.edit = flx.LineEdit(placeholder_text='username',
                                      text=self.session.get_cookie('username', ''))
 

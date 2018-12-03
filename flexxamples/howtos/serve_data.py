@@ -28,12 +28,12 @@ from urllib.request import urlopen
 
 from flexx import flx
 
-
 # Define names of standard images
-image_names = ['clock.png', 'page.png', 'camera.png', 'coins.png',
-               'hubble_deep_field.png', 'text.png', 'chelsea.png',
-               'coffee.png', 'horse.png', 'wikkie.png', 'moon.png',
-               'astronaut.png', 'immunohistochemistry.png']
+image_names = [
+    'clock.png', 'page.png', 'camera.png', 'coins.png', 'hubble_deep_field.png',
+    'text.png', 'chelsea.png', 'coffee.png', 'horse.png', 'wikkie.png', 'moon.png',
+    'astronaut.png', 'immunohistochemistry.png'
+]
 
 
 def get_img_blob(name):
@@ -45,12 +45,11 @@ def get_img_blob(name):
 
 
 # Randomly select a shared image at server start
-link1 = flx.assets.add_shared_data('image.png',
-                                   get_img_blob(random.choice(image_names)))
+link1 = flx.assets.add_shared_data('image.png', get_img_blob(
+    random.choice(image_names)))
 
 
 class Example(flx.PyComponent):
-
     def init(self):
         # Randomly select image - different between sessions
         link2 = self.session.add_data('image.png',

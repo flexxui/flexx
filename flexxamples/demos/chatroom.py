@@ -19,6 +19,7 @@ class Relay(flx.Component):
     def new_name(self):
         return {}
 
+
 # Create global relay
 relay = Relay()
 
@@ -102,6 +103,7 @@ class ChatRoom(flx.PyComponent):
             text = '<br />%i persons in this chat:<br /><br />' % len(names)
             text += '<br />'.join([name or 'anonymous' for name in sorted(names)])
             self.people_label.set_html(text)
+
 
 if __name__ == '__main__':
     a = flx.App(ChatRoom)

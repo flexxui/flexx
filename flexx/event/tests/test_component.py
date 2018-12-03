@@ -26,6 +26,7 @@ class Foo(event.Component):
         super().init()
         self._an_attr = 54
 
+
 class FooSubclass(Foo):
     pass
 
@@ -48,7 +49,7 @@ class Bar(event.Component):
 
     @event.emitter  # deliberately define it twice
     def a_emitter(self, v):
-        return {'x':1}
+        return {'x': 1}
 
 
 class Bar2(Bar):
@@ -166,9 +167,9 @@ def test_component_class_attributes3():
 
 
 class CompWithInit1(event.Component):
-
     def init(self, a, b=3):
         print('i', a, b)
+
 
 @run_in_both(CompWithInit1)
 def test_component_init1():
@@ -194,7 +195,7 @@ class CompWithInit2(event.Component):
 
     @event.action
     def set_foo3(self, v):
-        self._mutate_foo3(v+100)
+        self._mutate_foo3(v + 100)
 
 
 @run_in_both(CompWithInit2)
@@ -237,6 +238,7 @@ class CompWithInit3(event.Component):
         for ev in events:
             print('sub prop changed', ev.new_value)
 
+
 @run_in_both(CompWithInit3, Foo)
 def test_component_init3():
     """
@@ -275,6 +277,7 @@ class CompWithInit4(event.Component):
     def create(self, other, value):
         self.set_a_prop(value)
         CompWithInit4(other, value)
+
 
 @run_in_both(CompWithInit4, Foo)
 def test_component_init4():
@@ -332,6 +335,7 @@ def test_component_instance_attributes1():
 def test_component_instance_attributes2():  # Py only
 
     with raises(TypeError):
+
         class X(Component):
             a = event.Attribute(doc=3)
 
@@ -352,9 +356,7 @@ def test_component_event_types():
     print(c.get_event_types())
 
 
-
 class Foo2(event.Component):
-
     @event.reaction('!x')
     def spam(self, *events):
         pass
@@ -377,6 +379,7 @@ def test_get_event_handlers():
 
     def bar(*events):
         pass
+
     bar = foo.reaction('!x', bar)
 
     # sorted by label name
@@ -384,8 +387,10 @@ def test_get_event_handlers():
 
     def zz1(*events):
         pass
+
     def zz2(*events):
         pass
+
     zz1 = foo.reaction('!x', zz1)
     zz2 = foo.reaction('!x:a', zz2)
 
@@ -407,7 +412,6 @@ def test_that_methods_starting_with_on_are_not_autoconverted():
 
     # There is also a warning, but seems a bit of a fuzz to test
     class Foo3(event.Component):
-
         def on_foo(self, *events):
             pass
 
@@ -525,7 +529,6 @@ def test_registering_handlers():
 
 
 class CompCheckActive(event.Component):
-
     def init(self, do_iter=False):
         if do_iter:
             loop.iter()
@@ -598,7 +601,7 @@ def test_mutate_array1():
     """
     a = []
 
-    mutate_array(a, dict(mutation='set', index=0, objects=[1,2,5,6]))
+    mutate_array(a, dict(mutation='set', index=0, objects=[1, 2, 5, 6]))
     print(a)
 
     mutate_array(a, dict(mutation='insert', index=2, objects=[3, 3, 4, 4]))
@@ -630,13 +633,13 @@ def test_mutate_array2():
     a = np.arange(12)
     print(list(a.flat))
 
-    mutate_array(a, dict(mutation='replace', index=3, objects=np.zeros((4,))))
+    mutate_array(a, dict(mutation='replace', index=3, objects=np.zeros((4, ))))
     print(list(a.flat))
 
     a = np.arange(12)
     a.shape = 3, 4
 
-    mutate_array(a, dict(mutation='replace', index=(1, 2), objects=np.zeros((2,2))))
+    mutate_array(a, dict(mutation='replace', index=(1, 2), objects=np.zeros((2, 2))))
     print(list(a.flat))
 
 

@@ -8,7 +8,6 @@ from flexx import flx
 
 
 class Test(flx.Widget):
-
     def init(self):
         self.t = time()
 
@@ -24,22 +23,26 @@ class Test(flx.Widget):
             flx.Widget(flex=1)
             self.label2 = flx.Label(flex=1, style='overflow-y:scroll; font-size:60%;')
 
-        for name in ['pointerdown', 'pointermove', 'pointerup', 'pointercancel',
-                     'mousedown', 'mousemove', 'mouseup', 'click', 'dblclick',
-                     'touchstart', 'touchmove', 'touchend', 'touchcancel'
-                     ]:
-            test_widget1.node.addEventListener(name,
-                lambda e: self.show_event1(e.type))
+        for name in [
+                'pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'mousedown',
+                'mousemove', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchmove',
+                'touchend', 'touchcancel'
+        ]:
+            test_widget1.node.addEventListener(name, lambda e: self.show_event1(e.type))
 
         def reaction(*events):
             for ev in events:
                 self.show_event2(ev.type)
 
-        test_widget2.reaction(reaction,
-                              'pointer_down', 'pointer_move', 'pointer_up',
-                              'pointer_cancel',
-                              'pointer_click', 'pointer_double_click',
-                              )
+        test_widget2.reaction(
+            reaction,
+            'pointer_down',
+            'pointer_move',
+            'pointer_up',
+            'pointer_cancel',
+            'pointer_click',
+            'pointer_double_click',
+        )
 
     @flx.action
     def show_event1(self, name):

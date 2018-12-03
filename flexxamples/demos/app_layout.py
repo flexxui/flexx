@@ -7,16 +7,16 @@ from flexx import flx
 
 
 class AppLayoutExample(flx.Widget):
-
     def init(self):
 
         with flx.VBox():
 
-            flx.Label(style='background:#cfc;', wrap=1,
-                    text='Here is some content at the top for which we want to '
-                        'use minimal size. Thus the use of a VBox. '
-                        'Below is a splitter, with a box layout on the left '
-                        'and a fix layout on the right.')
+            flx.Label(
+                style='background:#cfc;', wrap=1,
+                text='Here is some content at the top for which we want to '
+                'use minimal size. Thus the use of a VBox. '
+                'Below is a splitter, with a box layout on the left '
+                'and a fix layout on the right.')
 
             with flx.HSplit(flex=1):
                 with flx.VBox(style='border:1px solid #777;'):

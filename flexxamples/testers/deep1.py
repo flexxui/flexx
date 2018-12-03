@@ -6,6 +6,7 @@ test that such deep layouts actually work.
 
 from flexx import app, ui
 
+
 class Red(ui.Widget):
     CSS = '.flx-Red { background: #ff0000;}'
 
@@ -27,7 +28,6 @@ class Deep1(ui.Widget):
 
 
 class Deep2(ui.Widget):
-
     def init(self):
 
         with ui.VBox():
@@ -42,7 +42,6 @@ class Deep2(ui.Widget):
 
 
 class Deep3(ui.Widget):
-
     def init(self):
 
         with ui.VBox():
@@ -58,7 +57,6 @@ class Deep3(ui.Widget):
 
 
 class Deep4(ui.Widget):
-
     def init(self):
 
         with ui.HBox():
@@ -73,7 +71,6 @@ class Deep4(ui.Widget):
 
 
 class Deep5(ui.Widget):
-
     def init(self):
 
         with ui.HBox():
@@ -88,7 +85,6 @@ class Deep5(ui.Widget):
 
 
 class Deep6(ui.Widget):
-
     def init(self):
 
         with ui.HBox():

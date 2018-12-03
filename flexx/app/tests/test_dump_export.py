@@ -16,13 +16,13 @@ from flexx import flx
 from flexx.util.testing import run_tests_if_main, raises, skip
 
 
-
 def setup_module():
     flx.manager._clear_old_pending_sessions(1)
     flx.assets.__init__()
-    
+
     flx.assets.associate_asset(__name__, 'foo.js', 'xx')
-    flx.assets.associate_asset(__name__,
+    flx.assets.associate_asset(
+        __name__,
         'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.21.0/codemirror.min.js')
 
 
@@ -91,7 +91,8 @@ def test_export():
 
     assert len(os.listdir(dir)) == 2
     assert os.path.isfile(os.path.join(dir, 'flexx', 'assets', 'shared', 'reset.css'))
-    assert os.path.isfile(os.path.join(dir, 'flexx', 'assets', 'shared', 'flexx-core.js'))
+    assert os.path.isfile(
+        os.path.join(dir, 'flexx', 'assets', 'shared', 'flexx-core.js'))
     assert os.path.isfile(os.path.join(dir, 'flexx', 'assets', 'shared', 'foo.js'))
 
     # Export under specific name
@@ -102,15 +103,15 @@ def test_export():
 
 
 def test_dump_consistency():
-    
+
     # This is why we have ``sesstion._id = name`` in _app.py
-    
+
     app1 = flx.App(MyExportTestApp)
     d1 = app1.dump()
-    
+
     app2 = flx.App(MyExportTestApp)
     d2 = app2.dump()
-    
+
     assert d1 == d2
 
 

@@ -17,7 +17,6 @@ from flexx import flx
 
 from tornado.web import StaticFileHandler
 
-
 # The directory to load video's from
 dirname = os.path.expanduser('~/Videos')
 
@@ -35,8 +34,11 @@ videos['ice-age.mp4 (online)'] = ('https://dl.dropboxusercontent.com/u/1463853/'
 # Make use of Tornado's static file handler
 tornado_app = flx.create_server().app
 tornado_app.add_handlers(r".*", [
-    (r"/videos/(.*)", StaticFileHandler, {"path": dirname}),
-    ])
+    (r"/videos/(.*)", StaticFileHandler,
+     {
+         "path": dirname
+     }),
+])
 
 
 class VideoViewer(flx.Widget):

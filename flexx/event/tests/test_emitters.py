@@ -13,7 +13,6 @@ loop = event.loop
 
 
 class MyObject(event.Component):
-
     @event.emitter
     def foo(self, v):
         if not isinstance(v, (int, float)):
@@ -22,7 +21,7 @@ class MyObject(event.Component):
 
     @event.emitter
     def bar(self, v):
-        return dict(value=float(v)+1)  # note plus 1
+        return dict(value=float(v) + 1)  # note plus 1
 
     @event.emitter
     def wrong(self, v):
@@ -38,14 +37,12 @@ class MyObject(event.Component):
 
 
 class MyObject2(MyObject):
-
     @event.emitter
     def bar(self, v):
         return super().bar(v + 10)
 
 
 class MyObject3(MyObject):
-
     @event.reaction('foo', mode='greedy')
     def on_foo(self, *events):
         print('foo', ', '.join([str(ev.value) for ev in events]))

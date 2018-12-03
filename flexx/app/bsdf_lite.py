@@ -1,6 +1,5 @@
 # This file is distributed under the terms of the 2-clause BSD License.
 # Copyright (c) 2017, Almar Klein
-
 """
 Python implementation of the Binary Structured Data Format (BSDF).
 
@@ -24,13 +23,10 @@ from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
-
 VERSION = 2, 2, 1
 __version__ = '.'.join(str(i) for i in VERSION)
 
-
 # %% The encoder and decoder implementation
-
 
 # Shorthands
 spack = struct.pack
@@ -103,8 +99,7 @@ class BsdfLiteSerializer(object):
             m = {'no': 0, 'zlib': 1, 'bz2': 2}
             compression = m.get(compression.lower(), compression)
         if compression not in (0, 1, 2):
-            raise TypeError('Compression must be 0, 1, 2, '
-                            '"no", "zlib", or "bz2"')
+            raise TypeError('Compression must be 0, 1, 2, ' '"no", "zlib", or "bz2"')
         self._compression = compression
 
         # Other encoding args
@@ -241,9 +236,8 @@ class BsdfLiteSerializer(object):
             # The actual data and extra space
             f.write(compressed)
             f.write(b'\x00' * (allocated_size - used_size))
-        elif getattr(value, "shape", None) == () and str(
-            getattr(value, "dtype", "")
-        ).startswith(("uint", "int", "float")):
+        elif getattr(value, "shape", None) == () and str(getattr(
+                value, "dtype", "")).startswith(("uint", "int", "float")):
             # Implicit conversion of numpy scalars
             if 'int' in str(value.dtype):
                 value = int(value)
@@ -351,7 +345,8 @@ class BsdfLiteSerializer(object):
             # Read blob header data (5 to 42 bytes)
             # Size
             allocated_size = strunpack('<B', f.read(1))[0]
-            if allocated_size == 253: allocated_size = strunpack('<Q', f.read(8))[0]  # noqa
+            if allocated_size == 253:
+                allocated_size = strunpack('<Q', f.read(8))[0]  # noqa
             used_size = strunpack('<B', f.read(1))[0]
             if used_size == 253: used_size = strunpack('<Q', f.read(8))[0]  # noqa
             data_size = strunpack('<B', f.read(1))[0]
@@ -440,6 +435,7 @@ class BsdfLiteSerializer(object):
 # that would only allow lambdas, which is too limiting, e.g. for ndarray
 # extension.
 
+
 class Extension(object):
     """ Base class to implement BSDF extensions for special data types.
 
@@ -504,14 +500,10 @@ class NDArrayExtension(Extension):
             self.cls = np.ndarray
 
     def match(self, s, v):  # e.g. for nd arrays in JS
-        return (hasattr(v, 'shape') and
-                hasattr(v, 'dtype') and
-                hasattr(v, 'tobytes'))
+        return (hasattr(v, 'shape') and hasattr(v, 'dtype') and hasattr(v, 'tobytes'))
 
     def encode(self, s, v):
-        return dict(shape=v.shape,
-                    dtype=str(v.dtype),
-                    data=v.tobytes())
+        return dict(shape=v.shape, dtype=str(v.dtype), data=v.tobytes())
 
     def decode(self, s, v):
         try:

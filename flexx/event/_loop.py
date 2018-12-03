@@ -11,6 +11,7 @@ import threading
 
 from . import logger
 
+
 def this_is_js():
     return False
 
@@ -64,8 +65,7 @@ class Loop:
     def has_pending(self):
         """ Get whether there are any pending actions, reactions, or calls.
         """
-        return (len(self._pending_reactions) > 0 or
-                len(self._pending_actions) > 0 or
+        return (len(self._pending_reactions) > 0 or len(self._pending_actions) > 0 or
                 len(self._pending_calls) > 0)
 
     def __enter__(self):
@@ -173,7 +173,6 @@ class Loop:
         pending_reactions = self._pending_reactions
 
         mode = reaction.get_mode()
-
 
         with self._lock:
             self._thread_match(True)
@@ -391,7 +390,6 @@ class Loop:
             self._call_soon_func(self._iter_callback)
             if reset:
                 self.reset()
-
 
     # Below is deprecated, but I leavae it here for a bit; we may want to
     # revive some of it.

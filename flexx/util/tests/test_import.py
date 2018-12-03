@@ -24,6 +24,7 @@ PROJECT_NAME = 'flexx'
 
 ## Generic code
 
+
 def loaded_modules(import_module, depth=None, all_modules=False):
     """ Import the given module in subprocess and return loaded modules
 
@@ -79,21 +80,27 @@ def test_import_project_fail():
 
 ## below it's project specific
 
+
 def test_import_flexx_util():
     modnames = loaded_modules('flexx.util', 2)
     assert modnames == set(MIN_MODULES + ['flexx.util'])
+
 
 def test_import_flexx_event():
     modnames = loaded_modules('flexx.event', 2)
     assert modnames == set(MIN_MODULES + ['flexx.event'])
 
+
 def test_import_flexx_app():
     modnames = loaded_modules('flexx.app', 2)
     assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.event'])
 
+
 def test_import_flexx_ui():
     modnames = loaded_modules('flexx.ui', 2)
-    assert modnames == set(MIN_MODULES + ['flexx.app', 'flexx.util', 'flexx.event', 'flexx.ui'])
+    assert modnames == set(MIN_MODULES +
+                           ['flexx.app', 'flexx.util', 'flexx.event', 'flexx.ui'])
+
 
 def test_import_deps():
     # These do not depend on tornado

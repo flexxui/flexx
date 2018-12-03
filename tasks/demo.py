@@ -1,5 +1,6 @@
 from invoke import task
 
+
 @task
 def demo(ctx):
     """show a quick Flexx demo

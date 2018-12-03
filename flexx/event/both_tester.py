@@ -74,7 +74,7 @@ def call_func_in_js(func, classes, extra_nodejs_args=None):
     code = JS_EVENT
     for c in reversed(all_classes):
         code += create_js_component_class(c, c.__name__,
-                                          c.__bases__[0].__name__+'.prototype')
+                                          c.__bases__[0].__name__ + '.prototype')
     code += py2js(func, 'test', inline_stdlib=False, docstrings=False)
     code += 'test();loop.reset();'
     nargs, function_deps, method_deps = get_std_info(code)
@@ -102,10 +102,10 @@ def smart_compare(func, *comparations):
         j = '_' * 79 + '\n'
         err_msgs = [''] + err_msgs + ['']
         t = 'Text mismatch in\nFile "%s", line %i, in %s:\n%s'
-        raise StdoutMismatchError(t % (func.__code__.co_filename,
-                                       func.__code__.co_firstlineno,
-                                       func.__name__,
-                                       j.join(err_msgs)))
+        raise StdoutMismatchError(
+            t % (func.__code__.co_filename, func.__code__.co_firstlineno, func.__name__,
+                 j.join(err_msgs)))
+
 
 def validate_text(name, text, reference):
     """ Compare text with a reference. Returns None if they match, and otherwise
@@ -138,7 +138,7 @@ def validate_text(name, text, reference):
         if not equal_enough:
             i1 = max(0, i - 16)
             i2 = min(n, i + 16)
-            msg = ' '*8 + name.ljust(nchars) + ' ' + 'Reference'.ljust(nchars) + '\n'
+            msg = ' ' * 8 + name.ljust(nchars) + ' ' + 'Reference'.ljust(nchars) + '\n'
             for j in range(i1, i2):
                 linenr = str(j + 1).rjust(3, '0')
                 prefix = ' >> ' if j == i else '    '
@@ -150,6 +150,7 @@ def validate_text(name, text, reference):
                 # line2 = line2 if len(line2) <= nchars else line2[:nchars-1] + '…'
                 # msg += '{}{} {} {}\n'.format(prefix, linenr, line1, line2)
             return msg
+
 
 def _wrap(line, nchars, maxlines):
     line = line.replace('\n', '\\n').replace('\r', '\\r')
@@ -168,6 +169,7 @@ def _wrap(line, nchars, maxlines):
         lines[-1] = lines[-1][:-1] + '…'
 
     return lines
+
 
 def _zip(lines1, lines2, offset):
     n = max(len(lines1), len(lines2))
@@ -200,7 +202,7 @@ def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
 
     def wrapper(func):
         reference = '\n'.join(line[4:] for line in func.__doc__.splitlines())
-        parts = reference.split('-'*10)
+        parts = reference.split('-' * 10)
         pyref = parts[0].strip(' \n')
         jsref = parts[-1].strip(' \n-')
 
@@ -241,5 +243,7 @@ def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
             smart_compare(*args)
             print(func.__name__, 'ok')
             return True
+
         return runner1
+
     return wrapper

@@ -67,12 +67,12 @@ class MyJComponent2(MyJComponent1):
     pass
 
 
-all_classes = [MyPComponent2, MyJComponent2, MyPComponent2.JS, MyJComponent2.JS,
-               MyPComponent1, MyJComponent1, MyPComponent1.JS, MyJComponent1.JS,
-               PyComponent, JsComponent, PyComponent.JS, JsComponent.JS,
-               LocalComponent, ProxyComponent,
-               BaseAppComponent,
-               Component]
+all_classes = [
+    MyPComponent2, MyJComponent2, MyPComponent2.JS, MyJComponent2.JS, MyPComponent1,
+    MyJComponent1, MyPComponent1.JS, MyJComponent1.JS, PyComponent, JsComponent,
+    PyComponent.JS, JsComponent.JS, LocalComponent, ProxyComponent, BaseAppComponent,
+    Component
+]
 
 
 def test_pycomponent_heritage():
@@ -85,7 +85,10 @@ def test_pycomponent_heritage():
     assert not 'proxy' in repr(C) and 'proxy' in repr(C.JS)
     assert not 'JS' in repr(C) and 'for JS' in repr(C.JS)
 
-    mro = [MyPComponent2, MyPComponent1, PyComponent, LocalComponent, BaseAppComponent, Component, object]
+    mro = [
+        MyPComponent2, MyPComponent1, PyComponent, LocalComponent, BaseAppComponent,
+        Component, object
+    ]
 
     # Validate inheritance of py class
     assert C.mro() == mro
@@ -103,7 +106,10 @@ def test_pycomponent_heritage():
         if cls not in mro:
             assert not isinstance(foo, cls)
 
-    mro = [MyPComponent2.JS, MyPComponent1.JS, PyComponent.JS, ProxyComponent, BaseAppComponent, Component, object]
+    mro = [
+        MyPComponent2.JS, MyPComponent1.JS, PyComponent.JS, ProxyComponent,
+        BaseAppComponent, Component, object
+    ]
 
     # Validate inheritance of JS class
     assert C.JS.mro() == mro
@@ -129,7 +135,10 @@ def test_jscomponent_heritage():
     assert 'proxy' in repr(C) and 'proxy' not in repr(C.JS)
     assert not 'JS' in repr(C) and 'for JS' in repr(C.JS)
 
-    mro = [MyJComponent2, MyJComponent1, JsComponent, ProxyComponent, BaseAppComponent, Component, object]
+    mro = [
+        MyJComponent2, MyJComponent1, JsComponent, ProxyComponent, BaseAppComponent,
+        Component, object
+    ]
 
     # Validate inheritance of py class
     assert C.mro() == mro
@@ -147,7 +156,10 @@ def test_jscomponent_heritage():
         if cls not in mro:
             assert not isinstance(foo, cls)
 
-    mro = [MyJComponent2.JS, MyJComponent1.JS, JsComponent.JS, LocalComponent, BaseAppComponent, Component, object]
+    mro = [
+        MyJComponent2.JS, MyJComponent1.JS, JsComponent.JS, LocalComponent,
+        BaseAppComponent, Component, object
+    ]
 
     # Validate inheritance of JS class
     assert C.JS.mro() == mro
@@ -197,10 +209,10 @@ def test_generated_js1():
     for line in js.splitlines():
         if '._base_class =' in line:
             classes.append(line.split('.')[0])
-    assert classes == ['LocalProperty',
-                       'BaseAppComponent',
-                       'LocalComponent', 'ProxyComponent', 'StubComponent',
-                       'JsComponent', 'PyComponent']
+    assert classes == [
+        'LocalProperty', 'BaseAppComponent', 'LocalComponent', 'ProxyComponent',
+        'StubComponent', 'JsComponent', 'PyComponent'
+    ]
     print(classes)
 
 

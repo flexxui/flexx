@@ -33,7 +33,7 @@ class Example(flx.Widget):
                                     flx.TreeItem(title='B', text='more info on B')
 
     @flx.reaction('tree.children**.checked', 'tree.children**.selected',
-                    'tree.children**.collapsed')
+                  'tree.children**.collapsed')
     def on_event(self, *events):
         for ev in events:
             id = ev.source.title or ev.source.text

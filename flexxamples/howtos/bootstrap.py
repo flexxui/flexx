@@ -34,52 +34,46 @@ class Example(flx.Widget):
 
         # Create form elements
         form_nodes = [
-            flx.create_element('div',
-                {'class': 'form-group mb-2'},
-                flx.create_element('input',
-                    {'class': 'form-control',
-                     'id': 'inputFirstName',
-                     'oninput': lambda e: self.set_first_name(e.target.value)
-                    },
-                    'First name'
-                    )
-                ),
-            flx.create_element('div',
-                {'class': 'form-group mx-sm-3 mb-2'},
-                flx.create_element('input',
-                    {'class': 'form-control',
-                     'id': 'inputLastName',
-                     'oninput': lambda e: self.set_last_name(e.target.value)
-                    },
-                    'Last name'
-                    )
-                ),
+            flx.create_element(
+                'div', {'class': 'form-group mb-2'},
+                flx.create_element(
+                    'input', {
+                        'class': 'form-control',
+                        'id': 'inputFirstName',
+                        'oninput': lambda e: self.set_first_name(e.target.value)
+                    }, 'First name')),
+            flx.create_element(
+                'div', {'class': 'form-group mx-sm-3 mb-2'},
+                flx.create_element(
+                    'input', {
+                        'class': 'form-control',
+                        'id': 'inputLastName',
+                        'oninput': lambda e: self.set_last_name(e.target.value)
+                    }, 'Last name')),
             flx.create_element('button',
-                {'class': 'btn btn-primary mb-2',
-                 'onclick': self._button_clicked
-                },
-                'Submit'
-                ),
-            ]
+                               {
+                                   'class': 'btn btn-primary mb-2',
+                                   'onclick': self._button_clicked
+                               }, 'Submit'),
+        ]
 
         # Create virtual DOM nodes for all persons. We use bootstrap cards
         card_nodes = []
         for name, info in self.persons:
-            person_node = flx.create_element('div', {'class': 'card'},
-                flx.create_element('div', {'class': 'card-body'},
+            person_node = flx.create_element(
+                'div', {'class': 'card'},
+                flx.create_element(
+                    'div',
+                    {'class': 'card-body'},
                     flx.create_element('h5', {'class': 'card-title'}, name),
                     flx.create_element('p', {'class': 'card-text'}, info),
-                    )
-                )
+                ))
             card_nodes.append(person_node)
 
         # Compose finaly DOM tree
-        return flx.create_element('div', {},
-                    flx.create_element('div',
-                        {'class': 'form-inline'},
-                        form_nodes
-                        ),
-                    *card_nodes)
+        return flx.create_element(
+            'div', {}, flx.create_element('div', {'class': 'form-inline'}, form_nodes),
+            *card_nodes)
 
 
 if __name__ == '__main__':

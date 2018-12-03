@@ -8,7 +8,6 @@ from flexx import app, event, ui
 
 
 class ErrorsPy(app.PyComponent):
-
     def init(self):
         self.js = ErrorsJS(self)
 
@@ -25,7 +24,6 @@ class ErrorsPy(app.PyComponent):
 
 
 class ErrorsJS(ui.Widget):
-
     def init(self, pycomponent):
         self.py = pycomponent
 

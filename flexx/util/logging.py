@@ -18,12 +18,10 @@ import time
 import logging
 import traceback
 
-
 MODULE_NAME = __name__.split('.')[0]
 
-logging_types = dict(debug=logging.DEBUG, info=logging.INFO,
-                     warning=logging.WARNING, error=logging.ERROR,
-                     critical=logging.CRITICAL)
+logging_types = dict(debug=logging.DEBUG, info=logging.INFO, warning=logging.WARNING,
+                     error=logging.ERROR, critical=logging.CRITICAL)
 
 
 class _Formatter(logging.Formatter):
@@ -34,8 +32,7 @@ class _Formatter(logging.Formatter):
         self.prepend_caller = False
 
     def format(self, record):
-        base = '[{} {} {}] '.format(record.levelname[0],
-                                    time.strftime('%H:%M:%S'),
+        base = '[{} {} {}] '.format(record.levelname[0], time.strftime('%H:%M:%S'),
                                     record.name)
         if isinstance(record.msg, Exception):
             # Get excepion info and skip first frames
@@ -74,6 +71,7 @@ class _Handler(logging.StreamHandler):
 class _MatchFilter:
     """ To filter records on regexp matches.
     """
+
     def __init__(self):
         self.match = None
 
@@ -82,8 +80,7 @@ class _MatchFilter:
         if not match:
             return True
         elif isinstance(match, str):
-            return (match in record.name or
-                    match in record.getMessage() or
+            return (match in record.name or match in record.getMessage() or
                     match in record.funcName)
         else:
             return (re.search(match, record.name) or
@@ -94,6 +91,7 @@ class _MatchFilter:
 class _CaptureFilter:
     """ To collect records in the capture_log context.
     """
+
     def __init__(self):
         self.records = []
 

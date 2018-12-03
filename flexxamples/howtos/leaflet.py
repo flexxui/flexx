@@ -3,7 +3,6 @@
 This example demonstrates the use of Leaflet to display a slippy map.
 """
 
-
 import os
 from urllib.request import urlopen, Request
 import re
@@ -12,7 +11,6 @@ import mimetypes
 
 from flexx import flx
 
-
 _leaflet_url = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/'
 _leaflet_version = '1.0.3'
 _leaflet_icons = [
@@ -20,7 +18,6 @@ _leaflet_icons = [
     'marker-icon-2x.png',
     'marker-shadow.png',
 ]
-
 
 if 'LEAFLET_DIR' in os.environ:
     _base_url = 'file://%s' % os.environ['LEAFLET_DIR']
@@ -48,7 +45,7 @@ def _get_data(item_or_url):
     return urlopen(req).read()
 
 
-def _embed_css_resources(css, types=('.png',)):
+def _embed_css_resources(css, types=('.png', )):
     """ Replace urls in css with data urls
     """
     type_str = '|'.join('\%s' % t for t in types)
@@ -100,11 +97,13 @@ class LeafletWidget(flx.Widget):
         The center of the map.
         """)
 
-    show_layers = flx.BoolProp(False, settable=True, doc="""
+    show_layers = flx.BoolProp(
+        False, settable=True, doc="""
         Whether to show layers-icon on the top-right of the map.
         """)
 
-    show_scale = flx.BoolProp(False, settable=True, doc="""
+    show_scale = flx.BoolProp(
+        False, settable=True, doc="""
         Whether to show scale at bottom-left of map.
         """)
 
@@ -233,7 +232,6 @@ class LeafletWidget(flx.Widget):
 
 
 class LeafletExample(flx.Widget):
-
     def init(self):
         with flx.HBox():
             self.leaflet = LeafletWidget(
@@ -271,8 +269,9 @@ class LeafletExample(flx.Widget):
         global L
         ev = events[-1]
         latlng = tuple(ev['latlng'])
-        flx.Label(text='%f, %f' % (int(100*latlng[0])/100, int(100*latlng[1])/100),
-                       parent=self.list)
+        flx.Label(
+            text='%f, %f' % (int(100 * latlng[0]) / 100, int(100 * latlng[1]) / 100),
+            parent=self.list)
         latlng = tuple(ev['latlng'])
         if ev['event'] == 'click':
             m = L.marker(ev['latlng'])

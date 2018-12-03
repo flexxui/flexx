@@ -20,8 +20,8 @@ class Circle(flx.Label):
     }
     """
 
-class Circles(flx.Widget):
 
+class Circles(flx.Widget):
     def init(self):
         with flx.PinboardLayout():
             self._circles = [Circle() for i in range(32)]
@@ -31,8 +31,8 @@ class Circles(flx.Widget):
         global Math, window
         t = time()
         for i, circle in enumerate(self._circles):
-            x = Math.sin(i*0.2 + t) * 30 + 50
-            y = Math.cos(i*0.2 + t) * 30 + 50
+            x = Math.sin(i * 0.2 + t) * 30 + 50
+            y = Math.cos(i * 0.2 + t) * 30 + 50
             circle.apply_style(dict(left=x + '%', top=y + '%'))
         window.setTimeout(self.tick, 30)
 

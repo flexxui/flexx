@@ -10,9 +10,12 @@ can be provided to configure Flexx, see
 
 import sys
 
-ALIASES = {'-h': 'help', '--help': 'help',
-           '--version': 'version',
-          }
+ALIASES = {
+    '-h': 'help',
+    '--help': 'help',
+    '--version': 'version',
+}
+
 
 class CLI:
     """ Command line interface class. Commands are simply defined as methods.
@@ -113,6 +116,7 @@ class CLI:
 
 class FetchError(Exception):
     pass
+
 
 def http_fetch(url):
     """ Perform an HTTP request.

@@ -5,7 +5,6 @@ A demo with geo data shown with plotly.
 
 from flexx import flx
 
-
 records = """
 Albania,13.40,ALB
 Andorra,4.80,AND
@@ -60,7 +59,6 @@ for line in records.strip().splitlines():
     country_codes.append(code)
     country_gdps.append(float(gdp))
 
-
 # Define the plot. Its probably easier to use the Python Plotly library,
 # but in this way this example does not require additional dependencies.
 
@@ -74,22 +72,20 @@ data = [{
         'cmin': 0,
         'cmax': 2000,
         'colorscale': 'Viridis',
-        'colorbar': {'title': 'GDP'},
-        'line': {'color': 'black'}
+        'colorbar': {
+            'title': 'GDP'
+        },
+        'line': {
+            'color': 'black'
+        }
     },
     'name': 'Europe GDP'
 }]
 
-layout = {
-    'geo': {
-        'scope': 'europe',
-        'resolution': 50
-    }
-}
+layout = {'geo': {'scope': 'europe', 'resolution': 50}}
 
 
 class PlotlyGeoDemo(flx.HBox):
-
     def init(self):
         flx.PlotlyWidget(data=data, layout=layout)
 

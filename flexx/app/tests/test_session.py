@@ -109,7 +109,8 @@ def test_session_registering_component_classes():
     assert len(s.present_modules) == 2
     assert 'flexx.ui._widget' in s.present_modules
     assert 'flexx.ui.widgets._button' in s.present_modules
-    assert len(s._present_classes) == 6  # Because a module was loaded that has more widgets
+    assert len(
+        s._present_classes) == 6  # Because a module was loaded that has more widgets
     assert ui.Button in s._present_classes
     assert ui.RadioButton in s._present_classes
     assert ui.CheckBox in s._present_classes
@@ -118,15 +119,15 @@ def test_session_registering_component_classes():
     assert ui.Widget in s._present_classes
 
     with raises(TypeError):
-         s._register_component_class(3)
+        s._register_component_class(3)
 
 
 ## Prepare module loading tests
 
 from flexx.event._component import new_type
 
-
 PKG_NAME = 'flxtest2'
+
 
 def add_prefix(n):
     if isinstance(n, list):
@@ -152,22 +153,27 @@ def fakecomponent_init(self, s):
     self._session = s
     self._id = 'FakeComponent'
 
+
 def fakecomponent_setattr(self, s, v):
     return object.__setattr__(self, s, v)
+
 
 def fakecomponent_del(self):
     pass
 
-Component_overload = dict(__linenr__=0,
-                          __init__=fakecomponent_init,
-                          __setattr__=fakecomponent_setattr,
-                          __del__=fakecomponent_del,
-                          )
+
+Component_overload = dict(
+    __linenr__=0,
+    __init__=fakecomponent_init,
+    __setattr__=fakecomponent_setattr,
+    __del__=fakecomponent_del,
+)
 
 
 class SessionTester(Session):
     """ A session subclass that keeps track of DEFINE commands.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.assets_js = []
@@ -187,6 +193,7 @@ class FakeModule:
     """ An object that looks and walks like a JSModule. Enough to fool
     Flexx' internals.
     """
+
     def __init__(self, store, name):
         self.name = add_prefix(name)
         self.deps = set()
@@ -219,6 +226,7 @@ class FakeModule:
 
 
 ## Test module loading
+
 
 def test_module_loading1():
     """ Simple case. """
@@ -332,8 +340,10 @@ def test_module_loading5():
     s._register_component(Mb(flx_session=s))
     s._register_component(Mc(flx_session=s))
 
-    assert s.assets_js == add_prefix(['spam.js', 'foo.m1.js', 'eggs.js', 'foo.m2.js', 'foo.m3.js'])
-    assert s.assets_css == add_prefix(['foo.m1.css', 'bla.css', 'foo.m2.css', 'foo.m3.css'])
+    assert s.assets_js == add_prefix(
+        ['spam.js', 'foo.m1.js', 'eggs.js', 'foo.m2.js', 'foo.m3.js'])
+    assert s.assets_css == add_prefix(
+        ['foo.m1.css', 'bla.css', 'foo.m2.css', 'foo.m3.css'])
 
 
 # clear_test_classes()
@@ -341,6 +351,7 @@ def test_module_loading5():
 # clear_test_classes()
 
 ##
+
 
 def pongit(session, n):
     for i in range(n):
@@ -352,6 +363,7 @@ def pongit(session, n):
             loop.call_soon(loop.stop)
             loop.run_forever()
         session._ping_counter = c + 1
+
 
 # def pongit(session, n):
 #     max_timeout = session._ping_counter + n
@@ -431,7 +443,6 @@ def test_keep_alive():
 
 
 def test_keep_alive_noleak1():
-
     class Foo:
         pass
 
@@ -484,7 +495,6 @@ def test_keep_alive_noleak2():
     gc.collect()
     assert session_ref() is None
     assert foo_ref() is None
-
 
 
 run_tests_if_main()

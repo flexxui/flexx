@@ -13,10 +13,10 @@ def lint(ctx):
     test_style()
 
 
-@task(optional=['unit', 'style'],
-      help=dict(unit='run unit tests (pytest) on given subdir (default ".")',
-                style='run style tests (flake8) on given subdir (default ".")',
-                cover='show test coverage'))
+@task(optional=['unit', 'style'], help=dict(
+    unit='run unit tests (pytest) on given subdir (default ".")',
+    style='run style tests (flake8) on given subdir (default ".")',
+    cover='show test coverage'))
 def test(ctx, unit='', style='', cover=False):
     """ run tests (unit, style)
     """
@@ -55,8 +55,10 @@ def test_unit(rel_path='.'):
     # Start tests
     _enable_faulthandler()
     try:
-        res = pytest.main(['--cov', NAME, '--cov-config=.coveragerc',
-                           '--cov-report=term', '--cov-report=html', test_path])
+        res = pytest.main([
+            '--cov', NAME, '--cov-config=.coveragerc', '--cov-report=term',
+            '--cov-report=html', test_path
+        ])
         sys.exit(res)
     finally:
         m = __import__(NAME)

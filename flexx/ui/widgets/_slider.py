@@ -105,13 +105,15 @@ class Slider(Widget):
         The current slider value.
         """)
 
-    text = event.StringProp('{value}', settable=True, doc="""
+    text = event.StringProp(
+        '{value}', settable=True, doc="""
         The label to display on the slider during dragging. Occurances of
         "{percent}" are replaced with the current percentage, and
         "{value}" with the current value. Default "{value}".
         """)
 
-    disabled = event.BoolProp(False, settable=True, doc="""
+    disabled = event.BoolProp(
+        False, settable=True, doc="""
         Whether the slider is disabled.
         """)
 
@@ -160,14 +162,18 @@ class Slider(Widget):
         label = label.replace('{value}', valuestr)
         label = label.replace('{percent}', Math.round(perc) + '%')
 
-        attr = {'className': 'slider disabled' if self.disabled else 'slider',
-                'style__left': 'calc(' + perc + '% - 5px)'
-                }
-        return [create_element('div', {'className': 'gutter'},
-                    create_element('span', {}, label),
-                    create_element('div', attr),
-                    )
-                ]
+        attr = {
+            'className': 'slider disabled' if self.disabled else 'slider',
+            'style__left': 'calc(' + perc + '% - 5px)'
+        }
+        return [
+            create_element(
+                'div',
+                {'className': 'gutter'},
+                create_element('span', {}, label),
+                create_element('div', attr),
+            )
+        ]
 
     # Use the Flexx pointer event system, so we can make use of capturing ...
 
@@ -281,23 +287,29 @@ class RangeSlider(Slider):
         label = label.replace('{percent}',
                               Math.round(perc1) + '% - ' + Math.round(perc2) + '%')
 
-        attr0 = {'className': 'range',
-                'style__left': perc1 + '%',
-                'style__right': (100 - perc2) + '%'
-                }
-        attr1 = {'className': 'slider disabled' if self.disabled else 'slider',
-                'style__left': 'calc(' + perc1 + '% - 5px)'
-                }
-        attr2 = {'className': 'slider disabled' if self.disabled else 'slider',
-                'style__left': 'calc(' + perc2 + '% - 5px)'
-                }
-        return [create_element('div', {'className': 'gutter'},
-                    create_element('span', {}, label),
-                    create_element('div', attr0),
-                    create_element('div', attr1),
-                    create_element('div', attr2),
-                    )
-                ]
+        attr0 = {
+            'className': 'range',
+            'style__left': perc1 + '%',
+            'style__right': (100 - perc2) + '%'
+        }
+        attr1 = {
+            'className': 'slider disabled' if self.disabled else 'slider',
+            'style__left': 'calc(' + perc1 + '% - 5px)'
+        }
+        attr2 = {
+            'className': 'slider disabled' if self.disabled else 'slider',
+            'style__left': 'calc(' + perc2 + '% - 5px)'
+        }
+        return [
+            create_element(
+                'div',
+                {'className': 'gutter'},
+                create_element('span', {}, label),
+                create_element('div', attr0),
+                create_element('div', attr1),
+                create_element('div', attr2),
+            )
+        ]
 
     def _snap2handle(self, x):
         # Snap to a slider handle or the center

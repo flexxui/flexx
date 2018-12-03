@@ -113,9 +113,9 @@ class NoteBookHelper:
             lines = []
             lines.append('var bb64 =  flexx.require("bb64");')
             lines.append('function cmd(c) {'
-                            'flexx.s1._receive_command('
-                            'flexx.serializer.decode('
-                            'bb64.decode(c)));}')
+                         'flexx.s1._receive_command('
+                         'flexx.serializer.decode('
+                         'bb64.decode(c)));}')
             for command in self._commands:  # also DEFINE commands!
                 command_str = base64.encodebytes(serializer.encode(command)).decode()
                 lines.append('cmd("' + command_str.replace('\n', '') + '");')
@@ -202,6 +202,7 @@ def init_notebook():
 
 # Keep serve and launch, they are still quite nice shorthands to quickly
 # get something done.
+
 
 def serve(cls, name=None, properties=None):
     """ Shorthand for ``app.App(cls).serve(name)``.

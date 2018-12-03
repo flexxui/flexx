@@ -8,7 +8,6 @@ data can be smoothed so the upward trend can be made more apparent.
 This app can be exported to a standalone HTML document.
 """
 
-
 from flexx import flx
 
 # Raw data obtained from
@@ -99,8 +98,11 @@ STN,YYYY,   JAN,   FEB,   MAR,   APR,   MAY,   JUN,   JUL,   AUG,   SEP,   OCT, 
 290,2017,     2,    44,    85,    79,   149,   179,   180,   172,   135,   126,    63,    42,   105
 """
 
-months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul',
-            'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'total']
+months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'total'
+]
+
 
 def parse_data(raw_data):
     years, data = [], [[] for i in range(13)]
@@ -109,14 +111,14 @@ def parse_data(raw_data):
             parts = [int(i.strip()) for i in line.split(',')]
             years.append(parts[1])
             for i in range(13):
-                data[i].append(parts[i+2]/10.0)
+                data[i].append(parts[i + 2] / 10.0)
     return years, data
+
 
 years, data = parse_data(raw_data)
 
 
 class Twente(flx.Widget):
-
     def init(self):
 
         with flx.HFix():
@@ -124,13 +126,13 @@ class Twente(flx.Widget):
             with flx.VBox(flex=0, minsize=200):
                 with flx.GroupWidget(title='Plot options'):
                     flx.Label(text='Month')
-                    self.month = flx.ComboBox(options=months, selected_index=12, style='width: 100%')
+                    self.month = flx.ComboBox(options=months, selected_index=12,
+                                              style='width: 100%')
                     self.smoothing_label = flx.Label(text='Smoothing')
                     self.smoothing = flx.Slider(max=20, step=2, text='{value} samples')
                 flx.Widget(flex=3)
             with flx.VBox(flex=4):
-                self.plot = flx.PlotWidget(flex=1,
-                                           xdata=years, yrange=(-5, 20),
+                self.plot = flx.PlotWidget(flex=1, xdata=years, yrange=(-5, 20),
                                            title='Average monthly temperature',
                                            xlabel='year', ylabel=u'temperature (°C)')
             flx.Widget(flex=1)
@@ -145,7 +147,7 @@ class Twente(flx.Widget):
         for i in range(len(yy1)):
             val = 0
             n = 0
-            for j in range(max(0, i-sm2), min(len(yy1), i+sm2+1)):
+            for j in range(max(0, i - sm2), min(len(yy1), i + sm2 + 1)):
                 val += yy1[j]
                 n += 1
             if n == 0:
@@ -157,6 +159,6 @@ class Twente(flx.Widget):
 
 
 if __name__ == '__main__':
-    a = flx.App(Twente, title='Temperature 1951 - 2014', style = 'background:#eaeaea;')
+    a = flx.App(Twente, title='Temperature 1951 - 2014', style='background:#eaeaea;')
     m = a.launch('app', size=(900, 400))
     flx.run()

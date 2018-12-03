@@ -25,6 +25,7 @@ class Person(event.Component):
 
 ##
 
+
 @run_in_both(Person)
 def func_ok1():
     """
@@ -44,7 +45,9 @@ def func_ok1():
 def test_ok1():
     assert func_ok1()
 
+
 ##
+
 
 @run_in_both()
 def func_ok2():
@@ -58,6 +61,7 @@ def func_ok2():
     else:
         print('bar')
 
+
 @run_in_both()
 def func_ok3():
     """
@@ -67,6 +71,7 @@ def func_ok3():
         print('foo')
     else:
         print('bar')
+
 
 @run_in_both()
 def func_ok4():
@@ -89,6 +94,7 @@ def test_ok234():
 
 ##
 
+
 @run_in_both(Person)
 def func_fail():
     """
@@ -108,7 +114,9 @@ def test_fail():
     with raises(StdoutMismatchError):
         func_fail()
 
+
 ##
+
 
 @run_in_both()
 def func_ok_exception():  # ? indicates that the following text must be present
@@ -127,17 +135,20 @@ def test_ok_exception():
 
 ##
 
+
 @run_in_both()
 def func_fail_exception1():  # This just fails hard
     """
     """
     raise AttributeError('xx')
 
+
 @run_in_both(js=False)
 def func_fail_exception2():  # This just fails hard
     """
     """
     raise AttributeError('xx')
+
 
 @run_in_both(py=False)
 def func_fail_exception3():  # This just fails hard

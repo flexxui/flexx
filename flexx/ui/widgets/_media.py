@@ -35,12 +35,14 @@ class ImageWidget(Widget):
 
     _sequence = 0
 
-    source = event.StringProp('', settable=True, doc="""
+    source = event.StringProp(
+        '', settable=True, doc="""
         The source of the image, This can be anything that an HTML
         img element supports.
         """)
 
-    stretch = event.BoolProp(False, settable=True, doc="""
+    stretch = event.BoolProp(
+        False, settable=True, doc="""
         Whether the image should stretch to fill all available
         space, or maintain its aspect ratio (default).
         """)
@@ -80,7 +82,8 @@ class VideoWidget(Widget):
 
     DEFAULT_MIN_SIZE = 100, 100
 
-    source = event.StringProp('', settable=True, doc="""
+    source = event.StringProp(
+        '', settable=True, doc="""
         The source of the video. This must be a url of a resource
         on the web.
         """)
@@ -118,7 +121,8 @@ class YoutubeWidget(Widget):
 
     DEFAULT_MIN_SIZE = 100, 100
 
-    source = event.StringProp('oHg5SJYRHA0', settable=True, doc="""
+    source = event.StringProp(
+        'oHg5SJYRHA0', settable=True, doc="""
         The source of the video represented as the Youtube id.
         """)
 

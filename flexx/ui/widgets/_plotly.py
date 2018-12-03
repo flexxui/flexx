@@ -26,12 +26,14 @@ class PlotlyWidget(Widget):
     """ A widget that shows a Plotly visualization.
     """
 
-    data = event.ListProp(settable=True, doc="""
+    data = event.ListProp(
+        settable=True, doc="""
         The data (list of dicts) that describes the plot.
         This can e.g. be the output of the Python plotly API call.
         """)
 
-    layout = event.DictProp(settable=True, doc="""
+    layout = event.DictProp(
+        settable=True, doc="""
         The layout dict to style the plot.
         """)
 

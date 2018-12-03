@@ -33,7 +33,8 @@ def trim_py_files(*directories):
 def ws(ctx):
     """ Remove trailing whitespace from all py files.
     """
-    trim_py_files(os.path.join(ROOT_DIR, 'flexx'),
-                  os.path.join(ROOT_DIR, 'flexxamples'),
-                  os.path.join(ROOT_DIR, 'tasks'),
-                  )
+    trim_py_files(
+        os.path.join(ROOT_DIR, 'flexx'),
+        os.path.join(ROOT_DIR, 'flexxamples'),
+        os.path.join(ROOT_DIR, 'tasks'),
+    )

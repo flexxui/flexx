@@ -26,7 +26,6 @@ Also see examples: :ref:`bokehdemo.py`.
 
 """
 
-
 import os
 
 from ... import event, app
@@ -38,17 +37,20 @@ def _load_bokeh(ext):
     dev = os.environ.get('BOKEH_RESOURCES', '') == 'relative-dev'
     res = bokeh.resources.bokehjsdir()
     if dev:
-        res = os.path.abspath(os.path.join(bokeh.__file__,
-                                            '..', '..', 'bokehjs', 'build'))
+        res = os.path.abspath(
+            os.path.join(bokeh.__file__, '..', '..', 'bokehjs', 'build'))
     modname = 'bokeh' if dev else 'bokeh.min'
     filename = os.path.join(res, ext, modname + '.' + ext)
     return open(filename, 'rb').read().decode()
 
+
 def _load_bokeh_js():
     return _load_bokeh('js')
 
+
 def _load_bokeh_css():
     return _load_bokeh('css')
+
 
 # Associate Bokeh asset, but in a "lazy" way, so that we don't attempt to
 # import bokeh until the user actually instantiates a BokehWidget.
@@ -69,8 +71,7 @@ def make_bokeh_widget(plot, **kwargs):
     script, div = components(plot)
     script = '\n'.join(script.strip().split('\n')[1:-1])
     widget = BokehWidget(**kwargs)
-    widget.set_plot_components(
-        dict(script=script, div=div, id=plot.ref['id']))
+    widget.set_plot_components(dict(script=script, div=div, id=plot.ref['id']))
     return widget
 
 
@@ -118,10 +119,12 @@ class BokehWidget(Widget):
         el = window.document.createElement('script')
         el.innerHTML = d.script
         self.node.appendChild(el)
+
         # Get plot from id in next event-loop iter
         def getplot():
             self._plot = window.Bokeh.index[d.id]
             self.__resize_plot()
+
         window.setTimeout(getplot, 10)
 
     @event.reaction('size')

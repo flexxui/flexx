@@ -26,6 +26,7 @@ class Greeter(event.Component):
     def show_message(self):
         print('Message:', self.message)
 
+
 p = Person()
 
 # This is the line that this is about

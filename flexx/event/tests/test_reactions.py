@@ -15,11 +15,10 @@ from flexx import event
 loop = event.loop
 logger = event.logger
 
-
 ## Order
 
-class MyObject1(event.Component):
 
+class MyObject1(event.Component):
     @event.reaction('!a')
     def r1(self, *events):
         print('r1:' + ' '.join([ev.type for ev in events]))
@@ -110,8 +109,8 @@ def test_reaction_order4():
 
 ## Labels
 
-class MyObject_labeled(event.Component):
 
+class MyObject_labeled(event.Component):
     @event.reaction('!a')
     def r1(self, *events):
         print('r1 ' + ' '.join([ev.type for ev in events]))
@@ -143,6 +142,7 @@ def test_reaction_labels1():
 
 ## Init order
 
+
 class MyObject_init(event.Component):
 
     foo = event.IntProp(settable=True)
@@ -151,7 +151,8 @@ class MyObject_init(event.Component):
 
     @event.reaction('foo', 'bar')
     def _report(self, *events):
-        print('r ' + ', '.join(['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
+        print('r ' + ', '.join(
+            ['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
 
 
 @run_in_both(MyObject_init)
@@ -172,7 +173,7 @@ def test_reaction_init1():
     print('end')
 
 
-@skipif(sys.version_info < (3,6), reason='need ordered kwargs')
+@skipif(sys.version_info < (3, 6), reason='need ordered kwargs')
 @run_in_both(MyObject_init)
 def test_reaction_init2():
     """
@@ -211,7 +212,7 @@ def test_reaction_init3():
     print('end')
 
 
-@skipif(sys.version_info < (3,6), reason='need ordered kwargs')
+@skipif(sys.version_info < (3, 6), reason='need ordered kwargs')
 @run_in_both(MyObject_init)
 def test_reaction_init4():
     """
@@ -250,10 +251,11 @@ def test_reaction_init_fail1():
         logger.exception(err)
     print('end')
 
+
 ## Inheritance, overloading, and super()
 
-class MyObjectSub(MyObject1):
 
+class MyObjectSub(MyObject1):
     @event.reaction('!a', '!b')
     def r2(self, *events):
         super().r2(*events)
@@ -297,7 +299,8 @@ def test_reaction_using_react_func1():
     """
 
     def foo(*events):
-        print('r ' + ', '.join(['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
+        print('r ' + ', '.join(
+            ['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
 
     m = MyObject2()
     m.reaction(foo, 'foo', 'bar')
@@ -312,14 +315,17 @@ def test_reaction_using_react_func1():
     m.set_bar(3)
     loop.iter()
 
+
 @run_in_both(MyObject2)
 def test_reaction_using_react_func2():
     """
     r foo:0->2, bar:7->2
     r foo:0->3, bar:7->3
     """
+
     def foo(*events):
-        print('r ' + ', '.join(['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
+        print('r ' + ', '.join(
+            ['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
 
     m = MyObject2()
     loop.iter()  # this is extra
@@ -342,9 +348,11 @@ def test_reaction_using_react_func3():
     """
     r foo:0->2, bar:7->2
     """
+
     class Foo:
         def foo(self, *events):
-            print('r ' + ', '.join(['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
+            print('r ' + ', '.join(
+                ['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
 
     f = Foo()
 
@@ -366,7 +374,8 @@ def test_reaction_using_react_func4():
 
     @m.reaction('foo', 'bar')
     def foo(*events):
-        print('r ' + ', '.join(['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
+        print('r ' + ', '.join(
+            ['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
 
     m.set_foo(2)
     m.set_bar(2)
@@ -375,7 +384,6 @@ def test_reaction_using_react_func4():
 
 # not in both
 def test_reaction_builtin_function():
-
     class Foo(event.Component):
         pass
 
@@ -385,16 +393,15 @@ def test_reaction_builtin_function():
 
 ## Reactions as decorators on other components
 
+
 # not in both
 def test_reaction_as_decorator_of_other_cls():
-
     class C1(event.Component):
         foo = event.AnyProp(settable=True)
 
     c1 = C1()
 
     class C2(event.Component):
-
         @c1.reaction('foo')
         def on_foo(self, *events):
             print('x')
@@ -430,7 +437,7 @@ def test_reaction_exceptions1():
 
     @m.reaction('!foo')
     def handle_foo(*events):
-        1/0
+        1 / 0
 
     m.emit('foo', {})
 
@@ -451,7 +458,6 @@ def test_reaction_exceptions1():
 
 
 def test_reaction_exceptions2():
-
     class Foo(event.Component):
         def __init__(self):
             super().__init__()
@@ -467,14 +473,15 @@ def test_reaction_exceptions2():
 
     # not ok
     with raises(RuntimeError) as err:
+
         @f.reaction('bar*.spam')
         def handle_foo(*events):
             pass
+
     assert 'not a tuple' in str(err)
 
 
 def test_reaction_decorator_fails():
-
     class Foo:
         def foo(self, *events):
             pass
@@ -505,8 +512,6 @@ def test_reaction_descriptor_has_local_connection_strings():
 
     m = MyObject1()
     assert m.__class__.r1.local_connection_strings == ['!a']
-
-
 
 
 ## Meta-ish tests that are similar for property/emitter/action/reaction

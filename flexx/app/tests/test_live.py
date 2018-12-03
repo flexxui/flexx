@@ -82,6 +82,7 @@ class JsComponentC(JsComponentA):
 
 ## PyComponent basics
 
+
 @run_live
 async def test_pycomponent_action1():
     """
@@ -123,7 +124,6 @@ async def test_pycomponent_action2():
     with c1:
         c = PyComponentA()
     assert c.session is s
-
 
     c.greet('foo')
     c.greet('bar')
@@ -460,7 +460,6 @@ async def test_jscomponent_init1():
 
 
 class CreatingPyComponent(PyComponentA):
-
     def init(self):
         self._x = JsComponentA(foo=7)
 
@@ -470,7 +469,6 @@ class CreatingPyComponent(PyComponentA):
 
 
 class CreatingJsComponent(JsComponentA):
-
     def init(self):
         self._x = JsComponentA(foo=7)
 
@@ -716,6 +714,7 @@ async def test_sharing_state_between_sessions():
     42
     42
     """
+
     # Test sharing state between multiple sessions
 
     class SharedComponent(event.Component):
@@ -728,8 +727,8 @@ async def test_sharing_state_between_sessions():
     # to really share a component (proxy), but this would mean that a
     # PyComponent could have multiple sessions, which would complicate things
     # too much to be worthwhile.
-    c1 = app.App(PyComponentA, foo=lambda:shared.foo).launch()
-    c2 = app.App(PyComponentA, foo=lambda:shared.foo).launch()
+    c1 = app.App(PyComponentA, foo=lambda: shared.foo).launch()
+    c2 = app.App(PyComponentA, foo=lambda: shared.foo).launch()
     s1, s2 = c1.session, c2.session
 
     with c1:

@@ -58,24 +58,29 @@ class LineEdit(Widget):
 
     ## Properties
 
-    text = event.StringProp(settable=True, doc="""
+    text = event.StringProp(
+        settable=True, doc="""
         The current text of the line edit. Settable. If this is an empty
         string, the placeholder_text is displayed instead.
         """)
 
-    password_mode = event.BoolProp(False, settable=True, doc="""
+    password_mode = event.BoolProp(
+        False, settable=True, doc="""
         Whether the insered text should be hidden.
         """)
 
-    placeholder_text = event.StringProp(settable=True, doc="""
+    placeholder_text = event.StringProp(
+        settable=True, doc="""
         The placeholder text (shown when the text is an empty string).
         """)
 
-    autocomp = event.TupleProp(settable=True, doc="""
+    autocomp = event.TupleProp(
+        settable=True, doc="""
         A tuple/list of strings for autocompletion. Might not work in all browsers.
         """)
 
-    disabled = event.BoolProp(False, settable=True, doc="""
+    disabled = event.BoolProp(
+        False, settable=True, doc="""
         Whether the line edit is disabled.
         """)
 

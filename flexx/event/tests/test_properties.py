@@ -152,7 +152,7 @@ def test_property_defaults1():
 
     # But need settable prop if setting to implicit reaction
     try:
-        MyObject(bar=lambda:'yy')
+        MyObject(bar=lambda: 'yy')
     except TypeError:
         print('fail ok')  # py and js
 
@@ -174,7 +174,7 @@ def test_property_list_init():
     # Good auto-defaults
     print(m.eggs2)
 
-    m = MyObject(eggs=[7,8,9])
+    m = MyObject(eggs=[7, 8, 9])
     loop.iter()
     print(m.eggs)
 
@@ -228,20 +228,22 @@ def test_property_dict_mutate():
     m._mutate_dictprop(dict(foo=3), 'insert')
     m._mutate_dictprop(dict(bar=4), 'replace')  # == insert
 
-    print('{' + ', '.join(['%s: %i' % (key, val)
-                          for key, val in sorted(m.dictprop.items())]) + '}')
+    print('{' +
+          ', '.join(['%s: %i' % (key, val)
+                     for key, val in sorted(m.dictprop.items())]) + '}')
 
     m._mutate_dictprop(dict(foo=5), 'replace')
-    print('{' + ', '.join(['%s: %i' % (key, val)
-                          for key, val in sorted(m.dictprop.items())]) + '}')
-
+    print('{' +
+          ', '.join(['%s: %i' % (key, val)
+                     for key, val in sorted(m.dictprop.items())]) + '}')
 
     m._mutate_dictprop(['foo'], 'remove')
-    print('{' + ', '.join(['%s: %i' % (key, val)
-                          for key, val in sorted(m.dictprop.items())]) + '}')
+    print('{' +
+          ', '.join(['%s: %i' % (key, val)
+                     for key, val in sorted(m.dictprop.items())]) + '}')
 
     try:
-       m._mutate_dictprop(dict(foo=3), 'insert', 0)
+        m._mutate_dictprop(dict(foo=3), 'insert', 0)
     except IndexError:
         print('fail IndexError')
 
@@ -302,7 +304,7 @@ class MyDefaults(event.Component):
     stringprop2 = event.StringProp('heya')
     tupleprop2 = event.TupleProp((2, 'xx'))
     listprop2 = event.ListProp([3, 'yy'])
-    dictprop2 = event.DictProp({'foo':3, 'bar': 4})
+    dictprop2 = event.DictProp({'foo': 3, 'bar': 4})
     componentprop2 = event.ComponentProp(None)
 
 
@@ -332,8 +334,9 @@ def test_property_defaults2():
     print(m.stringprop2)
     print([isinstance(m.tupleprop2, tuple)] + list(m.tupleprop2))  # grrr
     print(m.listprop2)
-    print('{' + ', '.join(['%s: %i' % (key, val)
-                          for key, val in sorted(m.dictprop2.items())]) + '}')
+    print('{' +
+          ', '.join(['%s: %i' % (key, val)
+                     for key, val in sorted(m.dictprop2.items())]) + '}')
     print(m.componentprop2 is None)
 
 
@@ -674,16 +677,19 @@ def test_property_python_only():
 
     # Fail component needs property instance, not class
     with raises(TypeError):
+
         class MyObject2(event.Component):
             foo = event.AnyProp
 
     # Fail multiple positional args
     with raises(TypeError):
+
         class MyObject2(event.Component):
             foo = event.AnyProp(3, 4)
 
     # Fail on old syntax
     with raises(TypeError):
+
         class MyObject2(event.Component):
             @event.Property
             def foo(self, v):
@@ -691,7 +697,6 @@ def test_property_python_only():
 
     with raises(TypeError):
         event.AnyProp(doc=3)
-
 
     m = MyObject()
 

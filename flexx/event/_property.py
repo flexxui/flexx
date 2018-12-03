@@ -98,14 +98,18 @@ class Property(BaseDescriptor):
 
     def make_mutator(self):
         flx_name = self._name
+
         def flx_mutator(self, *args):
             return self._mutate(flx_name, *args)
+
         return flx_mutator
 
     def make_set_action(self):
         flx_name = self._name
+
         def flx_setter(self, *val):
             self._mutate(flx_name, val[0] if len(val) == 1 else val)
+
         return flx_setter
 
     def _validate_py(self, value):
@@ -117,6 +121,7 @@ class Property(BaseDescriptor):
 
 
 ## Basic properties
+
 
 class AnyProp(Property):
     """ A property that can be anything (like Property). Default None.
@@ -153,8 +158,9 @@ class IntProp(Property):
     _default = 0
 
     def _validate(self, value, name, data):
-        if (isinstance(value, (int, float)) or isinstance(value, bool) or
-                                               isinstance(value, str)):
+        if (isinstance(value,
+                       (int, float)) or isinstance(value, bool) or
+                isinstance(value, str)):
             return int(value)
         else:
             raise TypeError('Int property %r cannot accept %r.' % (name, value))
@@ -252,6 +258,7 @@ class ComponentProp(Property):
         if not (value is None or hasattr(value, '_IS_COMPONENT')):
             raise TypeError('Component property %r cannot accept %r.' % (name, value))
         return value
+
 
 ## Advanced properties
 
@@ -356,8 +363,24 @@ class ColorProp(Property):
             "gray": "#808080", "grey": "#808080",
             }
         common_colors[''] = '#0000'  # empty string resolves to alpha 0, like None
-        M = {'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7,
-             '8': 8, '9': 9, 'a': 10, 'b': 11, 'c': 12, 'd': 13, 'e': 14, 'f': 15}
+        M = {
+            '0': 0,
+            '1': 1,
+            '2': 2,
+            '3': 3,
+            '4': 4,
+            '5': 5,
+            '6': 6,
+            '7': 7,
+            '8': 8,
+            '9': 9,
+            'a': 10,
+            'b': 11,
+            'c': 12,
+            'd': 13,
+            'e': 14,
+            'f': 15
+        }
         Mi = '0123456789abcdef'
 
         # Convert from str
@@ -378,11 +401,12 @@ class ColorProp(Property):
             val = common_colors.get(val, val)
             # Resolve CSS
             if val.startswith('#') and len(val) == 4 or len(val) == 5:
-                val = [M.get(val[i], 0) * 17
-                         for i in range(1, len(val), 1)]
+                val = [M.get(val[i], 0) * 17 for i in range(1, len(val), 1)]
             elif val.startswith('#') and len(val) == 7 or len(val) == 9:
-                val = [M.get(val[i], 0) * 16 + M.get(val[i+1], 0)
-                         for i in range(1, len(val), 2)]
+                val = [
+                    M.get(val[i], 0) * 16 + M.get(val[i + 1], 0)
+                    for i in range(1, len(val), 2)
+                ]
             elif val.startswith('rgb(') or val.startswith('rgba('):
                 val = [float(x.strip(' ,();')) for x in val[4:-1].split(',')]
                 if len(val) == 4:
@@ -434,8 +458,8 @@ class ColorProp(Property):
         d.alpha = val[3]
         hex = [int(c * 255) for c in val[:3]]
         d.hex = '#' + ''.join([Mi[int(c / 16)] + Mi[c % 16] for c in hex])
-        d.css = 'rgba({:.0f},{:.0f},{:.0f},{:g})'.format(
-            val[0]*255, val[1]*255, val[2]*255, val[3])
+        d.css = 'rgba({:.0f},{:.0f},{:.0f},{:g})'.format(val[0] * 255, val[1] * 255,
+                                                         val[2] * 255, val[3])
         return d
 
 
@@ -469,7 +493,6 @@ class ColorProp(Property):
 # class Either
 # class Instance
 # class Array
-
 
 __all__ = []
 for name, cls in list(globals().items()):

@@ -189,6 +189,7 @@ def test_property_Color2():
     loop.iter()
     print(m.color.hex, m.color.alpha)
 
+
 run_tests_if_main()
 # if __name__ == '__main__':
-    # test_property_Enum()
+# test_property_Enum()

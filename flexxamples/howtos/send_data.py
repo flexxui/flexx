@@ -14,7 +14,6 @@ the serializer with an extension.
 
 from flexx import flx
 
-
 # Prepare data array, preferably using Numpy
 try:
     import numpy as np
@@ -39,17 +38,21 @@ except ImportError:
         cls = ctypes.Array
 
         typemap = {
-            ctypes.c_bool: 'uint8', ctypes.c_int8: 'int8', ctypes.c_uint8: 'uint8',
-            ctypes.c_int16: 'int16', ctypes.c_uint16: 'uint16',
-            ctypes.c_int32: 'int32', ctypes.c_uint32: 'uint32',
-            ctypes.c_int64: 'int64', ctypes.c_uint64: 'uint64',
-            ctypes.c_float: 'float32', ctypes.c_double: 'float64',
-            }
+            ctypes.c_bool: 'uint8',
+            ctypes.c_int8: 'int8',
+            ctypes.c_uint8: 'uint8',
+            ctypes.c_int16: 'int16',
+            ctypes.c_uint16: 'uint16',
+            ctypes.c_int32: 'int32',
+            ctypes.c_uint32: 'uint32',
+            ctypes.c_int64: 'int64',
+            ctypes.c_uint64: 'uint64',
+            ctypes.c_float: 'float32',
+            ctypes.c_double: 'float64',
+        }
 
         def encode(self, s, v):
-            return dict(shape=(len(v), ),
-                        dtype=self.typemap[v._type_],
-                        data=bytes(v))
+            return dict(shape=(len(v), ), dtype=self.typemap[v._type_], data=bytes(v))
 
 
 class SendData(flx.PyComponent):

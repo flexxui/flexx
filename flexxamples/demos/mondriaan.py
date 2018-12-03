@@ -8,12 +8,12 @@ from flexx import flx
 
 
 class MyVBox(flx.VFix):
-
     def __init__(self, **kwargs):
         kwargs['spacing'] = kwargs.get('spacing', 15)
         kwargs['padding'] = 0
         kwargs['orientation'] = 'vertical'
         super().__init__(**kwargs)
+
 
 class MyHBox(flx.HFix):
     def __init__(self, **kwargs):

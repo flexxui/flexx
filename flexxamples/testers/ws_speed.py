@@ -21,7 +21,6 @@ from flexx import app, event, ui
 
 
 class SpeedTest(app.PyComponent):
-
     def init(self):
         self.widget = SpeedTestWidget(self)
 
@@ -31,7 +30,6 @@ class SpeedTest(app.PyComponent):
 
 
 class SpeedTestWidget(ui.Widget):
-
     def init(self, pycomp):
         self.pycomp = pycomp
         self._start_time = 0
@@ -46,9 +44,8 @@ class SpeedTestWidget(ui.Widget):
                 ui.Button(text='100 x 1 MiB roundtrip')
                 ui.Button(text='100 x 5 MiB roundtrip')
             self.progress = ui.ProgressBar()
-            self.status = ui.Label(text='Status: waiting for button press ...',
-                                   wrap=1, flex=1, style='overflow-y:scroll;')
-
+            self.status = ui.Label(text='Status: waiting for button press ...', wrap=1,
+                                   flex=1, style='overflow-y:scroll;')
 
     @event.reaction('buttons.children*.pointer_down')
     def run_test(self, *events):

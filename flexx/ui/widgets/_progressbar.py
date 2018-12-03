@@ -83,7 +83,8 @@ class ProgressBar(Widget):
         The maximum progress value.
         """)
 
-    text = event.StringProp('', settable=True, doc="""
+    text = event.StringProp(
+        '', settable=True, doc="""
         The label to display on the progress bar. Occurances of
         "{percent}" are replaced with the current percentage, and
         "{value}" with the current value.
@@ -107,8 +108,9 @@ class ProgressBar(Widget):
         label = self.text
         label = label.replace('{value}', str(value))
         label = label.replace('{percent}', Math.round(perc) + '%')
-        attr = {'style__width': perc+'%',
-                'style__height': '100%',
-                'className': 'progress-bar',
-                }
+        attr = {
+            'style__width': perc + '%',
+            'style__height': '100%',
+            'className': 'progress-bar',
+        }
         return [create_element('div', attr, label)]

@@ -14,7 +14,6 @@ from flexx.app._session import Session
 
 from flexx import app
 
-
 N_STANDARD_ASSETS = 3
 
 test_filename = os.path.join(tempfile.gettempdir(), 'flexx_asset_cache.test')
@@ -31,7 +30,8 @@ def test_asset_store_collect():
     assert len(s.modules) > 1
     assert 'flexx.app._component2' in s.modules
 
-    assert 'JsComponent.prototype =' in s.get_asset('flexx.app._component2.js').to_string()
+    assert 'JsComponent.prototype =' in s.get_asset(
+        'flexx.app._component2.js').to_string()
     assert 'JsComponent.prototype =' in s.get_asset('flexx.app.js').to_string()
     assert 'JsComponent.prototype =' in s.get_asset('flexx.js').to_string()
     #assert 'JsComponent.prototype =' not in s.get_asset('flexx.ui.js').to_string()

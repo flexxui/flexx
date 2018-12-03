@@ -7,9 +7,9 @@ from invoke import task
 from ._config import DOC_DIR, DOC_BUILD_DIR
 
 
-@task(help=dict(clean='clear the doc output; start fresh',
-                build='build html docs',
-                show='show the docs in the browser.'))
+@task(
+    help=dict(clean='clear the doc output; start fresh', build='build html docs',
+              show='show the docs in the browser.'))
 def docs(ctx, clean=False, build=False, show=False, **kwargs):
     """ make API documentation
     """
@@ -38,11 +38,14 @@ def sphinx_clean(build_dir):
 
 def sphinx_build(src_dir, build_dir):
     import sphinx
-    cmd = [ '-b', 'html',
-            '-d', op.join(build_dir, 'doctrees'),
-            src_dir,  # Source
-            op.join(build_dir, 'html'),  # Dest
-            ]
+    cmd = [
+        '-b',
+        'html',
+        '-d',
+        op.join(build_dir, 'doctrees'),
+        src_dir,  # Source
+        op.join(build_dir, 'html'),  # Dest
+    ]
 
     if sphinx.version_info > (1, 7):
         import sphinx.cmd.build

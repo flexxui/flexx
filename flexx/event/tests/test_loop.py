@@ -12,7 +12,6 @@ loop = event.loop
 
 
 class Foo(event.Component):
-
     def __init__(self):
         super().__init__()
         self.r = []
@@ -25,6 +24,7 @@ class Foo(event.Component):
 
 
 ## Tests for both
+
 
 @run_in_both()
 def test_calllater():
@@ -39,10 +39,13 @@ def test_calllater():
     called with 3 and 4
     called with 5 and 6
     """
+
     def x1():
         print('called later')
+
     def x2(i):
         print('called with', i)
+
     def x3(i, j):
         print('called with', i, 'and', j)
 
@@ -102,6 +105,7 @@ def test_iter_fail():
     """
     # Failing func call
     res = []
+
     def fail():
         print('1')
         raise AttributeError('xx')
@@ -167,6 +171,7 @@ def test_loop_cannot_call_iter():
     """
     ? Cannot call
     """
+
     def callback():
         try:
             loop.iter()
@@ -187,6 +192,7 @@ def test_loop_asyncio():
     loop.integrate(aio_loop, reset=False)
 
     res = []
+
     def callback():
         res.append(1)
 
@@ -219,6 +225,7 @@ def test_loop_asyncio():
 def xx_disabled_test_integrate():
 
     res = []
+
     def calllater(f):
         res.append(f)
 

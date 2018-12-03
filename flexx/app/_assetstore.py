@@ -16,7 +16,6 @@ from ._asset import Asset, Bundle, HEADER
 from ._modules import JSModule
 from . import logger
 
-
 INDEX = """
 <!doctype html>
 <html>
@@ -49,7 +48,6 @@ ASSET-HOOK
 # (re)define module classes. The loader is itself wrapped in a IIFE to
 # create a private namespace. The modules must follow this pattern:
 # define(name, dep_strings, function (name1, name2) {...});
-
 
 # todo: have loaders per session, or allow prefixing with session id, so that
 # each session can bring their own assets and not clash.
@@ -196,19 +194,22 @@ class AssetStore:
         asset_loader = Asset('flexx-loader.js', LOADER)
         # Create asset for PScript std
         func_names, method_names = get_all_std_names()
-        mod = create_js_module('pscript-std.js', get_full_std_lib(),
-                               [], func_names + method_names, 'amd-flexx')
+        mod = create_js_module('pscript-std.js', get_full_std_lib(), [],
+                               func_names + method_names, 'amd-flexx')
         asset_pscript = Asset('pscript-std.js', HEADER + mod)
         # Create asset for the even system
-        pre1 = ', '.join(['%s%s = _py.%s%s' % (FUNCTION_PREFIX, n, FUNCTION_PREFIX, n)
-                          for n in JS_EVENT.meta['std_functions']])
-        pre2 = ', '.join(['%s%s = _py.%s%s' % (METHOD_PREFIX, n, METHOD_PREFIX, n)
-                          for n in JS_EVENT.meta['std_methods']])
-        mod = create_js_module('flexx.event.js',
-                               'var %s;\nvar %s;\n%s' % (pre1, pre2, JS_EVENT),
-                               ['pscript-std.js as _py'],
-                               ['Component', 'loop', 'logger'] + _property.__all__,
-                               'amd-flexx')
+        pre1 = ', '.join([
+            '%s%s = _py.%s%s' % (FUNCTION_PREFIX, n, FUNCTION_PREFIX, n)
+            for n in JS_EVENT.meta['std_functions']
+        ])
+        pre2 = ', '.join([
+            '%s%s = _py.%s%s' % (METHOD_PREFIX, n, METHOD_PREFIX, n)
+            for n in JS_EVENT.meta['std_methods']
+        ])
+        mod = create_js_module(
+            'flexx.event.js', 'var %s;\nvar %s;\n%s' % (pre1, pre2, JS_EVENT),
+            ['pscript-std.js as _py'],
+            ['Component', 'loop', 'logger'] + _property.__all__, 'amd-flexx')
         asset_event = Asset('flexx.event.js', HEADER + mod)
         # Create asset for bsdf - we replace the UMD loader code with flexx.define()
         code = open(get_resoure_path('bsdf.js'), 'rb').read().decode().replace('\r', '')

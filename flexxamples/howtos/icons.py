@@ -1,5 +1,4 @@
 # doc-export: Icons2
-
 """
 This example demonstrates the use of icons in Flexx.
 
@@ -26,13 +25,11 @@ black_png = ('data:image/png;base64,'
 
 
 class Icons1(flx.Widget):
-
     def init(self):
         flx.Button(text='Not much to see here ...')
 
 
 class Icons2(flx.Widget):
-
     def init(self):
         self.set_title('Icon demo')
         self.set_icon(black_png)

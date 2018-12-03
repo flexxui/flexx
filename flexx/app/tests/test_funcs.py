@@ -18,6 +18,7 @@ def test_restarting():
     """ Test stopping and starting the ioloop.
     """
     res = []
+
     def add_res(i):
         res.append(i)
 
@@ -78,7 +79,6 @@ def test_more_stopping():
     app.start()
     assert time.time() - t0 < 0.1
 
-
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     server = app.create_server()
@@ -105,6 +105,7 @@ def test_rebinding_ioloop():
     """
 
     res = []
+
     def add_res(i):
         res.append(i)
 

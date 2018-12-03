@@ -62,7 +62,7 @@ class CollisionWidget(flx.Widget):
             q = d3.geom.quadtree(nodes)
             i = 0
             n = nodes.length
-            while i < n-1:
+            while i < n - 1:
                 i += 1
                 q.visit(collide(nodes[i]))
             svg.selectAll("circle").attr("cx", lambda d: d.x).attr("cy", lambda d: d.y)
@@ -99,11 +99,11 @@ class CollisionWidget(flx.Widget):
                         quad.point.x += x
                         quad.point.y += y
                 return x1 > nx2 or x2 < nx1 or y1 > ny2 or y2 < ny1
+
             return func
 
 
 class CollisionDemo(flx.Widget):
-
     def init(self):
         with flx.VSplit():
             with flx.HSplit():

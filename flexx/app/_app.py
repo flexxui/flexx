@@ -63,8 +63,8 @@ class App:
             self.kwargs['title'] = 'Flexx app - ' + cls.__name__
         if hasattr(cls, 'set_icon') and self.kwargs.get('icon', None) is None:
             # Set icon as base64 str; exported apps can still be standalone
-            fname = os.path.abspath(os.path.join(__file__, '..', '..',
-                                                    'resources', 'flexx.ico'))
+            fname = os.path.abspath(
+                os.path.join(__file__, '..', '..', 'resources', 'flexx.ico'))
             icon_str = encodebytes(open(fname, 'rb').read()).decode()
             self.kwargs['icon'] = 'data:image/ico;base64,' + icon_str
 
@@ -241,7 +241,7 @@ class App:
 
         # Add shares assets if we link to it from the main page
         if link in (2, 3):
-            d.update(assets._dump_assets(link==2))  # also_remote if link==2
+            d.update(assets._dump_assets(link == 2))  # also_remote if link==2
 
         # Add session specific, and shared data
         d.update(session._dump_data())
@@ -276,11 +276,8 @@ class App:
         if not isinstance(filename, str):
             raise ValueError('str filename required, use dump() for in-memory export.')
         filename = os.path.abspath(os.path.expanduser(filename))
-        if (
-                os.path.isdir(filename) or
-                filename.endswith(('/', '\\')) or
-                '.' not in os.path.basename(filename)
-                ):
+        if (os.path.isdir(filename) or filename.endswith(('/', '\\')) or
+                '.' not in os.path.basename(filename)):
             dirname = filename
             fname = None
         else:
@@ -339,10 +336,11 @@ class App:
         else:
             print('Publish succeeded, ' + r.text)
             if url.startswith('http://flexx.app'):
-                print('You app is now available at '
-                      'http://flexx.app/open/%s/' % name)
+                print('You app is now available at ' 'http://flexx.app/open/%s/' % name)
+
 
 # todo: thread safety
+
 
 def valid_app_name(name):
     T = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789'
@@ -350,6 +348,7 @@ def valid_app_name(name):
 
 
 # Note that the AppManager is a Component (but not a PyComponent)
+
 
 class AppManager(event.Component):
     """ Manage apps, or more specifically, the session objects.
@@ -445,8 +444,9 @@ class AppManager(event.Component):
                 if name == '__default__':
                     continue
                 _, pending, _ = self._appinfo[name]
-                to_remove = [s for s in pending
-                             if (time.time() - s._creation_time) > max_age]
+                to_remove = [
+                    s for s in pending if (time.time() - s._creation_time) > max_age
+                ]
                 for s in to_remove:
                     self._session_map.pop(s.id, None)
                     pending.remove(s)
@@ -505,8 +505,8 @@ class AppManager(event.Component):
                 pending.remove(session)
                 break
         else:
-            raise RuntimeError('Asked for session id %r, but could not find it' %
-                               session_id)
+            raise RuntimeError(
+                'Asked for session id %r, but could not find it' % session_id)
 
         # Add app to connected, set ws
         assert session.id == session_id
@@ -535,7 +535,7 @@ class AppManager(event.Component):
             connected.remove(session)
         except ValueError:
             pass
-        logger.info('Session closed %s %s' %(session.app_name, session.id))
+        logger.info('Session closed %s %s' % (session.app_name, session.id))
         session.close()
         self.connections_changed(session.app_name)
 

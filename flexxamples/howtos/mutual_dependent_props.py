@@ -33,6 +33,7 @@ class Temperature(event.Component):
         print('  temp in Celcius: %1.1f C' % self.c)
         print('  temp in Fahrenheit: %1.1f F' % self.f)
 
+
 t = Temperature()
 
 print('Water is freezing:')

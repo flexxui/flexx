@@ -30,7 +30,7 @@ class Node(event.Component):
                 xx.append(self.parent.val)
             else:
                 xx.append(None)
-        print('parent.val ' +  ', '.join([str(x) for x in xx]))
+        print('parent.val ' + ', '.join([str(x) for x in xx]))
 
     @event.reaction('children*.val')
     def handle_children_val(self, *events):
@@ -102,6 +102,7 @@ def test_dynamism2a():
                 res.append(n.parent.val)
             else:
                 res.append(None)
+
     n.reaction(func, 'parent.val')
 
     loop.iter()
@@ -149,6 +150,7 @@ def test_dynamism2b():
                 res.append(n.parent.val)
             else:
                 res.append(None)
+
     handler = n.reaction(func, 'parent', 'parent.val')  # also connect to parent
 
     loop.iter()
@@ -234,6 +236,7 @@ def test_dynamism4a():
                 res.append(ev.new_value)
             else:
                 res.append(None)
+
     handler = n.reaction(func, 'children*.val')
 
     loop.iter()
@@ -281,6 +284,7 @@ def test_dynamism4b():
                 res.append(ev.new_value)
             else:
                 res.append(None)
+
     handler = n.reaction(func, 'children', 'children*.val')  # also connect children
 
     loop.iter()
@@ -319,6 +323,7 @@ def test_dynamism5a():
     n.foo = n1
 
     res = []
+
     def func(*events):
         for ev in events:
             if isinstance(ev.new_value, (float, int)):
@@ -356,6 +361,7 @@ def test_dynamism5b():
     n.foo = n1
 
     res = []
+
     def func(*events):
         for ev in events:
             if isinstance(ev.new_value, (float, int)):
@@ -380,8 +386,6 @@ def test_dynamism5b():
     print(res)
 
 
-
-
 @run_in_both(Node)
 def test_deep1():
     """
@@ -401,6 +405,7 @@ def test_deep1():
     loop.iter()
 
     res = []
+
     def func(*events):
         for ev in events:
             if isinstance(ev.new_value, (float, int)):
@@ -408,6 +413,7 @@ def test_deep1():
                     res.append(ev.new_value)
             else:
                 res.append(None)
+
     handler = n.reaction(func, 'children**.val')
 
     loop.iter()
@@ -449,6 +455,7 @@ def test_deep2():
     loop.iter()
 
     res = []
+
     def func(*events):
         for ev in events:
             if isinstance(ev.new_value, (float, int)):
@@ -458,6 +465,7 @@ def test_deep2():
                     res.append('id%i' % ev.source.val)
             else:
                 res.append(None)
+
     handler = n.reaction(func, 'children**')
 
     loop.iter()
@@ -478,7 +486,6 @@ def test_deep2():
         n2.set_children([])  # no longer in the tree
         n1.set_children([])
     print(res)
-
 
 
 class TestOb(event.Component):
@@ -579,6 +586,7 @@ def test_issue_460_and_more():
 
 
 ## Python only
+
 
 class MyComponent(event.Component):
 

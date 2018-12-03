@@ -31,8 +31,7 @@ def copyright(ctx):
             filename = os.path.join(dirpath, fname)
             text = open(filename, 'rt', encoding='utf-8').read()
             if 'copyright' in text[:200].lower():
-                print(
-                    'Copyright in %s%s%s' % (reldirpath, os.path.sep, fname))
+                print('Copyright in %s%s%s' % (reldirpath, os.path.sep, fname))
                 for i, line in enumerate(text[:200].splitlines()):
                     if 'copyright' in line.lower():
-                        print('  line %i: %s' % (i+1, line))
+                        print('  line %i: %s' % (i + 1, line))

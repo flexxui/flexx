@@ -21,9 +21,8 @@ from flexx import event
 loop = event.loop
 logger = event.logger
 
-
-
 ## Greedy reactions
+
 
 class MyObject1(event.Component):
 
@@ -180,6 +179,7 @@ def test_reaction_auto2():
 
 
 ## One liner
+
 
 class MyObject4(event.Component):
 

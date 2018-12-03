@@ -5,7 +5,6 @@ from flexx import flx
 
 
 class Tester(flx.Widget):
-
     def init(self):
         super().init()
 

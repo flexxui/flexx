@@ -103,19 +103,24 @@ class Flexx:
             window.console.ori_log(msg)
             for session in self.sessions.values():
                 session.send_command("PRINT", str(msg))
+
         def info(msg):
             window.console.ori_info(msg)
             for session in self.sessions.values():
                 session.send_command("INFO", str(msg))
+
         def warn(msg):
             window.console.ori_warn(msg)
             for session in self.sessions.values():
                 session.send_command("WARN", str(msg))
+
         def error(msg):
             evt = dict(message=str(msg), error=msg, preventDefault=lambda: None)
             on_error(evt)
+
         def on_error(evt):
             self._handle_error(evt)
+
         on_error = on_error.bind(self)
         # Set new versions
         window.console.log = log
@@ -129,13 +134,13 @@ class Flexx:
         # The call to this method is embedded by get_page(),
         # or injected by init_notebook().
         # Can be called before init() is called.
-        
+
         if self._validate_browser_capabilities():
             s = JsSession(app_name, session_id, ws_url)
             self._session_count += 1
             self['s' + self._session_count] = s
             self.sessions[session_id] = s
-    
+
     def _validate_browser_capabilities(self):
         # We test a handful of features here, and assume that if these work,
         # all of Flexx works. It is not a hard guarantee, of course, because
@@ -161,7 +166,7 @@ class Flexx:
             return true;
         }
         """)
-    
+
     def _handle_error(self, evt):
         msg = short_msg = evt.message
         if not window.evt:
@@ -197,8 +202,8 @@ class Flexx:
         for session in self.sessions.values():
             session.send_command("ERROR", short_msg)
 
-class JsSession:
 
+class JsSession:
     def __init__(self, app_name, id, ws_url=None):
         self.app = None  # the root component (can be a PyComponent)
         self.app_name = app_name
@@ -327,6 +332,7 @@ class JsSession:
         def on_ws_open(evt):
             window.console.info('Socket opened with session id ' + self.id)
             self.send_command('HI_FLEXX', self.id)
+
         def on_ws_message(evt):
             msg = evt.data  # bsdf-encoded command
             if not msg:
@@ -339,6 +345,7 @@ class JsSession:
                 if len(self._pending_commands) == 0:
                     window.setTimeout(self._process_commands, 0)
                 self._pending_commands.push(msg)
+
         def on_ws_close(evt):
             self._ws = None
             self.status = 0
@@ -350,6 +357,7 @@ class JsSession:
                 window.document.body.textContent = msg
             else:
                 window.console.info(msg)
+
         def on_ws_error(self, evt):
             self._ws = None
             self.status = 0
@@ -459,8 +467,8 @@ class JsSession:
                 el.innerHTML = code
                 window.flexx.asset_node.appendChild(el)
             else:
-                window.console.error('Dont know how to DEFINE ' +
-                                     name + ' with "' + kind + '".')
+                window.console.error('Dont know how to DEFINE ' + name + ' with "' +
+                                     kind + '".')
         elif cmd == 'OPEN':
             window.win1 = window.open(command[1], 'new', 'chrome')
         else:
