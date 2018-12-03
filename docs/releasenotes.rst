@@ -3,6 +3,13 @@ Release notes
 -------------
 
 
+**v0.7.1** (03-12-2018)
+
+* Improved shutdown behavior (#533).
+* Small fix in App.export (#532).
+* Fix bahevior when navigating *back* to a Flexx app (#536).
+
+
 **v0.7.0** (02-11-2018)
 
 * New examples for Openlayers and including local assets (by @ocobacho).
