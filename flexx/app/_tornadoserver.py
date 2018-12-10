@@ -126,6 +126,7 @@ class TornadoServer(AbstractServer):
         proto = 'http'
         if 'ssl_options' in kwargs:
             proto = 'https'
+        # This string 'Serving apps at' is our 'ready' signal and is tested for.
         logger.info('Serving apps at %s://%s:%i/' % (proto, host, port))
 
     def _close(self):
