@@ -356,6 +356,6 @@ def test_serving_apps_at_output_message():
         app.stop()  # triggers event to stop
         app.start()
 
-    assert "Serving apps at" in ''.join(log)
+    assert 'Serving apps at' in ''.join(log)
 
 run_tests_if_main()
