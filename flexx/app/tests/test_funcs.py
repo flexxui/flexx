@@ -1,4 +1,5 @@
 from flexx.util.testing import run_tests_if_main, raises
+from flexx.util.logging import capture_log
 
 import time
 import asyncio
@@ -346,5 +347,15 @@ def test_flexx_multiprocessing():
 
     assert True  # Just arriving here is enough to pass this test
 
+
+def test_serving_apps_at_output_message():
+    """ Test for 'Serving apps at' ready signal.
+    """
+    with capture_log('info') as log:
+        server = app.create_server()
+        app.stop()  # triggers event to stop
+        app.start()
+
+    assert "Serving apps at" in ''.join(log)
 
 run_tests_if_main()
