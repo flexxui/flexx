@@ -14,7 +14,7 @@ become children.
     class Example(flx.Widget):
         def init(self):
             super().init()
-            
+
             flx.Button(text='foo')
             flx.Button(text='bar')
 
@@ -30,7 +30,7 @@ layout widgets (like ``HBox``).
     class Example(flx.Widget):
         def init(self):
             super().init()
-            
+
             with flx.HBox():
                 flx.Button(flex=1, text='foo')
                 flx.Button(flex=2, text='bar')
@@ -44,15 +44,15 @@ the real browser DOM.
 .. UIExample:: 100
 
     from flexx import flx
-    
+
     class Example(flx.Widget):
-        
+
         count = flx.IntProp()
-        
+
         def _render_dom(self):
             # This method automatically gets called when any of the used
             # properties (only count, in this case) changes.
-            return flx.create_element('div', {}, 
+            return flx.create_element('div', {},
                 flx.create_element('button',
                                    {'onclick': self.increase_count},
                                    '+'),
@@ -60,7 +60,7 @@ the real browser DOM.
                                    {'style.background': '#afa'},
                                    str(self.count)),
                 )
-        
+
         @flx.action
         def increase_count(self):
             self._mutate_count(self.count + 1)
@@ -100,28 +100,28 @@ def create_element(type, props=None, *children):
 class Widget(app.JsComponent):
     """ Base widget class (a :class:`Component <flexx.event.Component>` in JS wrapping
     an `HTML element <https://developer.mozilla.org/docs/Web/HTML/Element>`_).
-    
+
     When subclassing a Widget, it is recommended to not implement the
     ``__init__()`` method, but instead implement ``init()`` for compound
     (higher-level) widgets, and ``_create_dom()`` for low-level widgets.
-    
+
     Widgets can be styled using `CSS <https://developer.mozilla.org/docs/Web/CSS>`_
     by implementing a string class attribute named ``CSS``.
     A widget's node has a CSS-class-name corresponding to its Python class
     (and its base classes), following the scheme ``flx-WidgetClassName``.
-    
+
     All widgets have a ``node`` and ``outernode`` attribute (only accessible
-    in JavaScript), representing the 
+    in JavaScript), representing the
     `DOM element(s) <https://developer.mozilla.org/docs/Web/HTML/Element>`_
     that represent the widget. For most types of widgets, ``node`` is
     equal to ``outernode``. For the ``Widget`` class, this is simply a
     `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_
     element. If you don't understand what this is about, don't worry;
     you won't need it unless you are creating your own low-level widgets :)
-    
+
     When implementing your own widget class, the class attribute
     ``DEFAULT_MIN_SIZE`` can be set to specify a sensible minimum size.
-    
+
     """
 
     DEFAULT_MIN_SIZE = 0, 0
@@ -293,7 +293,7 @@ class Widget(app.JsComponent):
         except KeyError:
             given_parent = parent = None
             parent_given = False
-        
+
         if parent is None:
             active_components = loop.get_active_components()
             for active_component in reversed(active_components):
@@ -379,7 +379,7 @@ class Widget(app.JsComponent):
         """ Overload this to initialize a custom widget. It's preferred
         to use this instead of ``__init__()``, because it gets called
         at a better moment in the instantiation of the widget.
-        
+
         This method receives any positional arguments that were passed
         to the constructor.  When called, this widget is the current parent.
         """
@@ -915,7 +915,8 @@ class Widget(app.JsComponent):
         self._addEventListener(self.node, 'mousedown', mdown, True)
         self._addEventListener(self.node, "losecapture", losecapture)
         # Subscribe to normal mouse events
-        self._addEventListener(self.node, "mousemove", mmove_inside, False)
+        window.console.log('Disabled generic mousemove listener')
+        # self._addEventListener(self.node, "mousemove", mmove_inside, False)
         self._addEventListener(self.node, "mouseup", mup_inside, False)
 
     @event.emitter

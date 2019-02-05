@@ -176,12 +176,12 @@ class App:
         links to them). A link value of 0/1 may be prefered for
         performance or ease of distribution, but with link 2/3 debugging
         is easier and multiple apps can share common assets.
-        
+
         When a process only dumps/exports an app, no server is started.
         Tornado is not even imported (we have a test for this). This makes
         it possible to use Flexx to dump an app and then serve it with any
         tool one likes.
-        
+
         Arguments:
             fname (str, optional): the name of the main html asset.
                 If not given or None, the name of the component class

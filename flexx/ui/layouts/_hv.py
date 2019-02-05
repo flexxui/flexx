@@ -154,7 +154,7 @@ class HVLayout(Layout):
     `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_. The
     outer nodes of the child widgets are layed-out using JavaScript of CSS,
     depending on the mode.
-    
+
     Also see the convenience classes: HFix, VFix, HBox, VBox, HSplit, VSplit.
     """
 
@@ -293,7 +293,7 @@ class HVLayout(Layout):
         'left-to-right', 'right-to-left', 'top-to-bottom', 'bottom-to-top'
         (insensitive to case and use of dashes).
         """)
-    
+
     spacing = event.FloatProp(4, settable=True, doc="""
         The space between two child elements (in pixels).
         """)
@@ -402,18 +402,18 @@ class HVLayout(Layout):
         # look for min/max sizes of their children. We could set min-width and
         # friends at the layout to help flexbox a bit, but that would possibly
         # overwrite a user-set value. Hopefully flexbox will get fixed soon.
-        
+
         hori = 'h' in self.orientation
-        
+
         # Own limits
         mima0 = super()._query_min_max_size()
-        
+
         # Init limits for children
         if hori is True:
             mima1 = [0, 0, 0, 1e9]
         else:
             mima1 = [0, 1e9, 0, 0]
-        
+
         # Collect contributions of child widgets?
         if self.minsize_from_children:
             for child in self.children:
@@ -428,13 +428,13 @@ class HVLayout(Layout):
                     mima1[1] = min(mima1[1], mima2[1])
                     mima1[2] += mima2[2]
                     mima1[3] += mima2[3]
-        
+
         # Set unset max sizes
         if mima1[1] == 0:
             mima1[1] = 1e9
         if mima1[3] == 0:
             mima1[3] = 1e9
-        
+
         # Add padding and spacing
         if self.minsize_from_children:
             extra_padding = self.padding * 2
@@ -447,7 +447,7 @@ class HVLayout(Layout):
             else:
                 mima1[2] += extra_spacing
                 mima1[3] += extra_spacing
-        
+
         # Combine own limits with limits of children
         return [max(mima1[0], mima0[0]),
                 min(mima1[1], mima0[1]),

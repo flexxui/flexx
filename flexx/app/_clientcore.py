@@ -129,7 +129,7 @@ class Flexx:
         # The call to this method is embedded by get_page(),
         # or injected by init_notebook().
         # Can be called before init() is called.
-        
+
         if window.performance and window.performance.navigation.type == 2:
             # Force reload when we got here with back-button, otherwise
             # an old session-id is used, see issue #530
@@ -139,7 +139,7 @@ class Flexx:
             self._session_count += 1
             self['s' + self._session_count] = s
             self.sessions[session_id] = s
-    
+
     def _validate_browser_capabilities(self):
         # We test a handful of features here, and assume that if these work,
         # all of Flexx works. It is not a hard guarantee, of course, because
@@ -165,7 +165,7 @@ class Flexx:
             return true;
         }
         """)
-    
+
     def _handle_error(self, evt):
         msg = short_msg = evt.message
         if not window.evt:
@@ -238,7 +238,7 @@ class JsSession:
 
         # Initiate service to track resize
         window.addEventListener('resize', self._check_size_of_objects, False)
-        window.setInterval(self._check_size_of_objects, 1000)
+        # window.setInterval(self._check_size_of_objects, 1000)
 
     def exit(self):
         if self._ws:  # is not null or undefined
