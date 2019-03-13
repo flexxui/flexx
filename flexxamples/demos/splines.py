@@ -11,8 +11,8 @@ from flexx import flx
 SPLINES = ['linear', 'basis', 'cardinal', 'catmullrom', 'lagrange', 'lanczos']
 
 GENERAL_TEXT = """
-The splines in this exampe are used to interpolate a line between
-control points. The the range of influence is shown when a control point
+The splines in this example are used to interpolate a line between
+control points. The range of influence is shown when a control point
 is clicked. Move the control points by dragging them. Points can be
 added and deleted by holding shift and clicking.
 """
@@ -39,15 +39,15 @@ commonly used in computer graphics to interpolate motion between key frames.
 
 LAGRANGE_TEXT = """
 The Lagrange polynomials result in (C0 continous) interpolation
-equivalent to Newton a polynomial. It is, however, know to suffer from
-Runge's phenomenon (oscilating).
+equivalent to Newton a polynomial. It is, however, known to suffer from
+Runge's phenomenon (oscillations).
 """
 
 LANCZOS_TEXT = """
 Lanczos interpolation (C1 continous) is based on a windowed sinc
-function and is usually considered to produced the best result from the
+function and is usually considered to produce the best results from the
 perspective of the fourier domain. It's mainly used in applications
-related audio.
+related to audio processing.
 """
 
 
