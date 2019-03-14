@@ -112,7 +112,7 @@ class BaseTableLayout(Layout):
             row.vflex = vflexes[i] or 0  # Store for use during resizing
             for j in range(ncols):
                 col = row.children[j]
-                if (col is undefined) or (col.children.length is 0):
+                if (col is undefined) or (col.children.length == 0):
                     continue
                 self._apply_cell_layout(row, col, vflexes[i], hflexes[j],
                                         cum_vflex, cum_hflex)
@@ -166,7 +166,7 @@ class BaseTableLayout(Layout):
 class FormLayout(BaseTableLayout):
     """ A layout widget that vertically alligns its child widgets in a form.
     A label is placed to the left of each widget (based on the widget's title).
-    
+
     The ``node`` of this widget is a
     `<table> <https://developer.mozilla.org/docs/Web/HTML/Element/table>`_.
     (This may be changed to use a CSS layout instead.)

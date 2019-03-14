@@ -9,7 +9,7 @@ from pscript import this_is_js
 
 from flexx import app, event
 
-from flexx.util.testing import run_tests_if_main, raises, skip
+from flexx.util.testing import run_tests_if_main, raises, skip, skipif
 from flexx.app.live_tester import run_live, roundtrip, launch
 
 from flexx.event import loop
@@ -580,6 +580,7 @@ async def test_proxy_binding2():
     print(c3.foo)
 
 
+@skipif(True, reason='This test is flaky since early 2019')
 @run_live
 async def test_proxy_binding3():
     """

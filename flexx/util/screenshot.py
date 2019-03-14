@@ -21,11 +21,11 @@ if sys.platform.startswith('win'):
                     ('bottom', ctypes.c_long)]
 
     class BITMAPINFOHEADER(ctypes.Structure):
-            _fields_ = [('biSize', DWORD), ('biWidth', LONG), ('biHeight', LONG),
-                        ('biPlanes', WORD), ('biBitCount', WORD),
-                        ('biCompression', DWORD), ('biSizeImage', DWORD),
-                        ('biXPelsPerMeter', LONG), ('biYPelsPerMeter', LONG),
-                        ('biClrUsed', DWORD), ('biClrImportant', DWORD)]
+        _fields_ = [('biSize', DWORD), ('biWidth', LONG), ('biHeight', LONG),
+                    ('biPlanes', WORD), ('biBitCount', WORD),
+                    ('biCompression', DWORD), ('biSizeImage', DWORD),
+                    ('biXPelsPerMeter', LONG), ('biYPelsPerMeter', LONG),
+                    ('biClrUsed', DWORD), ('biClrImportant', DWORD)]
 
     class BITMAPINFO(ctypes.Structure):
         _fields_ = [('bmiHeader', BITMAPINFOHEADER), ('bmiColors', DWORD * 3)]

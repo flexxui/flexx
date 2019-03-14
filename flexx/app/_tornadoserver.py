@@ -67,7 +67,10 @@ class TornadoServer(AbstractServer):
         # I am sorry for this hack, but Tornado wont work otherwise :(
         # I wonder how long it will take before this will bite me back. I guess
         # we will be alright as long as there is no other Tornado stuff going on.
-        IOLoop._current.instance = None
+        if hasattr(IOLoop, "_current"):
+            IOLoop._current.instance = None
+        else:
+            IOLoop.current().instance = None
         self._io_loop.make_current()
 
         # handle ssl, wether from configuration or given args

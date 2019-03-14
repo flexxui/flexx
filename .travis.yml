@@ -16,6 +16,10 @@ branches:
   only:
     - master
 
+# https://benlimmer.com/2019/01/14/travis-ci-xvfb/
+services:
+  - xvfb
+
 matrix:
     include:
         - python: "3.6"
@@ -83,13 +87,9 @@ install:
       fi;
 
 before_script:
-  # Enable fake display so that we can run firefox
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
-  - sleep 3 # give xvfb some time to start
 
 # Run the tests
-script: 
+script:
     - cd ${SRC_DIR};
     - python -c "import sys; print(sys.version, '\n', sys.prefix)"
     - if [ "${TEST_UNIT}" == "1" ]; then
