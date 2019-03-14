@@ -16,6 +16,7 @@ branches:
   only:
     - master
 
+# https://benlimmer.com/2019/01/14/travis-ci-xvfb/
 services:
   - xvfb
 
@@ -86,10 +87,6 @@ install:
       fi;
 
 before_script:
-  # Enable fake display so that we can run firefox
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
-  - sleep 3 # give xvfb some time to start
 
 # Run the tests
 script:
