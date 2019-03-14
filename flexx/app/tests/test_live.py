@@ -580,6 +580,7 @@ async def test_proxy_binding2():
     print(c3.foo)
 
 
+@skipif('__pypy__' in sys.builtin_module_names, reason='pypy fails at this')
 @run_live
 async def test_proxy_binding3():
     """
