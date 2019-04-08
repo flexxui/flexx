@@ -109,7 +109,7 @@ def test_session_registering_component_classes():
     assert len(s.present_modules) == 2
     assert 'flexx.ui._widget' in s.present_modules
     assert 'flexx.ui.widgets._button' in s.present_modules
-    assert len(s._present_classes) == 6  # Because a module was loaded that has more widgets
+    assert len(s._present_classes) == 7  # Because a module was loaded that has more widgets
     assert ui.Button in s._present_classes
     assert ui.RadioButton in s._present_classes
     assert ui.CheckBox in s._present_classes
