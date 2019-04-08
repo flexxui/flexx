@@ -7,6 +7,12 @@ code that runs in JavaScript. This is done by *transpiling* the Python code
 to JavaScript using a tool called `PScript <http://pscript.readthedocs.io>`_,
 which is a spin-off of the Flexx project.
 
+The compilation of Python code to JavaScript happens automatically, at the
+moment that a ``JsComponent`` gets defined (i.e. imported). Flexx is aware
+of the classes that the browsers needs to know about and sends the corresponding
+code when needed. Therefore it's possible to dynamically import or
+create new classes and use them.
+
 
 PScript is almost Python
 ------------------------
