@@ -21,13 +21,13 @@ def main():
     layouts = set()
     
     # Get all pages and class names
-    namespace = {}; namespace.update(ui.__dict__); namespace.update(ui.layouts.__dict__); namespace.update(ui.widgets.__dict__)
+    namespace = {}; namespace.update(ui.__dict__); namespace.update(ui.layouts.__dict__); namespace.update(ui.widgets.__dict__); namespace.update(ui.pywidgets.__dict__)
     for mod in namespace.values():
         if isinstance(mod, ModuleType):
             classes = []
             for w in mod.__dict__.values():
                 if isinstance(w, type) and issubclass(w, (app.PyComponent, app.JsComponent)):
-                    if w.__module__ == mod.__name__:
+                    if w.__module__ == mod.__name__ and not w.__name__.startswith("_"):
                         classes.append(w)
                         if issubclass(w, ui.Layout):
                             layouts.add(w.__name__)

@@ -15,3 +15,4 @@ del logging
 from ._widget import Widget, PyWidget, create_element
 from .layouts import *
 from .widgets import *
+from .pywidgets import *
