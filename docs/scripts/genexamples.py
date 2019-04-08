@@ -40,10 +40,21 @@ def get_notebook_list():
     return filenames
 
 
+EXAMPLES_TEXT = """
+This page provides a list of examples. Some demonstate a specific application,
+while others show a tool/technique that is generically useful. In the latter case
+you can import the widget using e.g. ``from flexxamples.howtos.editor_cm import CodeEditor``.
+
+Note that most examples are written in such a way that they work in the
+browser (by subclassing :class:`Widget <flexx.ui.Widget>`). If you are creating a desktop
+application, you probably want to use :class:`PyWidget <flexx.ui.PyWidget>` to create your
+high-level widgets instead.
+"""
+
 def main():
-    
+
     output_dir = os.path.join(DOC_DIR, 'examples')
-    
+
     # Collect examples
     examples = {}
     for sub, dirname in EXAMPLES_DIRS:
@@ -62,36 +73,33 @@ def main():
                     text +=  '.. raw:: html\n\n    ' + html + '\n\n'
                 text += '.. code-block:: py\n    :linenos:\n\n'
                 text += '\n    ' + code.replace('\n', '\n    ').rstrip() + '\n'
-                
+
                 examples[sub][fname] = text
         if not examples[sub]:
             del examples[sub]
-    
+
         # Write source for all examples
         for name in examples[sub]:
             filename = os.path.join(output_dir, name[:-3] + '_src.rst')
             created_files.append(filename)
             open(filename, 'wt', encoding='utf-8').write(examples[sub][name])
-    
+
     # Create example page
     docs = 'Examples'
     docs += '\n%s\n\n' % (len(docs) * '=')
-    
-    docs += "This page provides a list of examples. Some demonstate a specific application, "
-    docs += "while others show a tool/technique that is generically useful. In the latter case "
-    docs += "you can import the widget using e.g. ``from flexxamples.howtos.editor_cm import CodeEditor``."
-    docs += "\n\n"
-    
+
+    docs += EXAMPLES_TEXT + "\n\n"
+
     for sub, _ in EXAMPLES_DIRS:
         section = sub.capitalize()
         docs += '\n%s\n%s\n\n' % (section, len(section) * '-')
         for name in sorted(examples[sub]):
             docs += '* :ref:`%s`\n' % name
-        
+
     filename = os.path.join(DOC_DIR, 'examples', 'index.rst')
     created_files.append(filename)
     open(filename, 'wt', encoding='utf-8').write(docs)
-    
+
     print('  generated %i examples' % sum([len(x) for x in examples.values()]))
 
 

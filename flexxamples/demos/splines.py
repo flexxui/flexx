@@ -303,7 +303,7 @@ class Splines(flx.Widget):
                 closed = flx.CheckBox(text='Closed')
                 flx.Widget(minsize=10)
                 self.tension = flx.Slider(min=-0.5, max=1, value=0.5,
-                                          text=lambda: 'Tension: {value}')
+                                          text='Tension: {value}')
                 flx.Widget(flex=1)
 
             with flx.VBox(flex=1):
@@ -330,7 +330,7 @@ class Splines(flx.Widget):
             return  # init event
         type = ev.source.text.replace(' ', '')
         self.spline.set_spline_type(type)
-        self.explanation.set_text(self[type.upper() + '_TEXT'])
+        self.explanation.set_text(getattr(self, type.upper() + '_TEXT'))
 
     @flx.reaction
     def __show_hide_tension_slider(self):

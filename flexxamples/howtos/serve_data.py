@@ -49,7 +49,7 @@ link1 = flx.assets.add_shared_data('image.png',
                                    get_img_blob(random.choice(image_names)))
 
 
-class Example(flx.PyComponent):
+class Example(flx.PyWidget):
 
     def init(self):
         # Randomly select image - different between sessions

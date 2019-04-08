@@ -29,7 +29,7 @@ class Relay(flx.Component):
 relay = Relay()
 
 
-class ColabPainting(flx.PyComponent):
+class ColabPainting(flx.PyWidget):
     """ The Python side of the app. There is one instance per connection.
     """
 
