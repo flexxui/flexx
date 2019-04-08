@@ -119,13 +119,19 @@ database object into a JsComponent. For example:
 
 
 
-The root component
-------------------
+The root component and active components
+----------------------------------------
 
 Another useful feature is that each component has a ``root`` attribute that
 holds a reference to the component representing the root of the application.
 E.g. if the root is a ``PersonDatabase``, all ``JsComponent`` objects have a
 reference to (a proxy of) this database.
+
+Further, when a component is used as a context manager, it becomes an
+"active component". We've already seen how this is used to structure
+child widgets. Sometimes you may want to know which components are active,
+which you can do with :func:`loop.get_active_component <flexx.event.Loop.get_active_component>`
+and :func:`loop.get_active_components <flexx.event.Loop.get_active_components>`.
 
 
 Next
