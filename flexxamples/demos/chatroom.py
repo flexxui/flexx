@@ -51,7 +51,7 @@ class MessageBox(flx.Label):
         self.set_html(self.html + line + '<br />')
 
 
-class ChatRoom(flx.PyComponent):
+class ChatRoom(flx.PyWidget):
     """ This represents one connection to the chat room.
     """
 

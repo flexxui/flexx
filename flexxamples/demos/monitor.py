@@ -47,7 +47,7 @@ class Relay(flx.Component):
 relay = Relay()
 
 
-class Monitor(flx.PyComponent):
+class Monitor(flx.PyWidget):
 
     cpu_count = psutil.cpu_count()
     nsamples = nsamples

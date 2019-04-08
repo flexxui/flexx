@@ -6,7 +6,7 @@ Small example for using cookies to (securely) store user data accross sessions.
 from flexx import flx
 
 
-class Cookies(flx.PyComponent):
+class Cookies(flx.PyWidget):
 
     def init(self):
 
