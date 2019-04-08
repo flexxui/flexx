@@ -18,7 +18,7 @@ elements:
 
 .. UIExample:: 100
     from flexx import flx
-    
+
     class Example(flx.Widget):
 
         def init(self):
@@ -28,12 +28,12 @@ elements:
 The above is usually not the layout that you want. Therefore there are layout widgets
 which distribute the space among its children in a more sensible manner. Like the
 :class:`HBox <flexx.ui.HBox>`:
-    
+
 
 .. UIExample:: 100
-    
+
     from flexx import flx
-    
+
     class Example(flx.Widget):
 
         def init(self):
@@ -44,6 +44,7 @@ which distribute the space among its children in a more sensible manner. Like th
 The ``HBox`` and ``Button`` are all widgets too. The example widgets that we
 created above are also refered to as "compound widgets"; widgets that contain
 other widgets. This is the most used way to create new UI elements.
+
 
 Structuring widgets
 -------------------
@@ -59,9 +60,9 @@ mechanism is thread-safe.) This allows for a style of writing that
 clearly shows the structure of your app:
 
 .. UIExample:: 100
-    
+
     from flexx import flx
-    
+
     class Example(flx.Widget):
 
         def init(self):
@@ -76,15 +77,15 @@ Turning a widget into an app
 ----------------------------
 
 To create an actual app from a widget, simply wrap it into an :class:`App <flexx.app.App>`.
-You can then ``launch()`` it as a desktop app, ``serve()`` it as a web app, 
+You can then ``launch()`` it as a desktop app, ``serve()`` it as a web app,
 ``dump()`` the assets, ``export()`` it as a standalone HTML document, or
 even ``publish()`` it online (experimental). Later in this guide we dive deeper
 into the different ways that you can run your app.
 
 .. code-block:: py
-    
+
     from flexx import flx
-    
+
     class Example(flx.Widget):
         def init(self):
             flx.Label(text='hello world')
@@ -107,6 +108,12 @@ Using widgets the Python way
 In the above examples, we've used the "classic" way to build applications
 from basic components. Flexx provides a variety of layout widgets as well
 as leaf widgets (i.e. controls), see the  :doc:`list of widget classes <../ui/api>`.
+
+Further, we've created high-level widgets by subclassing the ``flx.Widget`` class.
+By doing that in this guide, we are able to show the result inside the guide itself.
+However, if you're aiming for a desktop app, consider subclassing from ``PyWidget``
+instead: this will make that your widgets operatate in Python instead of JS.
+We talk more about this in the next page of the guide.
 
 
 Using widgets the web way
