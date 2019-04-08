@@ -86,17 +86,17 @@ Lean towards Python
 
 If your application is a Python app that just happens to use Flexx instead
 of Qt, you may try to stay in Python-land as much as possible by making
-use of PyComponents.
+use of ``PyWidget`` and ``PyComponent``.
 
 We repeat the above example, but now most of the logic will happen in Python.
-(The result will be nearly the same, but if we'd displayed it on this page it
-would not be reative, because there is no Python.)
+(The result will be nearly the same, but if we'd display it on this page it
+would not be interactive, because there is no Python.)
 
 .. code-block:: py
 
     from flexx import flx
     
-    class UserInput(flx.PyComponent):
+    class UserInput(flx.PyWidget):
         
         def init(self):
             with flx.VBox():
@@ -107,7 +107,7 @@ would not be reative, because there is no Python.)
         def update_user(self, *events):
             self.root.store.set_username(self.edit.text)
     
-    class SomeInfoWidget(flx.PyComponent):
+    class SomeInfoWidget(flx.PyWidget):
         
         def init(self):
             with flx.FormLayout():
@@ -122,7 +122,7 @@ would not be reative, because there is no Python.)
         
         username = flx.StringProp(settable=True)
     
-    class Example(flx.PyComponent):
+    class Example(flx.PyWidget):
         
         store = flx.ComponentProp()
         
@@ -145,10 +145,10 @@ Only JS
 If you want to be able to publish your app to the web as a static page, you will
 need to base it completely on JsComponents.
 
-For web apps that serve many users and/or is a long-running process, it can also
-be recommended to use Flexx to build the JS-only front-end, and implement the
-back-end using a classic http framework (such as aiohttp, flask, etc.). The next
-chapter goes into detail how to do this.
+For web apps that serve many users and/or is a long-running process, it is
+recommended to use Flexx to build the JS-only front-end, and implement the
+back-end using a classic http framework (such as aiohttp, flask, asgineer, etc.).
+The next chapter goes into detail how to do this.
 
 
 Clear separation

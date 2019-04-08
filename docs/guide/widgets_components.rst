@@ -10,10 +10,14 @@ next chapter.
 
 For the moment, it's enough to know that the :class:`Widget <flexx.ui.Widget>`
 class is kind of :class:`JsComponent <flexx.app.JsComponent>`.
-This means that widgets live in JavaScript, as you would expect. But the cool
+This means that these widgets live in JavaScript. But the cool
 thing is that you can use widget objects in Python, by setting their properties,
 invoking their actions, and reacting to their state. This is possible because
 of so-called proxy objects.
+
+We mentioned earlier that the :class:`PyWidget <flexx.ui.PyWidget>` can be used to
+create widgets that live in Python: these are a kind of :class:`PyComponent <flexx.app.PyComponent>`.
+It's good to understand the difference between these kinds of classes.
 
 
 PyComponent and JsComponent

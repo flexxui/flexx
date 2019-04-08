@@ -55,7 +55,7 @@ def main():
             docs += '.. autofunction:: flexx.ui.create_element\n\n'
         
         for cls in classes:
-            assert issubclass(cls, app.JsComponent)
+            assert issubclass(cls, (ui.Widget, ui.PyWidget)), cls.__name__ + " is not a Widget or PyWidget"
             name = cls.__name__
             
             # Insert info on base clases
