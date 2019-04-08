@@ -46,12 +46,24 @@ created above are also refered to as "compound widgets"; widgets that contain
 other widgets. This is the most used way to create new UI elements.
 
 
+The init method
+---------------
+
+In the above example one can see the use of the ``init()`` method, which
+is a common use in Flexx. It is generally better to use it instead of ``__init__()``,
+because Flexx calls it at a very approproate time in the initialization process.
+For example, when ``init()`` is called, the corresponding widget is the *default parent*.
+
+Further, the ``init()`` gets the positional instantiation arguments: creating
+a component ``Person("john", 32)`` matches ``def init(self, name, age)``.
+
+
 Structuring widgets
 -------------------
 
-Compound widgets can be used anywhere in your app. They are
-constructed by implementing the ``init()`` method. Inside this method
-the widget is the *default parent*.
+Flexx comes with it's own layout system. (Therefore you should generally
+not use CSS for widget layout, though you can very well use CSS
+*inside* a widget).
 
 Any widget class can also be used as a *context manager*. Within the context,
 that widget is the default parent; any widget that is created in that context
@@ -110,9 +122,10 @@ from basic components. Flexx provides a variety of layout widgets as well
 as leaf widgets (i.e. controls), see the  :doc:`list of widget classes <../ui/api>`.
 
 Further, we've created high-level widgets by subclassing the ``flx.Widget`` class.
-By doing that in this guide, we are able to show the result inside the guide itself.
-However, if you're aiming for a desktop app, consider subclassing from ``PyWidget``
-instead: this will make that your widgets operatate in Python instead of JS.
+These classes operate in JavaScript, because they are what we call ``JsComponent``'s,
+more on that later. Effectively, we are able to show the widgets live inside the guide itself.
+However, if you are developing a desktop app, consider subclassing from ``PyWidget``
+instead: this will make that your widgets operatate in Python instead of JavaScript.
 We talk more about this in the next page of the guide.
 
 
