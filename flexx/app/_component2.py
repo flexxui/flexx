@@ -285,7 +285,7 @@ class AppComponentMeta(ComponentMeta):
 
 class BaseAppComponent(Component):
     """ Inherits from :class:`Component <flexx.event.Component>`
-    
+
     Abstract class for Component classes that can be "shared" between
     Python and JavaScript. The concrete implementations are:
 
@@ -462,8 +462,12 @@ class ProxyComponent(BaseAppComponent):
         # Init more
         local_inst = self._comp_init_app_component(property_values)  # pops items
 
-        # Call original method, only set props if this is instantiated "by the local"
+        # Call original method, only set props if this is instantiated "by the local",
+        # except implicit setters (properties who's values are callables).
         props2set = {} if local_inst else property_values
+        for name in list(property_values.keys()):
+            if callable(property_values[name]):
+                props2set[name] = property_values.pop(name)
         super()._comp_init_property_values(props2set)
 
         if this_is_js():
@@ -597,7 +601,7 @@ StubComponent.__jsmodule__ = __name__
 
 class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
     """ Inherits from :class:`BaseAppComponent <flexx.app.BaseAppComponent>`
-    
+
     Base component class that operates in JavaScript, but is accessible
     in Python, where its properties and events can be observed,
     and actions can be invoked.
@@ -642,7 +646,7 @@ class JsComponent(with_metaclass(AppComponentMeta, ProxyComponent)):
 
 class PyComponent(with_metaclass(AppComponentMeta, LocalComponent)):
     """ Inherits from :class:`BaseAppComponent <flexx.app.BaseAppComponent>`
-    
+
     Base component class that operates in Python, but is accessible
     in JavaScript, where its properties and events can be observed,
     and actions can be invoked.

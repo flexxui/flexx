@@ -82,9 +82,12 @@ class Loop:
         # (so that behavior of an init() is the same regardless whether a
         # component is instantiated from an action), it must the current one.
         # Otherwise we must be in an action.
-        active = self.get_active_component()
-        if active is not None:
-            return active is component
+        # active = self.get_active_component()
+        # if active is not None:
+        #     return active is component
+        active_components = self._local._active_components
+        if active_components:
+            return component in active_components
         else:
             return self._processing_action is not None
 
