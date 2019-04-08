@@ -1,5 +1,5 @@
 """
-Provides the base ``Widget`` class.
+Provides the base ``Widget`` and ``PyWidget`` classes.
 
 When subclassing a Widget to create a compound widget (i.e. a widget
 that contains other widgets), initialize the child widgets inside the
@@ -35,8 +35,14 @@ layout widgets (like ``HBox``).
                 flx.Button(flex=1, text='foo')
                 flx.Button(flex=2, text='bar')
 
+In the above two examples, the newly created classes subclass from
+``Widget`` and are thus a ``JsComponent`` (i.e. operate in JS). This
+may be what you want if you are aiming for a UI that can be exported
+for the web. If, however, you are developing a desktop application,
+consider subclassing from ``PyWidget`` instead, which will make your
+widget operate in Python.
 
-It is possible to create custom low-level widgets by implementing
+It is also possible to create custom low-level widgets by implementing
 ``_render_dom()``, resulting in a declarative "react-like" (but less
 Pythonic) approach. It returns a virtual DOM that is used to update/replace
 the real browser DOM.
@@ -802,6 +808,7 @@ class Widget(app.JsComponent):
             return
 
         # Let session keep us up to date about size changes
+        # (or make it stop if we dont have a container anymore)
         self._session.keep_checking_size_of(self, bool(id))
 
         if id:
@@ -1114,3 +1121,64 @@ class Widget(app.JsComponent):
         # todo: handle Safari and older browsers via keyCode
         key = {'Esc': 'Escape', 'Del': 'Delete'}.get(key, key)  # IE
         return dict(key=key, modifiers=modifiers)
+
+
+class PyWidget(app.PyComponent):
+    """ A base class that can be used to create compound widgets that
+    operate in Python. This enables an approach for building GUI's in
+    a Pythonic way: by only *using* JS components (actual widgets) all
+    code that you *write* can be Python code.
+
+    Internally, objects of this class create a sub-widget (a
+    ``flx.Widget`` instance). When the object is used as a context
+    manager, the sub-widget will also become active. Further, this class
+    gets attributes for all the sub-widget's properties, actions, and
+    emitters. In effect, this class can be used like a normal
+    ``flx.Widget`` (but in Python).
+    """
+
+    _WidgetCls = Widget
+
+    def __init__(self, *args, **kwargs):
+        self._jswidget = None
+        super().__init__(*args, **kwargs)
+
+    def _comp_init_property_values(self, property_values):
+        # This is a good place to hook up our sub-widget. It gets called
+        # when this is the active component, and after the original
+        # version of this has been called, everything related to session
+        # etc. will work fine.
+
+        # First extract the kwargs
+        kwargs_for_real_widget = {}
+        for name in list(property_values.keys()):
+            if name not in self.__properties__:
+                if name in self._WidgetCls.__properties__:
+                    kwargs_for_real_widget[name] = property_values.pop(name)
+        # Call original version, sets _session, amongst other things
+        super()._comp_init_property_values(property_values)
+        # Create widget and activate it
+        w = self._WidgetCls(**kwargs_for_real_widget)
+        self.__exit__(None, None, None)
+        self._jswidget = w
+        self.__enter__()
+        # Copy all properties, actions and emitters
+        for x in w.__properties__ + w.__actions__ +  w.__emitters__:
+            if not hasattr(self, x):
+                setattr(self, x, getattr(w, x))
+        # Handle implicit actions from settable properties
+        for x in w.__properties__:
+            x = "set_" + x
+            if hasattr(w, x) and not hasattr(self, x):
+                setattr(self, x, getattr(w, x))
+
+    def __enter__(self):
+        res = super().__enter__()
+        if self._jswidget is not None:
+            self._jswidget.__enter__()
+        return res
+
+    def __exit__(self, *args, **kwargs):
+        if self._jswidget is not None:
+            self._jswidget.__exit__(None, None, None)
+        return super().__exit__(*args, **kwargs)

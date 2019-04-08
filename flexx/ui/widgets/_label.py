@@ -22,7 +22,7 @@ from . import Widget
 
 class Label(Widget):
     """ Widget to show text/html.
-    
+
     The ``node`` of this widget is a
     `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_ with
     CSS ``word-wrap`` and ``white-space`` set appropriately.
@@ -91,4 +91,4 @@ class Label(Widget):
             wrap = 0
         self.node.style['word-wrap'] = ['normal', 'normal', 'break-word'][wrap]
         self.node.style['white-space'] = ['nowrap', 'normal', 'normal'][wrap]
-        self.check_real_size(True)
+        self.check_real_size()
