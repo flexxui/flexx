@@ -1163,7 +1163,7 @@ class PyWidget(app.PyComponent):
         self._jswidget = w
         self.__enter__()
         # Copy all properties, actions and emitters
-        for x in w.__properties__ + w.__actions__ +  w.__emitters__:
+        for x in w.__properties__ + w.__actions__ + w.__emitters__:
             if not hasattr(self, x):
                 setattr(self, x, getattr(w, x))
         # Handle implicit actions from settable properties
