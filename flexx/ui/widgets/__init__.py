@@ -6,7 +6,7 @@
 from .. import Widget
 
 from ._button import BaseButton, Button, ToggleButton, RadioButton, CheckBox
-from ._lineedit import LineEdit
+from ._lineedit import LineEdit, MultiLineEdit
 from ._label import Label
 from ._group import GroupWidget
 from ._iframe import IFrame
