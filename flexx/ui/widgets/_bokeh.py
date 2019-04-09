@@ -34,7 +34,8 @@ from . import Widget
 
 
 def _load_bokeh(ext):
-    import bokeh.resources
+    bokeh = None
+    exec("import bokeh.resources")   # noqa - dont trigger e.g. PyInstaller
     dev = os.environ.get('BOKEH_RESOURCES', '') == 'relative-dev'
     res = bokeh.resources.bokehjsdir()
     if dev:
@@ -57,8 +58,9 @@ app.assets.associate_asset(__name__, 'bokeh.css', _load_bokeh_css)
 
 
 def make_bokeh_widget(plot, **kwargs):
-    from bokeh.models import Plot
-    from bokeh.embed import components
+    Plot = components = None
+    exec("from bokeh.models import Plot")  # noqa - dont trigger e.g. PyInstaller
+    exec("from from bokeh.embed import components")  # noqa - dont trigger e.g. PyInstaller
     # Set plot prop
     if not isinstance(plot, Plot):
         raise ValueError('plot must be a Bokeh plot object.')
