@@ -407,7 +407,7 @@ class Widget(app.JsComponent):
         Most widgets have the same value for ``node`` and ``outernode``.
         However, in some cases it helps to distinguish between the
         semantic "actual node" and a wrapper. E.g. Flexx uses it to
-        properly layout the ``CanvasWidget`` and ``TreeWidget``.
+        properly layout the ``CanvasWidget`` and ``TreeItem``.
         Internally, Flexx uses the ``node`` attribute for tab-index, and
         binding to mouse/touch/scroll/key events. If your ``outernode``
         already semantically represents your widget, you should probably
