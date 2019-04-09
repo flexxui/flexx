@@ -11,3 +11,4 @@ from ._stack import StackLayout
 from ._tabs import TabLayout
 from ._pinboard import PinboardLayout
 from ._form import FormLayout
+from ._grid import GridLayout
