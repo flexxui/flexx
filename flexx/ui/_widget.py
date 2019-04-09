@@ -123,7 +123,8 @@ class Widget(app.JsComponent):
     equal to ``outernode``. For the ``Widget`` class, this is simply a
     `<div> <https://developer.mozilla.org/docs/Web/HTML/Element/div>`_
     element. If you don't understand what this is about, don't worry;
-    you won't need it unless you are creating your own low-level widgets :)
+    you won't need it unless you are creating your own low-level widgets.
+    See ``_create_dom()`` for details.
     
     When implementing your own widget class, the class attribute
     ``DEFAULT_MIN_SIZE`` can be set to specify a sensible minimum size.
@@ -402,6 +403,15 @@ class Widget(app.JsComponent):
         values. These attributes must remain unchanged throughout the
         lifetime of a widget. This method can be overloaded in
         subclasses.
+
+        Most widgets have the same value for ``node`` and ``outernode``.
+        However, in some cases it helps to distinguish between the
+        semantic "actual node" and a wrapper. E.g. Flexx uses it to
+        properly layout the ``CanvasWidget`` and ``TreeWidget``.
+        Internally, Flexx uses the ``node`` attribute for tab-index, and
+        binding to mouse/touch/scroll/key events. If your ``outernode``
+        already semantically represents your widget, you should probably
+        just use that.
         """
         return create_element('div')
 
