@@ -1,7 +1,7 @@
 """ TableWidget
 
-A ``TableWidget`` can contain ``TableEntry`` objects, which in turn can contain
-``TableEntryAttr`` objects to construct a table.
+A ``TableWidget`` can contain ``TableRows``, which in turn can contain ``TableCells``
+to construct a table.
 
 .. UIExample:: 180
 
@@ -25,9 +25,9 @@ A ``TableWidget`` can contain ``TableEntry`` objects, which in turn can contain
         def init(self):
             with flx.TableWidget(show_header=True):
                 for r in releases:
-                    with flx.TableEntry():
-                        flx.TableEntryAttr(title="Version", text=r.version)
-                        flx.TableEntryAttr(title="Commit", text=r.commit)
+                    with flx.TableRow():
+                        flx.TableCell(title="Version", text=r.version)
+                        flx.TableCell(title="Commit", text=r.commit)
 
 """
 
@@ -39,10 +39,9 @@ from .._widget import Widget, create_element
 
 class TableWidget(Widget):
     """
-    A ``Widget`` that can be used to display information in a table. Its entries
-    are represented by its children, which must only be ``TableEntry`` objects.
-    Entry attributes are created by instantiating ``TableEntryAttributes`` in the
-    context of a ``TableEntry``.
+    A ``Widget`` that can be used to display information in a table. Its rows are
+    represented by its children, which must only be ``TableRow`` objects.
+    Cells are created by instantiating ``TableCells`` in the context of a ``TableRow``.
 
     A `<caption> <https://developer.mozilla.org/docs/Web/HTML/Element/caption>`_ is
     rendered to show the ``title`` of the table if it is not empty.
@@ -52,7 +51,7 @@ class TableWidget(Widget):
     `<thead> <https://developer.mozilla.org/docs/Web/HTML/Element/thead>`_ to hold the
     header row and a
     `<tbody> <https://developer.mozilla.org/docs/Web/HTML/Element/tbody>`_ to contain
-    the entries.
+    the body rows.
 
     """
 
@@ -61,11 +60,24 @@ class TableWidget(Widget):
     /* ----- Table Widget Mechanics ----- */
 
     .flx-TableWidget {
-        overflow: scroll;
+        height: 100%;
+        display: flex;
+        flex-flow: column nowrap;
+
         cursor: default;
     }
 
-    .flx-TableWidget .cell {
+    .flx-TableRow, .flx-TableWidget thead tr {
+        display: flex;
+        flex-flow: row nowrap;
+    }
+
+    .flx-TableCell, .flx-TableWidget th {
+        display: flex;
+        flex-flow: row nowrap;
+        flex-grow: 1;
+        flex-basis: 0;
+
         padding: 3px 6px;
     }
 
@@ -84,16 +96,16 @@ class TableWidget(Widget):
         return create_element('table')
 
     def _render_dom(self):
-        entries = []
+        rows = []
         caption = ''
         header = ''
 
         for child in self.children:
-            if child.__name__ == 'TableEntry':
-                entries.append(child)
+            if isinstance(child, TableRow):
+                rows.append(child)
 
-        if not entries:
-            raise RuntimeError("A TableWidget must contain at least one TableEntry.")
+        if not rows:
+            raise RuntimeError("A TableWidget must contain at least one TableRow.")
 
         if self.title:
             caption = create_element('caption', {}, self.title)
@@ -102,11 +114,9 @@ class TableWidget(Widget):
             header = create_element(
                 'thead', {}, [
                     create_element(
-                        'tr', {}, [
-                            create_element('th', {'class': 'cell'}, widget.title)
-                            for widget in entries[0].children
-                            if widget.__name__ == 'TableEntryAttr'
-                        ]
+                        'tr', {}, [create_element('th', {}, widget.title)
+                                   for widget in rows[0].children
+                                   if isinstance(widget, TableCell)]
                     )
                 ]
             )
@@ -115,14 +125,15 @@ class TableWidget(Widget):
             'table', {}, [
                 caption,
                 header,
-                create_element('tbody', {}, [entry.outernode for entry in entries])
+                create_element('tbody', {}, [r.outernode for r in rows])
             ]
         )
 
 
-class TableEntry(Widget):
-    """ An entry to put in a ``TableWidget``. This widget must only be used inside a
-    ``TableWidget``.
+class TableRow(Widget):
+    """ A row to put in a ``TableWidget``. This widget must only be used inside a
+    ``TableWidget``. Its cells are represented by its children, which must only be
+    ``TableCell`` objects.
 
     The ``outernode`` of this widget is a
     `<tr> <https://developer.mozilla.org/docs/Web/HTML/Element/tr>`_.
@@ -134,17 +145,18 @@ class TableEntry(Widget):
     def set_parent(self, parent, pos=None):
         if not (parent is None or
                 isinstance(parent, TableWidget)):
-            raise RuntimeError("TableEntry objects can only be created in the context "
-                               "of a TableWidget.")
+            raise RuntimeError("TableRows can only be created in the context of a "
+                               "TableWidget.")
+
         super().set_parent(parent, pos)
 
     def _create_dom(self):
         return create_element('tr')
 
 
-class TableEntryAttr(Widget):
-    """ An attribute to put in a ``TableEntry``. This widget must only be used inside a
-    ``TableEntry``.
+class TableCell(Widget):
+    """ A cell to put in a ``TableRow``. This widget must only be used inside a
+    ``TableRow``.
 
     If a ``title`` is specified, it is rendered as the header for this attribute.
 
@@ -154,20 +166,22 @@ class TableEntryAttr(Widget):
     """
 
     text = event.StringProp(settable=True, doc="""
-        The text shown for this attribute.
+        The text shown in the cell.
         """)
 
     title = event.StringProp(settable=True, doc="""
-        The title of this attribute that is displayed in the header.
+        The title of the column containing the cell. It is displayed in the header
+        if enabled in the parent ``TableWidget``.
         """)
 
     @event.action
     def set_parent(self, parent, pos=None):
         if not (parent is None or
-                isinstance(parent, TableEntry)):
-            raise RuntimeError("TableEntryAttr objects can only be created in the "
-                               "context of a TableEntry.")
+                isinstance(parent, TableRow)):
+            raise RuntimeError("TableCells can only be created in the context of a "
+                               "TableRow.")
+
         super().set_parent(parent, pos)
 
     def _create_dom(self):
-        return create_element('td', {'class': 'cell'}, [self.text])
+        return create_element('td', {}, [self.text])
