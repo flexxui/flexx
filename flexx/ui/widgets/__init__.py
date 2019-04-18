@@ -16,7 +16,6 @@ from ._media import ImageWidget, VideoWidget, YoutubeWidget
 
 from ._progressbar import ProgressBar
 from ._slider import Slider, RangeSlider
-from ._table import TableWidget, TableRow, TableCell
 from ._tree import TreeWidget, TreeItem
 from ._dropdown import ComboBox, DropdownContainer
 

@@ -1,43 +1,22 @@
-""" TableWidget
+# doc-export: ReleasesTable
+"""
+An example of a custom table widget built from stock.
 
-A ``TableWidget`` can contain ``TableRows``, which in turn can contain ``TableCells``
-to construct a table.
+Noticeable features:
 
-.. UIExample:: 180
-
-    from flexx import flx
-
-    releases = [
-        flx.Dict(version='0.7.1',
-                 commit='38b322c9f521270b1874db150104c094cce508e1'),
-        flx.Dict(version='0.7.0',
-                 commit='74fe76f749f4b033c193a8f8e7b025d42c6f9e70'),
-        flx.Dict(version='0.6.2',
-                 commit='1c3dbb0cedd47b29bae475517302408a53effb4b'),
-        flx.Dict(version='0.6.1',
-                 commit='e54574b3ecd7e5c39c09da68eac33662cc276b78'),
-        flx.Dict(version='0.6.0',
-                 commit='4cff67e57a7b2123bd4d660a79527e3131a494be'),
-    ]
-
-    class Example(flx.Widget):
-
-        def init(self):
-            with flx.TableWidget(show_header=True):
-                for r in releases:
-                    with flx.TableRow():
-                        flx.TableCell(title="Version", text=r.version)
-                        flx.TableCell(title="Commit", text=r.commit)
+ * widget properties,
+ * custom DOM rendering with:
+   - optional DOM elements,
+   - mandatory child widgets type,
+   - mandatory parent widget type,
+   - `flex` support.
 
 """
 
-from ... import event
-from .._widget import Widget, create_element
-
-# todo: automatically generate MDN links in the documentation
+from flexx import flx
 
 
-class TableWidget(Widget):
+class TableWidget(flx.Widget):
     """
     A ``Widget`` that can be used to display information in a table. Its rows are
     represented by its children, which must only be ``TableRow`` objects.
@@ -83,17 +62,17 @@ class TableWidget(Widget):
 
     """
 
-    title = event.StringProp(settable=True, doc="""
+    title = flx.StringProp(settable=True, doc="""
         The title which is shown as the caption of this table. If not specified,
         not any caption is rendered.
         """)
 
-    show_header = event.BoolProp(False, doc="""
+    show_header = flx.BoolProp(False, doc="""
         Whether to show the header line.
         """)
 
     def _create_dom(self):
-        return create_element('table')
+        return flx.create_element('table')
 
     def _render_dom(self):
         rows = []
@@ -108,14 +87,14 @@ class TableWidget(Widget):
             raise RuntimeError("A TableWidget must contain at least one TableRow.")
 
         if self.title:
-            caption = create_element('caption', {}, self.title)
+            caption = flx.create_element('caption', {}, self.title)
 
         if self.show_header:
-            header = create_element(
+            header = flx.create_element(
                 'thead', {}, [
-                    create_element(
+                    flx.create_element(
                         'tr', {}, [
-                            create_element(
+                            flx.create_element(
                                 'th',
                                 {'style': 'flex-grow: {};'.format(widget.flex[0] + 1)},
                                 widget.title
@@ -127,16 +106,16 @@ class TableWidget(Widget):
                 ]
             )
 
-        return create_element(
+        return flx.create_element(
             'table', {}, [
                 caption,
                 header,
-                create_element('tbody', {}, [r.outernode for r in rows])
+                flx.create_element('tbody', {}, [r.outernode for r in rows])
             ]
         )
 
 
-class TableRow(Widget):
+class TableRow(flx.Widget):
     """ A row to put in a ``TableWidget``. This widget must only be used inside a
     ``TableWidget``. Its cells are represented by its children, which must only be
     ``TableCell`` objects.
@@ -146,8 +125,7 @@ class TableRow(Widget):
 
     """
 
-    # todo: remove `set_parent` from documentation as its usage is internal, here
-    @event.action
+    @flx.action
     def set_parent(self, parent, pos=None):
         if not (parent is None or
                 isinstance(parent, TableWidget)):
@@ -157,7 +135,7 @@ class TableRow(Widget):
         super().set_parent(parent, pos)
 
     def _create_dom(self):
-        return create_element('tr')
+        return flx.create_element('tr')
 
     def _render_dom(self):
         for widget in self.children:
@@ -168,7 +146,7 @@ class TableRow(Widget):
         return super()._render_dom(self)
 
 
-class TableCell(Widget):
+class TableCell(flx.Widget):
     """ A cell to put in a ``TableRow``. This widget must only be used inside a
     ``TableRow``.
 
@@ -179,16 +157,16 @@ class TableCell(Widget):
 
     """
 
-    text = event.StringProp(settable=True, doc="""
+    text = flx.StringProp(settable=True, doc="""
         The text shown in the cell.
         """)
 
-    title = event.StringProp(settable=True, doc="""
+    title = flx.StringProp(settable=True, doc="""
         The title of the column containing the cell. It is displayed in the header
         if enabled in the parent ``TableWidget``.
         """)
 
-    @event.action
+    @flx.action
     def set_parent(self, parent, pos=None):
         if not (parent is None or
                 isinstance(parent, TableRow)):
@@ -198,4 +176,34 @@ class TableCell(Widget):
         super().set_parent(parent, pos)
 
     def _create_dom(self):
-        return create_element('td', {}, [self.text])
+        return flx.create_element('td', {}, [self.text])
+
+releases = [
+    flx.Dict(version='0.7.1',
+                commit='38b322c9f521270b1874db150104c094cce508e1'),
+    flx.Dict(version='0.7.0',
+                commit='74fe76f749f4b033c193a8f8e7b025d42c6f9e70'),
+    flx.Dict(version='0.6.2',
+                commit='1c3dbb0cedd47b29bae475517302408a53effb4b'),
+    flx.Dict(version='0.6.1',
+                commit='e54574b3ecd7e5c39c09da68eac33662cc276b78'),
+    flx.Dict(version='0.6.0',
+                commit='4cff67e57a7b2123bd4d660a79527e3131a494be'),
+]
+
+class ReleasesTable(flx.Widget):
+
+    def init(self):
+        self.apply_style({
+            'width': '100%'
+        })
+
+        with TableWidget(title="Flexx Releases", show_header=True):
+            for r in releases:
+                with TableRow():
+                    TableCell(title="Version", text=r.version, flex=0)
+                    TableCell(title="Commit", text=r.commit, flex=1)
+
+if __name__ == '__main__':
+    m = flx.launch(ReleasesTable, 'app')
+    flx.run()
