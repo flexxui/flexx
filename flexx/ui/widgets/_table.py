@@ -114,9 +114,15 @@ class TableWidget(Widget):
             header = create_element(
                 'thead', {}, [
                     create_element(
-                        'tr', {}, [create_element('th', {}, widget.title)
-                                   for widget in rows[0].children
-                                   if isinstance(widget, TableCell)]
+                        'tr', {}, [
+                            create_element(
+                                'th',
+                                {'style': 'flex-grow: {};'.format(widget.flex[0] + 1)},
+                                widget.title
+                            )
+                            for widget in rows[0].children
+                            if isinstance(widget, TableCell)
+                        ]
                     )
                 ]
             )
@@ -152,6 +158,14 @@ class TableRow(Widget):
 
     def _create_dom(self):
         return create_element('tr')
+
+    def _render_dom(self):
+        for widget in self.children:
+            widget.apply_style({
+                'flex-grow': widget.flex[0] + 1
+            })
+
+        return super()._render_dom(self)
 
 
 class TableCell(Widget):
