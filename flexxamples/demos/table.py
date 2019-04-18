@@ -9,7 +9,8 @@ Noticeable features:
    - optional DOM elements,
    - mandatory child widgets type,
    - mandatory parent widget type,
-   - `flex` support.
+   - `flex` support,
+ * widget CSS.
 
 """
 
@@ -36,29 +37,49 @@ class TableWidget(flx.Widget):
 
     CSS = """
 
-    /* ----- Table Widget Mechanics ----- */
+/* ----- Table Widget Mechanics ----- */
 
-    .flx-TableWidget {
-        height: 100%;
-        display: flex;
-        flex-flow: column nowrap;
+.flx-TableWidget {
+    height: 100%;
+    display: flex;
+    flex-flow: column nowrap;
+}
 
-        cursor: default;
-    }
+.flx-TableWidget caption {
+    margin-bottom: 1em;
+}
 
-    .flx-TableRow, .flx-TableWidget thead tr {
-        display: flex;
-        flex-flow: row nowrap;
-    }
+.flx-TableRow, .flx-TableWidget thead tr {
+    display: flex;
+    flex-flow: row nowrap;
+}
 
-    .flx-TableCell, .flx-TableWidget th {
-        display: flex;
-        flex-flow: row nowrap;
-        flex-grow: 1;
-        flex-basis: 0;
+.flx-TableCell, .flx-TableWidget th {
+    display: flex;
+    flex-flow: column nowrap;
+    flex-grow: 1;
+    flex-basis: 0;
+}
 
-        padding: 3px 6px;
-    }
+/* ----- Table Widget Style ----- */
+
+.flx-TableWidget caption {
+    font-variant-caps: petite-caps;
+    font-weight: bold;
+}
+
+.flx-TableWidget thead {
+    border-top: solid grey 1px;
+}
+
+.flx-TableWidget tbody {
+    border-top: solid grey 1px;
+    border-bottom: solid grey 1px;
+}
+
+.flx-TableCell, .flx-TableWidget th {
+    padding: 3px 16px;
+}
 
     """
 
@@ -180,18 +201,37 @@ class TableCell(flx.Widget):
 
 releases = [
     flx.Dict(version='0.7.1',
-                commit='38b322c9f521270b1874db150104c094cce508e1'),
+             date='2018-12-03',
+             commit='38b322c9f521270b1874db150104c094cce508e1'),
     flx.Dict(version='0.7.0',
-                commit='74fe76f749f4b033c193a8f8e7b025d42c6f9e70'),
+             date='2018-11-02',
+             commit='74fe76f749f4b033c193a8f8e7b025d42c6f9e70'),
     flx.Dict(version='0.6.2',
-                commit='1c3dbb0cedd47b29bae475517302408a53effb4b'),
+             date='2018-10-04',
+             commit='1c3dbb0cedd47b29bae475517302408a53effb4b'),
     flx.Dict(version='0.6.1',
-                commit='e54574b3ecd7e5c39c09da68eac33662cc276b78'),
+             date='2018-10-04',
+             commit='e54574b3ecd7e5c39c09da68eac33662cc276b78'),
     flx.Dict(version='0.6.0',
-                commit='4cff67e57a7b2123bd4d660a79527e3131a494be'),
+             date='2018-10-02',
+             commit='4cff67e57a7b2123bd4d660a79527e3131a494be'),
 ]
 
 class ReleasesTable(flx.Widget):
+
+    CSS = """
+
+/* ----- ReleasesTable Style ----- */
+
+.flx-ReleasesTable {
+    padding: 1em;
+}
+
+.flx-ReleasesTable td {
+    text-align: center;
+}
+
+    """
 
     def init(self):
         self.apply_style({
@@ -202,7 +242,8 @@ class ReleasesTable(flx.Widget):
             for r in releases:
                 with TableRow():
                     TableCell(title="Version", text=r.version, flex=0)
-                    TableCell(title="Commit", text=r.commit, flex=1)
+                    TableCell(title="Date", text=r.date, flex=1)
+                    TableCell(title="Commit", text=r.commit, flex=2)
 
 if __name__ == '__main__':
     m = flx.launch(ReleasesTable, 'app')
