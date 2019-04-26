@@ -2,8 +2,9 @@
 Definition of the App class and app manager.
 """
 
-import os
 import io
+import os
+import sys
 import time
 import weakref
 import zipfile
@@ -176,12 +177,12 @@ class App:
         links to them). A link value of 0/1 may be prefered for
         performance or ease of distribution, but with link 2/3 debugging
         is easier and multiple apps can share common assets.
-        
+
         When a process only dumps/exports an app, no server is started.
         Tornado is not even imported (we have a test for this). This makes
         it possible to use Flexx to dump an app and then serve it with any
         tool one likes.
-        
+
         Arguments:
             fname (str, optional): the name of the main html asset.
                 If not given or None, the name of the component class
@@ -341,6 +342,97 @@ class App:
             if url.startswith('http://flexx.app'):
                 print('You app is now available at '
                       'http://flexx.app/open/%s/' % name)
+
+    def freeze(self, dirname, launch="firefox-app", excludes=("numpy", ), includes=()):
+        """ Create an executable that can be distributed as a standalone
+        desktop application. This process (known as "freezing") requires PyInstaller.
+
+        Note: this method is experimental. See
+        https://flexx.readthedocs.io/en/stable/freeze.html for more information.
+
+        Arguments:
+            dirname (str): Path to generate the executable in. Some temporary
+                files and directories will be created during the freezing process.
+                The actual executable will be placed in "dist/app_name", where
+                app_name is the (lowercase) name of the application class.
+            launch (str): The argument to use for the call to ``flx.launch()``.
+                If set to None, ``flx.serve()`` will be used instead, and you
+                will be responsible for connecting a browser.
+            excludes (list): A list of module names to exclude during freezing.
+                By default Numpy is excluded because PyInstaller detects it
+                even though Flexx does not use it. Override this if you do use Numpy.
+            includes (list): A list of module name to include during freezing.
+
+        """
+        from flexx.util import freeze  # noqa
+        import PyInstaller.__main__  # noqa
+
+        name = self._cls.__name__.lower()
+        # Get absolute dir and ensure it exists
+        if dirname.startswith("~"):
+            dirname = os.path.expanduser(dirname)
+        else:
+            dirname = os.path.abspath(dirname)
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
+        main_module = self._cls.__module__
+        # When the main app is defined in the script itself, we do some extra work
+        if main_module == "__main__":
+            main_module = "mainmain"
+            main_code = open(sys.modules["__main__"].__file__, "rb").read().decode()
+            for line in main_code.splitlines():
+                if ".freeze(" in line or ".run(" in line:
+                    comment = " " * (len(line) - len(line.lstrip())) + "pass  # "
+                    main_code = main_code.replace(line, comment + line.lstrip())
+        # Create the main script to freeze
+        script_filename = os.path.join(dirname, name + ".py")
+        lines = ["from flexx.util import freeze", "freeze.install()"]
+        lines.append("from {} import {} as Main".format(main_module,
+                                                       self._cls.__name__))
+        lines.append("from flexx import flx")
+        args_str = ", ".join(repr(x) for x in self.args)
+        kwargs_str = ", ".join(key + "=" + repr(x) for key, x in self.kwargs.items())
+        args_str = ", " + args_str if args_str else args_str
+        kwargs_str = ", " + kwargs_str if kwargs_str else kwargs_str
+        lines.append("app = flx.App(Main{}{})".format(args_str, kwargs_str))
+        if launch:
+            lines.append("app.launch('{}')".format(launch))
+        else:
+            lines.append("app.serve('')")
+        lines.append("flx.run()")
+        with open(script_filename, "wb") as f:
+            f.write("\n".join(lines).encode())
+        # Prepare for freezing
+        distdir = "dist"
+        cmd = ["--clean", "--onedir", "--name", name, "--distpath", distdir]
+        # todo: handle icon on Windows and OS X
+        if sys.platform.startswith("win"):
+            cmd.append("--windowed")  # not a console app
+        elif sys.platform.startswith("darwin"):
+            cmd.append("--windowed")  # makes a .app bundle
+        for module_name in excludes:
+            cmd.extend(["--exclude-module", module_name])
+        for module_name in includes:
+            cmd.extend(["--include-module", module_name])
+        # Run freeze
+        cmd.append(script_filename)
+        ori_dir = os.getcwd()
+        os.chdir(dirname)
+        try:
+            PyInstaller.__main__.run(cmd)
+        finally:
+            os.chdir(ori_dir)
+        # Copy modules
+        appdir = os.path.join(dirname, distdir, name)
+        assets.update_modules()
+        for module_name in {x.split(".")[0] for x in assets.modules.keys()}:
+            if module_name == "__main__":
+                fname = os.path.join(appdir, "source", main_module + ".py")
+                with open(fname, "wb") as f:
+                    f.write(main_code.encode())
+            else:
+                freeze.copy_module(module_name, appdir)
+
 
 # todo: thread safety
 
