@@ -52,7 +52,7 @@
 "use strict";
 
 var VERSION;
-VERSION = [2, 2, 1];
+VERSION = [2, 2, 2];
 
 // http://github.com/msgpack/msgpack-javascript/blob/master/msgpack.js#L181-L192
 function utf8encode(mix) {
@@ -85,7 +85,9 @@ function utf8decode(buf) {
                             ((c & 0x0f) << 12 | (buf[++i] & 0x3f) << 6
                                               | (buf[++i] & 0x3f)));
     }
-    return String.fromCharCode.apply(null, ary);
+    // First line can cause Maximum call stack size exceeded"
+    // return String.fromCharCode.apply(null, ary);
+    return ary.map(function(i) {return String.fromCharCode(i)}).join("");
 }
 
 
@@ -293,7 +295,7 @@ function encode_type_id(f, c, extension_id) {
 
 BsdfSerializer.prototype.encode_object = function (f, value, extension_id) {
     var iext, ext;
-    
+
     // We prefer to fail on undefined, instead of silently converting to null like JSON
     // if (typeof value == 'undefined') { encode_type_id(f, 'v', extension_id); }
     if (typeof value == 'undefined') { throw new TypeError("BSDF cannot encode undefined, use null instead."); }
