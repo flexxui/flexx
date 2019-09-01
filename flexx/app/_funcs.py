@@ -87,9 +87,9 @@ class NoteBookHelper:
         self.enable()
 
     def enable(self):
-        get_ipython = None
-        exec("from IPython import get_ipython")  # noqa - dont trigger e.g. PyInstaller
-        ip = get_ipython()
+        ldict = {}
+        exec("from IPython import get_ipython", globals(), ldict)  # noqa - dont trigger e.g. PyInstaller
+        ip = ldict['get_ipython']()
         ip.events.register('pre_execute', self.capture)
         ip.events.register('post_execute', self.release)
 
@@ -110,8 +110,9 @@ class NoteBookHelper:
             self._session._ws = self._real_ws
         self._real_ws = None
         if self._commands:
-            display = Javascript = None
-            exec("from IPython.display import display, Javascript")  # noqa - dont trigger e.g. PyInstaller
+            ldict = {}
+            exec("from IPython.display import display, Javascript", globals(), ldict)  # noqa - dont trigger e.g. PyInstaller
+            display, Javascript = ldict['display'], ldict['Javascript']
             lines = []
             lines.append('var bb64 =  flexx.require("bb64");')
             lines.append('function cmd(c) {'
@@ -141,8 +142,9 @@ def init_notebook():
     # Note: not using IPython Comm objects yet, since they seem rather
     # undocumented and I could not get them to work when I tried for a bit.
     # This means though, that flexx in the notebook only works on localhost.
-    display = clear_output = HTML = None
-    exec("from IPython.display import display, clear_output, HTML")  # noqa - dont trigger e.g. PyInstaller
+    ldict = {}
+    exec("from IPython.display import display, clear_output, HTML", globals(), ldict)  # noqa - dont trigger e.g. PyInstaller
+    display, clear_output, HTML = ldict['display'], ldict['clear_output'], ldict['HTML']
     # from .. import ui  # noqa - make ui assets available
 
     # Make default log level warning instead of "info" to avoid spamming
