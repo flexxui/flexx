@@ -330,6 +330,16 @@ class ComboBox(BaseDropdown):
         self._mutate('selected_key', '')
         if not self.editable:
             self.set_text('')
+
+    @event.action
+    def update_selected_index(self, text):
+        for index, option in enumerate(self.options):
+            if option[1] == text:
+                self._mutate('selected_index', index)
+                self._mutate('selected_key', option[0])
+                return
+        # else
+        self._deselect()
     
     @event.action
     def set_selected_index(self, index):
@@ -470,9 +480,7 @@ class ComboBox(BaseDropdown):
 
     def _submit_text(self):
         super()._submit_text()
-        # todo: should this select option if text happens to match it?
-        self.set_selected_index(-1)
-        self.set_selected_key('')
+        self.update_selected_index(self.text)
 
 
 class DropdownContainer(BaseDropdown):
