@@ -41,8 +41,8 @@ class GroupWidget(Widget):
         border-radius: 3px;
     }
     .flx-GroupWidget > .flx-Layout {
-        width: calc(100% - 10px);
-        height: calc(100% - 25px);
+        width: calc(100% - 10px) !important;
+        height: calc(100% - 25px) !important;
     }
 
     """
