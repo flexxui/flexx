@@ -10,9 +10,6 @@
 # --label="traefik.demoflexxapp.frontend.rule=Host:demo.flexx.app,demo1.flexx.app"
 # --label="traefik.demoflexxapp.protocol=http"
 # --label="traefik.demoflexxapp.port=80"
-# --label="traefik.demoflexxlive.frontend.rule=Host:demo.flexx.live,demo1.flexx.live"
-# --label="traefik.demoflexxlive.protocol=http"
-# --label="traefik.demoflexxlive.port=80"
 
 FROM python:3.6-alpine
 
