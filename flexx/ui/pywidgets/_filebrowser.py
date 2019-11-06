@@ -165,7 +165,7 @@ class FileBrowserWidget(PyWidget):
         dirname = events[-1].dirname
         filename = events[-1].filename
         print(dirname, filename)
-        if dirname:
+        if dirname is not None and os.path.isdir(dirname):
             self.set_path(dirname)
         elif filename:
             self.selected(filename)
