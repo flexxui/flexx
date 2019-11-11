@@ -78,10 +78,10 @@ class _FileBrowserJS(Widget):
             elements.append(create_element("span", {}, " ❑■"[kind] or ""))
             if kind == 1:
                 elements.append(create_element("u",
-                    {"dirname": dirname + sep + fname}, fname))
+                    {"dirname": dirname + sep + fname, "filename": None}, fname))
             else:
                 elements.append(create_element("u",
-                    {"filename": dirname + sep + fname}, fname))
+                    {"filename": dirname + sep + fname, "dirname": None}, fname))
             if size >= 1048576:
                 elements.append(create_element("i", {},
                     "{:0.1f} MiB".format(size/1048576)))
@@ -165,7 +165,7 @@ class FileBrowserWidget(PyWidget):
         dirname = events[-1].dirname
         filename = events[-1].filename
         print(dirname, filename)
-        if dirname is not None and os.path.isdir(dirname):
+        if dirname:
             self.set_path(dirname)
         elif filename:
             self.selected(filename)
