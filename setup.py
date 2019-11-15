@@ -18,48 +18,14 @@ from distutils.core import setup
 
 ## Function we need
 
-def get_version_and_doc(filename):
-    NS = dict(__version__='', __doc__='')
-    docStatus = 0  # Not started, in progress, done
+def get_version(filename):
+    NS = dict(__version__='')
     for line in open(filename, 'rb').read().decode().splitlines():
         if line.startswith('__version__'):
             exec(line.strip(), NS, NS)
-        elif line.startswith('"""'):
-            if docStatus == 0:
-                docStatus = 1
-                line = line.lstrip('"')
-            elif docStatus == 1:
-                docStatus = 2
-        if docStatus == 1:
-            NS['__doc__'] += line.rstrip() + '\n'
     if not NS['__version__']:
         raise RuntimeError('Could not find __version__')
-    return NS['__version__'], NS['__doc__']
-
-
-def get_readme_as_rst(filename):
-    lines = []
-    for line in open(filename, 'rb').read().decode().splitlines():
-        lines.append(line)
-        # Convert links, images, and images with links
-        i1, i2 = line.find('['), line.find(']')
-        i3, i4 = line.find('(', i2), line.find(')', i2)
-        i5, i6 = line.find('(', i4), line.find(')', i4+1)
-        if '[Documentation Status' in line:
-            line.find('x')
-        if i1 >=0 and i2 > i1 and i3 == i2 + 1 and i4 > i3:
-            text, link = line[i1+1:i2], line[i3+1:i4]
-            if i1 == 1 and line[0] == '!':
-                # Image
-                lines[-1] = '\n.. image:: %s\n' % link
-            elif i1 == 0 and line.startswith('[![') and i5 == i4 + 2 and i6 > i5:
-                # Image with link
-                link2 = line[i5+1:i6]
-                lines[-1] = '\n.. image:: %s\n    :target: %s\n' % (link, link2)
-            else:
-                # RST link: `link text </the/link>`_
-                lines[-1] = '%s`%s <%s>`_%s' % (line[:i1], text, link, line[i4+1:])
-    return '\n'.join(lines)
+    return NS['__version__']
 
 
 def package_tree(pkgroot):
@@ -79,7 +45,6 @@ def get_all_resources():
 
 
 ## Collect info for setup()
-
 THIS_DIR = os.path.dirname(__file__)
 
 # Define name and description
@@ -87,13 +52,12 @@ name = 'flexx'
 description = "Write desktop and web apps in pure Python."
 
 # Get version and docstring (i.e. long description)
-version, doc = get_version_and_doc(os.path.join(THIS_DIR, name, '__init__.py'))
-if os.path.isfile(os.path.join(THIS_DIR, 'README.md')):
-    doc = get_readme_as_rst(os.path.join(THIS_DIR, 'README.md'))
+version = get_version(os.path.join(THIS_DIR, name, '__init__.py'))
+with open('README.md') as read_me:
+    long_description = read_me.read()
 
 # Install resources (e.g. phosphor.js)
 get_all_resources()
-
 
 ## Setup
 
@@ -103,11 +67,15 @@ setup(
     author='Flexx contributors',
     author_email='almar.klein@gmail.com',
     license='(new) BSD',
-    url='http://flexx.readthedocs.io',
+    url='https://github.com/flexxui/flexx',
+    project_urls={
+        'Documentation': 'https://flexx.readthedocs.io/en/stable/',
+    },
     download_url='https://pypi.python.org/pypi/flexx',
     keywords="ui design, GUI, web, runtime, pyscript, events, properties",
     description=description,
-    long_description=doc,
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     platforms='any',
     provides=[name],
     python_requires='>=3.5',
