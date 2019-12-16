@@ -111,7 +111,7 @@ setup(
     platforms='any',
     provides=[name],
     python_requires='>=3.5',
-    install_requires=['tornado', 'pscript>=0.7.1', 'webruntime>=0.5.6', 'dialite>=0.5.2'],
+    install_requires=['tornado', 'pscript>=0.7.3', 'webruntime>=0.5.6', 'dialite>=0.5.2'],
     packages=package_tree('flexx') + package_tree('flexxamples'),
     package_dir={'flexx': 'flexx', 'flexxamples': 'flexxamples'},
     package_data={name: ['resources/*']},
@@ -132,5 +132,6 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
 )
