@@ -469,19 +469,19 @@ def test_fails():
     m = JSModule('flxtest.bar', {})
     with raises(ValueError) as err:
         m.add_variable('cannot_transpile')
-    assert 'cannot transpile' in str(err)
+    assert 'cannot transpile' in str(err.value)
 
     # Unserializable
     m = JSModule('flxtest.bar', {})
     with raises(ValueError) as err:
         m.add_variable('cannot_serialize')
-    assert 'cannot serialize' in str(err)
+    assert 'cannot serialize' in str(err.value)
 
     # Un-anythingable
     m = JSModule('flxtest.bar', {})
     with raises(ValueError) as err:
         m.add_variable('cannot_do_anything')
-    assert 'cannot convert' in str(err)
+    assert 'cannot convert' in str(err.value)
 
 
 run_tests_if_main()

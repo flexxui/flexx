@@ -470,7 +470,7 @@ def test_reaction_exceptions2():
         @f.reaction('bar*.spam')
         def handle_foo(*events):
             pass
-    assert 'not a tuple' in str(err)
+    assert 'not a tuple' in str(err.value)
 
 
 def test_reaction_decorator_fails():
