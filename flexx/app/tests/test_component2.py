@@ -183,11 +183,11 @@ def test_cannot_instantiate_without_session():
 
     with raises(RuntimeError) as err:
         PyComponent()
-    assert 'needs a session!' in str(err)
+    assert 'needs a session!' in str(err.value)
 
     with raises(RuntimeError) as err:
         JsComponent()
-    assert 'needs a session!' in str(err)
+    assert 'needs a session!' in str(err.value)
 
 
 def test_generated_js1():
