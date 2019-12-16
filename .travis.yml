@@ -35,6 +35,8 @@ matrix:
           env: TEST_UNIT=1
         - python: "3.7"
           env: TEST_UNIT=1
+        - python: "3.8"
+          env: TEST_UNIT=1
 
 before_install:
     - SRC_DIR=$(pwd)
