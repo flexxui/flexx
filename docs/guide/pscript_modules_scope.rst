@@ -2,7 +2,7 @@
 PScript, modules, and scope
 ---------------------------
 
-In this guide, we've already seen several examples wherer we write Python
+In this guide, we've already seen several examples where we write Python
 code that runs in JavaScript. This is done by *transpiling* the Python code
 to JavaScript using a tool called `PScript <http://pscript.readthedocs.io>`_,
 which is a spin-off of the Flexx project.
