@@ -44,10 +44,21 @@ delivering applications to users, also for (interactive) scientific
 content.
 
 The purpose of Flexx is to provide a single application framework to
-create desktop applications, web apps, and (hopefully soon) mobile apps.
+create desktop applications, web apps, and (hopefully someday) mobile apps.
 By making use of browser technology, the library itself can be
 relatively small and pure Python, making it widely available and easy
 to use.
+
+
+A word of caution
+-----------------
+
+Flexx is very versatile and
+[can be used in different ways](https://flexx.readthedocs.io/en/stable/guide/running.html).
+It also makes it easy to mix Python that runs on the server and Python that
+runs in the browser. This is a powerful feature but this also makes it easy
+to create code that becomes difficult to maintain. You, the developer, must
+ensure that Python and PScript code are clearly separated.
 
 
 Installation
