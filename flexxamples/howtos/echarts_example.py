@@ -76,14 +76,11 @@ class EchartExample(flx.Widget):
             flx.create_element(
                 "script",
                 {"type": "text/javascript"},
-                """
+                f"""
                     // based on prepared DOM, initialize echarts instance
                     var myChart = echarts.init(
-                        document.getElementById('"""
-                + self.echart_id
-                + """'
-                        ));
-                    """,
+                        document.getElementById('{self.echart_id}'));
+                """,
             ),
             flx.create_element(
                 "button", {"onclick": self.change_chart}, "Change Chart"
