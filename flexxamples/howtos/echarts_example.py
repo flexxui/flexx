@@ -45,18 +45,12 @@ class EchartWidget(flx.Widget):
     def update_options(self, my_option):
         myChart = self.get_options()
         self._mutate_echart_options(my_option)
-        try:
-            myChart.setOption(self.echart_options)
-        except:
-            pass
+        myChart.setOption(self.echart_options)
 
     @flx.action
     def show_chart(self):
         myChart = self.get_options()
-        try:
-            myChart.setOption(self.echart_options)
-        except:
-            pass
+        myChart.setOption(self.echart_options)
 
     def _render_dom(self):
         global window
@@ -100,7 +94,7 @@ if __name__ == "__main__":
             },
             "yAxis": {},
             "series": [
-                {"name": "Sales", "type": "bar", "data": [5, 2, 3, 1, 10, 8],}
+                {"name": "Sales", "type": "bar", "data": [5, 2, 3, 1, 10, 8]}
             ],
         }
 
@@ -111,11 +105,11 @@ if __name__ == "__main__":
                     "type": "pie",
                     "radius": "55%",
                     "data": [
-                        {"value": 235, "name": "Video Ad.",},
-                        {"value": 274, "name": "Alignment Ad.",},
-                        {"value": 310, "name": "Email Marketing",},
-                        {"value": 335, "name": "Direct",},
-                        {"value": 400, "name": "Search Engine",},
+                        {"value": 235, "name": "Video Ad."},
+                        {"value": 274, "name": "Alignment Ad."},
+                        {"value": 310, "name": "Email Marketing"},
+                        {"value": 335, "name": "Direct"},
+                        {"value": 400, "name": "Search Engine"},
                     ],
                     "roseType": "angle",
                     "itemStyle": {
@@ -152,7 +146,6 @@ if __name__ == "__main__":
 
         def tick(self):
             global Math, window
-            t = time()
 
             my_option2 = self.option2
             option2_value = (Math.random() * 400).toFixed(2) - 0
@@ -164,7 +157,7 @@ if __name__ == "__main__":
             self.echart2[0].update_options(my_option2)
 
             option3_value = (Math.random() * 100).toFixed(2) - 0
-            # print("tick...", option3_value)
+            print("tick...", option3_value)
             my_option3 = self.option3
             my_option3["series"][0]["data"][0]["value"] = option3_value
             self.echart3[0].update_options(my_option3)
