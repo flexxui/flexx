@@ -595,7 +595,7 @@ class Widget(app.JsComponent):
         if style:
             for part in style.split(';'):
                 if ':' in part:
-                    key, val = part.split(':')
+                    key, val = part.split(':', 1)
                     key, val = key.trim(), val.trim()
                     self.outernode.style[key] = val
                     d[key] = val
