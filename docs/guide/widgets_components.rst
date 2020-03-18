@@ -5,7 +5,7 @@ Widgets are components
 Widgets are what we call "components", which are a central
 part of the event system. They are what allows widgets to have properties
 and react to things happening in other parts of the application. But
-let's not get ahead of ourselves; the event system is dicsussed in the
+let's not get ahead of ourselves; the event system is discussed in the
 next chapter.
 
 For the moment, it's enough to know that the :class:`Widget <flexx.ui.Widget>`
