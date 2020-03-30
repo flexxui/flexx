@@ -163,12 +163,12 @@ non-settable properties):
 
 .. code-block:: python
 
-    c = MyComponent(foo=42)
+    c = MyObject(foo=42)
 
 One can also set the initial value of a property to a function object.
 This creates an auto-reaction that sets the property, and makes it possible
 to hook things up in a very concise manner. In the example below, the label
-text will be automatically updated when the username property changes:
+text will be automatically updated when the counter property changes:
 
 .. code-block:: python
     
