@@ -9,9 +9,9 @@ changes in properties, using an underlying handler function:
 .. UIExample:: 100
 
     from flexx import flx
-    
+
     class Example(flx.Widget):
-        
+
         def init(self):
             super().init()
             with flx.VBox():
@@ -21,11 +21,11 @@ changes in properties, using an underlying handler function:
                 with flx.HBox():
                     self.but = flx.Button(text='Reset')
                     self.label = flx.Label(flex=1)
-            
+
         @flx.reaction('firstname.text', 'lastname.text')
         def greet(self, *events):
             self.label.set_text('hi ' + self.firstname.text + ' ' + self.lastname.text)
-        
+
         @flx.reaction('but.pointer_click')
         def reset(self, *events):
             self.label.set_text('')
@@ -46,9 +46,9 @@ When called by the event system, it will have at least 1 event. When
 e.g. a property is set twice, the function will be called
 just once, but with multiple events. If all events need to be processed
 individually, use:
-    
+
 .. code-block:: python
-    
+
     @flx.reaction('foo')
     def handler(self, *events):
         for ev in events:
@@ -68,15 +68,15 @@ default), the event system ensures that all events are handled in the
 order that they were emitted. This is often the most sensible approach,
 but this implies that a reaction can be called multiple times during a
 single event loop iteration, with other reactions called in between to
-ensure the consisten event order.
+ensure the consistent event order.
 
 If it is preferred that all events targeted at a reaction are handled with
 a single call to that reaction, it can be set to mode "greedy". Cases where
-this makes sense is when all related events must be processed simultenously,
+this makes sense is when all related events must be processed simultaneously,
 or simply when performance matters a lot and order matters less.
 
 .. code-block:: python
-    
+
     @flx.reaction('foo', mode='greedy')
     def handler(self, *events):
         ...
@@ -85,7 +85,7 @@ Reactions with mode "auto" are automatically triggered when any of the
 properties that the reaction uses is changed. Such reactions can be
 created by specifying the ``mode`` argument, or simply by creating a
 reaction with zero connections strings. We refer to such reactions as
-"auto reactions" or "implicit reactions". 
+"auto reactions" or "implicit reactions".
 
 This is a very convenient feature, but it has more overhead than a
 normal reaction, and should therefore probably be avoided when a lot
@@ -98,9 +98,9 @@ when needed.
 .. UIExample:: 100
 
     from flexx import flx
-    
+
     class Example(flx.Widget):
-        
+
         def init(self):
             super().init()
             with flx.VBox():
@@ -108,7 +108,7 @@ when needed.
                     self.slider1 = flx.Slider(flex=1)
                     self.slider2 = flx.Slider(flex=1)
                 self.label = flx.Label(flex=1)
-        
+
         @flx.reaction
         def slders_combined(self):
             self.label.set_text('{:.2f}'.format(self.slider1.value + self.slider2.value))
@@ -120,9 +120,9 @@ This can be convenient to easily connect different parts of an app.
 .. UIExample:: 100
 
     from flexx import flx
-    
+
     class Example(flx.Widget):
-        
+
         def init(self):
             super().init()
             with flx.VBox():
@@ -208,9 +208,9 @@ of a list of buttons, which keeps working even as that list changes.
 .. UIExample:: 150
 
     from flexx import flx
-    
+
     class Example(flx.Widget):
-        
+
         def init(self):
             super().init()
             with flx.VBox():
@@ -219,11 +219,11 @@ of a list of buttons, which keeps working even as that list changes.
                     self.label = flx.Label(flex=1)
                 with flx.HBox() as self.box:
                     flx.Button(text='x')
-        
+
         @flx.reaction('but.pointer_click')
         def add_widget(self, *events):
             flx.Button(parent=self.box, text='x')
-        
+
         @flx.reaction('box.children*.pointer_click')
         def a_button_was_pressed(self, *events):
             ev = events[-1]  # only care about last event
@@ -250,9 +250,9 @@ all children, and to the ``foo`` event of all children that are visible.
 .. UIExample:: 150
 
     from flexx import flx
-    
+
     class Example(flx.Widget):
-        
+
         def init(self):
             super().init()
             with flx.VBox():
@@ -261,11 +261,11 @@ all children, and to the ``foo`` event of all children that are visible.
                     self.label = flx.Label(flex=1)
                 with flx.HBox() as self.box:
                     flx.CheckBox()
-        
+
         @flx.reaction('but.pointer_click')
         def add_widget(self, *events):
             flx.CheckBox(parent=self.box)
-        
+
         @flx.reaction
         def a_button_was_pressed(self):
             ids = []
@@ -278,7 +278,7 @@ This mechanism is powerful, but one can see how it can potentially
 access (and thus connect to) many properties, especially if the reaction
 calls other functions that access more properties. As mentioned before,
 keep in mind that implicit reactions have more overhead, which scales with the
-number of properties that are accessed. 
+number of properties that are accessed.
 
 
 Next
