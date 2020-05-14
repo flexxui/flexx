@@ -1,26 +1,22 @@
-# MULTISITE CONTAINER
+# mypaas.service = flexx.demo
 #
-# DOCKER RUN ARGS
-# --network=web
-# --volume=/root/_flexx/demo:/root/flexx_demo
-# --memory="256m"
-# --cpus="0.5"
-# --label="traefik.docker.network=web"
-# --label="traefik.enable=true"
-# --label="traefik.demoflexxapp.frontend.rule=Host:demo.flexx.app,demo1.flexx.app"
-# --label="traefik.demoflexxapp.protocol=http"
-# --label="traefik.demoflexxapp.port=80"
+# mypaas.url = https://demo.flexx.app
+# mypaas.url = https://demo1.flexx.app
+#
+# mypaas.scale = 0
+# mypaas.maxmem = 256m
 
-FROM python:3.6-alpine
+FROM ubuntu:20.04
 
-RUN apk add --no-cache gcc g++ make linux-headers musl-dev libffi-dev openssl-dev git \
-    && pip --no-cache-dir install psutil markdown tornado
-
+RUN apt update \
+    && apt install -y python3-pip \
+    && pip3 --no-cache-dir install pip --upgrade \
+    && pip3 --no-cache-dir install psutil markdown tornado
 
 WORKDIR /root
 COPY . .
 
-RUN pip --no-cache-dir install dialite webruntime pscript \
-  && pip --no-cache-dir install https://github.com/flexxui/flexx/archive/master.zip
+RUN pip3 --no-cache-dir install dialite webruntime pscript \
+  && pip3 --no-cache-dir install https://github.com/flexxui/flexx/archive/master.zip
 
-CMD python demo.py --flexx-hostname=0.0.0.0 --flexx-port=80
+CMD ["python3", "demo.py", "--flexx-hostname=0.0.0.0", "--flexx-port=80"]

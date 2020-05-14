@@ -22,10 +22,11 @@ async def exit_server_after_a_while():
     await asyncio.sleep(12 * 3600)
     sys.exit()
 
+
 asyncio.ensure_future(exit_server_after_a_while())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # This example is setup as a server app
     # app.serve(Monitor)
     # app.serve(ChatRoom)
