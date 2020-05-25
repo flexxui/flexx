@@ -98,13 +98,13 @@ def test_style(rel_path='.'):
     # Prepare
     os.chdir(ROOT_DIR)
     if rel_path in ('', '.'):
-        sys.argv[1:] = ['flexx', 'flexxamples']
+        args = ['flexx', 'flexxamples']
     else:
-        sys.argv[1:] = ['flexx/' + rel_path]
+        args = ['flexx/' + rel_path]
     # Do test
     print('Running flake8 tests ...')
     app = Application()
-    app.run()
+    app.run(args)
     # Report
     nerrors = app.result_count
     if nerrors:
