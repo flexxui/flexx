@@ -34,8 +34,9 @@ from . import Widget
 
 
 def _load_bokeh(ext):
-    bokeh = None
-    exec("import bokeh.resources")   # noqa - dont trigger e.g. PyInstaller
+    ns = {}
+    exec("import bokeh.resources", ns, ns)   # noqa - dont trigger e.g. PyInstaller
+    bokeh = ns["bokeh"]
     dev = os.environ.get('BOKEH_RESOURCES', '') == 'relative-dev'
     res = bokeh.resources.bokehjsdir()
     if dev:
@@ -49,7 +50,10 @@ def _load_bokeh_js():
     return _load_bokeh('js')
 
 def _load_bokeh_css():
-    return _load_bokeh('css')
+    try:
+        return _load_bokeh('css')
+    except FileNotFoundError:
+        return ""  # newer versions of Bokeh have no css file, it seems
 
 # Associate Bokeh asset, but in a "lazy" way, so that we don't attempt to
 # import bokeh until the user actually instantiates a BokehWidget.
@@ -58,9 +62,10 @@ app.assets.associate_asset(__name__, 'bokeh.css', _load_bokeh_css)
 
 
 def make_bokeh_widget(plot, **kwargs):
-    Plot = components = None
-    exec("from bokeh.models import Plot")  # noqa - dont trigger e.g. PyInstaller
-    exec("from from bokeh.embed import components")  # noqa - dont trigger e.g. PyInstaller
+    ns = {}
+    exec("from bokeh.models import Plot", ns, ns)  # noqa - dont trigger e.g. PyInstaller
+    exec("from bokeh.embed import components", ns, ns)  # noqa - dont trigger e.g. PyInstaller
+    Plot, components = ns["Plot"], ns["components"]
     # Set plot prop
     if not isinstance(plot, Plot):
         raise ValueError('plot must be a Bokeh plot object.')
@@ -129,7 +134,9 @@ class BokehWidget(Widget):
     @event.reaction('size')
     def __resize_plot(self, *events):
         if self.plot and self.parent:
-            if self.plot.resize:
-                self.plot.resize()
+            if self.plot.resize_layout:
+                self.plot.resize_layout()
+            elif self.plot.resize:
+                self.plot.resize()  # older
             else:
-                self.plot.model.document.resize()  # older
+                self.plot.model.document.resize()  # older still
