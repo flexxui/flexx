@@ -214,7 +214,7 @@ class ComboBox(BaseDropdown):
     When the combobox is expanded, the arrow keys can be used to select
     an item, and it can be made current by pressing Enter or spacebar.
     Escape can be used to collapse the combobox.
-    
+
     The ``node`` of this widget is a
     `<span> <https://developer.mozilla.org/docs/Web/HTML/Element/span>`_
     with some child elements and quite a bit of CSS for rendering.
@@ -321,7 +321,7 @@ class ComboBox(BaseDropdown):
             self.set_selected_index(-1)
             self.set_selected_index(index)  # also changes text
         elif self.selected_key:
-            self.selected_key('')  # also changes text
+            self.set_selected_key('')  # also changes text
         else:
             pass  # no selection, leave text alone
 
@@ -340,7 +340,7 @@ class ComboBox(BaseDropdown):
                 return
         # else
         self._deselect()
-    
+
     @event.action
     def set_selected_index(self, index):
         if index == self.selected_index:
@@ -352,7 +352,7 @@ class ComboBox(BaseDropdown):
             self.set_text(text)
         else:
             self._deselect()
-    
+
     @event.action
     def set_selected_key(self, key):
         if key == self.selected_key:
@@ -366,7 +366,7 @@ class ComboBox(BaseDropdown):
                     return
         # else
         self._deselect()
-    
+
     @event.emitter
     def user_selected(self, index):
         """ Event emitted when the user selects an item using the mouse or
