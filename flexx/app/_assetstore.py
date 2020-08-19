@@ -391,8 +391,9 @@ class AssetStore:
             str: the (relative) url at which the asset can be retrieved.
         """
         # Get or create asset
-        if asset_name in self._assets:
-            asset = self._assets[asset_name]
+        name = asset_name.replace('\\', '/').split('/')[-1]
+        if name in self._assets:
+            asset = self._assets[name]
             if source is not None:
                 t = 'associate_asset() for %s got source, but asset %r already exists.'
                 raise TypeError(t % (mod_name, asset_name))
