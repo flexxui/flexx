@@ -159,18 +159,17 @@ async def test_dispose_PyComponent3():
         c2 = MyPyComponent()
     c1_id, c2_id = c1.id, c2.id
     await roundtrip(s)
-    await roundtrip(s)
 
     # Try to dispose
     s.send_command('INVOKE', c1.id, 'dispose', [])
     s.send_command('INVOKE', c2.id, 'dispose', [])
     await roundtrip(s)
-    await roundtrip(s)
 
     # End
     print('done')
     s.send_command('EVAL', '"done"')
-    await roundtrip(s)
+    del c1, c2
+    gc.collect()
     await roundtrip(s)
 
 
