@@ -1,7 +1,6 @@
 Flexx
 =====
 
-[![Join the chat at https://gitter.im/flexxui/flexx](https://badges.gitter.im/flexxui/flexx.svg)](https://gitter.im/flexxui/flexx?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/flexxui/flexx.svg)](https://travis-ci.org/flexxui/flexx)
 [![Documentation Status](https://readthedocs.org/projects/flexx/badge/?version=latest)](https://flexx.readthedocs.org)
 
@@ -73,7 +72,7 @@ it depends on:
 * the [Dialite](http://github.com/flexxui/dialite) library (a pure Python flexxui project).
 
 To install the latest release (and dependencies), use either of these commands:
-    
+
 * ``pip install flexx``
 * ``conda install flexx -c conda-forge``
 

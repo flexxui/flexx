@@ -47,6 +47,8 @@ def get_readme_as_rst(filename):
         i5, i6 = line.find('(', i4), line.find(')', i4+1)
         if '[Documentation Status' in line:
             line.find('x')
+        if '[Build Status' in line:
+            line.find('x')
         if i1 >=0 and i2 > i1 and i3 == i2 + 1 and i4 > i3:
             text, link = line[i1+1:i2], line[i3+1:i4]
             if i1 == 1 and line[0] == '!':
@@ -89,7 +91,7 @@ description = "Write desktop and web apps in pure Python."
 # Get version and docstring (i.e. long description)
 version, doc = get_version_and_doc(os.path.join(THIS_DIR, name, '__init__.py'))
 if os.path.isfile(os.path.join(THIS_DIR, 'README.md')):
-    doc = get_readme_as_rst(os.path.join(THIS_DIR, 'README.md'))
+    pass  # render fail - doc = get_readme_as_rst(os.path.join(THIS_DIR, 'README.md'))
 
 # Install resources (e.g. phosphor.js)
 get_all_resources()
