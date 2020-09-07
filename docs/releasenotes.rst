@@ -2,6 +2,15 @@
 Release notes
 -------------
 
+**v0.8.1** (07-09-2020)
+
+* Support for Python 3.8.
+* Support for latest Tornado (includes a workaround for py38+win).
+* Several fixes to various widgets.
+* Various fixes to the docs.
+* A few new examples.
+
+
 **v0.8.0** (26-04-2019)
 
 * Adds a `PyWidget` class that can be used as a base class for your high-level
