@@ -21,6 +21,8 @@ from flexx.app import PyComponent, JsComponent
 
 
 def setup_module():
+    if sys.version_info > (3, 8) and sys.platform.startswith('win'):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     app.manager._clear_old_pending_sessions(1)
 
 
@@ -157,15 +159,18 @@ async def test_dispose_PyComponent3():
         c2 = MyPyComponent()
     c1_id, c2_id = c1.id, c2.id
     await roundtrip(s)
+    await roundtrip(s)
 
     # Try to dispose
     s.send_command('INVOKE', c1.id, 'dispose', [])
     s.send_command('INVOKE', c2.id, 'dispose', [])
     await roundtrip(s)
+    await roundtrip(s)
 
     # End
     print('done')
     s.send_command('EVAL', '"done"')
+    await roundtrip(s)
     await roundtrip(s)
 
 
