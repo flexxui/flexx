@@ -627,9 +627,9 @@ def mutate_dict(d, ev):
     mutation = ev['mutation']
     objects = ev['objects']
 
-    if mutation == 'set':
-        d.clear()
-    elif mutation in ('set', 'insert', 'replace'):
+    if mutation in ('set', 'insert', 'replace'):
+        if mutation == 'set':
+            d.clear()
         assert isinstance(objects, dict)
         for key, val in objects.items():
             d[key] = val

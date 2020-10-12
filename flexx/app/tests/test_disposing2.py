@@ -21,6 +21,8 @@ from flexx.app import PyComponent, JsComponent
 
 
 def setup_module():
+    if sys.version_info > (3, 8) and sys.platform.startswith('win'):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     app.manager._clear_old_pending_sessions(1)
 
 
@@ -166,6 +168,8 @@ async def test_dispose_PyComponent3():
     # End
     print('done')
     s.send_command('EVAL', '"done"')
+    del c1, c2
+    gc.collect()
     await roundtrip(s)
 
 

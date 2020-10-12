@@ -41,5 +41,5 @@ To run apps that look like desktop apps, we recommend having Firefox or nw.js in
 Current status
 --------------
 
-Since version 0.5 (September 2018), Flexx is in beta status; some
+Flexx is in beta status; some
 parts of the API may change, but we do care about backwards compatibility.

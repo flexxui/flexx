@@ -1192,3 +1192,8 @@ class PyWidget(app.PyComponent):
         if self._jswidget is not None:
             self._jswidget.__exit__(None, None, None)
         return super().__exit__(*args, **kwargs)
+    
+    def dispose(self):
+        super().dispose()
+        if self._jswidget is not None:
+            self._jswidget.dispose()
