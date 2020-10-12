@@ -71,4 +71,5 @@ _website/
 _live/
 _gh-pages/
 
-
+# Eclipse
+.settings/
