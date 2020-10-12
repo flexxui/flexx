@@ -3,6 +3,8 @@ High level code related to the server that provides a mainloop and
 serves the pages and websocket.
 """
 
+import sys
+
 import asyncio
 
 from ..event import _loop
@@ -105,6 +107,8 @@ class AbstractServer:
 
     def __init__(self, host, port, loop=None, **kwargs):
         # First off, create new event loop and integrate event.loop
+        if sys.version_info > (3, 8) and sys.platform.startswith('win'):
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         if loop is None:
             self._loop = asyncio.get_event_loop()
         else:
