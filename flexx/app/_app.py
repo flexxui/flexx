@@ -141,15 +141,26 @@ class App:
         Arguments:
             runtime (str): the runtime to launch the application in.
                 Default 'app or browser'.
-            runtime_kwargs: kwargs to pass to the ``webruntime.launch`` function.
-                A few names are passed to runtime kwargs if not already present
-                ('title' and 'icon').
+            runtime_kwargs: kwargs to pass to the ``webruntime.launch`` function
+                and the create_server function.
+                create_server takes 'host', 'port', 'loop', 'backend' as parameters.
+                For webruntime.launch, a few names are passed to runtime kwargs if not 
+                already present ('title' and 'icon').
 
         Returns:
             Component: an instance of the given class.
         """
         # creates server (and event loop) if it did not yet exist
-        current_server()
+        server_kwargs = {}
+        server_keys = ['host', 'port', 'loop', 'backend']
+        for key, value in runtime_kwargs.items():
+            if key in server_keys:
+                server_kwargs[key] = value
+        current_server(**server_kwargs)
+        # remove the server_keys
+        for key in server_keys:
+            if key in runtime_kwargs:
+                del runtime_kwargs[key]
 
         # Create session
         if not self._is_served:
