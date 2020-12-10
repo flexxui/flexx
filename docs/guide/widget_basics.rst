@@ -51,7 +51,7 @@ The init method
 
 In the above example one can see the use of the ``init()`` method, which
 is a common use in Flexx. It is generally better to use it instead of ``__init__()``,
-because Flexx calls it at a very approproate time in the initialization process.
+because Flexx calls it at a very appropriate time in the initialization process.
 For example, when ``init()`` is called, the corresponding widget is the *default parent*.
 
 Further, the ``init()`` gets the positional instantiation arguments: creating
