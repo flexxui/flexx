@@ -13,7 +13,9 @@ class Example(flx.Widget):
             "This flexx app is served within flask! "
         ui.Markdown(content=content, style='background:#EAECFF;')
 
+
 flx_flask.serve(Example)
+
 
 @app.route("/")
 def site_map():  # list available applications and URLs
@@ -21,10 +23,12 @@ def site_map():  # list available applications and URLs
     This function lists all the URLs server by the flask application
     including the flexx application that have been registered.
     """
+
     def has_no_empty_params(rule):
         defaults = rule.defaults if rule.defaults is not None else ()
         arguments = rule.arguments if rule.arguments is not None else ()
         return len(defaults) >= len(arguments)
+
     links = []
     for rule in current_app.url_map.iter_rules():
         # Filter out rules we can't navigate to in a browser
@@ -39,25 +43,18 @@ def site_map():  # list available applications and URLs
     html.append("</ul>")
     return '\n'.join(html)
 
+
+@app.route('/favicon.ico')
+def ico_file():
+    return "None"
+
+
 ####################### Registration of blueprints #####################
 sockets = Sockets(app)  # keep at the end
-flx_flask.register_blueprints(app, sockets)
+flx_flask.register_blueprints(app, sockets, static_folder='static')
 
 ####################### Start flexx in thread #####################
-import threading
-import asyncio
-def flexx_thread():
-    """
-    Function to start a thread containing the main loop of flexx.
-    This is needed as flexx is an asyncio application which is not 
-    compatible with flexx/gevent.
-    """
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    flx_flask.start() # starts flexx loop without server
-thread1 = threading.Thread(target = flexx_thread)
-thread1.daemon = True
-thread1.start()
+flx_flask.start_thread()
 
 ######### Start flask server (using gevent that supports web sockets) #########
 if __name__ == "__main__":
