@@ -22,3 +22,4 @@ from ._dropdown import ComboBox, DropdownContainer
 from ._plotwidget import PlotWidget
 from ._plotly import PlotlyWidget
 from ._bokeh import BokehWidget
+from ._markdown import Markdown

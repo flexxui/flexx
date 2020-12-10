@@ -171,7 +171,6 @@ def port_hash(name):
 class FlexxHandler(RequestHandler):
     """ Base class for Flexx' Tornado request handlers.
     """
-
     def initialize(self, **kwargs):
         # kwargs == dict set as third arg in url spec
         pass
@@ -617,9 +616,9 @@ class WSHandler(WebSocketHandler):
 
     def close(self, *args):
         try:
-            WebSocketHandler.close(self, *args)
+            super().close(self, *args)
         except TypeError:
-            WebSocketHandler.close(self)  # older Tornado
+            super().close(self)  # older Tornado
 
     def close_this(self):
         """ Call this to close the websocket
