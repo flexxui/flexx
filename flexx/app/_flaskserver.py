@@ -1,6 +1,12 @@
 """
-Serve web page and handle web sockets using Tornado.
+Serve web page and handle web sockets using Flask.
 """
+# Improvements to be done in the future:
+# 1) Code from MainHandler, AppHandler and WSHandler should be moved in 
+#    _serverHandlers.py. Only RequestHandler and MyWebSocketHandler
+# 2) manager should be overloadable from _flaskserver.py to allow MainHandler,
+#    AppHandler and WSHandler to place manager tasks in the flexx app loop
+# 3) The specification of the backend should be passed at run or start. Not at launch or before.
 
 import json
 import time
@@ -10,33 +16,78 @@ import mimetypes
 import traceback
 import threading
 from urllib.parse import urlparse
-# from concurrent.futures import ThreadPoolExecutor
 
-import tornado
-from tornado import gen, netutil
-from tornado.web import Application, RequestHandler
-from tornado.ioloop import IOLoop
-from tornado.websocket import WebSocketHandler, WebSocketClosedError
-from tornado.httpserver import HTTPServer
-from tornado.platform.asyncio import AsyncIOMainLoop
+import flask
+from flask import Flask, request, Blueprint, current_app, url_for
+from flask_sockets import Sockets
+
+from gevent import pywsgi
+from geventwebsocket.handler import WebSocketHandler
+import werkzeug.serving
 
 from ._app import manager
 from ._session import get_page
 from ._server import AbstractServer
 from ._assetstore import assets
 from ._clientcore import serializer
+from ._flaskhelpers import register_blueprints, flexxBlueprint, flexxWS
 
 from . import logger
 from .. import config
 
-if tornado.version_info < (4, ):
-    raise RuntimeError('Flexx requires Tornado v4.0 or higher.')
+app = Flask(__name__)
+# app.debug = True
 
-# todo: generalize -> Make Tornado mnore of an implementation detail.
-# So we can use e.g. https://github.com/aaugustin/websockets
+@app.route('/favicon.ico')
+def favicon():
+    return '' # app.send_static_file(f'img/favicon.ico')
 
-# todo: threading, or even multi-process
-#executor = ThreadPoolExecutor(4)
+if app.debug:
+
+    def has_no_empty_params(rule):
+        defaults = rule.defaults if rule.defaults is not None else ()
+        arguments = rule.arguments if rule.arguments is not None else ()
+        return len(defaults) >= len(arguments)
+
+    @app.route("/site-map")
+    def site_map():
+        links = []
+        for rule in current_app.url_map.iter_rules():
+            # Filter out rules we can't navigate to in a browser
+            # and rules that require parameters
+            if "GET" in rule.methods and has_no_empty_params(rule):
+                url = url_for(rule.endpoint, **(rule.defaults or {}))
+                links.append((url, rule.endpoint))
+        # links is now a list of url, endpoint tuples
+        html = ["<h> URLs served by this server </h>", "<ul>"]
+        for link in links:
+            html.append(f'<li><a href="{link[0]}">{link[1]}</a></li>')
+        html.append("</ul>")
+        return '\n'.join(html)
+
+@flexxWS.route('/ws/<path:path>')
+def ws_handler(ws, path):
+    # WSHandler
+    wshandler = WSHandler(ws)
+    async def flexx_msg_handler(ws, path):
+        wshandler.open(path)
+        
+    future = asyncio.run_coroutine_threadsafe(flexx_msg_handler(ws, path), loop=manager.loop)
+    future.result()
+    while not ws.closed:
+        message = ws.receive()
+        if message is None: 
+            break
+        manager.loop.call_soon_threadsafe(wshandler.on_message, message)
+    manager.loop.call_soon_threadsafe(wshandler.ws_closed) #, 1000, "closed by client")  # add connection close reason?
+
+@flexxBlueprint.route('/', defaults={'path': ''})
+@flexxBlueprint.route('/<path:path>')
+def flexx_handler(path):
+    # if path.startswith('assets'):
+    # path = f"flexx/{path}"
+    # MainHandler
+    return MainHandler(flask.request).run()
 
 IMPORT_TIME = time.time()
 
@@ -45,61 +96,20 @@ def is_main_thread():
     """ Get whether this is the main thread. """
     return isinstance(threading.current_thread(), threading._MainThread)
 
-
-class TornadoServer(AbstractServer):
-    """ Flexx Server implemented in Tornado.
+class FlaskServer(AbstractServer):
+    """ Flexx Server implemented in Flask.
     """
-
     def __init__(self, *args, **kwargs):
-        self._app = None
+        global app
+        self._app = app
         self._server = None
-        super().__init__(*args, **kwargs)
+        self._serving = None # needed for AbstractServer
+        super().__init__(*args, **kwargs) # this calls self._open
 
     def _open(self, host, port, **kwargs):
         # Note: does not get called if host is False. That way we can
         # run Flexx in e.g. JLab's application.
-
-        # Hook Tornado up with asyncio. Flexx' BaseServer makes sure
-        # that the correct asyncio event loop is current (for this thread).
-        # http://www.tornadoweb.org/en/stable/asyncio.html
-        # todo: Since Tornado v5.0 asyncio is autom used, deprecating AsyncIOMainLoop
-        self._io_loop = AsyncIOMainLoop()
-        # I am sorry for this hack, but Tornado wont work otherwise :(
-        # I wonder how long it will take before this will bite me back. I guess
-        # we will be alright as long as there is no other Tornado stuff going on.
-        if hasattr(IOLoop, "_current"):
-            IOLoop._current.instance = None
-        else:
-            IOLoop.current().instance = None
-        self._io_loop.make_current()
-
-        # handle ssl, wether from configuration or given args
-        if config.ssl_certfile:
-            if 'ssl_options' not in kwargs:
-                kwargs['ssl_options'] = {}
-            if 'certfile' not in kwargs['ssl_options']:
-                kwargs['ssl_options']['certfile'] = config.ssl_certfile
-
-        if config.ssl_keyfile:
-            if 'ssl_options' not in kwargs:
-                kwargs['ssl_options'] = {}
-            if 'keyfile' not in kwargs['ssl_options']:
-                kwargs['ssl_options']['keyfile'] = config.ssl_keyfile
-
-        if config.tornado_debug:
-            app_kwargs = dict(debug=True)
-        else:
-            app_kwargs = dict()
-        # Create tornado application
-        self._app = Application([(r"/flexx/ws/(.*)", WSHandler),
-                                 (r"/flexx/(.*)", MainHandler),
-                                 (r"/(.*)", AppHandler), ], **app_kwargs)
-        self._app._io_loop = self._io_loop
-        # Create tornado server, bound to our own ioloop
-        if tornado.version_info < (5, ):
-            kwargs['io_loop'] = self._io_loop
-        self._server = HTTPServer(self._app, **kwargs)
-
+        
         # Start server (find free port number if port not given)
         if port:
             # Turn port into int, use hashed port number if a string was given
@@ -107,50 +117,66 @@ class TornadoServer(AbstractServer):
                 port = int(port)
             except ValueError:
                 port = port_hash(port)
-            self._server.listen(port, host)
         else:
             # Try N ports in a repeatable range (easier, browser history, etc.)
+            a_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
             prefered_port = port_hash('Flexx')
             for i in range(8):
                 port = prefered_port + i
                 try:
-                    self._server.listen(port, host)
-                    break
-                except (OSError, IOError):
-                    pass  # address already in use
+                    result_of_check = a_socket.bind((host,port))
+                except:
+                    continue
+                a_socket.close()
+                break
             else:
-                # Ok, let Tornado figure out a port
-                [sock] = netutil.bind_sockets(None, host, family=socket.AF_INET)
-                self._server.add_sockets([sock])
-                port = sock.getsockname()[1]
+                assert False, "No port found to start flask"
 
-        # Notify address, so its easy to e.g. copy and paste in the browser
-        self._serving = self._app._flexx_serving = host, port
-        proto = 'http'
-        if 'ssl_options' in kwargs:
-            proto = 'https'
-        # This string 'Serving apps at' is our 'ready' signal and is tested for.
-        logger.info('Serving apps at %s://%s:%i/' % (proto, host, port))
+        # remember the loop we are in for the manager
+        manager.loop = asyncio.get_event_loop()
+
+        # Keep flask application info
+        self._serving = (host, port)
+
+    def start(self):
+        # Register blueprints for all apps:
+        sockets = Sockets(app)
+        register_blueprints(self._app, sockets)
+
+        # Start flask application in background thread
+        def RunServer():
+            self._server = pywsgi.WSGIServer(self._serving, self._app, handler_class=WebSocketHandler)
+            proto = self.protocol
+            # This string 'Serving apps at' is our 'ready' signal and is tested for.
+            logger.info('Serving apps at %s://%s:%i/' % (proto, *self._serving))
+            self._server.serve_forever()
+        _thread = threading.Thread(target = RunServer)
+        _thread.daemon = True  # end the thread if the main thread exits
+        _thread.start()
+        super().start()
+
+    def start_serverless(self):
+        super().start()
 
     def _close(self):
         self._server.stop()
 
     @property
     def app(self):
-        """ The Tornado Application object being used."""
+        """ The Flask Application object being used."""
         return self._app
 
     @property
     def server(self):
-        """ The Tornado HttpServer object being used."""
+        """ The Flask HttpServer object being used."""
         return self._server
 
     @property
     def protocol(self):
         """ Get a string representing served protocol."""
-        if self._server.ssl_options is not None:
-            return 'https'
-
+#         if self._server.ssl_options is not None:
+#             return 'https'
         return 'http'
 
 def port_hash(name):
@@ -167,38 +193,40 @@ def port_hash(name):
     val += (val >> 3) + (len(name) * fac)
     return 49152 + (val % 2**14)
 
+class RequestHandler:
+    def __init__(self, request):
+        self.request = request
+        self.content = []
+        self.values = {}
+        
+    def redirect(self, location):
+        return flask.redirect(location)
+    
+    def write(self, string_or_bytes):
+        self.content = string_or_bytes
+    
+    def send_error(self, error_no):
+        return "Error", error_no
+    
+    def run(self):
+        if self.request.method == 'GET':
+            ret = self.get(request.path)
+            if ret is not None:
+                return ret
+            else:
+                return self.content, 200, self.values
+    
+    def get_argument(self, key, default):
+        return self.request.values.get(key,default)
+    
+    def set_header(self, key, value):
+        self.values[key] = value
+        
 
-class FlexxHandler(RequestHandler):
-    """ Base class for Flexx' Tornado request handlers.
-    """
-    def initialize(self, **kwargs):
-        # kwargs == dict set as third arg in url spec
-        pass
-
-    def write_error(self, status_code, **kwargs):
-        if status_code == 404:  # does not work?
-            self.write('flexx.ui wants you to connect to root (404)')
-        else:
-            if config.browser_stacktrace:
-                msg = 'Flexx.ui encountered an error: <br /><br />'
-                try:  # try providing a useful message; tough luck if this fails
-                    type, value, tb = kwargs['exc_info']
-                    tb_str = ''.join(traceback.format_tb(tb))
-                    msg += '<pre>%s\n%s</pre>' % (tb_str, str(value))
-                except Exception:
-                    pass
-                self.write(msg)
-            super().write_error(status_code, **kwargs)
-
-    def on_finish(self):
-        pass
-
-
-class AppHandler(FlexxHandler):
+class AppHandler(RequestHandler):
     """ Handler for http requests to get apps.
     """
 
-    @gen.coroutine
     def get(self, full_path):
 
         logger.debug('Incoming request at %r' % full_path)
@@ -239,7 +267,7 @@ class AppHandler(FlexxHandler):
                 app_name = '__index__'
             else:
                 name = parts[0] if parts else '__main__'
-                return self.write('No app "%s" is currently hosted.' % name)
+                self.write('No app "%s" is currently hosted.' % name)
 
         # We now have:
         # * app_name: name of the app, must be a valid identifier, names
@@ -247,9 +275,9 @@ class AppHandler(FlexxHandler):
         #   commands, etc.
         # * path: part (possibly with slashes) after app_name
         if app_name == '__index__':
-            self._get_index(app_name, path)  # Index page
+            return self._get_index(app_name, path)  # Index page
         else:
-            self._get_app(app_name, path)  # An actual app!
+            return self._get_app(app_name, path)  # An actual app!
 
     def _get_index(self, app_name, path):
         if path:
@@ -270,7 +298,7 @@ class AppHandler(FlexxHandler):
 
         # Error or redirect if app name is not right
         if not correct_app_name:
-            return self.write('No app "%s" is currently hosted.' % app_name)
+            self.write('No app "%s" is currently hosted.' % app_name)
         if correct_app_name != app_name:
             return self.redirect('/%s/%s' % (correct_app_name, path))
 
@@ -286,13 +314,17 @@ class AppHandler(FlexxHandler):
                 self.redirect('/%s/' % app_name)  # redirect for normal serve
         else:
             # Create session - websocket will connect to it via session_id
-            session = manager.create_session(app_name, request=self.request)
-            self.write(get_page(session).encode())
+            async def run_in_flexx_loop(app_name, request):
+                session = manager.create_session(app_name, request=request)
+                return session
 
+            future = asyncio.run_coroutine_threadsafe(run_in_flexx_loop(app_name, request=self.request), loop=manager.loop)
+            session = future.result()
+            self.write(get_page(session).encode())
 
 class MainHandler(RequestHandler):
     """ Handler for assets, commands, etc. Basically, everything for
-    which te path is clear.
+    which the path is clear.
     """
 
     def _guess_mime_type(self, fname):
@@ -302,16 +334,16 @@ class MainHandler(RequestHandler):
         if guess:
             self.set_header("Content-Type", guess)
 
-    @gen.coroutine
     def get(self, full_path):
 
         logger.debug('Incoming request at %s' % full_path)
 
         # Analyze path to derive components
         # Note: invalid app name can mean its a path relative to the main app
-        parts = [p for p in full_path.split('/') if p]
+        parts = [p for p in full_path.split('/') if p][1:]
         if not parts:
-            return self.write('Root url for flexx: assets, assetview, data, cmd')
+            self.write('Root url for flexx, missing selector: assets, assetview, data, info or cmd')
+            return
         selector = parts[0]
         path = '/'.join(parts[1:])
 
@@ -322,7 +354,7 @@ class MainHandler(RequestHandler):
         elif selector == 'cmd':
             self._get_cmd(selector, path)  # Execute (or ignore) command
         else:
-            return self.write('Invalid url path "%s".' % full_path)
+            self.write('Invalid url path "%s".' % full_path)
 
     def _get_asset(self, selector, path):
 
@@ -333,15 +365,15 @@ class MainHandler(RequestHandler):
         # Get asset provider: store or session
         asset_provider = assets
         if session_id and selector != 'data':
-            return self.write('Only supports shared assets, not ' % filename)
+            self.write('Only supports shared assets, not ' % filename)
         elif session_id:
             asset_provider = manager.get_session_by_id(session_id)
 
         # Checks
         if asset_provider is None:
-            return self.write('Invalid session %r' % session_id)
+            self.write('Invalid session %r' % session_id)
         if not filename:
-            return self.write('Root dir for %s/%s' % (selector, path))
+            self.write('Root dir for %s/%s' % (selector, path))
 
         if selector == 'assets':
 
@@ -366,7 +398,7 @@ class MainHandler(RequestHandler):
             try:
                 res = asset_provider.get_asset(filename)
             except KeyError:
-                return self.write('Could not load asset %r' % filename)
+                self.write('Could not load asset %r' % filename)
             else:
                 res = res.to_string()
 
@@ -381,7 +413,7 @@ class MainHandler(RequestHandler):
                 lines.append('<pre id="L%i"><a href="#L%i">%s</a>  %s</pre>' %
                              (i+1, i+1, str(i+1).rjust(4).replace(' ', '&nbsp'), line))
             lines.append('</body></html>')
-            return self.write('\n'.join(lines))
+            self.write('\n'.join(lines))
 
         elif selector == 'data':
             # todo: can/do we async write in case the data is large?
@@ -392,7 +424,7 @@ class MainHandler(RequestHandler):
                 return self.send_error(404)
             else:
                 self._guess_mime_type(filename)  # so that images show up
-                return self.write(res)
+                self.write(res)
 
         else:
             raise RuntimeError('Invalid asset type %r' % selector)
@@ -482,8 +514,52 @@ class MessageCounter:
     def stop(self):
         self._stop = True
 
+from typing import (
+    TYPE_CHECKING,
+    cast,
+    Any,
+    Optional,
+    Dict,
+    Union,
+    List,
+    Awaitable,
+    Callable,
+    Tuple,
+    Type,
+)
 
-class WSHandler(WebSocketHandler):
+class MyWebSocketHandler():
+    """
+    This class is designed to mimic the tornado WebSocketHandler to
+    allow glue in code from WSHandler.
+    """
+    class Application:
+        pass
+    class IOLoop:
+        def __init__(self, loop):
+            self._loop = loop
+        def spawn_callback(self, func, *args):
+            self._loop.call_soon_threadsafe(func, *args)
+    
+    def __init__(self, ws):
+        self._ws = ws
+        self.application = MyWebSocketHandler.Application()
+        self.application._io_loop = MyWebSocketHandler.IOLoop(manager.loop)
+        self.cookies = {}
+
+    def write_message(
+        self, message: Union[bytes, str, Dict[str, Any]], binary: bool = False
+    ) -> "Future[None]":
+        self._ws.send(message)
+        
+    def close(self, code: int = None, reason: str = None) -> None:
+        if not self._ws.closed:
+            self._ws.close(code, reason)
+
+    def ws_closed(self):
+        self.on_close()
+
+class WSHandler(MyWebSocketHandler):
     """ Handler for websocket.
     """
 
@@ -499,14 +575,11 @@ class WSHandler(WebSocketHandler):
     def open(self, path=None):
         """ Called when a new connection is made.
         """
-        if not hasattr(self, 'close_code'):  # old version of Tornado?
+        if not hasattr(self, 'close_code'):  # old version of Flask?
             self.close_code, self.close_reason = None, None
 
         self._session = None
         self._mps_counter = MessageCounter()
-
-        # Don't collect messages to send them more efficiently, just send asap
-        # self.set_nodelay(True)
 
         if isinstance(path, bytes):
             path = path.decode()
@@ -564,7 +637,6 @@ class WSHandler(WebSocketHandler):
             manager.disconnect_client(self._session)
             self._session = None  # Allow cleaning up
 
-    @gen.coroutine
     def pinger1(self):
         """ Check for timeouts. This helps remove lingering false connections.
 
@@ -615,10 +687,7 @@ class WSHandler(WebSocketHandler):
             self.close(1000, 'closed by client')
 
     def close(self, *args):
-        try:
-            super().close(self, *args)
-        except TypeError:
-            super().close(self)  # older Tornado
+        super().close(*args)
 
     def close_this(self):
         """ Call this to close the websocket

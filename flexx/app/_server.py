@@ -42,13 +42,8 @@ def create_server(host=None, port=None, loop=None, backend='tornado',
     Returns:
         AbstractServer: The server object, see ``current_server()``.
     """
-    # Lazy load tornado, so that we can use anything we want there without
-    # preventing other parts of flexx.app from using *this* module.
-    from ._tornadoserver import TornadoServer  # noqa - circular dependency
 
     global _current_server
-    if backend.lower() != 'tornado':
-        raise RuntimeError('Flexx server can only run on Tornado (for now).')
     # Handle defaults
     if host is None:
         host = config.hostname
@@ -58,12 +53,23 @@ def create_server(host=None, port=None, loop=None, backend='tornado',
     if _current_server:
         _current_server.close()
     # Start hosting
-    _current_server = TornadoServer(host, port, loop, **server_kwargs)
+    backend = backend.lower()
+    if backend == 'tornado':
+        # Lazy load tornado, so that we can use anything we want there without
+        # preventing other parts of flexx.app from using *this* module.
+        from ._tornadoserver import TornadoServer  # noqa - circular dependency
+        _current_server = TornadoServer(host, port, loop, **server_kwargs)
+    elif backend == 'flask':
+        # Lazy load flask
+        from ._flaskserver import FlaskServer
+        _current_server = FlaskServer(host, port, loop, **server_kwargs)
+    else:
+        raise RuntimeError('Flexx server can only run on Tornado and Flask (for now).')
     assert isinstance(_current_server, AbstractServer)
     return _current_server
 
 
-def current_server(create=True):
+def current_server(create=True, **server_kwargs):
     """
     Get the current server object. Creates a server if there is none
     and the ``create`` arg is True. Currently, this is always a
@@ -77,7 +83,7 @@ def current_server(create=True):
 
     """
     if create and not _current_server:
-        create_server()
+        create_server(**server_kwargs)
     return _current_server
 
 
