@@ -1,3 +1,14 @@
+"""
+Example showing an implementation of a flask server serving a flexx application.
+
+If assets are needed (jpg, files, etc.) they can be placed a folder called static 
+and accessed through each flexx blueprints (e.g. http://my_flexx/picture.jpg). The
+name of that folder can be changed when registering the blueprint.
+
+All functions needed for the implementation are found in flx_flask. More help can
+be found in flexx/app/_flaskhelpers.py.
+"""
+
 from flask import Flask, current_app, url_for
 from flask_sockets import Sockets
 app = Flask(__name__)

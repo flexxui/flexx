@@ -1,8 +1,9 @@
 """
-Simple use of a dropdown,
+Simple use of a dropdown containing a tree widget
 """
 
 from flexx import app, event, ui, flx
+
 
 class Example(ui.Widget):
 
@@ -18,6 +19,7 @@ class Example(ui.Widget):
             with ui.TreeWidget(max_selected=1):
                 for i in range(20):
                     ui.TreeItem(text='foo %i' % i, checked=False)
+
 
 if __name__ == '__main__':
     m = flx.launch(Example)

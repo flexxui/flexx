@@ -1,3 +1,29 @@
+"""
+This file contains the main functions used to implement a flask/gevent server 
+hosting a flexx application.
+
+The chain of initialisation is the following:
+
+# Import
+from flexx import flx_flask
+# Define one or multiple classes
+class Example1(flx.Widget):
+    ...
+# Register the class to the server (you can define more than one)
+flx_flask.serve(Example1)
+
+# Instantiate the Socket class and then register all flexx apps.
+# The flexx apps are individually registered as one Blueprint each. 
+sockets = Sockets(app)  # keep at the end
+flx_flask.register_blueprints(app, sockets, static_folder='static')
+
+# Start the flexx thread to manage the flexx asyncio worker loop.
+flx_flask.start_thread()
+
+# You can then start the flask/gevent server.
+
+See the howtos/flask_server.py example for a working example.
+"""
 import flask
 from ._app import manager, App
 from ._server import create_server, current_server
@@ -67,7 +93,7 @@ def serve(cls):
         m.serve()
 
 
-def _start():
+def _start(loop):
     """
     Start the flexx event loop only. This function generally does not
     return until the application is stopped.
@@ -75,24 +101,28 @@ def _start():
     In more detail, this calls ``run_forever()`` on the asyncio event loop
     associated with the current server.
     """
-    server = current_server(backend='flask')
+    server = current_server(backend='flask', loop=loop)
     server.start_serverless()
 
 
 def start_thread():
+    """
+    Starts the flexx thread that manages the flexx asyncio worker loop.
+    """
     import threading
     import asyncio
 
-    def flexx_thread():
+    flexx_loop = asyncio.new_event_loop()  # assign the loop to the manager so it can be accessed later. 
+
+    def flexx_thread(loop):
         """
         Function to start a thread containing the main loop of flexx.
         This is needed as flexx is an asyncio application which is not 
-        compatible with flexx/gevent.
+        compatible with flask/gevent.
         """
-        loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        _start()  # starts flexx loop without server
+        _start(loop)  # starts flexx loop without http server
 
-    thread1 = threading.Thread(target=flexx_thread)
+    thread1 = threading.Thread(target=flexx_thread, args=(flexx_loop,))
     thread1.daemon = True
     thread1.start()

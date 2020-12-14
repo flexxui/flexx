@@ -38,9 +38,11 @@ from .. import config
 app = Flask(__name__)
 # app.debug = True
 
+
 @app.route('/favicon.ico')
 def favicon():
-    return '' # app.send_static_file(f'img/favicon.ico')
+    return ''  # app.send_static_file(f'img/favicon.ico')
+
 
 if app.debug:
 
@@ -65,11 +67,13 @@ if app.debug:
         html.append("</ul>")
         return '\n'.join(html)
 
+
 @flexxWS.route('/ws/<path:path>')
 def ws_handler(ws, path):
     # WSHandler
     wshandler = WSHandler(ws)
-    async def flexx_msg_handler(ws, path):
+
+    async def flexx_msg_handler(ws, path): 
         wshandler.open(path)
         
     future = asyncio.run_coroutine_threadsafe(flexx_msg_handler(ws, path), loop=manager.loop)
@@ -79,7 +83,8 @@ def ws_handler(ws, path):
         if message is None: 
             break
         manager.loop.call_soon_threadsafe(wshandler.on_message, message)
-    manager.loop.call_soon_threadsafe(wshandler.ws_closed) #, 1000, "closed by client")  # add connection close reason?
+    manager.loop.call_soon_threadsafe(wshandler.ws_closed)
+
 
 @flexxBlueprint.route('/', defaults={'path': ''})
 @flexxBlueprint.route('/<path:path>')
@@ -89,6 +94,7 @@ def flexx_handler(path):
     # MainHandler
     return MainHandler(flask.request).run()
 
+
 IMPORT_TIME = time.time()
 
 
@@ -96,15 +102,18 @@ def is_main_thread():
     """ Get whether this is the main thread. """
     return isinstance(threading.current_thread(), threading._MainThread)
 
+
 class FlaskServer(AbstractServer):
     """ Flexx Server implemented in Flask.
     """
+
     def __init__(self, *args, **kwargs):
         global app
         self._app = app
         self._server = None
-        self._serving = None # needed for AbstractServer
-        super().__init__(*args, **kwargs) # this calls self._open
+        self._serving = None  # needed for AbstractServer
+        super().__init__(*args, **kwargs)  # this calls self._open and 
+                                            # create the loop if not specified 
 
     def _open(self, host, port, **kwargs):
         # Note: does not get called if host is False. That way we can
@@ -125,7 +134,7 @@ class FlaskServer(AbstractServer):
             for i in range(8):
                 port = prefered_port + i
                 try:
-                    result_of_check = a_socket.bind((host,port))
+                    result_of_check = a_socket.bind((host, port))
                 except:
                     continue
                 a_socket.close()
@@ -133,8 +142,8 @@ class FlaskServer(AbstractServer):
             else:
                 assert False, "No port found to start flask"
 
-        # remember the loop we are in for the manager
-        manager.loop = asyncio.get_event_loop()
+        # Remember the loop we are in for the manager
+        manager.loop = self._loop
 
         # Keep flask application info
         self._serving = (host, port)
@@ -151,7 +160,8 @@ class FlaskServer(AbstractServer):
             # This string 'Serving apps at' is our 'ready' signal and is tested for.
             logger.info('Serving apps at %s://%s:%i/' % (proto, *self._serving))
             self._server.serve_forever()
-        _thread = threading.Thread(target = RunServer)
+
+        _thread = threading.Thread(target=RunServer)
         _thread.daemon = True  # end the thread if the main thread exits
         _thread.start()
         super().start()
@@ -179,6 +189,7 @@ class FlaskServer(AbstractServer):
 #             return 'https'
         return 'http'
 
+
 def port_hash(name):
     """ Given a string, returns a port number between 49152 and 65535
 
@@ -191,9 +202,11 @@ def port_hash(name):
     for c in name:
         val += (val >> 3) + (ord(c) * fac)
     val += (val >> 3) + (len(name) * fac)
-    return 49152 + (val % 2**14)
+    return 49152 + (val % 2 ** 14)
+
 
 class RequestHandler:
+
     def __init__(self, request):
         self.request = request
         self.content = []
@@ -217,7 +230,7 @@ class RequestHandler:
                 return self.content, 200, self.values
     
     def get_argument(self, key, default):
-        return self.request.values.get(key,default)
+        return self.request.values.get(key, default)
     
     def set_header(self, key, value):
         self.values[key] = value
@@ -313,6 +326,7 @@ class AppHandler(RequestHandler):
             else:
                 self.redirect('/%s/' % app_name)  # redirect for normal serve
         else:
+
             # Create session - websocket will connect to it via session_id
             async def run_in_flexx_loop(app_name, request):
                 session = manager.create_session(app_name, request=request)
@@ -321,6 +335,7 @@ class AppHandler(RequestHandler):
             future = asyncio.run_coroutine_threadsafe(run_in_flexx_loop(app_name, request=self.request), loop=manager.loop)
             session = future.result()
             self.write(get_page(session).encode())
+
 
 class MainHandler(RequestHandler):
     """ Handler for assets, commands, etc. Basically, everything for
@@ -380,7 +395,7 @@ class MainHandler(RequestHandler):
             # If colon: request for a view of an asset at a certain line
             if '.js:' in filename or '.css:' in filename or filename[0] == ':':
                 fname, where = filename.split(':')[:2]
-                return self.redirect('/flexx/assetview/%s/%s#L%s' %
+                return self.redirect('/flexx/assetview/%s/%s#L%s' % 
                     (session_id or 'shared', fname.replace('/:', ':'), where))
 
             # Retrieve asset
@@ -410,8 +425,8 @@ class MainHandler(RequestHandler):
             for i, line in enumerate(res.splitlines()):
                 table = {ord('&'): '&amp;', ord('<'): '&lt;', ord('>'): '&gt;'}
                 line = line.translate(table).replace('\t', '    ')
-                lines.append('<pre id="L%i"><a href="#L%i">%s</a>  %s</pre>' %
-                             (i+1, i+1, str(i+1).rjust(4).replace(' ', '&nbsp'), line))
+                lines.append('<pre id="L%i"><a href="#L%i">%s</a>  %s</pre>' % 
+                             (i + 1, i + 1, str(i + 1).rjust(4).replace(' ', '&nbsp'), line))
             lines.append('</body></html>')
             self.write('\n'.join(lines))
 
@@ -514,6 +529,7 @@ class MessageCounter:
     def stop(self):
         self._stop = True
 
+
 from typing import (
     TYPE_CHECKING,
     cast,
@@ -528,16 +544,21 @@ from typing import (
     Type,
 )
 
+
 class MyWebSocketHandler():
     """
     This class is designed to mimic the tornado WebSocketHandler to
     allow glue in code from WSHandler.
     """
+
     class Application:
         pass
+
     class IOLoop:
+
         def __init__(self, loop):
             self._loop = loop
+
         def spawn_callback(self, func, *args):
             self._loop.call_soon_threadsafe(func, *args)
     
@@ -548,16 +569,17 @@ class MyWebSocketHandler():
         self.cookies = {}
 
     def write_message(
-        self, message: Union[bytes, str, Dict[str, Any]], binary: bool = False
+        self, message: Union[bytes, str, Dict[str, Any]], binary: bool=False
     ) -> "Future[None]":
         self._ws.send(message)
         
-    def close(self, code: int = None, reason: str = None) -> None:
+    def close(self, code: int=None, reason: str=None) -> None:
         if not self._ws.closed:
             self._ws.close(code, reason)
 
     def ws_closed(self):
         self.on_close()
+
 
 class WSHandler(MyWebSocketHandler):
     """ Handler for websocket.
@@ -698,7 +720,7 @@ class WSHandler(MyWebSocketHandler):
         """ Handle cross-domain access; override default same origin policy.
         """
         # http://www.tornadoweb.org/en/stable/_modules/tornado/websocket.html
-        #WebSocketHandler.check_origin
+        # WebSocketHandler.check_origin
 
         serving_host = self.request.headers.get("Host")
         serving_hostname, _, serving_port = serving_host.partition(':')

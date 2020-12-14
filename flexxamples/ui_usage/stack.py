@@ -1,4 +1,9 @@
+"""
+Example of VBox, HBox and StackLayout
+"""
+
 from flexx import app, event, ui, flx
+
 
 class Example(ui.Widget):
 
@@ -18,6 +23,7 @@ class Example(ui.Widget):
     def _stacked_current(self, *events):
         button = events[-1].source
         self.stack.set_current(button.w)
+
 
 if __name__ == '__main__':
      m = flx.launch(Example, 'default-browser')

@@ -114,7 +114,9 @@ class AbstractServer:
     def __init__(self, host, port, loop=None, **kwargs):
         # First off, create new event loop and integrate event.loop
         if sys.version_info > (3, 8) and sys.platform.startswith('win'):
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+            # watch out: this resets any previous set_event_loop
+            # Please add comment: What is this used for??
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy()) 
         if loop is None:
             self._loop = asyncio.get_event_loop()
         else:
