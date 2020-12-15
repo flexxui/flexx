@@ -13,7 +13,6 @@ import time
 import asyncio
 import socket
 import mimetypes
-import traceback
 import threading
 from urllib.parse import urlparse
 
@@ -23,7 +22,6 @@ from flask_sockets import Sockets
 
 from gevent import pywsgi
 from geventwebsocket.handler import WebSocketHandler
-import werkzeug.serving
 
 from ._app import manager
 from ._session import get_page
@@ -142,11 +140,25 @@ class FlaskServer(AbstractServer):
             else:
                 assert False, "No port found to start flask"
 
-        # Remember the loop we are in for the manager
-        manager.loop = self._loop
-
         # Keep flask application info
         self._serving = (host, port)
+
+        # Remember the loop we are in for the manager
+        manager.loop = self._loop
+        
+        # Create a thread frendly coroutine (especially for python 3.8)
+        asyncio.run_coroutine_threadsafe(self._thread_switch(), self._loop)
+
+    @staticmethod
+    async def _thread_switch():
+        """
+        Python 3.8 is very unfrendly to thread as it does not leave any chances for 
+        a Thread switch when no tasks are left to run. This function just let other
+        Threads some time to run.
+        """
+        while True:
+            time.sleep(0)
+            await asyncio.sleep(0)
 
     def start(self):
         # Register blueprints for all apps:
