@@ -1,6 +1,10 @@
-"""
+""" Markdown widget
 
-Simple example:
+Widget containing a string which content gets rendered and shown as markdown text. 
+
+See the working example from `flexxamples/ui_usage/markdown.py`.
+
+Simple usage:
 
 .. UIExample:: 200
 
@@ -9,8 +13,6 @@ Simple example:
             "Hello.  Welcome to my **website**. This is an example of a widget container for markdown content. " \
             "The content can be text or a link.\n\n"
         ui.Markdown(content=content, style='background:#EAECFF;height:60%;')
-
-Also see example: :ref:`ui_usage/markdown.py`.
 
 """
 
