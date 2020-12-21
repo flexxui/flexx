@@ -25,4 +25,9 @@ config = Config('flexx', '~appdata/.flexx.cfg',
         # tornado
         tornado_debug=('false', bool, 'Setting the tornado application debug flag '
                        'allows autoreload and other debugging features.'),
+
+        # flask
+        flask_debug=('false', bool, 'Setting the flask application debug flag '
+                       'allows autoreload and other debugging features.'),
+
         )
