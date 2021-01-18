@@ -8,7 +8,7 @@ import sys
 import time
 import weakref
 import zipfile
-from base64 import encodestring as encodebytes
+from base64 import encodebytes
 
 import webruntime
 
