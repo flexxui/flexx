@@ -158,7 +158,7 @@ class FlaskServer(AbstractServer):
         """
         while True:
             time.sleep(0)
-            await asyncio.sleep(0)
+            await asyncio.sleep(1e-9) # any number above 0 will keep low CPU usage 
 
     def start(self):
         # Register blueprints for all apps:
