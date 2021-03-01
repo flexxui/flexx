@@ -71,11 +71,15 @@ it depends on:
 * the [Webruntime](http://github.com/flexxui/webruntime) library (a pure Python flexxui project).
 * the [Dialite](http://github.com/flexxui/dialite) library (a pure Python flexxui project).
 
-To install the latest release (and dependencies), use either of these commands:
+To install the latest release (and dependencies), use either of:
 
-* ``pip install flexx``
-* ``conda install flexx -c conda-forge``
+```bash
+# Install latest release
+pip install flexx
 
+# Install latest from Github
+pip install -U https://github.com/flexxui/flexx/archive/master.zip
+```
 Or get the bleeding edge with:
 
 * ``pip install https://github.com/flexxui/flexx/archive/master.zip``
