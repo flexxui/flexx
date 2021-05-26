@@ -35,7 +35,7 @@ class BokehExample(flx.PyComponent):
             self.plot1 = flx.BokehWidget.from_plot(p1, title='Scatter')
             with flx.VFix(title='Sine'):
                 Controls()
-                with flx.Widget(style='overflow-y:auto;', flex=1):
+                with flx.PyWidget(style='overflow-y:auto;', flex=1):
                     self.plot2 = flx.BokehWidget.from_plot(p2)
                     self.plot3 = flx.BokehWidget.from_plot(p3)
 
