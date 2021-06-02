@@ -203,9 +203,11 @@ class Component(with_metaclass(ComponentMeta, object)):
         for name in self.__properties__:
             self.__handlers.setdefault(name, [])
 
-        # With self as the active component (and thus mutatable), init the
+        # With self as the active component (and thus mutable), init the
         # values of all properties, and apply user-defined initialization
         with self:
+            # This call will pop some of the consumed property values
+            # will remain properties used for the DOM component initialisation
             self._comp_init_property_values(property_values)
             self.init(*init_args)
 
@@ -218,6 +220,8 @@ class Component(with_metaclass(ComponentMeta, object)):
     def _comp_init_property_values(self, property_values):
         """ Initialize property values, combining given kwargs (in order)
         and default values.
+        Property values are popped when consumed so that the remainer is used for 
+        other initialisations without mixup.
         """
         values = []
         # First collect default property values (they come first)
@@ -227,18 +231,25 @@ class Component(with_metaclass(ComponentMeta, object)):
             if name not in property_values:
                 values.append((name, prop._default))
         # Then collect user-provided values
-        for name, value in property_values.items():  # is sorted by occurance in py36
+        for name, value in list(property_values.items()):  # is sorted by occurance in py36
             if name not in self.__properties__:
                 if name in self.__attributes__:
                     raise AttributeError('%s.%s is an attribute, not a property' %
                                          (self._id, name))
                 else:
-                    raise AttributeError('%s does not have property %s.' %
+                    # if the proxy instance does not exist, we want the attribute 
+                    # to be passed through to the Widget instantiation.
+                    # No exception if the proxy does not exists.
+                    if self._has_proxy is True:
+                        raise AttributeError('%s does not have property %s.' %
                                          (self._id, name))
             if callable(value):
                 self._comp_make_implicit_setter(name, value)
+                property_values.pop(name)
                 continue
-            values.append((name, value))
+            if name in self.__properties__:
+                values.append((name, value))
+                property_values.pop(name)
         # Then process all property values
         self._comp_apply_property_values(values)
 

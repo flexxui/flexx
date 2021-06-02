@@ -353,7 +353,9 @@ class LocalComponent(BaseAppComponent):
         # This is a good time to register with the session, and
         # instantiate the proxy class. Property values have been set at this
         # point, but init() has not yet been called.
-
+        # Property values must be poped when consumed so that the remainer is used for 
+        # instantiation of the Widget
+        
         # Keep track of what events are registered at the proxy
         self.__event_types_at_proxy = []
 
