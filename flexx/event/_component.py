@@ -206,6 +206,8 @@ class Component(with_metaclass(ComponentMeta, object)):
         # With self as the active component (and thus mutable), init the
         # values of all properties, and apply user-defined initialization
         with self:
+            # This call will pop some of the consumed property values
+            # will remain properties used for the DOM component initialisation
             self._comp_init_property_values(property_values)
             self.init(*init_args)
 
@@ -218,9 +220,9 @@ class Component(with_metaclass(ComponentMeta, object)):
     def _comp_init_property_values(self, property_values):
         """ Initialize property values, combining given kwargs (in order)
         and default values.
+        Property values are popped when consumed so that the remainer is used for 
+        other initialisations without mixup.
         """
-        # Property values must be poped when consumed so that the remainer is used for 
-        # instantiation of the Widget
         values = []
         # First collect default property values (they come first)
         for name in self.__properties__:  # is sorted by name

@@ -1158,8 +1158,8 @@ class PyWidget(app.PyComponent):
         # when this is the active component, and after the original
         # version of this has been called, everything related to session
         # etc. will work fine.
-        # Property values must be poped when consumed so that the remainer is used for 
-        # instantiation of the Widget
+        # Property values are poped when consumed so that the remainer is used for 
+        # instantiation of the js Widget
         
         # First extract the kwargs
         kwargs_for_real_widget = {}
@@ -1168,8 +1168,11 @@ class PyWidget(app.PyComponent):
                 if name in self._WidgetCls.__properties__:
                     kwargs_for_real_widget[name] = property_values.pop(name)
         # Call original version, sets _session, amongst other things
+        # it also pops the consumed property values so the remainer
+        # can be used to initialize the js _WidgetCls
         super()._comp_init_property_values(property_values)
-        # Create widget and activate it
+        # Create widget and activate it - at this point, all property values
+        # should be intended for the js Widget.
         w = self._WidgetCls(**kwargs_for_real_widget, **property_values)
         self.__exit__(None, None, None)
         self._jswidget = w
