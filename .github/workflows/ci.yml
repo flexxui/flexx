@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - master
+
+jobs:
+
+  lint-build:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Install dev dependencies
+      run: |
+          python -m pip install --upgrade pip
+          pip install -U pycodestyle flake8
+    - name: Lint
+      run: |
+          invoke test --style;
+
+  docs-build:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Install dev dependencies
+      run: |
+          python -m pip install --upgrade pip
+          pip install -U -r sphinx tornado pscript>=0.5.6 webruntime dialite;
+    - name: Build docs
+      run: |
+        python -c 'import flexx.ui';
+        invoke docs --clean --build;
+
+  test-builds:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - name: Test Linux py35
+            os: ubuntu-latest
+            pyversion: '3.5'
+          - name: Test Linux py36
+            os: ubuntu-latest
+            pyversion: '3.6'
+          - name: Test Linux py37
+            os: ubuntu-latest
+            pyversion: '3.7'
+          - name: Test Linux py38
+            os: ubuntu-latest
+            pyversion: '3.8'
+          - name: Test Linux py39
+            os: ubuntu-latest
+            pyversion: '3.9'
+          - name: Test Linux py39 install
+            os: ubuntu-latest
+            pyversion: '3.9'
+            install=1
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.pyversion }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.pyversion }}
+    - name: Install dev dependencies
+      run: |
+          python -m pip install --upgrade pip
+          pip install -U tornado pscript>=0.5.6 webruntime dialite;
+          pip install -U pytest pytest-cov selenium;
+    - name: Install self
+      if: matrix.install == 1
+      run: |
+          pip install .
+          rm -rf ./flexx ./build ./egg-info
+    - name: Unit tests
+      run: |
+          invoke test --unit;
