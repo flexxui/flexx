@@ -71,7 +71,7 @@ jobs:
           - name: Test Linux py39 install
             os: ubuntu-latest
             pyversion: '3.9'
-            install=1
+            install: 1
 
     steps:
     - uses: actions/checkout@v2
