@@ -54,7 +54,6 @@ def test_unit(rel_path='.'):
         assert ROOT_DIR in os.path.abspath(m.__path__[0])
     # Start tests
     _enable_faulthandler()
-    return
     try:
         res = pytest.main(['--cov', NAME, '--cov-config=.coveragerc',
                            '--cov-report=term', '--cov-report=html', test_path])
