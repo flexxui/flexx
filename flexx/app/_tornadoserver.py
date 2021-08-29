@@ -116,7 +116,7 @@ class TornadoServer(AbstractServer):
                 try:
                     self._server.listen(port, host)
                     break
-                except (OSError, IOError):
+                except OSError:
                     pass  # address already in use
             else:
                 # Ok, let Tornado figure out a port

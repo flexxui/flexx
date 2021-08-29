@@ -194,7 +194,7 @@ class Asset:
             elif self._remote:
                 self._source_str = self._get_from_url(self._source)
             else:  # pragma: no cover
-                assert False, 'This should not happen'
+                raise RuntimeError('This should not happen')
         return self._source_str
 
     def _get_from_url(self, url):
