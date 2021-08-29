@@ -73,11 +73,6 @@ jobs:
           - name: Test Linux py39
             os: ubuntu-latest
             pyversion: '3.9'
-          - name: Test Linux py39 install
-            os: ubuntu-latest
-            pyversion: '3.9'
-            install: 1
-
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.pyversion }}
@@ -89,11 +84,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -U tornado pscript>=0.5.6 webruntime dialite;
           pip install -U invoke pytest pytest-cov selenium;
-    - name: Install self
-      if: matrix.install == 1
-      run: |
-          pip install .
-          rm -rf ./flexx ./build ./egg-info
     - name: Unit tests
       run: |
           invoke test --unit;
