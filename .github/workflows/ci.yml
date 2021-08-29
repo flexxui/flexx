@@ -86,4 +86,5 @@ jobs:
           pip install -U invoke pytest pytest-cov;
     - name: Unit tests
       uses: GabrielBB/xvfb-action@v1
-      run: invoke test --unit;
+      with:
+        run: invoke test --unit;
