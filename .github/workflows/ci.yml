@@ -87,4 +87,4 @@ jobs:
     - name: Unit tests
       uses: GabrielBB/xvfb-action@v1
       with:
-        run: invoke test --unit;
+        run: invoke test --unit
