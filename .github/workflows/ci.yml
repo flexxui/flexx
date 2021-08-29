@@ -83,7 +83,7 @@ jobs:
       run: |
           python -m pip install --upgrade pip
           pip install -U tornado pscript>=0.5.6 webruntime dialite;
-          pip install -U invoke pytest pytest-cov selenium;
+          pip install -U invoke pytest pytest-cov;
     - name: Unit tests
       run: |
           invoke test --unit;
