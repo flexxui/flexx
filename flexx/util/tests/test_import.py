@@ -14,7 +14,7 @@ import flexx
 
 # https://docs.pytest.org/en/latest/skipping.html
 pytestmark = skipif(
-    '__pypy__' in sys.builtin_module_names and os.getenv('TRAVIS', '') == 'true',
+    '__pypy__' in sys.builtin_module_names and os.getenv('CI', '') == 'true',
     reason='These import tests are slow on pypy')
 
 # minimum that will be imported when importing flexx

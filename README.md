@@ -1,8 +1,9 @@
 Flexx
 =====
 
-![CI](https://github.com/pygfx/wgpu-py/workflows/CI/badge.svg)
+![CI](https://github.com/flexxui/flexx/workflows/CI/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/flexx/badge/?version=latest)](https://flexx.readthedocs.org)
+[![PyPI version](https://badge.fury.io/py/flexx.svg)](https://badge.fury.io/py/flexx)
 
 Want to stay up-to-date about (changes to) Flexx? Subscribe to the [NEWS issue](https://github.com/flexxui/flexx/issues/477).
 
