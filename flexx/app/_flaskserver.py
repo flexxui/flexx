@@ -6,7 +6,8 @@ Serve web page and handle web sockets using Flask.
 #    _serverHandlers.py. Only RequestHandler and MyWebSocketHandler
 # 2) manager should be overloadable from _flaskserver.py to allow MainHandler,
 #    AppHandler and WSHandler to place manager tasks in the flexx app loop
-# 3) The specification of the backend should be passed at run or start. Not at launch or before.
+# 3) The specification of the backend should be passed at run or start.
+#    Not at launch or before.
 
 import json
 import time
@@ -15,9 +16,10 @@ import socket
 import mimetypes
 import threading
 from urllib.parse import urlparse
+from typing import Any, Dict, Union
 
 import flask
-from flask import Flask, request, Blueprint, current_app, url_for
+from flask import Flask, request, current_app, url_for
 from flask_sockets import Sockets
 
 from gevent import pywsgi
@@ -74,7 +76,9 @@ def ws_handler(ws, path):
     async def flexx_msg_handler(ws, path): 
         wshandler.open(path)
         
-    future = asyncio.run_coroutine_threadsafe(flexx_msg_handler(ws, path), loop=manager.loop)
+    future = asyncio.run_coroutine_threadsafe(
+        flexx_msg_handler(ws, path), loop=manager.loop
+    )
     future.result()
     while not ws.closed:
         message = ws.receive()
@@ -110,8 +114,8 @@ class FlaskServer(AbstractServer):
         self._app = app
         self._server = None
         self._serving = None  # needed for AbstractServer
-        super().__init__(*args, **kwargs)  # this calls self._open and 
-                                            # create the loop if not specified 
+        # This calls self._open and # create the loop if not specified 
+        super().__init__(*args, **kwargs) 
 
     def _open(self, host, port, **kwargs):
         # Note: does not get called if host is False. That way we can
@@ -132,13 +136,13 @@ class FlaskServer(AbstractServer):
             for i in range(8):
                 port = prefered_port + i
                 try:
-                    result_of_check = a_socket.bind((host, port))
-                except:
+                    a_socket.bind((host, port))
+                except Exception:
                     continue
                 a_socket.close()
                 break
             else:
-                assert False, "No port found to start flask"
+                raise RuntimeError("No port found to start flask")
 
         # Keep flask application info
         self._serving = (host, port)
@@ -158,7 +162,7 @@ class FlaskServer(AbstractServer):
         """
         while True:
             time.sleep(0)
-            await asyncio.sleep(1e-9) # any number above 0 will keep low CPU usage 
+            await asyncio.sleep(1e-9)  # any number above 0 will keep low CPU usage 
 
     def start(self):
         # Register blueprints for all apps:
@@ -167,7 +171,9 @@ class FlaskServer(AbstractServer):
 
         # Start flask application in background thread
         def RunServer():
-            self._server = pywsgi.WSGIServer(self._serving, self._app, handler_class=WebSocketHandler)
+            self._server = pywsgi.WSGIServer(
+                self._serving, self._app, handler_class=WebSocketHandler
+            )
             proto = self.protocol
             # This string 'Serving apps at' is our 'ready' signal and is tested for.
             logger.info('Serving apps at %s://%s:%i/' % (proto, *self._serving))
@@ -344,7 +350,9 @@ class AppHandler(RequestHandler):
                 session = manager.create_session(app_name, request=request)
                 return session
 
-            future = asyncio.run_coroutine_threadsafe(run_in_flexx_loop(app_name, request=self.request), loop=manager.loop)
+            future = asyncio.run_coroutine_threadsafe(
+                run_in_flexx_loop(app_name, request=self.request), loop=manager.loop
+            )
             session = future.result()
             self.write(get_page(session).encode())
 
@@ -369,7 +377,8 @@ class MainHandler(RequestHandler):
         # Note: invalid app name can mean its a path relative to the main app
         parts = [p for p in full_path.split('/') if p][1:]
         if not parts:
-            self.write('Root url for flexx, missing selector: assets, assetview, data, info or cmd')
+            self.write('Root url for flexx, missing selector:' + 
+                       'assets, assetview, data, info or cmd')
             return
         selector = parts[0]
         path = '/'.join(parts[1:])
@@ -438,7 +447,7 @@ class MainHandler(RequestHandler):
                 table = {ord('&'): '&amp;', ord('<'): '&lt;', ord('>'): '&gt;'}
                 line = line.translate(table).replace('\t', '    ')
                 lines.append('<pre id="L%i"><a href="#L%i">%s</a>  %s</pre>' % 
-                             (i + 1, i + 1, str(i + 1).rjust(4).replace(' ', '&nbsp'), line))
+                    (i + 1, i + 1, str(i + 1).rjust(4).replace(' ', '&nbsp'), line))
             lines.append('</body></html>')
             self.write('\n'.join(lines))
 
@@ -542,21 +551,6 @@ class MessageCounter:
         self._stop = True
 
 
-from typing import (
-    TYPE_CHECKING,
-    cast,
-    Any,
-    Optional,
-    Dict,
-    Union,
-    List,
-    Awaitable,
-    Callable,
-    Tuple,
-    Type,
-)
-
-
 class MyWebSocketHandler():
     """
     This class is designed to mimic the tornado WebSocketHandler to
@@ -582,7 +576,7 @@ class MyWebSocketHandler():
 
     def write_message(
         self, message: Union[bytes, str, Dict[str, Any]], binary: bool=False
-    ) -> "Future[None]":
+    ):
         self._ws.send(message)
         
     def close(self, code: int=None, reason: str=None) -> None:
@@ -691,7 +685,7 @@ class WSHandler(MyWebSocketHandler):
                 pingtime = self._pingtime = time.time()
                 iters_since_ping = 0
 
-            yield gen.sleep(dt / 5)
+            # yield gen.sleep(dt / 5)
 
             # Check pong status
             iters_since_ping += 1
@@ -717,7 +711,7 @@ class WSHandler(MyWebSocketHandler):
         bb = serializer.encode(cmd)
         try:
             self.write_message(bb, binary=True)
-        except WebSocketClosedError:
+        except flask.Exception:  # Note: is there a more specific error we could use?
             self.close(1000, 'closed by client')
 
     def close(self, *args):

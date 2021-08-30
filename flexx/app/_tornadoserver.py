@@ -116,7 +116,7 @@ class TornadoServer(AbstractServer):
                 try:
                     self._server.listen(port, host)
                     break
-                except (OSError, IOError):
+                except OSError:
                     pass  # address already in use
             else:
                 # Ok, let Tornado figure out a port
@@ -616,9 +616,9 @@ class WSHandler(WebSocketHandler):
 
     def close(self, *args):
         try:
-            super().close(self, *args)
+            super().close(*args)
         except TypeError:
-            super().close(self)  # older Tornado
+            super().close()  # older Tornado
 
     def close_this(self):
         """ Call this to close the websocket

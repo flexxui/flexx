@@ -220,7 +220,7 @@ class Component(with_metaclass(ComponentMeta, object)):
     def _comp_init_property_values(self, property_values):
         """ Initialize property values, combining given kwargs (in order)
         and default values.
-        Property values are popped when consumed so that the remainer is used for 
+        Property values are popped when consumed so that the remainer is used for
         other initialisations without mixup.
         """
         values = []
@@ -231,13 +231,13 @@ class Component(with_metaclass(ComponentMeta, object)):
             if name not in property_values:
                 values.append((name, prop._default))
         # Then collect user-provided values
-        for name, value in list(property_values.items()):  # is sorted by occurance in py36
+        for name, value in list(property_values.items()):  # is sorted in py36
             if name not in self.__properties__:
                 if name in self.__attributes__:
                     raise AttributeError('%s.%s is an attribute, not a property' %
                                          (self._id, name))
                 else:
-                    # if the proxy instance does not exist, we want the attribute 
+                    # if the proxy instance does not exist, we want the attribute
                     # to be passed through to the Widget instantiation.
                     # No exception if the proxy does not exists.
                     if self._has_proxy is True:
