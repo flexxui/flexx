@@ -228,8 +228,12 @@ def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
             # Run in JS
             if js:
                 jsresult = call_func_in_js(func, classes, extra_nodejs_args)
+                jsresult = jsresult.replace('\n]', ']').replace('[\n', '[')
+                jsresult = jsresult.replace('[  ', '[').replace('  ]', ']')
                 jsresult = jsresult.replace('[ ', '[').replace(' ]', ']')
                 jsresult = jsresult.replace('\n  ', ' ')
+                jsresult = jsresult.replace(",   ", ", ").replace(",  ", ", ")
+                jsresult = jsresult.replace('\n}', '}')
                 jsresult = jsresult.replace('"', "'").split('!!!!')[-1]
                 jsresult = jsresult.replace('null', 'None')
                 #print('JS:\n' + jsresult)

@@ -242,7 +242,7 @@ def test_disposing_js0():
     mc = MemCounter()
     mc.reset()
 
-    a = Array(512*1024)  # about 4 MiB
+    a = Array(530 * 1024)  # about 4 MiB
     print(mc.diff_in_mb())
 
     a = None
@@ -263,7 +263,7 @@ def test_disposing_js1():  # The whole component + handler graph can be cleaned
     mc = MemCounter()
     mc.reset()
 
-    m.on_foo.blob = Array(512*1024)  # about 4 MiB
+    m.on_foo.blob = Array(530 * 1024)  # about 4 MiB
     print(mc.diff_in_mb())
 
     m = None
@@ -291,8 +291,8 @@ def test_disposing_js2():  # Disconnected handlers can be cleaned
     mc = MemCounter()
     mc.reset()
 
-    handler1.blob = Array(512*1024)  # about 4 MiB
-    handler2.blob = Array(512*1024)  # about 4 MiB
+    handler1.blob = Array(530 * 1024)  # about 4 MiB
+    handler2.blob = Array(530 * 1024)  # about 4 MiB
     print(mc.diff_in_mb())
 
     handler1 = None  # no effect, was not disposed

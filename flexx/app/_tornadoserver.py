@@ -616,9 +616,9 @@ class WSHandler(WebSocketHandler):
 
     def close(self, *args):
         try:
-            super().close(self, *args)
+            super().close(*args)
         except TypeError:
-            super().close(self)  # older Tornado
+            super().close()  # older Tornado
 
     def close_this(self):
         """ Call this to close the websocket
