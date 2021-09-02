@@ -32,8 +32,6 @@ Click the image below for an interactive example:
 
 [![demo](https://dl.dropboxusercontent.com/s/x4s7wgv6tpyqsqo/flexx_demo_300.png)](http://flexx.readthedocs.io/en/latest/examples/demo_src.html)
 
-There is a demo server at http://demo.flexx.app .
-
 
 Motivation
 ----------
