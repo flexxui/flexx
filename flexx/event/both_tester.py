@@ -224,6 +224,9 @@ def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
                 pyresult = call_func_in_py(func)
                 pyresult = pyresult.replace('"', "'").replace("\\'", "'")
                 pyresult = pyresult.split('!!!!')[-1]
+                if pyresult.startswith("Cleared ") and "old" in pyresult:
+                    # Remove "Cleared N old pending sessions"
+                    pyresult = pyresult.split("\n", 1)[-1]
                 #print('Py:\n' + pyresult)
             # Run in JS
             if js:
