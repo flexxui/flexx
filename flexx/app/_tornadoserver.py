@@ -333,7 +333,7 @@ class MainHandler(RequestHandler):
         # Get asset provider: store or session
         asset_provider = assets
         if session_id and selector != 'data':
-            return self.write('Only supports shared assets, not ' % filename)
+            return self.write('Only supports shared assets, not %s' % filename)
         elif session_id:
             asset_provider = manager.get_session_by_id(session_id)
 
