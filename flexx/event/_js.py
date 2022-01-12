@@ -14,7 +14,6 @@ event system have the same API and behavior.
 
 """
 
-import re
 import sys
 import json
 import inspect
@@ -396,20 +395,62 @@ def _create_js_class(PyClass, JSClass):
         jscode = jscode.replace('REACTION_METHODS_HOOK', code)
     # Optimizations, e.g. remove threading lock context in Loop
     if PyClass is Loop:
-        p = r"this\._lock\.__enter.+?try {(.+?)} catch.+?else.+?exit__.+?}"
-        jscode= re.sub(p, r'{/* with lock */\1}', jscode, 0,
-                       re.MULTILINE | re.DOTALL)
-        jscode= re.sub(r'\$Loop\..+? = undefined;\n', r'', jscode, 0,
-                       re.MULTILINE | re.DOTALL)
-        jscode = jscode.replace('this._ensure_thread_', '//this._ensure_thread_')
-        jscode = jscode.replace('threading.get_ident()', '0')
-        jscode = jscode.replace('._local.', '.')
-        jscode = jscode.replace('this._thread_match(true);\n', '')
-        jscode = jscode.replace('if (_pyfunc_truthy(this._thread_match(false)))', '')
+        jscode = _clean_code_of_thread_stuff(jscode)
     # Almost done
     jscode = jscode.replace('new Dict()', '{}').replace('new Dict(', '_pyfunc_dict(')
     mc.meta['std_functions'].add('dict')
     return mc.attach_meta(jscode)
+
+
+def _clean_code_of_thread_stuff(code):
+    """ Helper function to remove stuff that won't work in JS.
+    """
+    # This code used regexes first, but that makes it fragile.
+    # See https://github.com/flexxui/flexx/issues/709
+
+    # First take out only the try-block of the with-statement for the thread
+    parts = []
+    i = iend = 0
+    while True:
+        i0 = code.find("this._lock.__enter__", i)
+        if i0 < 0:
+            break
+        i = code.find("try {", i0)
+        i, sub = _exit_scope(code, i)
+        i = code.find("finally {", i)
+        i, _ = _exit_scope(code, i)
+        parts.append(code[iend:i0])
+        parts.append("/* with lock */\n")
+        parts.append(sub)
+        iend = i
+    parts.append(code[iend:])
+    jscode = "".join(parts)
+
+    # Some final tweaks
+    jscode = jscode.replace('this._ensure_thread_', '//this._ensure_thread_')
+    jscode = jscode.replace('threading.get_ident()', '0')
+    jscode = jscode.replace('._local.', '.')
+    jscode = jscode.replace('this._thread_match(true);\n', '')
+    jscode = jscode.replace('if (_pyfunc_truthy(this._thread_match(false)))', '')
+    jscode = jscode.replace('this._thread_match', '(function() { return true})')
+
+    return jscode
+
+
+def _exit_scope(code, i):
+    level = 0
+    istart = i
+    while i < len(code):
+        if code[i] == "{":
+            level += 1
+            if level == 1:
+                istart = i + 1
+        elif code[i] == "}":
+            level -= 1
+            if level == 0:
+                return i + 1, code[istart:i]
+        i += 1
+    raise RuntimeError("Should not happen")
 
 
 def create_js_component_class(cls, cls_name, base_class='Component.prototype'):

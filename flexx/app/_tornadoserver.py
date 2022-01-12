@@ -116,7 +116,7 @@ class TornadoServer(AbstractServer):
                 try:
                     self._server.listen(port, host)
                     break
-                except (OSError, IOError):
+                except OSError:
                     pass  # address already in use
             else:
                 # Ok, let Tornado figure out a port
@@ -333,7 +333,7 @@ class MainHandler(RequestHandler):
         # Get asset provider: store or session
         asset_provider = assets
         if session_id and selector != 'data':
-            return self.write('Only supports shared assets, not ' % filename)
+            return self.write('Only supports shared assets, not %s' % filename)
         elif session_id:
             asset_provider = manager.get_session_by_id(session_id)
 
@@ -616,9 +616,9 @@ class WSHandler(WebSocketHandler):
 
     def close(self, *args):
         try:
-            super().close(self, *args)
+            super().close(*args)
         except TypeError:
-            super().close(self)  # older Tornado
+            super().close()  # older Tornado
 
     def close_this(self):
         """ Call this to close the websocket

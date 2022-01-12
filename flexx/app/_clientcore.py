@@ -311,7 +311,7 @@ class JsSession:
         WebSocket = window.WebSocket
         if (WebSocket is undefined):
             window.document.body.textContent = 'Browser does not support WebSockets'
-            raise "FAIL: need websocket"
+            raise RuntimeError("FAIL: need websocket")
 
         # Construct ws url
         if not self.ws_url:

@@ -163,7 +163,7 @@ class AppComponentMeta(ComponentMeta):
             assert not issubclass(cls, ProxyComponent)
 
         # Fix inheritance for JS variant
-        jsbases = [getattr(b, 'JS') for b in cls.__bases__ if hasattr(b, 'JS')]
+        jsbases = [b.JS for b in cls.__bases__ if hasattr(b, 'JS')]
         if not jsbases:
             jsbases.append(ProxyComponent)
         jsdict = {}
@@ -193,7 +193,7 @@ class AppComponentMeta(ComponentMeta):
             assert not issubclass(cls, LocalComponent)
 
         # Fix inheritance for JS variant
-        jsbases = [getattr(b, 'JS') for b in cls.__bases__ if hasattr(b, 'JS')]
+        jsbases = [b.JS for b in cls.__bases__ if hasattr(b, 'JS')]
         if not jsbases:
             jsbases.append(LocalComponent)
         jsdict = {}
@@ -353,9 +353,9 @@ class LocalComponent(BaseAppComponent):
         # This is a good time to register with the session, and
         # instantiate the proxy class. Property values have been set at this
         # point, but init() has not yet been called.
-        # Property values must be poped when consumed so that the remainer is used for 
+        # Property values must be poped when consumed so that the remainer is used for
         # instantiation of the Widget
-        
+
         # Keep track of what events are registered at the proxy
         self.__event_types_at_proxy = []
 
@@ -530,8 +530,9 @@ class ProxyComponent(BaseAppComponent):
                 self._session.send_command('INVOKE', self._id,
                                            '_flx_set_event_types_at_proxy',
                                            [event_types])
-        finally:
-            return event_types
+        except Exception:
+            pass
+        return event_types
 
     @event.action
     def _emit_at_proxy(self, ev):

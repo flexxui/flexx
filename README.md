@@ -1,8 +1,9 @@
 Flexx
 =====
 
-[![Build Status](https://travis-ci.org/flexxui/flexx.svg)](https://travis-ci.org/flexxui/flexx)
+[![CI](https://github.com/flexxui/flexx/workflows/CI/badge.svg)](https://github.com/flexxui/flexx/actions)
 [![Documentation Status](https://readthedocs.org/projects/flexx/badge/?version=latest)](https://flexx.readthedocs.org)
+[![PyPI version](https://badge.fury.io/py/flexx.svg)](https://badge.fury.io/py/flexx)
 
 Want to stay up-to-date about (changes to) Flexx? Subscribe to the [NEWS issue](https://github.com/flexxui/flexx/issues/477).
 
@@ -30,8 +31,6 @@ Example
 Click the image below for an interactive example:
 
 [![demo](https://dl.dropboxusercontent.com/s/x4s7wgv6tpyqsqo/flexx_demo_300.png)](http://flexx.readthedocs.io/en/latest/examples/demo_src.html)
-
-There is a demo server at http://demo.flexx.app .
 
 
 Motivation

@@ -2,22 +2,22 @@
 Example of VBox, HBox and StackLayout
 """
 
-from flexx import app, event, ui, flx
+from flexx import event, flx
 
 
-class Example(ui.Widget):
+class Example(flx.Widget):
 
     def init(self):
-        with ui.VBox():
-            with ui.HBox():
-                self.buta = ui.Button(text='red')
-                self.butb = ui.Button(text='green')
-                self.butc = ui.Button(text='blue')
-                ui.Widget(flex=1)  # space filler
-            with ui.StackLayout(flex=1) as self.stack:
-                self.buta.w = ui.Widget(style='background:#a00;')
-                self.butb.w = ui.Widget(style='background:#0a0;')
-                self.butc.w = ui.Widget(style='background:#00a;')
+        with flx.VBox():
+            with flx.HBox():
+                self.buta = flx.Button(text='red')
+                self.butb = flx.Button(text='green')
+                self.butc = flx.Button(text='blue')
+                flx.Widget(flex=1)  # space filler
+            with flx.StackLayout(flex=1) as self.stack:
+                self.buta.w = flx.Widget(style='background:#a00;')
+                self.butb.w = flx.Widget(style='background:#0a0;')
+                self.butc.w = flx.Widget(style='background:#00a;')
 
     @event.reaction('buta.pointer_down', 'butb.pointer_down', 'butc.pointer_down')
     def _stacked_current(self, *events):
@@ -26,5 +26,5 @@ class Example(ui.Widget):
 
 
 if __name__ == '__main__':
-     m = flx.launch(Example, 'default-browser')
-     flx.run()
+    m = flx.launch(Example, 'default-browser')
+    flx.run()

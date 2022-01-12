@@ -224,12 +224,18 @@ def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
                 pyresult = call_func_in_py(func)
                 pyresult = pyresult.replace('"', "'").replace("\\'", "'")
                 pyresult = pyresult.split('!!!!')[-1]
+                # Remove "Cleared N old pending sessions"
+                pyresult = pyresult.split("old pending sessions\n")[-1]
                 #print('Py:\n' + pyresult)
             # Run in JS
             if js:
                 jsresult = call_func_in_js(func, classes, extra_nodejs_args)
+                jsresult = jsresult.replace('\n]', ']').replace('[\n', '[')
+                jsresult = jsresult.replace('[  ', '[').replace('  ]', ']')
                 jsresult = jsresult.replace('[ ', '[').replace(' ]', ']')
                 jsresult = jsresult.replace('\n  ', ' ')
+                jsresult = jsresult.replace(",   ", ", ").replace(",  ", ", ")
+                jsresult = jsresult.replace('\n}', '}')
                 jsresult = jsresult.replace('"', "'").split('!!!!')[-1]
                 jsresult = jsresult.replace('null', 'None')
                 #print('JS:\n' + jsresult)

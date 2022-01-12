@@ -210,7 +210,7 @@ class BsdfLiteSerializer(object):
             elif compression == 2:
                 compressed = bz2.compress(value, 9)
             else:
-                assert False, 'Unknown compression identifier'
+                raise ValueError('Unknown compression identifier')
             # Get sizes
             data_size = len(value)
             used_size = len(compressed)

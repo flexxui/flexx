@@ -1,7 +1,7 @@
 """
 Example showing an implementation of a flask server serving a flexx application.
 
-If assets are needed (jpg, files, etc.) they can be placed a folder called static 
+If assets are needed (jpg, files, etc.) they can be placed a folder called static
 and accessed through each flexx blueprints (e.g. http://my_flexx/picture.jpg). The
 name of that folder can be changed when registering the blueprint.
 
@@ -72,7 +72,8 @@ if __name__ == "__main__":
 
     @app.errorhandler(Exception)
     def internal_error(e):
-        import traceback; traceback.print_exc()  # get the trace stack
+        import traceback
+        traceback.print_exc()  # get the trace stack
         err_str = str(traceback.format_exc())  # to get the string
         err_str = err_str.replace("\n", "<br>")
         return "<h3>" + str(e) + "</h3><br>" + err_str
@@ -81,7 +82,11 @@ if __name__ == "__main__":
     from geventwebsocket.handler import WebSocketHandler
 
     def RunServer():
-        server = pywsgi.WSGIServer(('127.0.0.1', 5000), app, handler_class=WebSocketHandler)
+        server = pywsgi.WSGIServer(
+            ('127.0.0.1', 5000),
+            app,
+            handler_class=WebSocketHandler
+        )
         print("Server Started!")
         server.serve_forever()
 

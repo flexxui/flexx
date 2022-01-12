@@ -2,6 +2,19 @@
 Release notes
 -------------
 
+**v0.8.3** (16-09-2021)
+
+* Fixed a bug where with the latest PScript (0.7.6) Flexx wont start in the browser.
+
+
+**v0.8.2** (30-08-2021)
+
+* Support for Python 3.9.
+* More symmetry between Py and Js widgets [#698](https://github.com/flexxui/flexx/pull/698).
+* A Flask server backend.
+* CI uses GH Actions instead of Travis.
+
+
 **v0.8.1** (07-09-2020)
 
 * Support for Python 3.8.
@@ -63,6 +76,7 @@ Most notable changes:
 
 Also see the
 `overview of 0.6 issues and pull request <https://github.com/flexxui/flexx/milestone/7?closed=1>`_
+
 
 
 **v0.5.0** (13-09-2018)

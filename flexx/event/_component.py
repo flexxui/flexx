@@ -231,7 +231,7 @@ class Component(with_metaclass(ComponentMeta, object)):
             if name not in property_values:
                 values.append((name, prop._default))
         # Then collect user-provided values
-        for name, value in list(property_values.items()):  # is sorted by occurance in py36
+        for name, value in list(property_values.items()):  # is sorted in py36
             if name not in self.__properties__:
                 if name in self.__attributes__:
                     raise AttributeError('%s.%s is an attribute, not a property' %

@@ -12,7 +12,7 @@ class UserInput(flx.PyWidget):
         new_text = self.root.store.username + "\n" + self.edit.text
         self.root.store.set_username(new_text)
         self.edit.set_text("")
- 
+
 class SomeInfoWidget(flx.PyWidget):
 
     def init(self):
@@ -43,7 +43,7 @@ class Example(flx.PyWidget):
             UserInput()
             flx.Widget(style='background:#eee;')
             SomeInfoWidget()
-            
+
 if __name__ == '__main__':
     m = flx.launch(Example, 'default-browser', backend='flask')
     flx.run()
