@@ -19,7 +19,7 @@ class DynamicWidgetContainer(PyWidget):
         pass  # just don't use standard events
 
     def clean_pages(self):  # remove empty pages from the top
-        while self.pages[-1] == None:
+        while self.pages[-1] is None:
             del self.pages[-1]
 
     @event.reaction("remove")
