@@ -55,7 +55,7 @@ class DynamicWidgetContainer(PyWidget):
     def instantiate(self, widget_type, options=None):
         """ Send an instantiate command and return the widget instance id.
         This function is thread safe. """
-        if options == None:
+        if options is None:
             options = dict({'style':"width: 100%; height: 100%;"})
 
             async_task = threading.Event()
