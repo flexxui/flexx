@@ -3,6 +3,7 @@ Definition of the Session class.
 """
 
 import re
+import gc
 import sys
 import time
 import json
@@ -204,6 +205,8 @@ class Session:
                 self._component = None
             # Discard data
             self._data = {}
+            # This might be a good time to invoke the gc
+            gc.collect()
         finally:
             self._closing = False
 
