@@ -347,7 +347,13 @@ class Component(with_metaclass(ComponentMeta, object)):
 
     def __del__(self):
         if not self._disposed:
-            loop.call_soon(self._dispose)
+            # We don't know when this is called by the GC, so it might seem
+            # a good idea to schedule a call to _dispose in the event-loop.
+            # However, this creates a new ref to this object, preventing
+            # the actual cleanup, possibly causing the object to linger for
+            # much longer. So let's just call _dispose directly. See issue #721
+            self._dispose()
+            # loop.call_soon(self._dispose)
 
     def dispose(self):
         """ Use this to dispose of the object to prevent memory leaks.
