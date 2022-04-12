@@ -2,6 +2,11 @@
 Release notes
 -------------
 
+**v0.8.4** (12-04-2021)
+
+* Fix a memoryleak.
+
+
 **v0.8.3** (16-09-2021)
 
 * Fixed a bug where with the latest PScript (0.7.6) Flexx wont start in the browser.
