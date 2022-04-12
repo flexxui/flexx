@@ -288,6 +288,7 @@ def test_disposing_js2():  # Disconnected handlers can be cleaned
     handler2 = m.reaction(func, '!foo')
     loop.iter()
 
+    gc()
     mc = MemCounter()
     mc.reset()
 
