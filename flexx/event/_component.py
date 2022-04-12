@@ -352,8 +352,8 @@ class Component(with_metaclass(ComponentMeta, object)):
             # However, this creates a new ref to this object, preventing
             # the actual cleanup, possibly causing the object to linger for
             # much longer. So let's just call _dispose directly. See issue #721
-            # self._dispose()
-            loop.call_soon(self._dispose)
+            self._dispose()
+            # loop.call_soon(self._dispose)
 
     def dispose(self):
         """ Use this to dispose of the object to prevent memory leaks.
