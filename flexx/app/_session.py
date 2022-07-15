@@ -448,7 +448,7 @@ class Session:
 
     def _register_module(self, mod_name):
         """ Register a module with the client, as well as its
-        dependencies, and associated assests of the module and its
+        dependencies, and associated assets of the module and its
         dependencies. If the module was already defined, it is
         re-defined.
         """
@@ -607,7 +607,7 @@ class Session:
     def keep_alive(self, ob, iters=1):
         """ Keep an object alive for a certain amount of time, expressed
         in Python-JS ping roundtrips. This is intended for making JsComponent
-        (i.e. proxy components) survice the time between instantiation
+        (i.e. proxy components) service the time between instantiation
         triggered from JS and their attachement to a property, though any type
         of object can be given.
         """

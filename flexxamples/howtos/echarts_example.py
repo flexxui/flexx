@@ -6,7 +6,7 @@ Example demonstrating how to integrate famous eChart into flexx.
 
 from flexx import flx
 
-# # use local assests, I download the echarts.min.js and put in local folder
+# # use local assets, I download the echarts.min.js and put in local folder
 # import os
 #
 # BASE_DIR = os.getcwd()

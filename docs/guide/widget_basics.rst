@@ -170,7 +170,7 @@ worry, you don't need it:
 
 The ``_render_dom()`` method is called from an implicit reaction. This means
 that when any properties that are accessed during this function change,
-the function is automatically called again. This thus provides a declerative
+the function is automatically called again. This thus provides a declarative
 way to define the appearance of a widget using HTML elements.
 
 Above, the third argument in ``create_element()`` is a string, but this may

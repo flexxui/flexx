@@ -766,7 +766,7 @@ class Widget(app.JsComponent):
     @event.action
     def set_parent(self, parent, pos=None):
         """ Set the parent widget (can be None). This action also mutates the
-        childen of the old and new parent.
+        children of the old and new parent.
         """
         old_parent = self.parent  # or None
         new_parent = parent
@@ -883,7 +883,7 @@ class Widget(app.JsComponent):
                 self._capture_flag = 2
                 window.document.addEventListener("mousemove", mmove_outside, True)
                 window.document.addEventListener("mouseup", mup_outside, True)
-                # Explicit caputuring is not necessary, and even causes problems on IE
+                # Explicit capturing is not necessary, and even causes problems on IE
                 #if self.node.setCapture:
                 #    self.node.setCapture()
 

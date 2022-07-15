@@ -269,7 +269,7 @@ class Reaction:
         * 'greedy': this reaction receives all its events (since the last event
           loop iteration) in a single call (even if this breaks the order of
           events with respect to other reactions). Use this when multiple related
-          events must be handled simultenously (e.g. when syncing properties).
+          events must be handled simultaneously (e.g. when syncing properties).
         * 'auto': this reaction tracks what properties it uses, and is
           automatically triggered when any of these properties changes. Like
           'greedy' there is at most one call per event loop iteration.

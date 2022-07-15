@@ -246,8 +246,8 @@ def test_read_file_later():
 
     c.load_from_file(filename2)
     assert c.bar == 4  # from filename2
-    assert c.eggs == 'haha'  # from what we set - takes precedense
-    assert c.spam == 10  # from what we set - precedense over env var
+    assert c.eggs == 'haha'  # from what we set - takes precedence
+    assert c.spam == 10  # from what we set - precedence over env var
 
 
 def test_access():
