@@ -51,7 +51,7 @@ class SyncedSlidersRight(SyncedSlidersBase):
     single reaction, which is marked as greedy. This ensures that all events
     to either of the sliders get handled in a single call to the reaction,
     which avoids a ping-pong effect. Only having a single (normal) reaction
-    reduced the chance of a ping-pong effect, but does not elliminate it.
+    reduced the chance of a ping-pong effect, but does not eliminate it.
 
     Even better would be to react to ``user_value``  or ``user_done``
     to avoid ping-ping altogether.
