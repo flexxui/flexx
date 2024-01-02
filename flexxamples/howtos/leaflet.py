@@ -9,7 +9,8 @@ import re
 import base64
 import mimetypes
 
-import requests  # Note: you may need to pip install requests
+import requests  # Note: you may need to "pip install requests brotli"
+import brotli  # noqa: requests needs this for br encoding
 from flexx import flx
 
 
@@ -23,7 +24,7 @@ _leaflet_icons = [
 
 request_headers = {
     'User-Agent': 'flexx/%s' % flx.__version__,
-    'Accept-Encoding': 'gzip, deflate'
+    'Accept-Encoding': 'gzip, deflate, br'
 }
 
 if 'LEAFLET_DIR' in os.environ:
