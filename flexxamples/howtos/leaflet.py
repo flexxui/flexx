@@ -5,11 +5,12 @@ This example demonstrates the use of Leaflet to display a slippy map.
 
 
 import os
-from urllib.request import urlopen, Request
 import re
 import base64
 import mimetypes
 
+import requests  # Note: you may need to "pip install requests brotli"
+import brotli  # noqa: requests needs this for br encoding
 from flexx import flx
 
 
@@ -21,6 +22,10 @@ _leaflet_icons = [
     'marker-shadow.png',
 ]
 
+request_headers = {
+    'User-Agent': 'flexx/%s' % flx.__version__,
+    'Accept-Encoding': 'gzip, deflate, br'
+}
 
 if 'LEAFLET_DIR' in os.environ:
     _base_url = 'file://%s' % os.environ['LEAFLET_DIR']
@@ -33,8 +38,9 @@ def _get_code(item):
     """ Get a text item from _base_url
     """
     url = '%s/%s' % (_base_url, item)
-    req = Request(url, headers={'User-Agent': 'flexx/%s' % flx.__version__})
-    return urlopen(req).read().decode()
+    res = requests.get(url , headers=request_headers)
+    assert res.ok, f"{res.status_code}: {res.reason}"
+    return res.text
 
 
 def _get_data(item_or_url):
@@ -44,8 +50,9 @@ def _get_data(item_or_url):
         url = item_or_url
     else:
         url = '%s/%s' % (_base_url, item_or_url)
-    req = Request(url, headers={'User-Agent': 'flexx/%s' % flx.__version__})
-    return urlopen(req).read()
+    res = requests.get(url , headers=request_headers)
+    assert res.ok, f"{res.status_code}: {res.reason}"
+    return res.content
 
 
 def _embed_css_resources(css, types=('.png',)):
@@ -281,5 +288,5 @@ class LeafletExample(flx.Widget):
 
 
 if __name__ == '__main__':
-    flx.launch(LeafletExample, 'firefox')
+    flx.launch(LeafletExample, 'chrome-browser')
     flx.run()
