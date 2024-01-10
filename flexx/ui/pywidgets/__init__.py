@@ -4,3 +4,5 @@
 
 from .. import PyWidget
 from ._filebrowser import FileBrowserWidget
+from ._dynamicwidgetcontainer import DynamicWidgetContainer
+

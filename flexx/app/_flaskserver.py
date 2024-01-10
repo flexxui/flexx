@@ -711,7 +711,7 @@ class WSHandler(MyWebSocketHandler):
         bb = serializer.encode(cmd)
         try:
             self.write_message(bb, binary=True)
-        except flask.Exception:  # Note: is there a more specific error we could use?
+        except WebSocketClosedError:
             self.close(1000, 'closed by client')
 
     def close(self, *args):
