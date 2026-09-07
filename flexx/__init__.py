@@ -31,8 +31,8 @@ __version__ = '0.8.4'
 
 # Assert compatibility
 import sys
-if sys.version_info < (3, 5):  # pragma: no cover
-    raise RuntimeError('Flexx needs at least Python 3.5')
+if sys.version_info < (3, 8):  # pragma: no cover
+    raise RuntimeError('Flexx needs at least Python 3.8')
 
 # Import config object
 from ._config import config  # noqa

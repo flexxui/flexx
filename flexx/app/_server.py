@@ -118,7 +118,7 @@ class AbstractServer:
             # Please add comment: What is this used for??
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy()) 
         if loop is None:
-            self._loop = asyncio.get_event_loop()
+            self._loop = _loop.get_or_create_event_loop()
         else:
             assert isinstance(loop, asyncio.AbstractEventLoop)
             self._loop = loop
@@ -140,7 +140,7 @@ class AbstractServer:
             raise RuntimeError('Cannot start a closed or non-serving server!')
         if self._running:
             raise RuntimeError('Cannot start a running server.')
-        if asyncio.get_event_loop() is not self._loop:
+        if _loop.get_or_create_event_loop() is not self._loop:
             raise RuntimeError('Can only start server in same thread that created it.')
         logger.info('Starting Flexx event loop.')
         # Make use of the semi-standard defined by IPython to determine
