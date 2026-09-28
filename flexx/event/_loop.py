@@ -15,6 +15,24 @@ def this_is_js():
     return False
 
 
+def get_or_create_event_loop():
+    """ Get the current asyncio event loop, creating a new one if needed.
+
+    In Python 3.10+ ``asyncio.get_event_loop()`` no longer creates a loop
+    when none exists, and from Python 3.12 it raises an error in that case.
+    This helper preserves the historical behavior.
+    """
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        try:
+            return asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            return loop
+
+
 class Loop:
     """ The singleton Flexx event loop at ``flexx.event.loop``. This holds
     the queue of pending calls, actions, and reactions. These are queued
@@ -386,7 +404,7 @@ class Loop:
         (though this is currently not tested).
         """
         if loop is None:
-            loop = asyncio.get_event_loop()
+            loop = get_or_create_event_loop()
         with self._lock:
             self._thread_id = threading.get_ident()
             self._local._active_components = []

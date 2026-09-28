@@ -199,7 +199,8 @@ def run_in_both(*classes, js=True, py=True, extra_nodejs_args=None):
     """
 
     def wrapper(func):
-        reference = '\n'.join(line[4:] for line in func.__doc__.splitlines())
+        reference = '\n'.join(line[4:] if line.startswith('    ') else line
+                              for line in func.__doc__.splitlines())
         parts = reference.split('-'*10)
         pyref = parts[0].strip(' \n')
         jsref = parts[-1].strip(' \n-')

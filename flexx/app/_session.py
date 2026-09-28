@@ -277,7 +277,8 @@ class Session:
         # Clear cookie?
         if value is None:
             value = ""
-            expires = datetime.datetime.utcnow() - datetime.timedelta(days=365)
+            expires = (datetime.datetime.now(datetime.timezone.utc) -
+                       datetime.timedelta(days=365))
         else:
             secret = config.cookie_secret
             value = create_signed_value(secret, name, value, version=version,
@@ -296,8 +297,8 @@ class Session:
         if domain:
             morsel["domain"] = domain
         if expires_days is not None and not expires:
-            expires = datetime.datetime.utcnow() + datetime.timedelta(
-                days=expires_days)
+            expires = (datetime.datetime.now(datetime.timezone.utc) +
+                       datetime.timedelta(days=expires_days))
         if expires:
             morsel["expires"] = format_timestamp(expires)
         if path:

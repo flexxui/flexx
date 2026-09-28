@@ -8,12 +8,7 @@ import os
 import sys
 import shutil
 
-try:
-    import setuptools  # noqa, analysis:ignore
-except ImportError:
-    pass  # setuptools allows for "develop", but it's not essential
-
-from distutils.core import setup
+from setuptools import setup
 
 
 ## Function we need
@@ -115,7 +110,7 @@ setup(
     long_description=doc,
     platforms='any',
     provides=[name],
-    python_requires='>=3.5',
+    python_requires='>=3.8',
     install_requires=['tornado', 'pscript>=0.7.7', 'webruntime>=0.5.6', 'dialite>=0.5.2'],
     packages=package_tree('flexx') + package_tree('flexxamples'),
     package_dir={'flexx': 'flexx', 'flexxamples': 'flexxamples'},
@@ -134,10 +129,12 @@ setup(
         'Operating System :: POSIX',
         'Programming Language :: JavaScript',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
     ],
 )
